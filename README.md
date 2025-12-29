@@ -15,6 +15,22 @@
 
 Check the provided documentation [here](https://pegasussimulator.github.io/PegasusSimulator/) to discover how to install and use this framework.
 
+## Fork: FSC Lab Extensions
+
+This repository is a fork of the original **Pegasus Simulator** project:
+https://github.com/PegasusSimulator/PegasusSimulator
+
+It is maintained by the FSC Lab to support internal research and development needs.
+In addition to the upstream simulator, this fork includes:
+- **Additional examples** for <your project / use case>
+- **Utility functions and helper modules** used by FSC Lab workflows
+
+Upstream documentation and citation information remain applicable unless explicitly noted.
+For changes specific to this fork, see:
+- `examples/` (FSC Lab examples)
+- `<path-to-your-utils>/` (utility functions)
+- `CHANGELOG_FSC.md` (summary of fork-specific changes) *(optional but recommended)*
+
 ## Latest Updates
 
 ⚠️ For users of versions prior to v5.1.0:
@@ -46,6 +62,24 @@ If you find Pegasus Simulator useful in your academic work, please cite the pape
   doi={10.1109/ICUAS60882.2024.10556959}}
 ```
 
+## Citation for FSC Lab Fork Extensions
+
+If you use the **FSC Lab fork of Pegasus Simulator**, including the additional examples,
+utility functions, or modifications introduced in this repository, please also cite:
+
+```
+@misc{fsc_pegasus_fork_2025,
+title = {FSC Lab Extensions to Pegasus Simulator},
+author = {<Your Name> and <Collaborators>},
+year = {2025},
+howpublished = {\url{https://github.com/
+<your-org>/<your-repo>}},
+note = {Fork of Pegasus Simulator with additional examples and utilities}
+}
+```
+
+Users of this fork should **also cite the original Pegasus Simulator paper**.
+
 ## Main Developer Team
 
 This simulation framework is an open-source effort, started by me, Marcelo Jacinto in January/2023. It is a tool that was created with the original purpose of serving my Ph.D. workplan for the next 4 years, which means that you can expect this repository to be mantained, hopefully at least until 2027.
@@ -66,6 +100,17 @@ This simulation framework is an open-source effort, started by me, Marcelo Jacin
   * [Seunghwan Jo](https://github.com/SwiftGust)
 
 Also check the always up-to-date [Github contributors list](https://github.com/PegasusSimulator/PegasusSimulator/graphs/contributors) with all the open-source contributors.
+
+## FSC Lab Fork Maintainers
+
+This section documents contributors responsible for the development and maintenance
+of **fork-specific extensions** to Pegasus Simulator in this repository.
+It does not reflect authorship of the original Pegasus Simulator project.
+
+* Fork Maintainer
+  * <Your Name> (<your GitHub link>)
+* Contributors
+  * <Name> (<GitHub>) – examples and utilities
 
 ## Guidance, Control and Navigation Project
 

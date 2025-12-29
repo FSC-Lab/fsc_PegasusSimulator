@@ -49,12 +49,12 @@ class Vehicle(Robot):
         self,
         stage_prefix: str,
         usd_path: str = None,
-        init_pos=[0.0, 0.0, 0.0],
-        init_orientation=[0.0, 0.0, 0.0, 1.0],
-        sensors=[],
-        graphical_sensors=[],
-        graphs=[],
-        backends=[]
+        init_pos=(0.0, 0.0, 0.0),
+        init_orientation=(0.0, 0.0, 0.0, 1.0), # change this tuple
+        sensors=None, #.. change this to None
+        graphical_sensors=None, # change this to None
+        graphs=None, # change this to None
+        backends=None # change this to None
     ):
         """
         Class that initializes a vehicle in the isaac sim's curent stage
@@ -65,6 +65,26 @@ class Vehicle(Robot):
             init_pos (list): The initial position of the vehicle in the inertial frame (in ENU convention). Defaults to [0.0, 0.0, 0.0].
             init_orientation (list): The initial orientation of the vehicle in quaternion [qx, qy, qz, qw]. Defaults to [0.0, 0.0, 0.0, 1.0].
         """
+
+        if sensors is None:
+            sensors = []
+        else:
+            sensors = list(sensors)
+
+        if graphical_sensors is None:
+            graphical_sensors = []
+        else:
+            graphical_sensors = list(graphical_sensors)
+
+        if graphs is None:
+            graphs = []
+        else:
+            graphs = list(graphs)
+       
+        if backends is None:
+            backends = []
+        else:
+            backends = list(backends)
 
         # Get the current world at which we want to spawn the vehicle
         self._world = PegasusInterface().world

@@ -1,0 +1,156 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "01 config_debug",
+      "type": "shell",
+      "command": "./scripts/config_debug.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "02 config_release",
+      "type": "shell",
+      "command": "./scripts/config_release.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "03 build_debug",
+      "type": "shell",
+      "command": "./scripts/build_debug.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "04 build_release",
+      "type": "shell",
+      "command": "./scripts/build_release.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "05 debug_config_and_build",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "01 config_debug",
+        "03 build_debug",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "06 release_config_and_build",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "02 config_release",
+        "04 build_release",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "07 run_ut",
+      "type": "shell",
+      "command": "./run_ut.sh",
+      "options": {
+        "cwd": "${workspaceFolder}/scripts/"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "08 run_st",
+      "type": "shell",
+      "command": "./scripts/run_st.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "09 debug_config_ut",
+      "type": "shell",
+      "command": "./scripts/config_debug_ut.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "10 debug_config_and_build_ut",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "09 debug_config_ut",
+        "03 build_debug",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "11 release_config_st",
+      "type": "shell",
+      "command": "./scripts/config_release_st.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "12 release_config_and_build_st",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "11 release_config_st",
+        "04 build_release",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "13 run_all",
+      "type": "shell",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "10 debug_config_and_build_ut",
+        "12 release_config_and_build_st",
+        "07 run_ut",
+        "08 run_st"
+      ],
+      "problemMatcher": []
+    },
+  ]
+}
