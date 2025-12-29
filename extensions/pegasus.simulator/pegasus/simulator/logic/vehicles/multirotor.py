@@ -65,8 +65,8 @@ class Multirotor(Vehicle):
         usd_file: str = "",
         vehicle_id: int = 0,
         # Spawning pose of the vehicle
-        init_pos=[0.0, 0.0, 0.07],
-        init_orientation=[0.0, 0.0, 0.0, 1.0],
+        init_pos=(0.0, 0.0, 0.07),
+        init_orientation=(0.0, 0.0, 0.0, 1.0),
         config=MultirotorConfig(),
     ):
         """Initializes the multirotor object
