@@ -1,8 +1,8 @@
 #!/bin/bash
 
 PX4_DIR="$HOME/PX4-Autopilot"
-PEGASUS_SCRIPT="/home/longhao/source/fsc_PegasusSimulator/application/slungload/01_px4_single_drone_payload.py"
-ISAAC_PY="$HOME/isaacsim/python_r_fsc.sh"   # your Isaac launcher
+PEGASUS_SCRIPT="/home/fsc-jupiter/Source/fsc_PegasusSimulator/application/slungload/01_px4_single_drone_payload.py"
+ISAAC_PY="/home/fsc-jupiter/isaacsim/isaac-sim-standalone-5.1.0-linux-x86_64/python_r_fsc.sh"   # your Isaac launcher
 DELAY=2
 SESSION="px4_isaac"
 
