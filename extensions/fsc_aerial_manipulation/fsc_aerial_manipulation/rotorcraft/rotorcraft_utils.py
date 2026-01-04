@@ -32,7 +32,7 @@ def spawn_rotorcraft_with_mavlink(
         px4_path: the path to the pixhawk SITL folder. Usually ~/PX4-Autopilot
         px4_default_airframe: PX4 SITL default airframe. In config it is gazebo-iris
         vehicle_id: the id of the current drone.
-        spawn_pos:
+        spawn_pos: drone initial world position (ENU)
     """
     # common orientation
     quat_xyzw = Rotation.from_euler("XYZ", spawn_euler, degrees=True).as_quat()

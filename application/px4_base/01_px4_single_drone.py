@@ -22,23 +22,14 @@ simulation_app = SimulationApp({"headless": False})
 import omni.timeline
 from omni.isaac.core.world import World
 import omni.usd
-from pxr import UsdLux, Sdf, Gf
 
 # Import the Pegasus API for simulating drones
-from pegasus.simulator.params import ROBOTS, SIMULATION_ENVIRONMENTS
-from pegasus.simulator.logic.state import State
-from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
-from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
-from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorConfig
+from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
 from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
 
 # Import FSC aerial manipulation lib
 from fsc_aerial_manipulation.rotorcraft import spawn_rotorcraft_with_mavlink
 from fsc_aerial_manipulation.utils import add_dome_lighting
-
-# Auxiliary scipy and numpy modules
-import os.path
-from scipy.spatial.transform import Rotation
 
 class FscDroneSim:
     """

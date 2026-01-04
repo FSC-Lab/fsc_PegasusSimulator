@@ -6,7 +6,11 @@
 """
 
 from .lighting_utils import add_dome_lighting
+from .rotation_utils import quat_from_x_deg, quat_from_y_deg, quat_from_z_deg
 
 __all__ = [
     "add_dome_lighting",
+    "quat_from_x_deg",
+    "quat_from_y_deg",
+    "quat_from_z_deg"
 ]
