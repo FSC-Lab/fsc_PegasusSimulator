@@ -26,12 +26,10 @@ import omni.usd
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
 from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
-from pxr import UsdPhysics, Usd
 # Import FSC aerial manipulation lib
 from fsc_aerial_manipulation.rotorcraft import spawn_rotorcraft_with_mavlink
 from fsc_aerial_manipulation.utils import add_dome_lighting
 import fsc_aerial_manipulation.slung_load as sl
-import fsc_aerial_manipulation.utils as utl
 import fsc_aerial_manipulation.constraints as con
 class FscDroneSim:
     """
@@ -191,7 +189,7 @@ class FscDroneSim:
 
 def main():
     # Instantiate the template app
-    pg_app = FscDroneSim(
+    fsc_app = FscDroneSim(
         drone_spawn_pos=(0.0, 0.0, 0.07),
         drone_spawn_euler=(0.0, 0.0, 0.0),
         cable_length=1.0,
@@ -202,7 +200,7 @@ def main():
     )
 
     # Run the application loop
-    pg_app.run()
+    fsc_app.run()
 
 if __name__ == "__main__":
     main()

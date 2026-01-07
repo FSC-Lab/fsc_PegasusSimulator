@@ -56,6 +56,20 @@ def get_mid_point(p0_world, p1_world):
            0.5*(p0_world[2] + p1_world[2])]
     return mid
 
+
+def setup_same_height_payload_and_triangle_uavs(L, z, center_xy):
+    cx, cy = map(float, center_xy)
+    L = float(L)
+    z = float(z)
+
+    uavs = [
+            [cx + L,       cy + 0.0,                z],
+            [cx - 0.5*L,   cy + (math.sqrt(3)/2)*L, z],
+            [cx - 0.5*L,   cy - (math.sqrt(3)/2)*L, z],
+    ]
+    payload = [cx, cy, z]
+    return payload, uavs
+
 def create_cylinder_with_xform_root(
     stage,
     root_path: str,
