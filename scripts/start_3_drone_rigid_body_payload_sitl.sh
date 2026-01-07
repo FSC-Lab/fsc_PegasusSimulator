@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PX4_DIR="$HOME/PX4-Autopilot"
-PEGASUS_SCRIPT="/home/longhao/source/PegasusSimulator/examples/17_px4_multi_vehicle_slungload_test.py"
+PEGASUS_SCRIPT="/home/longhao/source/PegasusSimulator/examples/16_px4_multi_vehicle_slungload.py"
 ISAAC_PY="$HOME/isaacsim/python_r.sh"
 
 SESSION="px4_isaac"
