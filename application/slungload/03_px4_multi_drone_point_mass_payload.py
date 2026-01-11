@@ -195,9 +195,9 @@ class FscDroneSim:
         """
 
         # Start the simulation
-        # self.timeline.play()
+        self.timeline.play()
         # Start paused
-        self.timeline.pause()
+        # self.timeline.pause()
 
         print("[SIM] Simulation is paused after spawn.", flush=True)
         print("[SIM] Inspect payload, cables, joints. Press Play when ready.", flush=True)
