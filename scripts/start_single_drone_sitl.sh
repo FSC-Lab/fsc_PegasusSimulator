@@ -4,6 +4,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/terminal_utils.sh"
+
+# ---------------------------
+# New-terminal relaunch logic
+# ---------------------------
+IN_TERM=0
+if [[ "${1:-}" == "--in-terminal" ]]; then
+  IN_TERM=1
+  shift
+fi
 
 if [[ $# -ne 1 ]]; then
   echo "ERROR: must provide config name."
@@ -11,7 +22,14 @@ if [[ $# -ne 1 ]]; then
   exit 2
 fi
 
-load_machine_config "$0" "$1" || exit $?
+CFG_NAME="$1"
+
+if [[ $IN_TERM -eq 0 ]]; then
+  open_new_terminal "$0" --in-terminal "$CFG_NAME"
+  exit 0
+fi
+
+load_machine_config "$0" "$CFG_NAME"
 
 # Hard-coded relative path (same on all machines)
 PEGASUS_SCRIPT_REL="application/px4_base/01_px4_single_drone.py"
