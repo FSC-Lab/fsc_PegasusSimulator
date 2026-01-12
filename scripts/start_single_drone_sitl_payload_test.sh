@@ -32,7 +32,7 @@ fi
 load_machine_config "$0" "$CFG_NAME"
 
 # Hard-coded relative path (same on all machines)
-PEGASUS_SCRIPT_REL="application/slungload/01_px4_single_drone_payload.py"
+PEGASUS_SCRIPT_REL="application/slungload/05_px4_single_drone_payload_testing.py"
 
 # Compose the full path (machine-dependent base + fixed tail)
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
