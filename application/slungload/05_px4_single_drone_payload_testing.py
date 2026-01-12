@@ -128,7 +128,7 @@ class FscDroneSim:
             "pub_state": True,
             "sub_force": True,
         }
-        payload = ROS2RigidBodyBackend(world=self.world, payload_path=payload_path, config=config_ros2_rigid_body)
+        self.payload = ROS2RigidBodyBackend(world=self.world, payload_path=payload_path, config=config_ros2_rigid_body)
 
         # ---- NEW: wait for UAV prims to load ----
         if self._wait_for_prim(self.drone_path, max_frames=300) is None:
