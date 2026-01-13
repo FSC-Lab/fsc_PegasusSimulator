@@ -21,6 +21,7 @@ from omni.isaac.dynamic_control import _dynamic_control
 # ROS2 imports
 import rclpy
 from geometry_msgs.msg import PoseStamped, TwistStamped, AccelStamped, Vector3Stamped
+from rclpy.executors import SingleThreadedExecutor
 
 # Pegasus imports
 from pegasus.simulator.logic.backends.backend import Backend
@@ -57,6 +58,7 @@ class ROS2RigidBodyBackend(Backend):
             >>>  "pub_tf": False,                               # Publish the TF of the vehicle
         """
 
+        
         # Save the configurations for this backend
         self._topic_prefixes = config.get("topic_prefixes", ["payload_0"])
 
@@ -76,6 +78,8 @@ class ROS2RigidBodyBackend(Backend):
             pass
 
         self.node = rclpy.create_node("simulator_rigid_bodies")
+        self.executor = SingleThreadedExecutor()
+        self.executor.add_node(self.node)
 
         # Get the current world at which we want to spawn the vehicle
         self._payload_dc_interface = None
@@ -97,8 +101,8 @@ class ROS2RigidBodyBackend(Backend):
         self._states = []
         for _ in range(len(self.rigid_body_paths)):
             self._states.append(State())
-    
-    
+
+
     def initialize_publishers(self, config: dict):
 
         # ----------------------------------------------------- 
@@ -224,10 +228,8 @@ class ROS2RigidBodyBackend(Backend):
         from the communication interface. This method will be called by the simulation on every physics step
         """
 
-        # In this case, do nothing as we are sending messages as soon as new data arrives from the sensors and state
-        # and updating the reference for the thrusters as soon as receiving from ROS2 topics
-        # Just poll for new ROS 2 messages in a non-blocking way
-        rclpy.spin_once(self.node, timeout_sec=0)
+        # In this case, do nothing as update is handled in update_sim_state
+        pass
 
     def start(self):
         """
@@ -270,6 +272,7 @@ class ROS2RigidBodyBackend(Backend):
         Args:
             dt (float): The time elapsed between the previous and current function calls (s).
         """
+        self.executor.spin_once(timeout_sec=0.0)
         rigid_body_path = self.rigid_body_paths[rigid_body_id]
         # Get the body frame interface of the vehicle (this will be the frame used to get the position, orientation, etc.)
         rigid_body = self.get_dc_interface().get_rigid_body(rigid_body_path)

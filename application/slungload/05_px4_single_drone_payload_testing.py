@@ -127,7 +127,7 @@ class FscDroneSim:
         config_ros2_rigid_body = {
             "pub_state": True,
             "sub_force": True,
-            "topic_prefixes": ["payload_0", "cable_0"]
+            "topic_prefixes": ["payload", "cable"]
         }
         self.rigid_body = ROS2RigidBodyBackend(world=self.world, rigid_body_paths=self.rigid_body_paths, config=config_ros2_rigid_body)
 
