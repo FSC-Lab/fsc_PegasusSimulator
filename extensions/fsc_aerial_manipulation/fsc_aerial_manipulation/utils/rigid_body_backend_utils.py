@@ -1,7 +1,7 @@
 """
-| File: ros2_backend.py
+| File: rigid_body_backend_utils.py
 | Author: Marcelo Jacinto (marcelo.jacinto@tecnico.ulisboa.pt)
-| Description: File that implements the ROS2 Backend for communication/control with/of the vehicle simulation through ROS2 topics
+| Description: File that implements the ROS2 Backend for communication for rigid bodies through ROS2 topics
 | License: BSD-3-Clause. Copyright (c) 2024, Marcelo Jacinto. All rights reserved.
 """
 
@@ -9,13 +9,12 @@
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from pxr import Usd, Gf
-
 # Make sure the ROS2 extension is enabled
 import carb
 from isaacsim.core.utils.extensions import enable_extension
 enable_extension("isaacsim.ros2.bridge")
 
+# OmniIsaac imports
 import omni.usd
 from omni.isaac.dynamic_control import _dynamic_control
 
@@ -23,8 +22,13 @@ from omni.isaac.dynamic_control import _dynamic_control
 import rclpy
 from geometry_msgs.msg import PoseStamped, TwistStamped, AccelStamped, Vector3Stamped
 
+# Pegasus imports
 from pegasus.simulator.logic.backends.backend import Backend
 from pegasus.simulator.logic.state import State
+
+# Other imports
+from functools import partial
+from pxr import Usd, Gf
 
 
 class ROS2RigidBodyBackend(Backend):
@@ -85,8 +89,7 @@ class ROS2RigidBodyBackend(Backend):
         for i in range(len(self.rigid_body_paths)):
             rigid_body_path = self.rigid_body_paths[i]
             
-            # Lambda captures the current i value at each iteration
-            callback_with_id = lambda step_size: self.update_sim_state(step_size, i)
+            callback_with_id = partial(self.update_sim_state, rigid_body_id=i)
             
             self._world.add_physics_callback(rigid_body_path, callback_with_id)
 
@@ -127,8 +130,7 @@ class ROS2RigidBodyBackend(Backend):
             if self._sub_force:
                 topic = self._topic_prefixes[i] + "/disturbance/force"
 
-                # Lambda captures the current value of i at creation time
-                callback_with_id = lambda msg: self.force_callback(msg, i)
+                callback_with_id = partial(self.force_callback, rigid_body_id=i)
 
                 sub = self.node.create_subscription(
                     Vector3Stamped,
@@ -138,7 +140,7 @@ class ROS2RigidBodyBackend(Backend):
                 )
                 self.force_subs.append(sub)
 
-    def force_callback(self, msg: Vector3Stamped, id: int):
+    def force_callback(self, msg: Vector3Stamped, rigid_body_id: int):
         """
         Callback that is called when a new force message is received from ROS2 topic
 
@@ -146,11 +148,10 @@ class ROS2RigidBodyBackend(Backend):
             msg (Vector3Stamped): Message containing the force to be applied to the vehicle in N in X, Y, Z directions
         """
         self.input_force = [msg.vector.x, msg.vector.y, msg.vector.z]
-
         pos = [0.0, 0.0, 0.0]  # Apply force at the center of mass
 
         # Get the handle of the rigidbody that we will apply the force to
-        rb = self.get_dc_interface().get_rigid_body(self.rigid_body_paths[id])
+        rb = self.get_dc_interface().get_rigid_body(self.rigid_body_paths[rigid_body_id])
 
         # Apply the force to the rigidbody. The force should be expressed in the rigidbody frame
         self.get_dc_interface().apply_body_force(rb, carb._carb.Float3(self.input_force), carb._carb.Float3(pos), True)
