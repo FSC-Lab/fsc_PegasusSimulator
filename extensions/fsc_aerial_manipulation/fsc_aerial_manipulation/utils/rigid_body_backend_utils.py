@@ -29,7 +29,7 @@ from pegasus.simulator.logic.state import State
 
 class ROS2RigidBodyBackend(Backend):
 
-    def __init__(self, world, payload_path, config: dict = {}):
+    def __init__(self, world, rigid_body_paths, config: dict = {}):
         """Initialize the ROS2 Rigid Body Payload class
 
         Args:
@@ -54,11 +54,12 @@ class ROS2RigidBodyBackend(Backend):
         """
 
         # Save the configurations for this backend
-        self._topic_prefix = config.get("topic_prefix", "payload/")
+        self._topic_prefixes = config.get("topic_prefixes", ["payload_0"])
 
         # Save what whould be published/subscribed
         self._pub_state = config.get("pub_state", True)
         self._sub_force = config.get("sub_force", True)
+
 
         # # Check if the tf2_ros library is loaded and if the flag is set to True
         # self._pub_tf = config.get("pub_tf", False) and tf2_ros_loaded
@@ -70,26 +71,29 @@ class ROS2RigidBodyBackend(Backend):
             # If rclpy is already initialized, just ignore the exception
             pass
 
-        self.node = rclpy.create_node("simulator_payload")
+        self.node = rclpy.create_node("simulator_rigid_bodies")
+
+        # Get the current world at which we want to spawn the vehicle
+        self._payload_dc_interface = None
+        self.rigid_body_paths = rigid_body_paths
 
         # Initialize the publishers and subscribers
         self.initialize_publishers(config)
         self.initialize_subscribers()
 
-        # Get the current world at which we want to spawn the vehicle
-        self._payload_dc_interface = None
-        self.payload_path = payload_path
-        # self._current_stage = self.pg._world.stage
-        # # print(f"self._current_stage: {self._current_stage}")
-        # # Save the name with which the vehicle will appear in the stage
-        # # and the name of the .usd file that contains its description
-        # self._stage_prefix = get_stage_next_free_path(self._current_stage, payload_path, False)
-
         self._world = world
-        self._world.add_physics_callback(payload_path, self.update_sim_state)
+        for i in range(len(self.rigid_body_paths)):
+            rigid_body_path = self.rigid_body_paths[i]
+            
+            # Lambda captures the current i value at each iteration
+            callback_with_id = lambda step_size: self.update_sim_state(step_size, i)
+            
+            self._world.add_physics_callback(rigid_body_path, callback_with_id)
 
         # Variable that will hold the current state of the vehicle
-        self._state = State()
+        self._states = []
+        for _ in range(len(self.rigid_body_paths)):
+            self._states.append(State())
     
     
     def initialize_publishers(self, config: dict):
@@ -97,25 +101,44 @@ class ROS2RigidBodyBackend(Backend):
         # ----------------------------------------------------- 
         # Create publishers for the state of the vehicle in ENU
         # -----------------------------------------------------
-        if self._pub_state:
-            if config.get("pub_pose", True):
-                self.pose_pub = self.node.create_publisher(PoseStamped, self._topic_prefix +  "/" + "state/pose", rclpy.qos.qos_profile_sensor_data)
+        self.pose_pubs = []
+        self.twist_pubs = []
+        self.twist_inertial_pubs = []
+        self.accel_pubs = []
+        for i in range(len(self.rigid_body_paths)):
+            if self._pub_state:
+                if config.get("pub_pose", True):
+                    self.pose_pubs.append(self.node.create_publisher(PoseStamped, self._topic_prefixes[i] +  "/" + "state/pose", rclpy.qos.qos_profile_sensor_data))
             
-            if config.get("pub_twist", True):
-                self.twist_pub = self.node.create_publisher(TwistStamped, self._topic_prefix + "/" + "state/twist", rclpy.qos.qos_profile_sensor_data)
+                if config.get("pub_twist", True):
+                    self.twist_pubs.append(self.node.create_publisher(TwistStamped, self._topic_prefixes[i] + "/" + "state/twist", rclpy.qos.qos_profile_sensor_data))
 
-            if config.get("pub_twist_inertial", True):
-                self.twist_inertial_pub = self.node.create_publisher(TwistStamped, self._topic_prefix + "/" + "state/twist_inertial", rclpy.qos.qos_profile_sensor_data)
+                if config.get("pub_twist_inertial", True):
+                    self.twist_inertial_pubs.append(self.node.create_publisher(TwistStamped, self._topic_prefixes[i] + "/" + "state/twist_inertial", rclpy.qos.qos_profile_sensor_data))
 
-            if config.get("pub_accel", True):
-                self.accel_pub = self.node.create_publisher(AccelStamped, self._topic_prefix + "/" + "state/accel", rclpy.qos.qos_profile_sensor_data)
+                if config.get("pub_accel", True):
+                    self.accel_pubs.append(self.node.create_publisher(AccelStamped, self._topic_prefixes[i] + "/" + "state/accel", rclpy.qos.qos_profile_sensor_data))
         
 
     def initialize_subscribers(self):
-        self.force_sub = self.node.create_subscription(Vector3Stamped, self._topic_prefix + "/" + "disturbance/force", self.force_callback, rclpy.qos.qos_profile_sensor_data)
-        
+        self.force_subs = []
 
-    def force_callback(self, msg: Vector3Stamped):
+        for i in range(len(self.rigid_body_paths)):
+            if self._sub_force:
+                topic = self._topic_prefixes[i] + "/disturbance/force"
+
+                # Lambda captures the current value of i at creation time
+                callback_with_id = lambda msg: self.force_callback(msg, i)
+
+                sub = self.node.create_subscription(
+                    Vector3Stamped,
+                    topic,
+                    callback_with_id,
+                    rclpy.qos.qos_profile_sensor_data
+                )
+                self.force_subs.append(sub)
+
+    def force_callback(self, msg: Vector3Stamped, id: int):
         """
         Callback that is called when a new force message is received from ROS2 topic
 
@@ -124,7 +147,16 @@ class ROS2RigidBodyBackend(Backend):
         """
         self.input_force = [msg.vector.x, msg.vector.y, msg.vector.z]
 
-    def update_state(self):
+        pos = [0.0, 0.0, 0.0]  # Apply force at the center of mass
+
+        # Get the handle of the rigidbody that we will apply the force to
+        rb = self.get_dc_interface().get_rigid_body(self.rigid_body_paths[id])
+
+        # Apply the force to the rigidbody. The force should be expressed in the rigidbody frame
+        self.get_dc_interface().apply_body_force(rb, carb._carb.Float3(self.input_force), carb._carb.Float3(pos), True)
+
+
+    def update_state(self, rigid_body_id: int):
         """
         Method that when implemented, should handle the receivel of the state of the vehicle using this callback
         """
@@ -145,44 +177,44 @@ class ROS2RigidBodyBackend(Backend):
         accel.header.stamp = pose.header.stamp
 
         pose.header.frame_id = "map"
-        twist.header.frame_id = self._topic_prefix + "_" + "base_link"
+        twist.header.frame_id = self._topic_prefixes[rigid_body_id] + "_" + "base_link"
         twist_inertial.header.frame_id = "map"
         accel.header.frame_id = "map"
 
         # Fill the position and attitude of the vehicle in ENU
-        pose.pose.position.x = self._state.position[0]
-        pose.pose.position.y = self._state.position[1]
-        pose.pose.position.z = self._state.position[2]
+        pose.pose.position.x = self._states[rigid_body_id].position[0]
+        pose.pose.position.y = self._states[rigid_body_id].position[1]
+        pose.pose.position.z = self._states[rigid_body_id].position[2]
 
-        pose.pose.orientation.x = self._state.attitude[0]
-        pose.pose.orientation.y = self._state.attitude[1]
-        pose.pose.orientation.z = self._state.attitude[2]
-        pose.pose.orientation.w = self._state.attitude[3]
+        pose.pose.orientation.x = self._states[rigid_body_id].attitude[0]
+        pose.pose.orientation.y = self._states[rigid_body_id].attitude[1]
+        pose.pose.orientation.z = self._states[rigid_body_id].attitude[2]
+        pose.pose.orientation.w = self._states[rigid_body_id].attitude[3]
 
         # Fill the linear and angular velocities in the body frame of the vehicle
-        twist.twist.linear.x = self._state.linear_body_velocity[0]
-        twist.twist.linear.y = self._state.linear_body_velocity[1]
-        twist.twist.linear.z = self._state.linear_body_velocity[2]
+        twist.twist.linear.x = self._states[rigid_body_id].linear_body_velocity[0]
+        twist.twist.linear.y = self._states[rigid_body_id].linear_body_velocity[1]
+        twist.twist.linear.z = self._states[rigid_body_id].linear_body_velocity[2]
 
-        twist.twist.angular.x = self._state.angular_velocity[0]
-        twist.twist.angular.y = self._state.angular_velocity[1]
-        twist.twist.angular.z = self._state.angular_velocity[2]
+        twist.twist.angular.x = self._states[rigid_body_id].angular_velocity[0]
+        twist.twist.angular.y = self._states[rigid_body_id].angular_velocity[1]
+        twist.twist.angular.z = self._states[rigid_body_id].angular_velocity[2]
 
         # Fill the linear velocity of the vehicle in the inertial frame
-        twist_inertial.twist.linear.x = self._state.linear_velocity[0]
-        twist_inertial.twist.linear.y = self._state.linear_velocity[1]
-        twist_inertial.twist.linear.z = self._state.linear_velocity[2]
+        twist_inertial.twist.linear.x = self._states[rigid_body_id].linear_velocity[0]
+        twist_inertial.twist.linear.y = self._states[rigid_body_id].linear_velocity[1]
+        twist_inertial.twist.linear.z = self._states[rigid_body_id].linear_velocity[2]
 
         # Fill the linear acceleration in the inertial frame
-        accel.accel.linear.x = self._state.linear_acceleration[0]
-        accel.accel.linear.y = self._state.linear_acceleration[1]
-        accel.accel.linear.z = self._state.linear_acceleration[2]
+        accel.accel.linear.x = self._states[rigid_body_id].linear_acceleration[0]
+        accel.accel.linear.y = self._states[rigid_body_id].linear_acceleration[1]
+        accel.accel.linear.z = self._states[rigid_body_id].linear_acceleration[2]
 
         # Publish the messages containing the state of the vehicle
-        self.pose_pub.publish(pose)
-        self.twist_pub.publish(twist)
-        self.twist_inertial_pub.publish(twist_inertial)
-        self.accel_pub.publish(accel)
+        self.pose_pubs[rigid_body_id].publish(pose)
+        self.twist_pubs[rigid_body_id].publish(twist)
+        self.twist_inertial_pubs[rigid_body_id].publish(twist_inertial)
+        self.accel_pubs[rigid_body_id].publish(accel)
         
 
     def update(self, dt: float):
@@ -229,7 +261,7 @@ class ROS2RigidBodyBackend(Backend):
         """Method that handles graphical sensor data. Not used for rigid body payload."""
         pass
 
-    def update_sim_state(self, dt: float):
+    def update_sim_state(self, dt: float, rigid_body_id: int):
         """
         Method that is called at every physics step to retrieve and update the current state of the vehicle, i.e., get
         the current position, orientation, linear and angular velocities and acceleration of the vehicle.
@@ -237,53 +269,52 @@ class ROS2RigidBodyBackend(Backend):
         Args:
             dt (float): The time elapsed between the previous and current function calls (s).
         """
-
+        rigid_body_path = self.rigid_body_paths[rigid_body_id]
         # Get the body frame interface of the vehicle (this will be the frame used to get the position, orientation, etc.)
-        payload = self.get_dc_interface().get_rigid_body(self.payload_path)
+        rigid_body = self.get_dc_interface().get_rigid_body(rigid_body_path)
 
         # Get the current position and orientation in the inertial frame
-        pose = self.get_dc_interface().get_rigid_body_pose(payload)
+        pose = self.get_dc_interface().get_rigid_body_pose(rigid_body)
 
         # Get the attitude according to the convention [w, x, y, z]
-        prim = self._world.stage.GetPrimAtPath(self.payload_path)
+        prim = self._world.stage.GetPrimAtPath(rigid_body_path)
         rotation_quat = self.get_world_transform_xform(prim).GetQuaternion()
         rotation_quat_real = rotation_quat.GetReal()
         rotation_quat_img = rotation_quat.GetImaginary()
 
         # Get the angular velocity of the vehicle expressed in the body frame of reference
-        ang_vel = self.get_dc_interface().get_rigid_body_angular_velocity(payload)
+        ang_vel = self.get_dc_interface().get_rigid_body_angular_velocity(rigid_body)
 
         # The linear velocity [x_dot, y_dot, z_dot] of the vehicle's body frame expressed in the inertial frame of reference
-        linear_vel = self.get_dc_interface().get_rigid_body_linear_velocity(payload)
+        linear_vel = self.get_dc_interface().get_rigid_body_linear_velocity(rigid_body)
 
         # Get the linear acceleration of the body relative to the inertial frame, expressed in the inertial frame
         # Note: we must do this approximation, since the Isaac sim does not output the acceleration of the rigid body directly
-        linear_acceleration = (np.array(linear_vel) - self._state.linear_velocity) / dt
+        linear_acceleration = (np.array(linear_vel) - self._states[rigid_body_id].linear_velocity) / dt
 
         # Update the state variable X = [x,y,z]
-        self._state.position = np.array(pose.p)
+        self._states[rigid_body_id].position = np.array(pose.p)
 
         # Get the quaternion according in the [qx,qy,qz,qw] standard
-        self._state.attitude = np.array(
+        self._states[rigid_body_id].attitude = np.array(
             [rotation_quat_img[0], rotation_quat_img[1], rotation_quat_img[2], rotation_quat_real]
         )
 
         # Express the velocity of the vehicle in the inertial frame X_dot = [x_dot, y_dot, z_dot]
-        self._state.linear_velocity = np.array(linear_vel)
+        self._states[rigid_body_id].linear_velocity = np.array(linear_vel)
 
         # The linear velocity V =[u,v,w] of the vehicle's body frame expressed in the body frame of reference
         # Note that: x_dot = Rot * V
-        self._state.linear_body_velocity = (
-            Rotation.from_quat(self._state.attitude).inv().apply(self._state.linear_velocity)
+        self._states[rigid_body_id].linear_body_velocity = (
+            Rotation.from_quat(self._states[rigid_body_id].attitude).inv().apply(self._states[rigid_body_id].linear_velocity)
         )
 
         # omega = [p,q,r]
-        self._state.angular_velocity = Rotation.from_quat(self._state.attitude).inv().apply(np.array(ang_vel))
-
+        self._states[rigid_body_id].angular_velocity = Rotation.from_quat(self._states[rigid_body_id].attitude).inv().apply(np.array(ang_vel))
         # The acceleration of the vehicle expressed in the inertial frame X_ddot = [x_ddot, y_ddot, z_ddot]
-        self._state.linear_acceleration = linear_acceleration
+        self._states[rigid_body_id].linear_acceleration = linear_acceleration
 
-        self.update_state()
+        self.update_state(rigid_body_id)
     
     def get_dc_interface(self):
 

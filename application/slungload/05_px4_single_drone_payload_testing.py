@@ -123,12 +123,13 @@ class FscDroneSim:
             axis="X", # cylinder axis in Xfrom prim frame
         )
 
+        self.rigid_body_paths = [payload_path, cable_path]
         config_ros2_rigid_body = {
-            "topic_prefix": "payload",
             "pub_state": True,
             "sub_force": True,
+            "topic_prefixes": ["payload_0", "cable_0"]
         }
-        self.payload = ROS2RigidBodyBackend(world=self.world, payload_path=payload_path, config=config_ros2_rigid_body)
+        self.rigid_body = ROS2RigidBodyBackend(world=self.world, rigid_body_paths=self.rigid_body_paths, config=config_ros2_rigid_body)
 
         # ---- NEW: wait for UAV prims to load ----
         if self._wait_for_prim(self.drone_path, max_frames=300) is None:
