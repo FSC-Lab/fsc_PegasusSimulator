@@ -70,6 +70,20 @@ def setup_same_height_payload_and_triangle_uavs(L, z, center_xy):
     payload = [cx, cy, z]
     return payload, uavs
 
+def setup_payload_and_triangle_uavs_rigid(L, z, center_xy, p_hook):
+    cx, cy = map(float, center_xy)
+    L = float(L)
+    z = float(z)
+    p_hook_0, p_hook_1, p_hook_2 = map(tuple, p_hook)
+
+    uavs = [
+            [cx + L + p_hook_0[0],       cy + 0.0 + p_hook_0[1],                z + p_hook_0[2]],
+            [cx - 0.5*L + p_hook_1[0],   cy + (math.sqrt(3)/2)*L + p_hook_1[1], z + p_hook_1[2]],
+            [cx - 0.5*L + p_hook_2[0],   cy - (math.sqrt(3)/2)*L + p_hook_2[1], z + p_hook_2[2]],
+    ]
+    payload = [cx, cy, z]
+    return payload, uavs
+
 def create_cylinder_with_xform_root(
     stage,
     root_path: str,

@@ -3,7 +3,8 @@ from .slung_load_utils import (
     create_brick_with_xform_root,
     setup_single_drone_payload,
     get_mid_point,
-    setup_same_height_payload_and_triangle_uavs
+    setup_same_height_payload_and_triangle_uavs,
+    setup_payload_and_triangle_uavs_rigid
 )
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "create_brick_with_xform_root",
     "setup_single_drone_payload",
     "get_mid_point",
-    "setup_same_height_payload_and_triangle_uavs"
+    "setup_same_height_payload_and_triangle_uavs",
+    "setup_payload_and_triangle_uavs_rigid"
 ]
