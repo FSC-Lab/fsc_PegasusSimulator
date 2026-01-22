@@ -248,7 +248,7 @@ def main():
                  z_uavs=0.07,
                  center_xy=(0.0, 0.0),
                  payload_mass=1.0,
-                 payload_dimension=(0.2, 0.3, 0.05),
+                 payload_dimension=(0.9, 1.1, 0.1),  # minimum dimension for perpendicular cables + drones 1m apart (sqrt(0.75), 1)
                  payload_hook_local_ratio=((0.5, 0.0, 0.5), (-0.5, 0.5, 0.5), (-0.5, -0.5, 0.5)),
                  cable_mass=0.05,
                  cable_radius=0.01,

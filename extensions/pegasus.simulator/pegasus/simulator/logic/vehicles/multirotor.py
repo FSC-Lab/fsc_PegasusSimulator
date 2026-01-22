@@ -38,7 +38,7 @@ class MultirotorConfig:
 
         # The default thrust curve for a quadrotor and dynamics relating to drag
         self.thrust_curve = QuadraticThrustCurve()
-        self.drag = LinearDrag([0.50, 0.30, 0.0])
+        self.drag = LinearDrag([0.0, 0.0, 0.0])
 
         # The default sensors for a quadrotor
         self.sensors = [Barometer(), IMU(), Magnetometer(), GPS()]
