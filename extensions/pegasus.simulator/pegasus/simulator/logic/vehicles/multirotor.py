@@ -119,7 +119,7 @@ class Multirotor(Vehicle):
 
         # Get the desired forces to apply to the vehicle
         forces_z, _, rolling_moment = self._thrusters.update(self._state, dt)
-
+    
         # Apply force to each rotor
         for i in range(4):
 
