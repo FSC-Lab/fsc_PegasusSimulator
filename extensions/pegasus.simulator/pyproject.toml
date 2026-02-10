@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pegasus-simulator" # Must match the key in tool.uv.sources
+version = "5.1.0"
+description = "Extension providing framework interfaces for simulating aerial vehicles."
+authors = [
+  { name = "Marcelo Jacinto", email = "marcelo.jacinto@tecnico.ulisboa.pt" },
+]
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.11"
+dependencies = ["numpy", "pymavlink", "scipy", "pyyaml"]
+
+[project.scripts]
+pegasus-patch = "scripts.patch_isaac:main"
+
+[tool.setuptools]
+packages = ["pegasus.simulator", "scripts"]

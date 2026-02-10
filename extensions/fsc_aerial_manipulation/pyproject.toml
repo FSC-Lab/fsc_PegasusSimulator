@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fsc-aerial-manipulation"
+version = "0.1.0"
+description = "FSC aerial manipulation modules built on top of Pegasus Simulator / Isaac Sim."
+authors = [{ name = "Longhao Qian", email = "longhao.qian@mail.utoronot.ca" }]
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.11"
+dependencies = [
+  "numpy",
+  "scipy",
+  "pyyaml",
+  "pegasus-simulator", # uv will resolve this via the workspace
+]
+
+[tool.setuptools]
+packages = { find = { exclude = ["tests*", "docs*"] } }
