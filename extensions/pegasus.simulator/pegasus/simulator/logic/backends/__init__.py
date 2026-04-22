@@ -10,6 +10,7 @@ from .ardupilot_mavlink_backend import ArduPilotMavlinkBackend, ArduPilotMavlink
 # Check if the ROS2 package is installed
 try:
     from .ros2_backend import ROS2Backend
+    from .body_wrench_ros2_backend import BodyWrenchROS2Backend
 except:
     import carb
-    carb.log_warn("ROS2 package not installed. ROS2Backend will not be available")
+    carb.log_warn("ROS2 package not installed. ROS2Backend / BodyWrenchROS2Backend will not be available")
