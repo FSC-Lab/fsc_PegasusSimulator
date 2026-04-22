@@ -101,7 +101,11 @@ class Vehicle(Robot):
         # Spawn the vehicle primitive in the world's stage
         self._prim = define_prim(self._stage_prefix, "Xform")
         self._prim = get_prim_at_path(self._stage_prefix)
-        self._prim.GetReferences().AddReference(self._usd_file)
+        if self._usd_file:
+            self._prim.GetReferences().AddReference(self._usd_file)
+
+        # Hook for subclasses to build physics prims before Robot.__init__ runs
+        self._init_prim(self._prim)
 
         # Initialize the "Robot" class
         # Note: we need to change the rotation to have qw first, because NVidia
@@ -219,6 +223,12 @@ class Vehicle(Robot):
     """
     Operations
     """
+
+    def _init_prim(self, prim):
+        """Hook called after the root Xform is created but before Robot.__init__.
+        Override in subclasses to build physics prims programmatically instead of
+        loading a USD file."""
+        pass
 
     def sim_start_stop(self, event):
         """
