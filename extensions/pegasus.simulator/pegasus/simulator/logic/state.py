@@ -49,6 +49,9 @@ class State:
         # The linear acceleration [ax, ay, az] of the vehicle's body frame relative to the inertial frame, expressed in the inertial frame
         self.linear_acceleration = np.array([0.0, 0.0, 0.0])
 
+        # The linear jerk [ax_dot, ay_dot, az_dot] expressed in the inertial frame
+        self.linear_jerk = np.array([0.0, 0.0, 0.0])
+
     def get_position_ned(self):
         """
         Method that, assuming that a state is encoded in ENU standard (the Isaac Sim standard), converts the position
