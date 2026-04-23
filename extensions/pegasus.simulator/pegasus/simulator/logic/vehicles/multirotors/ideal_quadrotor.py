@@ -1,51 +1,60 @@
 """
 | File: ideal_quadrotor.py
 | Description: Ideal quadrotor (single-link floating-base articulation, no external
-|   USD) driven by a direct body-wrench command [F_z, tau_x, tau_y, tau_z].
+|   USD) driven by thrust f [N] and moment M [N·m] from fsc_geometric_controller.
 |
 |   PhysX requires ArticulationRootAPI and RigidBodyAPI to be on the SAME prim for
 |   a single-link floating articulation.  The collision box is a scaled Cube child.
 |   Because the physics prim is at stage_prefix (not stage_prefix/body), update_state
 |   is overridden and apply_force/torque are called with body_part="".
+|
+|   ROS 2 interface (via GeometricControllerROS2Backend):
+|     Subscribes: ~control/output/f (Float64), ~control/output/M (Vector3Stamped)
+|     Publishes:  ~state/pose, ~state/twist, ~state/twist_inertial,
+|                 ~state/accel, ~state/jerk
 """
 
 import numpy as np
 from scipy.spatial.transform import Rotation
-from pxr import Gf, UsdGeom, UsdPhysics
+from pxr import Gf, UsdGeom, UsdPhysics, PhysxSchema
 
 from pegasus.simulator.logic.vehicles.vehicle import Vehicle, get_world_transform_xform
 from pegasus.simulator.logic.dynamics import LinearDrag
-from pegasus.simulator.logic.backends.body_wrench_ros2_backend import BodyWrenchROS2Backend
+from pegasus.simulator.logic.backends.geometric_controller_ros2_backend import GeometricControllerROS2Backend
 
 
 class IdealQuadrotorConfig:
     """Configuration for the ideal quadrotor.
 
-    Control input is [F_z, tau_x, tau_y, tau_z] in the body-fixed FLU frame.
+    Control input is [f, M_x, M_y, M_z] from fsc_geometric_controller
+    (collective thrust along body z, and body-frame moments).
     """
 
     def __init__(self):
         self.stage_prefix = "ideal_quadrotor"
 
         # Rigid-body properties
-        self.mass    = 1.5                              # kg
-        self.inertia = (0.0347563, 0.0458929, 0.0977)  # (Ixx, Iyy, Izz)  kg·m²
+        self.mass    = 1.806                           # kg
+        self.inertia = (0.016, 0.017, 0.024)  # (Ixx, Iyy, Izz)  kg·m²
 
         # Visual/collision box  (length × width × height) in metres
         self.box_size = (0.47, 0.47, 0.11)
 
         # Aerodynamic drag
-        self.drag = LinearDrag([0.0, 0.0, 0.0])
+        self.drag = LinearDrag([0.0, 0.0, 0.0]) # no drag
+
+        # Set to True to disable PhysX gravity on this body (useful for attitude-only testing)
+        self.disable_gravity: bool = False
 
         # Sensors / backends
         self.sensors           = []
         self.graphical_sensors = []
         self.graphs            = []
-        self.backends          = [BodyWrenchROS2Backend(vehicle_id=0)]
+        self.backends          = [GeometricControllerROS2Backend(vehicle_id=0)]
 
 
 class IdealQuadrotor(Vehicle):
-    """Ideal quadrotor driven by a direct body-wrench [F_z, tau_x, tau_y, tau_z].
+    """Ideal quadrotor driven by [f, M] from fsc_geometric_controller.
 
     PhysX 5 recognises a single-body floating articulation only when
     ArticulationRootAPI and RigidBodyAPI are applied to the *same* prim.
@@ -64,9 +73,10 @@ class IdealQuadrotor(Vehicle):
             config = IdealQuadrotorConfig()
 
         # Must be stored before super().__init__ because _init_prim() runs inside it.
-        self._mass     = config.mass
-        self._inertia  = config.inertia
-        self._box_size = config.box_size
+        self._mass           = config.mass
+        self._inertia        = config.inertia
+        self._box_size       = config.box_size
+        self._disable_gravity = config.disable_gravity
 
         super().__init__(
             stage_prefix=config.stage_prefix,
@@ -101,6 +111,9 @@ class IdealQuadrotor(Vehicle):
         mass_api = UsdPhysics.MassAPI.Apply(root_prim)
         mass_api.GetMassAttr().Set(float(self._mass))
         mass_api.GetDiagonalInertiaAttr().Set(Gf.Vec3f(*self._inertia))
+
+        if self._disable_gravity:
+            PhysxSchema.PhysxRigidBodyAPI.Apply(root_prim).GetDisableGravityAttr().Set(True)
 
         # Collision + visual shape as a child cube
         col_path = self._stage_prefix + "/collision"
@@ -148,8 +161,10 @@ class IdealQuadrotor(Vehicle):
     # ------------------------------------------------------------------
 
     def update(self, dt: float):
-        """Read [F_z, tau_x, tau_y, tau_z] from the backend and apply to body.
+        """Read [f, M_x, M_y, M_z] from fsc_geometric_controller and apply to body.
 
+        f   – collective thrust [N] along body z (control/output/f)
+        M   – body-frame moments [N·m]            (control/output/M)
         body_part="" resolves to self._stage_prefix (the physics prim itself).
         """
         if self._backends:
@@ -157,13 +172,13 @@ class IdealQuadrotor(Vehicle):
         else:
             cmd = [0.0, 0.0, 0.0, 0.0]
 
-        F_z   = float(cmd[0]) if len(cmd) > 0 else 0.0
-        tau_x = float(cmd[1]) if len(cmd) > 1 else 0.0
-        tau_y = float(cmd[2]) if len(cmd) > 2 else 0.0
-        tau_z = float(cmd[3]) if len(cmd) > 3 else 0.0
+        f   = float(cmd[0]) if len(cmd) > 0 else 0.0
+        M_x = float(cmd[1]) if len(cmd) > 1 else 0.0
+        M_y = float(cmd[2]) if len(cmd) > 2 else 0.0
+        M_z = float(cmd[3]) if len(cmd) > 3 else 0.0
 
-        self.apply_force( [0.0, 0.0, F_z],       body_part="")
-        self.apply_torque([tau_x, tau_y, tau_z],  body_part="")
+        self.apply_force( [0.0, 0.0, f],      body_part="")
+        self.apply_torque([M_x, M_y, M_z],    body_part="")
 
         drag = self._drag.update(self._state, dt)
         self.apply_force(drag.tolist(),            body_part="")

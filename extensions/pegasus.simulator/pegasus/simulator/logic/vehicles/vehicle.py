@@ -330,15 +330,23 @@ class Vehicle(Robot):
         rotation_quat_real = rotation_quat.GetReal()
         rotation_quat_img = rotation_quat.GetImaginary()
 
-        # Get the angular velocity of the vehicle expressed in the body frame of reference
+        # Get the angular velocity of the vehicle expressed in the inertial frame of reference
         ang_vel = self.get_dc_interface().get_rigid_body_angular_velocity(body)
 
         # The linear velocity [x_dot, y_dot, z_dot] of the vehicle's body frame expressed in the inertial frame of reference
         linear_vel = self.get_dc_interface().get_rigid_body_linear_velocity(body)
 
-        # Get the linear acceleration of the body relative to the inertial frame, expressed in the inertial frame
-        # Note: we must do this approximation, since the Isaac sim does not output the acceleration of the rigid body directly
-        linear_acceleration = (np.array(linear_vel) - self._state.linear_velocity) / dt
+        prev_linear_velocity = self._state.linear_velocity.copy()
+        prev_linear_acceleration = self._state.linear_acceleration.copy()
+
+        # Get the linear acceleration and jerk of the body relative to the inertial frame, expressed in the inertial frame.
+        # Note: we must do this approximation, since Isaac Sim does not output the acceleration or jerk of the rigid body directly.
+        if dt > 0.0:
+            linear_acceleration = (np.array(linear_vel) - prev_linear_velocity) / dt
+            linear_jerk = (linear_acceleration - prev_linear_acceleration) / dt
+        else:
+            linear_acceleration = np.zeros(3)
+            linear_jerk = np.zeros(3)
 
         # Update the state variable X = [x,y,z]
         self._state.position = np.array(pose.p)
@@ -351,17 +359,20 @@ class Vehicle(Robot):
         # Express the velocity of the vehicle in the inertial frame X_dot = [x_dot, y_dot, z_dot]
         self._state.linear_velocity = np.array(linear_vel)
 
-        # The linear velocity V =[u,v,w] of the vehicle's body frame expressed in the body frame of reference
-        # Note that: x_dot = Rot * V
-        self._state.linear_body_velocity = (
-            Rotation.from_quat(self._state.attitude).inv().apply(self._state.linear_velocity)
-        )
+        # Cache R_BI = R_IB^{-1} to avoid computing the rotation twice
+        R_BI = Rotation.from_quat(self._state.attitude).inv()
 
-        # omega = [p,q,r]
-        self._state.angular_velocity = Rotation.from_quat(self._state.attitude).inv().apply(np.array(ang_vel))
+        # The linear velocity V =[u,v,w] of the vehicle's body frame expressed in the body frame of reference
+        self._state.linear_body_velocity = R_BI.apply(self._state.linear_velocity)
+
+        # omega = [p,q,r] expressed in body frame of reference
+        self._state.angular_velocity = R_BI.apply(np.array(ang_vel))
 
         # The acceleration of the vehicle expressed in the inertial frame X_ddot = [x_ddot, y_ddot, z_ddot]
         self._state.linear_acceleration = linear_acceleration
+
+        # The jerk of the vehicle expressed in the inertial frame X_dddot = [x_dddot, y_dddot, z_dddot]
+        self._state.linear_jerk = linear_jerk
 
     def start(self):
         """

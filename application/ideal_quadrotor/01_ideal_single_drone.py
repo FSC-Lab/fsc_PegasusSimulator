@@ -4,15 +4,18 @@
 | Author: Longhao Qian (longhao.qian@mail.utoronto.ca)
 | License: BSD-3-Clause
 | Copyright (c) 2025, Longhao Qian. All rights reserved.
-| Description: Single ideal quadrotor simulation.  The vehicle is a box rigid body
-|   with user-specified mass and inertia.  Commands are sent over ROS 2 as a
-|   geometry_msgs/WrenchStamped on  drone0/control/wrench
-|     wrench.force.z        – lift force  [N]  in body FLU frame
-|     wrench.torque.{x,y,z} – body torques [N·m]
+| Description: Single ideal quadrotor simulation interfacing with fsc_geometric_controller.
 |
-|   State is published on:
-|     drone0/state/pose   (geometry_msgs/PoseStamped)   – ENU position + attitude
-|     drone0/state/twist  (geometry_msgs/TwistStamped)  – body-FLU velocity
+|   Commands received from the geometric controller on:
+|     drone0/control/output/f  (std_msgs/Float64)            – thrust [N] along body z
+|     drone0/control/output/M  (geometry_msgs/Vector3Stamped)– body moments [N·m]
+|
+|   State published to the geometric controller on:
+|     drone0/state/pose           (geometry_msgs/PoseStamped)   – ENU position + attitude
+|     drone0/state/twist          (geometry_msgs/TwistStamped)  – body angular velocity
+|     drone0/state/twist_inertial (geometry_msgs/TwistStamped)  – inertial linear velocity
+|     drone0/state/accel          (geometry_msgs/AccelStamped)  – inertial linear acceleration
+|     drone0/state/jerk           (geometry_msgs/Vector3Stamped)– inertial linear jerk
 """
 
 # Must be instantiated before any Isaac Sim / Pegasus imports
@@ -34,7 +37,7 @@ from pegasus.simulator.logic.vehicles.multirotors.ideal_quadrotor import (
     IdealQuadrotor,
     IdealQuadrotorConfig,
 )
-from pegasus.simulator.logic.backends.body_wrench_ros2_backend import BodyWrenchROS2Backend
+from pegasus.simulator.logic.backends.geometric_controller_ros2_backend import GeometricControllerROS2Backend
 
 from fsc_aerial_manipulation.utils import add_dome_lighting
 
@@ -63,9 +66,9 @@ class IdealDroneSim:
 
         # Vehicle configuration
         cfg = IdealQuadrotorConfig()
-        cfg.backends = [BodyWrenchROS2Backend(vehicle_id=0)]
+        cfg.backends = [GeometricControllerROS2Backend(vehicle_id=0)]
 
-        # Spawn on the ground: z = half box height (0.11 / 2 = 0.055 m)
+        # Spawn on the ground (z = half box height = 0.055 m)
         IdealQuadrotor(
             vehicle_id=0,
             init_pos=(0.0, 0.0, 0.055),
