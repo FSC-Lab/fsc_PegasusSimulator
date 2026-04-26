@@ -52,7 +52,7 @@ class MultirotorConfig:
         # The backends for actually sending commands to the vehicle. By default use mavlink (with default mavlink configurations)
         # [Can be None as well, if we do not desired to use PX4 with this simulated vehicle]. It can also be a ROS2 backend
         # or your own custom Backend implementation!
-        self.backends = [PX4MavlinkBackend(config=PX4MavlinkBackendConfig())]
+        self.backends = None  # None → Multirotor.__init__ creates the default PX4 backend
 
 
 class Multirotor(Vehicle):
@@ -67,7 +67,7 @@ class Multirotor(Vehicle):
         # Spawning pose of the vehicle
         init_pos=(0.0, 0.0, 0.07),
         init_orientation=(0.0, 0.0, 0.0, 1.0),
-        config=MultirotorConfig(),
+        config=None,
     ):
         """Initializes the multirotor object
 
@@ -77,8 +77,14 @@ class Multirotor(Vehicle):
             vehicle_id (int): The id to be used for the vehicle. Defaults to 0.
             init_pos (list): The initial position of the vehicle in the inertial frame (in ENU convention). Defaults to [0.0, 0.0, 0.07].
             init_orientation (list): The initial orientation of the vehicle in quaternion [qx, qy, qz, qw]. Defaults to [0.0, 0.0, 0.0, 1.0].
-            config (MultirotorConfig, optional): Defaults to MultirotorConfig().
+            config (MultirotorConfig, optional): Defaults to a fresh MultirotorConfig().
         """
+        if config is None:
+            config = MultirotorConfig()
+
+        # Resolve default backend here so each vehicle gets its own fresh instance
+        if config.backends is None:
+            config.backends = [PX4MavlinkBackend(config=PX4MavlinkBackendConfig())]
 
         # 1. Initiate the Vehicle object itself
         super().__init__(stage_prefix, usd_file, init_pos, init_orientation, config.sensors, config.graphical_sensors, config.graphs, config.backends)
