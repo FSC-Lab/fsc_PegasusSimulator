@@ -9,9 +9,6 @@ from pegasus.simulator.logic.dynamics import LinearDrag
 from pegasus.simulator.logic.thrusters import QuadraticThrustCurve
 from pegasus.simulator.logic.sensors import Barometer, IMU, Magnetometer, GPS
 
-# Mavlink interface
-from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
-
 # Get the location of the IRIS asset
 from pegasus.simulator.params import ROBOTS
 
@@ -35,10 +32,12 @@ class IrisConfig(MultirotorConfig):
         # The backends for actually sending commands to the vehicle. By default use mavlink (with default mavlink configurations)
         # [Can be None as well, if we do not desired to use PX4 with this simulated vehicle]. It can also be a ROS2 backend
         # or your own custom Backend implementation!
-        self.backends = [PX4MavlinkBackend(config=PX4MavlinkBackendConfig())]
+        self.backends = None  # None → Multirotor.__init__ creates a fresh PX4 backend
 
 class Iris(Multirotor):
 
-    def __init__(self, id: int, world, init_pos=[0.0, 0.0, 0.07], init_orientation=[0.0, 0.0, 0.0, 1.0], config=IrisConfig()):
+    def __init__(self, id: int, world, init_pos=[0.0, 0.0, 0.07], init_orientation=[0.0, 0.0, 0.0, 1.0], config=None):
+        if config is None:
+            config = IrisConfig()
         super().__init__(config.stage_prefix, config.usd_file, id, world, init_pos, init_orientation, config=config)
 
