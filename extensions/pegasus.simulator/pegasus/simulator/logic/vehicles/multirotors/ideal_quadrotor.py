@@ -20,7 +20,7 @@ from pxr import Gf, UsdGeom, UsdPhysics, PhysxSchema
 
 from pegasus.simulator.logic.vehicles.vehicle import Vehicle, get_world_transform_xform
 from pegasus.simulator.logic.dynamics import LinearDrag
-from pegasus.simulator.logic.backends.geometric_controller_ros2_backend import GeometricControllerROS2Backend
+
 
 
 class IdealQuadrotorConfig:
@@ -50,7 +50,7 @@ class IdealQuadrotorConfig:
         self.sensors           = []
         self.graphical_sensors = []
         self.graphs            = []
-        self.backends          = [GeometricControllerROS2Backend(vehicle_id=0)]
+        self.backends          = []   # caller must supply a backend
 
 
 class IdealQuadrotor(Vehicle):
