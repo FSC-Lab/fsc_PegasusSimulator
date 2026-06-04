@@ -46,6 +46,7 @@ def spawn_rotorcraft_with_mavlink(
         "px4_autolaunch": False,
         "px4_dir": px4_path,
         "px4_vehicle_model": px4_default_airframe,
+        "enable_lockstep": False,   # avoid HIL lockstep deadlock when DDS offboard traffic stalls PX4 a cycle
     })
 
     # ----- ROS 2 backend -----

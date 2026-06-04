@@ -7,6 +7,7 @@
 __all__ = ["PX4MavlinkBackend", "PX4MavlinkBackendConfig"]
 
 import carb
+import os
 import time
 import numpy as np
 from pymavlink import mavutil
@@ -307,6 +308,15 @@ class PX4MavlinkBackend(Backend):
 
         # Auxiliar variables for setting the u_time when sending sensor data to px4
         self._current_utime: int = 0
+
+        # --- Optional HIL debug logging (enable with `export PEGASUS_HIL_DEBUG=1`)
+        # Logs what PX4 emits on the HIL link (armed state, raw controls and the
+        # scaled rotor references) so the actuator path can be inspected at
+        # runtime - useful when bringing up offboard / direct_actuator control.
+        self._hil_debug: bool = os.environ.get("PEGASUS_HIL_DEBUG", "0") == "1"
+        self._hil_dbg_last_log: float = 0.0
+        self._hil_dbg_actuator_msgs: int = 0
+        self._hil_dbg_total_msgs: int = 0
 
     def update_sensor(self, sensor_type: str, data):
         """Method that is used as callback for the vehicle for every iteration that a sensor produces new data. 
@@ -639,6 +649,9 @@ class PX4MavlinkBackend(Backend):
             # If a message was received
             if msg is not None:
 
+                if self._hil_debug:
+                    self._hil_dbg_total_msgs += 1
+
                 # Check if it is of the type that contains actuator controls
                 if msg.id == mavutil.mavlink.MAVLINK_MSG_ID_HIL_ACTUATOR_CONTROLS:
 
@@ -833,9 +846,14 @@ class PX4MavlinkBackend(Backend):
             flags: Ignored argument
         """
 
-        # Check if the vehicle is armed - Note: here we have to add a +1 since the code for armed is 128, but
-        # pymavlink is return 129 (the end of the buffer)
-        if mode == mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED + 1:
+        # Check if the vehicle is armed.
+        # NOTE: PX4 sets mode = mode_flag_custom(1) | mode_flag_armed(128) when armed
+        # (see SimulatorMavlink::actuator_controls_from_outputs), so armed == 129.
+        # The bitmask test below is equivalent to the old `== 129` check but is
+        # robust to PX4 setting any additional MAV_MODE_FLAG bits.
+        armed = bool(mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+
+        if armed:
 
             carb.log_info("Parsing control input")
 
@@ -845,6 +863,20 @@ class PX4MavlinkBackend(Backend):
         # If the vehicle is not armed, do not rotate the propellers
         else:
             self._rotor_data.zero_input_reference()
+
+        # --- Optional HIL debug logging (see PEGASUS_HIL_DEBUG) ------------------
+        if self._hil_debug:
+            self._hil_dbg_actuator_msgs += 1
+            now = time.time()
+            if (now - self._hil_dbg_last_log) > 0.5:
+                self._hil_dbg_last_log = now
+                ctrl = [round(float(c), 3) for c in controls[:8]]
+                ref = [round(float(r), 1) for r in self._rotor_data.input_reference]
+                carb.log_warn(
+                    f"[HIL_DBG vid={self._vehicle_id}] mode={mode} armed={armed} "
+                    f"flags={flags} act_msgs={self._hil_dbg_actuator_msgs} "
+                    f"total_msgs={self._hil_dbg_total_msgs} controls[:8]={ctrl} rotor_ref={ref}"
+                )
 
     def update_graphical_sensor(self, sensor_type: str, data):
         """Method that when implemented, should handle the receival of graphical sensor data
