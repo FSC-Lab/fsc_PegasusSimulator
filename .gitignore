@@ -44,3 +44,9 @@ log/
 
 # scripts
 ./config/**
+
+# RL training artifacts
+ppo_hover_tensorboard/
+checkpoints/
+ppo_hover_policy_final.zip
+*_tensorboard/

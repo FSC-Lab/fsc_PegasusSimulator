@@ -1,0 +1,55 @@
+# Declarative uv project for the fsc_PegasusSimulator RL stack.
+#
+# This pins the *validated* stack (see application/rl/README.md "Validated stack"):
+#   Isaac Sim 5.1.0  <->  Python 3.11  <->  NVIDIA driver 580.x
+#
+# Isaac Sim 5.1 wheels are cp311, so this project is Python 3.11 only. Isaac Sim
+# is consumed as the pip-installed `isaacsim` package from NVIDIA's index — no
+# standalone zip, no ISAACSIM_PATH, no PYTHONPATH patching.
+#
+# Setup:   uv sync
+# Run:     uv run python application/rl/train_hover_ppo.py
+# Test:    uv run pytest tests/test_api_smoke.py
+#
+# NOTE: clear PYTHONPATH when running so a sourced ROS distro (e.g. /opt/ros/jazzy,
+# Python 3.12) does not leak into this Python 3.11 venv. The RL app needs no ROS.
+
+[project]
+name = "fsc-pegasussimulator"
+version = "0.1.0"
+description = "RL hover stack on Pegasus Simulator / Isaac Sim, packaged with uv."
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "isaacsim[all,extscache]==5.1.0.0",
+    "pegasus-simulator",
+    "fsc-aerial-manipulation",
+    "stable-baselines3>=2.8,<2.9",
+    "gymnasium>=1.0",
+    "tensorboard>=2.20",
+    "scipy",
+    "numpy",
+    # Isaac Sim's replicator extensions import shapely at boot; declare it so kit
+    # never shells out to its (pip-less) bundled env to auto-install it.
+    "shapely",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+# Treat the repo root as a virtual workspace root: install the dependencies but do
+# not try to build/install the root itself as a package.
+[tool.uv]
+package = false
+index-strategy = "unsafe-best-match"
+# unsafe-best-match across the PyPI + NVIDIA indexes otherwise drifts some
+# transitive deps onto alpha releases; hold them on the last stable line.
+constraint-dependencies = ["lxml<7", "stable-baselines3<2.9"]
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+
+# The two in-repo extensions are installed editable from their subdirectories.
+[tool.uv.sources]
+pegasus-simulator = { path = "extensions/pegasus.simulator", editable = true }
+fsc-aerial-manipulation = { path = "extensions/fsc_aerial_manipulation", editable = true }

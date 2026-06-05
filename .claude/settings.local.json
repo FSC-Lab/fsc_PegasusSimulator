@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "/home/hs293go/python-scripts/optimal_quad_control_RL"
+    ]
+  }
+}

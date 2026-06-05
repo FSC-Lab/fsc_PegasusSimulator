@@ -60,19 +60,39 @@ class PatchIsaacSimKitApp(egg_info):
             f.writelines(lines)
 
 
+    @staticmethod
+    def _locate_isaacsim():
+        """Best-effort resolution of the Isaac Sim install root.
+
+        Prefers ISAACSIM_PATH (standalone zip layout); otherwise falls back to
+        the pip-installed `isaacsim` package directory. Returns None if neither
+        is available (e.g. during isolated builds before deps are installed)."""
+        isaacsim_path = os.environ.get("ISAACSIM_PATH")
+        if isaacsim_path:
+            return isaacsim_path
+        try:
+            import isaacsim
+            return os.path.dirname(isaacsim.__file__)
+        except Exception:
+            return None
+
     def run(self):
         egg_info.run(self)
 
-        # Get the ISAACSIM_PATH environment variable
-        isaacsim_path = os.environ.get("ISAACSIM_PATH")
-
-        # Check if the ISAACSIM_PATH environment variable is set
+        # Resolve the Isaac Sim install root (env var or pip package).
+        isaacsim_path = self._locate_isaacsim()
         if not isaacsim_path:
-            # If the environment variable is not set, raise an error
-            raise RuntimeError("ISAACSIM_PATH is not set! Please set it to the path of your Isaac Sim installation. Read the installation instructions at https://pegasussimulator.github.io/PegasusSimulator/source/setup/installation.html")
+            print("PatchIsaacSimKitApp: Isaac Sim not found (ISAACSIM_PATH unset and "
+                  "`isaacsim` not importable); skipping kit-app patch.")
+            return
 
         # Check if the isaacsim.exp.base.kit file contains the "isaacsim.replicator.agent.core" extension
         isaac_sim_kit_app = os.path.join(isaacsim_path, "apps", "isaacsim.exp.base.kit")
+
+        if not os.path.isfile(isaac_sim_kit_app):
+            print(f"PatchIsaacSimKitApp: kit file not found at {isaac_sim_kit_app}; "
+                  "skipping kit-app patch.")
+            return
 
         if not self.has_extension(isaac_sim_kit_app, "isaacsim.replicator.agent.core"):
             self.add_extensions(isaac_sim_kit_app, ["\"isaacsim.replicator.agent.core\" = {}"], marker_line="[dependencies]")

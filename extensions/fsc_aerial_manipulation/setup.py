@@ -4,13 +4,7 @@
 | License: BSD-3-Clause. Copyright (c) 2025, Longhao Qian. All rights reserved.
 | Description: File that defines the installation requirements for this python package.
 """
-import os
 from setuptools import setup, find_packages
-
-if not os.environ.get("ISAACSIM_PATH"):
-    raise RuntimeError(
-        "ISAACSIM_PATH is not set. Export ISAACSIM_PATH=/path/to/isaacsim before installing."
-    )
 
 INSTALL_REQUIRES = [
     "numpy",
