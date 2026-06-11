@@ -1,0 +1,28 @@
+GLOBAL POLYNOMIAL FITS — MT_2216_10x4.5
+=======================================================
+Fit is weighted across all step runs.
+force_origin = False
+
+Channel : rpm  (degree 1)
+  R²       : 0.997617
+  Equation : rpm(x) = 70.3939·x + 2991.67
+  Coefficients (x^0 → x^1):
+    x^0  :  2991.6738
+    x^1  :  70.393946
+
+Channel : thrust  (degree 2)
+  R²       : 0.998322
+  Equation : thrust(x) = 0.000679454·x^2 + 0.0679155·x + 1.00322
+  Coefficients (x^0 → x^2):
+    x^0  :  1.0032218
+    x^1  :  0.067915518
+    x^2  :  0.00067945358
+
+Channel : torque  (degree 3)
+  R²       : 0.998049
+  Equation : torque(x) =  - 1.23061e-07·x^3 + 2.73244e-05·x^2 + 0.000448811·x + 0.0225743
+  Coefficients (x^0 → x^3):
+    x^0  :  0.022574264
+    x^1  :  0.00044881122
+    x^2  :  2.7324447e-05
+    x^3  :  -1.2306105e-07

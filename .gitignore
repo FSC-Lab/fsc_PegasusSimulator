@@ -43,4 +43,6 @@ install/
 log/
 
 # scripts
-./config/**
+./config/**temp/
+.claude/
+temp/

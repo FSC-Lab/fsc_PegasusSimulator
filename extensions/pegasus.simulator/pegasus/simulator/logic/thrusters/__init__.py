@@ -5,3 +5,4 @@
 
 from .thrust_curve import ThrustCurve
 from .quadratic_thrust_curve import QuadraticThrustCurve
+from .mt2216_quadrotor_thrust_curve import MT2216ThrustCurve
