@@ -9,6 +9,16 @@
 |
 | Model equation (from bench test report MT_2216_10x4.5_report.pdf):
 |     dRPM/dt = λ(RPM, RPM_rate) · (RPM_cmd − RPM)
+| 
+| Parameter data is mostly in this file, even rate constant lambda which is coded 
+| as a function. The source data of the lag is in a csv, in the 
+| propeller data folder located in the same folder as this file. Note that the 
+| backend_zero_pos parameter is based off the throttle% to RPM curve for proper
+| scaling, but will not run at this RPM at 0% throttle in actuality.   
+|
+| The values for RPM scaling are defined through _DEFAULT_SCALING (rad/s at full 
+| throttle) and _DEFAULT_ZERO_POS (rad/s at idle, but should be set to y-intercept
+| of experimental RPM curve). 
 |
 | Source data:  extensions/.../thrusters/propeller_data/MT_2216_10x4p5/
 """
@@ -38,8 +48,8 @@ _RPM_A1 = 70.394     # RPM gained per percent throttle,
 #   controls ∈ [0, 1]   →   throttle [%] = controls × 100
 #   throttle_pct = (input_ref − _DEFAULT_ZERO_POS) / _DEFAULT_SCALING × 100
 # ---------------------------------------------------------------------------
-_DEFAULT_SCALING  = 1000.0   # rad/s per unit control  (PX4MavlinkBackendConfig default)
-_DEFAULT_ZERO_POS = 100.0    # rad/s at armed / 0 % throttle (PX4MavlinkBackendConfig default)
+_DEFAULT_SCALING  = 1050.45   # rad/s per unit control  (PX4MavlinkBackendConfig default)
+_DEFAULT_ZERO_POS = 313.27    # rad/s at armed / 0 % throttle (PX4MavlinkBackendConfig default)
 
 # ---------------------------------------------------------------------------
 # Lambda bivariate polynomial — lag_filtered variant
@@ -67,7 +77,7 @@ _LAMBDA_MIN = 1.0  # s⁻¹
 
 class MT2216ThrustCurve(ThrustCurve):
     """
-    Physics-based thrust curve for the T-Motor MT2216 / 10×4.5 propeller.
+    Data-based thrust curve for the T-Motor MT2216 / 10×4.5 propeller.
 
     Replaces the instantaneous QuadraticThrustCurve with a two-stage model:
       · Static map  : throttle % → steady-state RPM (measured polynomial)
@@ -76,11 +86,6 @@ class MT2216ThrustCurve(ThrustCurve):
 
     Each of the four rotors is integrated independently with its own state
     (current RPM and previous-step RPM for the finite-difference rate estimate).
-
-    Interface is identical to QuadraticThrustCurve:
-        set_input_reference(input_reference)  — target ω [rad/s] per rotor
-        update(state, dt)                     — returns (forces, velocities, moment)
-        .force / .velocity / .rolling_moment / .rot_dir  properties
     """
 
     def __init__(self, config: dict = {}):
@@ -197,17 +202,17 @@ class MT2216ThrustCurve(ThrustCurve):
 
             # 4. Bandwidth coefficient λ from bivariate polynomial surface
             lam = self._compute_lambda(rpm_current, rpm_rate)
-            lam = 13; # average value for testing
+            lam = 12; # average value for testing
 
             # 5. First-order lag integration (Euler forward step)
             #    dRPM/dt = λ · (RPM_cmd − RPM)
-            rpm_next  = rpm_current + dt * lam * (rpm_cmd - rpm_current)
+            rpm_next  = rpm_current + dt * lam * (rpm_cmd - rpm_current) # raw RPM
             omega_next = np.clip(
                 rpm_next * _RPM_TO_RADS,
                 self.min_rotor_velocity[i],
                 self.max_rotor_velocity[i],
-            )
-            rpm_next = omega_next * _RADS_TO_RPM
+            ) # clipped omega
+            rpm_next = omega_next * _RADS_TO_RPM # clipped RPM
 
             # Advance state
             self._rpm_prev[i] = rpm_current
