@@ -102,6 +102,12 @@ This simulation framework is an open-source effort, started by me, Marcelo Jacin
 
 .. toctree::
    :maxdepth: 2
+   :caption: FSC Lab Fork
+
+   source/fsc_lab/index
+
+.. toctree::
+   :maxdepth: 2
    :caption: Source API
 
    source/api/index

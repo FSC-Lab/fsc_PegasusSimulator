@@ -1,4 +1,7 @@
 ## Fsc Aerial Manipulation-Pegasus-PX4 SITL Launch Scripts
+
+> Full per-script documentation (what each one launches, tmux layout, prerequisites) lives in the Sphinx docs under `docs/source/fsc_lab/index.md`.
+
 ### 1. How to launch the simulation:
 ```
 {$PATH_TO_FSC_PEGASUS}/scripts/start_single_drone_sitl.sh {CONFIG_FILE_NAME}
