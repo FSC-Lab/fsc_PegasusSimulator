@@ -1,0 +1,21 @@
+1. similiar to /home/longhao/source/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/slung_load/slung_load_utils.py
+
+I need a slung load with variable length cable. To do this, you could use prismatic joint and 2 rigid rods to simulate the motor run system. the force in the prismatic joint is the cable tension.
+
+2.  Use ros2 pluging, establish the ros2 node. Use 2 packages as reference:
+/home/longhao/source/fsc_autopilot_ws/src/AK40-10-ROS2-Bridge/CLAUDE.md
+and 
+/home/longhao/source/fsc_autopilot_ws/src/fsc_ak_actuator_ground_control/CLAUDE.md
+
+AK40-10 ros2 bridge is the real ros node. The simulation in Isaace sim should mimic the AK40-10 motor
+3. The simulation takes primsatic joint force and output joint pos and vel (cable pos and vel)
+
+4. create a ros2 package in source/fsc_autopilot called AK40-10-issac-sim-emulator to mimic the ak_motor_driver cable_control.launch.py in AK40-10 ros2 bridge. the ros2 topology is: 
+
+Isaac-sim-(joint force/vel/pos)->emulator-(cable speed, torque cmd)->other control nodes
+
+make sure the modes are simulated correctly
+
+5. Need to make sure that the ros2 launch ak_motor_driver cable_torque_ctrl.launch.py can correctly control the cable length in external mode.
+
+6. make sure that the topics can be correctly interrapted by the ground station.
