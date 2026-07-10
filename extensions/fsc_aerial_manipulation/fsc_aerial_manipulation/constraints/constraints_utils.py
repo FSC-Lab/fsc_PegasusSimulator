@@ -38,3 +38,40 @@ def create_spherical_joint(stage, joint_path, body0_path, body1_path, local_pos0
     joint.CreateLocalPos0Attr(Gf.Vec3f(*map(float, local_pos0)))
     joint.CreateLocalPos1Attr(Gf.Vec3f(*map(float, local_pos1)))
     return joint_path
+
+# ----------------------------
+# Create prismatic joint (no DriveAPI - pure kinematic translation constraint)
+# ----------------------------
+def create_prismatic_joint(
+    stage,
+    joint_path,
+    body0_path,
+    body1_path,
+    local_pos0,
+    local_pos1,
+    axis="X",
+    lower_limit=None,
+    upper_limit=None,
+):
+    # body_path is the path where rigid-body propertiy is defined.
+    if (body0_path is None) or (body1_path is None):
+        raise RuntimeError(f"[Joint] body path is None for {joint_path}: body0={body0_path}, body1={body1_path}")
+
+    p0 = stage.GetPrimAtPath(body0_path)
+    p1 = stage.GetPrimAtPath(body1_path)
+    if (not p0) or (not p0.IsValid()) or (not p1) or (not p1.IsValid()):
+            raise RuntimeError(f"[Joint] Invalid prim path for {joint_path}: body0={body0_path}, body1={body1_path}")
+
+    joint = UsdPhysics.PrismaticJoint.Define(stage, Sdf.Path(joint_path))
+    joint.CreateBody0Rel().SetTargets([Sdf.Path(body0_path)])
+    joint.CreateBody1Rel().SetTargets([Sdf.Path(body1_path)])
+    joint.CreateLocalPos0Attr(Gf.Vec3f(*map(float, local_pos0)))
+    joint.CreateLocalPos1Attr(Gf.Vec3f(*map(float, local_pos1)))
+    joint.CreateAxisAttr(axis)
+    # Limits are optional: an unset/unbounded limit lets the rod pair telescope freely,
+    # matching the winch travel being governed by the ROS2 backend/control law instead.
+    if lower_limit is not None:
+        joint.CreateLowerLimitAttr(float(lower_limit))
+    if upper_limit is not None:
+        joint.CreateUpperLimitAttr(float(upper_limit))
+    return joint_path

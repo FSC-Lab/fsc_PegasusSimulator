@@ -8,11 +8,13 @@
 from .lighting_utils import add_dome_lighting
 from .rotation_utils import quat_from_x_deg, quat_from_y_deg, quat_from_z_deg
 from .rigid_body_backend_utils import ROS2RigidBodyBackend
+from .cable_winch_backend_utils import ROS2CableWinchBackend
 
 __all__ = [
     "add_dome_lighting",
     "quat_from_x_deg",
     "quat_from_y_deg",
     "quat_from_z_deg",
-    "ROS2RigidBodyBackend"
+    "ROS2RigidBodyBackend",
+    "ROS2CableWinchBackend"
 ]
