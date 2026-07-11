@@ -86,6 +86,9 @@ echo 'Starting PX4 SITL [uav_0] (instance 0, TCP 4560)...'
 PX4_SYS_AUTOSTART=10016 PX4_SIM_MODEL=iris PX4_UXRCE_DDS_NS=uav_0 \
   ./build/px4_sitl_default/bin/px4 -i 0 -w \"$W0\"
 echo 'PX4 uav_0 exited.'
+# Without this, a crash/close in any one pane leaves the rest lingering, burning CPU
+# indefinitely (nothing else tells them the scenario is over) - kill the other panes too.
+tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.3\" 2>/dev/null
 exec bash
 " C-m
 
@@ -98,6 +101,7 @@ echo 'Starting PX4 SITL [uav_1] (instance 1, TCP 4561)...'
 PX4_SYS_AUTOSTART=10016 PX4_SIM_MODEL=iris PX4_UXRCE_DDS_NS=uav_1 \
   ./build/px4_sitl_default/bin/px4 -i 1 -w \"$W1\"
 echo 'PX4 uav_1 exited.'
+tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.3\" 2>/dev/null
 exec bash
 " C-m
 
@@ -110,6 +114,7 @@ echo 'Starting PX4 SITL [uav_2] (instance 2, TCP 4562)...'
 PX4_SYS_AUTOSTART=10016 PX4_SIM_MODEL=iris PX4_UXRCE_DDS_NS=uav_2 \
   ./build/px4_sitl_default/bin/px4 -i 2 -w \"$W2\"
 echo 'PX4 uav_2 exited.'
+tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.3\" 2>/dev/null
 exec bash
 " C-m
 
@@ -122,6 +127,7 @@ sleep $DELAY
 echo 'Launching Isaac Sim with Pegasus multi-vehicle script...'
 \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
+tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null
 exec bash
 " C-m
 

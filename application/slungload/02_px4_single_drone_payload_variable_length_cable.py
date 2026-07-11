@@ -13,13 +13,18 @@
 """
 
 # Imports to start Isaac Sim from this script
+import os
+import time
 import carb
 from isaacsim import SimulationApp
 
 # Start Isaac Sim's simulation environment
 # Note: this simulation app must be instantiated right after the SimulationApp import, otherwise the simulator will crash
 # as this is the object that will load all the extensions and load the actual simulator.
-simulation_app = SimulationApp({"headless": False})
+# PEGASUS_HEADLESS=1 runs with no GUI/rendering (e.g. to A/B real-time performance against a
+# rendered run, or for CI) - defaults to a normal windowed run, unchanged from before.
+_headless = os.environ.get("PEGASUS_HEADLESS", "0").lower() in ("1", "true", "yes")
+simulation_app = SimulationApp({"headless": _headless})
 
 # -----------------------------------
 # The actual script should start here
@@ -35,6 +40,7 @@ from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
 from fsc_aerial_manipulation.rotorcraft import spawn_rotorcraft_with_mavlink
 from fsc_aerial_manipulation.utils import add_dome_lighting
 from fsc_aerial_manipulation.utils import ROS2CableWinchBackend
+from fsc_aerial_manipulation.utils import ROS2RigidBodyBackend
 import fsc_aerial_manipulation.slung_load as sl
 import fsc_aerial_manipulation.constraints as con
 
@@ -52,7 +58,12 @@ class FscDroneSim:
                  rod_a_mass: float=0.02,
                  rod_b_mass: float=0.02,
                  payload_size: float=0.08,
-                 payload_mass: float=0.3,
+                 # rod_b_mass + payload_mass = 0.565 kg to match cable_torque_ctrl_node's deployed
+                 # "mass" parameter (AK40-10-ROS2-Bridge/config/cable_torque_ctrl_params.yaml) -
+                 # its gravity feedforward/L1-adaptive nominal values are computed from that param
+                 # at startup and can't be corrected after the fact, so the sim's actual load must
+                 # match it instead (see fsc_PegasusSimulator/CLAUDE.md's WIP section).
+                 payload_mass: float=0.545,
                  uav_hook_local=(0.0, 0.0, 0.0),
                  max_cable_extension: float=2.0,
         ):
@@ -113,6 +124,17 @@ class FscDroneSim:
             enable_collision=True,
         )
 
+        # Publish the payload's own pose (not covered by the drone's TF broadcast, and not
+        # something ROS2CableWinchBackend does - it only exposes the winch joint's extension/
+        # force, not the payload rigid body's world pose) so it's visible for external monitoring
+        # (e.g. scripts/view_drone_3d.sh's RViz view - add a Pose display on payload/state/pose).
+        config_ros2_rigid_body = {
+            "topic_prefix": "payload",
+            "pub_state": True,
+            "sub_force": False,
+        }
+        self.payload_backend = ROS2RigidBodyBackend(world=self.world, payload_path=payload_path, config=config_ros2_rigid_body)
+
         # 3) Create the winch: two rods (rod_a: drone-side, rod_b: payload-side), coaxial along X,
         #    flush end-to-end and together spanning cable_length, centered on the drone/payload midpoint.
         self.rod_a_length = 0.5 * cable_length
@@ -171,11 +193,12 @@ class FscDroneSim:
             local_pos0=rod_a_end_to_rod_b,
             local_pos1=rod_b_end_to_rod_a,
             axis="X",
-            # TEMP DIAGNOSTIC: symmetric limits so the flush starting position (translation=0)
-            # isn't sitting exactly on a limit boundary. If this alone makes the winch respond
-            # to commanded force, the original lower_limit=0.0 (== the starting translation) was
-            # locking the joint. Revisit the "can't retract past flush" limit design afterward.
-            lower_limit=-max_cable_extension,
+            # Cable can't retract past flush (rod_b sliding back past rod_a's far end), but is
+            # free to extend up to max_cable_extension. (A symmetric ±max_cable_extension range
+            # was tried as a diagnostic for the force/extension bug below, but that turned out to
+            # be a red herring - see CLAUDE.md's WIP section - so this is back to the physically
+            # correct one-sided limit.)
+            lower_limit=0.0,
             upper_limit=max_cable_extension,
         )
 
@@ -225,11 +248,48 @@ class FscDroneSim:
         # Start the simulation
         self.timeline.play()
 
+        # PEGASUS_PROFILE=1: print wall-clock step-time stats every ~250 steps, to profile
+        # where per-step time actually goes (physics + PX4 lockstep + rendering + our own
+        # ROS2CableWinchBackend callback, timed separately - see cable_winch_backend_utils.py)
+        # rather than guessing from the published-topic rate alone.
+        profile = os.environ.get("PEGASUS_PROFILE", "0").lower() in ("1", "true", "yes")
+        step_count = 0
+        step_time_sum = 0.0
+        step_time_max = 0.0
+
+        # No window to show when headless - skip the render pass entirely rather than paying
+        # for it anyway. Profiling (2026-07-11) showed world.step(render=True) costing ~22ms/call
+        # even headless (Isaac Sim's GPU usage stayed high headless too - "no window" isn't "no
+        # rendering work"), well above our own ROS2CableWinchBackend callback's ~1ms - render is
+        # the dominant per-step cost, worth testing render=False against directly.
+        render_flag = not _headless
+
         # The "infinite" loop
         while simulation_app.is_running() and not self.stop_sim:
 
             # Update the UI of the app and perform the physics step
-            self.world.step(render=True)
+            if profile:
+                t0 = time.perf_counter()
+                self.world.step(render=render_flag)
+                dt_wall = time.perf_counter() - t0
+                step_count += 1
+                step_time_sum += dt_wall
+                step_time_max = max(step_time_max, dt_wall)
+                if step_count % 250 == 0:
+                    avg_hz = step_count / step_time_sum if step_time_sum > 0 else 0.0
+                    print(
+                        f"[PROFILE] world.step(render={render_flag}): n={step_count} "
+                        f"avg={step_time_sum/step_count*1000:.2f}ms ({avg_hz:.1f} Hz) "
+                        f"max={step_time_max*1000:.2f}ms "
+                        f"winch_cb_avg={self.winch_backend.profile_avg_ms():.3f}ms "
+                        f"winch_cb_max={self.winch_backend.profile_max_ms():.3f}ms",
+                        flush=True,
+                    )
+                    step_count = 0
+                    step_time_sum = 0.0
+                    step_time_max = 0.0
+            else:
+                self.world.step(render=render_flag)
 
         # Cleanup and stop
         carb.log_warn("FscDroneSim Simulation App is closing.")
@@ -247,7 +307,7 @@ def main():
         rod_a_mass=0.02,
         rod_b_mass=0.02,
         payload_size=0.08,
-        payload_mass=0.3,
+        payload_mass=0.545,
     )
 
     # Run the application loop

@@ -8,6 +8,8 @@
 |   to a real/emulated AK40-10 cable-actuator ROS2 driver.
 """
 
+import time
+
 import numpy as np
 
 import carb
@@ -78,8 +80,29 @@ class ROS2CableWinchBackend(Backend):
         self._commanded_force = 0.0
         self._extension_offset = None  # captured lazily on first physics step / after reset()
 
+        # Profiling only (see PEGASUS_PROFILE in the application script) - wall-clock time spent
+        # in update_sim_state() itself, to separate "our own callback cost" from "everything else
+        # in a physics step" (PhysX solve, PX4 lockstep, rendering) when investigating why this
+        # scenario doesn't sustain its nominal physics_dt in real time.
+        self._profile_sum_s = 0.0
+        self._profile_max_s = 0.0
+        self._profile_count = 0
+
         self._world = world
         self._world.add_physics_callback(f"cable_winch_{winch_id}_state", self.update_sim_state)
+
+    def profile_avg_ms(self) -> float:
+        """Average update_sim_state() wall-clock time (ms) since the last call, then resets."""
+        avg = (self._profile_sum_s / self._profile_count * 1000.0) if self._profile_count else 0.0
+        self._profile_sum_s = 0.0
+        self._profile_count = 0
+        return avg
+
+    def profile_max_ms(self) -> float:
+        """Max update_sim_state() wall-clock time (ms) since the last call, then resets."""
+        m = self._profile_max_s * 1000.0
+        self._profile_max_s = 0.0
+        return m
 
     def initialize_publishers(self):
         if self._pub_state:
@@ -113,8 +136,18 @@ class ROS2CableWinchBackend(Backend):
     def update_sim_state(self, dt: float):
         """
         Method called at every physics step: reads the current cable extension/velocity from the
-        two winch rods, publishes them, and applies the last commanded tension force.
+        two winch rods, publishes them, and applies the last commanded tension force. Thin timing
+        wrapper around _update_sim_state_impl() for PEGASUS_PROFILE (see application script).
+        """
+        t0 = time.perf_counter()
+        self._update_sim_state_impl(dt)
+        elapsed = time.perf_counter() - t0
+        self._profile_sum_s += elapsed
+        self._profile_count += 1
+        self._profile_max_s = max(self._profile_max_s, elapsed)
 
+    def _update_sim_state_impl(self, dt: float):
+        """
         Args:
             dt (float): The time elapsed between the previous and current function calls (s).
         """
@@ -165,15 +198,6 @@ class ROS2CableWinchBackend(Backend):
         force_local_a = (self._commanded_force * np.array(self._axis_local)).tolist()
         dc.apply_body_force(rb_b, carb._carb.Float3(force_local_b), carb._carb.Float3([0.0, 0.0, 0.0]), False)
         dc.apply_body_force(rb_a, carb._carb.Float3(force_local_a), carb._carb.Float3([0.0, 0.0, 0.0]), False)
-
-        self._debug_tick = getattr(self, "_debug_tick", 0) + 1
-        if self._debug_tick % 60 == 0:
-            print(
-                f"[ROS2CableWinchBackend DEBUG] rb_a={rb_a} rb_b={rb_b} "
-                f"pos_a={pos_a} pos_b={pos_b} axis_world={axis_world} "
-                f"raw_extension={raw_extension:.6f} extension={extension:.6f} "
-                f"commanded_force={self._commanded_force} force_local_a={force_local_a}"
-            )
 
     def update_state(self, extension: float, extension_vel: float):
         """

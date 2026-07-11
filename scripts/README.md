@@ -25,3 +25,14 @@ FSC_PEGASUS_ROOT="/home/longhao/source/fsc_PegasusSimulator"
 ```
 ISAAC_PY="$HOME/isaacsim/python_r_fsc.sh"
 ```
+
+### 3. If a scenario crashes or closes uncleanly
+
+The launch scripts kill each other's tmux pane (PX4 <-> Isaac Sim) when either side exits, so a
+lingering half shouldn't normally happen. If it does anyway (e.g. a process started outside these
+scripts), scan for and clean it up with:
+```
+./scripts/kill_stale_sim_processes.sh          # scan, ask before killing
+./scripts/kill_stale_sim_processes.sh -y        # scan, kill without asking
+./scripts/kill_stale_sim_processes.sh --dry-run # scan only
+```

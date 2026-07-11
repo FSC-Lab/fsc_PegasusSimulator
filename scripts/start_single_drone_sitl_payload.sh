@@ -60,6 +60,11 @@ PX4_UXRCE_DDS_NS=$PX4_UXRCE_DDS_NS make px4_sitl $PX4_TARGET \
   mavlink_udp_remote:=$MAVLINK_REMOTE \
   mavlink_udp_port:=$MAVLINK_PORT
 echo 'PX4 SITL exited.'
+# PX4 has no way to know Isaac Sim is gone (or vice versa) - without this, whichever
+# side is still alive lingers indefinitely burning CPU. Kill the sibling pane so a dead
+# half never outlives the other; this pane's own shell (exec bash below) stays up so you
+# can still read PX4's final output.
+tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null
 exec bash
 "
 
@@ -69,6 +74,7 @@ sleep $DELAY
 echo 'Launching Isaac Sim...'
 \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
+tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash
 "
 
