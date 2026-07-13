@@ -8,8 +8,66 @@ This is the FSC Lab fork of [Pegasus Simulator](https://github.com/PegasusSimula
   - `pegasus/simulator/logic/vehicles/` — vehicle base class (`vehicle.py`), `multirotor.py`, and concrete models under `multirotors/` (e.g. `iris.py`, `ideal_quadrotor.py`)
   - `pegasus/simulator/logic/backends/` — control/telemetry backends (PX4 mavlink, ArduPilot mavlink, ROS 2)
 - `extensions/fsc_aerial_manipulation/` — FSC Lab's own library: `aerodynamics/`, `constraints/`, `robotic_arm/`, `rotorcraft/`, `slung_load/`, `utils/`
-- `application/` — runnable example scripts, one subfolder per scenario: `ideal_quadrotor/`, `px4_base/`, `slungload/` (`aerial_manipulation/` and `VTOL/` exist but are currently empty placeholders)
+- `application/` — runnable example scripts, one subfolder per scenario: `ideal_quadrotor/`, `px4_base/`, `slungload/`, `robotic_arm/` (X650 quadrotor + arm, see below). `aerial_manipulation/` and `VTOL/` still exist as empty placeholders
 - `examples/`, `docs/`, `scripts/`, `tools/` — upstream examples, docs, and Isaac Sim tooling
+
+## Aerial manipulator (X650 quadrotor + robotic arm)
+
+Merged from teammate Shiqi Gao's `dev_robotic_arm` branch (`380d297`, 2026-07-10) — a quadrotor
+("X650" airframe) with a 4-DOF robotic arm rigidly coupled to it, controlled by a Python port of
+a validated MATLAB whole-body geometric+impedance controller. **Pure ROS 2, no PX4 SITL** (a
+different architecture from every scenario under `application/slungload/`, which are all PX4
+SITL + mavlink).
+
+- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/x650_vehicle.py` —
+  `VehicleMod(Vehicle)`, thin subclass adding `usd_prim_path`/configurable `body_path` for a
+  custom USD asset.
+- `.../robotic_arm/x650_multirotor.py` — `MultirotorMod(BaseMultirotor, VehicleMod)`, adds
+  configurable rotor prim paths/joint names. Compliant with this file's vehicle-model checklist
+  below (`config=None` resolved inside `__init__`, no mutable defaults).
+- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/x650_rotorcraft_utils.py`
+  — spawn helper (`spawn_rotorcraft_with_mavlink` with `px4_primary`/`include_px4` toggles for
+  ROS2-only vs PX4-primary operation) plus asset-authoring helpers used to extract USD-derived
+  mass/inertia/rotor-position params for the controller.
+- `.../robotic_arm/controller.py` (1008 lines) — `MatlabController` (thrust + body torque +
+  joint torques from the full coupled airframe+arm dynamics, not the arm alone) wrapped in a
+  ROS2 `MatlabControllerNode`: subscribes `state/pose`/`state/twist*`/`joint_states`, publishes
+  `rotor_velocity_command`/`joint_torque_cmd`. Run standalone (`python3 controller.py --ros-args
+  -r __ns:=/uav_0`), not launched by the Isaac Sim script itself.
+- `.../robotic_arm/postprocessor.py` (1227 lines) — **not** a runtime component. A one-shot
+  OnShape→USD asset-cleanup pipeline (reparent/rename/realign frames/set mass+inertia/add
+  colliders/apply joint drives/export), meant to be pasted into Isaac Sim's Script Editor after
+  CAD import, not imported by anything else.
+- `.../robotic_arm/__init__.py` is empty — import submodules directly
+  (`fsc_aerial_manipulation.robotic_arm.x650_vehicle`, etc.), not via the package.
+- `application/robotic_arm/01_aerial_manipulator_hover.py` (761 lines) — the working demo
+  entrypoint: DC-interface joint control, ROS2 pub/sub for torque/rotor commands, arm
+  position-hold→effort-control handoff.
+- `application/robotic_arm/22_x650_with_manip_minimal.py` (109 lines) — **currently broken as
+  committed**: inserts `application/robotic_arm/utils/` onto `sys.path` to import
+  `x650_rotorcraft_utils`, but that `utils/` directory doesn't exist in this repo (line 30), and
+  it hardcodes an absolute USD path under `/home/fsc-jupiter/...` (line 73) rather than
+  resolving relative to `FSC_PEGASUS_ROOT`. Don't use as a template until fixed — `01` is the
+  correct reference.
+- `scripts/start_aerial_manipulator.sh` + `scripts/config/shiqi_machine.conf` — follows the
+  same `common_config.sh`/`terminal_utils.sh`/per-machine-config convention as the slung-load
+  launch scripts. 2-pane tmux (`aerial_manip` session): pane 0 runs the Isaac Sim demo, pane 1
+  sources ROS 2 and runs `controller.py` under `--ros-args -r __ns:=/uav_0` after an 8s delay
+  (long enough for Isaac to spawn the vehicle first). Both panes tee to `/tmp/aerial_manip_isaac.log`
+  / `/tmp/aerial_manip_controller.log` for post-mortem grepping. Note the script's own header
+  comment still references an old filename (`aerial_manipulator_ee_impedance.py`) that no longer
+  exists — the actual entrypoint it launches is `01_aerial_manipulator_hover.py`; the comment is
+  just stale, not a real path.
+
+**Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
+below — `x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
+deviates):
+- `controller.py:774` — ROS2 node name is hardcoded (`"matlab_aerial_manipulator_controller"`),
+  not parameterized by vehicle/uav id. Fine for today's single-vehicle demo; will collide if two
+  arm instances ever run in the same ROS2 domain.
+- `controller.py:961` — `rclpy.init(args=args)` is called bare, not wrapped in try/except per
+  this repo's "already initialised is not an error" rule; will raise if `rclpy` is already
+  initialized by a host process.
 
 ## Work in progress: variable-length slung-load cable + AK40-10 Isaac Sim emulator
 
