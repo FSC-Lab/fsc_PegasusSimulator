@@ -44,3 +44,10 @@ log/
 
 # scripts
 ./config/**
+
+# FSC Lab custom USD assets - large binaries (100s of MB), not meant to go into git. Distributed
+# out-of-band (currently Google Drive) instead. Deliberately scoped to our own extension/app
+# asset dirs only - does NOT touch the upstream extensions/pegasus.simulator/.../assets/ tree,
+# whose small demo USD files stay tracked in git as-is.
+extensions/fsc_aerial_manipulation/**/assets/
+application/robotic_arm/assets/

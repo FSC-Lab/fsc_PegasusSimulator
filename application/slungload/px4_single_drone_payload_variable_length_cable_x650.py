@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 """
-| File: 02_px4_single_drone_payload_variable_length_cable.py
+| File: px4_single_drone_payload_variable_length_cable_x650.py
 | Author: Longhao Qian (longhao.qian@mail.utoronto.ca)
 | License: BSD-3-Clause
-| Copyright (c) 2025, Longhao Qian. All rights reserved.
-| Description: Single quadrotor with a variable-length slung-load cable SITL simulation
-|   environment. The cable is modeled as two rigid rods (rod_a: proximal/drone-side,
-|   rod_b: distal/payload-side) connected by a prismatic joint, whose constraint force is
-|   the cable tension and whose position/velocity are the cable extension/extension rate.
-|   A ROS2CableWinchBackend exposes this joint's state and accepts a commanded tension force,
-|   for bridging to a real/emulated AK40-10 cable-actuator ROS2 driver.
+| Copyright (c) 2026, Longhao Qian. All rights reserved.
+| Description: Single X650 quadrotor with a variable-length slung-load cable SITL simulation
+|   environment. Same winch mechanism as
+|   02_px4_single_drone_payload_variable_length_cable.py (two rigid rods - rod_a: proximal/
+|   drone-side, rod_b: distal/payload-side - connected by a prismatic joint, whose constraint
+|   force is the cable tension and whose position/velocity are the cable extension/extension
+|   rate, exposed over ROS2 via ROS2CableWinchBackend), just with the X650 asset (x650.usd) and
+|   its MN4014+15x5" thrust-curve calibration swapped in for Iris - same pattern as
+|   application/slungload/px4_single_drone_payload_x650.py's swap for the fixed-length cable.
 """
 
 # Imports to start Isaac Sim from this script
@@ -36,8 +38,10 @@ import omni.usd
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
 from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
-# Import FSC aerial manipulation lib
-from fsc_aerial_manipulation.rotorcraft import spawn_rotorcraft_with_mavlink
+# Bare X650 airframe spawn helper (stock Multirotor, MN4014+15x5" bench-test-calibrated
+# thrust curve) - same helper application/slungload/px4_single_drone_payload_x650.py and
+# application/px4_base/03_px4_single_drone_x650.py use.
+from fsc_aerial_manipulation.rotorcraft.x650_bare_frame_utils import spawn_x650_with_mavlink
 from fsc_aerial_manipulation.utils import add_dome_lighting
 from fsc_aerial_manipulation.utils import ROS2CableWinchBackend
 from fsc_aerial_manipulation.utils import ROS2RigidBodyBackend
@@ -48,7 +52,7 @@ import fsc_aerial_manipulation.constraints as con
 
 class FscDroneSim:
     """
-    Single quadrotor + variable-length winch cable + payload SITL simulation environment.
+    Single X650 quadrotor + variable-length winch cable + payload SITL simulation environment.
     """
 
     def __init__(self,
@@ -63,7 +67,10 @@ class FscDroneSim:
                  # "mass" parameter (AK40-10-ROS2-Bridge/config/cable_torque_ctrl_params.yaml) -
                  # its gravity feedforward/L1-adaptive nominal values are computed from that param
                  # at startup and can't be corrected after the fact, so the sim's actual load must
-                 # match it instead (see fsc_PegasusSimulator/CLAUDE.md's WIP section).
+                 # match it instead (see fsc_PegasusSimulator/CLAUDE.md's WIP section). This
+                 # constraint comes from the AK40-10 cable controller, not the carrying vehicle,
+                 # so it's unchanged from the Iris version - X650's much larger thrust margin
+                 # (~3.46:1 at 3.5kg) easily carries the same payload.
                  payload_mass: float=0.545,
                  uav_hook_local=(0.0, 0.0, 0.0),
                  max_cable_extension: float=2.0,
@@ -98,8 +105,8 @@ class FscDroneSim:
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
 
-        # 1) Create the vehicle
-        self.drone_path = spawn_rotorcraft_with_mavlink(
+        # 1) Create the vehicle (X650 airframe, MN4014+15x5" thrust curve)
+        self.drone_path = spawn_x650_with_mavlink(
             px4_path=self.pg.px4_path,
             px4_default_airframe=self.pg.px4_default_airframe,
             vehicle_id=0,
@@ -194,11 +201,8 @@ class FscDroneSim:
             local_pos0=rod_a_end_to_rod_b,
             local_pos1=rod_b_end_to_rod_a,
             axis="X",
-            # Cable can't retract past flush (rod_b sliding back past rod_a's far end), but is
-            # free to extend up to max_cable_extension. (A symmetric ±max_cable_extension range
-            # was tried as a diagnostic for the force/extension bug below, but that turned out to
-            # be a red herring - see CLAUDE.md's WIP section - so this is back to the physically
-            # correct one-sided limit.)
+            # Cable can't retract past flush, but is free to extend up to max_cable_extension -
+            # same physically-correct one-sided limit as the Iris version.
             lower_limit=0.0,
             upper_limit=max_cable_extension,
         )
@@ -276,10 +280,8 @@ class FscDroneSim:
         step_time_max = 0.0
 
         # No window to show when headless - skip the render pass entirely rather than paying
-        # for it anyway. Profiling (2026-07-11) showed world.step(render=True) costing ~22ms/call
-        # even headless (Isaac Sim's GPU usage stayed high headless too - "no window" isn't "no
-        # rendering work"), well above our own ROS2CableWinchBackend callback's ~1ms - render is
-        # the dominant per-step cost, worth testing render=False against directly.
+        # for it anyway (see fsc_PegasusSimulator/CLAUDE.md's real-time-factor investigation -
+        # this is now the permanent default across all scenarios, not just the one it was found in).
         render_flag = not _headless
 
         # The "infinite" loop

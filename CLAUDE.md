@@ -19,6 +19,11 @@ a validated MATLAB whole-body geometric+impedance controller. **Pure ROS 2, no P
 different architecture from every scenario under `application/slungload/`, which are all PX4
 SITL + mavlink).
 
+**Related paths — treat these three as one unit for future work on this scenario:**
+- `application/robotic_arm/`
+- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/`
+- `scripts/start_aerial_manipulator.sh`
+
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/x650_vehicle.py` —
   `VehicleMod(Vehicle)`, thin subclass adding `usd_prim_path`/configurable `body_path` for a
   custom USD asset.
@@ -68,6 +73,178 @@ deviates):
 - `controller.py:961` — `rclpy.init(args=args)` is called bare, not wrapped in try/except per
   this repo's "already initialised is not an error" rule; will raise if `rclpy` is already
   initialized by a host process.
+
+## X650 airframe reused standalone (no arm) for a stock PX4 slung-load scenario
+
+`application/slungload/px4_single_drone_payload_x650.py` (new) — a **different, simpler** use
+of the X650 platform than the aerial-manipulator scenario above: the bare X650 airframe (no
+robotic arm) flown as a plain PX4 SITL quadrotor via the **stock** `pegasus.simulator`
+`Multirotor`/`MultirotorConfig` (no `VehicleMod`/`MultirotorMod` subclassing), carrying a
+fixed-length slung-load payload — structurally the same pattern as
+`application/slungload/01_px4_single_drone_payload.py`, just with the X650 asset swapped in for
+Iris. This works unmodified because the new asset follows the stock naming convention the
+`Multirotor` class hardcodes (`/body`, `/rotor0`..`/rotor3`, `joint0`..`joint3`).
+
+- Asset: `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/x650.usd`
+  (~54MB) — **not** the same file as the aerial-manipulator's
+  `AM_realign.usda` (~255MB) in that same `assets/` directory; `x650.usd` is the bare frame only
+  (stock rotor/body naming, no arm links), while `AM_realign.usda` is the full quadrotor+arm
+  asset with the custom prim structure `VehicleMod`/`MultirotorMod` are built to reference. Both
+  are covered by the `extensions/fsc_aerial_manipulation/**/assets/` `.gitignore` rule (large
+  binaries, distributed out-of-band via Google Drive, not committed).
+- PX4 is the primary backend here (motor authority), with a ROS2 backend for state-publishing
+  only (`sub_control: False`) — same division as every other `application/slungload/` scenario,
+  and the opposite of the aerial-manipulator scenario (pure ROS2, no PX4).
+- Note the filename breaks the `NN_px4_...` numbering convention every other file in
+  `application/slungload/` follows (`01_`..`06_`) — not fixed here since it wasn't asked for,
+  just worth knowing if you're looking for it by number.
+
+**MN4014+15x5" thrust-curve calibration applied (2026-07-13)** — `x650.usd`'s structure was
+verified first (standalone `pxr` inspection, no Isaac Sim launch needed — see
+`docs/propeller_testing/` below for the bench data this uses): naming/articulation pattern
+matches the known-working `iris.usd` exactly (`ArticulationRootAPI` on the non-rigid-body root
+Xform, `RigidBodyAPI` on `/body` and each `/rotorN`), motor-to-motor **diagonal** spacing is
+exactly 650.3mm (matches the "X650" name), and rotor0/1 (`prop_clock` mesh) vs. rotor2/3
+(`prop_counter_clock` mesh) are correctly paired by diagonal for yaw balance. Vehicle mass was
+then set to 3.5kg total (`/x650/body/body`'s authored mass 1.467kg → 3.416kg, so the 4 rotors'
+existing ~0.021kg each bring the total to exactly 3.5kg; diagonal inertia scaled by the same
+mass ratio, ×2.328, assuming similar mass distribution — refine later if the extra ~2kg is
+known to sit somewhere specific like batteries far from the CG). A backup
+(`x650.usd.bak_before_mass_edit`) was left alongside the asset since it's gitignored with no
+git history to fall back on.
+
+The bench-fit throttle→RPM/thrust/torque polynomials (`docs/propeller_testing/` below) were
+then converted into the sim's actual thrust-curve interface:
+- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/x650_bare_frame_utils.py`
+  (new) — factored `spawn_x650_with_mavlink(...)` (bare X650, stock `Multirotor`) out of
+  `px4_single_drone_payload_x650.py` into a shared module so the calibration constants live in
+  exactly one place; that script now just imports it. Distinct from the arm-scenario's
+  `x650_rotorcraft_utils.py` (spawns the *arm-equipped* X650 on `MultirotorMod`/`VehicleMod` —
+  different USD asset, different vehicle classes).
+- Calibration derivation: `QuadraticThrustCurve` takes rotor angular velocity **ω (rad/s)** and
+  computes `force = rotor_constant·ω²`, yaw torque via `rolling_moment_coefficient·ω²·rot_dir` —
+  an instantaneous model, **no rotor spin-up lag** (`quadratic_thrust_curve.py`'s own comment:
+  "no delay introduced"). Per explicit project decision, the report's Step 3 λ (spin-up
+  bandwidth) model is **not** applied — there's nowhere in the current thrust-curve interface for
+  it to plug into, and only the Step 1 throttle→RPM/thrust/torque polynomials are used.
+  - `rpm(x) = 70.2593x + 781.49` (x = throttle 0–100%) is linear, and so is PX4MavlinkBackend's
+    own `omega = (controls + input_offset)·input_scaling + zero_position_armed` map (`controls`
+    = PX4's normalized 0–1 motor command) — so the two were matched **exactly** (not just at the
+    endpoints): `zero_position_armed = rpm(0)·2π/60 = 81.8374 rad/s`,
+    `input_scaling = (rpm(100) − rpm(0))·2π/60 = 735.7537 rad/s`, replacing the stock
+    Iris-tuned defaults (`input_scaling=1000`, `zero_position_armed=100`).
+  - `thrust(x)`/`torque(x)` are quadratic/cubic in throttle, but `QuadraticThrustCurve` only
+    supports a pure `k·ω²` form (through the origin) — so `rotor_constant`/
+    `rolling_moment_coefficient` were derived via an **unweighted zero-intercept least-squares
+    fit**, sampling the bench polynomials across throttle 0–100% and regressing against ω²
+    (no raw CSV data available in this repo to fit directly against ω² — see the propeller
+    bench-test section below). Fit quality: thrust RMSE 0.31N (range 0–30N, ~1%), torque RMSE
+    0.0136 N·m (range 0.01–0.52 N·m, ~2.6%) — the fixed-through-origin sim model can't capture
+    the bench fit's small nonzero throttle=0 intercept, but tracks it closely elsewhere.
+  - **Bug found on first live test (2026-07-13) and fixed**: props were visibly spinning on the
+    ground before arming. Root cause: `QuadraticThrustCurve.update()` applies `min_rotor_velocity`
+    as an **unconditional floor** (`velocity = np.maximum(min_rotor_velocity, ...)`), regardless
+    of armed state — unlike `zero_position_armed` (`PX4MavlinkBackend`), which is correctly
+    armed-gated (`handle_control()` calls `zero_input_reference()`, forcing true zero, whenever
+    PX4 reports disarmed). The first version of this calibration reused the same 81.8374 rad/s
+    idle value for *both* — forcing rotors to spin at that floor even disarmed. Fixed by
+    splitting them: `zero_position_armed=81.8374` (unchanged, armed-idle-throttle behavior is
+    physically correct and desired) but `min_rotor_velocity=0.0` (matches stock Iris's own
+    default, restores the sim's existing disarmed→true-zero gating). Not a curve-fitting
+    problem — the bench-measured nonzero idle RPM at 0% throttle is real hardware behavior and
+    didn't need to be altered; it was being applied through the wrong one of two similar-looking
+    but differently-gated parameters.
+  - Resulting total max thrust (4 rotors) ≈118.8N against the new 3.5kg vehicle weight (34.3N)
+    → thrust/weight ≈3.46:1, a physically sensible margin for this motor class.
+- `application/px4_base/03_px4_single_drone_x650.py` (new) — bare X650 (no payload), mirrors
+  `01_px4_single_drone.py`'s exact structure with Iris swapped for the calibrated X650 via
+  `spawn_x650_with_mavlink`. **`01_px4_single_drone.py`/Iris itself was not touched** by any of
+  this work — verified via `git status` on the upstream `extensions/pegasus.simulator/` tree.
+- `scripts/start_x650_single_drone.sh` (new) — mirrors `start_single_drone_sitl.sh` exactly,
+  pointing at the new bare-drone script above.
+- Note: `scripts/start_single_drone_sitl_payload_x650.sh` already existed (pre-dates this
+  session's work, launches the payload variant) but lacks the tmux kill-pane cleanup pattern the
+  other launch scripts in this repo have — not fixed here since it wasn't asked for.
+
+**X650 variable-length cable variant added and confirmed working (2026-07-13)** —
+`application/slungload/px4_single_drone_payload_variable_length_cable_x650.py` (new): same
+winch mechanism as `02_px4_single_drone_payload_variable_length_cable.py` (rod_a/rod_b +
+prismatic joint + `ROS2CableWinchBackend`), with Iris swapped for the calibrated X650 via
+`spawn_x650_with_mavlink` — same swap pattern as the fixed-length-cable variant above. Payload
+mass (`rod_b_mass+payload_mass=0.565kg`) is unchanged from the Iris version — that constraint
+comes from `cable_torque_ctrl_node`'s deployed mass param (AK40-10 side), not the carrying
+vehicle's lift capacity, so it doesn't change just because X650 has far more thrust margin.
+`scripts/start_single_drone_sitl_payload_variable_cable_x650.sh` (new) mirrors
+`start_single_drone_sitl_payload_variable_cable.sh` exactly, pointing at the new script. Neither
+the Iris variant nor its launch script were touched (verified via `git status`).
+
+## Propeller bench test data (`docs/propeller_testing/`)
+
+Real motor+propeller bench-test reports — reference data, not code. `MN_4014_15x5` is now wired
+into the X650 vehicle's thrust curve (see below); `MT_2216_10x4.5` is not yet connected to any
+vehicle config.
+
+- `MT_2216_10x4.5_report.pdf` (generated 2026-06-05) and `MN_4014_15x5_report.pdf` (generated
+  2026-07-12) — one report per motor+prop combo tested.
+- Each report gives: **Step 1** polynomial fits of throttle → RPM/Thrust/Torque (with R², all
+  ≥0.996 in both reports); **Step 2** throttle→RPM response lag lookup tables; **Step 3** a
+  first-order RPM-response bandwidth model, `RPM_rate = λ·(RPM_cmd − RPM)`, comparing 4
+  estimation variants (`direct_all`/`direct_filtered`: λ from the model equation at each sample;
+  `lag_all`/`lag_filtered`: λ = 1/τ from the measured step-response lag directly — a
+  system-ID estimate independent of the model equation).
+- The methodology page lists companion CSV outputs (`global_fit_coeffs.csv`,
+  `lag_vs_throttle_rate.csv`, `lambda_lookup_<variant>.csv`, etc.) — **only the summary PDF
+  reports are currently in this repo, not the underlying CSVs.**
+- **`MN_4014_15x5` is now connected**: its Step 1 throttle→RPM/thrust/torque polynomials are
+  applied to the X650 vehicle (not the spin-up-lag model — see the X650 section above for the
+  full derivation and the `x650_bare_frame_utils.py` calibration it produced).
+  `MT_2216_10x4.5` remains unconnected to any vehicle config as of this writing.
+
+## Normalized swing state (r, v) — JGCD paper data feed
+
+`extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/utils/swing_state_backend_utils.py`
+(new) — `ROS2SwingStateBackend`, publishes the normalized swing state `r`/`v` used by the JGCD
+paper at `~/source/JGCD-paper-longhao/main.tex` ("Robust Neural Contraction Slung Load
+Manipulation With Active Cable Length Control"), for that paper's still-empty "Simulation
+Verification" section.
+
+- **Definitions** (derived from `main.tex`, not guessed): cable vector
+  `l_c = x_q - x_p` (quadrotor position minus payload position, main.tex:793), cable length
+  `l = ||l_c||`, unit direction vector `n = l_c/l = [r; sqrt(1-r^T r)]` (`eq:def_cable_vector`) —
+  so **`r` is the horizontal (x,y) position difference between drone and payload, divided by the
+  total 3-D cable length `l`** (`r = (x_q-x_p)_{xy} / l`, i.e. the horizontal components of the
+  unit cable-direction vector `n`, equivalently) — normalized by the actual straight-line cable
+  length, **not** by the horizontal distance itself or any fixed reference length. Matches
+  main.tex's own description: "the 2-D offset of the quadrotor when the cable is 1m long"
+  (main.tex:130); dimensionless, bounded by `||r||<=1`. **Not** the winch's own
+  extension/extension-rate (already published separately by `ROS2CableWinchBackend` as
+  `cable_winch_0/state/cable`) — a different physical quantity (swing geometry vs. cable length
+  itself).
+- `v = rdot` is computed **analytically**, not by finite-differencing `r` — deliberately, per
+  this repo's own established lesson (differentiating a noisy/irregularly-sampled quantity
+  amplifies noise; see the AK40-10 emulator's `on_state_cable()` timing bug in the WIP section
+  below) and because the closed form is directly available here: `l_dot = n·(v_q-v_p)`,
+  `n_dot = ((v_q-v_p) - n*l_dot)/l` (`eq: B_property`'s `B` matrix, whose top block is `I_2`, so
+  `n_dot[:2] == rdot` by construction), `v = n_dot[:2]`. `v_q`/`v_p` come directly from
+  `dynamic_control.get_rigid_body_linear_velocity` (drone body + payload), never differentiated.
+  Verified numerically (standalone, no Isaac Sim needed): analytic `v` matches a finite-
+  difference of `r` at `dt=1e-6` to ~1e-7 agreement.
+- Publishes two `geometry_msgs/Vector3Stamped` topics (`z` always 0, `r`/`v` are 2-D):
+  `<topic_prefix>r` and `<topic_prefix>v`, default prefix `swing_state_{swing_id}/`. Follows the
+  same per-instance-unique-node-name pattern as `ROS2CableWinchBackend`
+  (`simulator_swing_state_{swing_id}`).
+- Wired into **both** variable-length-cable scenarios as `swing_state_0/{r,v}`:
+  `application/slungload/02_px4_single_drone_payload_variable_length_cable.py` (Iris) and
+  `application/slungload/px4_single_drone_payload_variable_length_cable_x650.py` (X650) — not
+  wired into the fixed-length-cable scenarios, since this is specifically paper-verification data
+  for the active-cable-length-control system.
+- **Known simplification, flagged to the user, not yet confirmed**: `x_q`/`v_q` are read from the
+  drone's own rigid-body prim (`uav_path`, the same one the spherical joint attaches to), i.e.
+  the drone's own COM — the small `uav_hook_local` cable-attachment offset from that COM is
+  ignored. This matches `main.tex`'s idealized model (`x_q` is just "quadrotor inertial
+  position," no hook offset anywhere in the math), so it's the more faithful choice of the two
+  options, not an arbitrary shortcut — but if the paper's verification actually wants the real
+  physical attachment point instead, this needs revisiting.
 
 ## Work in progress: variable-length slung-load cable + AK40-10 Isaac Sim emulator
 
