@@ -160,6 +160,14 @@ class ROS2SwingStateBackend(Backend):
         """Method that returns input reference. Not used for this backend."""
         return []
 
+    def update_state(self, state):
+        """Method that receives the vehicle's own State object each step. Not used for this
+        backend - it reads drone/payload poses/velocities directly via dynamic_control in
+        update_sim_state() instead (matching ROS2CableWinchBackend's pattern), since it needs
+        both the drone AND payload rigid bodies, not just the single vehicle this callback
+        would hand it."""
+        pass
+
     def update_sensor(self, sensor_type: str, data):
         """Method that handles sensor data. Not used for this backend."""
         pass

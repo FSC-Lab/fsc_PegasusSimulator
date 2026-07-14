@@ -17,7 +17,7 @@ from scipy.spatial.transform import Rotation
 from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorConfig
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
-from pegasus.simulator.logic.thrusters import QuadraticThrustCurve
+from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
 
 # Resolve the X650 asset (x650.usd) from the installed package so the path holds
 # regardless of where the repo lives.
@@ -27,11 +27,10 @@ X650_USD = os.path.join(os.path.dirname(__file__), "assets", "x650.usd")
 # Source: docs/propeller_testing/MN_4014_15x5_report.pdf, Step 1 polynomial fits
 # (throttle x in 0-100%): rpm(x) = 70.2593x + 781.49, thrust(x) [N] =
 # 0.0020455x^2 + 0.0960918x - 0.361797, torque(x) [N.m] = -2.94144e-07x^3 +
-# 7.56245e-05x^2 + 0.00046387x + 0.0104334. The Step 3 lambda/spin-up-lag model
-# is NOT applied here - QuadraticThrustCurve.update() is an instantaneous model
-# ("no delay introduced", see its own source) with no rotor-dynamics parameter
-# to plug it into; per-project decision, only the fitted throttle->RPM/thrust/
-# torque curve is used for now.
+# 7.56245e-05x^2 + 0.00046387x + 0.0104334. The Step 3 lambda (spin-up-lag) model
+# IS now applied via LaggedQuadraticThrustCurve (rotorcraft/lagged_thrust_curve.py,
+# X650_ROTOR_LAMBDA below) - it significantly affects the dynamics, per user report
+# 2026-07-13 - not just the Step 1 throttle->RPM/thrust/torque curve as before.
 #
 # rpm(x) is linear in x, and PX4MavlinkBackend's own controls(0-1)->omega[rad/s]
 # map (omega = (controls + input_offset) * input_scaling + zero_position_armed)
@@ -68,6 +67,23 @@ X650_MAX_ROTOR_VEL = 817.5911       # rad/s, == rpm(throttle=100%) in rad/s
 # curve's small nonzero intercept at throttle=0, but tracks it closely elsewhere.
 X650_ROTOR_CONSTANT = 4.536223e-05              # N / (rad/s)^2
 X650_ROLLING_MOMENT_COEFFICIENT = 8.366000e-07  # N.m / (rad/s)^2
+
+# Step 3 lambda (rotor spin-up bandwidth, 1/s): bench-measured value is the mean of the report's
+# lag_all/lag_filtered variants (10.519/10.501) - the two system-ID estimates derived directly
+# from the measured step-response timing (lambda=1/tau), not direct_all/direct_filtered (noisier,
+# up to ~24% unphysical negative values - see lagged_thrust_curve.py's header comment for the
+# full rationale). tau = 1/lambda ~= 95ms, within the report's own physically-expected 70-200ms
+# range.
+#
+# SETTLED (2026-07-14): the true bench-measured value (10.51) now flies cleanly - confirmed
+# working against (a) x650.usd's body inertia set to the true CAD-derived values (NOT
+# mass-ratio-scaled - see CLAUDE.md's "X650 CAD inertia correction" note) and (b) X650-specific
+# PX4 rate/attitude gain tuning, applied automatically at launch by
+# scripts/apply_x650_px4_gains.sh (all 3 X650 launch scripts call it). See CLAUDE.md's "X650 PX4
+# gain tuning" section for the full diagnostic history (the untuned generic none_iris defaults
+# oscillated/crashed across a range of test lambda values from 10.51 up to 14.5, before the real
+# fix - retuning PX4, not raising lambda - was identified).
+X650_ROTOR_LAMBDA = 10.51  # 1/s
 
 
 def spawn_x650_with_mavlink(
@@ -139,11 +155,12 @@ def spawn_x650_with_mavlink(
     # backend[0] = PX4 (primary).
     config = MultirotorConfig()
     config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
-    config.thrust_curve = QuadraticThrustCurve(config={
+    config.thrust_curve = LaggedQuadraticThrustCurve(config={
         "rotor_constant": [X650_ROTOR_CONSTANT] * 4,
         "rolling_moment_coefficient": [X650_ROLLING_MOMENT_COEFFICIENT] * 4,
         "min_rotor_velocity": [X650_MIN_ROTOR_VEL] * 4,
         "max_rotor_velocity": [X650_MAX_ROTOR_VEL] * 4,
+        "rotor_lambda": [X650_ROTOR_LAMBDA] * 4,
     })
 
     drone_prim_path = f"/World/quadrotor_{vehicle_id}"

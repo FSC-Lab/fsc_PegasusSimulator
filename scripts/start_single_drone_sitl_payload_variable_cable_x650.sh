@@ -81,5 +81,10 @@ tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash
 "
 
+# Apply the X650-specific PX4 rate/attitude gain tuning once PX4 has booted (see
+# apply_x650_px4_gains.sh and CLAUDE.md's "X650 PX4 gain tuning" section - stock none_iris
+# defaults can't fly the X650's rotor spin-up lag model without this).
+"$SCRIPT_DIR/apply_x650_px4_gains.sh" "$SESSION" "0.0" 8 &
+
 tmux select-layout -t "$SESSION":0 even-horizontal
 tmux attach-session -t "$SESSION"

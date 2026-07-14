@@ -108,10 +108,21 @@ exactly 650.3mm (matches the "X650" name), and rotor0/1 (`prop_clock` mesh) vs. 
 (`prop_counter_clock` mesh) are correctly paired by diagonal for yaw balance. Vehicle mass was
 then set to 3.5kg total (`/x650/body/body`'s authored mass 1.467kg → 3.416kg, so the 4 rotors'
 existing ~0.021kg each bring the total to exactly 3.5kg; diagonal inertia scaled by the same
-mass ratio, ×2.328, assuming similar mass distribution — refine later if the extra ~2kg is
-known to sit somewhere specific like batteries far from the CG). A backup
+mass ratio, ×2.328, assuming similar mass distribution). A backup
 (`x650.usd.bak_before_mass_edit`) was left alongside the asset since it's gitignored with no
 git history to fall back on.
+
+**Inertia halved again (2026-07-13), mass unchanged** — user's own follow-up correction: scaling
+inertia by the same ratio as mass assumed the added ~2kg is distributed like the rest of the
+body, but if it's more centrally concentrated (e.g. batteries mounted near the CG rather than
+spread over the frame's full extent), actual inertia wouldn't scale as much as mass did. Diagonal
+inertia halved from the mass-ratio-scaled value: `(0.1345, 0.1492, 0.1513) → (0.0673, 0.0746,
+0.0757)` kg·m² (mass stays 3.416kg). A second backup (`x650.usd.bak_before_inertia_half`) was
+made of the pre-halving (fully mass-scaled) state, in addition to the original
+`x650.usd.bak_before_mass_edit` - both available to revert to. This was part of diagnosing the
+rotor-lag-induced PX4 oscillation (see below): testing whether the earlier proportional-scaling
+assumption on inertia, not just the actuator lag itself, was contributing to the instability,
+before considering retuning PX4's rate/attitude gains directly.
 
 The bench-fit throttle→RPM/thrust/torque polynomials (`docs/propeller_testing/` below) were
 then converted into the sim's actual thrust-curve interface:
@@ -124,9 +135,9 @@ then converted into the sim's actual thrust-curve interface:
 - Calibration derivation: `QuadraticThrustCurve` takes rotor angular velocity **ω (rad/s)** and
   computes `force = rotor_constant·ω²`, yaw torque via `rolling_moment_coefficient·ω²·rot_dir` —
   an instantaneous model, **no rotor spin-up lag** (`quadratic_thrust_curve.py`'s own comment:
-  "no delay introduced"). Per explicit project decision, the report's Step 3 λ (spin-up
-  bandwidth) model is **not** applied — there's nowhere in the current thrust-curve interface for
-  it to plug into, and only the Step 1 throttle→RPM/thrust/torque polynomials are used.
+  "no delay introduced"). Only the Step 1 throttle→RPM/thrust/torque polynomials were used at
+  first; **the report's Step 3 λ (spin-up bandwidth) model was added later** (2026-07-13, user
+  report: it "significantly affects the dynamics") — see below.
   - `rpm(x) = 70.2593x + 781.49` (x = throttle 0–100%) is linear, and so is PX4MavlinkBackend's
     own `omega = (controls + input_offset)·input_scaling + zero_position_armed` map (`controls`
     = PX4's normalized 0–1 motor command) — so the two were matched **exactly** (not just at the
@@ -156,15 +167,100 @@ then converted into the sim's actual thrust-curve interface:
     but differently-gated parameters.
   - Resulting total max thrust (4 rotors) ≈118.8N against the new 3.5kg vehicle weight (34.3N)
     → thrust/weight ≈3.46:1, a physically sensible margin for this motor class.
+- **Rotor spin-up lag added (2026-07-13)** —
+  `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/lagged_thrust_curve.py`
+  (new): `LaggedQuadraticThrustCurve` subclasses the stock `QuadraticThrustCurve` (not modified —
+  Iris and every other vehicle stay on the instantaneous stock class) and replaces its
+  `velocity = clip(input_reference, min, max)` instantaneous jump with a first-order lag,
+  `omega_dot = rotor_lambda*(omega_cmd - omega)`, directly implementing the bench report's Step 3
+  model (`RPM_rate = λ·(RPM_cmd − RPM)`), previously left unapplied. Force is always computed
+  from the lagged `omega`, never from the raw commanded/target velocity directly.
+  - **Per-step update is the exact discrete (zero-order-hold) solution, not Euler integration**
+    (user-requested fix, 2026-07-14): `omega[k+1] = omega_cmd[k] + (omega[k] -
+    omega_cmd[k])·exp(-rotor_lambda[k]·dt)`. Euler integration is only *conditionally* stable
+    (diverges into growing oscillation once `rotor_lambda·dt` exceeds ~1–2 — confirmed
+    numerically: at `rotor_lambda·dt=2.4`, Euler oscillates ±4500 rad/s around an 800 rad/s
+    target while the exact update converges smoothly); the exact form is unconditionally stable
+    for any `rotor_lambda, dt > 0` and stays exact even if `rotor_lambda` later varies with
+    operating point (as long as it's treated as constant within one step — the usual
+    zero-order-hold assumption). Not just theoretical here: the exact update also matches the
+    true continuous-time analytic solution much more closely at normal operating `rotor_lambda`
+    (confirmed numerically: ~3.4x smaller error than Euler after the same number of steps).
+  - `rotor_lambda` default `10.51 (1/s)` is the mean of the report's `lag_all`/`lag_filtered`
+    variants (10.519/10.501) — not `direct_all`/`direct_filtered` (noisier, up to ~24%
+    unphysical negative λ values, NRMSE>1 — see the propeller bench-test section below).
+    `τ=1/λ≈95ms`, inside the report's own physically-expected 70–200ms range.
+  - Wired into `x650_bare_frame_utils.py` in place of `QuadraticThrustCurve`
+    (`X650_ROTOR_LAMBDA=10.51`), so all three X650 scenarios that share this spawn helper (bare
+    drone, fixed-length-cable payload, variable-length-cable payload) pick it up automatically.
+  - **Resolved (2026-07-14): the drone couldn't fly normally after this was added — root cause
+    confirmed as PX4's untouched generic `none_iris` rate/attitude gains, not a bug in the lag
+    model itself** (separately verified correct via standalone step-response checks, and the
+    Euler-vs-exact-discrete-update fix below). User reported diverging rate/attitude
+    oscillation at the bench-measured `λ=10.51`.
+    - **Per-step lag update switched from Euler to the exact discrete (zero-order-hold)
+      solution** (user-requested, 2026-07-14): `omega[k+1] = omega_cmd + (omega[k] -
+      omega_cmd)·exp(-λ·dt)`, unconditionally stable for any `λ,dt>0` (Euler integration is
+      only conditionally stable — confirmed numerically: at `λ·dt=2.4`, Euler diverges into a
+      growing ±4500 rad/s oscillation around an 800 rad/s target while the exact update
+      converges smoothly). Applied in `lagged_thrust_curve.py`; force is still always computed
+      from the lagged `omega`, never from the raw commanded velocity directly.
+    - **Diagnostic λ sweep** (against PX4's then-still-untouched default gains,
+      `MC_*RATE_K=1.0`): `10.51` (bench value) diverged, `12.0` crashed outright, `13.5`/`14.5`
+      both oscillated (marginal), `15.0`/`15.51` flew cleanly. This confirmed a lag-vs-
+      control-loop-tuning mismatch, not a model bug — but `15.51` isn't the physically accurate
+      value, just a stability-driven workaround.
+    - **X650 CAD inertia correction**: the user provided the actual CAD (OnShape) "Mass and
+      section properties" panel for the X650 frame part. Its `Lxx/Lyy/Lzz` (kg·mm², ÷1e6 for
+      kg·m²) — `(0.057775, 0.065004, 0.064082)` — matched `x650.usd`'s **original, pre-edit**
+      authored inertia `(0.057775, 0.064082, 0.065005)` for `(Ixx,Iyy,Izz)` almost exactly (Y/Z
+      swapped between CAD's and USD's axis labeling) — confirming the asset's original inertia
+      was already correctly CAD-sourced, and the earlier `×2.328` mass-ratio scaling (done when
+      total mass was set to 3.5kg) was the wrong move, not a refinement. A same-ratio "halve the
+      scaled inertia" diagnostic (an intermediate, still-not-CAD-accurate value) was tried first
+      and made flight *worse*, which in hindsight makes sense — it wasn't testing the real CAD
+      value. Fixed by setting `/x650/body/body`'s diagonal inertia to the exact original
+      CAD-derived values (`0.05777498, 0.06408172, 0.065004565`) while **keeping mass at
+      3.416kg** (ignoring CAD's own 1.467kg reference mass, per explicit user instruction — the
+      extra ~2kg is assumed not to significantly change the rotational inertia distribution). A
+      second backup, `x650.usd.bak_before_inertia_half`, and the original
+      `x650.usd.bak_before_mass_edit` are both still available to revert to if needed.
+    - **X650 PX4 gain tuning — final working configuration**, confirmed live against the
+      corrected CAD inertia and the true bench λ=10.51:
+      | Parameter | Stock default | X650 tuned value |
+      |---|---|---|
+      | `MC_ROLLRATE_K` / `MC_PITCHRATE_K` / `MC_YAWRATE_K` | 1.0 | **0.3** |
+      | `MC_ROLL_P` / `MC_PITCH_P` | 6.5 | **3.25** |
+      | `MC_YAW_P` | 2.8 | **1.4** |
+
+      Reasoning: `*RATE_K` is an overall multiplier on that axis's whole rate-loop P/I/D/FF
+      stack — the cleanest lever to uniformly soften the loop without rebalancing P/I/D ratios
+      individually, needed because the added actuator lag reduces the loop's available phase
+      margin. The attitude-loop `P` gains needed reducing too, found empirically after rate-only
+      softening (down to `0.2`) stopped helping — with the inner (rate) loop now much slower,
+      the outer (attitude) loop's unchanged gain was commanding rate corrections faster than the
+      softened inner loop could actually deliver, a classic cascade-control mismatch (outer loop
+      bandwidth must stay meaningfully below inner-loop bandwidth). Halving both attitude `P`
+      gains alongside the rate gains resolved this.
+      - `scripts/apply_x650_px4_gains.sh` (new) — applies and `param save`s this exact
+        configuration to a running PX4 SITL instance via `tmux send-keys`, so it doesn't have
+        to be re-typed by hand every session. Called (backgrounded, `&`) from all three X650
+        launch scripts (`start_x650_single_drone.sh`,
+        `start_single_drone_sitl_payload_x650.sh`,
+        `start_single_drone_sitl_payload_variable_cable_x650.sh`) a fixed 8s after PX4 is
+        expected to have booted to its `pxh>` prompt — `tmux send-keys` has no way to detect
+        readiness, so keys sent too early are silently dropped.
 - `application/px4_base/03_px4_single_drone_x650.py` (new) — bare X650 (no payload), mirrors
   `01_px4_single_drone.py`'s exact structure with Iris swapped for the calibrated X650 via
   `spawn_x650_with_mavlink`. **`01_px4_single_drone.py`/Iris itself was not touched** by any of
   this work — verified via `git status` on the upstream `extensions/pegasus.simulator/` tree.
 - `scripts/start_x650_single_drone.sh` (new) — mirrors `start_single_drone_sitl.sh` exactly,
-  pointing at the new bare-drone script above.
+  pointing at the new bare-drone script above; now also calls `apply_x650_px4_gains.sh` (see
+  "X650 PX4 gain tuning" above) 8s after launch.
 - Note: `scripts/start_single_drone_sitl_payload_x650.sh` already existed (pre-dates this
   session's work, launches the payload variant) but lacks the tmux kill-pane cleanup pattern the
-  other launch scripts in this repo have — not fixed here since it wasn't asked for.
+  other launch scripts in this repo have — not fixed here since it wasn't asked for. It does now
+  also call `apply_x650_px4_gains.sh`, same as the other two X650 launch scripts.
 
 **X650 variable-length cable variant added and confirmed working (2026-07-13)** —
 `application/slungload/px4_single_drone_payload_variable_length_cable_x650.py` (new): same
@@ -175,8 +271,9 @@ mass (`rod_b_mass+payload_mass=0.565kg`) is unchanged from the Iris version — 
 comes from `cable_torque_ctrl_node`'s deployed mass param (AK40-10 side), not the carrying
 vehicle's lift capacity, so it doesn't change just because X650 has far more thrust margin.
 `scripts/start_single_drone_sitl_payload_variable_cable_x650.sh` (new) mirrors
-`start_single_drone_sitl_payload_variable_cable.sh` exactly, pointing at the new script. Neither
-the Iris variant nor its launch script were touched (verified via `git status`).
+`start_single_drone_sitl_payload_variable_cable.sh` exactly, pointing at the new script, and also
+calls `apply_x650_px4_gains.sh`. Neither the Iris variant nor its launch script were touched
+(verified via `git status`).
 
 ## Propeller bench test data (`docs/propeller_testing/`)
 
@@ -195,10 +292,11 @@ vehicle config.
 - The methodology page lists companion CSV outputs (`global_fit_coeffs.csv`,
   `lag_vs_throttle_rate.csv`, `lambda_lookup_<variant>.csv`, etc.) — **only the summary PDF
   reports are currently in this repo, not the underlying CSVs.**
-- **`MN_4014_15x5` is now connected**: its Step 1 throttle→RPM/thrust/torque polynomials are
-  applied to the X650 vehicle (not the spin-up-lag model — see the X650 section above for the
-  full derivation and the `x650_bare_frame_utils.py` calibration it produced).
-  `MT_2216_10x4.5` remains unconnected to any vehicle config as of this writing.
+- **`MN_4014_15x5` is now fully connected**: its Step 1 throttle→RPM/thrust/torque polynomials
+  *and* its Step 3 spin-up-lag (λ) model are both applied to the X650 vehicle — see the X650
+  section above for the full derivation, `x650_bare_frame_utils.py`'s calibration, and
+  `lagged_thrust_curve.py`'s `LaggedQuadraticThrustCurve`. `MT_2216_10x4.5` remains unconnected
+  to any vehicle config as of this writing.
 
 ## Normalized swing state (r, v) — JGCD paper data feed
 
@@ -238,6 +336,16 @@ Verification" section.
   `application/slungload/px4_single_drone_payload_variable_length_cable_x650.py` (X650) — not
   wired into the fixed-length-cable scenarios, since this is specifically paper-verification data
   for the active-cable-length-control system.
+- **Bug found on first live test (2026-07-14) and fixed**: `TypeError: Can't instantiate abstract
+  class ROS2SwingStateBackend with abstract method update_state`. `Backend`'s ABC only checks
+  that a method *named* `update_state` exists on the subclass (not its signature - e.g.
+  `ROS2CableWinchBackend`'s own `update_state(self, extension, extension_vel)` has a completely
+  different signature from the base class's `update_state(self, state)` and still satisfies it
+  fine), and this class simply never defined one. Fixed by adding a no-op `update_state(self,
+  state)` — this backend doesn't need it since it independently reads both the drone's and
+  payload's rigid bodies via `dynamic_control` in its own `update_sim_state()` physics callback,
+  the same pattern `ROS2CableWinchBackend` uses. Affects both scenarios it's wired into (single
+  shared class, one fix covers both).
 - **Known simplification, flagged to the user, not yet confirmed**: `x_q`/`v_q` are read from the
   drone's own rigid-body prim (`uav_path`, the same one the spherical joint attaches to), i.e.
   the drone's own COM — the small `uav_hook_local` cable-attachment offset from that COM is
