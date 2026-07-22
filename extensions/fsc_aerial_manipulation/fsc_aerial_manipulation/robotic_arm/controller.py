@@ -18,6 +18,8 @@ the plant, driven over ROS2 — so the arm-impedance loop still faces the loop
 latency, but the control law itself is the validated MATLAB law verbatim.
 """
 
+import os
+
 import numpy as np
 from dataclasses import dataclass, field
 
@@ -762,6 +764,15 @@ class RotorMixer:
         return np.sqrt(F / (self.p.k_thrust + 1e-12))
 
 
+# Must match PX4MavlinkBackendConfig defaults used by
+# x650_rotorcraft_utils.spawn_rotorcraft_with_mavlink(). PX4's normalized
+# ActuatorMotors value u becomes omega = u * scaling + armed_idle in Pegasus.
+PX4_ROTOR_INPUT_SCALING = 1000.0
+PX4_ROTOR_ARMED_IDLE = 100.0
+PX4_OFFBOARD_WARMUP_SETPOINTS = 250  # 1 s at the controller's 250 Hz timer
+PX4_COMMAND_RETRY_INTERVAL = 100
+
+
 # ===========================================================================
 # ROS 2 node
 # ===========================================================================
@@ -772,6 +783,14 @@ if _HAS_ROS2:
 
         def __init__(self):
             super().__init__("matlab_aerial_manipulator_controller")
+            self._control_mode = os.environ.get("AERIAL_MANIPULATOR_CONTROL_MODE", "direct")
+            if self._control_mode not in {"direct", "px4_offboard"}:
+                raise ValueError(
+                    "AERIAL_MANIPULATOR_CONTROL_MODE must be 'direct' or 'px4_offboard', "
+                    f"got {self._control_mode!r}"
+                )
+            self._px4_offboard = self._control_mode == "px4_offboard"
+            self._px4_auto_arm = os.environ.get("AERIAL_MANIPULATOR_AUTO_ARM", "0") == "1"
             self.p = make_params()
             self.ctrl = MatlabController(self.p, attitude_feedforward=ATTITUDE_FEEDFORWARD)
             self.mixer = RotorMixer(RotorMixerParams())
@@ -808,10 +827,142 @@ if _HAS_ROS2:
             self.create_subscription(TwistStamped, "state/twist_inertial", self._tlin_cb, qos_profile_sensor_data)
             self.create_subscription(TwistStamped, "state/twist",          self._tang_cb, qos_profile_sensor_data)
             self.create_subscription(JointState,   "joint_states",         self._joint_cb, 10)
-            self._pub_rotors = self.create_publisher(Float64MultiArray, "rotor_velocity_command", 10)
             self._pub_joints = self.create_publisher(Float64MultiArray, "joint_torque_cmd", 10)
+            self._pub_rotors = None
+            self._px4_ocm_pub = None
+            self._px4_motors_pub = None
+            self._px4_command_pub = None
+            self._px4_status_sub = None
+            self._px4_status = None
+            self._px4_setpoint_count = 0
+            self._setup_rotor_output()
             self.create_timer(self._dt, self._loop)
-            self.get_logger().info("ctrl_matlab node ready")
+            self.get_logger().info(
+                f"ctrl_matlab node ready: rotor output={self._control_mode}, "
+                f"PX4 auto-arm={self._px4_auto_arm}"
+            )
+
+        def _setup_rotor_output(self):
+            """Create either the original Isaac rotor publisher or PX4 DDS I/O."""
+            if not self._px4_offboard:
+                self._pub_rotors = self.create_publisher(Float64MultiArray, "rotor_velocity_command", 10)
+                return
+
+            try:
+                from px4_msgs.msg import ActuatorMotors, OffboardControlMode, VehicleCommand, VehicleStatus
+                from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+            except ImportError as exc:
+                raise RuntimeError(
+                    "PX4 Offboard mode requires px4_msgs. Source the PX4 ROS 2 workspace "
+                    "before starting controller.py."
+                ) from exc
+
+            self._ActuatorMotors = ActuatorMotors
+            self._OffboardControlMode = OffboardControlMode
+            self._VehicleCommand = VehicleCommand
+            self._VehicleStatus = VehicleStatus
+            px4_qos = QoSProfile(
+                reliability=ReliabilityPolicy.BEST_EFFORT,
+                durability=DurabilityPolicy.VOLATILE,
+                history=HistoryPolicy.KEEP_LAST,
+                depth=10,
+            )
+            # Relative names intentionally inherit /uav_<id> from the node namespace,
+            # matching PX4_UXRCE_DDS_NS in the SITL launcher.
+            self._px4_ocm_pub = self.create_publisher(
+                OffboardControlMode, "fmu/in/offboard_control_mode", px4_qos
+            )
+            self._px4_motors_pub = self.create_publisher(
+                ActuatorMotors, "fmu/in/actuator_motors", px4_qos
+            )
+            self._px4_command_pub = self.create_publisher(
+                VehicleCommand, "fmu/in/vehicle_command", px4_qos
+            )
+            self._px4_status_sub = self.create_subscription(
+                VehicleStatus, "fmu/out/vehicle_status", self._px4_status_cb, px4_qos
+            )
+
+        def _px4_status_cb(self, msg):
+            old = self._px4_status
+            self._px4_status = msg
+            if old is None or old.arming_state != msg.arming_state or old.nav_state != msg.nav_state:
+                self.get_logger().info(
+                    f"PX4 status: arming_state={msg.arming_state}, nav_state={msg.nav_state}"
+                )
+
+        def _stamp_us(self):
+            return self.get_clock().now().nanoseconds // 1000
+
+        def _publish_px4_command(self, command, param1=0.0, param2=0.0):
+            msg = self._VehicleCommand()
+            msg.timestamp = self._stamp_us()
+            msg.command = command
+            msg.param1 = float(param1)
+            msg.param2 = float(param2)
+            msg.target_system = 1
+            msg.target_component = 1
+            msg.source_system = 1
+            msg.source_component = 1
+            msg.from_external = True
+            self._px4_command_pub.publish(msg)
+
+        def _maybe_engage_px4(self):
+            if not self._px4_auto_arm:
+                return
+            status = self._px4_status
+            offboard = status is not None and status.nav_state == self._VehicleStatus.NAVIGATION_STATE_OFFBOARD
+            armed = status is not None and status.arming_state == self._VehicleStatus.ARMING_STATE_ARMED
+            count = self._px4_setpoint_count
+            if (
+                count >= PX4_OFFBOARD_WARMUP_SETPOINTS
+                and count % PX4_COMMAND_RETRY_INTERVAL == 0
+                and not (offboard and armed)
+            ):
+                if not offboard:
+                    self._publish_px4_command(
+                        self._VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0
+                    )
+                    self.get_logger().info("Requested PX4 Offboard mode")
+                elif not armed:
+                    self._publish_px4_command(
+                        self._VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0, 0.0
+                    )
+                    self.get_logger().info("Requested PX4 arming in Offboard mode")
+
+        def _publish_rotors(self, omega):
+            """Publish desired rotor speed through the selected command path.
+
+            Channel order is identity across the controller, PX4 none_iris, and
+            the USD: 0=front-left, 1=rear-right, 2=front-right, 3=rear-left.
+            PX4 performs only Offboard/arming/output gating in direct-actuator
+            mode; allocation remains in :class:`RotorMixer`.
+            """
+            if not self._px4_offboard:
+                msg = Float64MultiArray()
+                msg.data = omega.tolist()
+                self._pub_rotors.publish(msg)
+                return
+
+            stamp = self._stamp_us()
+            mode = self._OffboardControlMode()
+            mode.timestamp = stamp
+            mode.direct_actuator = True
+            self._px4_ocm_pub.publish(mode)
+
+            controls = np.clip(
+                (np.asarray(omega) - PX4_ROTOR_ARMED_IDLE) / PX4_ROTOR_INPUT_SCALING,
+                0.0,
+                1.0,
+            )
+            motors = self._ActuatorMotors()
+            motors.timestamp = stamp
+            motors.timestamp_sample = stamp
+            motors.control = [float("nan")] * self._ActuatorMotors.NUM_CONTROLS
+            for index, value in enumerate(controls):
+                motors.control[index] = float(value)
+            self._px4_motors_pub.publish(motors)
+            self._px4_setpoint_count += 1
+            self._maybe_engage_px4()
 
         def _build_X(self):
             n = self.p["n"]
@@ -935,7 +1086,7 @@ if _HAS_ROS2:
                           "===================================================", flush=True)
                 self._arm_active_prev = self.ctrl.arm_active
                 omega = self.mixer.mix(res["thrust"], res["tau_body"])
-                m = Float64MultiArray(); m.data = omega.tolist(); self._pub_rotors.publish(m)
+                self._publish_rotors(omega)
                 # Append the arm-active flag (5th element) so the plant releases the arm
                 # EXACTLY when the controller starts commanding — no clock drift between
                 # the controller's accumulated-dt timer and the plant's sim-time timer.

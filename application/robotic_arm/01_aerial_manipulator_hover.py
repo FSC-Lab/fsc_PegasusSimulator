@@ -2,9 +2,9 @@
 #!/usr/bin/env python
 """
 | Description: Isaac Sim side of the impedance controller test.
-|              Pegasus spawns the gripper_bat model; the ROS2 backend
-|              publishes state and receives rotor velocity commands from
-|              the WSL-side ImpedanceControllerNode (which includes a mixer).
+|              Pegasus spawns the aerial manipulator and publishes state.
+|              Rotor commands can arrive directly through ROS 2 or through
+|              PX4 Offboard direct-actuator control and MAVLink.
 |              A small subscriber thread additionally receives joint torque
 |              commands and applies them to the arm each physics step.
 |
@@ -12,24 +12,24 @@
 |
 |     ┌── Isaac Sim (this script) ─────────────────────────────────────────┐
 |     │  Pegasus Multirotor                                                │
-|     │    ROS2Backend  ──publishes──►  /uav_0/odometry                    │
-|     │                 ──publishes──►  /uav_0/joint_states                │
-|     │                 ◄─subscribes──  /uav_0/rotor_velocity_command      │
+|     │    ROS2Backend  ──publishes──►  /uav_0/state/*, joint_states       │
+|     │    motor input   ◄────────────  ROS rotor command OR PX4 MAVLink    │
 |     │  JointTorqueApplier thread                                         │
 |     │                 ◄─subscribes──  /uav_0/joint_torque_cmd            │
 |     └────────────────────────────────────────────────────────────────────┘
-|              ▲ DDS (localhost or WSL bridge)
-|     ┌── WSL (ImpedanceControllerNode) ──────────────────────────────────┐
-|     │  subscribes  /uav_0/odometry, /uav_0/joint_states                 │
+|              ▲ DDS
+|     ┌── ImpedanceControllerNode ────────────────────────────────────────┐
+|     │  subscribes  /uav_0/state/*, /uav_0/joint_states                  │
 |     │  computes    thrust, R_desired, tau_body, tau_joint               │
 |     │  mixer       thrust + tau_body → 4 rotor ω commands               │
-|     │  publishes   /uav_0/rotor_velocity_command                        │
+|     │  publishes   rotor_velocity_command OR PX4 ActuatorMotors         │
 |     │  publishes   /uav_0/joint_torque_cmd                              │
 |     └───────────────────────────────────────────────────────────────────┘
 |
 |   To run (Linux, single machine — no WSL bridge needed):
 |     Use the launch script, which starts both panes in tmux:
-|          ./scripts/start_aerial_manipulator.sh <your_name>_machine
+|          ./scripts/start_aerial_manipulator.sh <your_name>_machine direct
+|          ./scripts/start_aerial_manipulator.sh <your_name>_machine px4-offboard
 |
 |     Or start the two processes manually:
 |       1. Isaac Sim side (this script), via the Isaac python wrapper:
@@ -101,6 +101,17 @@ SPAWN_POS   = (0.0, 0.0, 0.5)
 SPAWN_EULER = (0.0, 0.0, 0.0)
 
 VEHICLE_ID  = 0   # determines ROS2 topic namespace: /uav_0/...
+
+# Rotor command path. The launch script sets this to ``px4_offboard`` when PX4
+# must own the plant's motor input. Keep ``direct`` as the standalone default so
+# the original two-process demo still works without PX4 SITL or px4_msgs.
+CONTROL_MODE = os.environ.get("AERIAL_MANIPULATOR_CONTROL_MODE", "direct")
+if CONTROL_MODE not in {"direct", "px4_offboard"}:
+    raise ValueError(
+        "AERIAL_MANIPULATOR_CONTROL_MODE must be 'direct' or 'px4_offboard', "
+        f"got {CONTROL_MODE!r}"
+    )
+PX4_OFFBOARD = CONTROL_MODE == "px4_offboard"
 
 # --- PhysX debug frame visualization -----------------------------------------
 # Draw the world origin frame and every rigid-body frame (RGB = XYZ) using the
@@ -347,13 +358,14 @@ class GripperBatImpedanceDemo:
             intensity=2500.0, exposure=0.0, color=(1.0, 1.0, 1.0),
         )
 
-        # --- Spawn (ROS2 backend, px4_primary=False → external controller) --
-        # return_backend=True hands back the ROS2 backend so the rotor-command
-        # subscriber below can write its input_ref directly (keeps ros2_backend
-        # stock — no Pegasus extension edit needed for rotor commands).
+        # In direct mode the ROS2 backend is primary and RotorCommandApplier writes
+        # controller omega commands into it. In PX4 Offboard mode the MAVLink
+        # backend is primary; ROS2 remains state-only and PX4 receives normalized
+        # ActuatorMotors commands from the external controller over uXRCE-DDS.
         print(f"[Demo] Loading vehicle USD: {USD_FILE}", flush=True)
         print(f"[Demo]   exists={os.path.exists(USD_FILE)}  "
-              f"prim={USD_PRIM_PATH}  arm_mode={'POSITION-HOLD (PLATFORM_TUNE)' if PLATFORM_TUNE else 'POS→TORQUE hand-off'}",
+              f"prim={USD_PRIM_PATH}  control_mode={CONTROL_MODE}  "
+              f"arm_mode={'POSITION-HOLD (PLATFORM_TUNE)' if PLATFORM_TUNE else 'POS→TORQUE hand-off'}",
               flush=True)
         self.drone_path, self._ros2_backend = spawn_rotorcraft_with_mavlink(
             px4_path=self.pg.px4_path,
@@ -372,12 +384,12 @@ class GripperBatImpedanceDemo:
                 "rolling_moment_coefficient": [ROTOR_K_TORQUE] * 4,
                 "rot_dir": ROTOR_DIR,
             },
+            # External DDS traffic can briefly stall PX4 during Offboard mode
+            # transitions. Keep HIL real-time/non-blocking so that cannot deadlock
+            # the Isaac physics loop waiting for HIL_ACTUATOR_CONTROLS.
             enable_lockstep=False,
-            px4_primary=False,     # ROS2 backend is backend[0] → receives our commands
-            include_px4=False,     # pure-ROS2 architecture: don't spawn the MAVLink
-                                   # backend (no PX4 SITL here; it would only open
-                                   # port 4560 and sit idle). Set True if you also
-                                   # want PX4 state logging alongside the demo.
+            px4_primary=PX4_OFFBOARD,
+            include_px4=PX4_OFFBOARD,
             return_backend=True,   # hand back the backend so we can write input_ref
         )
 
@@ -407,10 +419,13 @@ class GripperBatImpedanceDemo:
         # --- ROS2 subscribers -----------------------------------------------
         self._torque_applier     = JointTorqueApplier(n_joints=len(ARM_JOINT_NAMES))
         self._joint_state_pub    = JointStatePublisher(ARM_JOINT_NAMES)
-        self._rotor_applier      = RotorCommandApplier(self._ros2_backend, n_rotors=len(ROTOR_PATHS))
+        self._rotor_applier      = None
+        if not PX4_OFFBOARD:
+            self._rotor_applier = RotorCommandApplier(self._ros2_backend, n_rotors=len(ROTOR_PATHS))
         self._torque_applier.setup()
         self._joint_state_pub.setup()
-        self._rotor_applier.setup()
+        if self._rotor_applier is not None:
+            self._rotor_applier.setup()
 
         # Service our manual subscriber nodes through ONE dedicated executor. Calling
         # rclpy.spin_once() per node on the shared *global* executor starved the
@@ -423,7 +438,7 @@ class GripperBatImpedanceDemo:
             from rclpy.executors import SingleThreadedExecutor
             self._ros_exec = SingleThreadedExecutor()
             for applier in (self._torque_applier, self._rotor_applier):
-                if applier._node is not None:
+                if applier is not None and applier._node is not None:
                     self._ros_exec.add_node(applier._node)
         except ImportError:
             carb.log_warn("[Demo] SingleThreadedExecutor unavailable — falling back to per-node spin.")
@@ -692,9 +707,10 @@ class GripperBatImpedanceDemo:
             arm_efforts = [round(self._efforts[i], 4) for i in self._arm_dof_indices]
             j_pubs = (self._torque_applier._node.count_publishers(JOINT_TORQUE_TOPIC)
                       if self._torque_applier._node else -1)
+            rotor_rx = self._rotor_applier._rx if self._rotor_applier is not None else "PX4"
             print(f"[Demo] efforts(arm)={arm_efforts} N·m  "
                   f"tau_joint={tau_joint.round(3)} N·m  "
-                  f"jrx={self._torque_applier._rx} rrx={self._rotor_applier._rx} "
+                  f"jrx={self._torque_applier._rx} rrx={rotor_rx} "
                   f"j_pubs={j_pubs}", flush=True)
 
     # ── Main loop ──────────────────────────────────────────────────────────
@@ -707,7 +723,8 @@ class GripperBatImpedanceDemo:
             for _ in range(16):
                 self._ros_exec.spin_once(timeout_sec=0.0)
         else:
-            self._rotor_applier.spin_once()
+            if self._rotor_applier is not None:
+                self._rotor_applier.spin_once()
             self._torque_applier.spin_once()
         tau = self._torque_applier.get_torques()
 
@@ -747,7 +764,8 @@ class GripperBatImpedanceDemo:
 
         self._torque_applier.destroy()
         self._joint_state_pub.destroy()
-        self._rotor_applier.destroy()
+        if self._rotor_applier is not None:
+            self._rotor_applier.destroy()
         self.timeline.stop()
         simulation_app.close()
 

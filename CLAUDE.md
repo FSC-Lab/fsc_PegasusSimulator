@@ -15,9 +15,11 @@ This is the FSC Lab fork of [Pegasus Simulator](https://github.com/PegasusSimula
 
 Merged from teammate Shiqi Gao's `dev_robotic_arm` branch (`380d297`, 2026-07-10) — a quadrotor
 ("X650" airframe) with a 4-DOF robotic arm rigidly coupled to it, controlled by a Python port of
-a validated MATLAB whole-body geometric+impedance controller. **Pure ROS 2, no PX4 SITL** (a
-different architecture from every scenario under `application/slungload/`, which are all PX4
-SITL + mavlink).
+a validated MATLAB whole-body geometric+impedance controller. Its original/default `direct`
+mode is pure ROS 2. The launcher now also provides a `px4-offboard` mode where the external
+controller streams PX4 `OffboardControlMode(direct_actuator=True)` + `ActuatorMotors`, PX4
+applies its Offboard/arming/saturation gate, and the resulting `HIL_ACTUATOR_CONTROLS` drives
+Isaac through Pegasus's primary MAVLink backend.
 
 **Related paths — treat these three as one unit for future work on this scenario:**
 - `application/robotic_arm/`
@@ -56,13 +58,12 @@ SITL + mavlink).
   correct reference.
 - `scripts/start_aerial_manipulator.sh` + `scripts/config/shiqi_machine.conf` — follows the
   same `common_config.sh`/`terminal_utils.sh`/per-machine-config convention as the slung-load
-  launch scripts. 2-pane tmux (`aerial_manip` session): pane 0 runs the Isaac Sim demo, pane 1
-  sources ROS 2 and runs `controller.py` under `--ros-args -r __ns:=/uav_0` after an 8s delay
-  (long enough for Isaac to spawn the vehicle first). Both panes tee to `/tmp/aerial_manip_isaac.log`
-  / `/tmp/aerial_manip_controller.log` for post-mortem grepping. Note the script's own header
-  comment still references an old filename (`aerial_manipulator_ee_impedance.py`) that no longer
-  exists — the actual entrypoint it launches is `01_aerial_manipulator_hover.py`; the comment is
-  just stale, not a real path.
+  launch scripts. `direct` starts the original two panes (Isaac + controller).
+  `px4-offboard` starts PX4 SITL, Micro XRCE-DDS Agent, Isaac, and the controller; it sources a
+  configurable `PX4_MSGS_SETUP`, applies `UXRCE_DDS_SYNCT=0` plus disabled HIL auto-disarm for
+  the run, prestreams for one second, confirms Offboard, then auto-arms. The controller runs
+  under `--ros-args -r __ns:=/uav_0`, matching `PX4_UXRCE_DDS_NS=uav_0`. The actual Isaac
+  entrypoint is `01_aerial_manipulator_hover.py`.
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`

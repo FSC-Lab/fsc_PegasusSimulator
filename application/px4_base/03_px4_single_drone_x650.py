@@ -12,13 +12,18 @@
 """
 
 # Imports to start Isaac Sim from this script
+import os
+
 import carb
 from isaacsim import SimulationApp
 
 # Start Isaac Sim's simulation environment
 # Note: this simulation app must be instantiated right after the SimulationApp import, otherwise the simulator will crash
 # as this is the object that will load all the extensions and load the actual simulator.
-simulation_app = SimulationApp({"headless": False})
+HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
+STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
+PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
+simulation_app = SimulationApp({"headless": HEADLESS})
 
 # -----------------------------------
 # The actual script should start here
@@ -79,6 +84,7 @@ class FscDroneSim:
             vehicle_id=0,
             spawn_pos=(0.0, 0.0, 0.07),
             spawn_euler=(0.0, 0.0, 0.0),
+            enable_lockstep=PX4_LOCKSTEP,
         )
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
@@ -94,12 +100,18 @@ class FscDroneSim:
 
         # Start the simulation
         self.timeline.play()
+        steps = 0
 
         # The "infinite" loop
-        while simulation_app.is_running() and not self.stop_sim:
+        while (
+            simulation_app.is_running()
+            and not self.stop_sim
+            and (not STEP_LIMIT or steps < STEP_LIMIT)
+        ):
 
             # Update the UI of the app and perform the physics step
-            self.world.step(render=True)
+            self.world.step(render=not HEADLESS)
+            steps += 1
 
         # Cleanup and stop
         carb.log_warn("FscDroneSim Simulation App is closing.")

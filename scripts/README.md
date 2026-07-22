@@ -36,3 +36,54 @@ scripts), scan for and clean it up with:
 ./scripts/kill_stale_sim_processes.sh -y        # scan, kill without asking
 ./scripts/kill_stale_sim_processes.sh --dry-run # scan only
 ```
+
+### 4. Aerial manipulator control modes
+
+The aerial-manipulator launcher preserves the original direct ROS 2 rotor path and
+also supports PX4 Offboard direct-actuator control:
+
+```bash
+# Original: controller publishes rotor angular velocity directly to Isaac
+./scripts/start_aerial_manipulator.sh longhao_machine direct
+
+# PX4 path: controller -> ActuatorMotors -> PX4 gate -> HIL_ACTUATOR_CONTROLS -> Isaac
+./scripts/start_aerial_manipulator.sh longhao_machine px4-offboard
+```
+
+The PX4 mode starts PX4 SITL, Micro XRCE-DDS Agent, Isaac Sim, and the whole-body
+controller in one tmux session. It automatically prestreams `OffboardControlMode`
+and `ActuatorMotors` for one second, requests Offboard mode, waits for PX4 to
+confirm it, and then requests arming.
+
+The controller needs a `px4_msgs` ROS 2 overlay. The launcher defaults to:
+
+```bash
+$HOME/source/fsc_autopilot_ws/install/setup.bash
+```
+
+If yours is elsewhere, add this to the selected machine config:
+
+```bash
+PX4_MSGS_SETUP="$HOME/path/to/px4_ros_ws/install/setup.bash"
+```
+
+The PX4 mode writes logs to `/tmp/aerial_manip_px4.log`,
+`/tmp/aerial_manip_xrce_agent.log`, `/tmp/aerial_manip_isaac.log`, and
+`/tmp/aerial_manip_controller.log`. It auto-arms the simulated vehicle; keep the
+PX4 mode for SITL only unless you deliberately remove that launcher setting.
+
+### 5. X650 ROS direct-actuator hover test
+
+The free-flight hover fixture launches PX4, the XRCE agent, the calibrated X650
+plant, the external `apl20_ros` PX4-style cascade, and a persistent 1.5 m ENU
+setpoint:
+
+```bash
+./scripts/start_x650_ros_offboard_hover_test.sh longhao_machine
+./scripts/start_x650_ros_offboard_hover_test.sh longhao_machine headless
+```
+
+Override the target with `X650_HOVER_ALT` and run detached with
+`X650_HOVER_TEST_DETACHED=1`. Controller tracking is written to
+`/tmp/x650_ros_hover_track.csv`; component logs use the same
+`/tmp/x650_ros_hover_*` prefix.

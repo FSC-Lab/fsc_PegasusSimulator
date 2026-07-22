@@ -94,6 +94,7 @@ def spawn_x650_with_mavlink(
     spawn_euler=(0.0, 0.0, 0.0),
     connection_ip: str = "127.0.0.1",
     connection_baseport: int = 4560,
+    enable_lockstep: bool = True,
 ):
     """Spawn the bare X650 airframe with a stock Pegasus ``Multirotor`` + PX4 MAVLink
     and ROS2 backends, calibrated against the MN4014+15x5" bench test. No PX4 SITL is
@@ -123,7 +124,7 @@ def spawn_x650_with_mavlink(
         "connection_type": "tcpin",
         "connection_ip": connection_ip,
         "connection_baseport": connection_baseport,   # Pegasus listens on 4560+i
-        "enable_lockstep": True,
+        "enable_lockstep": enable_lockstep,
         "px4_autolaunch": False,
         "px4_dir": px4_path,
         "px4_vehicle_model": px4_default_airframe,

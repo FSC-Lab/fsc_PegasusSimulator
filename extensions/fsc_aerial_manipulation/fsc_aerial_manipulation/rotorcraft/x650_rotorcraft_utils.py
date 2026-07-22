@@ -22,6 +22,10 @@ from fsc_aerial_manipulation.robotic_arm.x650_multirotor import MultirotorMod as
 from pegasus.simulator.logic.thrusters import QuadraticThrustCurve
 
 
+PX4_ROTOR_INPUT_SCALING = 1000.0
+PX4_ROTOR_ARMED_IDLE = 100.0
+
+
 def spawn_rotorcraft_with_mavlink(
     px4_path,
     px4_default_airframe,
@@ -72,6 +76,11 @@ def spawn_rotorcraft_with_mavlink(
         "px4_autolaunch": False,
         "px4_dir": px4_path,
         "px4_vehicle_model": px4_default_airframe,
+        # Keep this explicit: the Offboard direct-actuator controller in
+        # robotic_arm/controller.py inverts this exact normalized-control map.
+        "input_offset": [0.0] * 4,
+        "input_scaling": [PX4_ROTOR_INPUT_SCALING] * 4,
+        "zero_position_armed": [PX4_ROTOR_ARMED_IDLE] * 4,
     })
 
     ros2_backend = ROS2Backend(
