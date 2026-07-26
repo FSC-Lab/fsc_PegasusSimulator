@@ -5,7 +5,23 @@ to the calibrated X650 in Isaac Sim.
 
 ## Start the Simulation
 
-The standard launcher starts APL20, which already owns the actuator topics:
+For a custom controller that starts and owns `MicroXRCEAgent`, first start that
+controller stack's agent and then launch the controller-neutral PX4 SITL and
+X650 plant:
+
+```bash
+cd "$HOME/Source/fsc_PegasusSimulator"
+./scripts/indoor_sim/start_x650_direct_actuator_sitl.sh fsc_lab_machine
+```
+
+This launcher automatically disables Pegasus lockstep and applies the PX4
+wall-clock DDS/OFFBOARD parameters. It does not start APL20 or publish any
+setpoints or actuator commands.
+
+For the validated APL20-owned test instead, use the following launcher. It
+starts its own Micro XRCE-DDS Agent, so do not run a second agent:
+
+The APL20 launcher starts a controller that already owns the actuator topics:
 
 ```bash
 cd "$HOME/Source/fsc_PegasusSimulator"

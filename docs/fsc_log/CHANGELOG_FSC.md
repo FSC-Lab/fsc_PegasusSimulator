@@ -1,6 +1,10 @@
 # FSC Lab Fork Changelog
 
 ## Added
+- Controller-neutral X650 direct-actuator SITL launcher at
+  `scripts/indoor_sim/start_x650_direct_actuator_sitl.sh`; it reuses the calibrated indoor X650
+  stack, disables Pegasus lockstep, and applies the per-run PX4 wall-clock DDS settings while
+  leaving Micro XRCE-DDS and motor-command ownership to the external controller.
 - Indoor PX4-controlled X650 launcher at
   `scripts/indoor_sim/start_single_drone_x650.sh`.
 - Isolated persistent indoor X650 PX4 profile combining OptiTrack estimator

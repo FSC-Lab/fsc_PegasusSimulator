@@ -69,3 +69,24 @@ the measured first-order motor lag (`lambda=10.51 1/s`). Its isolated PX4 profil
 indoor OptiTrack estimator settings listed above with the validated X650 rate
 and attitude gains. Ground-truth verification is written to
 `/tmp/indoor_x650_groundtruth.log`.
+
+## Controller-neutral X650 direct actuation
+
+Use this wrapper when an external ROS 2 controller replaces APL20 and owns the
+Micro XRCE-DDS Agent plus the PX4 OFFBOARD/direct-actuator topics:
+
+```bash
+./scripts/indoor_sim/start_x650_direct_actuator_sitl.sh fsc_lab_machine
+```
+
+Start `MicroXRCEAgent udp4 -p 8888` from the external controller stack before
+running the launcher. The wrapper refuses to start if the agent is not present.
+It reuses the standard indoor X650 PX4/Isaac launcher, automatically exports
+`PEGASUS_PX4_LOCKSTEP=0`, and applies the per-run PX4 settings required by a
+wall-clock DDS controller (`UXRCE_DDS_SYNCT=0`, `COM_DISARM_LAND=0`, and
+`COM_DISARM_PRFLT=0`). It does not start APL20, a setpoint publisher, or any
+other motor-command source.
+
+The external controller is responsible for prestreaming stopped actuator
+commands, requesting and confirming OFFBOARD, requesting and confirming
+arming, and only then publishing nonzero motors.
