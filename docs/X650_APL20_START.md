@@ -3,6 +3,46 @@
 This runbook starts the bare X650 with the external APL20 controller through the complete
 ROS 2 → PX4 direct-actuator → MAVLink HIL → Pegasus path.
 
+## Source-Code Ownership
+
+The X650 free-flight direct-actuation controller is source code in the external APL20 workspace,
+not in this Pegasus Simulator repository. The workspace root is selected with
+`FSC_AUTOPILOT_WS`; on the FSC Jupiter machine its canonical location is
+`$HOME/Workspaces/fsc_autopilot_ws`.
+
+The main implementation files, relative to that workspace, are:
+
+- `src/apl20/apl20_ros/src/autopilot_node.cpp`: runs the position, attitude, and rate cascade,
+  publishes `OffboardControlMode` with `direct_actuator=true`, and publishes the four normalized
+  motor commands as `px4_msgs/msg/ActuatorMotors`.
+- `src/apl20/apl20/include/apl/control_allocator.hpp`: maps normalized body torque and collective
+  thrust to per-motor commands, including allocation, desaturation, and output clamping.
+- `src/apl20/apl20/src/position_controller.cpp`, `attitude_controller.cpp`, and
+  `rate_controller.cpp`: implement the individual flight-control loops.
+- `src/apl20/apl20_ros/config/x650.yaml`: defines the X650 hover command, control gains, rotor
+  positions, motor spin signs, moment ratio, and motor limits.
+
+This repository owns the launcher and simulated plant. In particular,
+`scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh` starts
+`apl20_ros/autopilot_node`, while `application/px4_base/03_px4_single_drone_x650.py` and the FSC
+X650 rotorcraft modules implement the Isaac/Pegasus side.
+
+The complete control path is:
+
+```text
+APL20 position/attitude/rate control
+  -> APL20 control allocator
+  -> /uav_0/fmu/in/actuator_motors
+  -> PX4 OFFBOARD/arming/saturation gate
+  -> HIL_ACTUATOR_CONTROLS over MAVLink
+  -> Pegasus calibrated X650 motor/thrust simulation
+```
+
+Do not confuse the free-flight controller with
+`$FSC_AUTOPILOT_WS/src/x650_direct_actuator_test_node.py`. That standalone node only generates
+the pinned fixture's motor-pulse sequence for checking motor order and roll, pitch, and yaw signs;
+it is not the APL20 flight controller.
+
 ## Prerequisites
 
 APL20 is built in `$HOME/Workspaces/fsc_autopilot_ws`. It requires CMake 3.28 or newer; keep

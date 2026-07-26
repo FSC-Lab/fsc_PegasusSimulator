@@ -21,6 +21,14 @@ Do not run a second normalized-throttle publisher alongside `apl20_ros/autopilot
 node may own the motor-command stream. A custom throttle node must replace APL20 in the launch
 workflow, not run concurrently with it.
 
+The free-flight controller and motor allocator are implemented in the external APL20 workspace,
+principally in `src/apl20/apl20_ros/src/autopilot_node.cpp` and
+`src/apl20/apl20/include/apl/control_allocator.hpp`. The X650-specific controller and rotor
+geometry parameters are in `src/apl20/apl20_ros/config/x650.yaml`. See
+[X650 APL20 Simulation Start Commands](X650_APL20_START.md#source-code-ownership) for the complete
+source ownership map. The separate `$FSC_AUTOPILOT_WS/src/x650_direct_actuator_test_node.py` is
+only a pinned motor-pulse diagnostic, not the free-flight controller.
+
 ## PX4 Direct-Actuator Topics
 
 Publish normalized throttle to:
@@ -42,10 +50,10 @@ Motor order for the X650 is:
 
 | Index | Position | Reaction group |
 | --- | --- | --- |
-| `control[0]` | Front-left | Positive (`km > 0`) |
-| `control[1]` | Rear-right | Positive (`km > 0`) |
-| `control[2]` | Front-right | Negative (`km < 0`) |
-| `control[3]` | Rear-left | Negative (`km < 0`) |
+| `control[0]` | Front-right | Positive (`km > 0`) |
+| `control[1]` | Rear-left | Positive (`km > 0`) |
+| `control[2]` | Front-left | Negative (`km < 0`) |
+| `control[3]` | Rear-right | Negative (`km < 0`) |
 
 Continuously publish the OFFBOARD heartbeat on:
 

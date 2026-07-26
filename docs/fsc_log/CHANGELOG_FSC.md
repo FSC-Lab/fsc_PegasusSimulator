@@ -15,6 +15,11 @@
 
 ## Modified
 - Documented separate indoor Iris, indoor X650, and outdoor launch sequences.
+- Documented that X650 free-flight direct-actuation control and allocation live in the external
+  APL20 workspace, including the ROS 2 → PX4 → MAVLink HIL → Pegasus path and the distinction
+  from the pinned motor-pulse diagnostic node.
+- Corrected the normalized-throttle guide's motor-position labels to match the validated X650
+  PX4 FRD rotor order.
 
 ## Notes
 - Upstream project: https://github.com/PegasusSimulator/PegasusSimulator
