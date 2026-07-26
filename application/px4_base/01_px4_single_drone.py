@@ -66,7 +66,12 @@ class FscDroneSim:
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
 
-        # Create the vehicle
+        # Create the vehicle. The shared spawn helper adds a telemetry-only ROS
+        # backend (PX4 remains backend[0] and owns the motors) that publishes
+        # Isaac ground truth for the indoor OptiTrack pipeline:
+        #   /uav_0/state/pose             ENU map position + FLU quaternion
+        #   /uav_0/state/twist_inertial   ENU map linear velocity
+        #   /uav_0/state/twist            FLU body velocity + angular rate
         self.drone_path = spawn_rotorcraft_with_mavlink(
             px4_path=self.pg.px4_path,
             px4_default_airframe=self.pg.px4_default_airframe,

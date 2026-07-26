@@ -23,8 +23,12 @@ into source code unless they explain a current invariant.
 - `application/`: FSC runnable scenarios grouped by `px4_base/`, `slungload/`,
   `robotic_arm/`, and `ideal_quadrotor/`.
 - `examples/`: upstream standalone examples and tutorials.
-- `scripts/`: machine-configured launch orchestration for Isaac Sim, PX4 SITL,
-  ROS 2, and tmux.
+- `scripts/`: shared machine configuration, parameter helpers, visualization,
+  cleanup, and launch orchestration support.
+- `scripts/indoor_sim/`: OptiTrack/ROS 2, aerial-manipulator, slung-load,
+  multi-drone, and direct-actuator indoor launchers.
+- `scripts/outdoor_sim/`: standard PX4-owned Iris and calibrated X650 outdoor
+  launchers.
 - `scripts/config/`: per-machine `.conf` files defining `PX4_DIR`, `ISAAC_PY`, and
   `FSC_PEGASUS_ROOT`.
 - `docs/`: Sphinx documentation and FSC lab guides. FSC-specific change history is
@@ -49,13 +53,14 @@ into source code unless they explain a current invariant.
   omit `.conf`:
 
   ```bash
-  ./scripts/start_single_drone_sitl.sh longhao_machine
+  ./scripts/outdoor_sim/start_single_drone_sitl.sh longhao_machine
   ```
 
-- New launch scripts should source both `scripts/common_config.sh` and
-  `scripts/terminal_utils.sh`, accept one machine config, use paths relative to
-  `FSC_PEGASUS_ROOT`, validate entrypoints, and clean up sibling tmux panes when one
-  process exits. Do not introduce user-specific absolute paths.
+- New launch scripts should live in `scripts/indoor_sim/` or
+  `scripts/outdoor_sim/`, source both parent helpers `scripts/common_config.sh`
+  and `scripts/terminal_utils.sh`, accept one machine config, use paths relative
+  to `FSC_PEGASUS_ROOT`, validate entrypoints, and clean up sibling tmux panes
+  when one process exits. Do not introduce user-specific absolute paths.
 
 ## Standalone application rules
 
@@ -98,15 +103,19 @@ into source code unless they explain a current invariant.
 - Treat these aerial-manipulator paths as one unit:
   `application/robotic_arm/`,
   `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/`, and
-  `scripts/start_aerial_manipulator.sh`. Its default `direct` mode is pure ROS 2;
+  `scripts/indoor_sim/start_aerial_manipulator.sh`. Its default `direct` mode is pure ROS 2;
   its optional `px4-offboard` mode routes normalized `ActuatorMotors` through
   PX4's arm/saturation gate and back to Isaac over HIL.
 - Use `application/robotic_arm/01_aerial_manipulator_hover.py` as the working arm
   reference. `22_x650_with_manip_minimal.py` contains stale/missing paths and is not
   a valid template.
-- The bare X650 uses stock Pegasus `Multirotor` with `x650.usd`; the arm-equipped
+- The bare X650 uses stock Pegasus `Multirotor` with corrected `x650_new.usd`;
+  its spawn helper overrides the asset's body mass/inertia so the established
+  3.5 kg total and CAD-derived inertia remain unchanged. The arm-equipped
   X650 uses custom `VehicleMod`/`MultirotorMod` with `AM_realign.usda`. Do not swap
-  their helpers or assets.
+  their helpers or assets. The legacy bare-X650 USD has the wrong frame
+  direction and must never be selected, including through configuration or an
+  environment override.
 - X650 calibration constants have physical provenance. Before changing mass,
   inertia, rotor speed mapping, thrust/torque coefficients, rotor lag, or PX4 gains,
   read the corresponding sections of `CLAUDE.md` and the reports under
@@ -119,7 +128,7 @@ The current ROS 2 direct-actuator work is deliberately staged. Do not begin by
 tuning the free-flight controller when motor order, signs, or torque response are
 in doubt.
 
-1. Run `scripts/start_x650_pinned_direct_actuator_test.sh`. It launches PX4,
+1. Run `scripts/indoor_sim/start_x650_pinned_direct_actuator_test.sh`. It launches PX4,
    Micro XRCE-DDS Agent, the temporary external ROS pulse node, and
    `application/px4_base/04_x650_pinned_direct_actuator_test.py`.
 2. The pinned fixture clamps translation in a physics callback but never resets
@@ -130,7 +139,7 @@ in doubt.
    diagnostic only. Compare the force-at-rotor predicted torque against measured
    angular acceleration in `/tmp/x650_pinned_torque.csv`.
 4. Only after all six roll, pitch, and yaw pulses have matching torque/acceleration
-   signs, run `scripts/start_x650_ros_offboard_hover_test.sh` for free flight. The
+   signs, run `scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh` for free flight. The
    hover plant uses the real `10.51 1/s` rotor lag.
 
 The pulse node is external at
@@ -140,7 +149,7 @@ confirms arming, and only then sends nonzero motors. After the sequence it holds
 zero and uses PX4's force-disarm code because a rotating pinned vehicle may still
 be classified as airborne.
 
-For the free-flight test, `scripts/start_x650_ros_offboard_hover_test.sh` launches
+For the free-flight test, `scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh` launches
 the external `apl20_ros/autopilot_node` with
 `/home/longhao/source/fsc_autopilot_ws/src/apl20/apl20_ros/config/x650.yaml`.
 The controller owns position, velocity, attitude, rate, and control-allocation
@@ -171,9 +180,85 @@ HIL vertical-estimator datum offset. Preserve it as an explicit caveat; do not
 compensate for it in hover thrust, position gains, or the commanded altitude.
 
 The hover launcher writes `/tmp/x650_ros_hover_track.csv` and component logs with
-the `/tmp/x650_ros_hover_*` prefix. It accepts `X650_HOVER_ALT` and
-`X650_HOVER_TEST_DETACHED=1`. The pinned fixture uses the corresponding
-`/tmp/x650_pinned_*` logs.
+the `/tmp/x650_ros_hover_*` prefix. It accepts `X650_HOVER_X`, `X650_HOVER_Y`,
+`X650_HOVER_ALT`, and `X650_HOVER_TEST_DETACHED=1`. The pinned fixture uses the
+corresponding `/tmp/x650_pinned_*` logs.
+
+The launcher also starts `isaacsim_optitrack_ros2_emulator` for `uav_0`. Isaac
+publishes ground-truth pose/quaternion on `/uav_0/state/pose`, ENU linear velocity
+on `/uav_0/state/twist_inertial`, and FLU body velocity/angular rate on
+`/uav_0/state/twist`. The emulator combines them into
+`fsc_autopilot_ros2_msgs/msg/Mocap` on `/uav_0/mocap` at 250 Hz. The source topics
+were measured at approximately 263 Hz in the 2026-07-24 live test.
+
+### Operational launch sequences
+
+The external controller workspace on the FSC Jupiter machine is
+`$HOME/Workspaces/fsc_autopilot_ws`. APL20 requires CMake 3.28 or newer; keep it
+below CMake 4 for compatibility with the other workspace projects. Build APL20
+against the existing `px4_msgs` installation rather than using
+`--packages-up-to`, which needlessly rebuilds `px4_msgs`:
+
+```bash
+cd "$HOME/Workspaces/fsc_autopilot_ws"
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+colcon build --symlink-install --packages-select apl20 apl20_ros \
+  --cmake-clean-cache --cmake-args -DBUILD_TESTING=ON
+source install/setup.bash
+colcon test --packages-select apl20 apl20_ros
+colcon test-result --verbose
+```
+
+Before starting Isaac Sim, run `nvidia-smi`. A driver/library mismatch observed
+after an NVIDIA package update was resolved by rebooting; do not begin by purging
+NVIDIA packages.
+
+Run the APL20 X650 directional-thrust test with the GUI as follows; append
+`headless` to run without the GUI:
+
+```bash
+cd "$HOME/Source/fsc_PegasusSimulator"
+FSC_AUTOPILOT_WS="$HOME/Workspaces/fsc_autopilot_ws" \
+X650_HOVER_X=1 X650_HOVER_Y=-1 X650_HOVER_ALT=1.5 \
+./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
+```
+
+The target uses ENU coordinates. The verified `(1, -1, 1.5)` m run converged to
+about 1.5 cm 3D PX4-local tracking error. Stop it with
+`tmux kill-session -t x650_ros_hover`.
+
+Use the following standard launchers when PX4, rather than APL20, should own the
+complete flight-control and motor-command path:
+
+```bash
+# Standard Iris
+./scripts/outdoor_sim/start_single_drone_sitl.sh fsc_lab_machine
+
+# Calibrated bare X650 with X650-specific PX4 gains
+./scripts/outdoor_sim/start_x650_single_drone.sh fsc_lab_machine
+```
+
+Do not run `apl20_ros/autopilot_node` or publish to
+`/uav_0/fmu/in/actuator_motors` alongside these standard launchers. Both use the
+`px4_isaac` tmux session, so they cannot run simultaneously without separate PX4
+instances, ports, vehicle IDs, and session names. Stop either with
+`tmux kill-session -t px4_isaac`.
+
+Focused runbooks are in `docs/single_drone_standard_sequence.md`,
+`docs/X650_APL20_START.md`, and `docs/X650_NORMALIZED_THROTTLE_ROS2.md`.
+
+For a standard indoor Iris with a parameter database isolated from outdoor
+simulation, use
+`scripts/indoor_sim/start_single_drone_iris.sh`. It stores parameters under
+PX4's `build/px4_sitl_default/rootfs_fsc_indoor/` while retaining PX4 instance 0,
+TCP port 4560, MAVLink system ID 1, and namespace `/uav_0`.
+
+For the equivalent bare X650 with the measured `10.51 1/s` motor lag, use
+`scripts/indoor_sim/start_single_drone_x650.sh`. Its independent
+`rootfs_fsc_indoor_x650/` profile combines the indoor external-vision parameters
+with the validated X650 attitude/rate gains. Both indoor launchers verify Isaac
+ground truth on `/uav_0/state/pose` and `/uav_0/state/twist_inertial`.
 
 ## Code style
 

@@ -28,11 +28,11 @@ set -euo pipefail
 #   └────────────────────────────────────────────────────────────────────┘
 #
 # Usage:
-#   ./scripts/start_aerial_manipulator.sh <config_name> [direct|px4-offboard]
-#   e.g. ./scripts/start_aerial_manipulator.sh longhao_machine px4-offboard
+#   ./scripts/indoor_sim/start_aerial_manipulator.sh <config_name> [direct|px4-offboard]
+#   e.g. ./scripts/indoor_sim/start_aerial_manipulator.sh longhao_machine px4-offboard
 # ============================================================================
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null

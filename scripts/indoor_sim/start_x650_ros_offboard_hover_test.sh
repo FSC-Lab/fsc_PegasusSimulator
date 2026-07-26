@@ -6,7 +6,7 @@ set -euo pipefail
 #   apl20 ROS cascade -> PX4 ActuatorMotors gate -> HIL_ACTUATOR_CONTROLS
 #       -> calibrated X650 rotor lag model -> free Isaac vehicle
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -43,6 +43,8 @@ ROS2_SETUP="${ROS2_SETUP:-/opt/ros/humble/setup.bash}"
 AUTOPILOT_SETUP="${AUTOPILOT_SETUP:-$FSC_AUTOPILOT_WS/install/setup.bash}"
 XRCE_AGENT="${XRCE_AGENT:-$(command -v MicroXRCEAgent || true)}"
 HOVER_ALT="${X650_HOVER_ALT:-1.5}"
+HOVER_X="${X650_HOVER_X:-0.0}"
+HOVER_Y="${X650_HOVER_Y:-0.0}"
 
 ISAAC_SCRIPT="$FSC_PEGASUS_ROOT/application/px4_base/03_px4_single_drone_x650.py"
 X650_PARAMS="$FSC_AUTOPILOT_WS/src/apl20/apl20_ros/config/x650.yaml"
@@ -54,6 +56,17 @@ PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 [[ -f "$ROS2_SETUP" ]] || { echo "ERROR: missing $ROS2_SETUP" >&2; exit 1; }
 [[ -f "$AUTOPILOT_SETUP" ]] || { echo "ERROR: missing $AUTOPILOT_SETUP" >&2; exit 1; }
 [[ -x "$XRCE_AGENT" ]] || { echo "ERROR: MicroXRCEAgent not found" >&2; exit 1; }
+if ! bash -c 'source "$1"; source "$2"; ros2 pkg prefix apl20_ros >/dev/null' \
+    bash "$ROS2_SETUP" "$AUTOPILOT_SETUP"; then
+  echo "ERROR: apl20_ros is not installed in $AUTOPILOT_SETUP" >&2
+  echo "Build the workspace containing $X650_PARAMS before launching." >&2
+  exit 1
+fi
+if ! bash -c 'source "$1"; source "$2"; ros2 pkg prefix isaacsim_optitrack_ros2_emulator >/dev/null' \
+    bash "$ROS2_SETUP" "$AUTOPILOT_SETUP"; then
+  echo "ERROR: isaacsim_optitrack_ros2_emulator is not installed in $AUTOPILOT_SETUP" >&2
+  exit 1
+fi
 
 SESSION="x650_ros_hover"
 UAV_NS="uav_0"
@@ -63,6 +76,7 @@ ISAAC_LOG="/tmp/x650_ros_hover_isaac.log"
 CONTROLLER_LOG="/tmp/x650_ros_hover_controller.log"
 SETPOINT_LOG="/tmp/x650_ros_hover_setpoint.log"
 XRCE_LOG="/tmp/x650_ros_hover_xrce.log"
+MOCAP_LOG="/tmp/x650_ros_hover_mocap.log"
 TRACK_LOG="/tmp/x650_ros_hover_track.csv"
 HEADLESS_VALUE=0
 [[ "$HEADLESS_ARG" == "headless" ]] && HEADLESS_VALUE=1
@@ -86,6 +100,7 @@ PX4_UXRCE_DDS_NS=$UAV_NS make px4_sitl $PX4_TARGET \\
 tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.3\" 2>/dev/null || true
+tmux kill-pane -t \"$SESSION:0.4\" 2>/dev/null || true
 exec bash
 "
 
@@ -100,6 +115,7 @@ echo 'Isaac plant exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.3\" 2>/dev/null || true
+tmux kill-pane -t \"$SESSION:0.4\" 2>/dev/null || true
 exec bash
 "
 
@@ -120,11 +136,22 @@ tmux split-window -v -t "$SESSION":0 "
 sleep 20
 source \"$ROS2_SETUP\"
 source \"$AUTOPILOT_SETUP\"
-echo 'Publishing persistent ENU hover setpoint z=$HOVER_ALT m...'
+echo 'Publishing persistent ENU position setpoint ($HOVER_X, $HOVER_Y, $HOVER_ALT) m...'
 ros2 topic pub -r 20 /autopilot/setpoint_position/local \\
   geometry_msgs/msg/PoseStamped \\
-  '{header: {frame_id: map}, pose: {position: {x: 0.0, y: 0.0, z: $HOVER_ALT}, orientation: {w: 1.0}}}' \\
+  '{header: {frame_id: map}, pose: {position: {x: $HOVER_X, y: $HOVER_Y, z: $HOVER_ALT}, orientation: {w: 1.0}}}' \\
   2>&1 | tee \"$SETPOINT_LOG\"
+exec bash
+"
+
+tmux split-window -v -t "$SESSION":0 "
+sleep 18
+source \"$ROS2_SETUP\"
+source \"$AUTOPILOT_SETUP\"
+echo 'Starting Isaac Sim OptiTrack emulator for uav_0...'
+ros2 launch isaacsim_optitrack_ros2_emulator emulator_launch.py bodies:=uav_0 \\
+  2>&1 | tee \"$MOCAP_LOG\"
+echo 'OptiTrack emulator exited.'
 exec bash
 "
 

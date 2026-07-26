@@ -11,7 +11,15 @@ The FSC Lab fork ships a set of launch scripts under `scripts/` at the repositor
 For example, to launch the single-drone slung-load payload SITL simulation on Longhao's machine:
 
 ```bash
-./scripts/start_single_drone_sitl_payload.sh longhao_machine
+./scripts/indoor_sim/start_single_drone_sitl_payload.sh longhao_machine
+```
+
+Standard indoor PX4-controlled single drones have dedicated persistent
+external-vision profiles:
+
+```bash
+./scripts/indoor_sim/start_single_drone_iris.sh fsc_lab_machine
+./scripts/indoor_sim/start_single_drone_x650.sh fsc_lab_machine
 ```
 
 `longhao_machine` is not a placeholder — it is the name (without `.conf`) of a file under `scripts/config/`. Every script takes exactly one argument: your machine config name.
@@ -36,7 +44,7 @@ ISAAC_PY="$HOME/isaacsim/python_r_fsc.sh"
 All three variables are required — `scripts/common_config.sh` validates they're set and that the paths exist before launching anything. Once the file exists, launch with its basename (without `.conf`); e.g. `scripts/config/smith_machine.conf` is invoked as:
 
 ```bash
-./scripts/start_single_drone_sitl.sh smith_machine
+./scripts/outdoor_sim/start_single_drone_sitl.sh smith_machine
 ```
 
 Configs already checked into the repo (for reference only — add your own rather than reusing one of these):
@@ -53,6 +61,7 @@ Configs already checked into the repo (for reference only — add your own rathe
 :maxdepth: 1
 
 single_drone_sitl
+single_drone_indoor
 single_drone_sitl_payload
 single_drone_sitl_payload_test
 multi_drone_sitl

@@ -6,7 +6,7 @@
 | Copyright (c) 2026, Longhao Qian. All rights reserved.
 | Description: Single X650 quadrotor SITL simulation environment - bare airframe, no
 |   payload. Mirrors 01_px4_single_drone.py's structure exactly, but spawns the FSC X650
-|   asset (x650.usd) on the stock Multirotor with a thrust curve calibrated against the
+|   corrected asset (x650_new.usd) on the stock Multirotor with a thrust curve calibrated against the
 |   MN4014 + 15x5" propeller bench test (docs/propeller_testing/MN_4014_15x5_report.pdf)
 |   instead of Iris's stock thrust curve. Does not touch 01_px4_single_drone.py/Iris.
 """

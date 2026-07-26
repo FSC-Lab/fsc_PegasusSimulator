@@ -1,4 +1,5 @@
 #!/bin/bash
+# Legacy indoor launcher; see docs/source/fsc_lab/three_drone_rigid_body_payload_sitl.md.
 
 PX4_DIR="$HOME/PX4-Autopilot"
 PEGASUS_SCRIPT="/home/longhao/source/PegasusSimulator/examples/16_px4_multi_vehicle_slungload.py"

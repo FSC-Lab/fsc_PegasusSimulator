@@ -28,8 +28,8 @@
 |
 |   To run (Linux, single machine — no WSL bridge needed):
 |     Use the launch script, which starts both panes in tmux:
-|          ./scripts/start_aerial_manipulator.sh <your_name>_machine direct
-|          ./scripts/start_aerial_manipulator.sh <your_name>_machine px4-offboard
+|          ./scripts/indoor_sim/start_aerial_manipulator.sh <your_name>_machine direct
+|          ./scripts/indoor_sim/start_aerial_manipulator.sh <your_name>_machine px4-offboard
 |
 |     Or start the two processes manually:
 |       1. Isaac Sim side (this script), via the Isaac python wrapper:

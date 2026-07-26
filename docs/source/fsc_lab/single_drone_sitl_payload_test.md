@@ -3,13 +3,13 @@
 Same layout as [Single Drone SITL with Slung-Load Payload](single_drone_sitl_payload.md), pointed at the payload testing scenario (e.g. a variable-length cable / testing setup) instead of the standard one.
 
 ```bash
-./scripts/start_single_drone_sitl_payload_test.sh <machine_config_name>
+./scripts/indoor_sim/start_single_drone_sitl_payload_test.sh <machine_config_name>
 ```
 
 Example:
 
 ```bash
-./scripts/start_single_drone_sitl_payload_test.sh longhao_machine
+./scripts/indoor_sim/start_single_drone_sitl_payload_test.sh longhao_machine
 ```
 
 **Pegasus entrypoint:** `application/slungload/05_px4_single_drone_payload_testing.py`

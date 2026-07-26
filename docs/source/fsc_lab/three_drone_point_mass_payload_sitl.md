@@ -3,13 +3,13 @@
 Same three-instance SITL setup as [Multi Drone SITL](multi_drone_sitl.md), carrying a shared point-mass payload.
 
 ```bash
-./scripts/start_3_drone_point_mass_payload_sitl.sh <machine_config_name>
+./scripts/indoor_sim/start_3_drone_point_mass_payload_sitl.sh <machine_config_name>
 ```
 
 Example:
 
 ```bash
-./scripts/start_3_drone_point_mass_payload_sitl.sh longhao_machine
+./scripts/indoor_sim/start_3_drone_point_mass_payload_sitl.sh longhao_machine
 ```
 
 **Pegasus entrypoint:** `application/slungload/03_px4_multi_drone_point_mass_payload.py`

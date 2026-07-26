@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Single X650 quadrotor with a slung-load payload — PX4 SITL simulation.
 
-The vehicle is the FSC X650 asset (x650.usd), flown on the stock Pegasus
+The vehicle is the corrected FSC X650 asset (x650_new.usd), flown on the stock Pegasus
 Multirotor/Vehicle: the asset already uses the naming those classes expect
 (/body, /rotor0../rotor3, joint0..joint3). PX4/QGroundControl drives the motors;
 a slung payload hangs from the drone body by a two-link cable of spherical joints.

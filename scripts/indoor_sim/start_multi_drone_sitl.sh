@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -31,7 +31,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-PEGASUS_SCRIPT_REL="application/slungload/06_px4_3_drone_rigidbody_payload_variable_length_cable.py"
+PEGASUS_SCRIPT_REL="application/px4_base/02_px4_multi_drone.py"
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Pegasus script not found: $PEGASUS_SCRIPT" >&2; exit 1; }
 
@@ -124,8 +124,8 @@ exec bash
 tmux send-keys -t "$SESSION":0.3 "
 echo 'Waiting $DELAY seconds for PX4 instances...'
 sleep $DELAY
-echo 'Launching Isaac Sim (PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0}, PEGASUS_PROFILE=${PEGASUS_PROFILE:-0})...'
-PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0} PEGASUS_PROFILE=${PEGASUS_PROFILE:-0} \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+echo 'Launching Isaac Sim with Pegasus multi-vehicle script...'
+\"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null; tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null
 exec bash

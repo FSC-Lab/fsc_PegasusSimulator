@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -31,11 +31,11 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-# Hard-coded relative path (same on all machines). Bare X650 airframe (no payload),
-# MN4014+15x5" thrust-curve calibration - see application/px4_base/03_px4_single_drone_x650.py
-# and fsc_aerial_manipulation/rotorcraft/x650_bare_frame_utils.py. Does not touch the
-# stock Iris single-drone script (01_px4_single_drone.py) this mirrors.
-PEGASUS_SCRIPT_REL="application/px4_base/03_px4_single_drone_x650.py"
+# Hard-coded relative path (same on all machines). X650 airframe + variable-length winch
+# cable - see application/slungload/px4_single_drone_payload_variable_length_cable_x650.py.
+# Does not touch the Iris variant (02_px4_single_drone_payload_variable_length_cable.py) or
+# its own launch script (start_single_drone_sitl_payload_variable_cable.sh) this mirrors.
+PEGASUS_SCRIPT_REL="application/slungload/px4_single_drone_payload_variable_length_cable_x650.py"
 
 # Compose the full path (machine-dependent base + fixed tail)
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
@@ -74,8 +74,8 @@ exec bash
 tmux split-window -h -t "$SESSION":0 "
 echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
-echo 'Launching Isaac Sim (X650, MN4014+15x5 thrust curve)...'
-\"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+echo 'Launching Isaac Sim (X650, variable-length cable, PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0}, PEGASUS_PROFILE=${PEGASUS_PROFILE:-0})...'
+PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0} PEGASUS_PROFILE=${PEGASUS_PROFILE:-0} \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash

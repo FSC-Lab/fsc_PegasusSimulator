@@ -3,13 +3,13 @@
 Launches one PX4 SITL instance carrying a slung-load payload.
 
 ```bash
-./scripts/start_single_drone_sitl_payload.sh <machine_config_name>
+./scripts/indoor_sim/start_single_drone_sitl_payload.sh <machine_config_name>
 ```
 
 Example:
 
 ```bash
-./scripts/start_single_drone_sitl_payload.sh longhao_machine
+./scripts/indoor_sim/start_single_drone_sitl_payload.sh longhao_machine
 ```
 
 **Pegasus entrypoint:** `application/slungload/01_px4_single_drone_payload.py`
