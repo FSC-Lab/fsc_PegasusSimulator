@@ -47,10 +47,13 @@ fi
 EV_DELAY_MS="$((10#$EV_DELAY_MS))"
 GROUNDTRUTH_LOG="/tmp/indoor_x650_groundtruth.log"
 
+command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
+command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: missing $PEGASUS_SCRIPT" >&2; exit 1; }
 [[ -f "$X650_ASSET" ]] || { echo "ERROR: missing corrected X650 asset: $X650_ASSET" >&2; exit 1; }
 [[ -f "$ROS2_SETUP" ]] || { echo "ERROR: missing $ROS2_SETUP" >&2; exit 1; }
 [[ -x "$GROUNDTRUTH_CHECK" ]] || { echo "ERROR: missing executable $GROUNDTRUTH_CHECK" >&2; exit 1; }
+[[ -x "$ISAAC_PY" ]] || { echo "ERROR: Isaac Sim wrapper is not executable: $ISAAC_PY" >&2; exit 1; }
 [[ -x "$PX4_BIN" ]] || {
   echo "ERROR: PX4 SITL is not built: $PX4_BIN" >&2
   echo "Run: make -C $PX4_DIR px4_sitl_default" >&2
