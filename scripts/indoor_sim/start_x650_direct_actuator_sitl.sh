@@ -58,6 +58,26 @@ fi
 # transitions. Disabling Pegasus lockstep prevents both sides waiting forever.
 export PEGASUS_PX4_LOCKSTEP=0
 
+# ...but the export alone is not enough, and silently was not working. This script
+# ends by exec'ing the base launcher, which starts Isaac inside a NEW tmux session,
+# and a new session inherits the environment of the already-running tmux SERVER --
+# not of this shell. Under the documented start order the controller stack runs
+# first, so a server always exists by now and the export above is discarded. Isaac
+# then comes up with lockstep enabled (the default), and entering DIRECT deadlocks
+# the PX4/Isaac HIL link: PX4 waits for Isaac, Isaac waits for PX4, and the PX4
+# console fills with "ERROR [simulator_mavlink] poll timeout 0, 111".
+#
+# Push the value onto the server as well. If no server is running yet this fails
+# harmlessly -- in that case the base launcher creates the first session, which does
+# inherit the exported value above, so both paths end up correct.
+# Diagnosed live 2026-07-30; see fsc_autopilot_ros2
+# docs/direct_actuator_control/progress_and_next_steps.md steps 0 and 3.
+if tmux setenv -g PEGASUS_PX4_LOCKSTEP 0 2>/dev/null; then
+  echo "Pegasus PX4 lockstep: pushed to the tmux server environment"
+else
+  echo "Pegasus PX4 lockstep: no tmux server yet; the new session will inherit the export"
+fi
+
 echo "Starting controller-neutral X650 direct-actuator SITL."
 echo "Pegasus PX4 lockstep: disabled"
 echo "MicroXRCEAgent: externally owned and detected"
