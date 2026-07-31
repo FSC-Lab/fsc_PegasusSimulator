@@ -14,6 +14,18 @@ cfg_usage() {
   echo "  ${prog} longhao_machine.conf"
 }
 
+list_machine_configs() {
+  local config_dir
+  config_dir="$(_get_repo_root)/scripts/config"
+
+  echo "Available configs:"
+  local config_file
+  for config_file in "$config_dir"/*.conf; do
+    [[ -e "$config_file" ]] || continue
+    echo "  $(basename -- "$config_file" .conf)"
+  done
+}
+
 # Resolve repo root based on this file location:
 #   <repo>/scripts/common_config.sh -> <repo>
 _get_repo_root() {
@@ -72,6 +84,7 @@ load_machine_config() {
   if ! cfg_file="$(resolve_config_path "$cfg_name")"; then
     echo "ERROR: could not resolve config: $cfg_name"
     echo "Looked in: $(_get_repo_root)/scripts/config/"
+    list_machine_configs
     cfg_usage "$prog"
     return 2
   fi

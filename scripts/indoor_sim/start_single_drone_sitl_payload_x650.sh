@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -32,7 +32,7 @@ fi
 load_machine_config "$0" "$CFG_NAME"
 
 # Hard-coded relative path (same on all machines)
-PEGASUS_SCRIPT_REL="application/slungload/01_px4_single_drone_payload.py"
+PEGASUS_SCRIPT_REL="application/slungload/px4_single_drone_payload_x650.py"
 
 # Compose the full path (machine-dependent base + fixed tail)
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
@@ -60,11 +60,6 @@ PX4_UXRCE_DDS_NS=$PX4_UXRCE_DDS_NS make px4_sitl $PX4_TARGET \
   mavlink_udp_remote:=$MAVLINK_REMOTE \
   mavlink_udp_port:=$MAVLINK_PORT
 echo 'PX4 SITL exited.'
-# PX4 has no way to know Isaac Sim is gone (or vice versa) - without this, whichever
-# side is still alive lingers indefinitely burning CPU. Kill the sibling pane so a dead
-# half never outlives the other; this pane's own shell (exec bash below) stays up so you
-# can still read PX4's final output.
-tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null
 exec bash
 "
 
@@ -74,9 +69,13 @@ sleep $DELAY
 echo 'Launching Isaac Sim...'
 \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
-tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash
 "
+
+# Apply the X650-specific PX4 rate/attitude gain tuning once PX4 has booted (see
+# apply_x650_px4_gains.sh and CLAUDE.md's "X650 PX4 gain tuning" section - stock none_iris
+# defaults can't fly the X650's rotor spin-up lag model without this).
+"$SCRIPT_DIR/apply_x650_px4_gains.sh" "$SESSION" "0.0" 8 &
 
 tmux select-layout -t "$SESSION":0 even-horizontal
 tmux attach-session -t "$SESSION"

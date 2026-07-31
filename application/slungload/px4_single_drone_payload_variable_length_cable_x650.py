@@ -9,7 +9,8 @@
 |   02_px4_single_drone_payload_variable_length_cable.py (two rigid rods - rod_a: proximal/
 |   drone-side, rod_b: distal/payload-side - connected by a prismatic joint, whose constraint
 |   force is the cable tension and whose position/velocity are the cable extension/extension
-|   rate, exposed over ROS2 via ROS2CableWinchBackend), just with the X650 asset (x650.usd) and
+|   rate, exposed over ROS2 via ROS2CableWinchBackend), just with the corrected X650 asset
+|   (x650_new.usd) and
 |   its MN4014+15x5" thrust-curve calibration swapped in for Iris - same pattern as
 |   application/slungload/px4_single_drone_payload_x650.py's swap for the fixed-length cable.
 """

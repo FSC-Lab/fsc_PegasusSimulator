@@ -9,7 +9,7 @@ set -euo pipefail
 # The X650 position is reset by a translation-only physics callback; attitude remains free.
 # Results are written to /tmp/x650_pinned_torque.csv.
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null

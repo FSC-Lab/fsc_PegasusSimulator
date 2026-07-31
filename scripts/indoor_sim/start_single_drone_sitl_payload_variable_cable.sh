@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -31,11 +31,8 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-# Hard-coded relative path (same on all machines). X650 airframe + variable-length winch
-# cable - see application/slungload/px4_single_drone_payload_variable_length_cable_x650.py.
-# Does not touch the Iris variant (02_px4_single_drone_payload_variable_length_cable.py) or
-# its own launch script (start_single_drone_sitl_payload_variable_cable.sh) this mirrors.
-PEGASUS_SCRIPT_REL="application/slungload/px4_single_drone_payload_variable_length_cable_x650.py"
+# Hard-coded relative path (same on all machines)
+PEGASUS_SCRIPT_REL="application/slungload/02_px4_single_drone_payload_variable_length_cable.py"
 
 # Compose the full path (machine-dependent base + fixed tail)
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
@@ -74,17 +71,12 @@ exec bash
 tmux split-window -h -t "$SESSION":0 "
 echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
-echo 'Launching Isaac Sim (X650, variable-length cable, PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0}, PEGASUS_PROFILE=${PEGASUS_PROFILE:-0})...'
+echo 'Launching Isaac Sim (PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0}, PEGASUS_PROFILE=${PEGASUS_PROFILE:-0})...'
 PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0} PEGASUS_PROFILE=${PEGASUS_PROFILE:-0} \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash
 "
-
-# Apply the X650-specific PX4 rate/attitude gain tuning once PX4 has booted (see
-# apply_x650_px4_gains.sh and CLAUDE.md's "X650 PX4 gain tuning" section - stock none_iris
-# defaults can't fly the X650's rotor spin-up lag model without this).
-"$SCRIPT_DIR/apply_x650_px4_gains.sh" "$SESSION" "0.0" 8 &
 
 tmux select-layout -t "$SESSION":0 even-horizontal
 tmux attach-session -t "$SESSION"

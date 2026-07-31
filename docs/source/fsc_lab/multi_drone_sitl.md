@@ -3,13 +3,13 @@
 Launches three independent PX4 SITL instances (`uav_0`, `uav_1`, `uav_2`) alongside a multi-vehicle Pegasus scene.
 
 ```bash
-./scripts/start_multi_drone_sitl.sh <machine_config_name>
+./scripts/indoor_sim/start_multi_drone_sitl.sh <machine_config_name>
 ```
 
 Example:
 
 ```bash
-./scripts/start_multi_drone_sitl.sh longhao_machine
+./scripts/indoor_sim/start_multi_drone_sitl.sh longhao_machine
 ```
 
 **Pegasus entrypoint:** `application/px4_base/02_px4_multi_drone.py`

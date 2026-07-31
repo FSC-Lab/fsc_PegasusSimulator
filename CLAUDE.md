@@ -24,7 +24,7 @@ Isaac through Pegasus's primary MAVLink backend.
 **Related paths — treat these three as one unit for future work on this scenario:**
 - `application/robotic_arm/`
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/`
-- `scripts/start_aerial_manipulator.sh`
+- `scripts/indoor_sim/start_aerial_manipulator.sh`
 
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/x650_vehicle.py` —
   `VehicleMod(Vehicle)`, thin subclass adding `usd_prim_path`/configurable `body_path` for a
@@ -56,7 +56,7 @@ Isaac through Pegasus's primary MAVLink backend.
   it hardcodes an absolute USD path under `/home/fsc-jupiter/...` (line 73) rather than
   resolving relative to `FSC_PEGASUS_ROOT`. Don't use as a template until fixed — `01` is the
   correct reference.
-- `scripts/start_aerial_manipulator.sh` + `scripts/config/shiqi_machine.conf` — follows the
+- `scripts/indoor_sim/start_aerial_manipulator.sh` + `scripts/config/shiqi_machine.conf` — follows the
   same `common_config.sh`/`terminal_utils.sh`/per-machine-config convention as the slung-load
   launch scripts. `direct` starts the original two panes (Isaac + controller).
   `px4-offboard` starts PX4 SITL, Micro XRCE-DDS Agent, Isaac, and the controller; it sources a
@@ -86,13 +86,15 @@ fixed-length slung-load payload — structurally the same pattern as
 Iris. This works unmodified because the new asset follows the stock naming convention the
 `Multirotor` class hardcodes (`/body`, `/rotor0`..`/rotor3`, `joint0`..`joint3`).
 
-- Asset: `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/x650.usd`
+- Active asset: `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/x650_new.usd`
   (~54MB) — **not** the same file as the aerial-manipulator's
-  `AM_realign.usda` (~255MB) in that same `assets/` directory; `x650.usd` is the bare frame only
+  `AM_realign.usda` (~255MB) in that same `assets/` directory; `x650_new.usd` is the bare frame only
   (stock rotor/body naming, no arm links), while `AM_realign.usda` is the full quadrotor+arm
   asset with the custom prim structure `VehicleMod`/`MultirotorMod` are built to reference. Both
   are covered by the `extensions/fsc_aerial_manipulation/**/assets/` `.gitignore` rule (large
-  binaries, distributed out-of-band via Google Drive, not committed).
+  binaries, distributed out-of-band via Google Drive, not committed). The legacy bare-frame file
+  has the wrong frame direction and is retained only as historical data; no code, launcher,
+  environment variable, or recovery procedure may select it.
 - PX4 is the primary backend here (motor authority), with a ROS2 backend for state-publishing
   only (`sub_control: False`) — same division as every other `application/slungload/` scenario,
   and the opposite of the aerial-manipulator scenario (pure ROS2, no PX4).
@@ -100,27 +102,27 @@ Iris. This works unmodified because the new asset follows the stock naming conve
   `application/slungload/` follows (`01_`..`06_`) — not fixed here since it wasn't asked for,
   just worth knowing if you're looking for it by number.
 
-**MN4014+15x5" thrust-curve calibration applied (2026-07-13)** — `x650.usd`'s structure was
-verified first (standalone `pxr` inspection, no Isaac Sim launch needed — see
+**MN4014+15x5" thrust-curve calibration applied (2026-07-13)** — the legacy asset's structure was
+inspected first (see
 `docs/propeller_testing/` below for the bench data this uses): naming/articulation pattern
 matches the known-working `iris.usd` exactly (`ArticulationRootAPI` on the non-rigid-body root
-Xform, `RigidBodyAPI` on `/body` and each `/rotorN`), motor-to-motor **diagonal** spacing is
-exactly 650.3mm (matches the "X650" name), and rotor0/1 (`prop_clock` mesh) vs. rotor2/3
-(`prop_counter_clock` mesh) are correctly paired by diagonal for yaw balance. Vehicle mass was
+Xform, `RigidBodyAPI` on `/body` and each `/rotorN`). Its frame direction and motor/propeller assignment
+were later found to be wrong; `x650_new.usd` corrects both and is now the sole source of geometry
+and rotor ordering. The corrected joint anchors place each motor at approximately
+`(±0.22990663, ±0.22990663)` m, giving a 0.325137 m arm length; the pure-Python allocation model
+uses those values. The original calibration's vehicle mass was
 then set to 3.5kg total (`/x650/body/body`'s authored mass 1.467kg → 3.416kg, so the 4 rotors'
 existing ~0.021kg each bring the total to exactly 3.5kg; diagonal inertia scaled by the same
 mass ratio, ×2.328, assuming similar mass distribution). A backup
-(`x650.usd.bak_before_mass_edit`) was left alongside the asset since it's gitignored with no
-git history to fall back on.
+was left alongside the legacy asset for historical comparison, not as a valid model to restore.
 
 **Inertia halved again (2026-07-13), mass unchanged** — user's own follow-up correction: scaling
 inertia by the same ratio as mass assumed the added ~2kg is distributed like the rest of the
 body, but if it's more centrally concentrated (e.g. batteries mounted near the CG rather than
 spread over the frame's full extent), actual inertia wouldn't scale as much as mass did. Diagonal
 inertia halved from the mass-ratio-scaled value: `(0.1345, 0.1492, 0.1513) → (0.0673, 0.0746,
-0.0757)` kg·m² (mass stays 3.416kg). A second backup (`x650.usd.bak_before_inertia_half`) was
-made of the pre-halving (fully mass-scaled) state, in addition to the original
-`x650.usd.bak_before_mass_edit` - both available to revert to. This was part of diagnosing the
+0.0757)` kg·m² (mass stays 3.416kg). Historical snapshots of these intermediate values must not
+be restored as flight assets. This was part of diagnosing the
 rotor-lag-induced PX4 oscillation (see below): testing whether the earlier proportional-scaling
 assumption on inertia, not just the actuator lag itself, was contributing to the instability,
 before considering retuning PX4's rate/attitude gains directly.
@@ -213,7 +215,7 @@ then converted into the sim's actual thrust-curve interface:
       value, just a stability-driven workaround.
     - **X650 CAD inertia correction**: the user provided the actual CAD (OnShape) "Mass and
       section properties" panel for the X650 frame part. Its `Lxx/Lyy/Lzz` (kg·mm², ÷1e6 for
-      kg·m²) — `(0.057775, 0.065004, 0.064082)` — matched `x650.usd`'s **original, pre-edit**
+      kg·m²) — `(0.057775, 0.065004, 0.064082)` — matched the legacy asset's **original, pre-edit**
       authored inertia `(0.057775, 0.064082, 0.065005)` for `(Ixx,Iyy,Izz)` almost exactly (Y/Z
       swapped between CAD's and USD's axis labeling) — confirming the asset's original inertia
       was already correctly CAD-sourced, and the earlier `×2.328` mass-ratio scaling (done when
@@ -224,8 +226,8 @@ then converted into the sim's actual thrust-curve interface:
       CAD-derived values (`0.05777498, 0.06408172, 0.065004565`) while **keeping mass at
       3.416kg** (ignoring CAD's own 1.467kg reference mass, per explicit user instruction — the
       extra ~2kg is assumed not to significantly change the rotational inertia distribution). A
-      second backup, `x650.usd.bak_before_inertia_half`, and the original
-      `x650.usd.bak_before_mass_edit` are both still available to revert to if needed.
+      historical backup files are diagnostic records only and must not be restored into an
+      active scenario because their model frame is wrong.
     - **X650 PX4 gain tuning — final working configuration**, confirmed live against the
       corrected CAD inertia and the true bench λ=10.51:
       | Parameter | Stock default | X650 tuned value |
@@ -255,10 +257,23 @@ then converted into the sim's actual thrust-curve interface:
   `01_px4_single_drone.py`'s exact structure with Iris swapped for the calibrated X650 via
   `spawn_x650_with_mavlink`. **`01_px4_single_drone.py`/Iris itself was not touched** by any of
   this work — verified via `git status` on the upstream `extensions/pegasus.simulator/` tree.
-- `scripts/start_x650_single_drone.sh` (new) — mirrors `start_single_drone_sitl.sh` exactly,
+- `scripts/outdoor_sim/start_x650_single_drone.sh` (new) — mirrors `start_single_drone_sitl.sh` exactly,
   pointing at the new bare-drone script above; now also calls `apply_x650_px4_gains.sh` (see
   "X650 PX4 gain tuning" above) 8s after launch.
-- Note: `scripts/start_single_drone_sitl_payload_x650.sh` already existed (pre-dates this
+- `scripts/indoor_sim/start_single_drone_x650.sh` (added 2026-07-25) runs the same calibrated
+  bare-X650 plant and measured `lambda=10.51 1/s` rotor lag with PX4-owned control, but combines
+  the validated X650 gains with the indoor external-vision estimator settings before EKF2 starts.
+  It keeps those parameters in the independent `rootfs_fsc_indoor_x650/` work directory and
+  verifies Isaac pose and inertial-velocity ROS 2 topics after startup.
+- `rotorcraft/assets/x650_new.usd` became the active bare-X650 asset on 2026-07-25. It corrects
+  the model rotation and PX4 Quad-X motor/propeller order: rotors 0/1 are the front-right/rear-left
+  counter-clockwise pair and rotors 2/3 are the front-left/rear-right clockwise pair. The new file
+  authors only 1.467368 kg on its body mesh, so `x650_bare_frame_utils.py` overrides that mesh at
+  spawn time with the established 3.416079 kg body mass and
+  `(0.05777498, 0.06408172, 0.065004565) kg*m^2` diagonal inertia. Together with the four authored
+  rotor masses, total simulated vehicle mass remains 3.5 kg. Do not copy the new asset's authored
+  body mass into controller or calibration constants.
+- Note: `scripts/indoor_sim/start_single_drone_sitl_payload_x650.sh` already existed (pre-dates this
   session's work, launches the payload variant) but lacks the tmux kill-pane cleanup pattern the
   other launch scripts in this repo have — not fixed here since it wasn't asked for. It does now
   also call `apply_x650_px4_gains.sh`, same as the other two X650 launch scripts.
@@ -271,7 +286,7 @@ prismatic joint + `ROS2CableWinchBackend`), with Iris swapped for the calibrated
 mass (`rod_b_mass+payload_mass=0.565kg`) is unchanged from the Iris version — that constraint
 comes from `cable_torque_ctrl_node`'s deployed mass param (AK40-10 side), not the carrying
 vehicle's lift capacity, so it doesn't change just because X650 has far more thrust margin.
-`scripts/start_single_drone_sitl_payload_variable_cable_x650.sh` (new) mirrors
+`scripts/indoor_sim/start_single_drone_sitl_payload_variable_cable_x650.sh` (new) mirrors
 `start_single_drone_sitl_payload_variable_cable.sh` exactly, pointing at the new script, and also
 calls `apply_x650_px4_gains.sh`. Neither the Iris variant nor its launch script were touched
 (verified via `git status`).
@@ -371,7 +386,7 @@ those two packages work against it **unmodified**.
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/slung_load/variable_length_cable_utils.py` (new) — `create_prismatic_rod_pair`, `setup_variable_length_cable_geometry`
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/utils/cable_winch_backend_utils.py` (new) — `ROS2CableWinchBackend`: publishes `cable_winch_0/state/cable` (extension, extension velocity) + `state/force`, subscribes `cable_winch_0/command/force`, applies it as a force pair each physics step
 - `application/slungload/02_px4_single_drone_payload_variable_length_cable.py` — populated (was an empty placeholder): drone ↔(spherical)↔ rod_a ↔(prismatic)↔ rod_b ↔(spherical)↔ payload, wired to the new backend
-- `scripts/start_single_drone_sitl_payload_variable_cable.sh` (new) — launch script for this scenario, same tmux/PX4 pattern as `start_single_drone_sitl_payload.sh`
+- `scripts/indoor_sim/start_single_drone_sitl_payload_variable_cable.sh` (new) — launch script for this scenario, same tmux/PX4 pattern as `start_single_drone_sitl_payload.sh`
 
 **Runtime test log:**
 1. Full stack launches cleanly: PX4 SITL connects over mavlink, Isaac Sim runs with no exceptions/tracebacks, visually the rods/payload behaved correctly (confirmed by user).

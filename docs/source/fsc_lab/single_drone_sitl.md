@@ -3,13 +3,13 @@
 Launches one PX4 SITL instance flying the default Iris multirotor via `pegasus.simulator`, no payload.
 
 ```bash
-./scripts/start_single_drone_sitl.sh <machine_config_name>
+./scripts/outdoor_sim/start_single_drone_sitl.sh <machine_config_name>
 ```
 
 Example:
 
 ```bash
-./scripts/start_single_drone_sitl.sh longhao_machine
+./scripts/outdoor_sim/start_single_drone_sitl.sh longhao_machine
 ```
 
 **Pegasus entrypoint:** `application/px4_base/01_px4_single_drone.py`

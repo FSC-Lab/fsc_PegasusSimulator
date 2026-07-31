@@ -4,7 +4,8 @@
 | Author: Longhao Qian (longhao.qian@mail.utoronto.ca)
 | License: BSD-3-Clause
 | Copyright (c) 2026, Longhao Qian. All rights reserved.
-| Description: Spawn helper for the bare X650 airframe (x650.usd - stock rotor/body naming,
+| Description: Spawn helper for the bare X650 airframe (x650_new.usd - corrected model rotation
+|   and PX4 motor order, with stock rotor/body naming,
 |   no robotic arm) on the STOCK Pegasus Multirotor/MultirotorConfig, calibrated against the
 |   MN4014 + 15x5" propeller bench test. Distinct from x650_rotorcraft_utils.py, which spawns
 |   the arm-equipped X650 (AM_realign.usda) on the FSC MultirotorMod/VehicleMod subclasses.
@@ -13,15 +14,23 @@
 import os
 
 from scipy.spatial.transform import Rotation
+from pxr import Gf, UsdPhysics
 
 from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorConfig
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
 
-# Resolve the X650 asset (x650.usd) from the installed package so the path holds
-# regardless of where the repo lives.
-X650_USD = os.path.join(os.path.dirname(__file__), "assets", "x650.usd")
+# The corrected model is the sole bare-X650 asset. Do not add an environment
+# override or fallback to the legacy wrong-frame model: every bare-X650
+# scenario must share this geometry, frame convention, and motor ordering.
+X650_USD = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", "x650_new.usd"))
+
+# x650_new.usd corrects geometry orientation and motor/propeller ordering, but
+# its body mesh currently authors a 1.467 kg mass. Preserve the validated
+# established mass properties: body + four authored rotor masses = 3.5 kg total.
+X650_BODY_MASS = 3.416079044342041  # kg
+X650_BODY_INERTIA = (0.05777498, 0.06408172, 0.065004565)  # kg*m^2
 
 # ── MN4014 + 15x5" prop bench-test calibration ──────────────────────────────
 # Source: docs/propeller_testing/MN_4014_15x5_report.pdf, Step 1 polynomial fits
@@ -76,7 +85,7 @@ X650_ROLLING_MOMENT_COEFFICIENT = 8.366000e-07  # N.m / (rad/s)^2
 # range.
 #
 # SETTLED (2026-07-14): the true bench-measured value (10.51) now flies cleanly - confirmed
-# working against (a) x650.usd's body inertia set to the true CAD-derived values (NOT
+# working against (a) the X650's true CAD-derived body inertia values (NOT
 # mass-ratio-scaled - see CLAUDE.md's "X650 CAD inertia correction" note) and (b) X650-specific
 # PX4 rate/attitude gain tuning, applied automatically at launch by
 # scripts/apply_x650_px4_gains.sh (all 3 X650 launch scripts call it). See CLAUDE.md's "X650 PX4
@@ -85,6 +94,20 @@ X650_ROLLING_MOMENT_COEFFICIENT = 8.366000e-07  # N.m / (rad/s)^2
 # fix - retuning PX4, not raising lambda - was identified).
 X650_ROTOR_LAMBDA = 10.51  # 1/s
 # X650_ROTOR_LAMBDA = 200  # test
+
+
+def apply_x650_mass_properties(vehicle) -> None:
+    """Apply the validated 3.5 kg X650 mass model to the corrected USD."""
+    body_mesh_path = f"{vehicle._stage_prefix}/body/body"
+    body_mesh = vehicle._world.stage.GetPrimAtPath(body_mesh_path)
+    if not body_mesh or not body_mesh.IsValid():
+        raise RuntimeError(f"X650 body mass prim did not resolve: {body_mesh_path}")
+
+    mass_api = UsdPhysics.MassAPI(body_mesh)
+    if not mass_api:
+        mass_api = UsdPhysics.MassAPI.Apply(body_mesh)
+    mass_api.GetMassAttr().Set(X650_BODY_MASS)
+    mass_api.GetDiagonalInertiaAttr().Set(Gf.Vec3f(*X650_BODY_INERTIA))
 
 
 def spawn_x650_with_mavlink(
@@ -101,7 +124,7 @@ def spawn_x650_with_mavlink(
     and ROS2 backends, calibrated against the MN4014+15x5" bench test. No PX4 SITL is
     launched here (it runs in a separate terminal).
 
-    The X650 asset (x650.usd) follows the stock naming convention, so the stock
+    The X650 asset (x650_new.usd) follows the stock naming convention, so the stock
     Multirotor works unmodified — its hardcoded "/body", "/rotor0".."/rotor3" and
     "joint0".."joint3" line up with the asset. We spawn at stage_prefix
     "/World/quadrotor_<id>" so the referenced /x650 children land directly under
@@ -113,6 +136,10 @@ def spawn_x650_with_mavlink(
     Returns:
         str: the vehicle stage prefix (drone root path).
     """
+    if not os.path.isfile(X650_USD):
+        raise FileNotFoundError(f"Corrected X650 USD not found: {X650_USD}")
+    print(f"[X650] Using corrected asset: {X650_USD}", flush=True)
+
     quat_xyzw = Rotation.from_euler("XYZ", spawn_euler, degrees=True).as_quat()
 
     # ----- PX4 MAVLink backend (primary motor command source = backend[0]) -----
@@ -151,9 +178,10 @@ def spawn_x650_with_mavlink(
     )
 
     # Stock MultirotorConfig: default sensors (Baro/IMU/Mag/GPS). Thrust curve is
-    # overridden below with the MN4014+15x5" bench-test calibration (rot_dir stays
-    # the default [-1,-1,1,1], the iris/none_iris spin convention the x650 rotors
-    # follow - see x650.usd's rotor_clock/rotor_counter_clock mesh pairing).
+    # overridden below with the MN4014+15x5" bench-test calibration. The
+    # corrected asset uses PX4 order: rotor0 front-right and rotor1 rear-left
+    # are counter-clockwise; rotor2 front-left and rotor3 rear-right are
+    # clockwise. Pegasus represents that convention as [-1, -1, 1, 1].
     # backend[0] = PX4 (primary).
     config = MultirotorConfig()
     config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
@@ -163,6 +191,7 @@ def spawn_x650_with_mavlink(
         "min_rotor_velocity": [X650_MIN_ROTOR_VEL] * 4,
         "max_rotor_velocity": [X650_MAX_ROTOR_VEL] * 4,
         "rotor_lambda": [X650_ROTOR_LAMBDA] * 4,
+        "rot_dir": [-1, -1, 1, 1],
     })
 
     drone_prim_path = f"/World/quadrotor_{vehicle_id}"
@@ -175,6 +204,7 @@ def spawn_x650_with_mavlink(
         init_orientation=quat_xyzw,
         config=config,
     )
+    apply_x650_mass_properties(vehicle)
 
     # Return the resolved stage prefix (get_stage_next_free_path may append a
     # suffix if the path was taken; here it stays "/World/quadrotor_<id>").
