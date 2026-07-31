@@ -1,11 +1,8 @@
 """
 | File: postprocessor.py
-| Author: Shiqi Gao (shiqi.gao907@gmail.com)
 | Author: Ben Natra (send2ben123@gmail.com)
-| License: BSD-3-Clause
-| Copyright (c) 2026, Shiqi Gao and Ben Natra. All rights reserved.
-
-onshape_usd_postprocessor.py
+| Author: Shiqi Gao (shiqi.gao907@gmail.com)
+| Description: OnShape → USD postprocessor.
 
 Paste into Isaac Sim Script Editor (Window > Script Editor) and run immediately
 after the OnShape importer finishes. Automates the full cleanup sequence:

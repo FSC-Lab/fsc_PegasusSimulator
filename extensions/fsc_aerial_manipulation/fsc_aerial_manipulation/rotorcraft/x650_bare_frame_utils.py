@@ -84,6 +84,7 @@ X650_ROLLING_MOMENT_COEFFICIENT = 8.366000e-07  # N.m / (rad/s)^2
 # oscillated/crashed across a range of test lambda values from 10.51 up to 14.5, before the real
 # fix - retuning PX4, not raising lambda - was identified).
 X650_ROTOR_LAMBDA = 10.51  # 1/s
+# X650_ROTOR_LAMBDA = 200  # test
 
 
 def spawn_x650_with_mavlink(

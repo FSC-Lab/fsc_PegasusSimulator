@@ -1,7 +1,7 @@
 """
 | File: x650_multirotor.py
+| Author: Ben Natra (send2ben123@gmail.com)
 | Author: Shiqi Gao (shiqi.gao907@gmail.com)
-| License: BSD-3-Clause
 | Description: FSC aerial-manipulator Multirotor. A *subclass* of the stock pegasus
 |              ``Multirotor`` (for the thrust model / is-a relationship) and of the
 |              FSC ``VehicleMod`` (for the configurable USD source prim + body path).

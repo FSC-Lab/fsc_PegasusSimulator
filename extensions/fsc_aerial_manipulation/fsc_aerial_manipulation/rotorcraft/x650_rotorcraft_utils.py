@@ -2,8 +2,6 @@
 """
 | File: x650_rotorcraft_utils.py
 | Author: Ben Natra (send2ben123@gmail.com)
-| License: BSD-3-Clause
-| Copyright (c) 2026, Ben Natra. All rights reserved.
 | Description: Utility functions for defining rotorcraft in Isaac Sim
 """
 

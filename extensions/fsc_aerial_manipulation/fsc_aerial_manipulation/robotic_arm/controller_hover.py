@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-controller.py — faithful Python port of the working MATLAB controller.
+controller_hover.py — faithful Python port of the working MATLAB controller.
+
+Author: Ben Natra (send2ben123@gmail.com)
+Author: Shiqi Gao (shiqi.gao907@gmail.com)
 
 Direct, function-structured port of the MATLAB pipeline so the code mirrors the
 reference exactly (which validated stable in simulation):

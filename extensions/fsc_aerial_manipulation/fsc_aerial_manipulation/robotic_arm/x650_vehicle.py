@@ -1,7 +1,7 @@
 """
 | File: x650_vehicle.py
+| Author: Ben Natra (send2ben123@gmail.com)
 | Author: Shiqi Gao (shiqi.gao907@gmail.com)
-| License: BSD-3-Clause
 | Description: FSC aerial-manipulator Vehicle. A thin *subclass* of the stock
 |              pegasus ``Vehicle`` (extensions/pegasus.simulator/.../vehicles/vehicle.py)
 |              that adds:
