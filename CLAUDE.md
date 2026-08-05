@@ -293,12 +293,13 @@ calls `apply_x650_px4_gains.sh`. Neither the Iris variant nor its launch script 
 
 ## Propeller bench test data (`docs/propeller_testing/`)
 
-Real motor+propeller bench-test reports — reference data, not code. `MN_4014_15x5` is now wired
-into the X650 vehicle's thrust curve (see below); `MT_2216_10x4.5` is not yet connected to any
-vehicle config.
+Real motor+propeller bench-test reports — reference data, not code. `MN_4014_15x5` is wired into
+the X650 vehicle's thrust curve and `MN_4010_15x5` into the T650's (see below);
+`MT_2216_10x4.5` is not yet connected to any vehicle config.
 
-- `MT_2216_10x4.5_report.pdf` (generated 2026-06-05) and `MN_4014_15x5_report.pdf` (generated
-  2026-07-12) — one report per motor+prop combo tested.
+- `MT_2216_10x4.5_report.pdf` (generated 2026-06-05), `MN_4014_15x5_report.pdf` (generated
+  2026-07-12) and `MN_4010_15x5_report.pdf` (generated 2026-07-15) — one report per motor+prop
+  combo tested.
 - Each report gives: **Step 1** polynomial fits of throttle → RPM/Thrust/Torque (with R², all
   ≥0.996 in both reports); **Step 2** throttle→RPM response lag lookup tables; **Step 3** a
   first-order RPM-response bandwidth model, `RPM_rate = λ·(RPM_cmd − RPM)`, comparing 4
@@ -313,6 +314,86 @@ vehicle config.
   section above for the full derivation, `x650_bare_frame_utils.py`'s calibration, and
   `lagged_thrust_curve.py`'s `LaggedQuadraticThrustCurve`. `MT_2216_10x4.5` remains unconnected
   to any vehicle config as of this writing.
+- **`MN_4010_15x5` is fully connected too, to the T650** (2026-08-05) — see the T650 section
+  below. **The fit procedure was validated before use**: re-running it against the MN4014
+  polynomials reproduced that motor's committed `k`/`c` to **0.000%**, so the two motor sets are
+  directly comparable and not fitted by different methods. Do the same before adding a third.
+
+## T650 (Tarot 650): X650 geometry + MN4010 motors + 2.95 kg (added 2026-08-05)
+
+A second vehicle sharing the bare-X650 asset, added for the FSC Lab Tarot 650 build. **Only two
+things differ from the X650** — the motor/propeller set and the total mass. USD geometry, rotor
+ordering, arm length, inertia, sensors, backends and environment are inherited unchanged; there
+is no separate T650 asset.
+
+| | MN4014 (X650) | MN4010 (T650) |
+|---|---|---|
+| ω idle → max | 81.8374 → 817.5911 rad/s | **64.0603 → 730.0507 rad/s** |
+| `rotor_constant` k | 4.536223e-05 | **4.540431e-05** |
+| `rolling_moment_coefficient` c | 8.366000e-07 | **8.247173e-07** |
+| λ (spin-up bandwidth) | 10.51 (τ 95.1 ms) | **10.0265 (τ 99.7 ms)** |
+| total mass | 3.5 kg | **2.95 kg** |
+| hover command | 0.4800 | **0.5032** |
+
+Two consequences that look like bugs but are not:
+
+- **The T650 hovers ~7 points higher on the stick** (0.5032 vs 0.4800). Its top rotor speed is
+  lower at a nearly identical thrust constant, so the same weight sits higher. Static
+  thrust-to-weight is still 3.35.
+- **The MN4010 is the SLOWER rotor**, λ 10.0265 vs 10.51 — ~4.8% more lag. Modest, but it costs
+  phase margin, so the softened X650 PX4 gains (`MC_*RATE_K=0.3`, `MC_ROLL_P/MC_PITCH_P=3.25`,
+  `MC_YAW_P=1.4`) are if anything more necessary here. Do **not** raise λ to buy stability —
+  that was tried on the MN4014 (15.51) and is a workaround for untuned gains, not a physical
+  value.
+
+Where things live:
+
+- `extensions/.../rotorcraft/x650_params.py` — `MN4010_*` constants and the `T650_*` mass/hover
+  block, each with its derivation. Inertia is **inherited from the X650's CAD diagonal**, on the
+  same "the mass difference is centrally concentrated" assumption already accepted for the X650's
+  own +1.95 kg body-mass change. It IS an assumption; replace it if the T650 gets its own CAD.
+- `extensions/.../rotorcraft/x650_bare_frame_utils.py` — a `MOTOR_CALIBRATIONS` table plus
+  `motor=` / `body_mass=` / `body_inertia=` arguments on `spawn_x650_with_mavlink()`. **Add a new
+  entry to that table rather than cloning the module.** `DEFAULT_MOTOR = "MN4014"`, so all four
+  pre-existing callers are untouched.
+- `application/px4_base/05_px4_single_drone_t650.py` — the T650 app.
+- `scripts/indoor_sim/start_single_drone_t650.sh` — thin wrapper over the X650 launcher.
+- `scripts/indoor_sim/start_t650_direct_actuator_sitl.sh` — direct-actuation variant, lockstep
+  disabled and pushed with `tmux setenv -g` (same fix as the X650 version).
+
+`start_single_drone_x650.sh` is now the shared orchestration for both vehicles, via three
+env hooks whose defaults reproduce the X650 exactly: `INDOOR_SIM_PEGASUS_SCRIPT`,
+`INDOOR_SIM_VEHICLE_LABEL`, `INDOOR_SIM_PX4_PROFILE`. The last is a directory **name**, not a
+path, so a variant wrapper does not need `PX4_DIR` resolved before it runs (it isn't —
+`common_config.sh` only defines it inside `load_machine_config`, which the base launcher calls).
+**Each vehicle must keep its own PX4 profile**: PX4 `param save`s into it, so sharing one would
+silently carry one airframe's tune into the other.
+
+**`SYS_HAS_MAG=0` was missing from the indoor launcher until 2026-08-05** and is now set for
+both vehicles. The indoor scenario already ran `EKF2_MAG_TYPE=5` (None), so declaring no
+magnetometer is the consistent setting; it is also on the required indoor list in
+`fsc_drone_state_estimator_ros2/docs/px4_indoor_paramters.md`. It is a boot-time parameter — a
+live `param set` will not take effect until PX4 restarts.
+
+**Validation, 2026-08-05.** Two independent paths, both agreeing with the calibration:
+
+| path | measured hover | predicted 0.503188 |
+|---|---|---|
+| QGC/PX4 mixer (`commander takeoff`, GPS profile) | 0.503341 | 0.030% |
+| `fsc_autopilot_ros2` baseline node (indoor EV, full stack) | 0.50320 | 0.002% |
+
+The first flew a full takeoff → 2.5 m hover (vz 0.0024 m/s, roll 1.3°, pitch 0.1°, body rates
+~0.002-0.004 rad/s) → land. The second held a commanded 1.0 m at 0.9963 m (0.37 cm error,
+0.59 cm spread) with lateral hold inside 1.5 cm.
+
+Two things learned while running it, both easy to lose an hour to:
+
+- **`ekf2 stop` on a running lockstep sim deadlocks the PX4↔Isaac HIL link** (`ERROR
+  [simulator_mavlink] poll timeout 0, 111`). Do not restart the estimator in place to pick up
+  EKF2 parameter changes — relaunch the sim instead.
+- **Isaac Sim crashes at ~800 ms under `PEGASUS_HEADLESS=1`** on this machine (breakpad,
+  `std::__throw_system_error` out of `pthread_create`), well before any scenario code runs. Run
+  with the display; `DISPLAY=:0` and an X11 session are available.
 
 ## Normalized swing state (r, v) — JGCD paper data feed
 
@@ -447,6 +528,13 @@ With all three fixed, the live A/B test (real square-wave reference driving `cab
 ## Checklist for adding a new vehicle model
 
 When creating a new vehicle (config class + vehicle class), verify each item below.
+
+**First check whether you need a new vehicle at all.** If the airframe reuses an existing
+asset and differs only in motors and/or mass — as the T650 does from the X650 — add a
+`MOTOR_CALIBRATIONS` entry in `x650_bare_frame_utils.py` and pass `motor=`/`body_mass=`
+instead of cloning the spawn helper. Whichever route you take, re-run the fit procedure
+against an already-committed motor first and confirm it reproduces that motor's constants
+before trusting it on the new one (see "Propeller bench test data").
 
 ### Config class
 - [ ] All fields are **pure data** — no live resources (ROS nodes, sockets, processes) instantiated in `__init__`

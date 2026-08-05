@@ -20,6 +20,7 @@ from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorCo
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
+from fsc_aerial_manipulation.rotorcraft import x650_params
 
 # The corrected model is the sole bare-X650 asset. Do not add an environment
 # override or fallback to the legacy wrong-frame model: every bare-X650
@@ -94,9 +95,46 @@ X650_ROLLING_MOMENT_COEFFICIENT = 8.366000e-07  # N.m / (rad/s)^2
 # fix - retuning PX4, not raising lambda - was identified).
 X650_ROTOR_LAMBDA = 10.51  # 1/s
 
+# ── Selectable motor/propeller calibration sets (added 2026-08-05) ──────────
+# Everything else about this vehicle -- asset, mass, inertia, rotor geometry,
+# rotation directions, backends, sensors -- is shared across motor variants.
+# Only the numbers in this table change, which is exactly the axis along which
+# these scenarios are meant to differ, so add an entry here rather than cloning
+# this module.
+#
+# "MN4014" is the historical default and reproduces the pre-2026-08-05 behaviour
+# exactly; every existing caller gets it without passing anything. MN4010's
+# constants and their derivation live in x650_params.py.
+MOTOR_CALIBRATIONS = {
+    "MN4014": {
+        "report": "docs/propeller_testing/MN_4014_15x5_report.pdf",
+        "zero_position_armed": X650_ZERO_POSITION_ARMED,
+        "min_rotor_velocity": X650_MIN_ROTOR_VEL,
+        "max_rotor_velocity": X650_MAX_ROTOR_VEL,
+        "rotor_constant": X650_ROTOR_CONSTANT,
+        "rolling_moment_coefficient": X650_ROLLING_MOMENT_COEFFICIENT,
+        "rotor_lambda": X650_ROTOR_LAMBDA,
+    },
+    "MN4010": {
+        "report": "docs/propeller_testing/MN_4010_15x5_report.pdf",
+        "zero_position_armed": x650_params.MN4010_ZERO_POSITION_ARMED,
+        "min_rotor_velocity": x650_params.MN4010_MIN_ROTOR_VEL,
+        "max_rotor_velocity": x650_params.MN4010_MAX_ROTOR_VEL,
+        "rotor_constant": x650_params.MN4010_ROTOR_CONSTANT,
+        "rolling_moment_coefficient": x650_params.MN4010_ROLLING_MOMENT_COEFFICIENT,
+        "rotor_lambda": x650_params.MN4010_ROTOR_LAMBDA,
+    },
+}
+DEFAULT_MOTOR = "MN4014"
 
-def apply_x650_mass_properties(vehicle) -> None:
-    """Apply the validated 3.5 kg X650 mass model to the corrected USD."""
+
+def apply_x650_mass_properties(vehicle, body_mass=None, body_inertia=None) -> None:
+    """Apply the validated 3.5 kg X650 mass model to the corrected USD.
+
+    ``body_mass``/``body_inertia`` override it for airframes that reuse this
+    geometry with a different mass budget (e.g. the 2.95 kg T650). Both default
+    to the X650's own validated values, so existing callers are unaffected.
+    """
     body_mesh_path = f"{vehicle._stage_prefix}/body/body"
     body_mesh = vehicle._world.stage.GetPrimAtPath(body_mesh_path)
     if not body_mesh or not body_mesh.IsValid():
@@ -105,8 +143,10 @@ def apply_x650_mass_properties(vehicle) -> None:
     mass_api = UsdPhysics.MassAPI(body_mesh)
     if not mass_api:
         mass_api = UsdPhysics.MassAPI.Apply(body_mesh)
-    mass_api.GetMassAttr().Set(X650_BODY_MASS)
-    mass_api.GetDiagonalInertiaAttr().Set(Gf.Vec3f(*X650_BODY_INERTIA))
+    mass_api.GetMassAttr().Set(X650_BODY_MASS if body_mass is None else body_mass)
+    mass_api.GetDiagonalInertiaAttr().Set(
+        Gf.Vec3f(*(X650_BODY_INERTIA if body_inertia is None else body_inertia))
+    )
 
 
 def spawn_x650_with_mavlink(
@@ -118,6 +158,9 @@ def spawn_x650_with_mavlink(
     connection_ip: str = "127.0.0.1",
     connection_baseport: int = 4560,
     enable_lockstep: bool = True,
+    motor: str = DEFAULT_MOTOR,
+    body_mass=None,
+    body_inertia=None,
 ):
     """Spawn the bare X650 airframe with a stock Pegasus ``Multirotor`` + PX4 MAVLink
     and ROS2 backends, calibrated against the MN4014+15x5" bench test. No PX4 SITL is
@@ -132,20 +175,40 @@ def spawn_x650_with_mavlink(
     PX4 is backend[0] (primary): PX4/QGroundControl drives the motors; the ROS2
     backend only publishes vehicle state.
 
+    Args:
+        motor: key into ``MOTOR_CALIBRATIONS`` -- "MN4014" (default, the X650's
+            own bench calibration) or "MN4010" (the T650's). Selects the rotor
+            speed range, thrust/torque constants and spin-up lambda together;
+            these must never be mixed across motors.
+        body_mass, body_inertia: override the X650's 3.416 kg / CAD inertia for
+            airframes reusing this geometry at a different mass (e.g. T650).
+
     Returns:
         str: the vehicle stage prefix (drone root path).
     """
     if not os.path.isfile(X650_USD):
         raise FileNotFoundError(f"Corrected X650 USD not found: {X650_USD}")
+    if motor not in MOTOR_CALIBRATIONS:
+        raise ValueError(
+            f"Unknown motor calibration {motor!r}; "
+            f"available: {sorted(MOTOR_CALIBRATIONS)}"
+        )
+    cal = MOTOR_CALIBRATIONS[motor]
     print(f"[X650] Using corrected asset: {X650_USD}", flush=True)
+    print(
+        f"[X650] Motor calibration: {motor} ({cal['report']}) | "
+        f"omega {cal['zero_position_armed']:.2f}..{cal['max_rotor_velocity']:.2f} rad/s | "
+        f"k={cal['rotor_constant']:.6e} | lambda={cal['rotor_lambda']} 1/s",
+        flush=True,
+    )
 
     quat_xyzw = Rotation.from_euler("XYZ", spawn_euler, degrees=True).as_quat()
 
     # ----- PX4 MAVLink backend (primary motor command source = backend[0]) -----
-    # input_offset/input_scaling/zero_position_armed calibrated against the MN4014+
-    # 15x5" bench test above, so PX4's normalized 0-1 motor commands map onto the
-    # bench-measured rotor speed range, replacing the stock Iris-tuned defaults
-    # (input_scaling=1000, zero_position_armed=100).
+    # input_offset/input_scaling/zero_position_armed calibrated against the
+    # selected motor's bench test, so PX4's normalized 0-1 motor commands map onto
+    # the bench-measured rotor speed range, replacing the stock Iris-tuned
+    # defaults (input_scaling=1000, zero_position_armed=100).
     mavlink_config = PX4MavlinkBackendConfig({
         "vehicle_id": vehicle_id,
         "connection_type": "tcpin",
@@ -156,8 +219,8 @@ def spawn_x650_with_mavlink(
         "px4_dir": px4_path,
         "px4_vehicle_model": px4_default_airframe,
         "input_offset": [0.0, 0.0, 0.0, 0.0],
-        "input_scaling": [X650_MAX_ROTOR_VEL - X650_ZERO_POSITION_ARMED] * 4,
-        "zero_position_armed": [X650_ZERO_POSITION_ARMED] * 4,
+        "input_scaling": [cal["max_rotor_velocity"] - cal["zero_position_armed"]] * 4,
+        "zero_position_armed": [cal["zero_position_armed"]] * 4,
     })
 
     # ----- ROS2 backend (state publishing only; PX4 has motor authority) -----
@@ -177,7 +240,7 @@ def spawn_x650_with_mavlink(
     )
 
     # Stock MultirotorConfig: default sensors (Baro/IMU/Mag/GPS). Thrust curve is
-    # overridden below with the MN4014+15x5" bench-test calibration. The
+    # overridden below with the selected motor's bench-test calibration. The
     # corrected asset uses PX4 order: rotor0 front-right and rotor1 rear-left
     # are counter-clockwise; rotor2 front-left and rotor3 rear-right are
     # clockwise. Pegasus represents that convention as [-1, -1, 1, 1].
@@ -185,11 +248,11 @@ def spawn_x650_with_mavlink(
     config = MultirotorConfig()
     config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
     config.thrust_curve = LaggedQuadraticThrustCurve(config={
-        "rotor_constant": [X650_ROTOR_CONSTANT] * 4,
-        "rolling_moment_coefficient": [X650_ROLLING_MOMENT_COEFFICIENT] * 4,
-        "min_rotor_velocity": [X650_MIN_ROTOR_VEL] * 4,
-        "max_rotor_velocity": [X650_MAX_ROTOR_VEL] * 4,
-        "rotor_lambda": [X650_ROTOR_LAMBDA] * 4,
+        "rotor_constant": [cal["rotor_constant"]] * 4,
+        "rolling_moment_coefficient": [cal["rolling_moment_coefficient"]] * 4,
+        "min_rotor_velocity": [cal["min_rotor_velocity"]] * 4,
+        "max_rotor_velocity": [cal["max_rotor_velocity"]] * 4,
+        "rotor_lambda": [cal["rotor_lambda"]] * 4,
         "rot_dir": [-1, -1, 1, 1],
     })
 
@@ -203,7 +266,7 @@ def spawn_x650_with_mavlink(
         init_orientation=quat_xyzw,
         config=config,
     )
-    apply_x650_mass_properties(vehicle)
+    apply_x650_mass_properties(vehicle, body_mass=body_mass, body_inertia=body_inertia)
 
     # Return the resolved stage prefix (get_stage_next_free_path may append a
     # suffix if the path was taken; here it stays "/World/quadrotor_<id>").
