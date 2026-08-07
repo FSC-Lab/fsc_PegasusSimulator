@@ -5,25 +5,34 @@
 | License: BSD-3-Clause
 | Copyright (c) 2026, Longhao Qian. All rights reserved.
 | Description: Single Tarot 650 (T650) quadrotor SITL simulation environment - bare
-|   airframe, no payload. Byte-for-byte the same scenario as
-|   03_px4_single_drone_x650.py except for the two things that actually differ
-|   between the two vehicles:
+|   airframe, no payload. Structurally the same scenario as
+|   03_px4_single_drone_x650.py, but the T650 now has its OWN parameter and spawn
+|   modules rather than borrowing the X650's:
+|
+|       rotorcraft/t650_params.py            physical + calibration constants
+|       rotorcraft/t650_bare_frame_utils.py  spawn_t650_with_mavlink()
+|
+|   Neither imports the X650 modules, so a change to one vehicle cannot silently
+|   move the other.
+|
+|   What actually differs from the X650:
 |
 |     1. MOTORS: MN4010 + 15x5" instead of MN4014 + 15x5"
-|        (docs/propeller_testing/MN_4010_15x5_report.pdf). Selected by name via
-|        spawn_x650_with_mavlink(motor="MN4010"); the calibration table lives in
-|        rotorcraft/x650_bare_frame_utils.py and the constants in x650_params.py.
-|     2. MASS: 2.95 kg total instead of 3.5 kg.
+|        (docs/propeller_testing/MN_4010_15x5_report.pdf).
+|     2. MASS: body mass 2.95 kg (total 3.0339 kg with the asset's four authored
+|        rotor bodies) instead of the X650's 3.416 kg body / 3.5 kg total.
 |
-|   Everything else - USD geometry, rotor ordering, arm length, inertia, sensors,
-|   backends, environment, spawn pose - is inherited unchanged. There is no
-|   separate T650 asset; this reuses x650_new.usd.
+|   The USD asset is SHARED - there is no separate T650 model; both vehicles use
+|   x650_new.usd, and the T650's body inertia is copied from the X650's CAD values.
 |
 |   Two consequences worth knowing before flying it:
 |
-|   * It hovers HIGHER on the stick: 0.5032 vs the X650's 0.4800, because the
+|   * It hovers HIGHER on the stick: 0.5117 against the X650's 0.4800, because the
 |     MN4010's top rotor speed is lower (730.05 vs 817.59 rad/s) at a nearly
-|     identical thrust constant. That is expected, not a calibration error.
+|     identical thrust constant, and because the body mass is now 2.95 kg rather
+|     than 2.95 kg TOTAL as before (which gave 0.5032). Expected, not a
+|     calibration error - but see t650_params.BODY_MASS, which records that
+|     0.5032 is the value validated against hardware.
 |   * The rotor is SLOWER: lambda 10.0265 vs 10.51 1/s, i.e. tau 99.7 vs 95.1 ms.
 |     Less phase margin, so the softened X650 PX4 gains (MC_*RATE_K=0.3,
 |     MC_ROLL_P/MC_PITCH_P=3.25, MC_YAW_P=1.4) are if anything more necessary
@@ -55,9 +64,9 @@ import omni.usd
 from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
 from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
 
-# Same spawn helper the X650 scenarios use; the motor set and mass are passed in.
-from fsc_aerial_manipulation.rotorcraft.x650_bare_frame_utils import spawn_x650_with_mavlink
-from fsc_aerial_manipulation.rotorcraft import x650_params
+# The T650's own spawn helper and constants -- independent of the X650 modules.
+from fsc_aerial_manipulation.rotorcraft.t650_bare_frame_utils import spawn_t650_with_mavlink
+from fsc_aerial_manipulation.rotorcraft import t650_params
 from fsc_aerial_manipulation.utils import add_dome_lighting
 
 
@@ -96,22 +105,24 @@ class FscDroneSim:
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
 
-        # Create the vehicle (X650 geometry, MN4010+15x5" thrust curve, 2.95 kg)
-        self.drone_path = spawn_x650_with_mavlink(
+        # Create the vehicle. Mass, inertia and the MN4010 thrust curve all come from
+        # t650_params via the helper's own defaults -- nothing is passed in here, so
+        # there is exactly one place to change a T650 number.
+        self.drone_path = spawn_t650_with_mavlink(
             px4_path=self.pg.px4_path,
             px4_default_airframe=self.pg.px4_default_airframe,
             vehicle_id=0,
             spawn_pos=(0.0, 0.0, 0.07),
             spawn_euler=(0.0, 0.0, 0.0),
             enable_lockstep=PX4_LOCKSTEP,
-            motor="MN4010",
-            body_mass=x650_params.T650_BODY_MASS,
-            body_inertia=tuple(x650_params.T650_INERTIA_DIAG),
         )
         print(
-            f"[T650] total mass {x650_params.T650_MASS} kg "
-            f"(body {x650_params.T650_BODY_MASS:.6f} kg + 4 authored rotors) | "
-            f"expected hover command {x650_params.T650_HOVER_COMMAND:.4f}",
+            f"[T650] total mass {t650_params.MASS:.6f} kg "
+            f"(body {t650_params.BODY_MASS:.6f} kg + 4 authored rotors "
+            f"{t650_params.ROTOR_MASS_TOTAL:.6f} kg) | "
+            f"inertia {tuple(t650_params.INERTIA_DIAG)} kg.m^2 | "
+            f"expected hover command {t650_params.HOVER_COMMAND:.4f} | "
+            f"thrust/weight {t650_params.THRUST_TO_WEIGHT:.2f}",
             flush=True,
         )
 
