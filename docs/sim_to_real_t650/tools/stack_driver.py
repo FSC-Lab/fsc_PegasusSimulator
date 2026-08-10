@@ -181,12 +181,19 @@ class StackDriver(Node):
 
     def on_odom(self, m):
         p, v = m.pose.pose.position, m.twist.twist.linear
+        q, w = m.pose.pose.orientation, m.twist.twist.angular
         self.pos = np.array([p.x, p.y, p.z])
         self.vel = np.array([v.x, v.y, v.z])
         self.have_odom = True
         if self.recording():
+            # 15 columns: 0 wall_us, 1 px4_us, 2:5 pos, 5:8 vel, 8:12 quat(wxyz), 12:15
+            # omega -- exactly the layout load_sim() slices. Orientation and body rates
+            # were dropped from this recording at some point, which silently made every
+            # attitude and yaw comparison impossible (load_sim raised IndexError on the
+            # 8-column result). Yaw is the axis this campaign most needs, so they stay.
             self.rec["odom"].append((self.stamp_us(), self.px4_us_latest,
-                                     p.x, p.y, p.z, v.x, v.y, v.z))
+                                     p.x, p.y, p.z, v.x, v.y, v.z,
+                                     q.w, q.x, q.y, q.z, w.x, w.y, w.z))
 
     @property
     def armed(self):
@@ -303,7 +310,7 @@ class StackDriver(Node):
             sp_q_d=arr("sp_q", 4), sp_thrust=arr("sp_thr", 3),
             spdbg_ts=np.asarray(rec["spd_t"], dtype=np.int64),
             spdbg_q_d=arr("spd_q", 4), spdbg_thrust=arr("spd_thr", 3),
-            odom=arr("odom", 8), timesync=arr("ts", 5), reflog=arr("reflog", 8),
+            odom=arr("odom", 15), timesync=arr("ts", 5), reflog=arr("reflog", 8),
             status=arr("status", 3),
             seq_t0_us=np.array([self._seq_t0_px4()], dtype=np.int64),
         )

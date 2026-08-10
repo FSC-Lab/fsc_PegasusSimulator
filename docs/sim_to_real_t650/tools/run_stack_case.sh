@@ -53,12 +53,18 @@ sleep 2
 # --- 2. PX4 SITL + IsaacSim T650 plant (the user-specified launcher) ---
 echo "[case] starting $SIM_LAUNCHER"
 DISPLAY=:0 setsid bash "$SIM_LAUNCHER" --in-terminal "$CFG" >"$LOGDIR/sim_launcher.log" 2>&1 &
-for i in $(seq 1 180); do
-  if tmux has-session -t px4_isaac 2>/dev/null && \
-     tmux capture-pane -p -t px4_isaac:0.0 2>/dev/null | grep -q "Simulator connected"; then
-    echo "[case] PX4<->Isaac HIL link up after ${i}s"; break
+# Readiness is checked on the DDS topics, NOT by grepping the tmux pane. capture-pane
+# truncates at the pane width (measured 39 columns here), so the "Simulator connected"
+# banner is not reliably greppable and this loop silently timed out on a healthy sim.
+# Nor can `ros2 topic echo --once` be used: it subscribes RELIABLE while every /fmu/out/*
+# topic is BEST_EFFORT, so it blocks forever. The topic being ADVERTISED is the real
+# signal -- /fmu/out/* only appears once PX4 has booted and uXRCE-DDS has connected.
+set +u; source "$ROS2_SETUP"; source "$WS_SETUP"; set -u
+for i in $(seq 1 120); do
+  if ros2 topic list 2>/dev/null | grep -q "^/uav_0/fmu/out/vehicle_status_v1$"; then
+    echo "[case] PX4 topics advertised after ~$((i*3))s"; break
   fi
-  sleep 1
+  sleep 3
 done
 echo "[case] waiting for EKF2 / ground-truth topics to settle"
 sleep 30

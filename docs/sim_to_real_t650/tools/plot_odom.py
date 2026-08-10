@@ -81,12 +81,66 @@ def detect_steps(ref_t, ref_pos, ref_yaw, min_pos=0.05, min_yaw=2.0):
     return steps
 
 
+AMBIGUOUS_YAW_DEG = 170.0
+MIN_HOLD_S = 5.0
+
+
+def usable_steps(steps, verbose=True):
+    """Keep only steps a response can actually be measured from. Never silent.
+
+    Two exclusions, both about the COMMAND being unsuitable rather than the model being
+    wrong, so leaving them in would corrupt the aggregates with differences that carry no
+    information about the plant:
+
+    1. Hold shorter than MIN_HOLD_S. Rise, overshoot and especially +-5% settling need the
+       response to actually develop; on a 3 s hold the next step arrives mid-transient and
+       the metrics measure the truncation, not the vehicle.
+    2. Yaw steps of >= AMBIGUOUS_YAW_DEG. A command of very nearly +-180 deg does not
+       specify which way to turn, and real and sim may legitimately choose opposite
+       directions.
+
+    The final step of a sequence has no defined hold and is also dropped -- it is the
+    landing descent in all of these runs, where ground effect and the land detector
+    dominate. The baseline campaign excluded it on the same grounds.
+    """
+    keep, drop = [], []
+    for s in steps:
+        if s["axis"] == "yaw" and abs(s["size"]) >= AMBIGUOUS_YAW_DEG:
+            drop.append((s, f"{abs(s['size']):.0f} deg is direction-ambiguous"))
+        elif s["hold"] is None:
+            drop.append((s, "final step of the sequence (landing descent)"))
+        elif s["hold"] < MIN_HOLD_S:
+            drop.append((s, f"hold {s['hold']:.1f}s < {MIN_HOLD_S:.0f}s, response is "
+                            f"truncated"))
+        else:
+            keep.append(s)
+    if verbose:
+        print(f"{len(steps)} steps detected; using {len(keep)}")
+        for s in keep:
+            print(f"  {s['idx']:2d} t={s['t']:7.2f}  {s['axis']:>3} {s['frm']:7.2f} -> "
+                  f"{s['to']:7.2f}  hold {s['hold']:.1f}s")
+        for s, why in drop:
+            print(f"  {s['idx']:2d} t={s['t']:7.2f}  {s['axis']:>3} {s['frm']:7.2f} -> "
+                  f"{s['to']:7.2f}  EXCLUDED: {why}")
+    return keep
+
+
 def series(side, axis, ref_yaw0=None):
-    """(y, label) for a plotted axis. Yaw is unwrapped and, for the simulation, shifted to
-    the real reference's yaw datum so both start from the same heading."""
+    """(y, label) for a plotted axis.
+
+    Yaw is WRAPPED to +-180, not unwrapped. np.unwrap was used here until 2026-08-07 and
+    silently corrupts any run whose heading approaches +-180: on flight D2 it spuriously
+    added full turns at t = 98.8, 133.1 and 144.2 s, sending the real trace to +366 deg
+    while the simulation stayed near 0 and making a well-tracked run look like a total
+    failure. None of these campaigns contains a genuine multi-turn maneuver, so wrapping
+    loses nothing and cannot invent a discontinuity that is not in the data.
+
+    Steps of very nearly +-180 deg remain genuinely ambiguous in DIRECTION regardless of
+    representation (the vehicle may turn either way, and real and sim need not agree);
+    metrics_direct.py excludes those rather than trying to plot around them.
+    """
     if axis == "yaw":
-        y = np.degrees(np.unwrap(np.radians(side["eul"][:, 2])))
-        return y, "yaw [deg]"
+        return wrap180(side["eul"][:, 2]), "yaw [deg]"
     k = "xyz".index(axis)
     return side["pos"][:, k], f"{axis} [m]"
 
@@ -201,26 +255,23 @@ def main():
     outdir = sys.argv[3] if len(sys.argv) > 3 else "figures"
     os.makedirs(outdir, exist_ok=True)
 
-    steps = detect_steps(real["ref_t"], real["ref_pos"], real["ref_yaw"])
-    print(f"{len(steps)} steps detected")
+    steps = usable_steps(
+        detect_steps(real["ref_t"], real["ref_pos"], real["ref_yaw"]))
     for s in steps:
         h = f"{s['hold']:.1f}" if s["hold"] else "-"
         print(f"  {s['idx']:2d} t={s['t']:7.2f}  {s['axis']:>3} {s['frm']:6.2f} -> "
               f"{s['to']:6.2f}  hold {h}")
 
     what = "real indoor flight vs IsaacSim" if sim else "real indoor flight (sim pending)"
+    # Deliverable is per-step + trajectory only (2026-08-07). The velocity and attitude
+    # figures were diagnostic and are not regenerated; the yaw panel of the attitude figure
+    # in particular relied on the np.unwrap that series() no longer uses.
     fig_per_step(real, sim, steps,
                  f"T650 baseline controller, flight {tag}: {what}, same step commands",
                  f"{outdir}/{tag}_per_step.png")
     fig_trajectory(real, sim, steps,
                    f"Full run overlay, flight {tag} (ENU, controller feedback topic)",
                    f"{outdir}/{tag}_trajectory.png")
-    fig_per_step(real, sim, steps,
-                 f"T650 flight {tag}: velocity along the stepping axis, {what}",
-                 f"{outdir}/{tag}_per_step_vel.png", getter=vel_series, show_ref=False)
-    fig_attitude(real, sim,
-                 f"T650 flight {tag}: attitude (Euler, controller feedback topic)",
-                 f"{outdir}/{tag}_attitude.png")
 
 
 if __name__ == "__main__":
