@@ -1,9 +1,11 @@
 # Aerial-Manipulator Simulation — Command Reference
 
 Running record of the commands used to launch, batch-run, and post-process the
-**aerial-manipulator** (X650 quadrotor + 4-DOF arm, `AM_realign.usda`) scenarios.
-Scope is deliberately limited to this scenario — the bare-X650 / slung-load
-launchers under `scripts/indoor_sim/` and `scripts/outdoor_sim/` are not covered here.
+**aerial-manipulator** (X650 quadrotor + 4-DOF arm, `AM_realign.usda`) scenarios,
+plus (§7) the **T650 DIRECT-actuation** stack, which is a different vehicle and a
+different repo pairing but is run from this machine alongside them.
+The bare-X650 / slung-load launchers under `scripts/indoor_sim/` and
+`scripts/outdoor_sim/` are still not covered here.
 
 All commands are run from the repository root:
 
@@ -28,17 +30,31 @@ export AM=extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm
 
 ---
 
-## 1. The five aerial-manipulator rigs
+## 1. The six aerial-manipulator rigs
 
 | Rig | Launcher | Isaac entrypoint | Controller | Rotor path |
 |---|---|---|---|---|
 | **Free-flying in-process** *(current default)* | `start_aerial_manipulator_free.sh` | `02_aerial_manipulator_free.py` | `controller.py` + `config/free.yaml` (no posture anchor, GMO observer) | direct `input_ref` |
 | **Pick-and-place in-process** | `start_aerial_manipulator_pick.sh` | `02_aerial_manipulator_pick.py` | `controller.py` + `config/pick.yaml` (same law, `pickplace*` plans in utils_planner) | direct `input_ref` |
+| **Push in-process** | `start_aerial_manipulator_push.sh` | `02_aerial_manipulator_push.py` | `controller.py` + `config/push.yaml` (same law, `push_home` plan) | direct `input_ref` |
 | Track in-process | `start_aerial_manipulator_track.sh` | `01_aerial_manipulator_track.py` | `controller_track.py` (posture anchor, no observer) | direct `input_ref` |
 | Hover, ROS 2 two-process | `start_aerial_manipulator_hover.sh` | `01_aerial_manipulator_hover.py` | `controller_hover.py` (separate node) | ROS 2 topics |
 | Free flight + PX4 direct-actuator | `start_px4_direct_aerial_manipulator_free.sh` | `03_px4_direct_aerial_manipulator_free.py` | `controller.py` + `config/px4_direct_free.yaml` in-process, rotors gated by PX4, lagged motors | PX4 `ActuatorMotors` via bridge |
 
-Each launcher opens a **new terminal window** and takes exactly one argument.
+Each launcher opens a **new terminal window** and takes the machine config name as
+its first argument.
+
+**`free` and `px4_direct` also take an optional second argument — the trajectory:**
+
+```bash
+./scripts/start_aerial_manipulator_free.sh shiqi_machine circle_drone
+./scripts/start_px4_direct_aerial_manipulator_free.sh shiqi_machine hover_drone
+```
+
+It overrides the in-script `MODE` (§2). `AM_SWEEP`'s `traj_type` in turn wins over
+the argument — that is the batch path (§3). `pick`, `push`, `track` and `hover`
+take the config name only; select their task with the in-script `MODE` or
+`AM_SWEEP`.
 
 ### 1.1 Free-flying in-process demo — the usual run
 
@@ -136,7 +152,63 @@ The npz records the block's own world position each step (`obj_p`), so the carry
 is measurable rather than only visual — check it lifted with the vehicle and
 stayed on the place table after release.
 
-### 1.3 Track in-process demo (posture-anchor baseline)
+### 1.3 Push in-process demo (physical interaction, no grasp)
+
+```bash
+./scripts/start_aerial_manipulator_push.sh shiqi_machine
+```
+
+Sibling of §1.2 — same rig, same law, same GMO, selected by `config/push.yaml` —
+but the interaction is **pushing, not grasping**: the **closed** jaws shove a box
+across a table. Nothing is ever held between the fingers; the closed fingers are
+simply the pusher, and **the drone does the pushing**.
+
+Why this is the cleaner demonstration of the two: the EE gets a straight **line**
+command at **fixed yaw**, and with the arm held at a fixed pose the
+dynamically-compatible CoM reference of that line degenerates to the line minus a
+constant CoM→EE offset — exactly what the FK-consistent schedule reference already
+produces. So the reference model contains no contact at all, and the contact force
+is carried entirely by the task impedance plus the GMO. That is the point of the
+run.
+
+Default `MODE = "push_home"`, a ground-to-ground mission along **world +y** (the
+direction the arm faces):
+
+| phase | arm | what happens |
+|---|---|---|
+| takeoff | **folded HOME** [0,40,40,0]° | fly the body to the task start on the software PD arm hold |
+| fly-out | **home → push** | translate above the push start while the arm unfolds to q = 0 (tool vertical) and the jaws **close** |
+| approach | push pose | vertical descent so the hanging fingers sit **beside** the box |
+| push | push pose | base flies a **straight +y line** at constant height and fixed heading; fingers meet the box after a small spawn gap and slide it ~0.32 m against sliding friction |
+| retreat | push pose | back off along −y (contact ends), climb out |
+| fly-land | **push → home** | translate past the table while the arm folds back |
+| land | home | vertical descent onto the legs, rotors ramp off |
+
+The arm has exactly **two setpoints** (home and push) and min-jerks between them
+during the transit flights only — it is **fixed at the push pose from approach
+until after retreat**, so the push geometry never changes while there is contact.
+
+Props (`PUSH_PROPS` block): a 0.10 × 0.12 × 0.064 m, **0.20 kg** box —
+deliberately unmodelled — with friction (0.25 static / 0.20 dynamic) on both box
+and tabletop, spawned `BOX_GAP_Y` = 0.03 m ahead of the fingers so the approach
+is contact-free and the contact transient happens *during* the push. Finger tips
+clear the tabletop by `PUSH_TIP_CLEAR` = 0.030 m.
+
+The folded home pose is **required, not decorative** — same reason as §1.2: at
+q = 0 the finger tips reach 0.356 m below the base, 51 mm *below ground* at the
+0.305 m resting body height, so the vehicle cannot sit down with the arm hanging.
+
+`EE_FORCE_ENABLE` (default `False`) swaps the whole task for the simpler
+`const_wrench` check: takeoff → hover → apply a constant 1 N force at the EE and
+watch `d_t_hat` converge to it while the vehicle holds position.
+
+Log is teed to `/tmp/aerial_manip_push.log`; npz: `…/robotic_arm/results/log/push_log.npz`.
+
+```bash
+$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/push_log.npz --tag push
+```
+
+### 1.4 Track in-process demo (posture-anchor baseline)
 
 ```bash
 ./scripts/start_aerial_manipulator_track.sh shiqi_machine
@@ -148,7 +220,7 @@ Log: `/tmp/aerial_manip_inproc.log`; npz: `…/robotic_arm/results/log/track_log
 $ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/track_log.npz --tag track
 ```
 
-### 1.4 Hover demo (pure ROS 2, two processes)
+### 1.5 Hover demo (pure ROS 2, two processes)
 
 ```bash
 ./scripts/start_aerial_manipulator_hover.sh shiqi_machine
@@ -158,23 +230,42 @@ Two tmux panes: Isaac Sim + the `controller_hover.py` node under the `/uav_0`
 namespace. Log: `/tmp/aerial_manip_isaac.log`. This demo does **not** write an
 npz — it predates the history logging, so there is nothing to plot.
 
-### 1.5 GMO with the PX4 direct-actuator rotor path
+### 1.6 Free flight with the PX4 direct-actuator rotor path
 
 ```bash
 ./scripts/start_px4_direct_aerial_manipulator_free.sh shiqi_machine
+./scripts/start_px4_direct_aerial_manipulator_free.sh shiqi_machine hover_drone   # pick the trajectory
 ```
 
-Three tmux panes in session `am_gmo_px4` (the script attaches automatically):
+Three tmux panes in session **`am_free_px4`** (the script attaches automatically):
 PX4 SITL `none_iris` + `MicroXRCEAgent udp4 -p 8888`, Isaac Sim, and the rotor
 bridge. PX4 runs **no** control loops — it is only the arming/offboard gate.
 `apply_aerial_manipulator_px4_offboard_params.sh` fires 15 s in.
-Logs: `/tmp/am_gmo_px4_{isaac,px4,bridge,xrce}.log`; npz: `…/robotic_arm/results/log/gmo_px4_log.npz`.
+Logs: `/tmp/am_free_px4_{isaac,px4,bridge,xrce}.log`; npz: `…/robotic_arm/results/log/gmo_px4_log.npz`.
+
+This rig runs the **same full flight machine as §1.1** — setpoint takeoff at the
+plan's own start point, hover-error-gated handover, tracked task, hover-gated
+setpoint landing, rotor ramp-off — over the PX4 `ActuatorMotors` path instead of
+direct `input_ref`. What stays PX4-specific: the `LaggedQuadraticThrustCurve`
+motor-delay model (λ = 10.51), the armed+OFFBOARD engagement hold before phase 1,
+the 3.416 kg body override mirrored into the control model, and the
+`omega_cmd`/`omega_plant`/`omega_real` diagnostics.
+
+> **Its gains are not `free.yaml`'s, and that is a plant property, not a
+> preference.** `config/px4_direct_free.yaml` carries `k_R` = 4 / `k_w` = 1.5,
+> **half** the in-process rig's `k_R` = 8. At `k_R` = 8 the attitude loop's
+> `wn = sqrt(k_R/0.065) = 11.1 rad/s` sits right on the rotor-lag pole (10.51), so
+> the moment commanded to cancel the arm's reaction arrives ~90° out of phase and
+> pumps a ~2.7 Hz body–arm mode. Also `D_y` = 24 is **not** optional here —
+> `free.yaml`'s `D_y` = 6 and 12 both crash; 24 and 48 fly.
 
 To reattach after detaching (`Ctrl+b d`):
 
 ```bash
-tmux attach -t am_gmo_px4
+tmux attach -t am_free_px4
 ```
+
+Run `./scripts/kill_stale_sim_processes.sh` before every launch of this rig (§6).
 
 ---
 
@@ -199,7 +290,25 @@ whole-body). Parameters live in `utils_planner.TRAJ_CONFIG[...]`:
 The classic single-phase `compatible` mode was dropped in the rename; its
 offline planner lives on as `poly_whole`'s engine.
 
-To change it without editing the file, override per run through `AM_SWEEP`:
+The two physical-interaction rigs have their own mission plans in the same
+catalogue: **`pickplace_home`** (default, §1.2), `pickplace_static`, `pickplace`,
+and **`push_home`** (default, §1.3).
+
+> **The `MODE` comments inside `02_..._pick.py` and `02_..._push.py` are stale.**
+> They still offer `"hover"`, `"circle"` and `"circle_bent"`, which were renamed
+> away in the 2026-08-08 catalogue rename and are **not** keys of
+> `utils_planner.TRAJ_CONFIG` any more. The full authoritative list is the twelve
+> keys above (`hover_drone` … `push_home`); check it directly with:
+>
+> ```bash
+> python3 -c "
+> import sys; sys.path.insert(0,'extensions/fsc_aerial_manipulation')
+> from fsc_aerial_manipulation.robotic_arm import utils_planner as P
+> print(sorted(P.TRAJ_CONFIG))"
+> ```
+
+To change it without editing the file, pass it as the launcher's second argument
+(`free` / `px4_direct` only, §1) or override per run through `AM_SWEEP`:
 
 ```bash
 AM_SWEEP='{"traj_type":"circle_drone"}' ./scripts/start_aerial_manipulator_free.sh shiqi_machine
@@ -579,10 +688,11 @@ at the top of this document):
 
 | Rig | Command | Tag if `--tag` omitted |
 |---|---|---|
-| GMO in-process (§1.1) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/gmo_log.npz` | `gmo` |
+| Free-flying in-process (§1.1) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/gmo_log.npz` | `gmo` |
 | Pick-and-place in-process (§1.2) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/pick_log.npz` | `pick` |
-| Track in-process (§1.3) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/track_log.npz` | `track` |
-| GMO + PX4 direct-actuator (§1.5) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/gmo_px4_log.npz` | `gmo_px4` |
+| Push in-process (§1.3) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/push_log.npz` | `push` |
+| Track in-process (§1.4) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/track_log.npz` | `track` |
+| Free flight + PX4 direct-actuator (§1.6) | `$ISAAC_PY $AM/utils_plot/plot_results.py $AM/results/log/gmo_px4_log.npz` | `gmo_px4` |
 | A sweep trial (§4) | `$ISAAC_PY $AM/utils_plot/plot_results.py /tmp/sweep_npz/<trial>.npz` | the file's basename |
 
 Without the shorthands, the fully-spelled form is:
@@ -662,11 +772,236 @@ position instead of going blank.
 
 ---
 
+## 7. T650 DIRECT-actuation stack (two repos)
+
+A **different vehicle and a different architecture** from everything above: the
+bare **T650** (Tarot 650 — the X650 airframe with MN4010 + 15x5" motors at
+2.95 kg, no arm, sharing `x650_new.usd`), flown by the external
+**`fsc_autopilot_ros2`** controller. In DIRECT mode that node owns attitude, rate
+**and** mixing; PX4 runs no control at all and is only the arming/OFFBOARD gate.
+Contrast §1.6, where the *in-process* whole-body law drives the PX4 actuator path.
+
+Two repos are involved:
+
+| Side | Path on this machine |
+|---|---|
+| ROS 2 controller stack | `~/ros2_ws/src/fsc_autopilot_ros2` |
+| Pegasus / PX4 SITL | `/home/shiqi/fsc_PegasusSimulator` |
+
+> **The upstream workflow's paths are the lab machine's, not this one.** It says
+> `~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2` and
+> `~/Source/fsc_PegasusSimulator` and passes `fsc_lab_machine`. On shiqi-desktop
+> use the paths above and **`shiqi_machine`** — Pegasus's `fsc_lab_machine.conf`
+> points at `/home/fsc-jupiter/…`. The config name only matters on the Pegasus
+> side; all four confs on the autopilot side are identical
+> (`ROS_DISTRO=humble`, `MICROXRCE_AGENT=MicroXRCEAgent`).
+
+### 7.0 Prerequisite: rebuild after pulling `fsc_autopilot_ros2`
+
+```bash
+cd ~/ros2_ws
+source /opt/ros/humble/setup.bash
+colcon build --packages-select fsc_autopilot_ros2
+```
+
+One package is enough — the root `CMakeLists.txt` pulls in `fsc_autopilot_lib`
+via `add_subdirectory`, so it is not a separate colcon package.
+
+**This is not optional after a pull, and it fails silently if skipped.** The
+launch file installs unchanged, so a stale build *looks* like it starts, while the
+node quietly lacks whatever the new config sets. Verify against the running node
+rather than the build tree:
+
+```bash
+ros2 param list /uav_0/fsc_autopilot_ros2 | grep -E 'system_fb_|system_wd_|ratectl_trim'
+```
+
+(Observed 2026-08-10: an 8-day-old build was missing `system_fb_timeout_s`,
+`system_fb_land_speed`, `system_wd_max_rate_dps`, `system_wd_max_tilt_deg` and
+`ratectl_trim_{x,y,z}` — i.e. the feedback-loss failsafe and the watchdog were
+absent while everything appeared to launch normally.)
+
+### 7.1 Clean slate
+
+```bash
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/stop_isaacsim_stack.sh
+```
+
+### 7.2 ROS 2 stack — terminal 1, maximized
+
+```bash
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_t650_stack.sh shiqi_machine uav_0
+```
+
+Six panes: `microXRCE`, `emulator`, `autopilot`, `estimator[raw-mocap]`, `gui`,
+`vrc`. The node **starts in SAFETY mode** (position control + UDE publishing an
+attitude setpoint — behaviourally the baseline controller).
+
+> **Detach with `Ctrl-b d`.** Not Ctrl-C, not Ctrl-D, not closing the window. The
+> script leaves the `microXRCE` pane selected on attach, so Ctrl-C + Ctrl-D there
+> kills the agent *and* closes its pane — after which the Pegasus launcher in §7.3
+> refuses to start. Observed 2026-08-10, with the `vrc` pane lost the same way,
+> which also removes the `rc/arm` and `rc/offboard` services §7.4 needs.
+>
+> Run it from a **maximized** terminal: six even-horizontal panes on an
+> 80-column window are 12 characters wide and unreadable.
+
+Verify before continuing:
+
+```bash
+tmux list-panes -t fsc_direct_actuation_t650_stack:stack -F '#{pane_index} #{pane_title}'  # expect 6
+pgrep -x MicroXRCEAgent && ss -lunp | grep 8888                                            # expect a pid + a listener
+```
+
+**Don't press Enter in the `vrc` pane** — `virtual_remote` arms the vehicle and
+requests OFFBOARD by itself once you do. It exists only because there is no real
+transmitter in the loop; §7.4 is the controlled path.
+
+### 7.3 Pegasus / PX4 SITL — terminal 2
+
+```bash
+cd /home/shiqi/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_direct_actuator_sitl.sh shiqi_machine
+```
+
+**Order is load-bearing, not stylistic.** This launcher hard-exits if
+`MicroXRCEAgent` is not already running (the ROS 2 stack owns it), and it pushes
+`PEGASUS_PX4_LOCKSTEP=0` onto the **tmux server** that stack created. Confirm it
+prints:
+
+```
+Pegasus PX4 lockstep: pushed to the tmux server environment
+```
+
+If it instead says *"no tmux server yet"*, the ordering is wrong. A new tmux
+session inherits the environment of the already-running **server**, not of the
+calling shell, so an `export` alone is silently discarded — Isaac then comes up
+with lockstep enabled and entering DIRECT deadlocks the PX4/Isaac HIL link
+(`ERROR [simulator_mavlink] poll timeout 0, 111`).
+
+First run initializes a fresh `rootfs_fsc_indoor_t650` PX4 profile (separate from
+the X650's, because PX4 `param save`s into it), so expect a slower boot; the gain
+script fires 8 s after the `pxh>` prompt.
+
+### 7.4 OFFBOARD, arm, then DIRECT — terminal 3
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
+
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+**OFFBOARD before arm is required in sim** — arming first is denied with
+`arming_check_error_flags = 16777216` (no global position indoors).
+
+Get a stable hover in SAFETY first, then hand over attitude, rate and mixing:
+
+```bash
+ros2 service call /uav_0/fsc_autopilot_ros2/direct_actuation/set_direct_mode \
+  std_srvs/srv/SetBool "{data: true}"
+```
+
+Abort path — keep it ready before entering DIRECT:
+
+```bash
+ros2 service call /uav_0/fsc_autopilot_ros2/direct_actuation/set_direct_mode \
+  std_srvs/srv/SetBool "{data: false}"
+```
+
+### 7.5 What to watch on a T650 DIRECT flight
+
+- **Hover command ≈ 0.503**, not the X650's 0.480 — the MN4010's top rotor speed
+  is lower (730.05 vs 817.59 rad/s) at a near-identical thrust constant, so the
+  same weight sits higher on the stick. Far off ⇒ suspect the mass/thrust model,
+  not the tune.
+- **Watch yaw first.** This config is **UNFLOWN in DIRECT**. Its rate-loop gains
+  are the X650 carry-over, and against this plant the yaw axis runs at ~2.45× the
+  loop gain they were tuned for (`t650_params.py`'s `YAW_TORQUE_FIT_FACTOR` = 3.0).
+- Rotor lag is **larger** than the X650's: λ = 10.0265 vs 10.51 1/s (τ 99.7 vs
+  95.1 ms), costing phase margin in every inner loop.
+- Feedback is **raw mocap**, not EKF2-fused — deliberate, since this node takes
+  the loops PX4's estimator would otherwise sit inside. The trade: velocity is a
+  finite difference with no IMU fusion, and EKF2's reset/dropout handling is
+  bypassed.
+
+### 7.6 Shutdown, in this order
+
+```bash
+cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh   # ROS 2 first
+/home/shiqi/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh               # then the simulator
+```
+
+ROS 2 first, so the control node is not streaming setpoints into a dying PX4.
+`stop_isaacsim_stack.sh` deliberately does **not** touch PX4/Isaac — those have
+their own lifecycle on the Pegasus side.
+
+> Duplicate `/uav_0/uav_0_node` entries in `ros2 node list` after a stop are the
+> known graph-ghost artifact (a hard-killed participant never deregisters). Count
+> **processes**, not graph entries: `pgrep -af indoor_mocap_feedback_node`.
+
+### 7.7 AM-T650 variant: the aerial manipulator under the DIRECT stack (2026-08-10)
+
+The same two-repo workflow with the **aerial manipulator as the plant**: the
+`AM_realign.usda` X650+arm asset spawned PX4-primary with the **T650 motor
+calibration** (MN4010, λ = 10.0265) and **T650 body mass** (2.95 kg re-authored
+onto `/body` at spawn; total flying mass **3.746 kg**), while the Isaac process
+(`application/robotic_arm/04_px4_direct_am_t650_hold.py`) does exactly one thing
+in-process — PD + gravity-comp holds the arm at its home pose
+**[0, 40°, 40°, 0]** (KP 3.0 / KD 0.25 / clamp 3.0 N·m, the flight-validated
+02/03 hold, running unconditionally: ground, SAFETY and DIRECT). No whole-body
+law, no mixer, no flight machine — the T650 DIRECT-actuation controller flies
+the vehicle as a plain quadrotor and never sees the arm. This is the
+**safe-fallback integration step** for the future whole-body controller: T650 is
+the airframe the real aerial manipulator will be built on.
+
+Commands — identical to §7.1–7.4 with the two `am_t650` scripts swapped in:
+
+```bash
+# ROS 2 stack (terminal 1, maximized; detach with Ctrl-b d)
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_am_t650_stack.sh shiqi_machine uav_0
+
+# Pegasus / PX4 SITL (terminal 2)
+cd /home/shiqi/fsc_PegasusSimulator
+./scripts/indoor_sim/start_am_t650_direct_actuator_sitl.sh shiqi_machine
+```
+
+OFFBOARD → arm → DIRECT service calls, abort path, and shutdown order are
+byte-identical to §7.4/§7.6. `stop_isaacsim_stack.sh` covers the new session
+(`fsc_direct_actuation_am_t650_stack`) automatically. The controller runs
+`config/params_single_drone_direct_actuation_am_t650.yaml` — a copy of the T650
+tune whose only value changes are the four `vehicle_*` plant numbers
+(mass 3.746172, thrust map re-derived about the heavier hover point).
+
+What to watch, beyond §7.5's list (which still applies):
+
+- **Hover command ≈ 0.569**, not the bare T650's 0.503 — same motors, +23%
+  mass. The Isaac spawn prints the exact TOTAL the yaml's `vehicle_mass` must
+  equal (`T650 MASS OVERRIDE … TOTAL → … kg`); if they disagree, the printout
+  is the truth.
+- **Standing roll/pitch trim is expected**: the folded arm offsets the CoM
+  while `alloc_rotor*_px/py` stay geometric. If the rate integrator parks near
+  `i_max` (0.09) in a settled DIRECT hover, read
+  `direct_actuation/rate_control_debug[3..5]` and seed `ratectl_trim_*`.
+- **Arm status** is printed by the Isaac pane every ~5 s (`q_err`, hold torque,
+  realized rotor ω: 0 = disarmed, ~64 = armed idle, ~443 = hover). The arm
+  should stay within ~2° of home throughout; a growing q_err or hold torque
+  pinned at 3.0 N·m is a plant-side problem, not a controller tune.
+- First run initializes the fresh PX4 profile `rootfs_fsc_indoor_am_t650`
+  (deliberately separate — PX4 `param save`s into it).
+
+---
+
 ## Notes
 
 - `CLAUDE.md` refers to `scripts/indoor_sim/start_aerial_manipulator.sh` with
   `direct` / `px4-offboard` modes. **That file does not exist in this repo** —
-  the five launchers in §1 are the real entrypoints.
+  the six launchers in §1 are the real entrypoints.
 - `02_aerial_manipulator_free.py`'s header mentions `utils/gain_sweep.py`; the
   only sweep harness actually present is `utils/px4_gmo_gain_sweep.py` (§4),
   which targets the PX4 rig.
