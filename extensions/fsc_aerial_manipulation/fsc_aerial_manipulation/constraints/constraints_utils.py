@@ -40,6 +40,32 @@ def create_spherical_joint(stage, joint_path, body0_path, body1_path, local_pos0
     return joint_path
 
 # ----------------------------
+# Create fixed joint (rigid link - locks all 6 DOF between the two bodies)
+# ----------------------------
+def create_fixed_joint(stage, joint_path, body0_path, body1_path, local_pos0, local_pos1):
+    """Rigidly couple two bodies. The joint frames (local_pos0 on body0, local_pos1 on
+    body1) must coincide in world space at creation time, or PhysX snaps the bodies
+    together on the first step. Collision between the two jointed bodies is disabled
+    explicitly so an attachment overlapping its carrier does not fight the constraint.
+    """
+    # body_path is the path where rigid-body propertiy is defined.
+    if (body0_path is None) or (body1_path is None):
+        raise RuntimeError(f"[Joint] body path is None for {joint_path}: body0={body0_path}, body1={body1_path}")
+
+    p0 = stage.GetPrimAtPath(body0_path)
+    p1 = stage.GetPrimAtPath(body1_path)
+    if (not p0) or (not p0.IsValid()) or (not p1) or (not p1.IsValid()):
+            raise RuntimeError(f"[Joint] Invalid prim path for {joint_path}: body0={body0_path}, body1={body1_path}")
+
+    joint = UsdPhysics.FixedJoint.Define(stage, Sdf.Path(joint_path))
+    joint.CreateBody0Rel().SetTargets([Sdf.Path(body0_path)])
+    joint.CreateBody1Rel().SetTargets([Sdf.Path(body1_path)])
+    joint.CreateLocalPos0Attr(Gf.Vec3f(*map(float, local_pos0)))
+    joint.CreateLocalPos1Attr(Gf.Vec3f(*map(float, local_pos1)))
+    joint.CreateCollisionEnabledAttr(False)
+    return joint_path
+
+# ----------------------------
 # Create prismatic joint (no DriveAPI - pure kinematic translation constraint)
 # ----------------------------
 def create_prismatic_joint(
