@@ -5,10 +5,13 @@
 Author: Shiqi Gao (shiqi.gao907@gmail.com)
 
 AERIAL MANIPULATOR plant for the fsc_autopilot_ros2 T650 DIRECT-actuation
-stack: the AM_realign X650+arm asset flown as a PX4-PRIMARY quadrotor with the
-**T650 motor and drone parameters** (MN4010 + 15x5" bench calibration, 2.95 kg
-body, rotor lag lambda = 10.0265 1/s), while this process does exactly ONE
-thing in-process — hold the arm at its home pose with joint torque commands.
+stack: the X-FORWARD aerial-manipulator asset (AM_xfwd.usda — AM_realign
+re-authored by utils_model/make_x_forward_asset.py so the arm side is BODY +X
+and the rotor channels present the PX4 Quad-X convention) flown as a
+PX4-PRIMARY quadrotor with the **T650 motor and drone parameters** (MN4010 +
+15x5" bench calibration, 2.95 kg body, rotor lag lambda = 10.0265 1/s), while
+this process does exactly ONE thing in-process — hold the arm at its home pose
+with joint torque commands.
 
     fsc_autopilot_ros2 node (T650 DIRECT law, params_..._am_t650.yaml)
         → fmu/in/actuator_motors → PX4 gate → HIL_ACTUATOR_CONTROLS
@@ -30,7 +33,7 @@ enters fsc_autopilot_ros2.
 
 WHY T650 PARAMETERS ON THE AM ASSET: T650 is the airframe the real aerial
 manipulator will be built on, so the plant carries its motor calibration and
-body mass now. AM_realign.usda authors the X650 CAD body (2.4760795 kg); at
+body mass now. The asset authors the X650 CAD body (2.4760795 kg); at
 spawn /body is re-authored to t650_params.BODY_MASS (2.95 kg) and the T650
 inertia on the LIVE stage (the 255 MB .usda is never touched), giving
 
@@ -108,15 +111,27 @@ from fsc_aerial_manipulation.robotic_arm.utils_controller import controller as C
 # ║  CONFIG                                                                  ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-# Vehicle USD — the aerial-manipulator asset every AM demo uses, resolved from
-# the installed package so the path holds regardless of CWD.
+# Vehicle USD — the X-FORWARD aerial-manipulator asset, generated from
+# AM_realign.usda by utils_model/make_x_forward_asset.py (re-run that script if
+# this file is missing; AM_realign itself is untouched and still serves every
+# whole-body demo). In AM_xfwd the mechanical front (arm side) is BODY +X,
+# matching the T650/X650 bare frames and PX4's x-forward assumption — this is
+# what lets PX4's own SAFETY-mode mixer and the standard Quad-X allocation fly
+# this vehicle at all. AM_realign's +y front / mirrored channel indexing
+# negated the ROLL row of the standard allocation and flipped the vehicle on
+# lift-off (diagnosed 2026-08-10, first flight of this rig).
 import fsc_aerial_manipulation.rotorcraft as _fsc_rotorcraft
 ASSETS_DIR = os.path.join(os.path.dirname(_fsc_rotorcraft.__file__), "assets")
-USD_FILE   = os.path.join(ASSETS_DIR, "AM_realign.usda")
+USD_FILE   = os.path.join(ASSETS_DIR, "AM_xfwd.usda")
 USD_PRIM_PATH     = "/gripper_bat"
 BODY_PATH         = "/body"
-ROTOR_PATHS       = ["/rotor0", "/rotor1", "/rotor2", "/rotor3"]
-ROTOR_JOINT_NAMES = ["joint0", "joint1", "joint2", "joint3"]
+# CHANNEL REMAP, load-bearing: in AM_xfwd the prim layout is rotor0 front-right
+# (CCW), rotor1 rear-left (CCW), rotor2 REAR-RIGHT (CW), rotor3 FRONT-LEFT (CW).
+# PX4 Quad-X channel order is FR, RL, FL, RR — so channels 2 and 3 map to prims
+# rotor3 and rotor2 respectively. With this ordering the plant presents the
+# EXACT x650_new.usd convention to PX4 and to the controller yaml's allocation.
+ROTOR_PATHS       = ["/rotor0", "/rotor1", "/rotor3", "/rotor2"]
+ROTOR_JOINT_NAMES = ["joint0", "joint1", "joint3", "joint2"]
 ARM_JOINT_NAMES   = ["manip_joint1", "manip_joint2", "manip_joint3", "manip_joint4"]
 GRIPPER_JOINT     = "gripper_joint"
 GRIPPER_REST_DEG  = 0.0     # authored rest target (jaws open)
@@ -148,6 +163,18 @@ ARM_HOLD_RATE = 0.5    # [rad/s] hold-target slew — a no-op when spawned at ho
                        # kept as protection for any spawn-pose variant
 TAU_MAX       = 3.0    # [N·m] torque clamp (config/px4_direct_free.yaml's value)
 ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7   # ≈ 0.02 kg·m² reflected rotor inertia
+
+# FRAME ADAPTER for the gravity comp. The shared control model (make_params /
+# dynamics) describes the arm in AM_realign's OLD body frame (front on +y);
+# AM_xfwd's content is that geometry rotated by Rz(-90) with the body frame
+# kept. The same physical configuration therefore satisfies
+#     R0_model = R0_actual @ Rz(-90),   v_model = Rz(-90)^T v_actual
+# (exact for any attitude, since only the frame label changed). Joint angles
+# and joint torques are scalars and carry over unchanged. Only g[6:] is
+# consumed here, but the whole state is transformed for consistency.
+R_MODEL = np.array([[0.0, 1.0, 0.0],
+                    [-1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0]])   # Rz(-90): maps old +y (arm) onto +x
 
 STATUS_PERIOD_S = 5.0   # one status line roughly this often (physics time)
 
@@ -545,8 +572,12 @@ class AmT650HoldSim:
         qdot = qd_all[self._arm_idx]
 
         # gravity comp: arm rows of the model's gravity vector at the CURRENT
-        # attitude (the whole point of using dynamics() instead of a constant)
-        X = np.concatenate([p0, R0.flatten(order="F"), q, v0, omega0, qdot])
+        # attitude (the whole point of using dynamics() instead of a constant).
+        # The model lives in AM_realign's old body frame — adapt (see R_MODEL).
+        R0_m = R0 @ R_MODEL
+        v0_m = R_MODEL.T @ v0
+        om_m = R_MODEL.T @ omega0
+        X = np.concatenate([p0, R0_m.flatten(order="F"), q, v0_m, om_m, qdot])
         g_arm = C.dynamics(X, self.params)["g"][6:]
 
         # PD + gravity comp toward Q_HOME, slewed reference, clamped
