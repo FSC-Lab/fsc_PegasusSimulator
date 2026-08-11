@@ -983,35 +983,166 @@ contact; standing pitch trim from the forward arm CoM measured at ~37 rad/s
 front-over-rear and absorbed cleanly. A rendered confirmation run is still
 worth doing (headless timing is the gentler regime).
 
-Commands — identical to §7.1–7.4 with the two `am_t650` scripts swapped in:
+#### 7.7.1 Full run sequence (exactly the validated 2026-08-10 flight)
+
+**Step 0 — clean slate.** Always: a stale estimator or agent silently corrupts
+the run.
 
 ```bash
-# ROS 2 stack (terminal 1, maximized; detach with Ctrl-b d)
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/stop_isaacsim_stack.sh
+/home/shiqi/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+```
+
+**Step 1 — ROS 2 stack** (terminal 1, maximized). Owns `MicroXRCEAgent`, so it
+must start **first**. Detach with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D.
+
+```bash
 cd ~/ros2_ws/src/fsc_autopilot_ros2
 ./scripts/isaacsim/start_direct_actuation_am_t650_stack.sh shiqi_machine uav_0
+```
 
-# Pegasus / PX4 SITL (terminal 2)
+**Step 2 — Pegasus / PX4 SITL** (terminal 2). Opens its own window.
+
+```bash
 cd /home/shiqi/fsc_PegasusSimulator
 ./scripts/indoor_sim/start_am_t650_direct_actuator_sitl.sh shiqi_machine
 ```
 
-OFFBOARD → arm → DIRECT service calls, abort path, and shutdown order are
-byte-identical to §7.4/§7.6. `stop_isaacsim_stack.sh` covers the new session
-(`fsc_direct_actuation_am_t650_stack`) automatically. The controller runs
-`config/params_single_drone_direct_actuation_am_t650.yaml` — a copy of the T650
-tune whose only value changes are the four `vehicle_*` plant numbers
-(mass 3.746170, thrust map re-derived about the heavier hover point).
+For a **headless** run (what the validation used), push the flag onto the tmux
+server *before* step 2, and unset it afterwards — a plain `export` is discarded
+because the session inherits the already-running server's environment:
 
-**Takeoff needs a position reference** — after arming, SAFETY holds the current
-(ground) position until one arrives. The normal flow: read the current position,
-then stream a reference at that x/y with the hover z on
-`/uav_0/fsc_autopilot_ros2/position_controller/reference`
-(`fsc_autopilot_ros2_msgs/PositionControllerReference`, ≥20 Hz — normally the
-ground-station GUI's job). Keep **one** publisher on that topic: two streams
-interleave and the vehicle chases both (observed during the validation run's
-first landing attempt). Note the node holds the *last received* reference when a
-stream stops, and PX4 denies disarm until the land detector sees low thrust — so
-land by streaming the reference down to ~0.31 m and disarm only after touchdown.
+```bash
+tmux setenv -g PEGASUS_HEADLESS 1     # before step 2
+tmux setenv -gu PEGASUS_HEADLESS      # after the run
+```
+
+**Step 3 — verify before arming.** All five must pass:
+
+```bash
+tmux list-panes -t fsc_direct_actuation_am_t650_stack:stack -F '#{pane_index} #{pane_title}'  # 6 panes
+pgrep -x MicroXRCEAgent && ss -lunp | grep 8888                                               # agent listening
+source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
+ros2 topic hz /uav_0/mocap                                     # ~250 Hz
+ros2 param get /uav_0/fsc_autopilot_ros2 vehicle_mass          # 3.746170
+tmux capture-pane -p -J -t px4_isaac:0.1 | grep "MASS OVERRIDE" # TOTAL must equal that
+```
+
+**Step 4 — OFFBOARD, then arm.** Order is mandatory (arming first is denied,
+`arming_check_error_flags = 16777216`).
+
+```bash
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+**Step 5 — takeoff by streaming a position reference.** After arming, SAFETY
+holds the *ground* position until a reference arrives; nothing lifts off on its
+own. Read the current position, then stream the hover setpoint at ≥20 Hz.
+Normally the ground-station GUI does this — here it is standalone. Run it in the
+**background** so the same terminal can issue the mode switches:
+
+```bash
+python3 - <<'EOF' &
+import time, rclpy
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from geometry_msgs.msg import PoseStamped
+from fsc_autopilot_ros2_msgs.msg import PositionControllerReference
+
+Z_HOVER, DURATION = 1.20, 300.0            # [m], [s]
+rclpy.init(); n = Node("am_t650_ref")
+pose = {}
+n.create_subscription(PoseStamped, "/uav_0/state/pose",
+                      lambda m: pose.update(p=(m.pose.position.x, m.pose.position.y)),
+                      qos_profile_sensor_data)          # sensor QoS: pose is BEST_EFFORT
+pub = n.create_publisher(PositionControllerReference,
+                         "/uav_0/fsc_autopilot_ros2/position_controller/reference", 10)
+t0 = time.time()
+while "p" not in pose and time.time() - t0 < 10:
+    rclpy.spin_once(n, timeout_sec=0.1)
+x, y = pose["p"]; print(f"holding ({x:.3f}, {y:.3f}, {Z_HOVER})", flush=True)
+t0 = time.time()
+while time.time() - t0 < DURATION:
+    m = PositionControllerReference()
+    m.header.stamp = n.get_clock().now().to_msg(); m.header.frame_id = "map"
+    m.position.x, m.position.y, m.position.z = x, y, Z_HOVER
+    m.yaw = 0.0
+    pub.publish(m); time.sleep(0.05)
+EOF
+```
+
+> **Exactly one publisher on that topic.** Two streams interleave and the
+> vehicle chases both — this is what broke the validation run's first landing
+> attempt. Kill the previous streamer before starting another. The node holds
+> the *last received* reference when a stream stops, so the vehicle keeps
+> hovering rather than falling.
+
+**Step 6 — enter DIRECT** (only once the SAFETY hover is settled):
+
+```bash
+ros2 service call /uav_0/fsc_autopilot_ros2/direct_actuation/set_direct_mode \
+  std_srvs/srv/SetBool "{data: true}"
+```
+
+Abort back to SAFETY at any time — keep this ready before step 6:
+
+```bash
+ros2 service call /uav_0/fsc_autopilot_ros2/direct_actuation/set_direct_mode \
+  std_srvs/srv/SetBool "{data: false}"
+```
+
+**Step 7 — land, then disarm.** PX4 refuses an in-air disarm
+(`Disarming denied: not landed`), so bring the vehicle down *by reference*
+first. Kill the step-5 streamer, then:
+
+```bash
+python3 - <<'EOF'
+import time, rclpy
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from geometry_msgs.msg import PoseStamped
+from fsc_autopilot_ros2_msgs.msg import PositionControllerReference
+
+Z_START, Z_GROUND, RATE = 1.20, 0.31, 0.20     # [m], [m], [m/s]
+rclpy.init(); n = Node("am_t650_land")
+z = {}
+n.create_subscription(PoseStamped, "/uav_0/state/pose",
+                      lambda m: z.update(z=m.pose.position.z), qos_profile_sensor_data)
+pub = n.create_publisher(PositionControllerReference,
+                         "/uav_0/fsc_autopilot_ros2/position_controller/reference", 10)
+z_ref, t0 = Z_START, time.time()
+while time.time() - t0 < 90:
+    z_ref = max(Z_GROUND, z_ref - RATE * 0.05)
+    m = PositionControllerReference()
+    m.header.stamp = n.get_clock().now().to_msg(); m.header.frame_id = "map"
+    m.position.x = m.position.y = 0.0; m.position.z = z_ref; m.yaw = 0.0
+    pub.publish(m); rclpy.spin_once(n, timeout_sec=0.0)
+    if z_ref <= Z_GROUND + 1e-3 and z.get("z", 9) < 0.34:
+        print(f"touchdown z={z['z']:.3f}", flush=True); break
+    time.sleep(0.05)
+EOF
+
+ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
+```
+
+**Step 8 — shut down, ROS 2 first** (so the controller is not streaming
+setpoints into a dying PX4):
+
+```bash
+cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+tmux kill-session -t px4_isaac
+/home/shiqi/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+tmux setenv -gu PEGASUS_HEADLESS ; tmux setenv -gu PEGASUS_PX4_LOCKSTEP
+```
+
+`stop_isaacsim_stack.sh` picks up the new session
+(`fsc_direct_actuation_am_t650_stack`) automatically — it reads `SESSION=` out
+of its sibling scripts. The controller runs
+`config/params_single_drone_direct_actuation_am_t650.yaml`, a copy of the T650
+tune whose only value changes are the four `vehicle_*` plant numbers.
 
 What to watch, beyond §7.5's list (which still applies):
 
@@ -1019,9 +1150,11 @@ What to watch, beyond §7.5's list (which still applies):
   mass. The Isaac spawn prints the exact TOTAL the yaml's `vehicle_mass` must
   equal (`T650 MASS OVERRIDE … TOTAL → … kg`); if they disagree, the printout
   is the truth.
-- **Standing roll/pitch trim is expected**: the folded arm offsets the CoM
-  while `alloc_rotor*_px/py` stay geometric. If the rate integrator parks near
-  `i_max` (0.09) in a settled DIRECT hover, read
+- **A standing PITCH trim is expected and was measured**: the folded arm sits
+  forward on body +x while `alloc_rotor*_px/py` stay geometric, so the front
+  rotor pair runs ~37 rad/s hot — hover ω ≈ `[462, 424, 461, 424]`
+  (ch0/ch2 front, ch1/ch3 rear). Benign in both SAFETY and DIRECT. Only if the
+  rate integrator parks near `i_max` (0.09) in a settled DIRECT hover: read
   `direct_actuation/rate_control_debug[3..5]` and seed `ratectl_trim_*`.
 - **Arm status** is printed by the Isaac pane every ~5 s (`q_err`, hold torque,
   realized rotor ω: 0 = disarmed, ~64 = armed idle, ~443 = hover). The arm
