@@ -313,6 +313,40 @@ EE-force disturbance block, the debug-draw arrows, `ARM_ALWAYS_PD_HOLD`.
   through `TRAJ_CFG_OVERRIDE`; the demo also WARNS at startup when the spawn fold
   `beta = q2+q3 < 40 deg`.
 
+**AM-T650: THE AERIAL MANIPULATOR UNDER THE fsc_autopilot_ros2 DIRECT-ACTUATION STACK
+(2026-08-10, user request — the safe-fallback integration step for the whole-body
+controller).** T650 is the airframe the real AM will be built on, so the AM plant now has a
+variant carrying the T650 parameters, flown by the external quadrotor-only DIRECT law while
+the arm is parked. `application/robotic_arm/04_px4_direct_am_t650_hold.py` spawns
+`AM_realign.usda` PX4-primary (inline spawn, 03's pattern) with `t650_params`' MN4010
+calibration (ω 64.06..730.05, k/c incl. both fit factors, λ = 10.0265 via
+`LaggedQuadraticThrustCurve`) and re-authors `/body` to the T650 2.95 kg + T650 inertia on
+the live stage → **TOTAL 3.746 kg** (AM rotors 4×0.039887 + arm 0.636624 add on top — NOT
+x650_new.usd's lighter rotors). In-process it does exactly one thing: the flight-validated
+02/03 arm hold (PD KP 3.0/KD 0.25 + `dynamics()` gravity comp, clamp 3.0 N·m, slewed ref)
+at the user-specified home `q_home = [0, 40°, 40°, 0]`, hardcoded — no planner dependency —
+running unconditionally (ground/SAFETY/DIRECT). Keeps 02/03's spawn-at-home + rigid re-seat
++ ground-seat, effort-mode arm DOFs, armature, gripper-drive pin, collider/scene fixes; drops
+the whole-body law, mixer, bridge, flight machine, npz. Reads `PEGASUS_PX4_LOCKSTEP`
+(indoor-launcher convention; 03 hardcodes False instead) and does NOT start paused (the
+mocap emulator needs `/uav_0/state/*` flowing). Launcher
+`scripts/indoor_sim/start_am_t650_direct_actuator_sitl.sh` = the T650 DIRECT wrapper pattern
+(agent pre-check, lockstep export + tmux-server push, offboard param script) but setting the
+`INDOOR_SIM_*` hooks itself (04's script, label AM-T650, own PX4 profile
+`rootfs_fsc_indoor_am_t650`) and exec'ing the x650 base launcher directly. Pairs with
+fsc_autopilot_ros2's `start_direct_actuation_am_t650_stack.sh` +
+`config/params_single_drone_direct_actuation_am_t650.yaml` (dev_CCM): a copy of the T650
+tune whose ONLY value changes are the four `vehicle_*` numbers — mass 3.746172,
+thrust_scaling/idle_thrust RE-DERIVED about the heavier hover point (0.036206/0.236457,
+hover ≈ 0.569 vs bare 0.503; the +23% mass is far off the tangent-fit anchor, so copying
+was not an option) — verified: key set identical, exactly 4 value diffs, rounded values
+reproduce hover to −2.3e-06. **The yaml's `vehicle_mass` must equal the TOTAL the spawn
+prints; the printout is the truth.** Known-accepted: alloc px/py stay geometric while the
+folded arm offsets the CoM (standing trim expected — if the rate integrator parks near
+i_max 0.09, seed `ratectl_trim_*` from `rate_control_debug[3..5]`); rate gains are the
+T650/X650 carry-over on a heavier, higher-inertia plant (watch yaw first — the 2.45×
+sim-yaw-gain caveat applies unchanged). Commands: Command.md §7.7. NOT yet run.
+
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):
