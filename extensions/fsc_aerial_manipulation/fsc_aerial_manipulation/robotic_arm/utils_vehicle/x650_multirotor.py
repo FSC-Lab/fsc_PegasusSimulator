@@ -22,7 +22,7 @@ import carb
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
 from pegasus.simulator.logic.vehicles.multirotor import Multirotor as BaseMultirotor, MultirotorConfig
 
-from fsc_aerial_manipulation.robotic_arm.x650_vehicle import VehicleMod
+from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_vehicle import VehicleMod
 
 # Re-export so callers can do `from ...multirotor_mod import MultirotorMod, MultirotorConfig`.
 __all__ = ["MultirotorMod", "MultirotorConfig"]
