@@ -1150,21 +1150,86 @@ What to watch, beyond §7.5's list (which still applies):
   mass. The Isaac spawn prints the exact TOTAL the yaml's `vehicle_mass` must
   equal (`T650 MASS OVERRIDE … TOTAL → … kg`); if they disagree, the printout
   is the truth.
-- **A standing PITCH trim exists and is now compensated**: the folded arm sits
-  19.5 mm forward on body +x while `alloc_rotor*_px/py` stay geometric, so the
-  front rotor pair runs ~37 rad/s hot — hover ω ≈ `[462, 424, 461, 424]`
-  (ch0/ch2 front, ch1/ch3 rear). Left uncompensated this cost a **97.7 cm X
-  excursion taking 23.1 s to settle** at DIRECT engagement; `ratectl_trim_y:
-  -0.040` in the AM yaml seeds the rate integrator with it and brings that to
-  **2.1 cm / 4.1 s**. Full derivation, the measured A/B, and two testing traps
-  (the trim is read only at node startup; `reset()` fires on the *arming* edge,
-  not the mode switch): [Feedforward Compensation for Home-Pose Arm.md](<Feedforward Compensation for Home-Pose Arm.md>).
+- **A standing PITCH torque exists and is now cancelled by a TRUE feedforward**
+  (2026-08-11; supersedes the earlier `ratectl_trim_y` integrator seed): the
+  folded arm sits 19.5 mm forward on body +x while `alloc_rotor*_px/py` stay
+  geometric, so the front rotor pair runs ~37 rad/s hot — hover ω ≈
+  `[462, 424, 461, 424]`. Left uncompensated this cost a **97.7 cm X excursion
+  taking 23.1 s to settle** at DIRECT engagement. The AM yaml now sets
+  `system_ff_tau_y_per_coll: -0.060` / `system_ff_tau_y_const: -0.0058` — a
+  thrust-proportional torque added every inner-loop tick (`ratectl_trim_y` back
+  to 0.0). Verify in flight: settled `rate_control_debug[4]` ≈ **0.000** (with
+  the old trim it sat at −0.0394; with nothing, the vehicle flew a metre
+  sideways). Derivation, the flight validation, and the trim history:
+  [Feedforward Compensation for Home-Pose Arm.md](<Feedforward Compensation for Home-Pose Arm.md>) §8.
 - **Arm status** is printed by the Isaac pane every ~5 s (`q_err`, hold torque,
   realized rotor ω: 0 = disarmed, ~64 = armed idle, ~443 = hover). The arm
   should stay within ~2° of home throughout; a growing q_err or hold torque
   pinned at 3.0 N·m is a plant-side problem, not a controller tune.
 - First run initializes the fresh PX4 profile `rootfs_fsc_indoor_am_t650`
   (deliberately separate — PX4 `param save`s into it).
+
+### 7.8 AM-T650 BASELINE (SAFETY-only) stack — added 2026-08-11
+
+The same AM plant flown by the **baseline** controller instead of the
+direct-actuation one. This node publishes a `VehicleAttitudeSetpoint` and **PX4
+runs attitude + rate + mixing**; there is no `set_direct_mode` service on this
+path at all. It is the gentler of the two rigs and the one to reach for when you
+want the AM airborne without DIRECT in the loop.
+
+**Two differences from §7.7, both load-bearing:**
+
+1. **Lockstep is ON.** The baseline path wants it (PX4 owns the inner loops);
+   the DIRECT path must disable it. That is the entire reason there are two
+   Pegasus launchers. `start_am_t650_baseline_sitl.sh` asserts
+   `PEGASUS_PX4_LOCKSTEP=1` and clears the tmux-server global, so a leftover `0`
+   from a previous DIRECT run cannot leak in.
+2. **Different config, different node name.** The baseline node is
+   `/uav_0/autopilot_sv_baseline_node` (not `/uav_0/fsc_autopilot_ros2`), reading
+   `params_single_vehicle_baseline_am_t650.yaml`.
+
+```bash
+# terminal 1 — ROS 2 baseline stack (owns the agent; detach with Ctrl-b d)
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_baseline_am_t650_stack_fused.sh shiqi_machine uav_0
+
+# terminal 2 — Pegasus / PX4 SITL, lockstep ON
+cd /home/shiqi/fsc_PegasusSimulator
+./scripts/indoor_sim/start_am_t650_baseline_sitl.sh shiqi_machine
+```
+
+Verify before arming — note the **baseline** node name:
+
+```bash
+ros2 param get /uav_0/autopilot_sv_baseline_node vehicle_mass       # 3.74617
+ros2 param get /uav_0/autopilot_sv_baseline_node posctl_k_vel_x     # 3.7
+ros2 topic hz /uav_0/mocap                                          # ~250 Hz
+```
+
+Then OFFBOARD → arm → stream a reference exactly as §7.7.1 steps 4–5, and land
+with step 7. **Skip step 6** — there is no DIRECT mode here. Shutdown is §7.7.1
+step 8 with the session name `fsc_baseline_am_t650_stack` (which
+`stop_isaacsim_stack.sh` picks up automatically).
+
+**The one number that proves the arm's feedforward is working:**
+
+```bash
+ros2 topic echo --once /uav_0/fsc_autopilot_ros2/position_controller/ude
+```
+
+`disturbance_estimate.z` should sit **near zero** in a settled hover (measured
+**+0.05 N**). If it parks near **−8 N**, the bare-T650 yaml got loaded instead of
+the AM one — that is the 0.71 kg arm being carried by the UDE instead of by
+`vehicle_mass`.
+
+**Measured 2026-08-11** (0.6 m steps in x/y, 0.4 m in z): flies the full sequence
+— takeoff, hover, six steps, landing, disarm — with the UDE at 0.05 N throughout.
+Step character is the T650's validated (underdamped) response by design, since
+this path's `k_vel` 3.70 is a pure mass restore: x/y overshoot 42–50% and do not
+settle to 2% within 20 s; z 10–11% overshoot, 9–14 s. The DIRECT rig is
+noticeably tighter (§7.7) because it runs `k_vel` 7.0. Raising the baseline gain
+on simulation evidence is explicitly warned against — see
+[Feedforward Compensation for Home-Pose Arm.md](<Feedforward Compensation for Home-Pose Arm.md>) §7.
 
 ---
 

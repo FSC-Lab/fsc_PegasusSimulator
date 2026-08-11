@@ -190,15 +190,221 @@ Both were learned the hard way while producing the table above.
   property of `q_home`. Procedure: fly DIRECT, let it settle, read elements
   `[3..5]` of `fsc_autopilot_ros2/direct_actuation/rate_control_debug`.
 
-## 6. If a true feedforward is ever wanted
+## 6. Both paths: what is compensated where (2026-08-11)
 
-The trim is a *constant* seed. A genuine feedforward — recomputing `dx(q)` from
-the live joint angles and injecting `dx(q)·T` every step — is the natural
-extension once the arm **moves**, i.e. for the whole-body controller. It would
-need a new term in the rate controller (`ratectl_kff_*` exist but are rate
-feedforwards, not torque) plus a channel carrying the arm state into
-`fsc_autopilot_ros2`. Deliberately **not** built now: at a fixed home pose it
-would compute the same −0.040 every step, and this rig exists to be the simple,
+The rig now has **two** configs, one per control path, and the arm's disturbance
+splits into two parts that are **not** equally reachable.
+
+| Arm effect | DIRECT (`params_single_drone_direct_actuation_am_t650.yaml`) | Baseline / SAFETY (`params_single_vehicle_baseline_am_t650.yaml`) |
+|---|---|---|
+| **Force** — weight 0.71 kg → 7.0 N | `vehicle_mass: 3.746170` | **same — the deliverable here** |
+| Hover point | `thrust_scaling` / `idle_thrust` re-derived | same |
+| **Torque** — CoM 19.5 mm fwd → +0.72 N·m | `ratectl_trim_y: -0.040` ✓ | **not reachable** |
+| Added inertia | PX4-side gains, out of scope | same |
+
+**The force term is the arm feedforward on both paths**, and it is delivered
+entirely by `vehicle_mass`, which is read twice independently:
+`robust_controller.cpp`'s gravity feedforward and `velocity_based_ude.cpp`'s
+weight and damping terms.
+
+> **How to check it in one number.** Watch
+> `position_controller/ude` → `disturbance_estimate.z`. Measured on both paths
+> after this change: **+0.05 to +0.06 N**, i.e. zero. Before the AM baseline
+> config existed, the baseline path would have loaded the bare-T650 file's
+> `vehicle_mass: 2.9` against a 3.746 kg plant — a 29% error the UDE would have
+> carried as roughly **−8.3 N**, most of its ±10 N budget spent on a known
+> modelling error.
+
+**The torque term cannot be fed forward on the baseline path — this is a hard
+fact, not a to-do.** Only an integrator can absorb a standing torque, and there
+the integrator belongs to PX4: the baseline node builds no rate controller (it
+publishes `VehicleAttitudeSetpoint`; PX4 runs attitude+rate+mixer), so
+`ratectl_trim_*` does not exist for it. PX4 v1.16 has no multicopter equivalent
+either — `TRIM_PITCH` is defined only in `fw_rate_control` and
+`commander/rc_calibration`, with **zero** references under `control_allocator/`
+or `mc_rate_control/`. CoM-referencing `CA_ROTOR*_PX` fails for the same reason
+it failed on this repo's own allocator (§3). PX4's own rate integrator absorbs
+it, measured benign in both modes. **Do not add an inert `ratectl_trim_y` key to
+the baseline yaml.**
+
+## 7. Why feedforward does not fix slow step convergence
+
+A separate symptom, investigated 2026-08-11: step responses converged slowly in
+x, y **and** z, and the natural guess was a missing feedforward term. It is not.
+
+**The position law already implements feedforward** — velocity, acceleration and
+thrust (`robust_controller.cpp:64-82`), and `PositionControllerReference` already
+carries all three fields. But a **step** reference has zero velocity and zero
+acceleration by definition, so every feedforward term evaluates to zero. *No*
+feedforward, existing or added, can speed up a step. Feedforward pays off only
+against a **smooth** reference — which is worth doing when the whole-body
+controller starts issuing trajectories, and costs nothing extra because the path
+already exists.
+
+What actually sets the convergence is the closed-loop poles. `posctl_pid_form:
+"nested"` computes `pd_term = k_vel*(vel_err + k_pos*pos_err)` **in newtons with
+no mass normalisation**, so `wn = sqrt(k_vel*k_pos/m)` and
+`zeta = sqrt(k_vel/(4*k_pos*m))` — and the arm's +23% mass alone cost 10% of both
+versus the T650 the gains were validated on. The fix is therefore gains, per path:
+
+- **Baseline → `k_vel` 3.70** = 3.0 × 3.746170/3.033921, a pure **mass restore**
+  that reproduces the T650's hardware-validated response exactly (`wn` 0.994,
+  `zeta` 0.497). Deliberately not raised further:
+  `docs/sim_to_real_fidelity.md` measured sim **overstating the settling benefit
+  of raising `k_vel` by 5.8×**, which is how a sim-tuned 8.0 was walked back to
+  3.0 on hardware.
+- **DIRECT → `k_vel` 7.0**, the X650 DIRECT value, hardware-validated at a
+  near-identical 3.5 kg, where higher `k_vel` is *stabilising* because DIRECT adds
+  ~120 ms of attitude lag.
+
+**Measured A/B on the DIRECT path** (0.6 m steps in x/y, 0.4 m in z; headless full
+stack). 7.0 wins on every axis and every metric:
+
+| | rise | overshoot | settle (2%) | final err |
+|---|---|---|---|---|
+| `k_vel` 3.0 — x/y | 2.0–2.5 s | 42–53% | 19–20 s | ±52–100 mm |
+| `k_vel` 3.0 — z | 2.3–2.4 s | 14–19% | 11.0 s | ±5 mm |
+| **`k_vel` 7.0 — x/y** | **1.6–1.7 s** | **25–30%** | **15.7–17.8 s** | **±2–14 mm** |
+| **`k_vel` 7.0 — z** | **2.0–2.2 s** | **0–0.5%** | **5.8 s** | **±2 mm** |
+
+> **The second-order formula describes the Z AXIS ONLY.** It predicted 4.3 s /
+> 5.3% at `k_vel` 7.0; z measured 5.8 s / 0%, but x/y measured 15.7–17.8 s /
+> 25–30%. The reason is structural: z drives collective thrust directly, while
+> x and y close through the **attitude loop**, which the formula ignores.
+
+### 7.1 Removing the x/y ringing — `k_pos`, after two failed hypotheses
+
+The x/y oscillation above (visible as several decaying cycles on a 1 m step, with
+z perfectly clean) was chased to ground on 2026-08-11. **Two plausible causes were
+measured and rejected first**; both are recorded so they are not retried.
+
+**Rejected — more torque feedforward.** The natural guess, but wrong twice over:
+the arm's standing torque is *already* compensated on this path (`ratectl_trim_y`;
+the integrator settles at −0.0394), and more decisively, **a pitch-only bias
+cannot ring the roll axis**. The CoM offset is purely in x (`dy` = −0.1 mm), yet
+y oscillated *as much as* x (measured y overshoot 29.5% vs x 25.5%). A constant
+bias shifts an equilibrium; it does not move poles.
+
+**Rejected — inertia-scaled rate gains.** The arm genuinely does raise rotational
+inertia by **×1.53 roll / ×1.86 pitch / ×2.02 yaw** (coupled mass matrix at
+`q_home` vs the bare T650 the gains were tuned on), so the rate loop really is
+running at about half its tuned gain. Scaling `ratectl_kp/ki/kd` by that ratio
+(kp_y 0.045 → 0.0838 etc.) measured **no improvement**: overshoot 23.5–29.5%
+against 25–30%, settling slightly worse. The rate loop is not the limiter — the
+**99.7 ms rotor lag** is, and no gain in this file can shorten it.
+
+**The fix: lower `k_pos`, not raise anything.** Since
+`zeta = sqrt(k_vel/(4*k_pos*m))`, lowering `k_pos` raises damping *without* asking
+the inner loop for more bandwidth — the standard cascade remedy when the inner
+loop's lag is fixed. `k_pos_x/y` 1.0 → **0.6**, `k_vel` 7.0 unchanged:
+
+| | k_pos 1.0 | **k_pos 0.6** |
+|---|---|---|
+| x/y overshoot | 25–30% | **0.0–0.4%** |
+| x/y settling (2%) | 15.7–18.9 s | **9.6–10.1 s** |
+| x/y final error | ±2–14 mm | **±0.1–3.0 mm** |
+| x/y rise | 1.6–1.7 s | 3.0–3.8 s |
+
+The ringing is gone. Rise time roughly doubles — that is the trade — but settling
+still nearly **halves**, because there is no longer any oscillation to decay.
+`k_pos_z` stays 1.0: z never rang.
+
+Note this is a *reduction* in gain, i.e. the conservative direction, which is why
+it is safe to adopt from simulation evidence where raising `k_vel` would not have
+been (§7's 5.8× warning applies to raising, not lowering).
+
+**Still open, deliberately:** the AM **baseline** path keeps `k_pos` 1.0 /
+`k_vel` 3.70 and still shows 42–50% x/y overshoot. The same `k_pos` reduction
+would very likely help there too — the physics is identical and PX4's attitude
+loop is also lagged — but it has not been measured on that path, and the baseline
+config's remit here was the mass restore. Measure before changing it.
+
+## 8. The true feedforward (2026-08-11) — supersedes the trim on the AM
+
+The user asked for the real thing: the arm is a *known* wrench, so compensate it
+exactly instead of seeding an integrator. This is the **first control-law change**
+of the whole effort — everything before this section was config-only.
+
+**Form.** The mixer zeroes torque about the geometric rotor centre, so the true
+CoM sees `τ = −r_com × (T·ê_z)`, proportional to thrust. In the allocator's
+normalized FLU units, with the affine motor map `ω = a·u + b`, the cancelling
+torque is **linear in the normalized collective c**:
+
+```
+τ_ff_y(c) = −dx/(√2·L) · (c + b/a) = −0.060·c − 0.0058
+            dx = 0.0195 m, L = 0.22990663 m, a = 665.9904, b = 64.0603
+```
+
+**Validated before any code was written:** at hover c = 0.5691 this evaluates to
+**−0.0399** against the independently flight-calibrated trim of **−0.040** —
+the closed form reproduces the flown calibration to 0.1%.
+
+**Implementation** (fsc_autopilot_ros2, `dev_CCM`): four **optional, default-0.0**
+client parameters — `system_ff_tau_{x,y}_per_coll`, `system_ff_tau_{x,y}_const` —
+plus a guarded ~10-line block in `DirectActuationClient::innerLoop()` that adds
+`per_coll·collective + const` to the rate controller's output torque before the
+FLU→FRD conversion and allocation. Configs that do not set the keys are
+**bit-identical** (kOptional loader semantics; the block is skipped) — the same
+isolation pattern as `ratectl_trim_*` and `ratectl_kff_*`. The AM yaml sets the
+y pair and **returns `ratectl_trim_y` to 0.0** (keeping both would
+double-compensate; the flown −0.040 stays in the comment as fallback).
+
+**Flight-validated same day** (headless full stack, 0.6 m x/y and 0.4 m z steps):
+
+| | trim config | **feedforward config** |
+|---|---|---|
+| settled `I_y` (rate integrator) | −0.0394 (44% of `i_max`) | **+0.0005 ≈ 0** |
+| x/y overshoot | 0.0–0.4% | 0.0–0.1% |
+| x/y final error | ±0.1–3.0 mm | ±0.1–1.9 mm |
+| z settling | 5.7–5.9 s | 5.1–6.4 s |
+
+The integrator row is the point: the arm's moment is now carried **openly, every
+tick, at every thrust level** — not learned, not seeded, and the integrator's
+full ±0.09 authority is back in reserve for genuine disturbances. By
+construction the compensation also tracks the collective through climbs and
+z-steps (the trim could not — its residual changed by 0.060·Δc), and there is no
+arming-edge dependence left.
+
+What remains beyond it: this is still the **fixed-pose** (q = home) evaluation of
+the arm. The q-dependent generalisation — recompute `dx(q)` from live joint
+angles — is the whole-body controller's opening move, and the linear-in-collective
+structure derived here carries over unchanged.
+
+## 8.1 Gain sweep at 1.0 m steps (2026-08-11): the shipped gains are the ceiling
+
+After the feedforward landed, the remaining "slightly underdamped" x/y feel (a
+soft final approach on 1.0 m GUI steps) was swept. **Every candidate lost to the
+shipped 0.6/7.0**, measured on the same 1.0 m x/y step suite:
+
+| candidate | rise (10–90%) | settle (2%) | outcome |
+|---|---|---|---|
+| **kp 0.6, kv 7.0 (shipped)** | **3.5–4.5 s** | **10.1–10.8 s** | 0.0% overshoot — best |
+| kp 0.5, kv 7.0 | 6.8–8.0 s | 12.3–14.3 s | overdamped-slow |
+| kp 0.6, kv 9.0 | 5.6–5.9 s | 9.4–11.1 s | no settle gain, slower rise |
+| `attctl_kp_angle` 3.25 → 4.5 | — | — | **flipped the vehicle on takeoff** |
+
+The last row is the important negative result: the attitude-P softening (3.25,
+inherited from the lagged-rotor tuning) is **load-bearing** — the MN4010's
+99.7 ms rotor lag leaves no attitude-bandwidth headroom, and raising it to buy
+x/y damping destabilizes the cascade outright. Do not retry.
+
+**Conclusion: further x/y improvement is not a gain — it is the reference.** A
+raw position step carries zero velocity/acceleration, so the law's feedforward
+terms (§7) sit idle and the loop does all the work against its own lag ceiling.
+Streaming a ramped or min-jerk reference (populating the message's `velocity`/
+`acceleration` fields) engages those terms and sidesteps the ceiling — which is
+exactly what the whole-body planner will do anyway.
+
+## 9. If a q-dependent feedforward is ever wanted
+
+§8's feedforward is exact for a **fixed** pose: its coefficients bake in
+`dx(q_home)`. Once the arm *moves*, the extension is to recompute
+`per_coll(q) = −dx(q)/(√2·L)` from live joint angles and feed it in each tick —
+the linear-in-collective structure survives unchanged; only the coefficient
+becomes time-varying. That needs a channel carrying the arm state into
+`fsc_autopilot_ros2`, which is the whole-body controller's opening move.
+Deliberately **not** built on this rig: at the fixed home pose it would compute
+the same coefficients every step, and this rig exists to be the simple,
 predictable fallback.
 
 ---

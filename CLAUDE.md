@@ -397,6 +397,60 @@ while the controller keeps the YAML value — relaunch with `params_file:=` to A
 trials. Full write-up: `docs/docs_aerial_manipulator/Feedforward Compensation for Home-Pose Arm.md`.
 Still open: SAFETY mode has the same bias and PX4's own integrator re-learns it (unreachable from
 this config); a true q-dependent feedforward belongs to the whole-body controller, not this rig.
+**BOTH CONTROL PATHS NOW EXIST, AND THE SLOW-STEP DIAGNOSIS (2026-08-11, user request).** The AM
+rig gained a BASELINE (SAFETY-only) counterpart so the arm's compensation exists on both paths:
+new `scripts/indoor_sim/start_am_t650_baseline_sitl.sh` (the direct launcher minus the lockstep
+disable — baseline WANTS lockstep, and it now asserts `PEGASUS_PX4_LOCKSTEP=1` + clears the tmux
+global so a stale 0 from a DIRECT run cannot leak), pairing with fsc_autopilot_ros2's
+`start_baseline_am_t650_stack_fused.sh` + `config/params_single_vehicle_baseline_am_t650.yaml`
+(dev_CCM). Both Isaac launchers share `04_px4_direct_am_t650_hold.py` (control-agnostic — it only
+spawns the plant and holds the arm) and the PX4 profile `rootfs_fsc_indoor_am_t650`.
+**The arm's FORCE is fed forward on both paths via `vehicle_mass` 3.746170**, read independently by
+robust_controller's gravity term and the UDE; the one-number check is
+`position_controller/ude.disturbance_estimate.z`, measured **+0.05 N** on both (it would be ≈ −8.3 N
+if the bare-T650 yaml's 2.9 kg were loaded — a 29% error). The arm's TORQUE stays DIRECT-only:
+the baseline node builds no rate controller, and **PX4 v1.16 has no multicopter torque trim**
+(`TRIM_PITCH` exists only in fw_rate_control/rc_calibration, zero refs under control_allocator or
+mc_rate_control) — verified, not assumed.
+**SLOW x/y/z STEP CONVERGENCE WAS NOT MISSING FEEDFORWARD.** robust_controller.cpp ALREADY
+implements velocity/acceleration/thrust feedforward and `PositionControllerReference` already
+carries all three fields — but a STEP has zero velocity and zero acceleration, so every FF term is
+zero by construction and no feedforward can speed up a step. The cause is the poles: `nested` form
+is `k_vel*(vel_err + k_pos*pos_err)` in NEWTONS with **no mass normalisation**, so the arm's +23%
+mass alone cost 10% of both wn and zeta. Fixed per path — baseline `k_vel` 3.0→**3.70** (pure
+mass-restore of the hardware-validated T650 response; deliberately NOT higher, because
+docs/sim_to_real_fidelity.md measured sim overstating the settling benefit of raising k_vel by
+**5.8×**, which is how a sim-tuned 8.0 was walked back to 3.0), DIRECT 3.0→**7.0** (the X650 DIRECT
+value, hardware-validated at a near-identical 3.5 kg, where higher k_vel is stabilising against the
+~120 ms attitude lag). Measured DIRECT A/B: x/y rise 2.0-2.5→1.6-1.7 s, overshoot 42-53→25-30%,
+final err ±52-100→±2-14 mm; z overshoot 14-19→0-0.5%, settle 11.0→5.8 s. **The second-order formula
+describes the Z AXIS ONLY** (z drives collective directly; x/y close through the attitude loop) —
+it predicted 4.3 s/5.3% at 7.0, z measured 5.8 s/0% but x/y 15.7-17.8 s/25-30%. That residual x/y
+underdamping is the attitude lag. **x/y RINGING FIXED by LOWERING k_pos 1.0→0.6** (DIRECT only;
+zeta = sqrt(k_vel/(4*k_pos*m)), so lowering k_pos raises damping WITHOUT asking the inner loop for
+bandwidth — the cascade remedy when the inner lag is fixed): x/y overshoot **25-30% → 0.0-0.4%**,
+settling **15.7-18.9 → 9.6-10.1 s**, final err ±2-14 → ±0.1-3.0 mm, at the cost of rise 1.7 → 3.3 s.
+k_pos_z stays 1.0 (z never rang). Safe to adopt from sim because it LOWERS gain — the 5.8x
+sim-overstatement warning applies to raising. **Two hypotheses measured and REJECTED first, do not
+retry**: (a) more torque feedforward — the trim already compensates it AND a pitch-only bias cannot
+ring ROLL, yet y overshot 29.5% vs x 25.5% while dy = -0.1 mm; (b) inertia-scaled rate gains — the
+arm really does raise inertia x1.53 roll/x1.86 pitch/x2.02 yaw (coupled mass matrix at q_home vs
+bare T650), but scaling ratectl_kp/ki/kd by that ratio gave NO improvement (23.5-29.5% vs 25-30%),
+so the rate loop is not the limiter, the 99.7 ms rotor lag is. Full write-up incl. the per-path
+table: `docs/docs_aerial_manipulator/Feedforward Compensation for Home-Pose Arm.md` §6-7.1;
+commands: Command.md §7.8. Baseline path still at k_pos 1.0 with 42-50% x/y overshoot — the same
+fix would likely help but is UNMEASURED there.
+**TRUE ARM TORQUE FEEDFORWARD (2026-08-11, user request — the first fsc_autopilot_ros2
+control-law change).** The trim was the hover-only, arming-edge approximation; the arm is a
+KNOWN wrench, so the DIRECT node now cancels it exactly every tick: new optional
+`system_ff_tau_{x,y}_per_coll/_const` params (default 0.0 = off, other vehicles bit-identical)
+add `per_coll*collective + const` to the commanded torque before allocation. Closed form
+`tau_ff_y(c) = -dx/(√2·L)·(c + b/a) = -0.060c - 0.0058` — evaluated at hover it reproduces the
+flight-calibrated trim (-0.0399 vs -0.040) BEFORE any code was written. AM yaml sets it and
+zeroes `ratectl_trim_y`. Flown: settled I_y **-0.0394 → +0.0005** (integrator fully freed),
+step metrics unchanged-or-better. Exact at every thrust level (climbs/z-steps no longer dump
+0.060·Δc onto the integrator); q-dependent dx(q) is the whole-body controller's opening move.
+Write-up: `Feedforward Compensation for Home-Pose Arm.md` §8.
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
