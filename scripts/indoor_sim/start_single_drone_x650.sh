@@ -30,13 +30,24 @@ load_machine_config "$0" "$CFG_NAME"
 
 ROS2_SETUP="${ROS2_SETUP:-/opt/ros/humble/setup.bash}"
 GROUNDTRUTH_CHECK="$SCRIPT_DIR/verify_groundtruth_ros2.sh"
-PEGASUS_SCRIPT="$FSC_PEGASUS_ROOT/application/px4_base/03_px4_single_drone_x650.py"
+# Vehicle-variant hooks. The defaults reproduce the validated indoor X650 exactly,
+# so nothing changes for existing callers. start_single_drone_t650.sh sets these
+# to swap in the MN4010 / 2.95 kg scenario without duplicating this orchestration:
+# the two vehicles differ only in the Isaac app script and the PX4 parameter
+# profile, while everything below (PX4 boot, param application, ground-truth
+# check, tmux layout, cleanup) is identical for both.
+PEGASUS_SCRIPT="${INDOOR_SIM_PEGASUS_SCRIPT:-$FSC_PEGASUS_ROOT/application/px4_base/03_px4_single_drone_x650.py}"
+VEHICLE_LABEL="${INDOOR_SIM_VEHICLE_LABEL:-X650}"
 X650_ASSET="$FSC_PEGASUS_ROOT/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/x650_new.usd"
 PX4_BUILD_DIR="$PX4_DIR/build/px4_sitl_default"
 PX4_BIN="$PX4_BUILD_DIR/bin/px4"
 PX4_ROOTFS_BASE="$PX4_BUILD_DIR/rootfs"
-# Keep these parameters independent of the indoor Iris and outdoor launchers.
-PX4_WORK_DIR="$PX4_BUILD_DIR/rootfs_fsc_indoor_x650"
+# Keep these parameters independent of the indoor Iris and outdoor launchers --
+# and, via the override, of each vehicle variant. PX4 `param save`s into this
+# directory, so sharing one profile across vehicles would silently carry one
+# airframe's saved tune into the other. The override is a directory NAME, not a
+# path, so a variant wrapper does not need PX4_DIR resolved before it runs.
+PX4_WORK_DIR="$PX4_BUILD_DIR/${INDOOR_SIM_PX4_PROFILE:-rootfs_fsc_indoor_x650}"
 SESSION="px4_isaac"
 DELAY=2
 EV_DELAY_MS="${PX4_INDOOR_EV_DELAY_MS:-0}"
@@ -69,7 +80,7 @@ command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or
 [[ -d "$PX4_ROOTFS_BASE" ]] || { echo "ERROR: missing $PX4_ROOTFS_BASE" >&2; exit 1; }
 
 if [[ ! -d "$PX4_WORK_DIR" ]]; then
-  echo "Initializing persistent indoor X650 PX4 profile: $PX4_WORK_DIR"
+  echo "Initializing persistent indoor $VEHICLE_LABEL PX4 profile: $PX4_WORK_DIR"
   cp -a "$PX4_ROOTFS_BASE" "$PX4_WORK_DIR"
 fi
 
@@ -77,11 +88,12 @@ tmux has-session -t "$SESSION" 2>/dev/null && tmux kill-session -t "$SESSION"
 
 tmux new-session -d -s "$SESSION" -n "indoor_x650" "
 cd \"$PX4_DIR\" || { echo 'PX4_DIR not found'; exec bash; }
-echo 'Starting indoor X650 PX4 SITL with persistent OptiTrack and X650 parameters...'
+echo 'Starting indoor $VEHICLE_LABEL PX4 SITL with persistent OptiTrack parameters...'
 PX4_SYS_AUTOSTART=10016 PX4_SIM_MODEL=iris PX4_UXRCE_DDS_NS=uav_0 \\
 PX4_PARAM_EKF2_HGT_REF=3 PX4_PARAM_EKF2_MAG_TYPE=5 \\
 PX4_PARAM_EKF2_GPS_CTRL=0 PX4_PARAM_EKF2_EV_CTRL=15 \\
 PX4_PARAM_EKF2_EV_DELAY=$EV_DELAY_MS PX4_PARAM_COM_ARM_WO_GPS=1 \\
+PX4_PARAM_SYS_HAS_MAG=0 \\
 PX4_PARAM_MC_ROLLRATE_K=0.3 PX4_PARAM_MC_PITCHRATE_K=0.3 \\
 PX4_PARAM_MC_YAWRATE_K=0.3 PX4_PARAM_MC_ROLL_P=3.25 \\
 PX4_PARAM_MC_PITCH_P=3.25 PX4_PARAM_MC_YAW_P=1.4 \\
@@ -97,6 +109,7 @@ exec bash
   sleep 4
   for parameter in \
     EKF2_HGT_REF EKF2_MAG_TYPE EKF2_GPS_CTRL EKF2_EV_CTRL EKF2_EV_DELAY COM_ARM_WO_GPS \
+    SYS_HAS_MAG \
     MC_ROLLRATE_K MC_PITCHRATE_K MC_YAWRATE_K MC_ROLL_P MC_PITCH_P MC_YAW_P; do
     tmux send-keys -t "$SESSION:0.0" "param show $parameter" Enter
     sleep 0.15
@@ -107,7 +120,7 @@ exec bash
 tmux split-window -h -t "$SESSION":0 "
 echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
-echo 'Launching indoor X650 with measured motor lag (lambda=10.51 1/s)...'
+echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'

@@ -541,12 +541,13 @@ calls `apply_x650_px4_gains.sh`. Neither the Iris variant nor its launch script 
 
 ## Propeller bench test data (`docs/propeller_testing/`)
 
-Real motor+propeller bench-test reports — reference data, not code. `MN_4014_15x5` is now wired
-into the X650 vehicle's thrust curve (see below); `MT_2216_10x4.5` is not yet connected to any
-vehicle config.
+Real motor+propeller bench-test reports — reference data, not code. `MN_4014_15x5` is wired into
+the X650 vehicle's thrust curve and `MN_4010_15x5` into the T650's (see below);
+`MT_2216_10x4.5` is not yet connected to any vehicle config.
 
-- `MT_2216_10x4.5_report.pdf` (generated 2026-06-05) and `MN_4014_15x5_report.pdf` (generated
-  2026-07-12) — one report per motor+prop combo tested.
+- `MT_2216_10x4.5_report.pdf` (generated 2026-06-05), `MN_4014_15x5_report.pdf` (generated
+  2026-07-12) and `MN_4010_15x5_report.pdf` (generated 2026-07-15) — one report per motor+prop
+  combo tested.
 - Each report gives: **Step 1** polynomial fits of throttle → RPM/Thrust/Torque (with R², all
   ≥0.996 in both reports); **Step 2** throttle→RPM response lag lookup tables; **Step 3** a
   first-order RPM-response bandwidth model, `RPM_rate = λ·(RPM_cmd − RPM)`, comparing 4
@@ -561,6 +562,241 @@ vehicle config.
   section above for the full derivation, `x650_bare_frame_utils.py`'s calibration, and
   `lagged_thrust_curve.py`'s `LaggedQuadraticThrustCurve`. `MT_2216_10x4.5` remains unconnected
   to any vehicle config as of this writing.
+- **`MN_4010_15x5` is fully connected too, to the T650** (2026-08-05; constants moved into
+  `t650_params.py` 2026-08-06) — see the T650 section below. **The fit procedure was validated
+  before use**, twice: re-running it against the MN4014 polynomials reproduces that motor's
+  committed `k`/`c` to **+0.004% / +0.015%**, and the MN4010's to **+0.003% / +0.018%**, so the
+  motor sets are directly comparable and not fitted by different methods. Do the same before
+  adding a third. The fit is an unweighted zero-intercept least-squares of the report's Step 1
+  polynomials sampled uniformly across throttle 0–100%, projected onto the simulator's fixed
+  `force = k·ω²` / `torque = c·ω²` form.
+- **The T650's shipped `k`/`c` are no longer the bench values** — both carry a named empirical
+  fit factor (T650 section). `BENCH_ROTOR_CONSTANT` / `BENCH_ROLLING_MOMENT_COEFFICIENT` in
+  `t650_params.py` are the unmodified report-derived numbers.
+
+## T650 (Tarot 650): X650 geometry + MN4010 motors (added 2026-08-05, restructured 2026-08-06)
+
+A second vehicle sharing the bare-X650 asset, added for the FSC Lab Tarot 650 build. The USD
+geometry, rotor ordering and arm length are inherited unchanged — there is no separate T650
+asset — but as of 2026-08-06 **the T650 has its own parameter and spawn modules** rather than
+borrowing the X650's.
+
+| | MN4014 (X650) | MN4010 (T650) |
+|---|---|---|
+| ω idle → max | 81.8374 → 817.5911 rad/s | **64.0603 → 730.0507 rad/s** |
+| `rotor_constant` k (bench) | 4.536223e-05 | **4.540431e-05** → tuned **4.679931e-05** |
+| `rolling_moment_coefficient` c (bench) | 8.366000e-07 | **8.247173e-07** → tuned **2.474152e-06** |
+| λ (spin-up bandwidth) | 10.51 (τ 95.1 ms) | **10.0265 (τ 99.7 ms)** |
+| body / total mass | 3.416079 / 3.5 kg | **2.95 / 3.033921 kg** |
+| hover command | 0.4800 | **0.5025** |
+
+Three things that look like bugs but are not:
+
+- **The T650 hovers ~22 points higher on the stick** (0.5025 vs 0.4800). Its top rotor speed is
+  lower at a nearly identical thrust constant, so the same weight sits higher. Static
+  thrust-to-weight is still 3.35.
+- **The MN4010 is the SLOWER rotor**, λ 10.0265 vs 10.51 — ~4.8% more lag. Modest, but it costs
+  phase margin, so the softened X650 PX4 gains (`MC_*RATE_K=0.3`, `MC_ROLL_P/MC_PITCH_P=3.25`,
+  `MC_YAW_P=1.4`) are if anything more necessary here. Do **not** raise λ to buy stability —
+  that was tried on the MN4014 (15.51) and is a workaround for untuned gains, not a physical
+  value.
+- **k and c are no longer the bench values.** Both carry an empirical fit factor (below). The
+  bench numbers are still in the file as `BENCH_*`; the tuning is one named factor each.
+
+### 2.95 kg is now the BODY mass, not the total
+
+Until 2026-08-06, `T650_MASS = 2.95` was the vehicle's **total** (body 2.866079 + four authored
+rotor bodies 0.083921). On instruction it is now the **body** mass, so the total the solver sees
+is **3.033921 kg**. That is a real change to the plant, and it is what forced the thrust-constant
+fit below: at the old total the bench k reproduced the measured hover to +0.14%, and the
+0.503188 hover command was confirmed four separate times (two in simulation, two against
+hardware). If the intent was ever 2.95 kg total, set `BODY_MASS = 2.95 - ROTOR_MASS_TOTAL` and
+`THRUST_FIT_FACTOR = 1.0`; every derived quantity recomputes automatically.
+
+### Empirical tuning against flight C (2026-08-06)
+
+Fitted to `docs/experimental_data_ros2_bag/debug_recording_20260806_164742` replayed through the
+same `fsc_autopilot_ros2` stack. **Parameters only — no modelling was changed, and mass was not
+touched.** Full method, before/after metrics and limitations: `docs/sim_to_real_t650/TUNING_t650.md`.
+
+| factor | value | what it does |
+|---|---|---|
+| `THRUST_FIT_FACTOR` | ×1.030724 on k | restores the measured hover command (0.5025) at the now-fixed 3.033921 kg |
+| `YAW_TORQUE_FIT_FACTOR` | ×3.0 on c | stands in for a **missing model term** (below); yaw shape RMSE 4.109° → 1.268° |
+| — | ×1.030724 on Ixx, Iyy | bookkeeping only: roll/pitch authority ∝ k/I, so this holds that (already good) fit exactly where it was. Izz deliberately NOT scaled — yaw is corrected through c, scaling both would double-count |
+
+**`c` is an effective yaw-torque coefficient, not a drag coefficient.** The simulated yaw axis is
+under-powered because the thrust curve applies only the steady drag torque `c·ω²` and never the
+reaction to the rotors' own angular acceleration, `I_rotor·ω̇`, which during a yaw command adds
+across all four rotors and is 2–4× larger than the modelled torque. Inflating c is a stand-in.
+**Revert c to `BENCH_ROLLING_MOMENT_COEFFICIENT` if `LaggedQuadraticThrustCurve` ever gains that
+term** — that is the real fix, and ×3.0 measures how much torque is missing. Only the ratio
+c/Izz sets yaw dynamics, so this could equally have been done by lowering Izz; c was chosen
+because Izz has CAD support and matching by inertia alone would need Izz ≈ 0.029 kg·m², under
+half any physical estimate.
+
+Where things live:
+
+- `extensions/.../rotorcraft/t650_params.py` — **new**, parallel to `x650_params.py` and
+  importing nothing from it, so a change to one vehicle cannot silently move the other. Holds the
+  MN4010 calibration (with its derivation and the fit validation), the mass model, the shared
+  rotor geometry, and hover/scaling values **computed from those constants rather than hard-coded**
+  so they cannot go stale. Pure Python, no Isaac imports, same as `x650_params.py`.
+  Inertia is copied from the X650 CAD diagonal on the "mass difference is centrally concentrated"
+  assumption. It IS an assumption; replace it if the T650 gets its own CAD.
+- `extensions/.../rotorcraft/t650_bare_frame_utils.py` — **new**, `spawn_t650_with_mavlink()`.
+  Standalone; shares only the USD asset (`assets/x650_new.usd`, referenced by its own
+  `T650_USD` constant) and overrides the asset's authored 1.467 kg body mass at spawn.
+- `application/px4_base/05_px4_single_drone_t650.py` — the T650 app. Calls the helper with **no**
+  mass/motor arguments, so every T650 number lives in exactly one place.
+- `scripts/indoor_sim/start_single_drone_t650.sh` — thin wrapper over the X650 launcher.
+- `scripts/indoor_sim/start_t650_direct_actuator_sitl.sh` — direct-actuation variant, lockstep
+  disabled and pushed with `tmux setenv -g` (same fix as the X650 version).
+
+`x650_bare_frame_utils.py`'s `MOTOR_CALIBRATIONS["MN4010"]` entry and the `motor=` argument are
+now **unused** — the T650 no longer routes through them. They were left in place rather than
+removed, so be aware there are two spawn paths for the same vehicle and they will drift; prefer
+the `t650_*` modules and delete the table entry when convenient.
+
+`start_single_drone_x650.sh` is now the shared orchestration for both vehicles, via three
+env hooks whose defaults reproduce the X650 exactly: `INDOOR_SIM_PEGASUS_SCRIPT`,
+`INDOOR_SIM_VEHICLE_LABEL`, `INDOOR_SIM_PX4_PROFILE`. The last is a directory **name**, not a
+path, so a variant wrapper does not need `PX4_DIR` resolved before it runs (it isn't —
+`common_config.sh` only defines it inside `load_machine_config`, which the base launcher calls).
+**Each vehicle must keep its own PX4 profile**: PX4 `param save`s into it, so sharing one would
+silently carry one airframe's tune into the other.
+
+**`SYS_HAS_MAG=0` was missing from the indoor launcher until 2026-08-05** and is now set for
+both vehicles. The indoor scenario already ran `EKF2_MAG_TYPE=5` (None), so declaring no
+magnetometer is the consistent setting; it is also on the required indoor list in
+`fsc_drone_state_estimator_ros2/docs/px4_indoor_paramters.md`. It is a boot-time parameter — a
+live `param set` will not take effect until PX4 restarts.
+
+**Validation, 2026-08-05** (against the then-current 2.95 kg **total** mass — historical, see the
+mass note above). Two independent paths, both agreeing with the calibration:
+
+| path | measured hover | predicted 0.503188 |
+|---|---|---|
+| QGC/PX4 mixer (`commander takeoff`, GPS profile) | 0.503341 | 0.030% |
+| `fsc_autopilot_ros2` baseline node (indoor EV, full stack) | 0.50320 | 0.002% |
+
+The first flew a full takeoff → 2.5 m hover (vz 0.0024 m/s, roll 1.3°, pitch 0.1°, body rates
+~0.002-0.004 rad/s) → land. The second held a commanded 1.0 m at 0.9963 m (0.37 cm error,
+0.59 cm spread) with lateral hold inside 1.5 cm. Real hardware later agreed too: flight B's
+command averages 0.5033 over its first 5 s and flight C's 0.5025 over t=5–15 s, both before
+battery sag accumulates.
+
+Two things learned while running it, both easy to lose an hour to:
+
+- **`ekf2 stop` on a running lockstep sim deadlocks the PX4↔Isaac HIL link** (`ERROR
+  [simulator_mavlink] poll timeout 0, 111`). Do not restart the estimator in place to pick up
+  EKF2 parameter changes — relaunch the sim instead.
+- **Isaac Sim crashes at ~800 ms under `PEGASUS_HEADLESS=1`** on this machine (breakpad,
+  `std::__throw_system_error` out of `pthread_create`), well before any scenario code runs. Run
+  with the display; `DISPLAY=:0` and an X11 session are available.
+
+## Sim-to-real validation, T650 indoor flights (`docs/sim_to_real_t650/`, 2026-08-06)
+
+Three recorded indoor T650 flights replayed through the **same** `fsc_autopilot_ros2` baseline
+stack in IsaacSim and compared against hardware. Bags live in
+`docs/experimental_data_ros2_bag/` (not committed-friendly: ~48 MB total).
+
+| bag | what it supports |
+|---|---|
+| `debug_recording_20260806_134620` (A, 117 s) | `sensor_combined` only — no measured position |
+| `debug_recording_20260806_140303` (B, 169 s) | same |
+| `debug_recording_20260806_164742` (**C**, 211 s) | **also records `state_estimator/local_position/odom`** → the real position/velocity/attitude comparison |
+
+Read `REPORT_flightC.md` + `TUNING_t650.md` first; `REPORT.md` (flights A/B) is marked stale for
+its step numbers but remains the reference for vibration and battery sag.
+
+**Method that makes it like-for-like.** The recorded `position_controller/reference` waypoints are
+replayed into the live stack and `fsc_autopilot_ros2` regenerates its own attitude setpoints —
+the real flights' setpoints are never injected, they are the thing being predicted. Simulation
+takes off to the sequence's first waypoint and settles before t=0 (2.0–2.8 cm error), so the
+initial condition matches the mid-flight bags.
+
+**Findings that are about the simulator, not this campaign:**
+
+- **Yaw is the one axis the plant gets materially wrong** — before tuning: overshoot 44.9% vs
+  9.2%, rise 0.840 s vs 0.555 s, shape RMSE 4.11° (20% of a 20° step). Root cause is the missing
+  `I_rotor·ω̇` term (see the T650 tuning section). Independent corroboration: **PX4's own autotune
+  cannot identify the yaw axis** — it returns 5.6× less response per unit excitation than
+  roll/pitch and times out at 20 s, while roll and pitch converge in ~5 s each
+  (`figures/autotune_diagnostic.png`). This is the third independent confirmation, after the X650
+  campaign, that yaw gains tuned in simulation must not be carried to hardware.
+- **Vibration is not modelled at all.** Real airframe accelerometer RMS above 2 Hz is 1.3–1.7
+  m/s²; simulated is 0.036 m/s², i.e. **sim is 2–6% of real**. Anything depending on IMU noise —
+  filter/notch tuning, vibration failsafes, EKF innovation gating — cannot be developed here.
+  Below 2 Hz the rigid-body motion agrees (gyro within 1.07–1.53×).
+- **Battery sag is now demonstrated, not hypothesised.** Same controller, same maneuver: the real
+  hover command climbs +0.80 %-pts over 95 s (flight A) while simulation is flat to −0.01 %-pts.
+  The X650 fidelity doc listed this as "a hypothesis, not a result". Consequence: **fit thrust
+  constants to the EARLY-flight hover**, before sag accumulates.
+- **Both vehicles hover tilted, in opposite directions** — real roll/pitch −1.31°/+1.07°,
+  simulated +0.98°/−1.58°, similar magnitude but 161° apart; on flight C it shows as a constant
+  +2.58°/+2.46° offset with correlations still 0.74/0.84 (transients align, datum does not). A
+  vehicle holding position with persistent tilt means the attitude estimate's "level" is offset
+  from where the thrust axis produces no horizontal force — on hardware IMU/mocap levelling, in
+  simulation the USD asset's body frame vs its rotor plane. **Not chased yet**; ~2.5° of built-in
+  tilt matters for any trim, disturbance-estimation or UDE study.
+- **Position agreement is good and partly luck.** Flight C: shape RMSE 5.5 cm on 1 m steps,
+  settling bias +0.004 s. But flights A/B show the *acceleration* that produces it is off by
+  +22.6% in peak and +92.7% in rise — two errors that partly cancel when integrated. Do not read
+  trajectory-level agreement as inner-loop fidelity.
+- **Run-to-run noise floor: position shape RMSE varies ±0.008 m** between two runs of an
+  identical configuration. Differences below ~0.01 m are not resolvable from single runs.
+
+### Traps, all of which silently corrupt results
+
+- **The simulator does not run in real time** — 0.84–0.90× measured. A reference schedule issued
+  on wall clock is compressed by that factor *in simulation time* (a 90 s sequence became 69.3 s,
+  every hold 23% short). `tools/stack_driver.py::sim_now` drives the schedule from
+  `sensor_combined.timestamp` instead; achieved spans then match the recorded ones to 23 ms
+  over 183 s.
+- **In simulation the recorded topics span two clocks.** `sensor_combined` / `vehicle_attitude`
+  are PX4-stamped (simulation time); the controller's attitude setpoints are stamped on ROS wall
+  clock. Mixing them misplaces every commanded trace by tens of seconds. The odometry record
+  carries both per sample; interpolate, do **not** affine-fit (the ratio varies through the run —
+  59 ms RMS residual). On hardware this does not arise; PX4 and ROS share a clock there.
+- **rosbag2 `messages.timestamp` is the receive time and is bursty** — 50.8 ms jitter against
+  odometry's clean 10.00 ms `header.stamp`. Use header stamps. The reference topic's own header
+  stamps are on a *different epoch* from odometry's, so reference onsets are recovered by mapping
+  reference receive time through odometry's receive→header correspondence (3–4 ms residual).
+- **PX4 autosaves parameters a few seconds after a `param set`** — "live-only" tuning is not
+  live-only. A yaw gain sweep leaked its last gain set into `rootfs_fsc_indoor_t650`, and because
+  `MC_YAWRATE_P/I/D` are **not** in the launcher's `PX4_PARAM_` override list they would have
+  survived into every later run (with `MC_YAWRATE_K` silently dropping to PX4's 1.0 default,
+  since the swept value matched it and PX4 does not save defaults). Add those three to the
+  launcher's override list, or restore explicitly after any sweep.
+- **`start_single_drone_x650.sh:77` clones the PX4 rootfs with `cp -a` for any new profile**, and
+  that rootfs is **39 GB** of accumulated logs. Creating a scratch profile cost 39 GB of disk.
+  Exclude `log/` — or create only the `etc`/`test_data` symlinks plus `eeprom/`, which is all PX4
+  needs to boot.
+- **`virtual_remote` is service-driven, not interactive.** `/uav_0/rc/{arm,disarm,offboard,rtl}`
+  as `std_srvs/Trigger`; there is no `_wait_for_arm_trigger()` and no "press Enter" gate. The
+  safety comment at `start_baseline_t650_stack_fused.sh:31-34` is **stale and overstates the
+  guarantee** — the pane arms whenever anyone calls the service, script included.
+- **PX4 autotune needs `MC_AT_EN=1` set at BOOT** (`rc.mc_apps:23` only starts the module if the
+  parameter is already >0), and there is no `MC_AT_AXES` in v1.16 — it sequences roll→pitch→yaw
+  and rewrites all three. Use `MC_AT_APPLY=0` to identify without writing. Excitation is injected
+  at `mc_att_control_main.cpp:353`, inside the attitude-control block, so it works in OFFBOARD
+  too. The FSC Pixhawk firmware is modified indoor-only — **do not run autotune on hardware.**
+- **Run long jobs under `tmux`, not `nohup`/`setsid`** — a killed tool call otherwise takes the
+  whole process group with it.
+
+### Tooling (`docs/sim_to_real_t650/tools/`)
+
+`extract_odom_bag.py` (bag → npz, header-stamp based) · `stack_driver.py` (drives the live stack
+through a recorded reference sequence on the simulation clock; optional `PARAM_SCHEDULE_FILE` env
+var fires PX4 console commands at set simulation times, used for gain sweeps) ·
+`run_stack_case.sh` (one closed-loop case end to end; **auto-arms**, simulation-only) ·
+`plot_odom.py` / `metrics_odom.py` (flight C figures and metrics) · `plot_tuning.py`
+(before/after) · `plot_autotune.py` · `extract_bag.py` / `steps.py` / `plot_steps.py` /
+`metrics.py` / `sensor_compare.py` (flights A/B, `sensor_combined`-based).
+
+Analysis runs on the **system** `python3` (numpy 2.x + matplotlib); bag extraction needs ROS 2 and
+`px4_msgs` sourced.
 
 ## Normalized swing state (r, v) — JGCD paper data feed
 
@@ -695,6 +931,26 @@ With all three fixed, the live A/B test (real square-wave reference driving `cab
 ## Checklist for adding a new vehicle model
 
 When creating a new vehicle (config class + vehicle class), verify each item below.
+
+**First decide how much to share.** If the airframe reuses an existing asset and differs only
+in motors and/or mass — as the T650 does from the X650 — there are two routes, and the repo
+now contains one of each:
+
+- **Shared module, selected by name.** Add a `MOTOR_CALIBRATIONS` entry in
+  `x650_bare_frame_utils.py` and pass `motor=` / `body_mass=`. Least duplication; fine while
+  the vehicles genuinely differ only in a few numbers.
+- **Parallel modules** (`t650_params.py` + `t650_bare_frame_utils.py`, added 2026-08-06 on
+  instruction). Importing nothing from the X650 pair means a change to one vehicle cannot
+  silently move the other — which matters once a vehicle starts carrying its own empirical
+  fit factors, as the T650 now does. Cost is duplication that will drift.
+
+Do not do both for the same vehicle: the T650 currently has a live `t650_*` path and a
+now-dead `MOTOR_CALIBRATIONS["MN4010"]` entry, which is exactly the drift risk to avoid.
+
+Whichever route you take, re-run the fit procedure against an already-committed motor first
+and confirm it reproduces that motor's constants before trusting it on the new one (see
+"Propeller bench test data"). Compute hover/scaling values **from** the constants rather than
+hard-coding them, so they cannot go stale when a constant changes.
 
 ### Config class
 - [ ] All fields are **pure data** — no live resources (ROS nodes, sockets, processes) instantiated in `__init__`
