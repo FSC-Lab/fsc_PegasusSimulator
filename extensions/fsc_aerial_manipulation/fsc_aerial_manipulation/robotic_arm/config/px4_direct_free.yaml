@@ -1,0 +1,112 @@
+# ===========================================================================
+# px4_direct_free — FREE-FLIGHT TRAJECTORY TRACKING ON THE PX4-GATED RIG WITH
+#                   LAGGED ROTORS (03_px4_direct_aerial_manipulator_free.py)
+#
+# Same law and same flight phases as free.yaml's rig (setpoint takeoff -> task
+# -> setpoint landing), DIFFERENT PLANT: rotor commands leave the process,
+# cross a ROS2/DDS/MAVLink transport (~15 ms), pass PX4's offboard/arming gate,
+# and finally reach a bench-calibrated first-order motor model
+# (lambda = 10.51 1/s, tau ~ 95 ms). Heavier, too: the demo overrides the
+# airframe to the real 3.416 kg battery-loaded mass (total 4.21 kg vs the 02
+# rig's 3.27 kg).
+#
+# That actuator lag is the whole reason this file exists. Every deviation from
+# free.yaml below follows from ONE rule: no loop in this stack may be as fast
+# as the actuator that has to answer it.
+#
+# Validated headless on the full stack (PX4 SITL + MicroXRCEAgent + rotor
+# bridge + Isaac) on 2026-08-10 — 22 flights through utils/px4_gmo_gain_sweep.py:
+#   hover_drone  90 s hold, CoM rms 0.5 mm, |e_R| rms 4e-4, EE rms 1.0 mm,
+#                zero torque saturation
+#   poly_whole   4/4 complete flights (takeoff -> fly-in -> pinned gimbal ->
+#                fly-out -> landing), see that section
+# ===========================================================================
+
+default:
+  # --- geometric outer loop ------------------------------------------------
+  # k_x/k_v unchanged from free.yaml (the translation loop was never the
+  # problem: takeoff and hover are clean at 16/8, and the vertical channel is
+  # critically damped there, which is what lets takeoff/landing be setpoints).
+  k_x: 16.0
+  k_v: 8.0
+  # k_R/k_w 8/2 -> 4/1.5: THE change this plant needs, and the one that took
+  # 20 flights to find. With M_r_d = I0 the attitude loop's natural frequency
+  # is sqrt(k_R / 0.065): 11.1 rad/s at k_R = 8, sitting ON the rotor lag pole
+  # (lambda = 10.51 rad/s). There, the moment the law commands to cancel the
+  # arm's reaction arrives ~90 deg out of phase and PUMPS the coupled body/arm
+  # mode instead of damping it — measured as a ~2.7 Hz oscillation, visible in
+  # all four joints and in the body attitude at once, growing from the moment
+  # the whole-body law takes the arm. At 4/1.5 the loop is 7.85 rad/s, below
+  # the pole, at the same damping ratio (zeta 1.4 -> 1.5).
+  # NOTE this supersedes the 2026-07-31 hover tuning's k_R = 8, which was
+  # validated with the arm hanging at q = 0 and a climb-ramp takeoff. In this
+  # demo's configuration (folded arm, setpoint takeoff, law owning the arm)
+  # k_R = 8 diverges 4 s after the handover; k_R = 4 holds 90 s at 0.5 mm.
+  k_R: 4.0
+  k_w: 1.5
+  M_r_d: [0.065194, 0.064352, 0.100439]
+
+  # --- end-effector task impedance ----------------------------------------
+  # The soft pair from the 2026-07-31 hover sweep: free.yaml's stiff EE gains
+  # saturated the arm against the clamp once the rotors could no longer answer
+  # instantly. Fine for holding station (EE rms 1.0 mm over 90 s); a mode that
+  # TRACKS an EE path wants more — see poly_whole.
+  K_y: [8.0, 8.0, 8.0, 1.0]
+  D_y: [12.0, 12.0, 12.0, 1.0]
+
+  # --- generalized-momentum disturbance observer ---------------------------
+  # 20 -> 0.5 rad/s, and it must stay there. The observer has to sit far BELOW
+  # the actuator bandwidth (lambda = 10.51) or its estimate chases lag the
+  # motors have not delivered yet and feeds it back as a phantom disturbance.
+  # Measured both ways: 20 diverges within seconds, 1.0 on the six BODY
+  # channels crashes poly_whole, 0.5 flies every mode tested. ~20x margin, not
+  # the textbook 2-3x, because the mode it excites is near-undamped.
+  use_gmo: true
+  K_o: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+
+  impedance_mode: shaped
+  M_Y: [1.0, 1.0, 1.0, 0.05]
+
+  # --- solver / actuator ---------------------------------------------------
+  dls_lambda: 0.3
+  # 3.0 N.m, NOT the 4.1 servo stall torque: the demo applies the value it
+  # reads back from here, so law and demo clamp at the same number and the base
+  # moment is rebuilt from a u3 the arm will really deliver. (Before the merge
+  # the demo clamped 3.0 while the law believed 4.1 — the law then
+  # pre-compensated a reaction torque the arm never produced.) Measured peak on
+  # the poly_whole flight: 1.4 N.m, so this is a guard, not a working limit.
+  tau_max: 3.0
+  omega_e_ff: false
+
+# ---------------------------------------------------------------------------
+# poly_whole — the 4-phase whole-body showcase (fly-in / EE-pinned gimbal /
+# fly-out / landing). Unlike hover, the EE reference MOVES: the arm swings
+# through ~30 deg of fold while the base translates 4 m, so its reaction torque
+# on the body is a continuously varying disturbance the rotors answer ~95 ms
+# late, and the pinned phase is a genuine EE-POSITION task (the tool tip must
+# stay put in the air while the platform yaws under it).
+#
+# ONE deviation from the baseline, and it is a TRACKING choice, not a stability
+# one — with k_R fixed above, this trajectory flew at K_y 8, 60 AND 200, a 25x
+# range, each repeating 3/3 with metrics within 3%.
+#   K_y 200 (= free.yaml's stiffness): pinned-phase EE error 0.2 mm
+#   K_y  60                          : 0.6 mm
+#   K_y   8 (the baseline)           : 2.5 mm
+# All three are far below anything visible; 200 is chosen because it also makes
+# this rig differ from the 02 rig in as few numbers as possible. If the real
+# vehicle's state estimate turns out noisy enough that stiff EE gains chatter,
+# K_y 60 / D_y 24 is validated and needs no other change.
+#
+# D_y 24 is NOT free-flight polish — it is required: at K_y 200 the flight
+# still crashed with free.yaml's D_y 6 (zeta 0.21 leaves the 2.7 Hz mode
+# under-damped) and with D_y 12. 24 and 48 both fly; 24 is the gentler.
+#
+# MEASURED on this section, 4/4 complete flights: CoM rms 7 mm, EE rms 0.1 mm,
+# pinned-phase EE 0.2 mm, |e_R| max 0.009, peak arm torque 1.4 of 3.0 N.m,
+# zero saturation, touchdown at exactly the 0.305 m resting height with the arm
+# back at its folded home. (The trajectory itself is flown with this rig's
+# gentler timing/pinned-phase settings — see TRAJ_CFG_OVERRIDE in the demo.)
+# ---------------------------------------------------------------------------
+poly_whole:
+  K_y: [200.0, 200.0, 200.0, 40.0]
+  D_y: [24.0, 24.0, 24.0, 2.0]

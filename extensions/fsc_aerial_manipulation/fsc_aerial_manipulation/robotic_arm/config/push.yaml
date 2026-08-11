@@ -1,0 +1,47 @@
+# ===========================================================================
+# push — BOX PUSH (02_aerial_manipulator_push.py)
+#
+# The closed jaws are the pusher; the box is never grasped. The contact force
+# is a SUSTAINED lateral load along the push line (~0.4 N of sliding friction),
+# absent from the reference model — so this scenario's demonstration is exactly
+# that the task impedance plus the observer carry it while the base flies a
+# straight fixed-yaw line.
+#
+# Identical to pick.yaml today (both were copies of the same controller). Kept
+# as its own file precisely so it can stop being identical: this is the rig
+# where a sustained contact load, not a transient, argues for its own K_o and
+# K_y once there is flight data to tune against.
+# ===========================================================================
+
+default:
+  # --- geometric outer loop ------------------------------------------------
+  k_x: 16.0
+  k_v: 8.0
+  k_R: 8.0
+  k_w: 2.0
+  M_r_d: [0.065194, 0.064352, 0.100439]
+
+  # --- end-effector task impedance ----------------------------------------
+  # The push phase commands a straight EE line at fixed yaw while the fingers
+  # are loaded sideways; the position channels are what hold the line.
+  K_y: [200.0, 200.0, 200.0, 40.0]
+  D_y: [6.0, 6.0, 6.0, 1.0]
+
+  # --- generalized-momentum disturbance observer ---------------------------
+  # d_t_hat IS the measured push force during contact (the panel's DIST/force
+  # row) — the one number this scenario exists to show.
+  use_gmo: true
+  K_o: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
+
+  impedance_mode: shaped
+  M_Y: [1.0, 1.0, 1.0, 0.05]
+
+  # --- solver / actuator ---------------------------------------------------
+  # 0 = plain J_3y inverse; see the note in pick.yaml — this value is inherited
+  # from a commented-out digit, not from a tuning decision.
+  dls_lambda: 0.0
+  # null = no in-law clamp (the demo clamps at TAU_MAX = 1.5 N.m). See
+  # pick.yaml for what turning this on would change; the push loads the arm
+  # against that clamp more than any other scenario.
+  tau_max: null
+  omega_e_ff: false

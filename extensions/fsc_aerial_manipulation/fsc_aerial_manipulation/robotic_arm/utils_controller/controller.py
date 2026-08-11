@@ -1,9 +1,42 @@
 #!/usr/bin/env python3
 """
-controller_gmo.py — GMO variant of the MATLAB controller port.
+controller.py — THE controller. One law, every scenario.
 
 Author: Ben Natra (send2ben123@gmail.com)
 Author: Shiqi Gao (shiqi.gao907@gmail.com)
+
+Merged 2026-08-09 from controller_free.py / controller_pick.py /
+controller_push.py, which were three copies of this same law. Measured before
+the merge, ignoring comments: make_params, dynamics, the Gains dataclass and
+the rotor mixer were byte-identical across all three, and MatlabController
+differed only in that `free` had two things the others never received — the
+`gmo_inhibit` flag and the saturation-consistent coupling (clamp tau, back out
+the REALIZED u3, rebuild the base moment from it). The copies had also drifted
+apart on a real control parameter without anyone deciding to: DLS_LAMBDA read
+0.3 in one and `0#.3` — zero, a digit commented out mid-token — in the other
+two. That is the failure mode this file exists to end.
+
+WHAT VARIES BETWEEN SCENARIOS IS NOW ONLY NUMBERS, and the numbers live in
+robotic_arm/config/<scenario>.yaml:
+
+    from ...utils_controller import controller as C, control_params as CP
+    cfg  = CP.load("pick")                       # or "free" / "push" / …
+    ctrl = C.MatlabController(C.make_params(), cfg)
+
+There are no gain defaults in this module — a scenario file that is missing a
+key fails at startup rather than flying something nobody chose. The free-flight
+demo additionally passes its trajectory type as a variant, so one mode can
+carry its own gains (CP.load("free", variant="poly_whole")).
+
+WHAT DOES NOT BELONG HERE: flight phases. Takeoff, the task handover, landing,
+the arm hold and the rotor ramp-off are the DEMO's business (they are about a
+particular vehicle on a particular ground); this module only answers "given the
+state and the reference right now, what are thrust, base moment and joint
+torques?". The trajectories themselves live in utils_planner/.
+
+Its sibling controller_track.py stays separate on purpose — it is a different
+law (joint-space posture anchor, no observer), the A/B baseline, not a
+parameterization of this one.
 
 ARM GEOMETRY NOTE: make_params registers the joint chain so joint k pivots about
 manip_joint_k (i.e. O[k-1] = manip_joint_k), deriving l_i/com_i from the raw
@@ -15,7 +48,7 @@ make_params avoids that while holding every body CoM and the EE point fixed
 (verified: g[6:]=[0,0.522,0.416,0], r_0e_0/r_0c_0 unchanged). See make_params.
 
 This is the sibling of `controller_track.py`, updated to the LATEST MATLAB
-design (`MATLAB Code/utils/utils_control/controller.m` + `main_sim.m`, see
+design (`refs_matlab/utils/utils_control/controller.m` + `main_sim.m`, see
 `doc/Control flowchart.pdf`).  Two deliberate differences from the track port:
 
   1. The joint-space posture-anchor PD (POSTURE_KP/KD) that `controller_track.py`
@@ -45,16 +78,23 @@ The MATLAB ran as a single-process, zero-latency closed loop (controller and
 plant share M,C,g), and integrated the GMO state p_hat as part of the ODE.
 Here `dynamics`+`controller` are the controller and Isaac is the plant, so the
 observer momentum p_hat is carried ON THE CONTROLLER INSTANCE and advanced by a
-forward-Euler step (dt = the physics step) each call.  Two ways to close the loop:
+forward-Euler step (dt = the physics step) each call.
 
-  in-process — 02_aerial_manipulator_gmo.py imports this module and runs it
-      inside a physics-step callback (250 Hz, dt = the physics step). The
-      preferred rig on Windows, where the ROS2 round-trip latency is fatal.
-  ROS2 node — `python3 controller_gmo.py` where rclpy is available (Linux /
-      low-latency setups): subscribes to the vehicle state topics and
-      publishes one synchronized [omega(4), tau_joint(n)] actuator packet.
+This module is a pure LIBRARY — it owns the MODEL (make_params, dynamics) and
+the CONTROL LAW (MatlabController, RotorMixer), and nothing else. The desired
+trajectories moved out to the utils_planner/ package next to this file, so the
+reference the controller tracks has exactly one source. It is imported and
+stepped IN-PROCESS from a physics-step callback (250 Hz, dt = the step) by:
 
-Either way the arm runs in true effort mode from the start, with a software
+  02_aerial_manipulator_free.py                     rotors driven directly
+  03_px4_direct_aerial_manipulator_free.py          rotors gated through PX4
+
+(The ROS2 `MatlabControllerNode` this file used to carry was dropped: nothing
+launched it, it duplicated the demos' takeoff/handover phase logic, and it
+existed for a Windows/WSL2 setup that is no longer in use. `python3
+controller_free.py` now always runs the standalone sanity checks at the bottom.)
+
+The arm runs in true effort mode from the start, with a software
 PD+gravity hold during takeoff (`MatlabController.hold`).  The GMO is held reset
 (p_hat = p, d_e_hat = 0) during that hold and only runs once airborne, so the
 software-hold torque — which is NOT the law's u3 — cannot corrupt the estimate.
@@ -62,17 +102,6 @@ software-hold torque — which is NOT the law's u3 — cannot corrupt the estima
 
 import numpy as np
 from dataclasses import dataclass, field
-
-try:
-    import rclpy
-    from rclpy.node import Node
-    from rclpy.qos import qos_profile_sensor_data
-    from geometry_msgs.msg import PoseStamped, TwistStamped
-    from sensor_msgs.msg import JointState
-    from std_msgs.msg import Float64MultiArray
-    _HAS_ROS2 = True
-except ImportError:
-    _HAS_ROS2 = False
 
 
 # ===========================================================================
@@ -236,35 +265,20 @@ def make_params():
 #   the transformed EE disturbance and cancel d_t_hat in u1, d_r_hat in u2 (and
 #   the shaped-mode arm term).  False: d_e_hat = 0 (nominal controller, no
 #   disturbance compensation) — the GMO-vs-no-GMO A/B baseline.
-USE_GMO = True
-
-# IMPEDANCE_MODE — task-space desired inertia M_y (see the Arm section):
-#   "natural" : M_y = Lambda_y (the robot's own task inertia).  Lambda_y·M_y⁻¹=I,
-#               so the arm law is plain impedance and the GMO F_hat_y arm term
-#               VANISHES.  Reproduces the previously validated arm behaviour
-#               (minus the removed posture anchor).  M_Y stays None; the
-#               controller resolves it to the state-dependent Lambda_y online.
-#   "shaped"  : impose a design task inertia M_Y != Lambda_y (4x4 SPD; the
-#               translational block isotropic).  Realizing a different apparent
-#               inertia REQUIRES the estimated task force F_hat_y, so this mode is
-#               meaningful only with USE_GMO = True.  main_sim.m's latest default.
-IMPEDANCE_MODE = "shaped"    # "natural" | "shaped"
-if IMPEDANCE_MODE == "shaped":
-    _M_Y_T = 1.0     # desired translational inertia [kg]     (main_sim m_y_t)
-    _M_Y_R = 0.05    # desired EE-heading inertia   [kg·m²]   (main_sim m_y_r)
-    M_Y = np.diag([_M_Y_T, _M_Y_T, _M_Y_T, _M_Y_R])
-else:
-    M_Y = None       # -> Lambda_y (natural inertia, resolved in the controller)
-
-# DLS_LAMBDA — damped-least-squares regularization of the J_3y solve in u3.
-# The MATLAB uses a PLAIN linear solve (J_3y \ inner); with λ = 0 the DLS solve
-# below reduces to exactly that (J_3y is square 4x4). λ > 0 caps the torque gain
-# of near-singular task directions (the q1/q4 heading pair) — kept > 0 here as a
-# safety margin because removing the posture anchor takes away the term that
-# used to pin that pair. Set to 0.0 to recover the exact MATLAB inverse.
-DLS_LAMBDA = 0.3
-
-OMEGA_E_FF = False
+# ---------------------------------------------------------------------------
+# CONTROL PARAMETERS LIVE IN YAML, NOT HERE.
+#
+# Everything that used to be a module global in this block — USE_GMO,
+# IMPEDANCE_MODE, M_Y, DLS_LAMBDA, TAU_MAX, OMEGA_E_FF — plus every gain that
+# used to be a `Gains` dataclass default is now one key in
+# robotic_arm/config/<scenario>.yaml, loaded into a ControlParams and handed to
+# MatlabController. See control_params.py for the schema and the reason there
+# are no defaults in code (three copies of this file had already drifted apart
+# on DLS_LAMBDA without anyone deciding to).
+#
+# The law below reads them as self.cfg.<key> — nothing else in this module
+# holds a tunable number.
+# ---------------------------------------------------------------------------
 
 
 # ===========================================================================
@@ -469,403 +483,30 @@ def dynamics(X, params):
 
 
 # ===========================================================================
-# generate_reference  — port of generate_reference.m (trajectory library)
+# Trajectories — MOVED to utils_planner/  (2026-08-08)
 # ===========================================================================
-# Choose the trajectory here (mirrors traj_config() in generate_reference.m).
-# The drone first climbs to TAKEOFF_ALTITUDE and settles, then the selected
-# trajectory runs, anchored at [spawn_xy, TAKEOFF_ALTITUDE].
-TRAJ_TYPE = "hover"  # "hover" | "line" | "sine" | "circle" | "circle_bent" | "poly" | "reach" | "pickplace"
-TRAJ_CONFIG = {
-    "hover":  {"T": 8.0},
-    "line":   {"axis": "xy", "D": 2.0, "T": 10.0},
-    "sine":   {"axis": "xy", "A": 0.5, "Ncyc": 2, "T": 12.0},
-    "circle": {"r": 1.0, "T": 20.0},
-    # circle_bent: the SAME circle, but the arm is HELD at a better-conditioned
-    # pose q_hold instead of q=0. With no posture anchor here, this is a
-    # J_3y-conditioning stress test for the GMO arm law. MEASURED cond(J_3y)
-    # on this asset (joints 2/3 rotate about x): ~96 at q=0, best ~35 at q2=q3~+0.8
-    # (POSITIVE; negative q2/q3 is MUCH worse -- ~150 at -0.5, ~880 at -0.75, which
-    # is why the reach target [0,-0.5,-0.5,0] is the wrong pose for this test).
-    # Keep q1=q4=0: they barely change conditioning and zeroing them keeps
-    # b1_de = tangent consistent (e_RE3 = 0). NOTE: +q2/q3 swings the arm
-    # outward-and-up (reach q_target sign note) -- reduce if it hits the body/rotors.
-    "circle_bent": {"r": 1.0, "T": 20.0, "q_hold": [0.0, 0.8, 0.8, 0.0]},
-    "poly":   {"D": 2.0, "A": 0.2, "T": 12.0},
-    # "reach": body hovers in place; the ARM moves relative to it. Joint-space
-    # min-jerk 0 → q_target over T_move (after T_hold of settled hover), the
-    # gripper closes during T_grip at the target pose, then min-jerk back home
-    # over T_return with the gripper kept closed. The EE reference r_ed is
-    # generated CONSISTENTLY from the arm FK (as a delta from the anchored
-    # offset, so it is continuous at the maneuver start), and ref carries
-    # q_d/q_d_dot so the posture anchor TRACKS the maneuver instead of pulling
-    # the arm back to q=0. ref["grip"] (0 open / 1 closed) tells the demo when
-    # to actuate gripper_joint. Keep q_target[0]=q_target[3]=0 — those joints
-    # yaw the EE heading while the b1_de reference stays fixed.
-    # q_target SIGN (2026-07-14): AM_realign's re-authored axes invert the
-    # physical direction of q2/q3 vs the old asset — [0,−0.5,−0.5,0] reproduces
-    # the maneuver every validated run flew (arm sweeps across under the body,
-    # EE delta ≈ [0, −0.19, −0.05] m from its hover-home offset in the new
-    # frame). [+0.5,+0.5] would instead swing outward-and-up (untested; better
-    # J_3y conditioning, but the measured EE_SAG / grasp geometry don't apply).
-    "reach":  {"q_target": [0.0, -0.5, -0.5, 0.0],
-               "T_hold": 2.0, "T_move": 5.0, "T_grip": 3.0, "T_return": 5.0},
-    # "pickplace": full mission — fly to the pick point, reach + close the
-    # gripper, retract, fly to the place point, reach + open, retract, return
-    # home. pick_wp/place_wp are CoM waypoint OFFSETS from the hover anchor [m]
-    # (keep z=0 for constant altitude). Base flights and arm moves are min-jerk;
-    # the same FK-consistent EE reference + q_d posture tracking as "reach".
-    # At the arm target the EE sits ≈[0, −0.19, −0.05] m from its hover-home
-    # offset (joints 2/3 swing in the body y-z plane; see the reach q_target
-    # sign note above) — place objects there.
-    # dz_approach/T_vert: horizontal flights happen dz ABOVE the waypoints and
-    # the vehicle descends/climbs vertically at each one — the landing legs
-    # reach ~0.6 m below the body, so cruising at grasp altitude sweeps them
-    # through the pick stand (observed: feet knocked the cube off). A vertical
-    # final approach lets the stand rise between the legs instead.
-    "pickplace": {"pick_wp":  [1.0, 0.0, 0.0],
-                  "place_wp": [1.0, -1.5, 0.0],
-                  "q_target": [0.0, -0.5, -0.5, 0.0],
-                  "T_hold": 2.0, "T_fly": 4.0, "T_arm": 4.0, "T_grip": 2.0,
-                  "dz_approach": 0.5, "T_vert": 2.5},
-}
-TAKEOFF_ALTITUDE = 1.5     # [m] climb to this before the trajectory
-TAKEOFF_TIME     = 4.0     # [s] climb + settle window before trajectory starts
-# NOTE: controller_track.py's optional EE integral (K_i·∫e_y) is GONE here — the
-# GMO is the principled replacement for the steady-droop rejection the integral
-# provided (it estimates the constant disturbance and cancels it in u1/u2).
-
-
-def _axis_dir(s):
-    table = {"x": [1, 0, 0], "y": [0, 1, 0], "z": [0, 0, 1],
-             "xy": [1, 1, 0], "xz": [1, 0, 1], "yz": [0, 1, 1], "xyz": [1, 1, 1]}
-    e = np.array(table[s.lower()], float)
-    return e / np.linalg.norm(e)
-
-
-def _minjerk(tau):
-    """Rest-to-rest min-jerk profile s and derivatives ds..d4s (wrt tau)."""
-    if tau <= 0.0:
-        return 0.0, 0.0, 0.0, 0.0, 0.0
-    if tau >= 1.0:
-        return 1.0, 0.0, 0.0, 0.0, 0.0
-    s = 10*tau**3 - 15*tau**4 + 6*tau**5
-    ds = 30*tau**2 - 60*tau**3 + 30*tau**4
-    d2s = 60*tau - 180*tau**2 + 120*tau**3
-    d3s = 60 - 360*tau + 360*tau**2
-    d4s = -360 + 720*tau
-    return s, ds, d2s, d3s, d4s
-
-
-_FK_PARAMS = None
-
-
-def _arm_fk(q):
-    """Light FK for reference generation (level body, R0=I): returns
-    (r_0e_0, r_0c_0, A_e, A) at joint config q — the subset of dynamics()
-    needed to turn a joint-space arm reference into a consistent EE reference."""
-    global _FK_PARAMS
-    if _FK_PARAMS is None:
-        _FK_PARAMS = make_params()
-    p = _FK_PARAMS
-    n = p["n"]; mi = p["m_i"]; m_total = sum(mi)
-    R = [np.eye(3)]
-    for i in range(n):
-        R.append(R[i] @ joint_rotation(p["h_i_im1"][i], q[i]))
-    h0 = [np.zeros(3)]
-    for i in range(1, n + 1):
-        h0.append(R[i - 1] @ p["h_i_im1"][i - 1])
-    O = [np.zeros(3)]
-    for i in range(1, n + 1):
-        O.append(O[i - 1] + R[i] @ p["l_i"][i - 1])
-    r_e = O[n]
-    r0i = [np.zeros(3)]
-    for i in range(1, n + 1):
-        r0i.append(O[i - 1] + R[i] @ p["com_i"][i - 1])
-    r_c = sum(mi[i] * r0i[i] for i in range(n + 1)) / m_total
-    A_i = [np.zeros((3, n)) for _ in range(n + 1)]
-    for i in range(1, n + 1):
-        for k in range(1, i + 1):
-            A_i[i][:, k - 1] = np.cross(h0[k], r0i[i] - O[k - 1])
-    A_e = np.zeros((3, n))
-    for k in range(1, n + 1):
-        A_e[:, k - 1] = np.cross(h0[k], r_e - O[k - 1])
-    A = sum(mi[i] * A_i[i] for i in range(n + 1)) / m_total
-    return r_e, r_c, A_e, A
-
-
-def build_traj(x_c0, d0, b1_0, traj_type=None):
-    """Combine the selected config with the initial anchors (port of build_traj)."""
-    ttype = traj_type or TRAJ_TYPE
-    cfg = TRAJ_CONFIG[ttype]
-    tr = {"type": ttype, "x_c0": np.array(x_c0, float),
-          "d0": np.array(d0, float), "b1": np.array(b1_0, float),
-          "T": cfg.get("T", 0.0)}
-    if ttype == "line":
-        tr["dir"] = _axis_dir(cfg["axis"]); tr["D"] = cfg["D"]
-    elif ttype == "sine":
-        tr["e"] = _axis_dir(cfg["axis"]); tr["A"] = cfg["A"]; tr["Ncyc"] = cfg["Ncyc"]
-    elif ttype in ("circle", "circle_bent"):
-        tr["r"] = cfg["r"]
-        hxy = np.array([b1_0[0], b1_0[1], 0.0])
-        if np.linalg.norm(hxy) < 1e-9:
-            tr["theta0"] = 0.0
-        else:
-            hxy /= np.linalg.norm(hxy)
-            tr["theta0"] = np.arctan2(-hxy[0], hxy[1])
-        c = tr["x_c0"] - tr["r"] * np.array([np.cos(tr["theta0"]), np.sin(tr["theta0"]), 0.0])
-        c[2] = tr["x_c0"][2]
-        tr["c"] = c
-        if ttype == "circle_bent":
-            # arm held at a fixed better-conditioned pose; the demo's takeoff hold
-            # drives the arm to q_hold BEFORE the circle starts, so the re-anchored
-            # d0 is already the bent EE offset (no FK delta needed -- d0 carries it).
-            tr["q_hold"] = np.array(cfg["q_hold"], float)
-    elif ttype == "poly":
-        tr["D"] = cfg["D"]; tr["A"] = cfg["A"]
-        ef = np.array([b1_0[0], b1_0[1], 0.0])
-        ef = ef / np.linalg.norm(ef) if np.linalg.norm(ef) > 1e-9 else np.array([1.0, 0, 0])
-        tr["e_fwd"] = ef; tr["e_lat"] = np.array([-ef[1], ef[0], 0.0])
-    elif ttype == "reach":
-        tr["q_target"] = np.array(cfg["q_target"], float)
-        tr["T_hold"] = cfg["T_hold"]; tr["T_move"] = cfg["T_move"]
-        tr["T_grip"] = cfg["T_grip"]; tr["T_return"] = cfg["T_return"]
-        tr["T"] = cfg["T_hold"] + cfg["T_move"] + cfg["T_grip"] + cfg["T_return"]
-        # FK offset at home, so the reach EE reference is generated as a DELTA
-        # from the anchored d0 (continuous at the maneuver start even though the
-        # actual hover offset differs slightly from the level-body FK).
-        r_e0, r_c0, _, _ = _arm_fk(np.zeros(4))
-        tr["d_fk0"] = r_e0 - r_c0
-    elif ttype == "pickplace":
-        qT = np.array(cfg["q_target"], float)
-        z4 = np.zeros(4)
-        home = np.zeros(3)
-        pick = np.array(cfg["pick_wp"], float)
-        place = np.array(cfg["place_wp"], float)
-        Th, Tf, Ta, Tg = cfg["T_hold"], cfg["T_fly"], cfg["T_arm"], cfg["T_grip"]
-        Tv = cfg.get("T_vert", 2.5)
-        up = np.array([0.0, 0.0, cfg.get("dz_approach", 0.5)])
-        # (duration, base_from, base_to, q_from, q_to, grip) — min-jerk within
-        # each segment; only one of base/arm moves per segment. Horizontal
-        # flights cruise dz above the waypoints; each waypoint is entered and
-        # left VERTICALLY so the stands pass between the landing legs.
-        segs = [
-            (Th, home,       home,       z4, z4, 0.0),   # settle at the anchor
-            (Tf, home,       pick + up,  z4, z4, 0.0),   # cruise above the pick stand
-            (Tv, pick + up,  pick,       z4, z4, 0.0),   # vertical descent
-            (Ta, pick,       pick,       z4, qT, 0.0),   # reach toward the object
-            (Tg, pick,       pick,       qT, qT, 1.0),   # close the gripper
-            (Ta, pick,       pick,       qT, z4, 1.0),   # retract with the object
-            (Tv, pick,       pick + up,  z4, z4, 1.0),   # vertical climb-out
-            (Tf, pick + up,  place + up, z4, z4, 1.0),   # cruise to the place point
-            (Tv, place + up, place,      z4, z4, 1.0),   # vertical descent
-            (Ta, place,      place,      z4, qT, 1.0),   # reach to set it down
-            (Tg, place,      place,      qT, qT, 0.0),   # open the gripper
-            (Ta, place,      place,      qT, z4, 0.0),   # retract empty
-            (Tv, place,      place + up, z4, z4, 0.0),   # vertical climb-out
-            (Tf, place + up, home,       z4, z4, 0.0),   # return to the anchor
-        ]
-        t0 = 0.0
-        sched = []
-        for (Ts, b0, b1, q0, q1, gr) in segs:
-            sched.append({"t0": t0, "t1": t0 + Ts,
-                          "b0": np.array(b0, float), "b1": np.array(b1, float),
-                          "q0": np.array(q0, float), "q1": np.array(q1, float),
-                          "grip": gr})
-            t0 += Ts
-        tr["sched"] = sched
-        tr["T"] = t0
-        r_e0, r_c0, _, _ = _arm_fk(np.zeros(4))
-        tr["d_fk0"] = r_e0 - r_c0
-    elif ttype != "hover":
-        raise ValueError(f"unsupported trajectory type {ttype}")
-    return tr
-
-
-def _fixed_ee(ref, tr):
-    ref["r_ed"] = ref["x_cd"] + tr["d0"]
-    ref["r_ed_dot"] = ref["x_cd_dot"]; ref["r_ed_ddot"] = ref["x_cd_ddot"]
-    z3 = np.zeros(3)
-    ref["b1_d"] = tr["b1"]; ref["b1_d_dot"] = z3; ref["b1_d_ddot"] = z3
-    ref["b1_de"] = tr["b1"]; ref["b1_de_dot"] = z3; ref["b1_de_ddot"] = z3
-    return ref
-
-
-def generate_reference(t, tr):
-    """Reference at time t for the built trajectory tr (port of generate_reference)."""
-    z3 = np.zeros(3)
-    ttype = tr["type"]
-    if ttype == "hover":
-        ref = {"x_cd": tr["x_c0"].copy(), "x_cd_dot": z3, "x_cd_ddot": z3,
-               "x_cd_d3": z3, "x_cd_d4": z3}
-        return _fixed_ee(ref, tr)
-
-    if ttype == "reach":
-        qT = tr["q_target"]
-        Th, Tm, Tg, Tr = tr["T_hold"], tr["T_move"], tr["T_grip"], tr["T_return"]
-        n4 = len(qT)
-        if t < Th:                              # settled hover, arm home, gripper open
-            q_d, q_dd, q_ddd, grip = np.zeros(n4), np.zeros(n4), np.zeros(n4), 0.0
-        elif t < Th + Tm:                       # min-jerk out to the target pose
-            s, ds, d2s, _, _ = _minjerk((t - Th) / Tm)
-            q_d, q_dd, q_ddd, grip = s * qT, ds / Tm * qT, d2s / Tm**2 * qT, 0.0
-        elif t < Th + Tm + Tg:                  # hold at target, close the gripper
-            q_d, q_dd, q_ddd, grip = qT.copy(), np.zeros(n4), np.zeros(n4), 1.0
-        elif t < Th + Tm + Tg + Tr:             # min-jerk back home, gripper stays closed
-            s, ds, d2s, _, _ = _minjerk((t - Th - Tm - Tg) / Tr)
-            q_d, q_dd, q_ddd = (1 - s) * qT, -ds / Tr * qT, -d2s / Tr**2 * qT
-            grip = 1.0
-        else:                                   # hold home with the object
-            q_d, q_dd, q_ddd, grip = np.zeros(n4), np.zeros(n4), np.zeros(n4), 1.0
-
-        # EE reference from FK, as a delta from the anchored offset (continuous
-        # at the maneuver start). r_ed_dot/ddot via the offset Jacobian
-        # J = A_e − A (Ȧ terms dropped — the maneuver is slow).
-        r_e, r_c, A_e, A = _arm_fk(q_d)
-        J = A_e - A
-        ref = {"x_cd": tr["x_c0"].copy(), "x_cd_dot": z3, "x_cd_ddot": z3,
-               "x_cd_d3": z3, "x_cd_d4": z3,
-               "r_ed": tr["x_c0"] + tr["d0"] + ((r_e - r_c) - tr["d_fk0"]),
-               "r_ed_dot": J @ q_dd, "r_ed_ddot": J @ q_ddd,
-               "b1_d": tr["b1"], "b1_d_dot": z3, "b1_d_ddot": z3,
-               "b1_de": tr["b1"], "b1_de_dot": z3, "b1_de_ddot": z3,
-               "q_d": q_d, "q_d_dot": q_dd, "grip": grip}
-        return ref
-
-    if ttype == "pickplace":
-        seg = None
-        for s_ in tr["sched"]:
-            if t < s_["t1"]:
-                seg = s_
-                break
-        if seg is None:                       # past the end: hold the final state
-            seg = tr["sched"][-1]
-            t = seg["t1"]
-        Ts = seg["t1"] - seg["t0"]
-        s, ds, d2s, d3s, d4s = _minjerk((t - seg["t0"]) / Ts)
-        db = seg["b1"] - seg["b0"]
-        x_cd = tr["x_c0"] + seg["b0"] + s * db
-        ref = {"x_cd": x_cd, "x_cd_dot": ds / Ts * db, "x_cd_ddot": d2s / Ts**2 * db,
-               "x_cd_d3": d3s / Ts**3 * db, "x_cd_d4": d4s / Ts**4 * db}
-        dq_ = seg["q1"] - seg["q0"]
-        q_d = seg["q0"] + s * dq_
-        q_dd = ds / Ts * dq_
-        q_ddd = d2s / Ts**2 * dq_
-        # FK-consistent EE reference carried with the moving base (same delta
-        # construction as "reach")
-        r_e, r_c, A_e, A = _arm_fk(q_d)
-        J = A_e - A
-        ref.update({"r_ed": x_cd + tr["d0"] + ((r_e - r_c) - tr["d_fk0"]),
-                    "r_ed_dot": ref["x_cd_dot"] + J @ q_dd,
-                    "r_ed_ddot": ref["x_cd_ddot"] + J @ q_ddd,
-                    "b1_d": tr["b1"], "b1_d_dot": z3, "b1_d_ddot": z3,
-                    "b1_de": tr["b1"], "b1_de_dot": z3, "b1_de_ddot": z3,
-                    "q_d": q_d, "q_d_dot": q_dd, "grip": seg["grip"]})
-        return ref
-
-    if ttype == "line":
-        T, D, e = tr["T"], tr["D"], tr["dir"]
-        s, ds, d2s, d3s, d4s = _minjerk(t / T)
-        ref = {"x_cd": tr["x_c0"] + D*s*e, "x_cd_dot": D*ds/T*e,
-               "x_cd_ddot": D*d2s/T**2*e, "x_cd_d3": D*d3s/T**3*e, "x_cd_d4": D*d4s/T**4*e}
-        return _fixed_ee(ref, tr)
-
-    if ttype == "sine":
-        T, A, e, K = tr["T"], tr["A"], tr["e"], 2*np.pi*tr["Ncyc"]
-        s, ds, d2s, d3s, d4s = _minjerk(t / T)
-        p = K*s; p1 = K*ds/T; p2 = K*d2s/T**2; p3 = K*d3s/T**3; p4 = K*d4s/T**4
-        sp, cp = np.sin(p), np.cos(p)
-        f0 = sp; f1 = cp*p1; f2 = -sp*p1**2 + cp*p2
-        f3 = -cp*p1**3 - 3*sp*p1*p2 + cp*p3
-        f4 = sp*p1**4 - 6*cp*p1**2*p2 - 3*sp*p2**2 - 4*sp*p1*p3 + cp*p4
-        ref = {"x_cd": tr["x_c0"] + A*f0*e, "x_cd_dot": A*f1*e, "x_cd_ddot": A*f2*e,
-               "x_cd_d3": A*f3*e, "x_cd_d4": A*f4*e}
-        return _fixed_ee(ref, tr)
-
-    if ttype in ("circle", "circle_bent"):
-        r, c, T, th0 = tr["r"], tr["c"], tr["T"], tr["theta0"]
-        s, ds, d2s, d3s, d4s = _minjerk(t / T)
-        th = th0 + 2*np.pi*s
-        a = 2*np.pi*ds/T; b = 2*np.pi*d2s/T**2; cc = 2*np.pi*d3s/T**3; dd = 2*np.pi*d4s/T**4
-        ct, st = np.cos(th), np.sin(th)
-        pth1 = r*np.array([-st, ct, 0.0]); pth2 = r*np.array([-ct, -st, 0.0])
-        pth3 = r*np.array([st, -ct, 0.0]); pth4 = r*np.array([ct, st, 0.0])
-        ref = {"x_cd": c + r*np.array([ct, st, 0.0]),
-               "x_cd_dot": pth1*a, "x_cd_ddot": pth2*a**2 + pth1*b,
-               "x_cd_d3": pth3*a**3 + 3*pth2*a*b + pth1*cc,
-               "x_cd_d4": pth4*a**4 + 6*pth3*a**2*b + pth2*(3*b**2 + 4*a*cc) + pth1*dd}
-        # EE offset carried with the base yaw; headings follow the tangent. For
-        # circle_bent the arm sits at q_hold, so tr["d0"] (anchored at handover,
-        # after the takeoff hold moved the arm to q_hold) is ALREADY the bent EE
-        # offset — the same carry-with-yaw applies, arm stays fixed to the platform.
-        phi = th - th0; cph, sph = np.cos(phi), np.sin(phi)
-        Sz = np.array([[0, -1, 0.], [1, 0, 0], [0, 0, 0]])
-        Rz = np.array([[cph, -sph, 0.], [sph, cph, 0], [0, 0, 1]])
-        d_off = Rz @ tr["d0"]
-        ref["r_ed"] = ref["x_cd"] + d_off
-        ref["r_ed_dot"] = ref["x_cd_dot"] + a*(Sz @ d_off)
-        ref["r_ed_ddot"] = ref["x_cd_ddot"] + b*(Sz @ d_off) + a**2*(Sz @ Sz @ d_off)
-        b1 = np.array([-st, ct, 0.0]); db1 = np.array([-ct, -st, 0.0]); d2b1 = np.array([st, -ct, 0.0])
-        ref["b1_d"] = b1; ref["b1_d_dot"] = db1*a; ref["b1_d_ddot"] = d2b1*a**2 + db1*b
-        ref["b1_de"] = b1; ref["b1_de_dot"] = db1*a; ref["b1_de_ddot"] = d2b1*a**2 + db1*b
-        if ttype == "circle_bent":
-            # tell the posture anchor to track the bent pose (not q=0)
-            ref["q_d"] = tr["q_hold"].copy()
-            ref["q_d_dot"] = np.zeros_like(tr["q_hold"])
-        return ref
-
-    if ttype == "poly":
-        T, D, A = tr["T"], tr["D"], tr["A"]
-        ef, el = tr["e_fwd"], tr["e_lat"]
-        s, ds, d2s, d3s, d4s = _minjerk(t / T)
-        sig = s; sd = ds/T; sdd = d2s/T**2; s3 = d3s/T**3; s4 = d4s/T**4
-        X = D*sig; Xp = D
-        Y = A*(3*sig**2 - 2*sig**3); Yp = A*(6*sig - 6*sig**2); Ypp = A*(6 - 12*sig); Yppp = -12*A
-        P = tr["x_c0"] + X*ef + Y*el
-        P1 = Xp*ef + Yp*el; P2 = Ypp*el; P3 = Yppp*el
-        ref = {"x_cd": P, "x_cd_dot": P1*sd, "x_cd_ddot": P2*sd**2 + P1*sdd,
-               "x_cd_d3": P3*sd**3 + 3*P2*sd*sdd + P1*s3,
-               "x_cd_d4": 6*P3*sd**2*sdd + P2*(3*sdd**2 + 4*sd*s3) + P1*s4}
-        return _fixed_ee(ref, tr)
-
-    raise ValueError(f"unknown trajectory type {ttype}")
-
+# TRAJ_CONFIG, build_traj, generate_reference, the takeoff ramp and the
+# compatible-plan hook used to live here. They are now the single-source
+# trajectory package next to this file:
+#
+#     from fsc_aerial_manipulation.robotic_arm import utils_planner as P
+#     P.set_traj_type("poly_whole")
+#     tr  = P.build_traj(x_c0, d0, b1_0, params=params)
+#     ref = P.generate_reference(t, tr)            # P.takeoff_reference() for the climb
+#
+# This module is now the MODEL and the CONTROL LAW only: make_params, dynamics,
+# MatlabController and RotorMixer. It does not know what trajectory is flying,
+# and nothing here should import utils_planner — the dependency runs one way,
+# planner -> model (build_traj needs make_params for the compatible solve).
 
 # ===========================================================================
 # controller(X, dyn, ref, params)  — faithful port of controller.m
 # ===========================================================================
 
-@dataclass
-class Gains:
-    # k_x/k_v from the 2026-07-07 gain sweep (utils/gain_sweep.py, validated on
-    # reach + circle + pickplace): 16/8 halved the CoM error vs the MATLAB's
-    # 10/5 with no cost in attitude, EE error, or torque. k_R/k_w unchanged.
-    k_x: float = 16.0
-    k_v: float = 8.0
-    k_R: float = 8.0
-    k_w: float = 2.0
-    # M_r_d: the paper/MATLAB use eye(3) → attitude gain M_r·M_r_d⁻¹·k_R with
-    # M_r ~ 0.1 gives only ~0.09 N·m of authority. IN-PROCESS TEST (user,
-    # 2026-07-03): eye(3) still tips over even at 250 Hz zero-latency;
-    # 2·eye(3) flies. I0_body kept as the default. (Sweepable via AM_SWEEP
-    # "M_r_d" in gain_sweep.py.)
-    M_r_d = np.diag([0.065194, 0.064352, 0.100439])
-    # EE impedance gains. Position channels 8/6 from the 2026-07-07 sweep
-    # (MATLAB base was 4/4; 16 improved EE further but doubled attitude error —
-    # skipped). The 4th (EE-heading) channel stays DETUNED to 1: J_3y⁻¹'s
-    # heading column is high-gain (it drives the near-massless q1/q4 wrist
-    # pair — mrad-level e_y[3]/e_vy[3] noise produced N·m-level torque and
-    # clamp chatter, 2026-07-02 log). K_y does NOT remove steady gravity
-    # droop; the GMO does.
-    D_y: np.ndarray = field(default_factory=lambda: np.diag([6.0, 6.0, 6.0, 1.0]))
-    K_y: np.ndarray = field(default_factory=lambda: np.diag([200.0, 200.0, 200.0, 40.0]))    # 8.0, 8.0, 8.0, 1.0
-    # K_o — GMO observer gain (6+n), per-channel estimation bandwidth [rad/s]:
-    # the estimate is a first-order low-pass of the true disturbance,
-    # d_e_hat_dot = K_o (d_e − d_e_hat). blkdiag(k_o_t·I3, k_o_r·I3, k_o_ρ·In)
-    # with 20 rad/s on every channel (main_sim.m Section 1c). Forward-Euler
-    # stable at the physics rate: K_o·dt ≈ 20·0.004 = 0.08 ≪ 2. The GMO replaces
-    # controller_track.py's integral as the steady-droop / disturbance rejector.
-    K_o: np.ndarray = field(default_factory=lambda: np.diag(
-        [20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0]))
+# `Gains` used to live here as a dataclass of defaults. It is now
+# ControlParams in control_params.py, built from the scenario YAML — same
+# attribute names (k_x, k_v, k_R, k_w, M_r_d, K_y, D_y, K_o), so the law body
+# below is unchanged.
 
 
 class MatlabController:
@@ -880,15 +521,35 @@ class MatlabController:
     `hold` is True (p_hat = p, d_e_hat = 0) so the software-hold torque — which
     is not the law's u3 — cannot corrupt the momentum estimate.
 
+    The hold↔law switch needs no torque blend, PROVIDED the caller switches at a
+    CONSTANT reference and only after a settled hover (the demo's sequencing
+    rule).  Measured at both of 02_aerial_manipulator_free.py's switch states:
+    with e_y = 0, everything at rest and F_trans = 0, the law's u3 is ~0 and its
+    arm torque reduces to the same gravity term the PD hold applies — the step
+    is 0.005 N·m at takeoff and 0.000 at landing, i.e. 0.1% of TAU_MAX.  What
+    genuinely hurts is stepping the REFERENCE while the law still owns the arm:
+    a 1.17 m setpoint drop cuts thrust, F_trans ≈ −mg floods u3 through the
+    coupling feedforward, and the demanded arm torque hits 90 N·m (22× the
+    clamp).  Sequence the two, and no blend is needed.
+
+    `gmo_inhibit` — hold the observer reset without zeroing u3.  Lets a caller
+    freeze the estimate on its own schedule (the demo asserts it exactly while a
+    hold phase owns the arm) independently of `hold`.
+
     GMO state: `_p_hat` is the observer momentum p_hat ∈ R^{6+n}, integrated by
     forward Euler each call.  It is (re)initialized to p = M̃·ξ on the first
     airborne call so d_e_hat starts at zero (matching main_sim's p_hat(0)=p(0)).
     """
 
-    def __init__(self, params, gains=None):
+    def __init__(self, params, cfg):
+        """params: make_params() model.  cfg: ControlParams from the scenario
+        YAML (control_params.load) — REQUIRED, there is no default gain set."""
         self.p = params
-        self.g = gains or Gains()
+        self.cfg = cfg
+        self.g = cfg          # the law reads gains as g.<name>; ControlParams
+                              # carries exactly those attribute names
         self.hold = False
+        self.gmo_inhibit = False   # hold the observer reset without zeroing u3
         self._qdot_prev = None
         self._omega0_prev = None
         self._p_hat = None         # GMO observer momentum p_hat (6+n); None until init
@@ -918,9 +579,12 @@ class MatlabController:
         # translational / rotational / arm parts the three control laws consume.
         # The observer is HELD RESET while `hold` is True (or USE_GMO off): p_hat
         # tracks p so d_e_hat = 0 and it is primed to run cleanly at the handover.
+        # `gmo_inhibit` does the same without zeroing u3 — the demo uses it to keep
+        # the observer reset for a beat AFTER the handover, so the switching
+        # transient is not mistaken for a disturbance and fought.
         M_tilde = dyn["M_tilde"]; C_tilde = dyn["C_tilde"]; g_tilde = dyn["g_tilde"]
         pmom = M_tilde @ xi
-        gmo_active = USE_GMO and not self.hold
+        gmo_active = self.cfg.use_gmo and not self.hold and not self.gmo_inhibit
         if not gmo_active:
             self._p_hat = pmom.copy()
             d_e_hat = np.zeros(6 + n)
@@ -994,7 +658,7 @@ class MatlabController:
         omega_e_hat = hat(omega_e)
 
 
-        if not OMEGA_E_FF or self._qdot_prev is None or dt <= 0:
+        if not self.cfg.omega_e_ff or self._qdot_prev is None or dt <= 0:
             qddot = np.zeros(n); omega_0_dot = np.zeros(3)
         else:
             qddot = (qdot - self._qdot_prev) / dt
@@ -1048,7 +712,7 @@ class MatlabController:
         #   is unscaled and the GMO arm term below vanishes (arm disturbance left
         #   to D_y,K_y).  shaped (M_Y != Lambda_y): imposes a design task inertia,
         #   which the −(Lam_Myinv−I)·F_hat_y term realizes using the GMO estimate.
-        M_y = Lambda_y if M_Y is None else M_Y
+        M_y = Lambda_y if self.cfg.M_Y is None else self.cfg.M_Y
         Lam_Myinv = Lambda_y @ np.linalg.solve(M_y, np.eye(4))   # Lambda_y·M_y⁻¹
         # estimated task-space disturbance force  F_hat_y = (J_y^#)ᵀ d_e_hat
         F_hat_y = J_1y @ d_t_hat + J_2y @ d_r_hat + J_3y @ d_rho_hat
@@ -1066,7 +730,7 @@ class MatlabController:
         # MATLAB plain solve (J_3y \ inner); λ>0 caps the torque gain of
         # near-singular task directions (the q1/q4 heading pair) — kept as a
         # margin now that the posture anchor that used to pin them is gone.
-        _JJt = J_3y @ J_3y.T + DLS_LAMBDA**2 * np.eye(4)
+        _JJt = J_3y @ J_3y.T + self.cfg.dls_lambda**2 * np.eye(4)
         _sol = lambda v: J_3y.T @ np.linalg.solve(_JJt, v)
         u3 = -_sol(inner) - C_rp.T @ omega_0 + C_p @ rho
         # NOTE: controller_track.py's joint-space posture-anchor PD is REMOVED —
@@ -1079,13 +743,43 @@ class MatlabController:
         # N1ᵀ·u3 of an arm torque that isn't there (that phantom reaction was a
         # roll-runaway path). The body torque still carries the arm mass via the
         # CoM-offset term u1·hat(r0c)·e3 inside τ = Tᵀu.
+        # HOLD: the caller drives the arm itself (PD + gravity comp through the
+        # same effort path), so the task law's u3 is NOT applied. Zero it *before*
+        # forming τ, so the body torque τ[3:6] does not inherit the coupling
+        # N1ᵀ·u3 of an arm torque that isn't there (that phantom reaction was a
+        # roll-runaway path). The body torque still carries the arm mass via the
+        # CoM-offset term u1·hat(r0c)·e3 inside τ = Tᵀu.
         if self.hold:
             u3 = np.zeros(n)
 
         # physical wrench  τ = Tᵀ [u1·R0·e3 ; u2 ; u3]   (u is the transformed wrench)
+        # blocks:  τ_joint = τ[6:]  = u3 + u1·Aᵀe3           (what the servos apply)
+        #          τ_body  = τ[3:6] = u2 + u1·hat(r0c)e3 + N1ᵀ·u3   (base moment;
+        #                    the N1ᵀ·u3 term is the arm's reaction = the coupling)
         u = np.concatenate([u1 * (R_0 @ e3), u2, u3])
         tau = T.T @ u
         tau_joint = np.zeros(n) if self.hold else tau[6:]
+
+        # ---- SERVO SATURATION, made coupling-consistent ----------------------
+        # In the MATLAB the joint torque is applied exactly, so the N1ᵀ·u3 the
+        # base moment carries is always what the arm really produces. Real
+        # servos clamp at ±TAU_MAX, and feeding the base moment the DEMANDED u3
+        # while the arm delivers less commands an attitude reaction that never
+        # arrives — the documented flip path on this rig (a stepped reference
+        # once demanded 90 N·m, 22x the clamp, on two joints at once).
+        # So: clamp τ_joint, back the REALIZED u3 out of τ_joint = u3 + u1·Aᵀe3,
+        # and rebuild the base moment from it. Attitude and arm stay consistent
+        # while the law stays fully coupled. No-op when nothing saturates.
+        n_sat = 0
+        if not self.hold and self.cfg.tau_max is not None:
+            _tm = self.cfg.tau_max
+            tau_clamped = np.clip(tau_joint, -_tm, _tm)
+            n_sat = int(np.count_nonzero(tau_clamped != tau_joint))
+            if n_sat:
+                tau_joint = tau_clamped
+                u3 = tau_joint - u1 * (A.T @ e3)          # realized u3
+                u = np.concatenate([u1 * (R_0 @ e3), u2, u3])
+                tau = T.T @ u                             # coupled + consistent
 
         # ---- GMO observer: advance p_hat one forward-Euler step (formed AFTER u,
         # it depends on u).  p_hat_dot = C̃ᵀ·ξ − g̃ + u + d_e_hat.  Only while
@@ -1117,6 +811,11 @@ class MatlabController:
             # during the takeoff hold / when USE_GMO is off.
             "d_t_hat": d_t_hat, "d_r_hat": d_r_hat, "d_rho_hat": d_rho_hat,
             "d_e_hat": d_e_hat, "gmo_active": gmo_active,
+            # how many joints hit ±TAU_MAX this step. Non-zero means the law is
+            # asking for more than the servos can give: the arm tracks worse
+            # than commanded and the caller should treat it as a fault signal,
+            # not a routine event (tau_body IS consistent with it either way).
+            "n_sat": n_sat,
         }
 
 
@@ -1152,151 +851,10 @@ class RotorMixer:
 
 
 # ===========================================================================
-# ROS 2 node — for Linux / low-latency setups where the ROS2 round-trip is
-# acceptable (on Windows/WSL2 the latency is fatal; use the in-process rig).
-# Publishes ONE synchronized actuator packet [omega(4), tau_joint(n)] so the
-# rotor wrench (which carries the arm reaction N1ᵀ·u3 in tau_body) and the arm
-# torque land on the same plant step. The arm is torque-driven from the start:
-# during takeoff the node publishes the software PD+gravity hold torque through
-# the same packet (the plant keeps its arm dofs in effort mode throughout).
-# ===========================================================================
-
-if _HAS_ROS2:
-    class MatlabControllerNode(Node):
-        CLIMB_RATE  = 0.4    # [m/s] takeoff altitude ramp
-        ARM_HOLD_KP = 3.0    # [N·m/rad]   takeoff hold (matches the in-process rig)
-        ARM_HOLD_KD = 0.25   # [N·m·s/rad]
-
-        def __init__(self):
-            super().__init__("matlab_aerial_manipulator_gmo_controller")
-            self.p = make_params()
-            self.ctrl = MatlabController(self.p)
-            self.ctrl.hold = True            # takeoff hold until airborne
-            self.mixer = RotorMixer(RotorMixerParams())
-            n = self.p["n"]
-            self._R0 = np.eye(3); self._p0 = np.zeros(3)
-            self._omega0 = np.zeros(3); self._v0 = np.zeros(3)
-            self._q = np.zeros(n); self._qd = np.zeros(n)
-            self._tr = None; self._t = 0.0; self._climb_z = 0.0   # set to x_c[2] at first pose
-            self._dt = 0.01; self._ready = False; self._first = True; self._log = 0
-
-            self.create_subscription(PoseStamped,  "state/pose",           self._pose_cb, qos_profile_sensor_data)
-            self.create_subscription(TwistStamped, "state/twist_inertial", self._tlin_cb, qos_profile_sensor_data)
-            self.create_subscription(TwistStamped, "state/twist",          self._tang_cb, qos_profile_sensor_data)
-            self.create_subscription(JointState,   "joint_states",         self._joint_cb, 10)
-            self._pub_act = self.create_publisher(Float64MultiArray, "actuator_command", 10)
-            self.create_timer(self._dt, self._loop)
-            self.get_logger().info(
-                f"matlab GMO controller node ready (USE_GMO={USE_GMO}, "
-                f"impedance={IMPEDANCE_MODE})")
-
-        def _build_X(self):
-            return np.concatenate([self._p0, self._R0.flatten(order="F"),
-                                   self._q, self._v0, self._omega0, self._qd])
-
-        def _anchor(self, tag):
-            """(Re)anchor the trajectory at the CURRENT CoM/EE pose."""
-            dyn0 = dynamics(self._build_X(), self.p)
-            x_c = self._p0 + self._R0 @ dyn0["r_0c_0"]
-            x_c0 = np.array([x_c[0], x_c[1], TAKEOFF_ALTITUDE])
-            d0 = self._R0 @ (dyn0["r_0e_0"] - dyn0["r_0c_0"])
-            b1_0 = self._R0 @ np.array([1.0, 0, 0])
-            self._tr = build_traj(x_c0, d0, b1_0)
-            self.get_logger().info(f"{tag}: anchored '{self._tr['type']}' at "
-                                   f"x_c={x_c.round(3)}")
-            return x_c
-
-        def _pose_cb(self, msg):
-            o = msg.pose.orientation; pos = msg.pose.position
-            self._p0 = np.array([pos.x, pos.y, pos.z])
-            self._R0 = quat_to_rot(o.w, o.x, o.y, o.z)
-            if not self._ready:
-                x_c = self._anchor("first pose")
-                self._climb_z = x_c[2]                            # start of climb ramp
-                self._ready = True
-
-        def _tlin_cb(self, msg):
-            l = msg.twist.linear
-            self._v0 = self._R0.T @ np.array([l.x, l.y, l.z])
-
-        def _tang_cb(self, msg):
-            a = msg.twist.angular
-            self._omega0 = np.array([a.x, a.y, a.z])
-
-        def _joint_cb(self, msg):
-            n = self.p["n"]
-            self._q = np.array(msg.position[:n]); self._qd = np.array(msg.velocity[:n])
-
-        def _loop(self):
-            if not self._ready or self._tr is None:
-                return
-            self._t += self._dt
-            # phase 1: climb to TAKEOFF_ALTITUDE with the arm on the software
-            # hold; phase 2: run the selected trajectory anchored at altitude.
-            hold = self._t < TAKEOFF_TIME
-            if hold != self.ctrl.hold:
-                self.ctrl.hold = hold
-                self.get_logger().info(f"arm hold -> {hold} (t={self._t:.1f}s)")
-                if not hold:
-                    # RE-ANCHOR at the hold→impedance handover so e_x=e_y=0 at
-                    # the actual hover equilibrium (see the in-process rig).
-                    self._anchor("handover")
-            if hold:
-                dz = TAKEOFF_ALTITUDE - self._climb_z
-                step = max(-self.CLIMB_RATE * self._dt, min(self.CLIMB_RATE * self._dt, dz))
-                self._climb_z += step
-                # Velocity feedforward: with x_cd_dot=0 the translation damping
-                # (k_v) and EE damping (D_y) both fight the climb → e_y ramps.
-                vz = step / self._dt if self._dt > 0 else 0.0
-                z3 = np.zeros(3)
-                ref = {"x_cd": np.array([self._tr["x_c0"][0], self._tr["x_c0"][1], self._climb_z]),
-                       "x_cd_dot": np.array([0.0, 0.0, vz]), "x_cd_ddot": z3,
-                       "x_cd_d3": z3, "x_cd_d4": z3}
-                ref = _fixed_ee(ref, self._tr)
-            else:
-                ref = generate_reference(self._t - TAKEOFF_TIME, self._tr)
-            try:
-                X = self._build_X()
-                dyn = dynamics(X, self.p)
-                res = self.ctrl(X, dyn, ref, self._dt)
-                omega = self.mixer.mix(res["thrust"], res["tau_body"])
-                if hold:
-                    # software hold torque through the SAME effort path the
-                    # impedance uses — the plant never switches drive modes
-                    tau_j = (-self.ARM_HOLD_KP * self._q
-                             - self.ARM_HOLD_KD * self._qd + dyn["g"][6:])
-                else:
-                    tau_j = res["tau_joint"]
-                m = Float64MultiArray()
-                m.data = omega.tolist() + np.asarray(tau_j, float).tolist()
-                self._pub_act.publish(m)
-                if self._first:
-                    self._first = False
-                    self.get_logger().info(
-                        f"first ctrl: thrust={res['thrust']:.2f} omega={omega.round(1)}")
-                self._log += 1
-                if self._log >= 100:
-                    self._log = 0
-                    self.get_logger().info(
-                        f"z={self._p0[2]:.3f} thrust={res['thrust']:.1f}N "
-                        f"e_R={res['e_R'].round(3)} e_y={res['e_y'].round(3)}")
-            except Exception as exc:
-                self.get_logger().error(f"loop: {exc}")
-
-    def main(args=None):
-        rclpy.init(args=args)
-        rclpy.spin(MatlabControllerNode())
-        rclpy.shutdown()
-
-    if __name__ == "__main__":
-        main()
-
-
-# ===========================================================================
 # Standalone sanity checks (plain python; no Isaac/ROS2 needed)
 # ===========================================================================
 
-if __name__ == "__main__" and not _HAS_ROS2:
+if __name__ == "__main__":
     params = make_params()
     n = params["n"]
     R0 = np.eye(3); q = np.array([0.0, 0.3, -0.6, 0.0])
@@ -1309,12 +867,32 @@ if __name__ == "__main__" and not _HAS_ROS2:
     sv = np.linalg.svd(dyn["J_3y"], compute_uv=False)
     print("J_3y cond     = %.1f" % (sv[0] / sv[-1]))
 
+    # local import: the planner depends on this module, never the reverse.
+    # Run as a bare script sys.path[0] is utils_controller/, so walk up to the
+    # extension root (utils_controller -> robotic_arm -> package -> root).
+    try:
+        from fsc_aerial_manipulation.robotic_arm import utils_planner as P
+    except ModuleNotFoundError:
+        import os, sys
+        _here = os.path.abspath(__file__)
+        for _ in range(4):
+            _here = os.path.dirname(_here)
+        sys.path.insert(0, _here)
+        from fsc_aerial_manipulation.robotic_arm import utils_planner as P
     r0 = X[0:3]; R0_ = X[3:12].reshape(3, 3, order="F")
     x_c = r0 + R0_ @ dyn["r_0c_0"]
-    tr = build_traj(x_c, R0_ @ (dyn["r_0e_0"] - dyn["r_0c_0"]),
-                    R0_ @ np.array([1.0, 0, 0]), "hover")
-    ref = generate_reference(0.0, tr)
-    ctrl = MatlabController(params)
+    tr = P.build_traj(x_c, R0_ @ (dyn["r_0e_0"] - dyn["r_0c_0"]),
+                      R0_ @ np.array([1.0, 0, 0]), "hover_drone", params=params)
+    ref = P.generate_reference(0.0, tr)
+    # Parameters come from a scenario file like any other run — no hidden
+    # defaults, not even in the self-test. Name one on the command line to
+    # check any scenario:  python controller.py pick
+    import sys as _sys
+    from fsc_aerial_manipulation.robotic_arm.utils_controller import (
+        control_params as CP)
+    scenario = _sys.argv[1] if len(_sys.argv) > 1 else "free"
+    cfg = CP.load(scenario)
+    ctrl = MatlabController(params, cfg)
     res = ctrl(X, dyn, ref, 0.01)
     print(f"hover thrust  = {res['thrust']:.3f} N  (m·g = {sum(params['m_i'])*9.81:.3f})")
     print(f"tau_body      = {res['tau_body'].round(4)}")
@@ -1333,7 +911,8 @@ if __name__ == "__main__" and not _HAS_ROS2:
     print(f"C_tilde trans-row/col zero = "
           f"{np.allclose(Ct[0:3, :], 0) and np.allclose(Ct[:, 0:3], 0)}")
     # p_hat initializes to p on the first airborne call -> d_e_hat starts at 0.
-    print(f"USE_GMO={USE_GMO}  IMPEDANCE_MODE={IMPEDANCE_MODE}  "
-          f"M_Y={'None' if M_Y is None else 'shaped'}")
+    print(f"use_gmo={cfg.use_gmo}  impedance={cfg.impedance_mode}  "
+          f"M_Y={'None' if cfg.M_Y is None else 'shaped'}  "
+          f"tau_max={cfg.tau_max}")
     print(f"d_e_hat(0)    = {res['d_e_hat'].round(6)}  (expect ~0 at init)")
-    print(f"gmo_active    = {res['gmo_active']}  (True: airborne + USE_GMO)")
+    print(f"gmo_active    = {res['gmo_active']}  (True: airborne + use_gmo)")

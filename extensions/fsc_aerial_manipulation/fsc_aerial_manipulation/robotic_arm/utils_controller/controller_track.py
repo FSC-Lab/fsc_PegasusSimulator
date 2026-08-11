@@ -19,7 +19,7 @@ The MATLAB ran as a single-process, zero-latency closed loop (controller and
 plant share M,C,g). Here `dynamics`+`controller` are the controller and Isaac
 is the plant. Two ways to close the loop:
 
-  in-process — 02_aerial_manipulator_track.py imports this module and runs it
+  in-process — 01_aerial_manipulator_track.py imports this module and runs it
       inside a physics-step callback (250 Hz, dt = the physics step). The
       preferred rig on Windows, where the ROS2 round-trip latency is fatal.
   ROS2 node — `python3 controller_track.py` where rclpy is available (Linux /
@@ -213,7 +213,7 @@ POSTURE_KD = np.array([0.6, 0.3, 0.3, 0.6])     # [N·m·s/rad]
 #   False : STRICTLY the paper's law — u3 is the coupled EE impedance alone, with
 #          NO posture anchor. With the geometry-correct model the arm's gravity
 #          bias is gone, so this is the clean A/B of the paper's law vs the +PD
-#          form (and matches controller_gmo minus the disturbance observer).
+#          form (and matches controller.py minus the disturbance observer).
 # Overridable per-run via AM_SWEEP {"USE_POSTURE_ANCHOR": false}.
 USE_POSTURE_ANCHOR = False
 # DLS_LAMBDA — damped-least-squares regularization of the J_3y solve in u3.
