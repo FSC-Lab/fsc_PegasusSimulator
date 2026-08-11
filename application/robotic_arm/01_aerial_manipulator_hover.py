@@ -40,7 +40,7 @@
 |       2. Controller node, in a ROS2-sourced shell, under the /uav_0 namespace
 |          so its relative topics (state/pose, joint_states, ...) map onto the
 |          Pegasus uav_0/... topics:
-|            python3 extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/controller_hover.py --ros-args -r __ns:=/uav_0
+|            python3 extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller_hover.py --ros-args -r __ns:=/uav_0
 """
 
 import os

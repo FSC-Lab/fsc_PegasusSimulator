@@ -13,7 +13,7 @@ set -euo pipefail
 #   │                            /uav_0/joint_torque_cmd                 │
 #   └────────────────────────────────────────────────────────────────────┘
 #   ┌ pane 1: controller node ──────────────────────────────────────────┐
-#   │  ...robotic_arm/controller_hover.py  (run under /uav_0 ns)      │
+#   │  ...robotic_arm/utils_controller/controller_hover.py (ns /uav_0)│
 #   │    subscribes state/pose, state/twist*, joint_states               │
 #   │    publishes  rotor_velocity_command, joint_torque_cmd            │
 #   └────────────────────────────────────────────────────────────────────┘
@@ -57,7 +57,7 @@ load_machine_config "$0" "$CFG_NAME"
 # Entry-point scripts (fixed relative tails)
 # ================================
 PEGASUS_SCRIPT_REL="application/robotic_arm/01_aerial_manipulator_hover.py"
-CONTROLLER_SCRIPT_REL="extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/controller_hover.py"
+CONTROLLER_SCRIPT_REL="extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller_hover.py"
 
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 CONTROLLER_SCRIPT="${FSC_PEGASUS_ROOT}/${CONTROLLER_SCRIPT_REL}"

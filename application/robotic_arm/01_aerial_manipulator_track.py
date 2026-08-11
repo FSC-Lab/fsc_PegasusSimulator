@@ -1,47 +1,31 @@
 #!/usr/bin/env python
 """
-02_aerial_manipulator_gmo.py
+01_aerial_manipulator_track.py
 
 Author: Ben Natra (send2ben123@gmail.com)
 Author: Shiqi Gao (shiqi.gao907@gmail.com)
 
-IN-PROCESS aerial-manipulator demo running controller_gmo.py (the COUPLED
-feedback-linearizing law + generalized-momentum disturbance observer) inside a
-physics-step callback — no ROS2 round-trip, true 250 Hz control at the physics dt.
-
-Differs from 02_aerial_manipulator_track.py only in the controller it drives:
-controller_gmo.py has NO joint-space posture anchor and adds the GMO (estimates
-the transformed EE disturbance and cancels it in thrust/base-moment, plus the
-arm channel in shaped-impedance mode). Its make_params registers the arm joint
-chain correctly (joint k pivots about manip_joint_k), so manip_joint3's gravity
-matches the plant.
-
-TASK (EE_FORCE_ENABLE): takeoff → hover → apply a CONSTANT force at the
-end-effector (default 1 N along inertial +y), mirroring main_sim.m's
-'const_wrench' disturbance. The GMO estimates it (d_t_hat converges to the
-applied force) and the controller rejects it (the vehicle holds position). Set
-EE_FORCE_ENABLE=False for the plain trajectory (no disturbance).
+IN-PROCESS aerial-manipulator demo running controller_track.py (the full COUPLED
+feedback-linearizing law) inside a physics-step callback — no ROS2 round-trip,
+true 250 Hz control at the physics dt.
 
 Two-phase flight, selected by the MODE knob below (mirrors the MATLAB harness):
-  Phase 1 TAKEOFF  climb the BODY to TAKEOFF_ALTITUDE (a CoM-reference ramp).
-  Phase 2 TRACK    the MODE trajectory runs, re-anchored at the takeoff setpoint
-                   (zero initial position/orientation error) with its own clock
-                   (t=0 at handover).
-The ARM is driven by the DESIGNED GMO control law in BOTH phases — there is no
-joint-space PD in the loop (TAKEOFF_ARM_HOLD, default False). Set MODE = "hover"
-(hold the takeoff point) or "circle" (nominal MATLAB circle).
+  Phase 1 TAKEOFF  climb to TAKEOFF_ALTITUDE with the arm software-locked.
+  Phase 2 TRACK    arm switches to torque-control impedance; the MODE trajectory
+                   runs, re-anchored at the takeoff setpoint (zero initial
+                   position/orientation error) with its own clock (t=0 at handover).
+Set MODE = "hover" (hold the takeoff point) or "circle" (nominal MATLAB circle).
 
 Each physics step (world.add_physics_callback → _control_step):
   1. read body pose/twist (DC) + arm joint states (core Articulation API)
-  2. build X, generate the takeoff / trajectory reference  (controller_gmo.py)
-  3. dynamics() + MatlabController()  → thrust, tau_body, tau_joint  (+ GMO)
+  2. build X, generate the takeoff / trajectory reference  (controller_track.py)
+  3. dynamics() + MatlabController()  → thrust, tau_body, tau_joint
   4. mixer  → 4 rotor speeds → backend.input_ref
   5. tau_joint → art.set_joint_efforts (arm dofs in true effort mode);
-     the designed GMO law throughout (legacy software PD hold only if
-     TAKEOFF_ARM_HOLD is enabled)
+     software PD hold + gravity comp during the takeoff phase
   6. gripper_joint position target from the trajectory's grip flag
 
-Run with:  scripts/start_aerial_manipulator_gmo.sh <config_name>
+Run with:  scripts/start_aerial_manipulator_track.sh <config_name>
 (no WSL controller needed)
 """
 
@@ -55,30 +39,20 @@ import json
 # holding a JSON dict. Recognized keys:
 #   headless (bool)         run without a window
 #   t_end (s)               auto-stop + save after this sim time
-#   log_path (str)          npz destination (default log/gmo_log.npz)
+#   log_path (str)          npz destination (default log/track_log.npz)
 #   traj_type (str)         override controller TRAJ_TYPE
 #   k_x k_v k_R k_w         scalars
-#   K_y D_y                 4-lists (diagonal)
+#   K_y D_y K_i             4-lists (diagonal)
 #   M_r_d                   3-list (diagonal)
-#   K_o                     GMO observer gain (6+n=10-list, diagonal)
+#   POSTURE_KP POSTURE_KD   4-lists
+#   USE_POSTURE_ANCHOR      bool (True = paper law + extra u3 PD; False = paper law only)
 #   DLS_LAMBDA TAU_MAX      scalars
 # A crashed run (on the ground / flipped after takeoff) ends early and the npz
 # carries crashed=True.
 SWEEP = json.loads(os.environ.get("AM_SWEEP", "{}"))
 
 from isaacsim import SimulationApp
-_HEADLESS = bool(SWEEP.get("headless", False))
-simulation_app = SimulationApp({"headless": _HEADLESS})
-
-# --- enable the PhysX debug / visualization UI so the physics debugger and its
-#     frame/axis draw are available (fixes the greyed-out Utilities > Profilers &
-#     Debuggers menu, and is what SHOW_PHYSICS_FRAMES below drives). Skipped when
-#     headless — there is no viewport to draw into. Must run after SimulationApp. ---
-if not _HEADLESS:
-    from isaacsim.core.utils.extensions import enable_extension
-    enable_extension("omni.physx.ui")             # PhysX Debug Visualization window
-    enable_extension("omni.kit.profiler.window")  # (optional) Profiler window
-    simulation_app.update()
+simulation_app = SimulationApp({"headless": bool(SWEEP.get("headless", False))})
 
 import numpy as np
 import carb
@@ -104,12 +78,16 @@ from fsc_aerial_manipulation.rotorcraft.x650_rotorcraft_utils import (
     print_mass_inertia_properties,
     print_rotor_positions,
 )
-from fsc_aerial_manipulation.robotic_arm import controller_gmo as C   # GMO controller, kinematics re-registered
+from fsc_aerial_manipulation.robotic_arm.utils_controller import controller_track as C   # the tuned controller (in-process)
 
-# Data logs (.npz) are written to a `log/` folder inside the controller package,
-# parallel to plot_results.py's `images/` output dir (resolved from the installed
-# package so it holds regardless of CWD / editable-install location).
-LOG_DIR = os.path.join(os.path.dirname(C.__file__), "log")
+# A run's outputs all live under ONE root, robotic_arm/results/ (resolved from
+# the installed package, so it holds regardless of CWD / editable-install
+# location):  results/log/ for the .npz this demo writes, results/figures/ for
+# the .png utils_plot/plot_results.py renders from it.
+import fsc_aerial_manipulation.robotic_arm as _ra
+_RA_DIR = os.path.dirname(_ra.__file__)   # robotic_arm/, NOT the
+                                          # controller's own folder
+LOG_DIR = os.path.join(_RA_DIR, "results", "log")
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  CONFIG  (matches the ROS2 demo so the same fixed model is used)         ║
@@ -126,38 +104,22 @@ LOG_DIR = os.path.join(os.path.dirname(C.__file__), "log")
 #            trajectory is RE-ANCHORED at the current CoM / EE offset / heading,
 #            so it STARTS at the takeoff setpoint with zero initial position AND
 #            orientation error, and its clock starts at 0 (not sim t=0).
-# Modes (map 1:1 onto controller_gmo.TRAJ_TYPE / TRAJ_CONFIG):
-#   "hover"  — hold the takeoff setpoint. RECOMMENDED first GMO check: with the
-#              posture anchor gone, confirm the arm holds on hover (GMO + task
-#              impedance only) before moving to a tracking trajectory.
+# Modes (map 1:1 onto controller_track.TRAJ_TYPE / TRAJ_CONFIG):
+#   "hover"  — hold the takeoff setpoint (the previous default test).
 #   "circle" — track ONE rest-to-rest circle in the horizontal plane at the
 #              takeoff altitude (radius/period from TRAJ_CONFIG["circle"],
 #              default r=1.0 m, T=20 s). The base heading follows the tangent and
 #              the EE tracks the compatible circle with all joint angles held at
 #              zero — the nominal MATLAB circle test.
-#   "circle_bent" — the same circle with the arm held at a better-conditioned
-#              pose (q_hold = [0,0.8,0.8,0]; cond(J_3y) ~35 vs ~96 at q=0). With
-#              the posture anchor removed the arm is now free in its null space,
-#              so this is mainly a J_3y-conditioning stress test for the GMO law.
+#   "circle_bent" — DIAGNOSTIC: the same circle, but the arm is held at a better-
+#              conditioned pose (q_hold = [0,0.8,0.8,0]; cond(J_3y) ~35 vs ~96 at
+#              q=0) instead of q=0. Isolates whether the posture anchor is only
+#              needed because of J_3y conditioning. Run it, then comment out the
+#              POSTURE_KP/KD term in controller_track.u3 and rerun: if the arm now
+#              holds, the fold was conditioning; if it still folds, it's the
+#              gravity-residual slope (independent of conditioning).
 # Override per-run without editing this file: AM_SWEEP='{"traj_type":"circle"}'.
 MODE = "circle"
-
-# ── End-effector disturbance (TASK: takeoff → hover → constant EE force) ───────
-# After the vehicle is hovering, apply a CONSTANT force at the end-effector (the
-# gripper body) to exercise the disturbance observer — mirrors main_sim.m's
-# 'const_wrench' mode. The GMO should ESTIMATE it (watch d_t_hat converge to the
-# applied force in the log) and the controller REJECT it (the vehicle holds
-# position instead of drifting off in the force direction). Best run with
-# MODE="hover"; set EE_FORCE_ENABLE=False (and MODE="circle") for the plain circle.
-EE_FORCE_ENABLE = True
-EE_FORCE_WORLD  = np.array([0.0, 2.0, 0.0])   # [N] constant force, INERTIAL frame (+y = 1 N)
-EE_FORCE_START  = 3.0                          # [s] into the hover (after takeoff→track handover)
-EE_FORCE_BODY   = "/manip_base"                # gripper body it's applied to (= the EE link)
-# Live force arrows (debug_draw): RED = applied EE force, CYAN = GMO estimate d_t_hat.
-# PhysX's own debug visualizer shows colliders/CoM/contacts but NOT apply_body_force,
-# so we draw the vectors ourselves. Degrades gracefully if debug_draw is unavailable.
-EE_FORCE_VIZ    = True
-FORCE_VIZ_SCALE = 0.15                          # [m per N] arrow length per newton
 
 # Vehicle USD — resolved from the installed fsc_aerial_manipulation package so
 # the path holds regardless of CWD (same asset the ROS2 demo and the paired
@@ -177,24 +139,14 @@ SPAWN_POS   = (0.0, 0.0, 0.5)
 SPAWN_EULER = (0.0, 0.0, 0.0)
 VEHICLE_ID  = 0
 
-# --- PhysX debug frame visualization -----------------------------------------
-# Draw the world origin frame and every rigid-body frame (RGB = XYZ) using the
-# PhysX debug visualizer. Frames only render while the sim is PLAYING (and never
-# in headless / sweep runs). Flip SHOW_PHYSICS_FRAMES to False to turn it all off.
-SHOW_PHYSICS_FRAMES  = False   # PhysX debug visualizer (Utilities > Profilers & Debuggers > Physics)
-SHOW_WORLD_AXES      = True    # world origin frame
-SHOW_BODY_AXES       = True    # each rigid body's link frame
-SHOW_BODY_MASS_AXES  = False   # each body's centre-of-mass frame
-PHYSICS_FRAME_SCALE  = 10.0    # axis length multiplier (0 → invisible)
-
 CLIMB_RATE  = 0.4   # [m/s] takeoff altitude ramp (matches controller node)
 
-# Rotor model — must match controller_gmo.py RotorMixerParams and the spawn thrust curve.
+# Rotor model — must match controller_track.py RotorMixerParams and the spawn thrust curve.
 ROTOR_K_THRUST = 1.03e-5
 ROTOR_K_TORQUE = 1.0e-6
 ROTOR_DIR      = [-1, -1, 1, 1]
 
-# Reflected rotor inertia — must equal controller_gmo.py make_params J_arm.
+# Reflected rotor inertia — must equal controller_track.py make_params J_arm.
 ARM_ARMATURE   = 353.5 ** 2 * 1.6e-7   # ≈ 0.02 kg·m²
 
 # Safety clamps so a runaway control command can't blow up the physics / crash the
@@ -206,24 +158,11 @@ ARM_ARMATURE   = 353.5 ** 2 * 1.6e-7   # ≈ 0.02 kg·m²
 TAU_MAX   = 1.5      # [N·m]   max arm joint torque (normal ~0.5)
 OMEGA_MAX = 2000.0   # [rad/s] max rotor speed (hover ~850)
 
-# TAKEOFF_ARM_HOLD — arm control during the takeoff CLIMB window.
-#   False (DEFAULT): the DESIGNED GMO control law (res["tau_joint"]) drives the
-#     arm for the WHOLE flight — there is NO joint-space PD anywhere in the loop,
-#     and the disturbance observer is active from t=0. This is the "controller is
-#     always my designed version with the observer" behavior.
-#   True : legacy behavior — a software joint-space PD (+ gravity comp) holds the
-#     arm during the climb, and the coupled law / GMO engage only at handover.
-#     This is a SAFETY FALLBACK: the coupled law is only proven AIRBORNE (ground
-#     contact is not in the model), so if the designed law flails the arm on the
-#     ground at spawn (the drone rests on its legs at z=0.5), flip this to True.
-# NOTE: the body (thrust + attitude) is ALWAYS on the designed law; this flag
-# only affects the ARM channel during the climb. The climb ramp itself (a CoM
-# reference that lifts the body to altitude) runs regardless.
-TAKEOFF_ARM_HOLD = True
-
-# Legacy software-hold PD gains — used ONLY when TAKEOFF_ARM_HOLD = True. Gentle
-# PD-to-zero + gravity comp through the same effort path (drive gains are never
-# switched mid-sim; mid-sim gain writes went stale in PhysX before).
+# Software arm hold during takeoff: the coupled feedback-linearized law is only
+# valid AIRBORNE (ground contact is not in the model), so until the takeoff
+# phase ends the arm gets a gentle PD-to-zero + gravity compensation THROUGH
+# THE SAME effort path — drive gains are never switched mid-sim (mid-sim gain
+# writes went stale in PhysX before).
 ARM_HOLD_KP = 3.0    # [N·m/rad]   ωn = sqrt(3/0.02) ≈ 12 rad/s per joint
 ARM_HOLD_KD = 0.25   # [N·m·s/rad] ζ ≈ 0.5
 
@@ -275,12 +214,14 @@ C.TRAJ_TYPE = str(SWEEP.get("traj_type", MODE))
 
 # module-level sweep overrides (see AM_SWEEP block at the top; gain overrides
 # on the controller instance are applied in InProcessDemoV2.__init__)
+if "POSTURE_KP" in SWEEP:
+    C.POSTURE_KP = np.asarray(SWEEP["POSTURE_KP"], float)
+if "POSTURE_KD" in SWEEP:
+    C.POSTURE_KD = np.asarray(SWEEP["POSTURE_KD"], float)
+if "USE_POSTURE_ANCHOR" in SWEEP:   # False = strictly the paper's EE law (no extra u3 PD)
+    C.USE_POSTURE_ANCHOR = bool(SWEEP["USE_POSTURE_ANCHOR"])
 if "DLS_LAMBDA" in SWEEP:
     C.DLS_LAMBDA = float(SWEEP["DLS_LAMBDA"])
-if "USE_GMO" in SWEEP:
-    C.USE_GMO = bool(SWEEP["USE_GMO"])
-if "M_Y" in SWEEP:            # shaped-impedance task inertia (4-list -> diagonal)
-    C.M_Y = np.diag(np.asarray(SWEEP["M_Y"], float))
 if "TAU_MAX" in SWEEP:
     TAU_MAX = float(SWEEP["TAU_MAX"])
 
@@ -331,7 +272,6 @@ class InProcessDemoV2:
         self._spawn_pickplace_props()     # pedestals + graspable cube (pickplace only)
         self.world.reset()
         self.stage = omni.usd.get_context().get_stage()
-        self._setup_physics_debug_viz()  # world/body frame axes (see SHOW_PHYSICS_FRAMES)
 
         print_mass_inertia_properties(self.stage, self.drone_path)
         print_rotor_positions(self.stage, self.drone_path, ROTOR_PATHS)
@@ -340,43 +280,6 @@ class InProcessDemoV2:
         # Articulation API below) -------------------------------------------
         self._dc     = _dynamic_control.acquire_dynamic_control_interface()
         self._body   = self._dc.get_rigid_body(self.drone_path + BODY_PATH)
-        # gripper (EE) body handle for the optional end-effector disturbance force
-        self._ee_body = self._dc.get_rigid_body(self.drone_path + EE_FORCE_BODY)
-        self._ee_force_announced = False
-        self._ee_force_now = np.zeros(3)
-        self._ee_world = None                 # EE world position (stashed for the render-loop draw)
-        self._last_d_t_hat = np.zeros(3)      # GMO translational estimate (for the cyan arrow)
-        self._draw_ok = False
-        if EE_FORCE_ENABLE:
-            print(f"[InProc] EE disturbance armed: {EE_FORCE_WORLD} N (world) at "
-                  f"'{EE_FORCE_BODY}', from {EE_FORCE_START:.1f}s into hover "
-                  f"(handle {'ok' if self._ee_body else 'NOT FOUND'})", flush=True)
-        # --- debug_draw interface for the live force arrows (optional) -------
-        self._draw = None
-        if EE_FORCE_VIZ:
-            import importlib
-            try:
-                from omni.isaac.core.utils.extensions import enable_extension
-            except Exception:
-                enable_extension = None
-            last = None
-            # the debug_draw ext moved namespaces across Isaac versions; try both,
-            # enabling the extension first in case it's present but not loaded.
-            for ext in ("omni.isaac.debug_draw", "isaacsim.util.debug_draw"):
-                try:
-                    if enable_extension is not None:
-                        try:
-                            enable_extension(ext)
-                        except Exception:
-                            pass
-                    dd = importlib.import_module(ext + "._debug_draw")
-                    self._draw = dd.acquire_debug_draw_interface()
-                    print(f"[InProc] force viz: {ext} acquired (RED=applied, CYAN=GMO est)", flush=True)
-                    break
-                except Exception as exc:
-                    last = exc
-            if self._draw is None:
-                print(f"[InProc] force viz: no debug_draw module — arrows off ({last})", flush=True)
 
         # --- Core Articulation API for the ARM (required). dynamic_control is
         # deprecated and its dof layer is broken here (wrong velocities, silent
@@ -395,24 +298,18 @@ class InProcessDemoV2:
         self._vehicle = VehicleManager.get_vehicle_manager().get_vehicle(self.drone_path)
         self._backend = self._vehicle._backends[0]
 
-        # --- Controller + mixer (in-process, controller_gmo.py) -----------------
+        # --- Controller + mixer (in-process, controller_track.py) -----------------
         self.params = C.make_params()
         self.ctrl   = C.MatlabController(self.params)
-        # arm hold ONLY if the legacy takeoff PD is explicitly enabled; otherwise
-        # the designed GMO law drives the arm from the first step (the control
-        # loop re-asserts self.ctrl.hold every step, so this is just the seed).
-        self.ctrl.hold = TAKEOFF_ARM_HOLD
-        print(f"[InProc] GMO controller: USE_GMO={C.USE_GMO} "
-              f"impedance={C.IMPEDANCE_MODE} "
-              f"M_Y={'natural' if C.M_Y is None else 'shaped'} "
-              f"DLS_LAMBDA={C.DLS_LAMBDA} "
-              f"TAKEOFF_ARM_HOLD={TAKEOFF_ARM_HOLD}", flush=True)
+        self.ctrl.hold = True            # takeoff hold until airborne
+        print(f"[InProc] EE law: {'paper + extra u3 PD (posture anchor ON)' if C.USE_POSTURE_ANCHOR else 'strictly the paper (posture anchor OFF)'}",
+              flush=True)
         # sweep gain overrides on the controller instance (AM_SWEEP)
         g = self.ctrl.g
         for k in ("k_x", "k_v", "k_R", "k_w"):
             if k in SWEEP:
                 setattr(g, k, float(SWEEP[k]))
-        for k in ("K_y", "D_y", "K_o"):
+        for k in ("K_y", "D_y", "K_i"):
             if k in SWEEP:
                 setattr(g, k, np.diag(np.asarray(SWEEP[k], float)))
         if "M_r_d" in SWEEP:
@@ -439,7 +336,6 @@ class InProcessDemoV2:
         self._tr = None
         self._climb_z = 0.0
         self._t = 0.0
-        self._climbing = True       # True during the takeoff climb window
         self._log = 0
         self._grip_cmd = GRIPPER_OPEN            # rate-limited gripper command [rad];
         self._grip_q = 0.0                       # starts at the authored rest (open)
@@ -449,11 +345,9 @@ class InProcessDemoV2:
         self._hist = {k: [] for k in
                       ("t", "p", "v0", "omega0", "e_R", "e_y", "q", "qdot",
                        "thrust", "tau_j", "u3",
-                       "t_thrust", "t_imp", "t_dist", "t_cpl", "tau_b", "tau_b_arm",
+                       "t_thrust", "t_imp", "t_int", "t_cpl", "tau_b", "tau_b_arm",
                        "grip", "grip_q",
-                       "x_c", "x_cd", "r_e", "r_ed", "q_d", "obj_p",
-                       # GMO disturbance estimates (transformed frame) + applied EE force
-                       "d_t_hat", "d_r_hat", "d_rho_hat", "ee_force")}
+                       "x_c", "x_cd", "r_e", "r_ed", "q_d", "obj_p")}
         carb.log_info("[InProc] ready")
 
     def _record(self, p0, v0, omega0, q, qdot, tau_applied, res, ref, x_c, r_e):
@@ -488,28 +382,22 @@ class InProcessDemoV2:
                 h["obj_p"].append(np.zeros(3))
         else:
             h["obj_p"].append(np.zeros(3))
-        for k in ("t_thrust", "t_imp", "t_dist", "t_cpl"):
+        for k in ("t_thrust", "t_imp", "t_int", "t_cpl"):
             h[k].append(np.asarray(res[k], float).copy())
-        # GMO disturbance estimates (active from t=0 by default; zero only if
-        # USE_GMO is off, or during the climb when TAKEOFF_ARM_HOLD is enabled)
-        for k in ("d_t_hat", "d_r_hat", "d_rho_hat"):
-            h[k].append(np.asarray(res[k], float).copy())
-        # applied EE disturbance force (world frame; zero until it turns on)
-        h["ee_force"].append(np.asarray(getattr(self, "_ee_force_now", np.zeros(3)), float).copy())
 
     def _save_history(self):
         h = self._hist
         if not h["t"]:
             return
         os.makedirs(LOG_DIR, exist_ok=True)
-        path = SWEEP.get("log_path") or os.path.join(LOG_DIR, "gmo_log.npz")
+        path = SWEEP.get("log_path") or os.path.join(LOG_DIR, "track_log.npz")
         np.savez(path, crashed=np.array(self._crashed),
                  **{k: np.array(v) for k, v in h.items()})
-        plot_script = os.path.join(os.path.dirname(C.__file__), "plot_results.py")
+        plot_script = os.path.join(_RA_DIR, "utils_plot", "plot_results.py")
         print(f"[InProc] saved {len(h['t'])} samples -> {path} "
               f"(crashed={self._crashed})\n"
               f"         plot with the Isaac python (ISAAC_PY), e.g.:\n"
-              f"           ~/isaacsim/python_r_fsc.sh {plot_script} {path}", flush=True)
+              f"           ~/isaacsim/python_r_fsc.sh {plot_script}", flush=True)
 
     # ── physics/model fixes (ported from the ROS2 demo) ─────────────────────
 
@@ -524,55 +412,6 @@ class InProcessDemoV2:
         api.CreateGpuFoundLostPairsCapacityAttr().Set(1024 * 1024)
         api.CreateGpuMaxRigidContactCountAttr().Set(2 * 1024 * 1024)
         api.CreateGpuMaxRigidPatchCountAttr().Set(256 * 1024)
-
-    def _setup_physics_debug_viz(self):
-        """Toggle PhysX debug-draw of coordinate frames from the CONFIG switches.
-        Draws the world origin frame and/or each rigid-body frame (RGB = XYZ).
-
-        Two subtleties, both learned from omni.physxui's own PhysxDebugView:
-          1. Turning on the draw needs BOTH interfaces — the physx visualization
-             interface (computes the lines) AND the physxui interface's
-             enable_debug_visualization (actually renders them in the viewport).
-             Calling only the first computes lines nobody draws.
-          2. PhysX resets these parameters every time the sim starts, so a
-             one-shot call before Play is wiped out. We re-apply on every
-             RESUMED simulation event (same as the debug window does)."""
-        if not SHOW_PHYSICS_FRAMES or _HEADLESS:
-            return
-        try:
-            from omni.physx import (get_physx_visualization_interface,
-                                    get_physx_interface)
-            from omni.physxui import get_physxui_interface
-            from omni.physx.bindings._physx import SimulationEvent
-        except ImportError:
-            carb.log_warn("[PhysX] omni.physx.ui not loaded; cannot draw frames. "
-                          "Keep enable_extension('omni.physx.ui') at startup.")
-            return
-
-        def _apply():
-            viz = get_physx_visualization_interface()
-            get_physxui_interface().enable_debug_visualization(True)  # (1) render
-            viz.enable_visualization(True)                            # (1) compute
-            viz.set_visualization_scale(PHYSICS_FRAME_SCALE)
-            viz.set_visualization_parameter("WorldAxes",    SHOW_WORLD_AXES)
-            viz.set_visualization_parameter("BodyAxes",     SHOW_BODY_AXES)
-            viz.set_visualization_parameter("BodyMassAxes", SHOW_BODY_MASS_AXES)
-
-        _apply()  # take effect immediately if the sim is already playing
-
-        # (2) re-apply on every Play/resume — PhysX wipes the params on sim start.
-        def _on_sim_event(event):
-            if event.type == int(SimulationEvent.RESUMED):
-                _apply()
-
-        events = get_physx_interface().get_simulation_event_stream_v2()
-        # keep the subscription alive for the process lifetime (else it's GC'd
-        # and the re-apply never fires).
-        self._physx_viz_sub = events.create_subscription_to_pop(_on_sim_event)
-
-        print(f"[PhysX] Frame viz: world={SHOW_WORLD_AXES} body={SHOW_BODY_AXES} "
-              f"mass={SHOW_BODY_MASS_AXES} scale={PHYSICS_FRAME_SCALE} "
-              f"(re-applied on every Play)", flush=True)
 
     def _wait_for_prim(self, prim_path, max_frames=300):
         stage = omni.usd.get_context().get_stage()
@@ -707,34 +546,6 @@ class InProcessDemoV2:
             print(f"[InProc] WARNING: pickplace props failed ({exc}) — "
                   f"flying without objects", flush=True)
 
-    def _draw_force_arrows(self):
-        """Live debug_draw arrows from the EE: applied disturbance force (RED) and the
-        GMO's translational estimate d_t_hat (CYAN). Called from the RENDER loop;
-        cleared + redrawn each frame, so cyan grows to overlap red as the observer
-        converges. Uses stashed self._ee_world / _ee_force_now / _last_d_t_hat."""
-        ee = self._ee_world
-        if ee is None:
-            return
-        base = tuple(np.asarray(ee, float))
-        starts, ends, colors, widths = [], [], [], []
-        for vec, color in ((self._ee_force_now,  (1.0, 0.2, 0.2, 1.0)),   # applied  = red
-                           (self._last_d_t_hat,  (0.2, 0.9, 1.0, 1.0))):  # GMO est  = cyan
-            v = np.asarray(vec, float)
-            if v.shape != (3,) or np.linalg.norm(v) < 1e-4:
-                continue
-            tip = np.asarray(ee, float) + FORCE_VIZ_SCALE * v
-            starts.append(base); ends.append(tuple(tip)); colors.append(color); widths.append(6.0)
-        try:
-            self._draw.clear_lines()
-            if starts:
-                self._draw.draw_lines(starts, ends, colors, widths)
-                if not self._draw_ok:
-                    self._draw_ok = True
-                    print(f"[InProc] force viz: first arrow drawn ({len(starts)} line(s))", flush=True)
-        except Exception as exc:
-            print(f"[InProc] force viz draw FAILED ({exc}) — disabling arrows", flush=True)
-            self._draw = None
-
     def _apply_gripper(self, grip_closed, dt):
         """Rate-limited gripper command from the trajectory's grip flag."""
         if self._grip_idx is None:
@@ -819,29 +630,26 @@ class InProcessDemoV2:
                       f"(z={p0[2]:.3f}, R33={R0[2,2]:.2f})", flush=True)
             self._crashed = True
             self._done = True
-        # Two-phase flight. The BODY always climbs to altitude then runs the
-        # trajectory (a CoM reference — NOT a joint command). The ARM is driven
-        # by the DESIGNED GMO law the whole time; self.ctrl.hold (which zeros u3
-        # and freezes the GMO) is asserted ONLY if the legacy takeoff PD is
-        # explicitly enabled via TAKEOFF_ARM_HOLD (a ground-contact fallback).
-        climbing = self._t < C.TAKEOFF_TIME
-        arm_hold = TAKEOFF_ARM_HOLD and climbing
-        self.ctrl.hold = arm_hold
-        if self._climbing and not climbing:
-            # RE-ANCHOR once, at the climb→trajectory handover. The integrator-
-            # free loops hover with a steady tilt+offset (e_R~0.03 roll → thrust
-            # tilts → the position loop settles ~0.1 m off in y, and e_y inherits
-            # it). Anchoring here starts e_x=e_y=0; the vehicle holds its actual
-            # equilibrium instead of the spawn xy.
-            self._climbing = False
-            dyn_a = C.dynamics(self._build_X(R0, p0, q, v0, omega0, qdot), self.params)
-            x_c_now = p0 + R0 @ dyn_a["r_0c_0"]
-            self._tr = C.build_traj(x_c_now, R0 @ (dyn_a["r_0e_0"] - dyn_a["r_0c_0"]),
-                                    R0 @ np.array([1.0, 0, 0]))
-            print(f"[InProc] climb done (t={self._t:.1f}s) → re-anchored ref at "
-                  f"x_c={x_c_now.round(3)}", flush=True)
+        # Takeoff hold: the coupled law is only valid AIRBORNE (ground contact
+        # is not in the model), so the arm is held by a software PD + gravity
+        # comp through the same effort path until the climb window ends.
+        hold = self._t < C.TAKEOFF_TIME
+        if hold != self.ctrl.hold:
+            self.ctrl.hold = hold
+            print(f"[InProc] arm hold -> {hold} (t={self._t:.1f}s)", flush=True)
+            if not hold:
+                # RE-ANCHOR at the hold→impedance handover. The integrator-free
+                # loops hover with a steady tilt+offset (e_R~0.03 roll → thrust
+                # tilts → the position loop settles ~0.1 m off in y, and e_y
+                # inherits it). Anchoring here starts e_x=e_y=0; the vehicle
+                # holds its actual equilibrium instead of the spawn xy.
+                dyn_a = C.dynamics(self._build_X(R0, p0, q, v0, omega0, qdot), self.params)
+                x_c_now = p0 + R0 @ dyn_a["r_0c_0"]
+                self._tr = C.build_traj(x_c_now, R0 @ (dyn_a["r_0e_0"] - dyn_a["r_0c_0"]),
+                                        R0 @ np.array([1.0, 0, 0]))
+                print(f"[InProc] re-anchored ref at x_c={x_c_now.round(3)}", flush=True)
 
-        if climbing:
+        if hold:
             dz = C.TAKEOFF_ALTITUDE - self._climb_z
             step = max(-CLIMB_RATE * dt, min(CLIMB_RATE * dt, dz))
             self._climb_z += step
@@ -863,11 +671,9 @@ class InProcessDemoV2:
         for i in range(min(4, len(self._backend.input_ref))):
             self._backend.input_ref[i] = float(omega[i])
 
-        # arm efforts EVERY step. Default: the DESIGNED GMO law drives the arm
-        # (res["tau_joint"]) the whole flight — no joint-space PD. The legacy
-        # software PD hold runs ONLY when TAKEOFF_ARM_HOLD is enabled, during the
-        # climb (arm_hold). One actuation path, one clamp.
-        if arm_hold:
+        # arm efforts EVERY step: software hold during takeoff, full impedance
+        # law after. One actuation path, one clamp.
+        if hold:
             g_arm = dyn["g"][6:]
             # hold to the trajectory's q_hold (zeros for every mode except
             # circle_bent) so the arm reaches the commanded pose BEFORE the
@@ -887,39 +693,6 @@ class InProcessDemoV2:
         # trajectory commands the grasp.
         self._apply_gripper(ref.get("grip", 0.0), dt)
 
-        # --- End-effector disturbance force (the TASK): a constant WORLD-frame
-        # force on the gripper, re-applied EVERY step (apply_body_force is one-shot),
-        # once we are hovering. Converted to the body's LOCAL frame — the codebase's
-        # apply_body_force convention is global=False (see vehicle.py / slung-load).
-        self._ee_force_now = np.zeros(3)
-        if (EE_FORCE_ENABLE and self._ee_body and not arm_hold
-                and (self._t - C.TAKEOFF_TIME) >= EE_FORCE_START):
-            # commanded force -> drawn (red arrow) even if the physical apply fails,
-            # so we can tell "not commanded" apart from "commanded but apply failed".
-            self._ee_force_now = EE_FORCE_WORLD.copy()
-            try:
-                pe = self._dc.get_rigid_body_pose(self._ee_body)
-                R_ee = C.quat_to_rot(pe.r.w, pe.r.x, pe.r.y, pe.r.z)
-                f_local = R_ee.T @ EE_FORCE_WORLD            # world -> gripper local
-                self._dc.apply_body_force(self._ee_body,
-                                          carb._carb.Float3(f_local.tolist()),
-                                          carb._carb.Float3([0.0, 0.0, 0.0]), False)
-                if not self._ee_force_announced:
-                    self._ee_force_announced = True
-                    print(f"[InProc] EE force ON at t={self._t:.1f}s: "
-                          f"{EE_FORCE_WORLD} N (world) — watch d_t_hat converge to it",
-                          flush=True)
-            except Exception as exc:
-                if not self._ee_force_announced:
-                    self._ee_force_announced = True
-                    print(f"[InProc] EE apply_body_force FAILED ({exc}) — force NOT applied "
-                          f"(articulation-link force issue?)", flush=True)
-
-        # stash the arrow inputs; the actual debug_draw is done in run() (render loop —
-        # debug_draw from the physics callback often doesn't reach the viewport).
-        self._ee_world = p0 + R0 @ dyn["r_0e_0"]
-        self._last_d_t_hat = np.asarray(res["d_t_hat"], float).copy()
-
         self._record(p0, v0, omega0, q, qdot, tau_j, res, ref,
                      x_c=p0 + R0 @ dyn["r_0c_0"], r_e=p0 + R0 @ dyn["r_0e_0"])
 
@@ -927,7 +700,7 @@ class InProcessDemoV2:
         if self._log >= 250:
             self._log = 0
             drive = (res["t_thrust"] + res["t_cpl"]).round(3)     # pushes arm off
-            correct = (res["t_imp"] + res["t_dist"]).round(3)      # fights to fix it
+            correct = (res["t_imp"] + res["t_int"]).round(3)       # fights to fix it
             print(f"[InProc] t={self._t:5.1f} z={p0[2]:.3f} thr={res['thrust']:.1f} "
                   f"e_R={res['e_R'].round(3)}\n"
                   f"          q={q.round(3)} qdot={qdot.round(3)} "
@@ -938,12 +711,6 @@ class InProcessDemoV2:
                   f"N1ᵀu3={res['tau_body_arm'].round(3)} omega0={omega0.round(3)}\n"
                   f"          arm err e_y={res['e_y'].round(3)}  "
                   f"drive={drive}  correct={correct}\n"
-                  f"          GMO[{'on' if res['gmo_active'] else 'off'}] "
-                  f"d_t={np.asarray(res['d_t_hat']).round(3)} "
-                  f"d_r={np.asarray(res['d_r_hat']).round(3)} "
-                  f"d_rho={np.asarray(res['d_rho_hat']).round(3)}\n"
-                  f"          EE_force(world)={self._ee_force_now.round(3)} "
-                  f"(d_t should converge to it)\n"
                   f"          q_d={np.asarray(ref.get('q_d', np.zeros(4))).round(3)} "
                   f"grip cmd={math.degrees(self._grip_cmd):.1f}deg "
                   f"meas={math.degrees(self._grip_q):.1f}deg", flush=True)
@@ -952,13 +719,10 @@ class InProcessDemoV2:
 
     def run(self):
         self.world.add_physics_callback("am_control", self._control_step)
-        # self.timeline.pause()
         self.timeline.play()
         render = not bool(SWEEP.get("headless", False))   # headless: skip rendering
         while simulation_app.is_running() and not self._done:
             self.world.step(render=render)   # control runs inside the physics steps
-            if render and self._draw is not None:   # draw force arrows in the RENDER context
-                self._draw_force_arrows()
         self._save_history()
         self.timeline.stop()
         simulation_app.close()

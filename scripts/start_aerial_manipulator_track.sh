@@ -10,7 +10,7 @@ set -euo pipefail
 # separate controller node, no 60 Hz render-loop bottleneck).
 #
 #   ┌ Isaac Sim (only process) ─────────────────────────────────────────┐
-#   │  application/robotic_arm/02_aerial_manipulator_track.py               │
+#   │  application/robotic_arm/01_aerial_manipulator_track.py               │
 #   │    spawns the AM vehicle (AM_realign.usda),                        │
 #   │    runs controller_track in-process, and writes rotor input_ref +     │
 #   │    arm efforts directly every physics step.                        │
@@ -60,7 +60,7 @@ load_machine_config "$0" "$CFG_NAME"
 # ================================
 # Entry-point script (fixed relative tail)
 # ================================
-PEGASUS_SCRIPT_REL="application/robotic_arm/02_aerial_manipulator_track.py"
+PEGASUS_SCRIPT_REL="application/robotic_arm/01_aerial_manipulator_track.py"
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Isaac script not found: $PEGASUS_SCRIPT" >&2; exit 1; }

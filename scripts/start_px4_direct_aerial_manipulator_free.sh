@@ -2,20 +2,22 @@
 set -euo pipefail
 
 # ============================================================================
-# Aerial-manipulator GMO with the PX4 DIRECT-ACTUATOR rotor path.
+# FREE-FLIGHT aerial manipulator on the PX4 DIRECT-ACTUATOR rotor path.
 #
-# PX4-gated parallel of start_aerial_manipulator_gmo.sh: the whole-body GMO
-# law still runs IN-PROCESS inside Isaac (unchanged control objective —
-# takeoff → hover/circle, EE impedance, GMO observer), but the rotor command
-# now goes through the "direct thrust" pipeline proven on the bare-frame X650,
-# and the plant uses the bench-calibrated LAGGED motor model (lambda=10.51):
+# PX4-gated parallel of start_aerial_manipulator_free.sh: the same whole-body
+# law, the same three-phase flight (setpoint takeoff → tracked task → setpoint
+# landing) and the same trajectory catalogue run IN-PROCESS inside Isaac, but
+# the rotor command goes out through the "direct thrust" pipeline proven on the
+# bare-frame X650 and the plant uses the bench-calibrated MOTOR DELAY MODEL
+# (lambda = 10.51 1/s, tau ~ 95 ms) — the realistic actuator, which is why this
+# rig has gains of its own (config/px4_direct_free.yaml).
 #
 #   ┌ pane 0: PX4 SITL (none_iris) + MicroXRCEAgent (udp4:8888) ────────────┐
 #   │   direct-actuator gate only — PX4 runs NO control loops here          │
 #   └────────────────────────────────────────────────────────────────────────┘
 #   ┌ pane 1: Isaac Sim ─────────────────────────────────────────────────────┐
-#   │   application/robotic_arm/px4_direct_actuator_aerial_manipulator_gmo.py│
-#   │   GMO law in-process → omega[4] → /uav_0/px4_bridge/rotor_omega        │
+#   │   application/robotic_arm/03_px4_direct_aerial_manipulator_free.py     │
+#   │   whole-body law in-process → omega[4] → /uav_0/px4_bridge/rotor_omega │
 #   │   plant: PX4MavlinkBackend (primary) + LaggedQuadraticThrustCurve      │
 #   └────────────────────────────────────────────────────────────────────────┘
 #   ┌ pane 2: rotor bridge (system python + px4_msgs overlay) ───────────────┐
@@ -30,11 +32,17 @@ set -euo pipefail
 # loops are bypassed in direct-actuator mode, so those gains never act.
 #
 # Usage:
-#   ./scripts/start_px4_direct_actuator_aerial_manipulator_gmo.sh <config_name>
-#   e.g. ./scripts/start_px4_direct_actuator_aerial_manipulator_gmo.sh shiqi_machine
+#   ./scripts/start_px4_direct_aerial_manipulator_free.sh <config> [traj_mode]
+#   e.g. ./scripts/start_px4_direct_aerial_manipulator_free.sh shiqi_machine
+#        ./scripts/start_px4_direct_aerial_manipulator_free.sh shiqi_machine hover_drone
 #
-# Optional: export AM_SWEEP='{"headless":true,"traj_type":"hover"}' as usual —
-# it is forwarded to the Isaac pane.
+# The optional 2nd argument picks the trajectory for this run without editing
+# the demo (it just exports AM_MODE). TUNED ON THIS RIG: poly_whole (the
+# default — 4-phase whole-body showcase + landing) and hover_drone. Any other
+# catalogue name flies on the file's hover baseline gains.
+#
+# Optional: export AM_SWEEP='{"headless":true,"traj_type":"hover_drone"}' — it
+# is forwarded to the Isaac pane and its traj_type WINS over the argument.
 # ============================================================================
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,17 +60,30 @@ if [[ "${1:-}" == "--in-terminal" ]]; then
   shift
 fi
 
-if [[ $# -ne 1 ]]; then
-  echo "ERROR: must provide config name."
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  echo "ERROR: must provide config name (trajectory mode optional)."
   cfg_usage "$0"
+  echo
+  echo "Optional 2nd argument — trajectory for this run (default: the demo's MODE):"
+  echo "  poly_whole   4-phase whole-body showcase + landing  (tuned on this rig)"
+  echo "  hover_drone  hold the takeoff setpoint, arm locked  (tuned on this rig)"
+  echo "  any other utils_planner name runs on the hover baseline gains"
   exit 2
 fi
 
 CFG_NAME="$1"
+TRAJ_MODE="${2:-}"
 
 if [[ $IN_TERM -eq 0 ]]; then
-  open_new_terminal "$0" --in-terminal "$CFG_NAME"
+  # forward the mode through the terminal relaunch, if one was given
+  open_new_terminal "$0" --in-terminal "$CFG_NAME" ${TRAJ_MODE:+"$TRAJ_MODE"}
   exit 0
+fi
+
+# The demo reads AM_MODE (see its MODE block); AM_SWEEP's traj_type still wins
+# over it, so a sweep run is unaffected by this argument.
+if [[ -n "$TRAJ_MODE" ]]; then
+  export AM_MODE="$TRAJ_MODE"
 fi
 
 load_machine_config "$0" "$CFG_NAME"
@@ -70,7 +91,7 @@ load_machine_config "$0" "$CFG_NAME"
 # ================================
 # Entry points + environment
 # ================================
-PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/application/robotic_arm/px4_direct_actuator_aerial_manipulator_gmo.py"
+PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/application/robotic_arm/03_px4_direct_aerial_manipulator_free.py"
 BRIDGE_SCRIPT="${FSC_PEGASUS_ROOT}/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/px4_direct_actuator_rotor_bridge.py"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 
@@ -93,19 +114,25 @@ XRCE_AGENT="${XRCE_AGENT:-$(command -v MicroXRCEAgent || true)}"
 }
 [[ -n "$XRCE_AGENT" && -x "$XRCE_AGENT" ]] || { echo "ERROR: MicroXRCEAgent not found" >&2; exit 1; }
 
-SESSION="am_gmo_px4"
+SESSION="am_free_px4"
 UAV_NS="uav_0"
 PX4_TARGET="none_iris"
-PX4_LOG="/tmp/am_gmo_px4_px4.log"
-ISAAC_LOG="/tmp/am_gmo_px4_isaac.log"
-BRIDGE_LOG="/tmp/am_gmo_px4_bridge.log"
-XRCE_LOG="/tmp/am_gmo_px4_xrce.log"
+PX4_LOG="/tmp/am_free_px4_px4.log"
+ISAAC_LOG="/tmp/am_free_px4_isaac.log"
+BRIDGE_LOG="/tmp/am_free_px4_bridge.log"
+XRCE_LOG="/tmp/am_free_px4_xrce.log"
 
-# Forward AM_SWEEP (JSON) into the Isaac pane only when it is set and non-empty
-# (an empty AM_SWEEP would crash json.loads in the demo).
-AM_SWEEP_ENV=""
+# Forward AM_SWEEP (JSON) / AM_MODE into the Isaac pane, INLINE on its command
+# line rather than by export: the tmux server may already be running with an
+# environment of its own, so an exported variable in this shell does not
+# reliably reach a new pane. AM_SWEEP is forwarded only when non-empty (an
+# empty AM_SWEEP would crash json.loads in the demo).
+AM_ENV=""
 if [[ -n "${AM_SWEEP:-}" ]]; then
-  AM_SWEEP_ENV="AM_SWEEP=$(printf '%q' "$AM_SWEEP") "
+  AM_ENV+="AM_SWEEP=$(printf '%q' "$AM_SWEEP") "
+fi
+if [[ -n "${AM_MODE:-}" ]]; then
+  AM_ENV+="AM_MODE=$(printf '%q' "$AM_MODE") "
 fi
 
 tmux has-session -t "$SESSION" 2>/dev/null && tmux kill-session -t "$SESSION"
@@ -114,7 +141,7 @@ tmux set-option -g history-limit 100000 2>/dev/null || true
 tmux set-option -g mouse on 2>/dev/null || true
 
 # --- pane 0: PX4 SITL + MicroXRCEAgent -------------------------------------
-tmux new-session -d -s "$SESSION" -n "gmo_px4" "
+tmux new-session -d -s "$SESSION" -n "free_px4" "
 cd \"$PX4_DIR\" || { echo 'PX4_DIR not found'; exec bash; }
 XRCE_PID=''
 if pgrep -x MicroXRCEAgent >/dev/null 2>&1; then
@@ -138,8 +165,8 @@ exec bash
 # --- pane 1: Isaac Sim (in-process GMO law + PX4-primary lagged plant) ------
 tmux split-window -h -t "$SESSION":0 "
 sleep 2
-echo 'Launching Isaac Sim PX4-direct-actuator GMO demo...  (log: $ISAAC_LOG)'
-${AM_SWEEP_ENV}PYTHONUNBUFFERED=1 \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\" 2>&1 | tee \"$ISAAC_LOG\"
+echo 'Launching Isaac Sim PX4-direct-actuator FREE-FLIGHT demo...  (log: $ISAAC_LOG)'
+${AM_ENV}PYTHONUNBUFFERED=1 \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\" 2>&1 | tee \"$ISAAC_LOG\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null || true
