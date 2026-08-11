@@ -374,6 +374,29 @@ touchdown; hover command 0.5687 vs 0.569 predicted; arm ≤0.6° from home throu
 forward-arm CoM shows as the predicted standing pitch trim (front pair ~+37 rad/s),
 absorbed cleanly. PX4 denies disarm until the land detector sees low thrust — land by
 reference, then disarm. Rendered confirmation run still pending.
+**ARM FEEDFORWARD (2026-08-10, user-reported symptom: X underdamped/slow while Y clean).**
+Cause: the arm folded at home puts the CoM **19.5 mm FORWARD** (model at q_home; independently
+19.3 mm by back-solving the flown hover's rotor commands 59.7/54.1%), a constant **+0.72 N·m**
+nose-down pitch moment. `alloc_rotor*_px/py` are geometric, and per rate_controller.hpp ONLY the
+rate integrator can absorb a torque bias (attitude loop is pure P; the UDE compensates force) —
+so every engagement re-learned it while the vehicle tilted. dy = −0.1 mm is why ROLL/Y was clean:
+the symptom's asymmetry is the arm's asymmetry. Fixed CONFIG-ONLY with the purpose-built
+`ratectl_trim_y: -0.040` in `params_..._am_t650.yaml` (dev_CCM) — **no control-law change**.
+Value COMPUTED, not tuned: the normalized FLU pitch torque whose allocated commands give zero
+physical moment about the true CoM at hover collective (normalized pitch 1.0 = 11.12 N·m; uses
+44% of i_max), predicting 59.7/54.1/59.7/54.1% against the flown 59.7/54.1/59.6/54.0%.
+**Do NOT instead CoM-reference `alloc_*_px`** (design_decisions.md's action item): the
+effectiveness matrix assumes thrust ∝ command but the real curve has a large affine offset, so
+that OVER-corrects (+0.72 → −0.50 N·m), verified through this repo's own NormalizedMix.
+Matched A/B flown (arm→climb→engage DIRECT, trim 0 vs −0.040): X peak excursion **97.7 → 2.1 cm**,
+settling **23.1 → 4.1 s**, both settling to the same I_y ≈ −0.0394. Two testing traps, both hit:
+(a) there is NO on-set-parameters callback, so `ros2 param set` changes what `param get` reports
+while the controller keeps the YAML value — relaunch with `params_file:=` to A/B; (b) `reset()`
+(which applies the trim) fires on the **ARMING edge**, not the mode switch — SAFETY↔DIRECT uses
+`resetDerivative()` and deliberately PRESERVES the integrator — so land/disarm/re-arm between
+trials. Full write-up: `docs/docs_aerial_manipulator/Feedforward Compensation for Home-Pose Arm.md`.
+Still open: SAFETY mode has the same bias and PX4's own integrator re-learns it (unreachable from
+this config); a true q-dependent feedforward belongs to the whole-body controller, not this rig.
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`

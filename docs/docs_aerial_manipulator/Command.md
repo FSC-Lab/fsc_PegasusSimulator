@@ -1150,12 +1150,15 @@ What to watch, beyond §7.5's list (which still applies):
   mass. The Isaac spawn prints the exact TOTAL the yaml's `vehicle_mass` must
   equal (`T650 MASS OVERRIDE … TOTAL → … kg`); if they disagree, the printout
   is the truth.
-- **A standing PITCH trim is expected and was measured**: the folded arm sits
-  forward on body +x while `alloc_rotor*_px/py` stay geometric, so the front
-  rotor pair runs ~37 rad/s hot — hover ω ≈ `[462, 424, 461, 424]`
-  (ch0/ch2 front, ch1/ch3 rear). Benign in both SAFETY and DIRECT. Only if the
-  rate integrator parks near `i_max` (0.09) in a settled DIRECT hover: read
-  `direct_actuation/rate_control_debug[3..5]` and seed `ratectl_trim_*`.
+- **A standing PITCH trim exists and is now compensated**: the folded arm sits
+  19.5 mm forward on body +x while `alloc_rotor*_px/py` stay geometric, so the
+  front rotor pair runs ~37 rad/s hot — hover ω ≈ `[462, 424, 461, 424]`
+  (ch0/ch2 front, ch1/ch3 rear). Left uncompensated this cost a **97.7 cm X
+  excursion taking 23.1 s to settle** at DIRECT engagement; `ratectl_trim_y:
+  -0.040` in the AM yaml seeds the rate integrator with it and brings that to
+  **2.1 cm / 4.1 s**. Full derivation, the measured A/B, and two testing traps
+  (the trim is read only at node startup; `reset()` fires on the *arming* edge,
+  not the mode switch): [Feedforward Compensation for Home-Pose Arm.md](<Feedforward Compensation for Home-Pose Arm.md>).
 - **Arm status** is printed by the Isaac pane every ~5 s (`q_err`, hold torque,
   realized rotor ω: 0 = disarmed, ~64 = armed idle, ~443 = hover). The arm
   should stay within ~2° of home throughout; a growing q_err or hold torque
