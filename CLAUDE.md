@@ -26,10 +26,10 @@ Isaac through Pegasus's primary MAVLink backend.
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/`
 - `scripts/indoor_sim/start_aerial_manipulator.sh`
 
-- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/x650_vehicle.py` —
+- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_vehicle/x650_vehicle.py` —
   `VehicleMod(Vehicle)`, thin subclass adding `usd_prim_path`/configurable `body_path` for a
   custom USD asset.
-- `.../robotic_arm/x650_multirotor.py` — `MultirotorMod(BaseMultirotor, VehicleMod)`, adds
+- `.../robotic_arm/utils_vehicle/x650_multirotor.py` — `MultirotorMod(BaseMultirotor, VehicleMod)`, adds
   configurable rotor prim paths/joint names. Compliant with this file's vehicle-model checklist
   below (`config=None` resolved inside `__init__`, no mutable defaults).
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/x650_rotorcraft_utils.py`
@@ -41,12 +41,12 @@ Isaac through Pegasus's primary MAVLink backend.
   ROS2 `MatlabControllerNode`: subscribes `state/pose`/`state/twist*`/`joint_states`, publishes
   `rotor_velocity_command`/`joint_torque_cmd`. Run standalone (`python3 controller.py --ros-args
   -r __ns:=/uav_0`), not launched by the Isaac Sim script itself.
-- `.../robotic_arm/postprocessor.py` (1227 lines) — **not** a runtime component. A one-shot
+- `.../robotic_arm/utils_model/postprocessor.py` (1227 lines) — **not** a runtime component. A one-shot
   OnShape→USD asset-cleanup pipeline (reparent/rename/realign frames/set mass+inertia/add
   colliders/apply joint drives/export), meant to be pasted into Isaac Sim's Script Editor after
   CAD import, not imported by anything else.
 - `.../robotic_arm/__init__.py` is empty — import submodules directly
-  (`fsc_aerial_manipulation.robotic_arm.x650_vehicle`, etc.), not via the package.
+  (`fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_vehicle`, etc.), not via the package.
 - `application/robotic_arm/01_aerial_manipulator_hover.py` (761 lines) — the working demo
   entrypoint: DC-interface joint control, ROS2 pub/sub for torque/rotor commands, arm
   position-hold→effort-control handoff.
@@ -64,9 +64,257 @@ Isaac through Pegasus's primary MAVLink backend.
   the run, prestreams for one second, confirms Offboard, then auto-arms. The controller runs
   under `--ros-args -r __ns:=/uav_0`, matching `PX4_UXRCE_DDS_NS=uav_0`. The actual Isaac
   entrypoint is `01_aerial_manipulator_hover.py`.
+- `.../robotic_arm/utils_planner/compatible_trajectory.py` (new, 2026-08-06; moved into
+  `utils_planner/` 2026-08-08) — offline planner for the
+  dynamically-compatible EE+CoM trajectory, Python port of `MATLAB
+  Code/utils/utils_planning/plan_compatible_trajectory.m`: prescribes the EE task (3-axis
+  position span+arc, orientation sweep yaw/tilt/wrist) plus an independent platform heading,
+  and SOLVES the CoM reference x_cd(t) (deg-16 polynomial, Picard fixed point over thrust-dir ↔
+  arm-kinematics coupling). Pure numpy, testable without Isaac. Two deliberate deviations from
+  the MATLAB original: (1) **z-x-z, not z-y-z** — the AM_realign asset's joints 2/3 rotate
+  about +x (MATLAB model: +y), so R_e = Rz·Rx·Rz and the joint recovery is a z-x-z
+  decomposition; (2) planned once in a **canonical frame** (EE start at origin, zero heading)
+  and cached, then anchored by translation+yaw in `build_traj` — exact since gravity is along
+  z. Uses the exact `com_i` link CoMs from `make_params()`, not the MATLAB's l_i/2
+  approximation. Wired into `controller_free.py` as `TRAJ_TYPE = "compatible"`
+  (`TRAJ_CONFIG["compatible"]` holds the task/planner knobs; angle amplitudes sized to this
+  asset's authored joint limits — q1 ±35°, q2/q3 −90..+50°, checked by the planner's
+  `q_lim_deg` warning) and into `02_aerial_manipulator_free.py` as `MODE = "compatible"` (now
+  the default; EE_FORCE_ENABLE set False for the plain tracking test). The plan's t=0 arm pose
+  `q0 = [0, b0/2, b0/2, 0]` is exported as `tr["q_hold"]` so the existing takeoff hold
+  pre-positions the arm — run with `TAKEOFF_ARM_HOLD = True`. Offline validation (2026-08-06,
+  system python): Picard converges in 7 iters, dynamic defect 3.7e-6 m, cond(J_3y) ≈ 15 the
+  whole plan (vs ~96 at q=0), all reference derivative chains FD-consistent to ~1e-10, ref
+  eval ~0.2 ms/call at 250 Hz. Only wired into the GMO controller/demo, not
+  `controller_track.py` (its generate_reference has no "compatible" branch).
+  **4-phase showcase flight added same day** (`TRAJ_TYPE="compatible_showcase"`, now the
+  demo's default MODE): takeoff with the arm **FOLDED at the singularity-certified HOME pose
+  β=80° (q_hold=[0,40°,40°,0])** → fly-in forward (**along world +y**, see `path_yaw_deg`
+  below) while UNFOLDING (β→50°) → PINNED phase (EE position+heading exactly fixed — wrist
+  stays 0 so b1_de is β-independent — while the platform yaws ±15° and the arm folds/unfolds
+  50→75→50°) → fly-out to above the landing spot while FOLDING BACK to home →
+  **pure vertical descent to a LANDING, arm at home throughout**. HOME POSE (2026-08-06,
+  user's request, derived from `refs_matlab/utils/utils_singularity/singularity_sweep.m`
+  mapped onto this asset): the elbow/yaw singular branches live at **NEGATIVE q2/q3 in this
+  asset's sign convention** (MATLAB's +y joint axes flip sign vs the asset's +x; deepest
+  valley q3≈−52°, and the previously measured cond≈880 at q2=q3=−43° IS the elbow branch),
+  while on the positive fold line nondimensional σ_min(J_3y0/Lchar) RISES monotonically with
+  β (0.38 at q=0 → 0.52 at 80° = 5.2× the analysis' 0.10 keep-out margin, worst-case over
+  q1 ±35°/q4 ±180°; task envelope worst 0.48). The planner now computes/prints this
+  certification per plan (`diag min_sigma_nd`, warns <0.10). Arm fold direction (measured,
+  easy to get backwards): β=q2+q3 and LARGER β tucks the EE UP toward the body (base→EE reach
+  0.279 m at β=0, 0.205 at 50°, 0.16 at 80°) — folded home = compact + ground-safe (~0.26 m
+  EE clearance at rest) + best-conditioned. `land_drop` resized 1.03→1.17 m (same home pose
+  at both ends ⇒ EE drop = CoM drop; the old value belonged to the asymmetric schedule).
+  **TASK SHAPE reworked 2026-08-07 (user request)**: (a) the pinned point sits 0.35 m BELOW
+  both the fly-in start and fly-out end, each transit arcing ~0.15 m over first, so the SIDE
+  view shows climb-over→dip→climb-over→descend (EE z 1.48→1.62→1.13→1.62→1.48→land) while
+  `Ay=0` keeps both transits DEAD STRAIGHT in bird view (measured 0.0 mm lateral deviation);
+  (b) the pinned phase is a TRUE GIMBAL — EE position AND heading frozen inertially while the
+  platform sweeps a FULL sine cycle 0→+30°→0→−30°→0 (new `_scal_sincycle` helper, min-snap
+  phased so endpoint rates vanish), returning to forward so fly-out continues straight;
+  `yaw_work_deg` dropped to 0 to free all of q1 for this. **TWO KINEMATIC BOUNDS worth
+  knowing**: (1) a FULL 360° platform spin is IMPOSSIBLE with the EE yaw locked — R_e^0 =
+  R_0ᵀR_e forces q1 = −ψ and q1 is limited to ±35°; q4 cannot help because the two z-rotations
+  in Rz(q1)Rx(β)Rz(q4) only trade at β=0 (the wrist singularity). Dropping the yaw lock would
+  allow a full circle. (2) the drone barely TRANSLATES while pinned — q1 counter-rotating the
+  yaw also counter-rotates the arm's offset, so R_0·r_0e is invariant and a pure yaw moves the
+  base NOT AT ALL; all pinned translation comes from the arm's FOLD changing r_0e, only
+  ~0.03 m horizontally / ~0.06 m vertically over β 50–80° (measured CoM span 0.059 m). This is
+  a workspace bound, not a tuning knob.
+  **Takeoff-hold target is SLEWED (`ARM_HOLD_RATE`=0.5 rad/s), not stepped**: the raw 0→40°
+  spawn step overshot the ζ≈0.5 PD into q2's +50° hard stop (measured 50.0° at t=0.35 s);
+  the slew caps the transient at 26° and peak hold torque 2.62→0.86 N·m.
+  Ground contact is NOT in the control model, so `02_aerial_manipulator_free.py` gained a
+  `LAND_*` block: below `LAND_HOLD_Z`=1.0 m the arm reverts to the software PD hold **tracking
+  the stowed pose** (NOT the takeoff q_hold — that would swing the arm down at touchdown) and
+  the GMO freezes; after the plan ends the rotors ramp off over `LAND_DISARM_TIME`=2 s.
+  **The vehicle's resting body height is 0.305 m / CoM 0.290 m — MEASURED from a landing run,
+  not the 0.613 m spawn height** (the drone lifts off at t=0 and is never seen resting at
+  spawn; sizing `land_drop` off the spawn value left the reference 27 cm high and the rotor
+  ramp turned it into a drop). Planner
+  extensions this required, all in `compatible_trajectory.py`: (a) segmented prescribed task
+  (`_prescribed_task_showcase`, selected by the `T_fly_in` cfg key); (b) **min-snap (septic)
+  segment phases** — the compatible CoM's velocity depends on the prescribed JERK via the
+  thrust-direction map, so min-jerk phases (jerk jumps at joins) would make the solved CoM
+  velocity discontinuous at phase boundaries; (c) **piecewise polynomial p_c, one per phase,
+  with constrained fits** (value pinned + zero vel/acc at both segment ends) — a single
+  global polynomial fits move–hold–move poorly (4 mm defect, shifted q0), and unconstrained
+  per-segment fits RING in their endpoint derivatives, which the Picard loop amplifies
+  through p_c'' (deg 20 constrained even diverges — deg 12 is the sweet spot). The classic
+  single-segment mode keeps the plain unconstrained fit (flight-validated, ~40x lower
+  defect). Headless-validated (2026-08-06, 34 s run): pinned-phase EE held to 0.28 mm / yaw
+  err 1e-5 while the base flew an 11.7 cm path; per-phase EE error ≤0.7 mm; touchdown settles
+  3.9 cm at ≤0.34 m/s onto the resting height with final thrust back at hover (32.7 N ≈ mg)
+  and zero drift after; joints peak q1 30°, q2/q3 44° (limit 50°).
+  **`path_yaw_deg` (added 2026-08-06, default 90° for the showcase)** — decouples TRAVEL
+  direction from HEADING: `_eval_task` rotates only the prescribed EE *position* about z,
+  leaving R_e/b1_de/b1_d untouched. Needed because the controller's b1_d steers BODY +x but
+  this asset's mechanical front (arm side) is BODY +y, so the demo would otherwise fly
+  sideways-on. At 90° the vehicle travels along world +y — face-first — while the attitude
+  reference stays on +x (it never yaws to follow the path; the only yaw is the ±15° pinned
+  counterpoint). Valid because the canonical EE start is the origin and gravity is
+  z-invariant. **TEMPORARY**: the user plans to re-author the USDA so the front is body +x,
+  after which this goes back to 0.0. A USDA-only rotation is NOT sufficient — `make_params`
+  (both controllers), `RotorMixer.rotor_positions`, `M_r_d`, and the planner's z-x-z joint
+  recovery all encode the body frame and must change together, and the measured pickplace
+  `EE_SAG` would go stale. Re-validated headless at 90°: identical quality to the +x version
+  (pinned EE 0.28 mm, touchdown 3.9 cm settle, no crash).
+  **Spawn-at-home (2026-08-07, user request off the singularity-sweep Fig 3)**: the arm now
+  SPAWNS at the folded home pose (`02`'s `Q_SPAWN` = the plan's `q0` = [0,40°,46°,0], resolved
+  from the cached pure-numpy `get_plan` pre-Isaac; zeros for hover/circle, `q_hold` for
+  circle_bent) instead of hanging at q=0 — at q=0 the gripper pad reaches 0.282 m below the
+  base, only 2.3 cm off the floor at the 0.305 m resting height, and the old zero-then-slew
+  start swept it near the ground through the first ~1.5 s of climb; at home the lowest arm
+  point (the elbow) keeps 0.14 m clearance. The arm now holds home continuously
+  spawn→takeoff→fly-in, and the landing hold already tracked home through touchdown. The home
+  POSE itself is unchanged (the user's sketched link2-horizontal fold needs q2≈79° vs the +50°
+  stop; β=96 would raise the elbow only 1.5 cm while erasing the stop margin the measured
+  ~7.5° q2 handover overshoot needs — β=86 is the feasible optimum, σ_nd 0.529). Two
+  hard-won implementation facts: (a) authoring `PhysicsJointStateAPI` state attrs pre-reset
+  does NOT take effect in 02's startup sequence (the asset authors no state values; the
+  pre-reset `world.step()` calls in `_wait_for_prim` let PhysX capture its reset-snapshot at
+  q=0 and `world.reset()` restores that over the authored attrs — measured q(t0)=0), so the
+  pose is written post-`_art.initialize()` via `set_joint_positions`; (b) **PhysX roots the
+  AM_realign articulation tree at an ARM link**, so that teleport swings the BODY around the
+  arm — it came out rolled −(q2+q3) = −86° about x and 0.21 m displaced, the anchored
+  reference chased the sideways thrust axis and the vehicle tumbled at t=1 s. The write is
+  therefore followed by a RIGID RE-SEAT (measure body pose before/after, left-apply the world
+  correction to the articulation root via `set_world_pose`; exact no-op on a body-rooted
+  tree). The old `_zero_arm_joint_states` was deleted — the asset authors zero state anyway,
+  it was always a no-op. Headless-validated (34 s, 2026-08-07): arm within 2.0° of home for
+  the whole climb (vs the old 64° hanging→folded swing), q2 peak 47.2° at handover, pinned EE
+  0.43 mm mean / 1.17 mm max, touchdown at exactly 0.305 m, zero final drift, final q = home.
+  **TRAJECTORY CATALOGUE RENAMED + EXTENDED (2026-08-08, user request — supersedes every
+  older mode name above)**: `utils_planner` now names every free-flight mode `<shape>_<who>`
+  (`<shape>` hover/circle/figure8/poly; `<who>` `drone` = arm LOCKED at one pose, `whole` =
+  whole body moves). Renames: `hover`→`hover_drone`, `circle`→`circle_drone` (old
+  `circle_bent` became its optional `q_hold` config knob), `compatible_showcase`→`poly_whole`
+  (remark: showcase_end_effector_gimbal); the classic single-phase `compatible` entry was
+  DELETED from the catalogue (the offline planner in `compatible_trajectory.py` is untouched
+  — it is poly_whole's engine, and its classic-task branch still evaluates for legacy cfgs).
+  FOUR NEW modes, implemented in `trajectory_library.py` + new `utils_planner/arm_sweep.py`:
+  (a) `hover_whole` (remark: showcase_drone_gimbal) — the base HOVERS pinned at the takeoff
+  setpoint while a prescribed EE command sweeps the arm (fold β 80→50→80 two full min-snap
+  cycles + arm-yaw q1 ±25° in quadrature → the EE traces a closed loop; measured span 12 cm
+  lateral / 5 cm vertical / ±25° EE yaw). Dynamically EXACT, not an approximation: arm motion
+  is internal, so a fixed system-CoM reference plus a moving EE reference is fully compatible
+  — the visible "drone gimbal" is the base counter-moving a few cm about the held CoM.
+  (b) `circle_whole` / `figure8_whole` — the _drone base path plus a β 50..80° fold sweep
+  (q1 = 0 keeps b1_de exactly on the tangent); the EE reference is the FK-exact swept offset
+  (arm_sweep.py: central-difference Jacobian ε=1e-6 + directional second difference ε=1e-4
+  on the exact `_arm_kin` chain, anchored as d(t)=Rz(Δψ)(d0+Rz(ψ0)[u(q(t))−u(q0)]) so d(0)
+  EQUALS the measured anchor → zero initial EE error; ~0.4 ms/eval vs the 4 ms 250 Hz budget).
+  (c) `figure8_drone` — Gerono lemniscate x=A·sinθ, y=(B/2)·sin2θ (A=1.2 m, B=0.7, T=24 s),
+  θ = 2π·minjerk, same Faà-di-Bruno 4-derivative chain as the circle; tangent heading is
+  parameterized by θ (defined at the zero-speed rest endpoints), and |de/dθ| ≥ B > 0 so the
+  tangent never degenerates. Unlike the circle, the yaw RATE REVERSES at the crossing.
+  (d) `poly_drone` — the showcase waypoints flown by the BASE alone: min-snap septic segments
+  (new `minsnap()` with 4 derivatives — jerk-continuous joins, one order smoother than the
+  circle's minjerk) fly-in→hold→fly-out over the same target/land_wp/timings as poly_whole,
+  the same ±30° mid-phase platform-yaw full sine cycle, arm locked at the folded home
+  [0,40°,46°,0]; ends hovering at land_wp and LANDS (`LAND_ENABLE` is now poly_whole OR
+  poly_drone). The intended A/B: with the arm locked the yaw cycle SWINGS the EE around the
+  base — nothing can be pinned. New API `P.initial_arm_pose(traj_type, params=None)` replaces
+  02's `_takeoff_arm_pose()` for Q_SPAWN; EVERY mode with a non-zero arm pose exports
+  `tr["q_hold"]`. Consumers updated: `02_aerial_manipulator_free.py` (MODE default
+  "poly_whole"; waypoint markers + npz phase table know poly_drone),
+  `px4_direct_actuator_aerial_manipulator_gmo.py` (MODE="hover_drone"),
+  `utils/px4_gmo_gain_sweep.py`, controller_free's self-test, `Command.md`,
+  `Flight State Machine.md`. `controller_track`'s EMBEDDED catalogue (used by
+  01_track) keeps its OWN old names — it never imported utils_planner, so the rename does
+  not touch it. **SUPERSEDED 2026-08-09 for pick/push**: those two controllers were merged
+  away (see the CONTROLLER MERGE entry below) and their catalogues now live in
+  utils_planner alongside everything else. Offline-validated (system
+  python, 2026-08-08): FD-consistency of every derivative chain in all 8 modes (max interior
+  err ≤2e-4, FD-limited), poly_drone joins continuous through JERK, sweeps inside joint
+  limits (q2/q3 peak 40° vs 50 limit, q1 25 vs 35, peak rates ≤57°/s), headings unit-norm,
+  all endpoints at rest, controller_free self-test passes (hover thrust = mg exactly).
+  NOT yet flown in Isaac.
+
+**CONTROLLER MERGE (2026-08-09) — one law, per-scenario YAML.** `controller_free.py`,
+`controller_pick.py` and `controller_push.py` were three copies of the SAME law (measured
+ignoring comments: `make_params`, `dynamics`, `Gains` and the mixer byte-identical;
+`MatlabController` differed only in two features `free` had — `gmo_inhibit` and the
+saturation-consistent coupling — and the copies had silently drifted apart on
+`DLS_LAMBDA`, 0.3 vs `0#.3`). They are now:
+- `utils_controller/controller.py` — THE law, no gain defaults in code.
+- `utils_controller/control_params.py` + `robotic_arm/config/<scenario>.yaml` —
+  every gain and law knob (`free`, `pick`, `push`, `px4_direct`). A missing key is a
+  startup error, so a run's parameters always trace to one file. The free demo passes its
+  TRAJECTORY TYPE as a `variant`, so a mode can carry its own section.
+- the pickplace*/push_home MISSION PLANS moved to `utils_planner` (they are trajectories);
+  `build_traj` gained `land_in_plan` (default False — the demo owns the landing).
+- `controller_track.py` (posture-anchor baseline) and `controller_hover.py` (ROS2 demo)
+  are NOT part of this and stay as they are.
+Both moves were proven behaviour-preserving before deleting anything: old-vs-new law over
+4 operating points x hold on/off x 3 scenarios, and old-vs-new references over the full
+plans at 250 Hz — max difference exactly 0.0 in every case. The px4 rig's `TUNED_GAINS`
+dict became `config/px4_direct.yaml` (renamed `px4_direct_free.yaml` 2026-08-10). NOT yet
+flown in Isaac.
+
+**PX4 DIRECT-ACTUATOR RIG BECAME THE FREE-FLIGHT PARALLEL OF 02 (2026-08-10, user
+request).** `px4_direct_actuator_aerial_manipulator_gmo.py` →
+`application/robotic_arm/03_px4_direct_aerial_manipulator_free.py`; launcher →
+`scripts/start_px4_direct_aerial_manipulator_free.sh` (tmux session `am_free_px4`, optional
+2nd arg = trajectory, forwarded INLINE on the pane command line — an exported var does not
+reliably reach an already-running tmux server); gains →
+`config/px4_direct_free.yaml`. It is no longer a two-phase hover rig: it now runs 02's FULL
+flight machine — setpoint takeoff at the plan's own start point, hover-error-gated handover
+(no clock gating), tracked task, hover-gated setpoint landing, rotor ramp-off, auto-close —
+plus 02's Q_SPAWN arm-spawn + rigid re-seat + ground-seat, two-panel terminal frame (with an
+extra ROTOR cmd/real row), waypoint markers, flight-volume report and npz phase table. Kept
+PX4-specific: PX4-primary spawn, `LaggedQuadraticThrustCurve` (the MOTOR DELAY MODEL,
+lambda = 10.51), omega published to the external bridge, the armed+OFFBOARD engagement hold
+(phase 0), the 3.416 kg body override mirrored into the control model, and the
+`omega_cmd`/`omega_plant`/`omega_real` diagnostics. Dropped to match 02's scope: the
+EE-force disturbance block, the debug-draw arrows, `ARM_ALWAYS_PD_HOLD`.
+- **TUNING RESULT — the failure was the BODY ATTITUDE LOOP, not the arm gains** (20 headless
+  full-stack flights, `utils/px4_gmo_gain_sweep.py`, now `--traj`-aware and scoring per
+  PHASE off the npz phase table). Every crash was the same ~2.7 Hz mode, in all four joints
+  AND the body attitude at once, growing from the moment the law took the arm with a MOVING
+  reference. Cause: with `M_r_d = I0` the attitude loop's `wn = sqrt(k_R/0.065) = 11.1 rad/s`
+  at `k_R = 8` sits ON the rotor-lag pole (10.51), so the moment commanded to cancel the
+  arm's reaction arrives ~90 deg out of phase and pumps the mode. At `k_R = 8` poly_whole
+  crashed at `K_y` = 8, 24, 60, 120, 150 AND 300, and the single `K_y = 200` completion did
+  NOT repeat — that was a marginal system's run-to-run scatter (the stack is wall-clock PX4
+  + DDS, not deterministic), which is why every candidate is now repeat-tested. `k_R` 8→4,
+  `k_w` 2→1.5 (wn 7.85, same zeta) flew at `K_y` 8, 60 AND 200 — a 25x range — and repeats
+  3/3 within 3%. Because this is a PLANT property, k_R/k_w live in `default`, and they
+  **supersede the 2026-07-31 hover tuning's k_R = 8** — that was validated with the arm
+  hanging at q=0 and a climb-ramp takeoff; in this demo's configuration hover_drone at
+  k_R = 8 diverges ~4 s after the handover, while k_R = 4 holds 90 s at 0.5 mm CoM rms /
+  1.0 mm EE. `default` also gets `tau_max` 4.1→3.0 so the law and the demo clamp at the
+  same number. The `poly_whole` section then carries ONE deviation, a tracking choice:
+  K_y 200 (free.yaml's stiffness; 60 → 0.6 mm and 8 → 2.5 mm pinned EE also fly 3/3) with
+  **D_y 24**, which is NOT optional — free.yaml's D_y 6 crashes and 12 crashes, 24 and 48
+  fly. `K_o` stays 0.5 on all ten channels (raising the six BODY channels to 1.0 crashes:
+  the GMO books the rotor lag as a phantom disturbance). Measured on the shipped config,
+  4/4 complete flights: CoM rms 7 mm, EE rms 0.1 mm, pinned-phase EE 0.2 mm, |e_R| max
+  0.009, peak arm torque 1.4 of 3.0 N·m, touchdown at exactly 0.305 m, arm back at home.
+- **Trajectory de-aggression for this plant** via a new planner hook,
+  `utils_planner.traj_config` + `cfg_overrides=` on `build_traj`/`initial_arm_pose` (unknown
+  key = error, except documented-optional `q_hold`): the demo's `TRAJ_CFG_OVERRIDE` holds
+  `pin_mode "combo"→"yaw"`, phases 6→9 s (peak |v| 0.75→0.50 m/s, |a| 0.48→0.21 m/s²) and
+  `beta_home` 86→80 deg. The catalogue is UNTOUCHED, so 02 keeps its validated numbers.
+  beta_home is a JOINT-STOP fix: at 86 the law's ~3.5 deg overshoot folding back to home
+  put q3 at 49.4-49.7 deg against the +50 hard stop on every flight; 80 leaves ~4 deg.
+- **CATALOGUE DEFECT FOUND, NOT FIXED (02 flies it today)**: `TRAJ_CONFIG["poly_whole"]`'s
+  `pin_mode: combo` + `pin_phase_deg: 90` starts the pinned fold at `beta_work + 30` while
+  the fly-in ENDS at `beta_work`, so the plan is DISCONTINUOUS at BOTH pinned joins — a
+  measured 61 mm step in `x_cd` and 16 deg in the recovered arm pose, twice per flight. The
+  EE reference is continuous across it, which is why an EE-error metric never showed it.
+  `pin_mode: yaw` measures 0.0 mm / 0.0 deg. Fixing the catalogue needs its own 02 flight.
+- **A ground-seated vehicle needs a FOLDED arm.** `hover_drone` has no `q_hold`, so the arm
+  hangs at q = 0, which reaches 0.282 m below the base — below the legs at the 0.305 m
+  resting height. Seated, the vehicle rests on its gripper and tips over during the
+  pre-engagement wait (measured: rolled 74 deg, 0.57 m off, before PX4 armed). The old
+  midair-spawn version never met this. Fixed by giving hover_drone the same folded home
+  through `TRAJ_CFG_OVERRIDE`; the demo also WARNS at startup when the spawn fold
+  `beta = q2+q3 < 40 deg`.
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
-below — `x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
+below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):
 - `controller.py:774` — ROS2 node name is hardcoded (`"matlab_aerial_manipulator_controller"`),
   not parameterized by vehicle/uav id. Fine for today's single-vehicle demo; will collide if two
