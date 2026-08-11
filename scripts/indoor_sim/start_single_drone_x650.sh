@@ -46,6 +46,13 @@ if [[ ! "$EV_DELAY_MS" =~ ^[0-9]+$ ]] || (( 10#$EV_DELAY_MS > 300 )); then
 fi
 EV_DELAY_MS="$((10#$EV_DELAY_MS))"
 GROUNDTRUTH_LOG="/tmp/indoor_x650_groundtruth.log"
+# Baked into the Isaac pane's command line below rather than left to inheritance. A new
+# tmux session inherits the environment of the already-running tmux SERVER, not of this
+# shell, so an `export` here (e.g. the one start_x650_direct_actuator_sitl.sh does) is
+# silently discarded whenever a server is already up -- and lockstep stays enabled, which
+# deadlocks the HIL link the moment the external controller enters DIRECT.
+# Default 1 keeps stock lockstep behaviour for the baseline flows that source this script.
+LOCKSTEP="${PEGASUS_PX4_LOCKSTEP:-1}"
 
 command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
 command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
@@ -102,7 +109,7 @@ echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
 echo 'Launching indoor X650 with measured motor lag (lambda=10.51 1/s)...'
 echo 'Asset: $X650_ASSET'
-\"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PEGASUS_PX4_LOCKSTEP=$LOCKSTEP \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null || true

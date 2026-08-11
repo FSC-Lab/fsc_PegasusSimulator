@@ -16,7 +16,7 @@ from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 # They add the body_path / rotor_paths / rotor_joint_names / usd_prim_path constructor
 # kwargs that spawn_rotorcraft_with_mavlink passes below. The stock multirotor.py/vehicle.py
 # base classes are left untouched (they lack these kwargs and would raise TypeError).
-from fsc_aerial_manipulation.robotic_arm.x650_multirotor import MultirotorMod as Multirotor, MultirotorConfig
+from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_multirotor import MultirotorMod as Multirotor, MultirotorConfig
 from pegasus.simulator.logic.thrusters import QuadraticThrustCurve
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PX4 direct-actuator ROTOR BRIDGE for the aerial-manipulator GMO rig.
 
-Companion to application/robotic_arm/px4_direct_actuator_aerial_manipulator_gmo.py.
+Companion to application/robotic_arm/03_px4_direct_aerial_manipulator_free.py.
 Runs under SYSTEM python (3.10) with the px4_msgs overlay sourced — px4_msgs'
 compiled typesupport must never be imported inside Isaac's own python.
 
