@@ -53,7 +53,7 @@ RESULT (verified by this script's own check pass):
 DOWNSTREAM (unchanged consumers keep using AM_realign.usda): the whole-body
 demos (01/02/03), make_params, RotorMixer, the planner's z-x-z recovery and
 the measured EE_SAG all encode the OLD frame and are NOT migrated by this
-script. Only 04_px4_direct_am_t650_hold.py uses AM_xfwd.usda, with a one-line
+script. Only 04_px4_direct_t650_aerial_manipulator_hold.py uses AM_xfwd.usda, with a one-line
 frame adapter for its gravity comp (R0_model = R0_actual @ Rz(-90)).
 """
 

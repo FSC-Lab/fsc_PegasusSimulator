@@ -12,7 +12,7 @@ already ships the right mechanism (`ratectl_trim_*`), and the correct value is
 derivable in closed form. The fix is one number in one config file:
 
 ```yaml
-ratectl_trim_y: -0.040        # params_single_drone_direct_actuation_am_t650.yaml
+ratectl_trim_y: -0.040        # params_single_drone_direct_actuation_t650_aerial_manipulator.yaml
 ```
 
 Measured effect on the reported symptom — X peak excursion at DIRECT engagement
@@ -195,7 +195,7 @@ Both were learned the hard way while producing the table above.
 The rig now has **two** configs, one per control path, and the arm's disturbance
 splits into two parts that are **not** equally reachable.
 
-| Arm effect | DIRECT (`params_single_drone_direct_actuation_am_t650.yaml`) | Baseline / SAFETY (`params_single_vehicle_baseline_am_t650.yaml`) |
+| Arm effect | DIRECT (`params_single_drone_direct_actuation_t650_aerial_manipulator.yaml`) | Baseline / SAFETY (`params_single_vehicle_baseline_t650_aerial_manipulator.yaml`) |
 |---|---|---|
 | **Force** — weight 0.71 kg → 7.0 N | `vehicle_mass: 3.746170` | **same — the deliverable here** |
 | Hover point | `thrust_scaling` / `idle_thrust` re-derived | same |
@@ -325,6 +325,15 @@ The user asked for the real thing: the arm is a *known* wrench, so compensate it
 exactly instead of seeding an integrator. This is the **first control-law change**
 of the whole effort — everything before this section was config-only.
 
+> **Restructured the same evening (user request):** the shared
+> `single_drone_direct_actuation_client.{hpp,cpp}` were reverted byte-identical
+> to upstream, and everything this section describes now lives in a deliberate
+> parallel fork, `fsc_autopilot_ros2_node/single_aerial_manipulator_direct_actuation/`
+> (`autopilot_aerial_manipulator_direct_actuation_node`,
+> `single_aerial_manipulator_direct_actuation_launch.py`). Same node name,
+> topics and services as the parent — only the executable and source tree
+> differ. The physics, values and flight results below are unchanged.
+
 **Form.** The mixer zeroes torque about the geometric rotor centre, so the true
 CoM sees `τ = −r_com × (T·ê_z)`, proportional to thrust. In the allocator's
 normalized FLU units, with the affine motor map `ω = a·u + b`, the cancelling
@@ -435,4 +444,4 @@ land/disarm/re-arm between trials.
 
 *Written 2026-08-10 alongside the AM-T650 integration. Config lives in
 `fsc_autopilot_ros2` (branch `dev_CCM`),
-`config/params_single_drone_direct_actuation_am_t650.yaml`.*
+`config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml`.*

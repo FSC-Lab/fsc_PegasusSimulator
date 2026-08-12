@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-04_px4_direct_am_t650_hold.py
+04_px4_direct_t650_aerial_manipulator_hold.py
 
 Author: Shiqi Gao (shiqi.gao907@gmail.com)
 
@@ -13,7 +13,7 @@ PX4-PRIMARY quadrotor with the **T650 motor and drone parameters** (MN4010 +
 this process does exactly ONE thing in-process — hold the arm at its home pose
 with joint torque commands.
 
-    fsc_autopilot_ros2 node (T650 DIRECT law, params_..._am_t650.yaml)
+    fsc_autopilot_ros2 node (T650 DIRECT law, params_..._t650_aerial_manipulator.yaml)
         → fmu/in/actuator_motors → PX4 gate → HIL_ACTUATOR_CONTROLS
         → PX4MavlinkBackend (PRIMARY, T650 map: omega = u*665.99 + 64.06)
         → LaggedQuadraticThrustCurve (T650 k, c, lambda)  → AM_realign rotors
@@ -41,7 +41,7 @@ inertia on the LIVE stage (the 255 MB .usda is never touched), giving
           = 3.746172 kg      → hover command ≈ 0.569, static T/W 2.71
 
 The paired controller config (fsc_autopilot_ros2
-config/params_single_drone_direct_actuation_am_t650.yaml) carries this exact
+config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml) carries this exact
 mass and the tangent-line thrust map re-derived about this hover point — if
 the TOTAL printed by the mass override below ever disagrees with that yaml's
 vehicle_mass, fix the yaml.
@@ -53,9 +53,9 @@ the hold runs unconditionally every physics step — on the ground, in SAFETY
 hover, and in DIRECT. Gravity comp uses the shared control model
 (utils_controller.controller: make_params + dynamics), NOT the whole-body law.
 
-Run with:  scripts/indoor_sim/start_am_t650_direct_actuator_sitl.sh <config>
+Run with:  scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh <config>
 (pairs with fsc_autopilot_ros2 scripts/isaacsim/
-start_direct_actuation_am_t650_stack.sh, which must be started FIRST — it
+start_direct_actuation_t650_aerial_manipulator_stack.sh, which must be started FIRST — it
 owns MicroXRCEAgent, and the SITL launcher refuses to run without it).
 """
 
@@ -473,7 +473,7 @@ class AmT650HoldSim:
 
         Records self._body_dm / self._body_dI so the control model (used only
         for the arm gravity comp here) can be mirrored, and PRINTS THE TOTAL —
-        the number config/params_single_drone_direct_actuation_am_t650.yaml's
+        the number config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml's
         vehicle_mass must equal.
         """
         self._body_dm = 0.0
@@ -516,7 +516,7 @@ class AmT650HoldSim:
               f"other bodies {m_rest:.6f} kg; "
               f"TOTAL {m_old + m_rest:.6f} -> {T650_BODY_MASS + m_rest:.6f} kg "
               f"(weight {(T650_BODY_MASS + m_rest) * 9.81:.2f} N). "
-              f"vehicle_mass in params_..._am_t650.yaml MUST equal this total. "
+              f"vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. "
               f"The .usda is untouched.", flush=True)
 
     def _setup_gripper_drive(self):

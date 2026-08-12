@@ -12,18 +12,18 @@ set -euo pipefail
 # The external controller owns MicroXRCEAgent and all OFFBOARD topics. This
 # launcher only configures and starts PX4 SITL plus the simulated plant.
 #
-# PAIR WITH fsc_autopilot_ros2/scripts/isaacsim/start_baseline_am_t650_stack_fused.sh
+# PAIR WITH fsc_autopilot_ros2/scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh
 # (started FIRST -- it owns the agent).
 #
 # THIS IS THE BASELINE (SAFETY) COUNTERPART of
-# start_am_t650_direct_actuator_sitl.sh. The ONLY functional difference is
+# start_t650_aerial_manipulator_direct_actuator_sitl.sh. The ONLY functional difference is
 # LOCKSTEP: this script leaves it ON (the plant default), because lockstep exists
 # for exactly this PX4-owns-the-inner-loops path. The direct launcher disables it,
 # which is required there and wrong here -- the same split the bare T650 makes
 # between start_single_drone_t650.sh and start_t650_direct_actuator_sitl.sh.
 #
 # Same plant in every other respect:
-#   * Isaac entrypoint application/robotic_arm/04_px4_direct_am_t650_hold.py
+#   * Isaac entrypoint application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py
 #     (its name says "direct" for historical reasons; it is control-agnostic --
 #     it only spawns the plant and holds the arm, and reads PEGASUS_PX4_LOCKSTEP).
 #   * TOTAL flying mass 3.746 kg (T650 body 2.95 + AM rotors 0.1595 + arm 0.6366)
@@ -31,7 +31,7 @@ set -euo pipefail
 #   * Shares the PX4 parameter profile rootfs_fsc_indoor_am_t650 with the direct
 #     launcher: same vehicle, same airframe params, and PX4 `param save`s into it.
 #   * The paired stack MUST run the AM BASELINE yaml
-#     (params_single_vehicle_baseline_am_t650.yaml): its vehicle_mass carries the
+#     (params_single_vehicle_baseline_t650_aerial_manipulator.yaml): its vehicle_mass carries the
 #     arm's weight as feedforward. The bare-T650 baseline yaml declares 2.9 kg
 #     against this 3.746 kg plant -- a 29% error the UDE would silently absorb.
 
@@ -66,14 +66,14 @@ load_machine_config "$0" "$CFG_NAME"
 BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
-PARAM_DELAY="${AM_T650_BASELINE_PARAM_DELAY:-8}"
+PARAM_DELAY="${T650_AERIAL_MANIPULATOR_BASELINE_PARAM_DELAY:-8}"
 
 # Variant hooks consumed by the base launcher (same mechanism as
 # start_single_drone_t650.sh). The PX4 profile is a directory NAME the base
 # launcher prefixes with the SITL build dir; the AM gets its own because PX4
 # `param save`s into it — sharing the bare-T650 profile would carry one
 # plant's saved tune into the other.
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/04_px4_direct_am_t650_hold.py"
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py"
 export INDOOR_SIM_VEHICLE_LABEL="AM-T650"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 
@@ -84,7 +84,7 @@ export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
   exit 1
 }
 if [[ ! "$PARAM_DELAY" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: AM_T650_BASELINE_PARAM_DELAY must be a non-negative integer." >&2
+  echo "ERROR: T650_AERIAL_MANIPULATOR_BASELINE_PARAM_DELAY must be a non-negative integer." >&2
   exit 2
 fi
 

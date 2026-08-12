@@ -12,18 +12,18 @@ set -euo pipefail
 # The external controller owns MicroXRCEAgent and all OFFBOARD/actuator topics.
 # This launcher only configures and starts PX4 SITL plus the simulated plant.
 #
-# PAIR WITH fsc_autopilot_ros2/scripts/isaacsim/start_direct_actuation_am_t650_stack.sh
+# PAIR WITH fsc_autopilot_ros2/scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh
 # (started FIRST — it owns the agent). Identical orchestration to
 # start_t650_direct_actuator_sitl.sh; what differs is the plant:
 #
-#   * Isaac entrypoint: application/robotic_arm/04_px4_direct_am_t650_hold.py
+#   * Isaac entrypoint: application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py
 #     (AM_realign.usda, X650 frame + 4-DOF arm) instead of the bare
 #     05_px4_single_drone_t650.py.
 #   * TOTAL flying mass 3.746 kg (T650 body 2.95 + AM rotors 0.1595 + arm
 #     0.6366) — expected hover command ~0.569, not the bare T650's ~0.503.
 #     Static thrust-to-weight 2.71.
 #   * The paired stack MUST run the AM yaml
-#     (params_single_drone_direct_actuation_am_t650.yaml): its vehicle_mass /
+#     (params_single_drone_direct_actuation_t650_aerial_manipulator.yaml): its vehicle_mass /
 #     thrust map carry this heavier hover point. Flying the bare-T650 yaml
 #     against this plant leaves the position loop's feedforward ~7 N short.
 
@@ -58,14 +58,14 @@ load_machine_config "$0" "$CFG_NAME"
 BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
-PARAM_DELAY="${AM_T650_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
+PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
 
 # Variant hooks consumed by the base launcher (same mechanism as
 # start_single_drone_t650.sh). The PX4 profile is a directory NAME the base
 # launcher prefixes with the SITL build dir; the AM gets its own because PX4
 # `param save`s into it — sharing the bare-T650 profile would carry one
 # plant's saved tune into the other.
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/04_px4_direct_am_t650_hold.py"
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py"
 export INDOOR_SIM_VEHICLE_LABEL="AM-T650"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 
@@ -76,7 +76,7 @@ export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
   exit 1
 }
 if [[ ! "$PARAM_DELAY" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: AM_T650_DIRECT_ACTUATOR_PARAM_DELAY must be a non-negative integer." >&2
+  echo "ERROR: T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY must be a non-negative integer." >&2
   exit 2
 fi
 

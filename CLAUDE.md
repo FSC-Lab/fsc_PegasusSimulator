@@ -317,7 +317,7 @@ EE-force disturbance block, the debug-draw arrows, `ARM_ALWAYS_PD_HOLD`.
 (2026-08-10, user request — the safe-fallback integration step for the whole-body
 controller).** T650 is the airframe the real AM will be built on, so the AM plant now has a
 variant carrying the T650 parameters, flown by the external quadrotor-only DIRECT law while
-the arm is parked. `application/robotic_arm/04_px4_direct_am_t650_hold.py` spawns
+the arm is parked. `application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py` spawns
 `AM_realign.usda` PX4-primary (inline spawn, 03's pattern) with `t650_params`' MN4010
 calibration (ω 64.06..730.05, k/c incl. both fit factors, λ = 10.0265 via
 `LaggedQuadraticThrustCurve`) and re-authors `/body` to the T650 2.95 kg + T650 inertia on
@@ -330,12 +330,12 @@ running unconditionally (ground/SAFETY/DIRECT). Keeps 02/03's spawn-at-home + ri
 the whole-body law, mixer, bridge, flight machine, npz. Reads `PEGASUS_PX4_LOCKSTEP`
 (indoor-launcher convention; 03 hardcodes False instead) and does NOT start paused (the
 mocap emulator needs `/uav_0/state/*` flowing). Launcher
-`scripts/indoor_sim/start_am_t650_direct_actuator_sitl.sh` = the T650 DIRECT wrapper pattern
+`scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh` = the T650 DIRECT wrapper pattern
 (agent pre-check, lockstep export + tmux-server push, offboard param script) but setting the
 `INDOOR_SIM_*` hooks itself (04's script, label AM-T650, own PX4 profile
 `rootfs_fsc_indoor_am_t650`) and exec'ing the x650 base launcher directly. Pairs with
-fsc_autopilot_ros2's `start_direct_actuation_am_t650_stack.sh` +
-`config/params_single_drone_direct_actuation_am_t650.yaml` (dev_CCM): a copy of the T650
+fsc_autopilot_ros2's `start_direct_actuation_t650_aerial_manipulator_stack.sh` +
+`config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml` (dev_CCM): a copy of the T650
 tune whose ONLY value changes are the four `vehicle_*` numbers — mass 3.746172,
 thrust_scaling/idle_thrust RE-DERIVED about the heavier hover point (0.036206/0.236457,
 hover ≈ 0.569 vs bare 0.503; the +23% mass is far off the tangent-fit anchor, so copying
@@ -381,7 +381,7 @@ nose-down pitch moment. `alloc_rotor*_px/py` are geometric, and per rate_control
 rate integrator can absorb a torque bias (attitude loop is pure P; the UDE compensates force) —
 so every engagement re-learned it while the vehicle tilted. dy = −0.1 mm is why ROLL/Y was clean:
 the symptom's asymmetry is the arm's asymmetry. Fixed CONFIG-ONLY with the purpose-built
-`ratectl_trim_y: -0.040` in `params_..._am_t650.yaml` (dev_CCM) — **no control-law change**.
+`ratectl_trim_y: -0.040` in `params_..._t650_aerial_manipulator.yaml` (dev_CCM) — **no control-law change**.
 Value COMPUTED, not tuned: the normalized FLU pitch torque whose allocated commands give zero
 physical moment about the true CoM at hover collective (normalized pitch 1.0 = 11.12 N·m; uses
 44% of i_max), predicting 59.7/54.1/59.7/54.1% against the flown 59.7/54.1/59.6/54.0%.
@@ -399,11 +399,11 @@ Still open: SAFETY mode has the same bias and PX4's own integrator re-learns it 
 this config); a true q-dependent feedforward belongs to the whole-body controller, not this rig.
 **BOTH CONTROL PATHS NOW EXIST, AND THE SLOW-STEP DIAGNOSIS (2026-08-11, user request).** The AM
 rig gained a BASELINE (SAFETY-only) counterpart so the arm's compensation exists on both paths:
-new `scripts/indoor_sim/start_am_t650_baseline_sitl.sh` (the direct launcher minus the lockstep
+new `scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh` (the direct launcher minus the lockstep
 disable — baseline WANTS lockstep, and it now asserts `PEGASUS_PX4_LOCKSTEP=1` + clears the tmux
 global so a stale 0 from a DIRECT run cannot leak), pairing with fsc_autopilot_ros2's
-`start_baseline_am_t650_stack_fused.sh` + `config/params_single_vehicle_baseline_am_t650.yaml`
-(dev_CCM). Both Isaac launchers share `04_px4_direct_am_t650_hold.py` (control-agnostic — it only
+`start_baseline_t650_aerial_manipulator_stack_fused.sh` + `config/params_single_vehicle_baseline_t650_aerial_manipulator.yaml`
+(dev_CCM). Both Isaac launchers share `04_px4_direct_t650_aerial_manipulator_hold.py` (control-agnostic — it only
 spawns the plant and holds the arm) and the PX4 profile `rootfs_fsc_indoor_am_t650`.
 **The arm's FORCE is fed forward on both paths via `vehicle_mass` 3.746170**, read independently by
 robust_controller's gravity term and the UDE; the one-number check is
@@ -451,6 +451,17 @@ zeroes `ratectl_trim_y`. Flown: settled I_y **-0.0394 → +0.0005** (integrator 
 step metrics unchanged-or-better. Exact at every thrust level (climbs/z-steps no longer dump
 0.060·Δc onto the integrator); q-dependent dx(q) is the whole-body controller's opening move.
 Write-up: `Feedforward Compensation for Home-Pose Arm.md` §8.
+**RESTRUCTURED same evening (user request): the feedforward no longer touches the shared
+node.** fsc_autopilot_ros2's `single_drone_direct_actuation_client.{hpp,cpp}` were reverted
+byte-identical to upstream, and the feedforward now lives in a deliberate PARALLEL FORK,
+`fsc_autopilot_ros2_node/single_aerial_manipulator_direct_actuation/`
+(`autopilot_aerial_manipulator_direct_actuation_node`, launched by
+`single_aerial_manipulator_direct_actuation_launch.py`) — same node name/topics/services as
+the parent, so this repo's side cannot tell them apart; bug fixes do NOT auto-propagate
+between the two clients. In the same pass every `am_t650` file was renamed to
+`t650_aerial_manipulator` in both repos (launchers, yamls, the 04 hold script) — EXCEPT the
+PX4 profile directory `rootfs_fsc_indoor_am_t650`, kept on purpose: renaming it would
+re-clone a fresh 39 GB rootfs and orphan the saved AM params.
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`

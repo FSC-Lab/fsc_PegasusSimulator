@@ -950,7 +950,7 @@ The same two-repo workflow with the **aerial manipulator as the plant**: the
 **`AM_xfwd.usda`** X650+arm asset spawned PX4-primary with the **T650 motor
 calibration** (MN4010, λ = 10.0265) and **T650 body mass** (2.95 kg re-authored
 onto `/body` at spawn; total flying mass **3.746 kg**), while the Isaac process
-(`application/robotic_arm/04_px4_direct_am_t650_hold.py`) does exactly one thing
+(`application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py`) does exactly one thing
 in-process — PD + gravity-comp holds the arm at its home pose
 **[0, 40°, 40°, 0]** (KP 3.0 / KD 0.25 / clamp 3.0 N·m, the flight-validated
 02/03 hold, running unconditionally: ground, SAFETY and DIRECT). No whole-body
@@ -999,14 +999,14 @@ must start **first**. Detach with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D.
 
 ```bash
 cd ~/ros2_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_direct_actuation_am_t650_stack.sh shiqi_machine uav_0
+./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 ```
 
 **Step 2 — Pegasus / PX4 SITL** (terminal 2). Opens its own window.
 
 ```bash
 cd /home/shiqi/fsc_PegasusSimulator
-./scripts/indoor_sim/start_am_t650_direct_actuator_sitl.sh shiqi_machine
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh shiqi_machine
 ```
 
 For a **headless** run (what the validation used), push the flag onto the tmux
@@ -1021,7 +1021,7 @@ tmux setenv -gu PEGASUS_HEADLESS      # after the run
 **Step 3 — verify before arming.** All five must pass:
 
 ```bash
-tmux list-panes -t fsc_direct_actuation_am_t650_stack:stack -F '#{pane_index} #{pane_title}'  # 6 panes
+tmux list-panes -t fsc_direct_actuation_t650_aerial_manipulator_stack:stack -F '#{pane_index} #{pane_title}'  # 6 panes
 pgrep -x MicroXRCEAgent && ss -lunp | grep 8888                                               # agent listening
 source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
 ros2 topic hz /uav_0/mocap                                     # ~250 Hz
@@ -1053,7 +1053,7 @@ from geometry_msgs.msg import PoseStamped
 from fsc_autopilot_ros2_msgs.msg import PositionControllerReference
 
 Z_HOVER, DURATION = 1.20, 300.0            # [m], [s]
-rclpy.init(); n = Node("am_t650_ref")
+rclpy.init(); n = Node("t650_aerial_manipulator_ref")
 pose = {}
 n.create_subscription(PoseStamped, "/uav_0/state/pose",
                       lambda m: pose.update(p=(m.pose.position.x, m.pose.position.y)),
@@ -1107,7 +1107,7 @@ from geometry_msgs.msg import PoseStamped
 from fsc_autopilot_ros2_msgs.msg import PositionControllerReference
 
 Z_START, Z_GROUND, RATE = 1.20, 0.31, 0.20     # [m], [m], [m/s]
-rclpy.init(); n = Node("am_t650_land")
+rclpy.init(); n = Node("t650_aerial_manipulator_land")
 z = {}
 n.create_subscription(PoseStamped, "/uav_0/state/pose",
                       lambda m: z.update(z=m.pose.position.z), qos_profile_sensor_data)
@@ -1139,9 +1139,9 @@ tmux setenv -gu PEGASUS_HEADLESS ; tmux setenv -gu PEGASUS_PX4_LOCKSTEP
 ```
 
 `stop_isaacsim_stack.sh` picks up the new session
-(`fsc_direct_actuation_am_t650_stack`) automatically — it reads `SESSION=` out
+(`fsc_direct_actuation_t650_aerial_manipulator_stack`) automatically — it reads `SESSION=` out
 of its sibling scripts. The controller runs
-`config/params_single_drone_direct_actuation_am_t650.yaml`, a copy of the T650
+`config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml`, a copy of the T650
 tune whose only value changes are the four `vehicle_*` plant numbers.
 
 What to watch, beyond §7.5's list (which still applies):
@@ -1181,21 +1181,21 @@ want the AM airborne without DIRECT in the loop.
 
 1. **Lockstep is ON.** The baseline path wants it (PX4 owns the inner loops);
    the DIRECT path must disable it. That is the entire reason there are two
-   Pegasus launchers. `start_am_t650_baseline_sitl.sh` asserts
+   Pegasus launchers. `start_t650_aerial_manipulator_baseline_sitl.sh` asserts
    `PEGASUS_PX4_LOCKSTEP=1` and clears the tmux-server global, so a leftover `0`
    from a previous DIRECT run cannot leak in.
 2. **Different config, different node name.** The baseline node is
    `/uav_0/autopilot_sv_baseline_node` (not `/uav_0/fsc_autopilot_ros2`), reading
-   `params_single_vehicle_baseline_am_t650.yaml`.
+   `params_single_vehicle_baseline_t650_aerial_manipulator.yaml`.
 
 ```bash
 # terminal 1 — ROS 2 baseline stack (owns the agent; detach with Ctrl-b d)
 cd ~/ros2_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_baseline_am_t650_stack_fused.sh shiqi_machine uav_0
+./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
 
 # terminal 2 — Pegasus / PX4 SITL, lockstep ON
 cd /home/shiqi/fsc_PegasusSimulator
-./scripts/indoor_sim/start_am_t650_baseline_sitl.sh shiqi_machine
+./scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh shiqi_machine
 ```
 
 Verify before arming — note the **baseline** node name:
@@ -1208,7 +1208,7 @@ ros2 topic hz /uav_0/mocap                                          # ~250 Hz
 
 Then OFFBOARD → arm → stream a reference exactly as §7.7.1 steps 4–5, and land
 with step 7. **Skip step 6** — there is no DIRECT mode here. Shutdown is §7.7.1
-step 8 with the session name `fsc_baseline_am_t650_stack` (which
+step 8 with the session name `fsc_baseline_t650_aerial_manipulator_stack` (which
 `stop_isaacsim_stack.sh` picks up automatically).
 
 **The one number that proves the arm's feedforward is working:**
