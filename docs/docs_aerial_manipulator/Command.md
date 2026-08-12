@@ -983,224 +983,89 @@ contact; standing pitch trim from the forward arm CoM measured at ~37 rad/s
 front-over-rear and absorbed cleanly. A rendered confirmation run is still
 worth doing (headless timing is the gentler regime).
 
-#### 7.7.1 Full run sequence (exactly the validated 2026-08-10 flight)
+#### 7.7.1 Run sequence — copy-paste, per machine
 
 > **Script names changed 2026-08-11** (`am_t650` → `t650_aerial_manipulator`).
 > The old `start_direct_actuation_am_t650_stack.sh` and
 > `start_am_t650_direct_actuator_sitl.sh` no longer exist — if a saved command
 > fails with "No such file or directory", this is why.
 
-**Step A — pick your machine.** Paste ONE of these into every terminal you use
-for the run; steps 0–8 below are then identical on both machines.
-
-```bash
-# ── fsc_lab_machine (the lab desktop, user fsc-jupiter) ──
-export MACHINE=fsc_lab_machine
-export AUTOPILOT_WS=~/Workspaces/fsc_autopilot_ws
-export PEGASUS=~/Source/fsc_PegasusSimulator
-```
-
-```bash
-# ── shiqi_machine (shiqi-desktop) ──
-export MACHINE=shiqi_machine
-export AUTOPILOT_WS=~/ros2_ws
-export PEGASUS=~/fsc_PegasusSimulator
-```
-
-The only per-machine differences are those three values: the machine-config
-argument the launchers take, and where the two repos live. Everything else —
-the tmux session names, the ROS 2 topics, the service calls, the reference
-streamers — is identical.
-
-**The four commands you actually type.** Steps 0–2 and 4; the rest of this
-section is the detail behind them.
+**fsc_lab_machine** (the lab desktop, user `fsc-jupiter`):
 
 ```bash
 # 0. clean slate            (any terminal)
-cd $AUTOPILOT_WS/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
-$PEGASUS/scripts/kill_stale_sim_processes.sh -y
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
 # 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
-cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh $MACHINE uav_0
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
 
 # 2. Pegasus / PX4 SITL     (terminal 2)
-cd $PEGASUS
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh $MACHINE
+cd ~/Source/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh fsc_lab_machine
 
-# 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
 sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
----
-
-**Step 0 — clean slate.** Always: a stale estimator or agent silently corrupts
-the run.
+**shiqi_machine** (shiqi-desktop):
 
 ```bash
-cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
-./scripts/isaacsim/stop_isaacsim_stack.sh
-$PEGASUS/scripts/kill_stale_sim_processes.sh -y
-```
+# 0. clean slate            (any terminal)
+cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
-**Step 1 — ROS 2 stack** (terminal 1, maximized). Owns `MicroXRCEAgent`, so it
-must start **first**. Detach with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D.
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
-```bash
-cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh $MACHINE uav_0
-```
+# 2. Pegasus / PX4 SITL     (terminal 2)
+cd ~/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh shiqi_machine
 
-Since 2026-08-11 this launches the **aerial-manipulator fork** of the
-direct-actuation node (`autopilot_aerial_manipulator_direct_actuation_node`, via
-`single_aerial_manipulator_direct_actuation_launch.py`) rather than the shared
-drone node — that fork is what carries the arm torque feedforward. The node
-name, topics and services are unchanged, so nothing else in this section
-differs.
-
-**Step 2 — Pegasus / PX4 SITL** (terminal 2). Opens its own window.
-
-```bash
-cd $PEGASUS
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh $MACHINE
-```
-
-For a **headless** run (what the validation used), push the flag onto the tmux
-server *before* step 2, and unset it afterwards — a plain `export` is discarded
-because the session inherits the already-running server's environment:
-
-```bash
-tmux setenv -g PEGASUS_HEADLESS 1     # before step 2
-tmux setenv -gu PEGASUS_HEADLESS      # after the run
-```
-
-**Step 3 — verify before arming.** All five must pass:
-
-```bash
-tmux list-panes -t fsc_direct_actuation_t650_aerial_manipulator_stack:stack -F '#{pane_index} #{pane_title}'  # 6 panes
-pgrep -x MicroXRCEAgent && ss -lunp | grep 8888                                               # agent listening
-source /opt/ros/humble/setup.bash && source $AUTOPILOT_WS/install/setup.bash
-ros2 topic hz /uav_0/mocap                                     # ~250 Hz
-ros2 param get /uav_0/fsc_autopilot_ros2 vehicle_mass          # 3.746170
-tmux capture-pane -p -J -t px4_isaac:0.1 | grep "MASS OVERRIDE" # TOTAL must equal that
-```
-
-**Step 4 — OFFBOARD, then arm.** Order is mandatory (arming first is denied,
-`arming_check_error_flags = 16777216`).
-
-```bash
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
 sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
-**Step 5 — takeoff by streaming a position reference.** After arming, SAFETY
-holds the *ground* position until a reference arrives; nothing lifts off on its
-own. Read the current position, then stream the hover setpoint at ≥20 Hz.
-Normally the ground-station GUI does this — here it is standalone. Run it in the
-**background** so the same terminal can issue the mode switches:
+Detach a stack terminal with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is
+also the shutdown: run it again to tear everything down.
+
+**In flight** (machine-independent). Takeoff is driven from the ground station:
+after arming, SAFETY holds the *ground* position until a position reference
+arrives, and nothing lifts off on its own. Once the hover is settled:
 
 ```bash
-python3 - <<'EOF' &
-import time, rclpy
-from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-from geometry_msgs.msg import PoseStamped
-from fsc_autopilot_ros2_msgs.msg import PositionControllerReference
-
-Z_HOVER, DURATION = 1.20, 300.0            # [m], [s]
-rclpy.init(); n = Node("t650_aerial_manipulator_ref")
-pose = {}
-n.create_subscription(PoseStamped, "/uav_0/state/pose",
-                      lambda m: pose.update(p=(m.pose.position.x, m.pose.position.y)),
-                      qos_profile_sensor_data)          # sensor QoS: pose is BEST_EFFORT
-pub = n.create_publisher(PositionControllerReference,
-                         "/uav_0/fsc_autopilot_ros2/position_controller/reference", 10)
-t0 = time.time()
-while "p" not in pose and time.time() - t0 < 10:
-    rclpy.spin_once(n, timeout_sec=0.1)
-x, y = pose["p"]; print(f"holding ({x:.3f}, {y:.3f}, {Z_HOVER})", flush=True)
-t0 = time.time()
-while time.time() - t0 < DURATION:
-    m = PositionControllerReference()
-    m.header.stamp = n.get_clock().now().to_msg(); m.header.frame_id = "map"
-    m.position.x, m.position.y, m.position.z = x, y, Z_HOVER
-    m.yaw = 0.0
-    pub.publish(m); time.sleep(0.05)
-EOF
-```
-
-> **Exactly one publisher on that topic.** Two streams interleave and the
-> vehicle chases both — this is what broke the validation run's first landing
-> attempt. Kill the previous streamer before starting another. The node holds
-> the *last received* reference when a stream stops, so the vehicle keeps
-> hovering rather than falling.
-
-**Step 6 — enter DIRECT** (only once the SAFETY hover is settled):
-
-```bash
+# enter DIRECT
 ros2 service call /uav_0/fsc_autopilot_ros2/direct_actuation/set_direct_mode \
   std_srvs/srv/SetBool "{data: true}"
-```
 
-Abort back to SAFETY at any time — keep this ready before step 6:
-
-```bash
+# abort back to SAFETY — keep this ready before entering DIRECT
 ros2 service call /uav_0/fsc_autopilot_ros2/direct_actuation/set_direct_mode \
   std_srvs/srv/SetBool "{data: false}"
-```
 
-**Step 7 — land, then disarm.** PX4 refuses an in-air disarm
-(`Disarming denied: not landed`), so bring the vehicle down *by reference*
-first. Kill the step-5 streamer, then:
-
-```bash
-python3 - <<'EOF'
-import time, rclpy
-from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-from geometry_msgs.msg import PoseStamped
-from fsc_autopilot_ros2_msgs.msg import PositionControllerReference
-
-Z_START, Z_GROUND, RATE = 1.20, 0.31, 0.20     # [m], [m], [m/s]
-rclpy.init(); n = Node("t650_aerial_manipulator_land")
-z = {}
-n.create_subscription(PoseStamped, "/uav_0/state/pose",
-                      lambda m: z.update(z=m.pose.position.z), qos_profile_sensor_data)
-pub = n.create_publisher(PositionControllerReference,
-                         "/uav_0/fsc_autopilot_ros2/position_controller/reference", 10)
-z_ref, t0 = Z_START, time.time()
-while time.time() - t0 < 90:
-    z_ref = max(Z_GROUND, z_ref - RATE * 0.05)
-    m = PositionControllerReference()
-    m.header.stamp = n.get_clock().now().to_msg(); m.header.frame_id = "map"
-    m.position.x = m.position.y = 0.0; m.position.z = z_ref; m.yaw = 0.0
-    pub.publish(m); rclpy.spin_once(n, timeout_sec=0.0)
-    if z_ref <= Z_GROUND + 1e-3 and z.get("z", 9) < 0.34:
-        print(f"touchdown z={z['z']:.3f}", flush=True); break
-    time.sleep(0.05)
-EOF
-
+# PX4 refuses an in-air disarm, so land by reference FIRST, then:
 ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
 ```
 
-**Step 8 — shut down, ROS 2 first** (so the controller is not streaming
-setpoints into a dying PX4):
+> The standalone Python reference-streamer and descent scripts used for the
+> 2026-08-10 headless validation (plus the pre-arm verification checks and the
+> `PEGASUS_HEADLESS` tmux-server flag) were trimmed from this section on
+> 2026-08-11 for brevity — recover them from git history if a headless run is
+> needed again. Their one trap is worth repeating here: **exactly one publisher
+> on the reference topic**, or the vehicle chases both streams.
 
-```bash
-cd $AUTOPILOT_WS/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
-tmux kill-session -t px4_isaac
-$PEGASUS/scripts/kill_stale_sim_processes.sh -y
-tmux setenv -gu PEGASUS_HEADLESS ; tmux setenv -gu PEGASUS_PX4_LOCKSTEP
-```
-
-`stop_isaacsim_stack.sh` picks up the new session
-(`fsc_direct_actuation_t650_aerial_manipulator_stack`) automatically — it reads `SESSION=` out
-of its sibling scripts. The controller runs
-`config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml`, a copy of the T650
-tune whose only value changes are the four `vehicle_*` plant numbers.
+Since 2026-08-11 step 1 launches the **aerial-manipulator fork** of the
+direct-actuation node (`autopilot_aerial_manipulator_direct_actuation_node`) —
+the fork carries the arm torque feedforward. Node name, topics and services are
+unchanged, so the commands above are unaffected. The controller runs
+`config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml`, a
+copy of the T650 tune whose only value changes are the four `vehicle_*` plant
+numbers.
 
 What to watch, beyond §7.5's list (which still applies):
 
@@ -1246,17 +1111,28 @@ want the AM airborne without DIRECT in the loop.
    `/uav_0/autopilot_sv_baseline_node` (not `/uav_0/fsc_autopilot_ros2`), reading
    `params_single_vehicle_baseline_t650_aerial_manipulator.yaml`.
 
-Uses the same `$MACHINE` / `$AUTOPILOT_WS` / `$PEGASUS` block as §7.7.1 step A
-(`fsc_lab_machine` or `shiqi_machine`):
+Same shape as §7.7.1, only the two launcher names change. **fsc_lab_machine:**
 
 ```bash
 # terminal 1 — ROS 2 baseline stack (owns the agent; detach with Ctrl-b d)
-cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh $MACHINE uav_0
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh fsc_lab_machine uav_0
 
 # terminal 2 — Pegasus / PX4 SITL, lockstep ON
-cd $PEGASUS
-./scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh $MACHINE
+cd ~/Source/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh fsc_lab_machine
+```
+
+**shiqi_machine:**
+
+```bash
+# terminal 1 — ROS 2 baseline stack (owns the agent; detach with Ctrl-b d)
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
+
+# terminal 2 — Pegasus / PX4 SITL, lockstep ON
+cd ~/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh shiqi_machine
 ```
 
 Verify before arming — note the **baseline** node name:
@@ -1267,10 +1143,10 @@ ros2 param get /uav_0/autopilot_sv_baseline_node posctl_k_vel_x     # 3.7
 ros2 topic hz /uav_0/mocap                                          # ~250 Hz
 ```
 
-Then OFFBOARD → arm → stream a reference exactly as §7.7.1 steps 4–5, and land
-with step 7. **Skip step 6** — there is no DIRECT mode here. Shutdown is §7.7.1
-step 8 with the session name `fsc_baseline_t650_aerial_manipulator_stack` (which
-`stop_isaacsim_stack.sh` picks up automatically).
+Then OFFBOARD → arm exactly as §7.7.1 step 3, and fly from the ground station.
+There is **no `set_direct_mode` service** on this path. Shutdown is §7.7.1
+step 0; `stop_isaacsim_stack.sh` picks up the
+`fsc_baseline_t650_aerial_manipulator_stack` session automatically.
 
 **The one number that proves the arm's feedforward is working:**
 
