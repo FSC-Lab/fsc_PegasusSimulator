@@ -985,28 +985,86 @@ worth doing (headless timing is the gentler regime).
 
 #### 7.7.1 Full run sequence (exactly the validated 2026-08-10 flight)
 
+> **Script names changed 2026-08-11** (`am_t650` → `t650_aerial_manipulator`).
+> The old `start_direct_actuation_am_t650_stack.sh` and
+> `start_am_t650_direct_actuator_sitl.sh` no longer exist — if a saved command
+> fails with "No such file or directory", this is why.
+
+**Step A — pick your machine.** Paste ONE of these into every terminal you use
+for the run; steps 0–8 below are then identical on both machines.
+
+```bash
+# ── fsc_lab_machine (the lab desktop, user fsc-jupiter) ──
+export MACHINE=fsc_lab_machine
+export AUTOPILOT_WS=~/Workspaces/fsc_autopilot_ws
+export PEGASUS=~/Source/fsc_PegasusSimulator
+```
+
+```bash
+# ── shiqi_machine (shiqi-desktop) ──
+export MACHINE=shiqi_machine
+export AUTOPILOT_WS=~/ros2_ws
+export PEGASUS=~/fsc_PegasusSimulator
+```
+
+The only per-machine differences are those three values: the machine-config
+argument the launchers take, and where the two repos live. Everything else —
+the tmux session names, the ROS 2 topics, the service calls, the reference
+streamers — is identical.
+
+**The four commands you actually type.** Steps 0–2 and 4; the rest of this
+section is the detail behind them.
+
+```bash
+# 0. clean slate            (any terminal)
+cd $AUTOPILOT_WS/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+$PEGASUS/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh $MACHINE uav_0
+
+# 2. Pegasus / PX4 SITL     (terminal 2)
+cd $PEGASUS
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh $MACHINE
+
+# 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+---
+
 **Step 0 — clean slate.** Always: a stale estimator or agent silently corrupts
 the run.
 
 ```bash
-cd ~/ros2_ws/src/fsc_autopilot_ros2
+cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
 ./scripts/isaacsim/stop_isaacsim_stack.sh
-/home/shiqi/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+$PEGASUS/scripts/kill_stale_sim_processes.sh -y
 ```
 
 **Step 1 — ROS 2 stack** (terminal 1, maximized). Owns `MicroXRCEAgent`, so it
 must start **first**. Detach with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D.
 
 ```bash
-cd ~/ros2_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh $MACHINE uav_0
 ```
+
+Since 2026-08-11 this launches the **aerial-manipulator fork** of the
+direct-actuation node (`autopilot_aerial_manipulator_direct_actuation_node`, via
+`single_aerial_manipulator_direct_actuation_launch.py`) rather than the shared
+drone node — that fork is what carries the arm torque feedforward. The node
+name, topics and services are unchanged, so nothing else in this section
+differs.
 
 **Step 2 — Pegasus / PX4 SITL** (terminal 2). Opens its own window.
 
 ```bash
-cd /home/shiqi/fsc_PegasusSimulator
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh shiqi_machine
+cd $PEGASUS
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh $MACHINE
 ```
 
 For a **headless** run (what the validation used), push the flag onto the tmux
@@ -1023,7 +1081,7 @@ tmux setenv -gu PEGASUS_HEADLESS      # after the run
 ```bash
 tmux list-panes -t fsc_direct_actuation_t650_aerial_manipulator_stack:stack -F '#{pane_index} #{pane_title}'  # 6 panes
 pgrep -x MicroXRCEAgent && ss -lunp | grep 8888                                               # agent listening
-source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
+source /opt/ros/humble/setup.bash && source $AUTOPILOT_WS/install/setup.bash
 ros2 topic hz /uav_0/mocap                                     # ~250 Hz
 ros2 param get /uav_0/fsc_autopilot_ros2 vehicle_mass          # 3.746170
 tmux capture-pane -p -J -t px4_isaac:0.1 | grep "MASS OVERRIDE" # TOTAL must equal that
@@ -1132,9 +1190,9 @@ ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
 setpoints into a dying PX4):
 
 ```bash
-cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+cd $AUTOPILOT_WS/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
 tmux kill-session -t px4_isaac
-/home/shiqi/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+$PEGASUS/scripts/kill_stale_sim_processes.sh -y
 tmux setenv -gu PEGASUS_HEADLESS ; tmux setenv -gu PEGASUS_PX4_LOCKSTEP
 ```
 
@@ -1188,14 +1246,17 @@ want the AM airborne without DIRECT in the loop.
    `/uav_0/autopilot_sv_baseline_node` (not `/uav_0/fsc_autopilot_ros2`), reading
    `params_single_vehicle_baseline_t650_aerial_manipulator.yaml`.
 
+Uses the same `$MACHINE` / `$AUTOPILOT_WS` / `$PEGASUS` block as §7.7.1 step A
+(`fsc_lab_machine` or `shiqi_machine`):
+
 ```bash
 # terminal 1 — ROS 2 baseline stack (owns the agent; detach with Ctrl-b d)
-cd ~/ros2_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
+cd $AUTOPILOT_WS/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh $MACHINE uav_0
 
 # terminal 2 — Pegasus / PX4 SITL, lockstep ON
-cd /home/shiqi/fsc_PegasusSimulator
-./scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh shiqi_machine
+cd $PEGASUS
+./scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh $MACHINE
 ```
 
 Verify before arming — note the **baseline** node name:
