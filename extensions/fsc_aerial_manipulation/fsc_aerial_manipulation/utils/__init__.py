@@ -13,6 +13,8 @@ from .swing_state_backend_utils import ROS2SwingStateBackend
 from .flight_volume_utils import (draw_flight_volume, volume_bounds,
                                   volume_report, draw_pose_marker,
                                   draw_pose_axes)
+from .inertia_utils import (principal_inertia, author_inertia_tensor,
+                            read_inertia_tensor)
 
 __all__ = [
     "add_dome_lighting",
@@ -27,4 +29,7 @@ __all__ = [
     "volume_report",
     "draw_pose_marker",
     "draw_pose_axes",
+    "principal_inertia",
+    "author_inertia_tensor",
+    "read_inertia_tensor",
 ]

@@ -27,6 +27,7 @@ from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBacke
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
 from fsc_aerial_manipulation.rotorcraft import t650_params
+from fsc_aerial_manipulation.utils.inertia_utils import author_inertia_tensor
 
 # Shared with the X650 on purpose -- see the module docstring. Do not add an environment
 # override or a fallback to the legacy wrong-frame model: every bare-airframe scenario must
@@ -51,8 +52,10 @@ def apply_t650_mass_properties(vehicle, body_mass=None, body_inertia=None) -> No
     mass_api.GetMassAttr().Set(
         t650_params.BODY_MASS if body_mass is None else body_mass
     )
-    mass_api.GetDiagonalInertiaAttr().Set(
-        Gf.Vec3f(*(tuple(t650_params.INERTIA_DIAG) if body_inertia is None else body_inertia))
+    # Authors diagonalInertia + principalAxes: USD cannot store products of inertia, so a
+    # straight diagonalInertia write would silently drop INERTIA_TENSOR's Ixy term.
+    author_inertia_tensor(
+        mass_api, t650_params.INERTIA_TENSOR if body_inertia is None else body_inertia
     )
 
 
@@ -81,7 +84,8 @@ def spawn_t650_with_mavlink(
     only publishes vehicle state.
 
     Args:
-        body_mass, body_inertia: override t650_params.BODY_MASS / INERTIA_DIAG. Both default
+        body_mass, body_inertia: override t650_params.BODY_MASS / INERTIA_TENSOR (a 3x3
+            tensor or a length-3 diagonal; both accepted). Both default
             to the T650's own values; pass them only for a deliberate variant.
 
     Returns:

@@ -137,28 +137,29 @@ ROTOR_LAMBDA = 10.0265   # 1/s
 # If the intent was 2.95 kg TOTAL, set BODY_MASS = 2.95 - ROTOR_MASS_TOTAL and everything
 # below follows automatically.
 ROTOR_MASS_TOTAL = 0.083920955657959   # kg, the four rotor bodies authored in x650_new.usd
-BODY_MASS = 2.95                       # kg, written onto /body/body at spawn
+BODY_MASS = 2.95 - ROTOR_MASS_TOTAL                      # kg, written onto /body/body at spawn
 MASS = BODY_MASS + ROTOR_MASS_TOTAL    # kg, total vehicle mass the physics solver sees
 
-# Diagonal body inertia (Ixx, Iyy, Izz), kg*m^2, in x650_new.usd's body-axis labelling.
-# COPIED from the X650's exact CAD (OnShape) values, on instruction. The same assumption
-# already accepted for the X650's own body-mass change applies: the mass difference is taken
-# to be centrally concentrated (batteries near the CG) and therefore not to move the
-# rotational inertia much. It IS an assumption -- replace it if the T650 gets its own CAD.
-CAD_INERTIA_DIAG = np.array([0.05777498, 0.06408172, 0.065004565])   # kg*m^2
-
-# Roll/pitch authority goes as k/I, so raising the thrust constant by THRUST_FIT_FACTOR
-# above would have sped the roll and pitch axes up by the same 3.07%. Those axes already fit
-# well (flight C position-step shape RMSE 5.5 cm on 1 m steps, settling bias +0.004 s), so
-# Ixx and Iyy are scaled by the identical factor to leave their authority -- and therefore
-# that fit -- exactly where it was. This is bookkeeping to protect a good result, not a
-# claim about the real vehicle's inertia.
+# ── Body inertia ────────────────────────────────────────────────────────────
+# FULL inertia tensor about the body CoM (kg*m^2), in x650_new.usd's body-axis labelling,
+# INCLUDING the Ixy product of inertia. Derived by regression against flight data
+# (2026-08-13) -- record the bag/script here, per this module's docstring rule.
 #
-# Izz is deliberately NOT scaled: the yaw axis is corrected through the effective yaw-torque
-# coefficient instead (see YAW_TORQUE_FIT_FACTOR), so scaling Izz here would double-count.
-INERTIA_DIAG = CAD_INERTIA_DIAG * np.array(
-    [THRUST_FIT_FACTOR, THRUST_FIT_FACTOR, 1.0]
-)   # -> (0.05955008, 0.06605059, 0.065004565)
+# This is the shipped value as written: it is NOT scaled by THRUST_FIT_FACTOR. Earlier
+# versions scaled Ixx/Iyy by that factor to hold k/I (and therefore the flight-C roll/pitch
+# fit) invariant against the thrust refit; a tensor identified from flight data already
+# reflects the real plant, so that bookkeeping no longer applies.
+#
+# Ixy is load-bearing and must not be dropped: USD/PhysX stores inertia as principal
+# moments plus a principal-axes rotation, so anything writing this into a stage goes
+# through fsc_aerial_manipulation.utils.author_inertia_tensor(), which converts exactly.
+INERTIA_TENSOR = np.array([[0.077,   0.0089,     0.0],
+                           [0.0089,  0.06408172, 0.0],
+                           [0.0,     0.0,        0.065004565]])   # kg*m^2
+
+# Diagonal view (Ixx, Iyy, Izz) for the offline tools in docs/sim_to_real_t650, which model
+# a diagonal plant. It DISCARDS Ixy -- never use it to author a stage.
+INERTIA_DIAG = np.diag(INERTIA_TENSOR).copy()
 
 # ── Rotor geometry ──────────────────────────────────────────────────────────
 # Shared with the X650 because the airframe asset is literally the same file; measured from

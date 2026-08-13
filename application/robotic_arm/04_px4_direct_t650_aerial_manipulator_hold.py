@@ -93,7 +93,8 @@ from pegasus.simulator.logic.backends.px4_mavlink_backend import (
     PX4MavlinkBackend, PX4MavlinkBackendConfig)
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 
-from fsc_aerial_manipulation.utils import add_dome_lighting
+from fsc_aerial_manipulation.utils import (add_dome_lighting, author_inertia_tensor,
+                                           read_inertia_tensor)
 from fsc_aerial_manipulation.rotorcraft.x650_rotorcraft_utils import (
     print_mass_inertia_properties,
     print_rotor_positions,
@@ -154,7 +155,9 @@ Q_HOME = np.radians([0.0, 40.0, 40.0, 0.0])
 # (4 x 0.039887, authored in AM_realign — NOT the 0.083921 kg of x650_new.usd)
 # and the arm/gripper (0.636624 kg) add on top.
 T650_BODY_MASS    = float(t650_params.BODY_MASS)          # 2.95 kg
-T650_BODY_INERTIA = np.asarray(t650_params.INERTIA_DIAG)  # (0.05955, 0.06605, 0.06500)
+# Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
+# store as diagonalInertia + principalAxes (see utils.author_inertia_tensor).
+T650_BODY_INERTIA = np.asarray(t650_params.INERTIA_TENSOR, float)
 
 # ── Arm hold (same numbers as the flight-validated 02/03 holds) ──────────────
 ARM_HOLD_KP   = 3.0    # [N·m/rad]   wn = sqrt(3/0.02) ≈ 12 rad/s per joint
@@ -256,7 +259,9 @@ class AmT650HoldSim:
         if getattr(self, "_body_dm", 0.0):
             self.params["m_i"][0] += self._body_dm
             if self._body_dI is not None:
-                self.params["I_i_i"][0] = self.params["I_i_i"][0] + np.diag(self._body_dI)
+                # _body_dI is already a 3x3 tensor delta — do NOT np.diag() it (on a 2-D
+                # input that EXTRACTS the diagonal instead of building a matrix).
+                self.params["I_i_i"][0] = self.params["I_i_i"][0] + self._body_dI
             print(f"[AM-T650] control model mirrored: m0="
                   f"{self.params['m_i'][0]:.6f} kg, m_total="
                   f"{sum(self.params['m_i']):.6f} kg (hover thrust "
@@ -504,12 +509,22 @@ class AmT650HoldSim:
 
         mass_api.CreateMassAttr().Set(T650_BODY_MASS)
         self._body_dm = T650_BODY_MASS - m_old
-        mass_api.CreateDiagonalInertiaAttr().Set(
-            Gf.Vec3f(*[float(x) for x in T650_BODY_INERTIA]))
+        # Authors diagonalInertia + principalAxes, the only representation USD/PhysX has —
+        # a straight diagonalInertia write would silently drop the Ixy product.
+        moments, quat = author_inertia_tensor(mass_api, T650_BODY_INERTIA)
         if I_old is not None:
-            self._body_dI = T650_BODY_INERTIA - I_old
-            print(f"[AM-T650] body inertia {I_old.round(6)} -> "
-                  f"{T650_BODY_INERTIA.round(6)} kg·m² (T650)", flush=True)
+            self._body_dI = T650_BODY_INERTIA - np.diag(I_old)
+            print(f"[AM-T650] body inertia diag {I_old.round(6)} -> "
+                  f"{np.diag(T650_BODY_INERTIA).round(6)} kg·m² (T650), "
+                  f"Ixy {T650_BODY_INERTIA[0, 1]:+.6f}; authored as principal moments "
+                  f"{moments.round(6)} + principalAxes (w,x,y,z) {quat.round(4)}",
+                  flush=True)
+        # Read the tensor back off the stage and confirm it round-trips.
+        I_stage = read_inertia_tensor(prim)
+        err = (np.abs(I_stage - T650_BODY_INERTIA).max()
+               if I_stage is not None else float("nan"))
+        print(f"[AM-T650] inertia round-trip off the stage: max err {err:.2e} kg·m²",
+              flush=True)
 
         print(f"[AM-T650] T650 MASS OVERRIDE: {body_path} {m_old:.6f} -> "
               f"{T650_BODY_MASS:.6f} kg (delta {self._body_dm:+.6f}); "
