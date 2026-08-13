@@ -1168,6 +1168,128 @@ noticeably tighter (§7.7) because it runs `k_vel` 7.0. Raising the baseline gai
 on simulation evidence is explicitly warned against — see
 [Feedforward Compensation for Home-Pose Arm.md](<Feedforward Compensation for Home-Pose Arm.md>) §7.
 
+### 7.9 AM-T650 DIRECT with the ROS 2 position-mode ARM STACK (fsc_open_manipulator) — added 2026-08-13
+
+The §7.7 rig with the arm commanded **over ROS 2 by the real
+`fsc_open_manipulator` position-mode stack** instead of 04's in-process hold —
+the first integration step toward driving the simulated arm through the same
+software that drives the real OM-X (torque mode comes later). Incremental: 04
+and its launcher are untouched and still work.
+
+```
+fsc_open_manipulator PositionController      ← the SAME compiled ros2_control
+  (arm_position_controller, AERIAL config:     plugin the Gazebo and hardware
+   home [0, 40°, 40°, 0], min-jerk moves)      bring-ups load
+    ↕ position command/state interfaces
+open_manipulator_x_isaac_bridge/IsaacTopicSystem     (new hardware plugin)
+    → /uav_0/arm/joint_position_commands (JointState)
+    ← /uav_0/arm/joint_states
+Isaac (05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py, 250 Hz):
+    Dynamixel-servo EMULATION — 04's flight-validated PD + gravity comp +
+    3 N·m clamp, tracking the streamed reference; latches it if the stack dies
+```
+
+The plant spawns at home, the PositionController homes on activation (a no-op
+move) and holds — so this rig's flight behaviour is 04's, with the arm
+reference arriving over DDS. Only the **inverted/aerial** configuration exists
+(on the drone the arm always hangs inverted). The run adds a second tmux
+window `arm` (switch with **`Ctrl-b n`**) holding the arm ros2_control stack
+and the **ARM GROUND STATION** (`custom_gui joint_plot_inverted`) — together
+with the drone ground station from step 1 the simulation runs **two ground
+stations, one per subsystem, like the real rig**.
+
+**The whole arm stack lives under the vehicle namespace `/uav_0`**
+(2026-08-13, user request), so its topics sit beside the drone's:
+`/uav_0/controller_manager`, `/uav_0/arm_position_controller/…`,
+`/uav_0/{joint_states,joint_desired_states,joint_measured_states}`,
+`/uav_0/arm/{joint_states,joint_position_commands}` (the Isaac bridge pair).
+This required making the ground station's ROS names namespace-relative
+(`custom_gui`, 2026-08-13) — bench launches without a namespace resolve to
+the root exactly as before; the launcher starts the sim's station with
+`-r __ns:=/uav_0`. The launch's `namespace` argument and the nesting in
+`position_controller_isaac_aerial.yaml` must change together.
+
+**One-time build on shiqi-desktop** (already done 2026-08-13; repeat after
+pulling the arm repos). The arm workspace lives at
+`~/ros2_ws/src/fsc_open_manipulator` and builds standalone inside its own
+tree; this machine has no system ros2_control/pinocchio and no sudo, so a
+root-less deb extract provides them (`~/ros2_ws/rosdeps/local_setup.bash` —
+its header explains how to replace it with a real `sudo apt install` later):
+
+```bash
+cd ~/ros2_ws/src/fsc_open_manipulator
+source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash
+colcon build --base-paths src --packages-select \
+  dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \
+  open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \
+  --symlink-install
+```
+
+**Run sequence — shiqi_machine (shiqi-desktop):**
+
+```bash
+# 0. clean slate            (any terminal)
+cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+
+# 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2)
+cd ~/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh shiqi_machine
+
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+Flight (takeoff by streamed reference, DIRECT in/out, land, disarm) is
+identical to §7.7.1. The arm stack's pane waits for Isaac's
+`/uav_0/arm/joint_states` before launching `controller_manager`, so the
+ordering inside terminal 2 is automatic.
+
+**Commanding the arm** — identical to the Gazebo/hardware bring-ups apart
+from the `/uav_0` prefix, plus the ground station's Setpoints/Sine/Demos tabs:
+
+```bash
+ros2 topic pub --once /uav_0/arm_position_controller/target_joint_positions \
+    std_msgs/msg/Float64MultiArray '{data: [0.0, 0.698, 0.698, 0.0]}'
+ros2 service call /uav_0/arm_position_controller/go_home std_srvs/srv/Trigger
+```
+
+(For this integration step the mission is just: home commanded and held for
+the whole flight. Targets are clamped to the validated working range; the
+aerial config's max_velocity is a deliberate 0.2 rad/s.)
+
+What to watch:
+
+- The Isaac pane's status line gained `cmds: n=…, age …s` — n growing and age
+  ~0 s means the position stack owns the reference; `none yet (holding spawn
+  pose)` means the arm window hasn't come up (the rig is then exactly 04).
+- The `arm` window: hardware activation logs `Activated on the measured pose
+  [0.000, 0.698, 0.698, 0.000]`, then `uav_0.arm_position_controller` logs
+  `Activated; homing over 1.50 s`.
+- In the arm ground station the commanded-torque curves are flat zero — the
+  position controller publishes no commanded effort (its caption says so);
+  executed torque is live (the Isaac servo emulation's applied τ). The
+  gripper button has no action server in this sim (Isaac pins the gripper);
+  ignore it.
+- **VALIDATED 2026-08-13** (headless, ground-seated plant, no PX4 — the drone
+  path is §7.7's and was not re-flown): real Isaac plant + real stack held
+  home exactly, tracked a commanded 4-joint target move and a `go_home`
+  through the real topic/service interface, all with < 0.05° steady error;
+  hold torque ≈ 0.7 N·m (gravity), commands flowing continuously. After the
+  `/uav_0` namespacing (same day) the identical hold/move/go_home sequence
+  was re-run loopback (fake plant) through the namespaced interfaces — all
+  PASS — and the namespaced ground station verified on the wire: it
+  publishes/subscribes `/uav_0/arm_position_controller/target_joint_positions`,
+  follows `/uav_0/joint_states`, and adopts the controller's working range
+  through the namespaced parameter service. First full flight with
+  PX4/DIRECT in the loop was run by the user 2026-08-13.
+
 ---
 
 ## Notes

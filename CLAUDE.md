@@ -463,6 +463,54 @@ between the two clients. In the same pass every `am_t650` file was renamed to
 PX4 profile directory `rootfs_fsc_indoor_am_t650`, kept on purpose: renaming it would
 re-clone a fresh 39 GB rootfs and orphan the saved AM params.
 
+**ROS2 POSITION-MODE ARM STACK (fsc_open_manipulator) INTEGRATED (2026-08-13, user
+request — first step toward external arm control; torque mode later).** The AM-T650
+DIRECT rig gained a sibling where the arm is commanded OVER ROS2 by the real
+OM-X position-mode stack instead of 04's in-process hold. New, all incremental (04 and
+its launcher untouched): `application/robotic_arm/05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py`
+(04's plant verbatim; the hold law's REFERENCE now comes from
+`/uav_0/arm/joint_position_commands`, joint states/efforts go out on
+`/uav_0/arm/joint_states` under controller-side names joint1..4 — the PD+gravity+clamp
+hold is unchanged and acts as the Dynamixel-servo emulation, AK40-10-emulator pattern;
+reference LATCHES if the stack dies, so solo it behaves exactly like 04) +
+`scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh` (the 04 direct
+launcher plus a detached-helper tmux window `arm` with the ros2_control stack — gated on the
+Isaac topic — and the ARM GROUND STATION `joint_plot_inverted`; two ground stations total
+with the drone one; same PX4 profile as 04 on purpose, same plant). The arm side lives in
+`~/ros2_ws/src/fsc_open_manipulator` (workspace repo + Gao907/open_manipulator fork on
+omx-torque-control, cloned 2026-08-13): new package `open_manipulator_x_isaac_bridge`
+(topic-based `hardware_interface::SystemInterface` plugin `IsaacTopicSystem` — read()
+latches JointState by name, write() publishes commands; on_activate BLOCKS for the first
+Isaac state so the controller never snapshots NaN; stub URDF carries only the ros2_control
+block; gripper-less copy of the AERIAL config — inverted-only per the user, home
+[0,40°,40°,0] = the plant's spawn pose so activation homing is a no-op) running the REAL
+`PositionController` plugin. Machine facts (shiqi-desktop): no system ros2_control/pinocchio
+and no sudo → 30 debs extracted root-lessly to `~/ros2_ws/rosdeps/` (its `local_setup.bash`
+documents the future `sudo apt install` replacement; octomap runtime libs symlinked, 2
+non-relocatable cmake paths patched); Qt 6.8.3+Charts via aqtinstall to `~/Qt` (custom_gui's
+expected location); **one fork change**: `open_manipulator_x_custom_controller/CMakeLists.txt`
+additionally links `pinocchio::pinocchio` — ros-humble-pinocchio 4.0's Boost.MPL sizing
+defines and deprecated-header include dir only travel on the modern target, and
+`ament_target_dependencies` drops them (harmless on the bench machine's older pinocchio).
+The workspace builds STANDALONE inside its repo (`colcon build --base-paths src`, a
+gitignored `COLCON_IGNORE` at its root keeps `~/ros2_ws`-level builds out). Config hooks in
+`shiqi_machine.conf`: `FSC_OM_ARM_WS`, `FSC_OM_ARM_ROSDEPS_SETUP`. VALIDATED 2026-08-13
+headless (ground-seated, no PX4 — drone path is 04's, not re-flown): real plant + real stack
+hold home, track a 4-joint target and go_home through the real interfaces, all <0.05° steady
+error, hold torque ≈0.7 N·m; the user then ran the full workflow live. **NAMESPACED under
+/uav_0 same day (user request)**: the launch takes `namespace` (default uav_0, nodes +
+spawners), the yaml nests its node keys under `/uav_0:` (launch namespace and yaml nesting
+must change TOGETHER — a mismatch means params silently don't apply and the controller fails
+on empty `joints`), and the controller's logging topics went namespace-relative — so the
+whole arm interface sits beside the drone's: /uav_0/controller_manager,
+/uav_0/arm_position_controller/…, /uav_0/{joint_states,joint_desired_states,joint_measured_states}.
+This required making custom_gui's ROS names NAMESPACE-RELATIVE (they were absolute
+"/..."; bare launches still resolve to the root, so the bench workflow is unchanged) — the
+sim's station runs with `-r __ns:=/uav_0`. Re-validated loopback (hold/move/go_home PASS)
+and on the wire: the namespaced GUI publishes/subscribes the /uav_0 target topic, follows
+/uav_0/joint_states, and adopts the working range via the namespaced parameter service.
+Commands: Command.md §7.9.
+
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):
