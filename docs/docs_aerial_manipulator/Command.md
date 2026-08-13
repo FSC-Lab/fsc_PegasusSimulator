@@ -1210,16 +1210,18 @@ the root exactly as before; the launcher starts the sim's station with
 `position_controller_isaac_aerial.yaml` must change together.
 
 **One-time build on shiqi-desktop** (already done 2026-08-13; repeat after
-pulling the arm repos). The arm workspace lives at
-`~/ros2_ws/src/fsc_open_manipulator` and builds standalone inside its own
-tree; this machine has no system ros2_control/pinocchio and no sudo, so a
-root-less deb extract provides them (`~/ros2_ws/rosdeps/local_setup.bash` —
-its header explains how to replace it with a real `sudo apt install` later):
+pulling the arm repo). Since the same-day repo consolidation there is ONE arm
+repo — the fsc_open_manipulator GitHub repo, cloned at
+`~/colcon_ws/src/fsc_open_manipulator` with its pinned Dynamixel deps beside
+it (`cd ~/colcon_ws && vcs import src < src/fsc_open_manipulator/workspace.repos`).
+This machine has no system ros2_control/pinocchio and no sudo, so a root-less
+deb extract provides them (`~/ros2_ws/rosdeps/local_setup.bash` — its header
+explains how to replace it with a real `sudo apt install` later):
 
 ```bash
-cd ~/ros2_ws/src/fsc_open_manipulator
+cd ~/colcon_ws
 source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash
-colcon build --base-paths src --packages-select \
+colcon build --packages-select \
   dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \
   open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \
   --symlink-install

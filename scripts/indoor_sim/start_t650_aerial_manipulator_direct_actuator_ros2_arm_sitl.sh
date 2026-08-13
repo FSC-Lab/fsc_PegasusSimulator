@@ -62,11 +62,12 @@ PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
 
-# Arm-stack workspace (fsc_open_manipulator). Defaults reproduce shiqi-desktop;
-# override in the machine config. ROSDEPS_SETUP is the root-less ros2_control
-# overlay this machine needs (no sudo) — point it at /dev/null where
-# ros2_control is apt-installed.
-ARM_WS="${FSC_OM_ARM_WS:-$HOME/ros2_ws/src/fsc_open_manipulator}"
+# Colcon workspace holding the fsc_open_manipulator repo (at src/, with its
+# Dynamixel deps beside it). Defaults reproduce shiqi-desktop; override in the
+# machine config. ROSDEPS_SETUP is the root-less ros2_control overlay this
+# machine needs (no sudo) — point it at /dev/null where ros2_control is
+# apt-installed.
+ARM_WS="${FSC_OM_ARM_WS:-$HOME/colcon_ws}"
 ARM_ROSDEPS_SETUP="${FSC_OM_ARM_ROSDEPS_SETUP:-$HOME/ros2_ws/rosdeps/local_setup.bash}"
 ARM_ROS2_SETUP="${ROS2_SETUP:-/opt/ros/humble/setup.bash}"
 ARM_WS_SETUP="$ARM_WS/install/setup.bash"
@@ -88,10 +89,10 @@ export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
   exit 1
 }
 [[ -f "$ARM_WS_SETUP" ]] || {
-  echo "ERROR: fsc_open_manipulator workspace is not built: $ARM_WS_SETUP" >&2
+  echo "ERROR: the arm workspace is not built: $ARM_WS_SETUP" >&2
   echo "Build it with:" >&2
   echo "  cd $ARM_WS && source $ARM_ROS2_SETUP && source $ARM_ROSDEPS_SETUP \\" >&2
-  echo "  && colcon build --base-paths src --packages-select \\" >&2
+  echo "  && colcon build --packages-select \\" >&2
   echo "     dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \\" >&2
   echo "     open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \\" >&2
   echo "     --symlink-install" >&2

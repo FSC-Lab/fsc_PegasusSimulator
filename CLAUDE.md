@@ -509,7 +509,19 @@ This required making custom_gui's ROS names NAMESPACE-RELATIVE (they were absolu
 sim's station runs with `-r __ns:=/uav_0`. Re-validated loopback (hold/move/go_home PASS)
 and on the wire: the namespaced GUI publishes/subscribes the /uav_0 target topic, follows
 /uav_0/joint_states, and adopts the working range via the namespaced parameter service.
-Commands: Command.md §7.9.
+Commands: Command.md §7.9. **ARM-REPO CONSOLIDATION same day (user request — supersedes
+this entry's workspace paths)**: the two arm repos (workspace repo + ROBOTIS fork) were
+merged into ONE, fork-rooted, histories preserved; on GitHub the fork takes the
+`fsc_open_manipulator` name and the old workspace repo is archived. New layout on this
+machine: `~/colcon_ws/src/fsc_open_manipulator` (packages at repo root — custom_gui,
+open_manipulator_x_isaac_bridge, the controller, the ROBOTIS set) with the three pinned
+Dynamixel deps vcs-imported beside it; `~/ros2_ws/src/fsc_open_manipulator` is GONE
+(deleted after the merge; the rosdeps overlay at `~/ros2_ws/rosdeps` is a separate path
+and STAYS). `FSC_OM_ARM_WS` now points at the workspace `~/colcon_ws` (launcher derives
+`$FSC_OM_ARM_WS/install/setup.bash`); builds are plain `colcon build --packages-select`
+from the workspace root, no `--base-paths`/COLCON_IGNORE machinery. ROBOTIS releases
+merge straight in (`git merge upstream/humble`). Rebuilt + loopback re-validated after
+the move (hold/move/go_home PASS).
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
