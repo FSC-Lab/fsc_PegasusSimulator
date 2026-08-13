@@ -999,7 +999,10 @@ cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/st
 
 # 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
+./scripts/isaacsim/start_direct_actuation_am_t650_stack.sh fsc_lab_machine uav_0
+#   ^ the OLD name — this is the one that RUNS on this machine today. Once the
+#     rename is pushed from shiqi-desktop, switch to:
+#     ./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
 
 # 2. Pegasus / PX4 SITL     (terminal 2)
 cd ~/Source/fsc_PegasusSimulator
@@ -1116,7 +1119,10 @@ Same shape as §7.7.1, only the two launcher names change. **fsc_lab_machine:**
 ```bash
 # terminal 1 — ROS 2 baseline stack (owns the agent; detach with Ctrl-b d)
 cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh fsc_lab_machine uav_0
+./scripts/isaacsim/start_baseline_am_t650_stack_fused.sh fsc_lab_machine uav_0
+#   ^ the OLD name — this is the one that RUNS on this machine today. Once the
+#     rename is pushed from shiqi-desktop, switch to:
+#     ./scripts/isaacsim/start_baseline_t650_aerial_manipulator_stack_fused.sh fsc_lab_machine uav_0
 
 # terminal 2 — Pegasus / PX4 SITL, lockstep ON
 cd ~/Source/fsc_PegasusSimulator
@@ -1248,6 +1254,118 @@ sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
+**Run sequence — fsc_lab_machine (the lab desktop, user `fsc-jupiter`):**
+
+Same shape; only the two repo roots differ (`~/Workspaces/fsc_autopilot_ws` and
+`~/Source/fsc_PegasusSimulator`, see §7.7.1) and the config name.
+
+```bash
+# 0. clean slate            (any terminal)
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_direct_actuation_am_t650_stack.sh fsc_lab_machine uav_0
+#   ^ the OLD name — this is the one that RUNS on this machine today. Once the
+#     rename is pushed from shiqi-desktop, switch to:
+#     ./scripts/isaacsim/start_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
+
+# 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2)
+cd ~/Source/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh fsc_lab_machine
+
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+> **The `t650_aerial_manipulator` RENAME OF THE AUTOPILOT-SIDE SCRIPT IS NOT ON
+> `origin/dev_CCM`** (checked 2026-08-13: no remote branch of fsc_autopilot_ros2
+> contains it, and fsc_lab_machine's checkout is 0/0 against `origin/dev_CCM`).
+> It is unpushed on shiqi-desktop. **This does not block a run** — everything
+> functional IS on `dev_CCM` under the old name:
+> `start_direct_actuation_am_t650_stack.sh` takes the identical
+> `<machine_config> [uav_prefix]` arguments, launches the same
+> `single_drone_direct_actuation_launch.py`, and points at
+> `config/params_single_drone_direct_actuation_am_t650.yaml`, which already
+> carries the 2026-08-11 tune (`posctl_k_pos_x/y` 0.6, `posctl_k_vel_*` 7.0,
+> `system_ff_tau_y_per_coll` −0.060 / `_const` −0.0058, `ratectl_trim_y` 0.0).
+> The `system_ff_tau_*` feedforward is implemented on `dev_CCM` in
+> `fsc_autopilot_ros2_node/single_drone_direct_actuation/client_lib/`.
+>
+> One documentation drift to be aware of: §7.7.1 above says step 1 launches a
+> FORK, `autopilot_aerial_manipulator_direct_actuation_node`. **No such fork
+> exists on `dev_CCM`** — there the feedforward lives in the shared
+> direct-actuation node, gated off by 0.0 defaults. That refactor is unpushed
+> too. Functionally the two are equivalent for this rig.
+
+**One-time build on fsc_lab_machine** — the arm workspace is
+`~/Source/Shiqi/fsc_om_ws`, **not** `~/colcon_ws`: this machine's `~/colcon_ws`
+already holds the UPSTREAM `ROBOTIS-GIT/open_manipulator` checkout, which is a
+different repo (no `open_manipulator_x_custom_controller`, no `_isaac_bridge`,
+no `custom_gui`) and must not be conflated with the fork. Unlike shiqi-desktop
+this machine has **ros2_control installed system-wide from apt**, so there is no
+root-less deb overlay — `FSC_OM_ARM_ROSDEPS_SETUP` is `/dev/null`.
+
+```bash
+# one-time apt (needs the sudo password). pinocchio is a hard BUILD dep of
+# open_manipulator_x_custom_controller; Qt6 Widgets+Charts of custom_gui.
+sudo apt install ros-humble-pinocchio qt6-base-dev libqt6charts6-dev \
+                 ros-humble-robot-state-publisher
+
+mkdir -p ~/Source/Shiqi/fsc_om_ws/src
+cd ~/Source/Shiqi/fsc_om_ws
+# NOTE the Gao907@ in the URL — see the credential warning below
+git clone https://Gao907@github.com/Gao907/fsc_open_manipulator.git src/fsc_open_manipulator
+vcs import src < src/fsc_open_manipulator/workspace.repos
+
+# MANDATORY on this machine — see the python warning below
+export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v fsc_isaac_env | paste -sd:)
+source /opt/ros/humble/setup.bash
+colcon build --packages-select \
+  dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \
+  open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \
+  --symlink-install
+```
+
+> **The build FAILS on this machine unless the `fsc_isaac_env` venv is off
+> `PATH` first.** This login shell's `python3` resolves to
+> `~/envs/fsc_isaac_env/bin/python3`, CMake hands that interpreter to
+> `ament_cmake_core`'s `package_xml_2_cmake.py`, and it dies with
+> `ModuleNotFoundError: No module named 'catkin_pkg'` on the very first
+> package. The error names a python module, so it reads like a missing pip
+> dependency; it is the wrong interpreter. Verify with `which python3` →
+> `/usr/bin/python3` before building. The same applies to `custom_gui`'s
+> Python-side imports (PyQt5/pyqtgraph/matplotlib exist under `/usr/bin/python3`
+> only).
+>
+> **`gazebo_ros` / `gazebo_ros2_control` are NOT needed** even though
+> `open_manipulator_x_bringup` and `_custom_controller` declare them in
+> `package.xml`: neither is ever `find_package`d (the build lists are the
+> `THIS_PACKAGE_INCLUDE_DEPENDS` blocks), and this rig runs Isaac, not Gazebo.
+> Skipping them avoids pulling the whole Gazebo stack.
+>
+> `open_manipulator_x_isaac_bridge` must be built **after**
+> `open_manipulator_x_custom_controller` — colcon looks for the latter's
+> `package.sh` and fails outright if it is missing, so a `--packages-select`
+> that omits the controller cannot build the bridge either.
+
+> **`fsc_open_manipulator` is PRIVATE to the `Gao907` account, and this shared
+> lab desktop's stored GitHub credential belongs to `LonghaoQian`.** A plain
+> `git clone https://github.com/Gao907/...` silently authenticates as Longhao
+> and fails with a misleading **"Repository not found"** (GitHub returns 404,
+> not 403, for private repos an identity cannot see) — it is an access problem,
+> not a typo. Putting `Gao907@` in the URL makes git-credential-manager key the
+> lookup on host + username, so it prompts for the right identity instead of
+> reusing Longhao's and leaves that credential untouched.
+>
+> The GUI dependencies (PyQt5/pyqtgraph/matplotlib) are already present under
+> this machine's `/usr/bin/python3`; note an interactive shell's `python3`
+> resolves to `~/envs/fsc_isaac_env`, which does **not** have them, so check
+> with the absolute path if `custom_gui` fails to import.
+
 Flight (takeoff by streamed reference, DIRECT in/out, land, disarm) is
 identical to §7.7.1. The arm stack's pane waits for Isaac's
 `/uav_0/arm/joint_states` before launching `controller_manager`, so the
@@ -1291,6 +1409,168 @@ What to watch:
   follows `/uav_0/joint_states`, and adopts the controller's working range
   through the namespaced parameter service. First full flight with
   PX4/DIRECT in the loop was run by the user 2026-08-13.
+
+### 7.10 AM-T650 GEOMETRIC direct actuation — added 2026-08-13
+
+The §7.7 rig flown by a **different controller**: a new node in
+`fsc_autopilot_ros2` (`single_drone_geometric_direct_actuation`, installed as
+`autopilot_geometric_direct_actuation_node`) whose DIRECT mode replaces the
+apm attitude stage + normalized-torque rate PID + `NormalizedMix` with **one
+geometric SO(3) law computed in physical units**. The plant, the Pegasus
+launcher and the arm hold are **exactly §7.7's** — only the ROS 2 side changes.
+
+```
+outer loop (UNCHANGED, shared by both modes, 100 Hz)
+  robust position controller + UDE  →  attitude setpoint + thrust [N]
+    │
+    ├─ SAFETY : thrust → vehicle thrust model → normalized thrust_body
+    │           + attitude setpoint → VehicleAttitudeSetpoint → PX4 runs
+    │           attitude + rate + mixer          (geometric law DORMANT)
+    │
+    └─ DIRECT : attitude setpoint → GEOMETRIC SO(3) LAW, 250 Hz
+                  τ = −kR∘e_R − kΩ∘ω + ω×Jω          [N·m]
+                + CoM torque feedforward             [N·m]
+                → FLU→FRD → WRENCH ALLOCATOR
+                  [τ; T] → per-rotor thrust [N] → ω² → ω [rad/s]
+                  → normalized throttle via the MN4010 bench curve
+                → ActuatorMotors                     (PX4 runs NOTHING)
+```
+
+**The point of the redesign is where normalization happens.** There is no
+vehicle thrust model on the DIRECT path: collective thrust stays in newtons all
+the way down, and the only `→ normalized` step is the last one, after per-rotor
+speeds exist. `vehicle_thrust_scaling` / `vehicle_idle_thrust` in the yaml
+therefore serve **SAFETY only** (PX4 needs a dimensionless `thrust_body`).
+
+**Three consequences that differ from §7.7 and will bite if forgotten:**
+
+1. **No integral state anywhere in the inner loop.** The geometric law is pure
+   kR/kΩ + gyroscopic feedforward — no rate integrator, no `ratectl_trim_*`. The
+   arm's standing pitch moment is carried *entirely* by the torque feedforward
+   `system_ff_tau_y_per_newton: -0.0195` (= −dx, in N·m per newton of thrust —
+   exact with zero intercept, unlike §7.7's normalized `-0.060·c - 0.0058`
+   which needed an affine term for the motor map). At hover it evaluates to
+   **−0.717 N·m**, the same moment §7.7 cancels. **A persistent attitude offset
+   in DIRECT hover means this coefficient is wrong — nothing will absorb it.**
+2. **`alloc_rotor*_km` is NOT inert here.** §7.7's allocator re-normalizes the
+   yaw column so a common km factor cancels; this one does no column scaling, so
+   km sets yaw torque in N·m directly. The shipped 0.052867 is the **sim-plant
+   effective** value (bench × `YAW_TORQUE_FIT_FACTOR` 3.0); for hardware use the
+   bench 0.018164 and kf 4.540431e-05.
+3. **Gains live in `geoctl_*`, in physical units** (kR N·m/rad, kΩ N·m/(rad/s),
+   full inertia tensor, torque clamps) — not `attctl_*`/`ratectl_*`. They are
+   **derived, not tuned**: authority-matched to §7.7's flown cascade at hover
+   (1.0 normalized roll/pitch ≙ 17.96 N·m, yaw ≙ 5.84 N·m — cross-checked
+   against the flown hover rotor split).
+
+Higher-order references (jerk/snap → ω_ref, ω̇_ref) are **zero** for now, so the
+J-weighted tracking-feedforward terms of the full Lee law vanish; the
+gyroscopic ω×Jω term remains.
+
+**STATUS: bench-checked only, NEVER FLOWN — not even in sim — as of
+2026-08-13.** A synthetic closed-loop harness (faked PX4/estimator topics, real
+service switch) drove the full chain and reproduced the AM-T650 hover solution:
+mean motor command **0.567** vs 0.569 derived, front/rear split
+**0.595 / 0.539** vs 0.597 / 0.540 physical. The feedback-loss failsafe was
+observed tripping at +1.0 s and reverting DIRECT → SAFETY. Everything past that
+is unflown.
+
+#### 7.10.1 Run sequence — copy-paste, per machine
+
+Identical to §7.7.1 except **step 1's launcher** and the **service namespace**
+(`geometric_direct_actuation`, not `direct_actuation`). Step 2 is the *same*
+Pegasus launcher — the plant does not change.
+
+**fsc_lab_machine** (the lab desktop, user `fsc-jupiter`):
+
+```bash
+# 0. clean slate            (any terminal)
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
+colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
+./scripts/isaacsim/start_geometric_direct_actuation_am_t650_stack.sh fsc_lab_machine uav_0
+
+# 2. Pegasus / PX4 SITL     (terminal 2 — SAME launcher as §7.7, plant unchanged)
+cd ~/Source/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh fsc_lab_machine
+
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+**shiqi_machine** (shiqi-desktop): the node is new and was authored on
+fsc_lab_machine — it does not exist there until `fsc_autopilot_ros2` is pushed
+and pulled. Once it is, the block above holds with `~/ros2_ws/src/…`,
+`~/fsc_PegasusSimulator/…` and `shiqi_machine`, exactly as §7.7.1 differs.
+
+Detach a stack terminal with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is
+also the shutdown (`stop_isaacsim_stack.sh` auto-discovers this stack's session
+`fsc_geometric_direct_actuation_am_t650_stack` by grepping its sibling
+`start_*.sh` files, so it cannot drift).
+
+**In flight** (machine-independent). Takeoff is driven from the ground station
+exactly as in §7.7 — SAFETY holds the *ground* position until a reference
+arrives, and **exactly one publisher** on the reference topic. Once settled:
+
+```bash
+# enter GEOMETRIC DIRECT
+ros2 service call /uav_0/fsc_autopilot_ros2/geometric_direct_actuation/set_direct_mode \
+  std_srvs/srv/SetBool "{data: true}"
+
+# abort back to SAFETY — keep this ready before entering DIRECT
+ros2 service call /uav_0/fsc_autopilot_ros2/geometric_direct_actuation/set_direct_mode \
+  std_srvs/srv/SetBool "{data: false}"
+
+# PX4 refuses an in-air disarm, so land by reference FIRST, then:
+ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
+```
+
+**Starting the stack does NOT put you in the geometric controller.** The node
+boots in SAFETY and `innerLoop()` returns on its first line unless the mode is
+DIRECT, so the geometric law computes nothing until the service call above.
+Confirm which law is live:
+
+```bash
+ros2 topic echo --once /uav_0/fsc_autopilot_ros2/controller_type
+#   → "Baseline (Safety)"  |  "Geometric Direct Actuation"      (latched)
+ros2 topic echo /uav_0/fsc_autopilot_ros2/geometric_direct_actuation/geometric_control_debug
+#   → SILENT in SAFETY; publishes at 250 Hz in DIRECT
+```
+
+`geometric_control_debug` is a flat `Float32MultiArray`, 24 elements:
+
+| index | contents | units |
+|---|---|---|
+| 0–2 | `e_R` attitude error | — |
+| 3–5 | `e_ω` (= ω, reference zeroed) | rad/s |
+| 6–8 | commanded torque, feedforward included | N·m |
+| 9–11 | CoM torque feedforward | N·m |
+| 12–15 | per-rotor thrust | N |
+| 16–19 | rotor speed | rad/s |
+| 20–23 | normalized motor command | — |
+
+What to watch, beyond §7.5 and §7.7's lists (both still apply):
+
+- **Motor commands ≈ `[0.597, 0.540, 0.597, 0.540]`** in a settled DIRECT hover
+  (elements 20–23), and element 10 (τ_ff pitch) ≈ **−0.717 N·m**. Same hover
+  point as §7.7 — the plant is identical, only the law computing it changed.
+- **Yaw first.** The gains are derived, unflown, and the sim yaw axis runs at
+  ~2.45× its nominal loop gain from `YAW_TORQUE_FIT_FACTOR = 3.0` — and unlike
+  §7.7, km feeds yaw torque directly here (consequence 2 above).
+- **A steady attitude offset is a feedforward error, not a gain error** — there
+  is no integrator to blame (consequence 1 above).
+- **Allocator saturation** is logged (throttled, 1 Hz) with the unallocated
+  wrench in N·m/N. On this airframe it should never fire in hover: peak
+  authority is 11.38 N·m roll/pitch, 2.62 N·m yaw against clamps of 8.0 / 2.0.
+- The SAFETY path here is the baseline *architecture* but **not** numerically
+  §7.8's tune: this config runs the DIRECT-tuned position gains
+  (`k_pos_x/y 0.6`, `k_vel 7.0`) in **both** modes, where the AM baseline stack
+  runs 1.0 / 3.70. Don't compare step responses across the two rigs.
 
 ---
 
