@@ -1711,11 +1711,43 @@ sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
-> **fsc_lab_machine:** the launcher and params file are new on shiqi-desktop
-> (2026-08-14) and not yet pushed — same situation as the §7.9/§7.10 rename
-> notes. Once pulled, the sequence is identical with the lab paths
-> (`~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2`,
-> `~/Source/fsc_PegasusSimulator`, config `fsc_lab_machine`).
+**Run sequence — fsc_lab_machine (the lab desktop, user `fsc-jupiter`):**
+
+Same four steps, lab paths. Both new files arrived here on 2026-08-14 — the
+Pegasus launcher with `dev_robotic_arm` `b07f426`, the ROS 2 fork with
+`fsc_autopilot_ros2` `dev_CCM` `d8d64e1`.
+
+```bash
+# 0. clean slate            (any terminal)
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/Workspaces/fsc_autopilot_ws                                                 # workspace root, NOT the repo
+colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # after any pull
+cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_geometric_direct_actuation_t650_stack.sh fsc_lab_machine uav_0
+
+# 2. Pegasus / PX4 SITL     (terminal 2 — the geometric stack's own launcher, twin of §7.3's)
+cd ~/Source/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_geometric_direct_actuator_sitl.sh fsc_lab_machine
+
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+Only the paths differ from the shiqi_machine block: the autopilot workspace is
+`~/Workspaces/fsc_autopilot_ws` (repo under `src/fsc_autopilot_ros2`) and
+Pegasus is at `~/Source/fsc_PegasusSimulator`. **`colcon build` must run from
+the workspace root on this machine too** — the stack script derives
+`WS_ROOT` as its own path's great-grandparent (`~/Workspaces/fsc_autopilot_ws`)
+and sources `$WS_ROOT/install/setup.bash`, so a build launched from the repo
+directory writes a nested `build/`+`install/` the script never reads and the
+stack silently runs the previous binaries. (§7.10's fsc_lab_machine block still
+shows the build in the repo directory — treat that as stale; nothing has ever
+built there, there is no in-repo `build/`.)
 
 Detach with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is also the shutdown
 (`stop_isaacsim_stack.sh` auto-discovers the session by grepping its sibling
