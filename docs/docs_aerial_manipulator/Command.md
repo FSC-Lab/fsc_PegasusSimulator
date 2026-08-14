@@ -1413,8 +1413,8 @@ What to watch:
 ### 7.10 AM-T650 GEOMETRIC direct actuation — added 2026-08-13
 
 The §7.7 rig flown by a **different controller**: a new node in
-`fsc_autopilot_ros2` (`single_drone_geometric_direct_actuation`, installed as
-`autopilot_geometric_direct_actuation_node`) whose DIRECT mode replaces the
+`fsc_autopilot_ros2` (`single_aerial_manipulator_geometric_direct_actuation`,
+installed as `autopilot_geometric_direct_actuation_node`) whose DIRECT mode replaces the
 apm attitude stage + normalized-torque rate PID + `NormalizedMix` with **one
 geometric SO(3) law computed in physical units**. The plant, the Pegasus
 launcher and the arm hold are **exactly §7.7's** — only the ROS 2 side changes.
@@ -1481,6 +1481,24 @@ Identical to §7.7.1 except **step 1's launcher** and the **service namespace**
 (`geometric_direct_actuation`, not `direct_actuation`). Step 2 is the *same*
 Pegasus launcher — the plant does not change.
 
+> **Renamed 2026-08-14, twice.** First `am_t650` → `t650_aerial_manipulator`,
+> completing on the geometric stack the rename the other AM stacks got on
+> 2026-08-11. Then `single_drone_` → `single_aerial_manipulator_` on the node
+> itself, since this variant flies the manipulator, not a bare drone. Current
+> names:
+>
+> | | name |
+> |---|---|
+> | launcher | `start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh` |
+> | params | `params_single_aerial_manipulator_geometric_direct_actuation_t650.yaml` |
+> | launch file | `single_aerial_manipulator_geometric_direct_actuation_launch.py` |
+> | tmux session | `fsc_geometric_direct_actuation_t650_aerial_manipulator_stack` |
+>
+> **Unchanged on purpose:** the executable `autopilot_geometric_direct_actuation_node`
+> and the service namespace `geometric_direct_actuation`, so the `set_direct_mode`
+> calls below still work verbatim. Any `am_t650` or `single_drone_geometric`
+> spelling will now fail with "No such file or directory".
+
 **fsc_lab_machine** (the lab desktop, user `fsc-jupiter`):
 
 ```bash
@@ -1491,7 +1509,7 @@ cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/st
 # 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
 colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
-./scripts/isaacsim/start_geometric_direct_actuation_am_t650_stack.sh fsc_lab_machine uav_0
+./scripts/isaacsim/start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
 
 # 2. Pegasus / PX4 SITL     (terminal 2 — SAME launcher as §7.7, plant unchanged)
 cd ~/Source/fsc_PegasusSimulator
@@ -1515,7 +1533,7 @@ cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
 cd ~/ros2_ws                                                                     # workspace root, NOT the repo
 colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
 cd ~/ros2_ws/src/fsc_autopilot_ros2
-./scripts/isaacsim/start_geometric_direct_actuation_am_t650_stack.sh shiqi_machine uav_0
+./scripts/isaacsim/start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
 # 2. Pegasus / PX4 SITL     (terminal 2 — SAME launcher as §7.7, plant unchanged)
 cd ~/fsc_PegasusSimulator
@@ -1551,8 +1569,8 @@ unflown, so do not debug both novelties at once.
 
 Detach a stack terminal with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is
 also the shutdown (`stop_isaacsim_stack.sh` auto-discovers this stack's session
-`fsc_geometric_direct_actuation_am_t650_stack` by grepping its sibling
-`start_*.sh` files, so it cannot drift).
+`fsc_geometric_direct_actuation_t650_aerial_manipulator_stack` by grepping its
+sibling `start_*.sh` files, so it cannot drift).
 
 **In flight** (machine-independent). Takeoff is driven from the ground station
 exactly as in §7.7 — SAFETY holds the *ground* position until a reference
@@ -1612,6 +1630,192 @@ What to watch, beyond §7.5 and §7.7's lists (both still apply):
   §7.8's tune: this config runs the DIRECT-tuned position gains
   (`k_pos_x/y 0.6`, `k_vel 7.0`) in **both** modes, where the AM baseline stack
   runs 1.0 / 3.70. Don't compare step responses across the two rigs.
+
+### 7.11 Bare-T650 GEOMETRIC direct actuation — added 2026-08-14
+
+§7.10's geometric controller on §7's **bare T650 plant** (no arm —
+`x650_new.usd` with the T650 motor calibration, 3.034 kg total). The ROS 2 side
+runs a **separate parallel fork** of the geometric node (split out 2026-08-14):
+its own sub-package `single_drone_geometric_direct_actuation`, its own
+executable, sharing no source file with the AM node — but the **runtime
+interface is identical on purpose** (same node name `fsc_autopilot_ros2`, same
+topics, same `geometric_direct_actuation/set_direct_mode` service), so every
+command in this section is §7.10's verbatim. The Pegasus side gets its **own
+named launcher** (below, added 2026-08-14), a functionally identical twin of
+§7.3's classic one — same plant, same lockstep-off setup — so every stack
+pairs 1:1 with its own launcher.
+
+| | name |
+|---|---|
+| launcher | `start_geometric_direct_actuation_t650_stack.sh` |
+| executable | `autopilot_drone_geometric_direct_actuation_node` (fork, NOT §7.10's) |
+| params | `params_single_drone_geometric_direct_actuation_t650.yaml` |
+| tmux session | `fsc_geometric_direct_actuation_t650_stack` |
+| Pegasus launcher | `start_t650_geometric_direct_actuator_sitl.sh` (added 2026-08-14) |
+
+The Pegasus launcher is a **functionally identical twin of §7.3's**
+`start_t650_direct_actuator_sitl.sh` — same plant, same lockstep-off setup,
+its own name so every stack pairs 1:1 with its own launcher (its param-delay
+override is `T650_GEOMETRIC_DIRECT_ACTUATOR_PARAM_DELAY`). Keep the two
+scripts functionally in lockstep; a plant change in one belongs in both.
+
+The params file is the §7.10 config re-derived about the bare hover point:
+`vehicle_mass` 3.033921, the bare-body inertia tensor, `geoctl_*` gains
+authority-matched at the bare hover (`kR` 2.4 / 0.44, `kΩ` 0.73 / 0.32 N·m
+units), and the classic bare-T650 outer loop (`k_pos` 1.0, `k_vel` 3.0 —
+**not** the AM's 0.6/7.0). The `system_ff_tau_*` keys **do not exist on this
+node** (not "present but zero" — setting them is silently ignored).
+
+**§7.10's consequence 1 does NOT apply here: this fork's law is geometric PID,
+not PD.** An integral term (`geoctl_ki_*`, Goodarzi & Lee's form) was added
+2026-08-14 after the first sim hover measured what pure PD does with a standing
+torque bias — see the status paragraph below. Consequences 2 (km not inert)
+and 3 (`geoctl_*` physical units) apply unchanged.
+
+**STATUS — three sim lessons on 2026-08-14, one flight each.** (1) First
+hover (pure PD law): stable, but with a steady 3–6 cm x/y offset in DIRECT —
+the plant's true CoM sits ~0.5 mm off the rotor centroid (mesh-derived mass
+properties of `x650_new.usd`), a ~0.015 N·m standing torque that PD can only
+absorb as a 0.36° standing attitude error, bought by the P-P position loop as
+position error (`e_pos = m·g·τ/(kR·k_pos·k_vel)`). The same bias exists under
+PX4 and the classic node — their rate integrators hide it. (2) An integral
+term was added (Goodarzi & Lee geometric PID) — and the first integrator
+build **oscillated in DIRECT**: the integral of e_ω *is* the attitude, so a
+mis-split that put the whole gain into kI (3.15, c2=1.0) acted as phantom
+proportional stiffness, cutting the roll/pitch phase margin against the
+99.7 ms rotor lag from 29° to 6°. (3) Corrected same day to the bit-faithful
+classic mapping — `ki_xy 0.97 / ki_z 0.32` with `c2_xy 3.25 / c2_z 1.4`
+(products unchanged, phase margin 20°, the flown classic loop shape). The
+corrected split is **unflown** as of writing. Hardware unflown entirely.
+
+**Run sequence — shiqi_machine (shiqi-desktop):**
+
+```bash
+# 0. clean slate            (any terminal)
+cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/ros2_ws                                                                     # workspace root, NOT the repo
+colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # after any pull
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_geometric_direct_actuation_t650_stack.sh shiqi_machine uav_0
+
+# 2. Pegasus / PX4 SITL     (terminal 2 — the geometric stack's own launcher, twin of §7.3's)
+cd ~/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_geometric_direct_actuator_sitl.sh shiqi_machine
+
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+> **fsc_lab_machine:** the launcher and params file are new on shiqi-desktop
+> (2026-08-14) and not yet pushed — same situation as the §7.9/§7.10 rename
+> notes. Once pulled, the sequence is identical with the lab paths
+> (`~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2`,
+> `~/Source/fsc_PegasusSimulator`, config `fsc_lab_machine`).
+
+Detach with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is also the shutdown
+(`stop_isaacsim_stack.sh` auto-discovers the session by grepping its sibling
+`start_*.sh` files).
+
+**In flight**: identical to §7.10 — takeoff by streamed reference from the
+ground station (exactly one publisher), then the same
+`geometric_direct_actuation/set_direct_mode` service calls to enter/abort
+DIRECT, land by reference, disarm on the ground. The `controller_type` /
+`geometric_control_debug` verification topics are §7.10's, but this fork's
+debug array has its **own 24-element layout** (no feedforward slot; integral
+torque appended): e_R [0..2], e_ω [3..5], torque N·m [6..8], rotor thrust
+[9..12], rotor speed [13..16], motor command [17..20], **integral torque
+kI∘e_I N·m [21..23]**.
+
+What to watch, beyond §7.5's list (which still applies):
+
+- **Motor commands ≈ `[0.5025, 0.5025, 0.5025, 0.5025]`** in a settled DIRECT
+  hover (debug elements **17–20**) — the symmetric plant's signature. A
+  front/rear split here would mean the AM stack is running (its hover is
+  0.597/0.540).
+- **Integral torque [21..23] should settle near `[±0.015, ∓0.008, ·]` N·m** —
+  the measured CoM-offset bias — and the commanded-vs-actual attitude gap and
+  the 3–6 cm x/y offset should be gone with it. An integral parked at
+  `geoctl_i_max_*` (1.45 xy / 0.47 z) means a real airframe-class fault, the
+  X650 motor-cant kind — land and measure, don't retune.
+- **Yaw first**, same as every T650 rig: the sim yaw axis carries
+  `YAW_TORQUE_FIT_FACTOR` = 3.0, and on this allocator km feeds yaw torque in
+  N·m directly.
+- The integral resets on the **arming edge only** and survives SAFETY↔DIRECT
+  switches, so the first DIRECT entry of a flight re-learns the bias in ~1–2 s
+  (Ti = 0.76 s xy) and every later entry starts pre-charged.
+
+#### 7.11.1 Reference for the integral term
+
+The integral term added on 2026-08-14 is **not** an ad-hoc PID bolt-on; it is
+the attitude integral of:
+
+> F. Goodarzi, D. Lee, and T. Lee, **"Geometric Nonlinear PID Control of a
+> Quadrotor UAV on SE(3),"** *Proceedings of the European Control Conference
+> (ECC)*, Zürich, Switzerland, July 17–19 2013, IEEE, New York, pp. 3845–3850.
+> Preprint: [arXiv:1304.6765](https://arxiv.org/abs/1304.6765).
+
+It extends the PD law this node already ran — Lee, Leok & McClamroch,
+*"Geometric tracking control of a quadrotor UAV on SE(3)"*, CDC 2010 — whose
+attitude channel is what §7.10 and this section call "the geometric law".
+
+**What we took, verbatim.** The paper's attitude moment, its equations (13)–(14):
+
+```
+M   = −kR·eR − kΩ·eΩ − kI·eI + (RᵀR_d Ω_d)^ J RᵀR_d Ω_d + J RᵀR_d Ω̇_d      (13)
+eI  = ∫₀ᵗ [ eΩ(τ) + c₂·eR(τ) ] dτ                                            (14)
+```
+
+Our implementation is (13)–(14) with `Ω_d ≡ Ω̇_d ≡ 0` (no jerk/snap references,
+so both feedforward terms vanish and only `ω×Jω` survives — §7.10's note), plus
+two engineering additions the paper does not specify: a per-axis clamp on the
+integral and a freeze while the allocator reports that axis saturated.
+
+| paper | our param | shipped (bare T650) |
+|---|---|---|
+| `kR` | `geoctl_kr_*` | 2.4 / 2.4 / 0.44 N·m/rad |
+| `kΩ` | `geoctl_komega_*` | 0.73 / 0.73 / 0.32 N·m/(rad/s) |
+| `kI` | `geoctl_ki_*` | 0.97 / 0.97 / 0.32 N·m/rad |
+| `c₂` | `geoctl_c2_xy`, `geoctl_c2_z` | 3.25 / 1.4 s⁻¹ (paper uses one scalar) |
+| — | `geoctl_i_max_*` | 1.45 / 0.47 N·m (not in the paper) |
+
+**The paper predicts the oscillation we hit.** Integrating `eΩ` as well as `eR`
+is the paper's deliberate choice (it is what buys exponential stability under
+disturbance), and §III-B spells out the side effect:
+
+> "Unlike common integral control terms where the attitude error is integrated
+> only, here the angular velocity error is also integrated at (14). […] From
+> (12), it essentially increases the proportional term. **The corresponding
+> effective controller gains for the proportional term and the integral term
+> are given by kR + kI and c₂kI, respectively.**"
+
+That is exactly the trap the first integrator build fell into: putting the whole
+desired `c₂kI` into `kI` (3.15, c₂ = 1) raised the *effective* proportional gain
+to `kR + kI` = 5.55 N·m/rad and cut phase margin against the 99.7 ms rotor lag
+to 6°. The shipped split keeps `kI` small and `c₂` large — same `c₂kI` = 3.15,
+effective proportional 3.37, margin 20°.
+
+**One deliberate deviation, recorded.** The paper's Proposition 2 requires
+
+```
+c₂ < min{ √(kR·λm/λM),  4kΩ / (8kR·λM + (kΩ+B₂)²) }
+```
+
+which at our tensor (λm 0.0595, λM 0.0815) and `Ω_d = 0` (so `B₂ = 0`) evaluates
+to **c₂ < 1.324 s⁻¹**. Our `c2_xy` = 3.25 exceeds that by 2.45×, so
+**Proposition 2's almost-global exponential-stability guarantee does not cover
+this tune.** We ship it anyway, deliberately: the paper's model is a rigid body
+with instantaneous torque and **no actuator dynamics**, while this plant's
+binding constraint is the rotor lag. Satisfying the bound at fixed integral
+authority forces `kI` up (`c₂` 1.324 → `kI` 2.38 → effective P 4.78) and drops
+the measured phase margin to **10.4°** — i.e. obeying the sufficient condition
+would make the real loop *worse*. Values were instead authority-matched to the
+flown classic cascade and confirmed in sim. Revisit this if jerk/snap references
+are ever added (`Ω_d ≠ 0` makes `B₂ > 0` and tightens the bound further).
 
 ---
 
