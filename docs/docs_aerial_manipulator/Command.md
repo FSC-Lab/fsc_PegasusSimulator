@@ -1503,10 +1503,51 @@ sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
-**shiqi_machine** (shiqi-desktop): the node is new and was authored on
-fsc_lab_machine — it does not exist there until `fsc_autopilot_ros2` is pushed
-and pulled. Once it is, the block above holds with `~/ros2_ws/src/…`,
-`~/fsc_PegasusSimulator/…` and `shiqi_machine`, exactly as §7.7.1 differs.
+**shiqi_machine** (shiqi-desktop) — the node arrived here with the
+`fsc_autopilot_ros2` `dev_CCM` pull of 2026-08-13:
+
+```bash
+# 0. clean slate            (any terminal)
+cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/ros2_ws                                                                     # workspace root, NOT the repo
+colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
+cd ~/ros2_ws/src/fsc_autopilot_ros2
+./scripts/isaacsim/start_geometric_direct_actuation_am_t650_stack.sh shiqi_machine uav_0
+
+# 2. Pegasus / PX4 SITL     (terminal 2 — SAME launcher as §7.7, plant unchanged)
+cd ~/fsc_PegasusSimulator
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh shiqi_machine
+
+# 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+```
+
+Two machine-shape differences from the fsc_lab_machine block above, both
+deliberate: `colcon build` runs from the **workspace root `~/ros2_ws`** (the
+stack script derives `WS_ROOT` from its own path and refuses to start unless
+`$WS_ROOT/install/setup.bash` exists — it sources the overlay itself, so no
+manual `source` is needed), and the Pegasus repo is at `~/fsc_PegasusSimulator`
+rather than `~/Source/…`.
+
+**Swapping in the ROS 2 arm stack (optional, untried).** Step 2 above runs
+§7.7's `04_..._hold.py`, i.e. the arm held in-process. To fly the geometric
+controller against the §7.9 rig — arm commanded over ROS 2 by
+fsc_open_manipulator, with its own ground station — replace step 2's launcher
+with
+
+```bash
+./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh shiqi_machine
+```
+
+The two sides are independent (the arm stack talks only to
+`/uav_0/arm/*`, the flight controller never sees it), so the combination
+should work — but **nobody has run it**, and the geometric law itself is
+unflown, so do not debug both novelties at once.
 
 Detach a stack terminal with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is
 also the shutdown (`stop_isaacsim_stack.sh` auto-discovers this stack's session
