@@ -70,6 +70,8 @@ def spawn_t650_with_mavlink(
     enable_lockstep: bool = True,
     body_mass=None,
     body_inertia=None,
+    graphical_sensors=None,
+    pub_graphical_sensors: bool = False,
 ):
     """Spawn the bare T650 airframe with a stock Pegasus ``Multirotor`` plus PX4 MAVLink and
     ROS 2 backends, calibrated against the MN4010 + 15x5" bench test. No PX4 SITL is
@@ -87,6 +89,11 @@ def spawn_t650_with_mavlink(
         body_mass, body_inertia: override t650_params.BODY_MASS / INERTIA_TENSOR (a 3x3
             tensor or a length-3 diagonal; both accepted). Both default
             to the T650's own values; pass them only for a deliberate variant.
+        graphical_sensors: optional list of pegasus GraphicalSensor instances (e.g.
+            MonocularCamera) attached to the vehicle. Default None keeps the bare
+            airframe exactly as before.
+        pub_graphical_sensors: forward camera/graphical sensor data on the ROS 2
+            backend. Off by default (matches previous behaviour).
 
     Returns:
         str: the vehicle stage prefix (drone root path).
@@ -129,7 +136,7 @@ def spawn_t650_with_mavlink(
         config={
             "namespace": "uav_",
             "pub_sensors": False,
-            "pub_graphical_sensors": False,
+            "pub_graphical_sensors": pub_graphical_sensors,
             "pub_state": True,
             "pub_twist": True,
             "pub_accel": True,
@@ -154,6 +161,8 @@ def spawn_t650_with_mavlink(
         "rotor_lambda": [t650_params.ROTOR_LAMBDA] * 4,
         "rot_dir": [int(d) for d in t650_params.ROT_DIR],
     })
+    if graphical_sensors:
+        config.graphical_sensors = list(graphical_sensors)
 
     drone_prim_path = f"/World/quadrotor_{vehicle_id}"
 
