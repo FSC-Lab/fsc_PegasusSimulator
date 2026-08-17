@@ -13,8 +13,8 @@ set -euo pipefail
 #   fsc_open_manipulator PositionController (the REAL ros2_control plugin,
 #       aerial config: home [0, 40, 40, 0] deg, min-jerk moves)
 #     -> open_manipulator_x_isaac_bridge/IsaacTopicSystem
-#     -> /uav_0/arm/joint_position_commands -> Isaac servo emulation
-#     <- /uav_0/arm/joint_states
+#     -> /uav_0/isaacsim_manipulator/position_commands -> Isaac servo emulation
+#     <- /uav_0/isaacsim_manipulator/joint_states
 #
 # On top of the base tmux session this launcher adds an "arm" window with two
 # panes: the arm ros2_control stack (controller_manager + spawners) and the
@@ -71,7 +71,14 @@ ARM_WS="${FSC_OM_ARM_WS:-$HOME/colcon_ws}"
 ARM_ROSDEPS_SETUP="${FSC_OM_ARM_ROSDEPS_SETUP:-$HOME/ros2_ws/rosdeps/local_setup.bash}"
 ARM_ROS2_SETUP="${ROS2_SETUP:-/opt/ros/humble/setup.bash}"
 ARM_WS_SETUP="$ARM_WS/install/setup.bash"
-ARM_STATE_TOPIC="/uav_0/arm/joint_states"
+# Topic naming (see docs/docs_aerial_manipulator/Arm Topic Naming.md):
+#   /uav_0/fsc_open_manipulator/...  the REAL arm stack — same names on hardware
+#   /uav_0/isaacsim_manipulator/...  the simulated servo bus — sim only
+# ARM_NS is the ros2_control stack's namespace; the ground station must run in
+# the SAME namespace (it resolves every topic/service relatively), so both are
+# derived from this one variable.
+ARM_NS="uav_0/fsc_open_manipulator"
+ARM_STATE_TOPIC="/uav_0/isaacsim_manipulator/joint_states"
 # Display-only workspace datum for the inverted ground station: the paired
 # fsc_autopilot stack's standard hover reference is z = 1.2 m.
 ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
@@ -153,7 +160,7 @@ until timeout 5 ros2 topic echo --once $ARM_STATE_TOPIC >/dev/null 2>&1; do
   sleep 2
 done
 echo 'Isaac arm is reporting; launching the position-mode ros2_control stack.'
-ros2 launch open_manipulator_x_isaac_bridge position_control_isaac.launch.py
+ros2 launch open_manipulator_x_isaac_bridge position_control_isaac.launch.py namespace:=$ARM_NS
 echo 'Arm ros2_control stack exited.'
 exec bash
 "
@@ -162,7 +169,7 @@ exec bash
 $ARM_ENV
 export DISPLAY='$ARM_DISPLAY'
 echo 'Arm ground station (inverted). It discovers the active controller on its own.'
-ros2 run custom_gui joint_plot_inverted --ros-args -r __ns:=/uav_0 \\
+ros2 run custom_gui joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
   -p torque_constant:=1.81 -p mount_height:=$ARM_GS_MOUNT_HEIGHT
 echo 'Arm ground station exited.'
 exec bash

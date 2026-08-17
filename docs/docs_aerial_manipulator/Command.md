@@ -1188,8 +1188,8 @@ fsc_open_manipulator PositionController      ← the SAME compiled ros2_control
    home [0, 40°, 40°, 0], min-jerk moves)      bring-ups load
     ↕ position command/state interfaces
 open_manipulator_x_isaac_bridge/IsaacTopicSystem     (new hardware plugin)
-    → /uav_0/arm/joint_position_commands (JointState)
-    ← /uav_0/arm/joint_states
+    → /uav_0/isaacsim_manipulator/position_commands (JointState)
+    ← /uav_0/isaacsim_manipulator/joint_states
 Isaac (05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py, 250 Hz):
     Dynamixel-servo EMULATION — 04's flight-validated PD + gravity comp +
     3 N·m clamp, tracking the streamed reference; latches it if the stack dies
@@ -1204,16 +1204,33 @@ and the **ARM GROUND STATION** (`custom_gui joint_plot_inverted`) — together
 with the drone ground station from step 1 the simulation runs **two ground
 stations, one per subsystem, like the real rig**.
 
-**The whole arm stack lives under the vehicle namespace `/uav_0`**
-(2026-08-13, user request), so its topics sit beside the drone's:
-`/uav_0/controller_manager`, `/uav_0/arm_position_controller/…`,
-`/uav_0/{joint_states,joint_desired_states,joint_measured_states}`,
-`/uav_0/arm/{joint_states,joint_position_commands}` (the Isaac bridge pair).
-This required making the ground station's ROS names namespace-relative
-(`custom_gui`, 2026-08-13) — bench launches without a namespace resolve to
-the root exactly as before; the launcher starts the sim's station with
-`-r __ns:=/uav_0`. The launch's `namespace` argument and the nesting in
-`position_controller_isaac_aerial.yaml` must change together.
+**Every arm topic sits under the namespace of the PACKAGE that owns it**
+(2026-08-15, user request — superseding the 2026-08-13 plain `/uav_0`
+namespacing), mirroring how the flight stack owns `/uav_0/fsc_autopilot_ros2/…`
+so provenance is readable straight off `ros2 topic list`:
+
+| prefix | owner | on real hardware |
+|---|---|---|
+| `/uav_0/fsc_open_manipulator/…` | the real arm stack (ros2_control) | **identical** |
+| `/uav_0/isaacsim_manipulator/…` | the Isaac servo emulation | **absent** |
+
+so `/uav_0/fsc_open_manipulator/{controller_manager, joint_states,
+joint_desired_states, dynamic_joint_states, arm_position_controller/…}` and
+`/uav_0/isaacsim_manipulator/{joint_states, position_commands}` (the Isaac
+bridge pair — the emulated Dynamixel/U2D2 wire; **never subscribe to it from an
+application**, it vanishes on the real arm).
+
+The ground station's ROS names are namespace-relative (`custom_gui`,
+2026-08-13) — bench launches without a namespace resolve to the root exactly as
+before; the launcher starts the sim's station with
+`-r __ns:=/uav_0/fsc_open_manipulator`. **The launcher's single `ARM_NS`
+variable drives the stack namespace, the ground station and the readiness
+gate**, so they cannot drift, and `position_controller_isaac_aerial.yaml` no
+longer has to be edited in step — its node keys use the `/**/<node>:` wildcard
+and apply at any namespace. That wildcard must be **flat**: `/**:` with the
+node nested under it parses fine and matches nothing (params silently stop
+applying, controllers fail on empty `joints`). Full convention:
+`docs/docs_aerial_manipulator/Arm Topic Naming.md`.
 
 **One-time build on shiqi-desktop** (already done 2026-08-13; repeat after
 pulling the arm repo). Since the same-day repo consolidation there is ONE arm
@@ -1246,7 +1263,7 @@ cd ~/ros2_ws/src/fsc_autopilot_ros2
 
 # 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2)
 cd ~/fsc_PegasusSimulator
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh shiqi_machine
+./scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh shiqi_machine
 
 # 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
@@ -1273,7 +1290,7 @@ cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
 
 # 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2)
 cd ~/Source/fsc_PegasusSimulator
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh fsc_lab_machine
+./scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh fsc_lab_machine
 
 # 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
@@ -1368,16 +1385,16 @@ colcon build --packages-select \
 
 Flight (takeoff by streamed reference, DIRECT in/out, land, disarm) is
 identical to §7.7.1. The arm stack's pane waits for Isaac's
-`/uav_0/arm/joint_states` before launching `controller_manager`, so the
+`/uav_0/isaacsim_manipulator/joint_states` before launching `controller_manager`, so the
 ordering inside terminal 2 is automatic.
 
 **Commanding the arm** — identical to the Gazebo/hardware bring-ups apart
 from the `/uav_0` prefix, plus the ground station's Setpoints/Sine/Demos tabs:
 
 ```bash
-ros2 topic pub --once /uav_0/arm_position_controller/target_joint_positions \
+ros2 topic pub --once /uav_0/fsc_open_manipulator/arm_position_controller/target_joint_positions \
     std_msgs/msg/Float64MultiArray '{data: [0.0, 0.698, 0.698, 0.0]}'
-ros2 service call /uav_0/arm_position_controller/go_home std_srvs/srv/Trigger
+ros2 service call /uav_0/fsc_open_manipulator/arm_position_controller/go_home std_srvs/srv/Trigger
 ```
 
 (For this integration step the mission is just: home commanded and held for
@@ -1405,8 +1422,8 @@ What to watch:
   `/uav_0` namespacing (same day) the identical hold/move/go_home sequence
   was re-run loopback (fake plant) through the namespaced interfaces — all
   PASS — and the namespaced ground station verified on the wire: it
-  publishes/subscribes `/uav_0/arm_position_controller/target_joint_positions`,
-  follows `/uav_0/joint_states`, and adopts the controller's working range
+  publishes/subscribes `/uav_0/fsc_open_manipulator/arm_position_controller/target_joint_positions`,
+  follows `/uav_0/fsc_open_manipulator/joint_states`, and adopts the controller's working range
   through the namespaced parameter service. First full flight with
   PX4/DIRECT in the loop was run by the user 2026-08-13.
 
@@ -1444,14 +1461,18 @@ therefore serve **SAFETY only** (PX4 needs a dimensionless `thrust_body`).
 
 **Three consequences that differ from §7.7 and will bite if forgotten:**
 
-1. **No integral state anywhere in the inner loop.** The geometric law is pure
-   kR/kΩ + gyroscopic feedforward — no rate integrator, no `ratectl_trim_*`. The
-   arm's standing pitch moment is carried *entirely* by the torque feedforward
-   `system_ff_tau_y_per_newton: -0.0195` (= −dx, in N·m per newton of thrust —
-   exact with zero intercept, unlike §7.7's normalized `-0.060·c - 0.0058`
-   which needed an affine term for the motor map). At hover it evaluates to
-   **−0.717 N·m**, the same moment §7.7 cancels. **A persistent attitude offset
-   in DIRECT hover means this coefficient is wrong — nothing will absorb it.**
+1. ~~**No integral state anywhere in the inner loop.**~~ **REVISED 2026-08-15
+   (see §7.10.2): the node now runs the geometric PID of §7.11** (the Goodarzi
+   integral term the bare-T650 fork validated in sim AND hardware on
+   2026-08-14), and the CoM torque feedforward is recomputed **live from the
+   arm encoders** each joint-state message (`armff_*`), with the flown static
+   `system_ff_tau_y_per_newton: -0.0195` pair as the stale-arm fallback (= −dx
+   at home, N·m per newton — exact zero-intercept form, −0.717 N·m at hover,
+   the same moment §7.7 cancels). Division of labour: the feedforward carries
+   the arm's computable moment, the integral only the residual — expect the
+   settled integral ≈ 0, like §7.7's flown I_y. A persistent attitude offset
+   in DIRECT hover now means the *arm model* is wrong (and the integral will
+   mask it slowly — watch debug [24..26], not just the attitude).
 2. **`alloc_rotor*_km` is NOT inert here.** §7.7's allocator re-normalizes the
    yaw column so a common km factor cancels; this one does no column scaling, so
    km sets yaw torque in N·m directly. The shipped 0.052867 is the **sim-plant
@@ -1473,13 +1494,25 @@ service switch) drove the full chain and reproduced the AM-T650 hover solution:
 mean motor command **0.567** vs 0.569 derived, front/rear split
 **0.595 / 0.539** vs 0.597 / 0.540 physical. The feedback-loss failsafe was
 observed tripping at +1.0 s and reverting DIRECT → SAFETY. Everything past that
-is unflown.
+is unflown. **2026-08-15: the node was then upgraded (integral term + live arm
+feedforward, §7.10.2) before ever flying, so the first sim flight will fly the
+upgraded form.** The FK core of the live feedforward is cross-validated against
+this repo's `utils_controller/controller.py` to 1e-9 m over six arm poses
+(home reproduces the flown −0.0195 to 0.02%), and a clean `colcon build`
+passed; the closed loop is unflown.
 
 #### 7.10.1 Run sequence — copy-paste, per machine
 
 Identical to §7.7.1 except **step 1's launcher** and the **service namespace**
-(`geometric_direct_actuation`, not `direct_actuation`). Step 2 is the *same*
-Pegasus launcher — the plant does not change.
+(`geometric_direct_actuation`, not `direct_actuation`). **Step 2 changed
+2026-08-15: this rig now pairs with the §7.9 ROS2-ARM launcher** — the live
+arm feedforward consumes `/uav_0/fsc_open_manipulator/joint_states`, which only the
+fsc_open_manipulator ros2_control stack publishes — so the sim runs **two
+ground stations** (drone GS from step 1's gui pane, arm GS from step 2's `arm`
+tmux window), like the real rig. The plant itself is unchanged (§7.7's, arm
+servo emulation and all). Pairing with the plain §7.7 hold launcher still
+works but leaves the feedforward permanently on its static home-pose fallback
+(warn throttled in the autopilot pane).
 
 > **Renamed 2026-08-14, twice.** First `am_t650` → `t650_aerial_manipulator`,
 > completing on the geometric stack the rename the other AM stacks got on
@@ -1511,9 +1544,10 @@ cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
 colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
 ./scripts/isaacsim/start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
 
-# 2. Pegasus / PX4 SITL     (terminal 2 — SAME launcher as §7.7, plant unchanged)
+# 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2 — the §7.9
+#    ros2_arm launcher, REQUIRED since 2026-08-15 for the live arm feedforward)
 cd ~/Source/fsc_PegasusSimulator
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh fsc_lab_machine
+./scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh fsc_lab_machine
 
 # 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
@@ -1535,9 +1569,10 @@ colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=O
 cd ~/ros2_ws/src/fsc_autopilot_ros2
 ./scripts/isaacsim/start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
-# 2. Pegasus / PX4 SITL     (terminal 2 — SAME launcher as §7.7, plant unchanged)
+# 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2 — the §7.9
+#    ros2_arm launcher, REQUIRED since 2026-08-15 for the live arm feedforward)
 cd ~/fsc_PegasusSimulator
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh shiqi_machine
+./scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh shiqi_machine
 
 # 3. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
@@ -1552,20 +1587,26 @@ stack script derives `WS_ROOT` from its own path and refuses to start unless
 manual `source` is needed), and the Pegasus repo is at `~/fsc_PegasusSimulator`
 rather than `~/Source/…`.
 
-**Swapping in the ROS 2 arm stack (optional, untried).** Step 2 above runs
-§7.7's `04_..._hold.py`, i.e. the arm held in-process. To fly the geometric
-controller against the §7.9 rig — arm commanded over ROS 2 by
-fsc_open_manipulator, with its own ground station — replace step 2's launcher
-with
+**Why step 2 is the ROS 2 arm launcher (changed 2026-08-15).** It used to be
+§7.7's `04_..._hold.py` (arm held in-process), with the §7.9 rig listed as an
+optional, untried swap. ~~The two sides are independent (the arm stack talks
+only to `/uav_0/arm/*`, the flight controller never sees it)~~ — **no longer
+true, and no longer optional.** The flight controller now subscribes to
+`/uav_0/fsc_open_manipulator/joint_states` for its live CoM feedforward, and only the
+fsc_open_manipulator ros2_control stack publishes that topic; it also brings
+the arm ground station, which is what makes this a two-ground-station rig.
 
-```bash
-./scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh shiqi_machine
-```
+Running the plain `04` hold launcher instead still flies — the controller logs
+a throttled warn and falls back to the flown static home-pose coefficients, so
+you get the pre-2026-08-15 behaviour — but the live feedforward never
+activates (`geometric_control_debug[30]` stays 1), so it is a drone-only
+check, not this rig. The same fallback is the safety net if the arm stack dies
+mid-flight: degraded, not dangerous (the arm parks near home, and the integral
+absorbs the bounded difference slowly).
 
-The two sides are independent (the arm stack talks only to
-`/uav_0/arm/*`, the flight controller never sees it), so the combination
-should work — but **nobody has run it**, and the geometric law itself is
-unflown, so do not debug both novelties at once.
+**One-time prerequisite for step 2** (already done on shiqi-desktop 2026-08-13;
+repeat after pulling the arm repo) — the arm packages must be built in
+`~/colcon_ws`, see §7.9's "One-time build" block.
 
 Detach a stack terminal with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is
 also the shutdown (`stop_isaacsim_stack.sh` auto-discovers this stack's session
@@ -1601,28 +1642,40 @@ ros2 topic echo /uav_0/fsc_autopilot_ros2/geometric_direct_actuation/geometric_c
 #   → SILENT in SAFETY; publishes at 250 Hz in DIRECT
 ```
 
-`geometric_control_debug` is a flat `Float32MultiArray`, 24 elements:
+`geometric_control_debug` is a flat `Float32MultiArray`, **31 elements since
+2026-08-15** ([24..30] appended so earlier indices stay stable — bags recorded
+before that date have 24):
 
 | index | contents | units |
 |---|---|---|
 | 0–2 | `e_R` attitude error | — |
 | 3–5 | `e_ω` (= ω, reference zeroed) | rad/s |
 | 6–8 | commanded torque, feedforward included | N·m |
-| 9–11 | CoM torque feedforward | N·m |
+| 9–11 | CoM torque feedforward (live or static) | N·m |
 | 12–15 | per-rotor thrust | N |
 | 16–19 | rotor speed | rad/s |
 | 20–23 | normalized motor command | — |
+| 24–26 | integral torque kI∘e_I (the RESIDUAL the FF misses) | N·m |
+| 27–29 | live CoM offset r_com(q), FLU (zeros unless live) | m |
+| 30 | feedforward source: 0 none, 1 static fallback, 2 live | — |
 
 What to watch, beyond §7.5 and §7.7's lists (both still apply):
 
 - **Motor commands ≈ `[0.597, 0.540, 0.597, 0.540]`** in a settled DIRECT hover
   (elements 20–23), and element 10 (τ_ff pitch) ≈ **−0.717 N·m**. Same hover
   point as §7.7 — the plant is identical, only the law computing it changed.
+- **Element 30 must read 2** with the ros2_arm rig up — a 1 means the joint
+  stream is not reaching the controller (arm stack down, wrong namespace), and
+  the FF is frozen at home-pose values. Elements 27–29 should sit near
+  `[0.0195, −0.0001, −0.0145]` with the arm at home and MOVE when you command
+  the arm from the arm ground station — that motion, with the vehicle holding
+  station, is the whole point of the live feedforward.
+- **Integral torque [24..26] should settle near ZERO** (the FF carries the arm;
+  only residual model error is left). A value parked near `geoctl_i_max_*`
+  (1.62 xy / 0.53 z) means a broken arm model or a §7.7-class airframe fault.
 - **Yaw first.** The gains are derived, unflown, and the sim yaw axis runs at
   ~2.45× its nominal loop gain from `YAW_TORQUE_FIT_FACTOR = 3.0` — and unlike
   §7.7, km feeds yaw torque directly here (consequence 2 above).
-- **A steady attitude offset is a feedforward error, not a gain error** — there
-  is no integrator to blame (consequence 1 above).
 - **Allocator saturation** is logged (throttled, 1 Hz) with the unallocated
   wrench in N·m/N. On this airframe it should never fire in hover: peak
   authority is 11.38 N·m roll/pitch, 2.62 N·m yaw against clamps of 8.0 / 2.0.
@@ -1630,6 +1683,42 @@ What to watch, beyond §7.5 and §7.7's lists (both still apply):
   §7.8's tune: this config runs the DIRECT-tuned position gains
   (`k_pos_x/y 0.6`, `k_vel 7.0`) in **both** modes, where the AM baseline stack
   runs 1.0 / 3.70. Don't compare step responses across the two rigs.
+
+#### 7.10.2 The 2026-08-15 upgrade: geometric PID + live arm feedforward
+
+Two changes landed together in `fsc_autopilot_ros2` (branch `dev_CCM`) after
+§7.11's bare-T650 framework was validated in sim and hardware experiment:
+
+1. **The Goodarzi integral term was ported from the §7.11 fork** — verbatim
+   law, same arming-edge-only reset, preserved across SAFETY↔DIRECT, frozen
+   per-axis on allocator saturation. Gains are the bit-faithful classic
+   mapping at the AM's authority (17.96/5.84 N·m): `geoctl_ki` **1.08 xy /
+   0.35 z**, `c2` **3.25/1.4**, `i_max` **1.62/0.53** — products kI·c2
+   3.51/0.49, Ti 0.74 s/1.0 s, the classic kp/ki. §7.11's kI/c2 split warning
+   applies unchanged: never retune kI alone.
+2. **The CoM torque feedforward went live** (`armff_*` params + a new
+   `arm_state_feedforward` module): the controller subscribes to
+   `/uav_0/fsc_open_manipulator/joint_states` (names `joint1..4`), runs the 4-link FK **from this
+   repo's `utils_controller/controller.py` link table** (make_params(), T650
+   base bump; vectors in the model frame, fixed model→FLU rotation), and feeds
+   τ_ff = r_com(q)×(T·e_z) each 250 Hz tick. q matters: τ_ff_y/T is −0.0195 at
+   home but −0.0145 at `[0,0,0,0]` and −0.0215 at `[0,90,0,0]`. The C++ FK is
+   cross-validated against the python to 1e-9 m over six poses.
+   **Force level, settled by physics:** a quasi-static arm adds exactly its
+   weight, which `vehicle_mass` already carries (§7.8 measured the UDE at
+   +0.05 N on the total-mass yaml) — so the force channel deliberately adds
+   nothing, and the node instead startup-checks base+links ≡ vehicle_mass
+   (3.7462 vs 3.74617 ✓) and home-τ_ff ≡ the static pair (both logged in the
+   autopilot pane; warns at 1% / 5%). Reaction wrenches from a *fast* arm need
+   q̈ and belong to the whole-body controller.
+
+Suggested first sim campaign, in order: (a) hover in SAFETY, check the two
+startup anchors and element 30 = 2; (b) enter DIRECT at home pose — expect
+§7.7's hover split and integral ≈ 0; (c) command an arm move from the arm GS
+mid-hover and watch elements 27–29 track q while the vehicle holds station —
+compare against the same move with `armff_enable: false` (static FF only),
+which should show a transient attitude/position excursion the integral cleans
+up slowly. That A/B is the deliverable measurement of this upgrade.
 
 ### 7.11 Bare-T650 GEOMETRIC direct actuation — added 2026-08-14
 
@@ -1687,6 +1776,13 @@ proportional stiffness, cutting the roll/pitch phase margin against the
 classic mapping — `ki_xy 0.97 / ki_z 0.32` with `c2_xy 3.25 / c2_z 1.4`
 (products unchanged, phase margin 20°, the flown classic loop shape). The
 corrected split is **unflown** as of writing. Hardware unflown entirely.
+
+> **UPDATE 2026-08-15: superseded — the corrected split has now flown, and so
+> has hardware.** The bare-T650 geometric rig was validated end-to-end in both
+> the sim stack and a real indoor experiment (2026-08-14, user-confirmed
+> 2026-08-15), with no config or code changes coming back from the campaign —
+> the committed configuration is the flown one. This validation is what
+> qualified porting the integral term to the AM geometric node (§7.10.2).
 
 **Run sequence — shiqi_machine (shiqi-desktop):**
 

@@ -15,8 +15,8 @@ What changed is ONLY who owns the arm reference:
          home [0, 40, 40, 0] deg, min-jerk moves)   bring-ups load)
         ↕ position command/state interfaces
     open_manipulator_x_isaac_bridge/IsaacTopicSystem   (ros2_control hardware)
-        → /uav_0/arm/joint_position_commands  (sensor_msgs/JointState)
-        ← /uav_0/arm/joint_states
+        → /uav_0/isaacsim_manipulator/position_commands  (sensor_msgs/JointState)
+        ← /uav_0/isaacsim_manipulator/joint_states
     THIS process (physics callback, 250 Hz):
         Dynamixel-servo EMULATION: PD + gravity comp TRACKING the streamed
         position reference (04's flight-validated hold law and gains — the
@@ -36,7 +36,7 @@ at home that activation move is a no-op, giving this integration step's goal:
 the home pose commanded and held over ROS 2 for the whole flight.
 
 Run with:
-  scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh <config>
+  scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh <config>
 (starts this plant, the arm ros2_control stack and the arm ground station;
 pairs with fsc_autopilot_ros2's
 start_direct_actuation_t650_aerial_manipulator_stack.sh, started FIRST — it
@@ -115,13 +115,23 @@ GROUND_BODY_Z = 0.305
 # no-op, and until ROS 2 commands flow this process holds exactly like 04.
 Q_HOME = np.radians([0.0, 40.0, 40.0, 0.0])
 
-# ── ARM-ROS2: the bridge topics (must match the IsaacTopicSystem params in
-# open_manipulator_x_isaac_bridge/urdf/open_manipulator_x_isaac_aerial.urdf).
+# ── ARM-ROS2: the SIMULATED SERVO BUS (must match the IsaacTopicSystem params
+# in open_manipulator_x_isaac_bridge/urdf/open_manipulator_x_isaac_aerial.urdf).
+# These two topics stand in for the Dynamixel/U2D2 serial link and exist ONLY
+# in simulation — hence the `isaacsim_manipulator` prefix, which marks
+# everything the SIMULATOR owns. On real hardware the bus is the wire and
+# nothing under it is published. Everything the REAL ARM STACK owns lives under
+# `/uav_0/fsc_open_manipulator/...` (joint_states from joint_state_broadcaster,
+# the controller's own topics) and is identical in sim and on hardware; that is
+# the whole point of the split, so do NOT let an application subscribe here.
 # States/commands are matched BY NAME using the controller-side joint names,
 # so neither side depends on the other's ordering.
+# NOTE: `effort` below is the applied joint torque in N*m. The hardware
+# backend reports raw Dynamixel counts on the same field — see
+# docs/docs_aerial_manipulator/Arm Topic Naming.md.
 ARM_ROS_JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
-ARM_STATE_TOPIC     = "/uav_0/arm/joint_states"
-ARM_CMD_TOPIC       = "/uav_0/arm/joint_position_commands"
+ARM_STATE_TOPIC     = "/uav_0/isaacsim_manipulator/joint_states"
+ARM_CMD_TOPIC       = "/uav_0/isaacsim_manipulator/position_commands"
 
 T650_BODY_MASS    = float(t650_params.BODY_MASS)
 # Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
@@ -624,8 +634,8 @@ class AmT650Ros2ArmSim:
     def run(self):
         self.world.add_physics_callback("am_ros2_arm", self._control_step)
         # No START_PAUSED (04's rationale): /uav_0/state/* must flow for the
-        # mocap emulator, and /uav_0/arm/joint_states must flow for the arm
-        # stack's hardware activation.
+        # mocap emulator, and /uav_0/isaacsim_manipulator/joint_states must flow for
+        # the arm stack's hardware activation.
         self.timeline.play()
         steps = 0
         while (simulation_app.is_running()

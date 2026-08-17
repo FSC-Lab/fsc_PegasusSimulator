@@ -469,11 +469,11 @@ DIRECT rig gained a sibling where the arm is commanded OVER ROS2 by the real
 OM-X position-mode stack instead of 04's in-process hold. New, all incremental (04 and
 its launcher untouched): `application/robotic_arm/05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py`
 (04's plant verbatim; the hold law's REFERENCE now comes from
-`/uav_0/arm/joint_position_commands`, joint states/efforts go out on
-`/uav_0/arm/joint_states` under controller-side names joint1..4 — the PD+gravity+clamp
+`/uav_0/isaacsim_manipulator/position_commands`, joint states/efforts go out on
+`/uav_0/isaacsim_manipulator/joint_states` under controller-side names joint1..4 — the PD+gravity+clamp
 hold is unchanged and acts as the Dynamixel-servo emulation, AK40-10-emulator pattern;
 reference LATCHES if the stack dies, so solo it behaves exactly like 04) +
-`scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_ros2_arm_sitl.sh` (the 04 direct
+`scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh` (the 04 direct
 launcher plus a detached-helper tmux window `arm` with the ros2_control stack — gated on the
 Isaac topic — and the ARM GROUND STATION `joint_plot_inverted`; two ground stations total
 with the drone one; same PX4 profile as 04 on purpose, same plant). The arm side lives in
@@ -509,6 +509,20 @@ This required making custom_gui's ROS names NAMESPACE-RELATIVE (they were absolu
 sim's station runs with `-r __ns:=/uav_0`. Re-validated loopback (hold/move/go_home PASS)
 and on the wire: the namespaced GUI publishes/subscribes the /uav_0 target topic, follows
 /uav_0/joint_states, and adopts the working range via the namespaced parameter service.
+**SUPERSEDED 2026-08-15 by the OWNER-PREFIX topic scheme** (user request; full convention in
+`docs/docs_aerial_manipulator/Arm Topic Naming.md`): every topic now sits under the namespace
+of the PACKAGE that owns it, mirroring the flight stack's own /uav_0/fsc_autopilot_ros2/… —
+so the real arm stack moved to **/uav_0/fsc_open_manipulator/**{joint_states,
+joint_desired_states,dynamic_joint_states,arm_position_controller/…,controller_manager} and
+the Isaac servo emulation (sim-only, absent on hardware) to
+**/uav_0/isaacsim_manipulator/**{joint_states,position_commands}. The whole first group comes
+from ONE launch argument (`namespace:=uav_0/fsc_open_manipulator`) because the yaml keys were
+flattened to the `/**/<node>:` wildcard the same day — so the "launch namespace and yaml
+nesting must change TOGETHER" trap above is GONE. **The wildcard must be FLAT**: `/**:` with
+the node nested under it parses and matches nothing (verified live at two namespaces). The
+GS `__ns` and the launcher's stack-readiness gate both derive from the launcher's single
+`ARM_NS`, and fsc_autopilot_ros2's `armff_joint_topic` became the relative
+`fsc_open_manipulator/joint_states`. NOT flown yet.
 Commands: Command.md §7.9. **ARM-REPO CONSOLIDATION same day (user request — supersedes
 this entry's workspace paths)**: the two arm repos (workspace repo + ROBOTIS fork) were
 merged into ONE, fork-rooted, histories preserved; on GitHub the fork takes the
