@@ -1473,6 +1473,30 @@ therefore serve **SAFETY only** (PX4 needs a dimensionless `thrust_body`).
    settled integral ≈ 0, like §7.7's flown I_y. A persistent attitude offset
    in DIRECT hover now means the *arm model* is wrong (and the integral will
    mask it slowly — watch debug [24..26], not just the attitude).
+   **RE-REVISED 2026-08-18: the ROLL/PITCH integral was DISABLED
+   (`geoctl_ki_x/y: 0.0`; yaw keeps 0.35) — SUPERSEDED 2026-08-19, the
+   shipped value is now `0.15`, see §7.10.4. The diagnosis below stands
+   as the description of the OLD (`kR` 2.6, ζ 0.376) loop; with the
+   attitude poles fixed the integral is no longer the trigger.** Flown A/B in sim on
+   fsc_lab_machine (live armff active and verified, debug[30]=2): the hover
+   diverges in a growing ~0.5–1.3 Hz roll+pitch whirl at the attitude loop's
+   own natural frequency, and the time-to-flip scales hard with kI — in SIM
+   time, ki 1.08 flips ~5 s after takeoff (4/4 flights), ki 0.3 at ~25 s,
+   ki 0 at ~108 s (one run; a second ki-0 run was still clean when torn down
+   at 107 sim-s). **The underlying cause is machine speed, measured**: this
+   full rig (Isaac + 2 ground stations + both stacks on one box) runs at
+   REAL-TIME FACTOR 0.36–0.39 on fsc_lab_machine — PX4-SITL is a lockstep
+   build, so PX4/plant time is Isaac sim time, while the 250 Hz law, the DDS
+   latency and the integral's dt all run on WALL clock — every effective
+   loop delay and integration rate is ~2.6× off. A faster desktop (higher
+   RTF) flies ki 1.08; do not tune this rig's marginal gains on one machine.
+   ki_xy 0 is the robust setting (the live feedforward already carries the
+   arm's moment; a residual bias now shows as a small standing e_R instead
+   of winding an integrator), but at RTF≈0.38 a slow residual whirl remains
+   (~108 sim-s to flip) — keep lab-machine DIRECT hovers short, raise RTF
+   (close the GS plot windows, lighten rendering), or — the principled fix —
+   derive the node's dt/rates from the PX4 (sim) clock instead of wall time,
+   the same lesson `tools/stack_driver.py::sim_now` already encodes.
 2. **`alloc_rotor*_km` is NOT inert here.** §7.7's allocator re-normalizes the
    yaw column so a common km factor cancels; this one does no column scaling, so
    km sets yaw torque in N·m directly. The shipped 0.052867 is the **sim-plant
@@ -1482,7 +1506,7 @@ therefore serve **SAFETY only** (PX4 needs a dimensionless `thrust_body`).
    full inertia tensor, torque clamps) — not `attctl_*`/`ratectl_*`. They are
    **derived, not tuned**: authority-matched to §7.7's flown cascade at hover
    (1.0 normalized roll/pitch ≙ 17.96 N·m, yaw ≙ 5.84 N·m — cross-checked
-   against the flown hover rotor split).
+   against the flown hover rotor split). **RETUNED 2026-08-18 and again 2026-08-19 — see §7.10.3 and §7.10.4 (the shipped set).**
 
 Higher-order references (jerk/snap → ω_ref, ω̇_ref) are **zero** for now, so the
 J-weighted tracking-feedforward terms of the full Lee law vanish; the
@@ -1540,8 +1564,9 @@ cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/st
 ~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
 # 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+cd ~/Workspaces/fsc_autopilot_ws                                                 # workspace root, NOT the repo
+colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # after any pull
 cd ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2
-colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
 ./scripts/isaacsim/start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
 
 # 2. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2 — the §7.9
@@ -1565,7 +1590,7 @@ cd ~/ros2_ws/src/fsc_autopilot_ros2 && ./scripts/isaacsim/stop_isaacsim_stack.sh
 
 # 1. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 cd ~/ros2_ws                                                                     # workspace root, NOT the repo
-colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # new node — build once
+colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF  # after any pull
 cd ~/ros2_ws/src/fsc_autopilot_ros2
 ./scripts/isaacsim/start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
@@ -1580,12 +1605,26 @@ sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
-Two machine-shape differences from the fsc_lab_machine block above, both
-deliberate: `colcon build` runs from the **workspace root `~/ros2_ws`** (the
-stack script derives `WS_ROOT` from its own path and refuses to start unless
-`$WS_ROOT/install/setup.bash` exists — it sources the overlay itself, so no
-manual `source` is needed), and the Pegasus repo is at `~/fsc_PegasusSimulator`
-rather than `~/Source/…`.
+**Only the paths differ between the two blocks** — on shiqi-desktop the
+workspace is `~/ros2_ws` and Pegasus sits at `~/fsc_PegasusSimulator` rather
+than `~/Source/…`. In particular `colcon build` runs from the **workspace
+root on both** (corrected for fsc_lab_machine 2026-08-18): the stack script
+derives `WS_ROOT` from its own path, refuses to start unless
+`$WS_ROOT/install/setup.bash` exists, and sources that overlay itself — so no
+manual `source` is needed, but a build launched from the *repo* directory
+writes a nested `build/`+`install/` the script never reads, and the stack then
+runs the PREVIOUS binaries with no complaint.
+
+**Build after every pull, not once.** `dev_CCM` changed this node's sources on
+2026-08-15 (§7.10.2), and a stale binary against the current params file is the
+quiet failure mode: rclcpp ignores overrides the running node never declared,
+so the rig flies the OLD law under the NEW gains and logs nothing about it.
+One command settles it — zero means the binary predates the live feedforward:
+
+```bash
+strings $WS/install/fsc_autopilot_ros2/lib/fsc_autopilot_ros2/autopilot_geometric_direct_actuation_node \
+  | grep -c armff        # 0 → pre-2026-08-15 build, rebuild before flying
+```
 
 **Why step 2 is the ROS 2 arm launcher (changed 2026-08-15).** It used to be
 §7.7's `04_..._hold.py` (arm held in-process), with the §7.9 rig listed as an
@@ -1604,9 +1643,29 @@ check, not this rig. The same fallback is the safety net if the arm stack dies
 mid-flight: degraded, not dangerous (the arm parks near home, and the integral
 absorbs the bounded difference slowly).
 
-**One-time prerequisite for step 2** (already done on shiqi-desktop 2026-08-13;
-repeat after pulling the arm repo) — the arm packages must be built in
-`~/colcon_ws`, see §7.9's "One-time build" block.
+**Prerequisite for step 2 — the ARM repo is a THIRD repo to pull and rebuild,
+in lockstep with the other two.** Pulling `fsc_PegasusSimulator` +
+`fsc_autopilot_ros2` alone leaves the arm stack on the pre-2026-08-15 topic
+names, and the rig degrades with no error at the flight-controller level (hit
+on fsc_lab_machine 2026-08-18: the local `fsc_open_manipulator` was 10 commits
+behind — before the owner-prefix topic rename — so its bridge waited forever
+on the old `/uav_0/arm/joint_states`, the ros2_control stack never activated,
+the arm ground station had nothing to drive, and the live arm feedforward sat
+on its static fallback, `geometric_control_debug[30]` stuck at 1). Pull and
+rebuild from the **workspace root**, then re-run the whole sequence:
+
+```bash
+# fsc_lab_machine (workspace ~/Source/Shiqi/fsc_om_ws; no rosdeps overlay)
+cd ~/Source/Shiqi/fsc_om_ws/src/fsc_open_manipulator && git pull --ff-only
+cd ~/Source/Shiqi/fsc_om_ws && source /opt/ros/humble/setup.bash
+colcon build --packages-select dynamixel_interfaces open_manipulator_x_description \
+  open_manipulator_x_bringup open_manipulator_x_custom_controller \
+  open_manipulator_x_isaac_bridge custom_gui --symlink-install
+
+# shiqi_machine (workspace ~/colcon_ws; already current as of 2026-08-13 —
+# same pull+build there after any arm-repo change, plus the ~/ros2_ws/rosdeps
+# overlay sourced before building, see §7.9's "One-time build" block)
+```
 
 Detach a stack terminal with **`Ctrl-b d`** — never Ctrl-C/Ctrl-D. Step 0 is
 also the shutdown (`stop_isaacsim_stack.sh` auto-discovers this stack's session
@@ -1630,9 +1689,23 @@ ros2 service call /uav_0/fsc_autopilot_ros2/geometric_direct_actuation/set_direc
 ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
 ```
 
-**Starting the stack does NOT put you in the geometric controller.** The node
-boots in SAFETY and `innerLoop()` returns on its first line unless the mode is
-DIRECT, so the geometric law computes nothing until the service call above.
+**The launcher now enters DIRECT for you (2026-08-15) — this rig only.** The
+node still *boots* in SAFETY, which is the right power-on state for a fallback
+controller, but the stack script's `vrc` pane calls `set_direct_mode` as soon
+as the service appears, sequenced before `virtual_remote` starts. So the switch
+always lands while DISARMED, and step 3's arm command starts the flight already
+in the geometric law — there is no SAFETY takeoff to switch out of, and the
+manual call above is now the recovery path, not the normal one. The tell is
+printed directly above the arm prompt:
+
+```
+AUTO-DIRECT: geometric DIRECT entered while disarmed …   (green — good)
+AUTO-DIRECT FAILED — the node is still in SAFETY          (red — use the call above)
+```
+
+Every other stack keeps the old behaviour: it boots in SAFETY and
+`innerLoop()` returns on its first line unless the mode is DIRECT, so the
+geometric law computes nothing until the service call above.
 Confirm which law is live:
 
 ```bash
@@ -1670,8 +1743,12 @@ What to watch, beyond §7.5 and §7.7's lists (both still apply):
   `[0.0195, −0.0001, −0.0145]` with the arm at home and MOVE when you command
   the arm from the arm ground station — that motion, with the vehicle holding
   station, is the whole point of the live feedforward.
-- **Integral torque [24..26] should settle near ZERO** (the FF carries the arm;
-  only residual model error is left). A value parked near `geoctl_i_max_*`
+- **Integral torque [24..26] should settle near ZERO on all three axes.**
+  All three integrate again since 2026-08-19 (`geoctl_ki_x/y: 0.15`, `ki_z
+  0.13` — §7.10.4; they were pinned at 0 between 08-18 and 08-19). Near zero
+  is the *expected* value, not a sign the term is inert: the live arm
+  feedforward carries the arm's moment, so only residual model error is left
+  — measured ≤0.007 N·m settled. A value parked near `geoctl_i_max_*`
   (1.62 xy / 0.53 z) means a broken arm model or a §7.7-class airframe fault.
 - **Yaw first.** The gains are derived, unflown, and the sim yaw axis runs at
   ~2.45× its nominal loop gain from `YAW_TORQUE_FIT_FACTOR = 3.0` — and unlike
@@ -1719,6 +1796,164 @@ mid-hover and watch elements 27–29 track q while the vehicle holds station —
 compare against the same move with `armff_enable: false` (static FF only),
 which should show a transient attitude/position excursion the integral cleans
 up slowly. That A/B is the deliverable measurement of this upgrade.
+
+#### 7.10.3 Gain tuning against the harsh step (2026-08-18)
+
+> **Read §7.10.4 first — it supersedes this section's shipped gains and
+> retracts the A/Bs whose gains were never actually live.** Kept here as
+> the record of how the attitude-damping finding was reached.
+
+Tuned on fsc_lab_machine against the standard acceptance test — **from a
+settled 1 m hover, step to x=1, y=1, yaw=90 in one command** (zero velocity and
+zero acceleration in the reference, so every feedforward term is zero by
+construction). Six full-stack flights, one gain set each; metrics measured in
+SIM time from the PX4 ulog, not from the ground station's wall-clock plot.
+
+| # | change | result on the step |
+|---|---|---|
+| 1 | as-found (ki_xy 0.25, ude 2.0, kR 2.6) | **flipped 2.5 s after the step** — already diverging in hover |
+| 2 | ude_gain 2.0 → **0.74** | survived 35 s; rise 1.63 s, overshoot 3.8% |
+| 3 | + ki_xy → **0** | no divergence in 36 s; ss err ±6 mm; one big excursion that recovered |
+| 4 | + kR 2.6 → 1.6, kΩ 0.81 → 0.9 | no divergence in 61 s; ss err ±0.3 mm; still one excursion (peak tilt 44.8°) |
+| 5 | ude_gain 0.74 → 0.30 | **diverged 14.7 s after the step** — too slow, so 0.74 is a real optimum |
+| 6 | **kR → 1.2, kΩ → 0.75** (shipped) | **clean**: overshoot 3.4%, settling 6.9 s, peak tilt 3.5°, ss err ≤1.8 mm, yaw exact |
+| 7 | repeat of 6, no change | no divergence, tilt 4.7° — but x/y **wandered ±0.3 m** at ~1.3 rad/s |
+| 8 | + ki_xy 0 → 0.15 | worse: overshoot 99%, wander ±0.55 m. Reverted — ki_xy stays 0 |
+| 9 | + k_pos_xy 0.6 → 0.4 | wander unchanged (±0.4 m, 1.27 rad/s). Reverted — k_pos stays 0.6 |
+
+**The one finding that matters most: the yaml header's attitude sanity check
+omits the rotor-lag pole**, and that is where the ~1 Hz whirl came from. The
+header solves `wn = sqrt(kR/J) = 4.7 rad/s, zeta = 0.73`, but the plant (and the
+real motors) carry the MN4010 spin-up lag `lambda = 10.0265 1/s`. Solving the
+true third-order loop `J s^2 (s + lambda) + lambda (kOmega s + kR) = 0` gives
+**wn 6.61 rad/s, zeta 0.376** at the shipped 2.6/0.81 — half the claimed
+damping, at exactly the frequency every failed flight oscillated at. Softening
+to 1.2/0.75 gives zeta 0.574 at the same bandwidth. This is the same lesson the
+classic AM rig learned when it took `k_R` 8 → 4 (CLAUDE.md, 2026-08-10).
+
+**Which of these transfer to hardware — this matters, the two halves differ:**
+
+- **`geoctl_kr_*` / `geoctl_komega_*` DO transfer.** The rotor lag is a property
+  of the real MN4010s, not of the simulator, so the damping deficit is real on
+  hardware too. Carry 1.2 / 0.75.
+- **`ude_gain` and `geoctl_ki_*` DO NOT transfer** — they were scaled by the
+  measured RTF 0.38 purely to undo this rig's wall-clock-`dt`-vs-sim-time
+  mismatch (§7.10.1's note), and on hardware RTF is 1. Restore
+  `ude_gain: 2.0`, and **start `ki_xy` at 0.15–0.25** — zero is right for THIS
+  rig only; hardware's real biases (wind, CoM error, motor asymmetry) need
+  integral action. **The 2026-08-19 "`ki_xy` 0 / 0.15 / 0.41 are
+  indistinguishable" measurement that stood here is RETRACTED** — all three
+  runs actually flew `ki_xy` 0, so their identity was an artifact, not a
+  result, and the "0–1.08 hardware-equivalent range is stable" conclusion
+  drawn from it does not follow. See §7.10.4 for the cause (the harness
+  edited an install-tree yaml the launcher never reads) and for the first
+  verified-live `ki_xy` flights, which do support starting at 0.15.
+
+Harness (session scratchpad, not committed): `runtest.sh` drives one full
+launch → step → teardown cycle per gain set, `step_driver.py` is the sole
+reference publisher, `step_metrics.py` reports rise/overshoot/settling/steady
+state in sim time and truncates at loss of control so a late crash cannot
+flatter the step numbers. Two gotchas it encodes: PX4 opens its ulog at BOOT
+(so "newest log after teardown" is this run's — a before/after comparison never
+sees a new file), and `kill_stale_sim_processes.sh` pattern-kills any shell
+whose command line mentions a launcher, so it must never be chained with one.
+
+**Still open — this is a large improvement, not a finished tune.** Across the
+four runs carrying the attitude fix there were **zero divergences** (vs a flip
+2.5 s after the step on the as-found config) and peak tilt stayed 3.5–8.5°, but
+the *position* result is not yet repeatable: run 6 settled to ±1 mm, while runs
+7–9 wandered ±0.3–0.6 m at ~1.3 rad/s on identical or near-identical gains.
+That is run-to-run scatter of a still-marginal loop — the same trap
+CLAUDE.md records for the classic AM rig ("a marginal system's run-to-run
+scatter … which is why every candidate is now repeat-tested"), so treat any
+single good flight here as unproven.
+
+**ROOT CAUSE OF THE WANDER FOUND — IT IS THE ROS 2 ARM STACK, NOT A DRONE
+GAIN.** The wander frequency would not move for ANY drone gain (`ude_gain`
+0.74/1.1, `k_pos` 0.6/0.4, `ki_xy` 0/0.15 all left it at 1.26–1.36 rad/s),
+which already ruled out every loop being tuned. Recording
+`/uav_0/isaacsim_manipulator/joint_states` alongside the flight showed the ARM
+JOINTS oscillating at 0.079–0.085 Hz on the wall clock = **1.31–1.41 rad/s in
+sim time — the same mode**. The A/B is unambiguous: same drone gains, arm held
+by §7.7's in-process PD instead of the fsc_open_manipulator ros2_control stack:
+
+| | ros2_control arm stack | in-process arm PD |
+|---|---|---|
+| position noise (sigma) | 300–610 mm | **3–4 mm** |
+| overshoot | 52–104 % | **30 / 28 %** |
+| tail ringing | 449–936 mm | **189 mm** |
+| peak tilt | 4.7–8.2 deg | **3.3 / 4.0 deg** |
+
+A ~100x reduction, far larger than the 0.38 -> 0.42 RTF change that comes with
+running fewer processes. The arm stack's own loop is wall-clock-driven at
+250 Hz against a sim-time plant — the same class of bug as §7.10.1's, but on a
+subsystem whose gains are NOT in this file. **Consequence for tuning: any
+drone-gain result measured on the §7.9 ros2-arm rig is confounded** — the
+`ki_xy` 0.15 and `k_pos` 0.4 rejections above were both measured through this
+disturbance and should be re-judged on the §7.7 hold rig before being trusted.
+
+Re-judged on the §7.7 hold rig (arm confound removed), BOTH rejections hold and
+the ceiling is now measured: `ki_xy` 0 vs 0.15 is **identical** (ss err
++35/+23 vs +39/+21 mm, overshoot 30.4/27.6 vs 30.0/27.9 %), and `k_pos` 0.6 vs
+0.4 moves overshoot only 30.4 -> 28.9 %. So on the clean rig the residual is
+~30 % overshoot, a ~1.5 rad/s ringing of ~180 mm, and a **steady +35/+20 mm
+offset that no gain touches**. That offset is almost certainly not a control
+error at all: the controller closes on `state_estimator/local_position/odom`
+while these metrics come from PX4's own EKF in the ulog, so the two estimates
+need not agree. **Check `position_controller/state`'s `position_error` before
+tuning anything further** — if it reads ~0 while the ulog reads 35 mm, the loop
+is already on target and the gap is estimator disagreement.
+
+The real fixes, in order of value: (1) make the arm stack's control loop use
+the sim clock, or slow it until it stops exciting this mode; (2) do the same
+for the flight node's `dt` (§7.10.1), which removes the RTF dependence
+entirely and lets the integrators run at their designed, hardware-valid values.
+Neither is a gain change, and no further gain search is worthwhile until at
+least (1) is done.
+
+#### 7.10.4 The install-yaml no-op, and the 2026-08-19 retune (SUPERSEDES parts of §7.10.3)
+
+**A methodology bug invalidated part of §7.10.3.** The sim stack launcher
+passes the **source-tree** params yaml to the node
+(`start_geometric_direct_actuation_t650_aerial_manipulator_stack.sh`,
+"Source-tree path" comment) — the §7.10.3 harness edited the
+**install/share** copy, which nothing reads. Consequences, verified
+2026-08-19 by re-running with `ros2 param get` confirmation of the live node:
+
+- The "ki_xy 0 / 0.15 / 0.41 indistinguishable" sweep (§7.10.3's
+  hardware-transfer bullet) is an artifact — all three runs flew the source
+  yaml's `ki_xy 0`. **ki_xy had never actually flown nonzero** before
+  2026-08-19. Any §7.10.3 row whose label disagrees with what the source
+  yaml held at that moment is unverifiable; the attitude-damping finding
+  (kR 2.6 → 1.2) is real (it matches the source-yaml evolution and
+  reproduced), the fine A/Bs are not.
+- The harness now edits the source yaml and prints the live node's
+  parameters after every launch.
+
+**Retune, validated on the §7.9 ros2-arm rig** (fsc_lab_machine, RTF 0.38,
+x=1/y=1/yaw=90° step from a settled 1 m hover, live armff, all configs
+verified live):
+
+| gain | 08-18 value | shipped | why |
+|---|---|---|---|
+| `geoctl_kr_x/y` | 1.2 | **1.0** | with `komega` 0.55: pair ζ 0.574→0.661, wn 6.82→4.86 |
+| `geoctl_komega_x/y` | 0.75 (source had drifted to an undocumented 1.25) | **0.55** | 0.75 left a residual whirl at exactly 6.8 rad/s that flipped the vehicle ~50 s after the step; 1.25 diverged 11.6 s after the step (slow real pole lands on the position loop — never raise kΩ for damping against a lag pole) |
+| `geoctl_ki_x/y` | 0 | **0.15** | first live integral flights; settled integral ≤0.007 N·m |
+| `ude_gain` | 0.74 | **0.45** | 0.74 (=2.0 rad/s effective) sits above the position loop; wound ±6 N and drove a growing ~1.1 rad/s position ring on this rig |
+| `posctl_k_pos_x/y` | 0.6 | **0.45** | position loop wn 1.06→0.92 rad/s, ζ 0.88→1.02 |
+
+Result, 3/3 clean flights (two 210 s-wall, one 476 s-wall = 180 sim-s):
+overshoot **0.8–2.4 %** (was ~30 % clean-rig / 50–300 % arm-rig), settle to
+±2 cm in **~8 s**, steady-state error **±2 mm** (the old +35 mm x offset is
+gone), yaw exact in <1 s, peak tilt ≤3.1°, hover σ 3–5 mm, **no divergence
+over 144 sim-s of post-step hold** — the §7.10.3 "wander" no longer appears
+even with the ros2_control arm stack running, so it was the marginal drone
+loop being excited, with the arm stack as the exciter, not an independent
+fault. Sim-only vs hardware split: `ude_gain` 0.45 and roughly half of the
+kr/komega softening compensate this rig's RTF-inflated delays — on hardware
+restore `ude_gain 2.0` and start the attitude pair at §7.10.3's 1.2/0.75;
+`ki_xy 0.15`, `k_pos 0.45` and the kI/c2 split carry as-is. Full per-gain
+rationale lives in the params yaml's comments.
 
 ### 7.11 Bare-T650 GEOMETRIC direct actuation — added 2026-08-14
 
