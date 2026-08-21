@@ -134,10 +134,11 @@ ROTOR_LAMBDA = 10.0265   # 1/s
 # 0.5032 was confirmed four separate times -- twice in simulation (QGC/PX4 mixer takeoff
 # 0.503341, fsc_autopilot_ros2 baseline hover 0.50320) and twice against hardware (flight B
 # averages 0.5033 over its first 5 s, flight A 0.5018, before battery sag accumulates).
-# If the intent was 2.95 kg TOTAL, set BODY_MASS = 2.95 - ROTOR_MASS_TOTAL and everything
-# below follows automatically.
+# The body-mass interpretation is intentional.  Do not subtract the authored
+# rotor masses here: every T650 controller/config downstream uses the resulting
+# 3.033921 kg bare-airframe total (and 3.746170 kg with the manipulator).
 ROTOR_MASS_TOTAL = 0.083920955657959   # kg, the four rotor bodies authored in x650_new.usd
-BODY_MASS = 2.95 - ROTOR_MASS_TOTAL                      # kg, written onto /body/body at spawn
+BODY_MASS = 2.95                                         # kg, written onto /body/body at spawn
 MASS = BODY_MASS + ROTOR_MASS_TOTAL    # kg, total vehicle mass the physics solver sees
 
 # ── Body inertia ────────────────────────────────────────────────────────────

@@ -59,6 +59,7 @@ from isaacsim import SimulationApp
 HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
+EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
 simulation_app = SimulationApp({"headless": HEADLESS})
 
 # ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
@@ -526,11 +527,23 @@ class AmT650Ros2ArmSim:
         print(f"[AM-T650-ARM] inertia round-trip off the stage: max err {err:.2e} kg·m²",
               flush=True)
 
+        total_mass = T650_BODY_MASS + m_rest
+        if EXPECTED_TOTAL_MASS:
+            expected_total_mass = float(EXPECTED_TOTAL_MASS)
+            if not math.isclose(total_mass, expected_total_mass, rel_tol=0.0,
+                                abs_tol=5e-4):
+                raise RuntimeError(
+                    "AM-T650 plant/controller mass mismatch: Isaac authored "
+                    f"{total_mass:.6f} kg, but the launcher expects "
+                    f"{expected_total_mass:.6f} kg. Fix t650_params.py and the "
+                    "paired controller YAML before flight."
+                )
+
         print(f"[AM-T650-ARM] T650 MASS OVERRIDE: {body_path} {m_old:.6f} -> "
               f"{T650_BODY_MASS:.6f} kg (delta {self._body_dm:+.6f}); "
               f"other bodies {m_rest:.6f} kg; "
-              f"TOTAL {m_old + m_rest:.6f} -> {T650_BODY_MASS + m_rest:.6f} kg "
-              f"(weight {(T650_BODY_MASS + m_rest) * 9.81:.2f} N). "
+              f"TOTAL {m_old + m_rest:.6f} -> {total_mass:.6f} kg "
+              f"(weight {total_mass * 9.81:.2f} N). "
               f"vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. "
               f"The .usda is untouched.", flush=True)
 

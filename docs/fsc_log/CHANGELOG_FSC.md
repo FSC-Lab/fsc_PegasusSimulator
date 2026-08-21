@@ -18,6 +18,15 @@
   rotor-to-corner order.
 
 ## Modified
+- Tuned the AM-T650 geometric+L1 simulation controller against a deliberate
+  +20% controller-side thrust-coefficient mismatch: raised the adaptive thrust
+  bound to 10 N, selected 2 1/s predictor poles and a 6 rad/s filter bandwidth,
+  retained the stable geometric position gains, and documented the rejected
+  higher-gain candidate and full X/Z validation metrics.
+- Corrected the AM-T650 geometric+L1 plant/controller contract: restored the intended
+  2.95 kg body mass, added a launch-time total-mass guard, advanced adaptation only on
+  distinct feedback samples, and referenced the live arm CoM offset to the bare-airframe
+  CoM required by the paper.
 - Documented separate indoor Iris, indoor X650, and outdoor launch sequences.
 - Documented that X650 free-flight direct-actuation control and allocation live in the external
   APL20 workspace, including the ROS 2 → PX4 → MAVLink HIL → Pegasus path and the distinction

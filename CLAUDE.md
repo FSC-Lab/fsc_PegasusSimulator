@@ -537,6 +537,64 @@ from the workspace root, no `--base-paths`/COLCON_IGNORE machinery. ROBOTIS rele
 merge straight in (`git merge upstream/humble`). Rebuilt + loopback re-validated after
 the move (hold/move/go_home PASS).
 
+**GEOMETRIC + L1-ADAPTIVE STACK (2026-08-20, user request — the controller of Cai et al.,
+"An experiment study for unmanned aerial manipulator systems with L1 adaptive augmentation
+of geometric control", CEP 164 (2025) 106418; PDF in `docs/docs_aerial_manipulator/`).**
+A THIRD external controller for the §7.9 rig, implemented as a parallel fork in
+fsc_autopilot_ros2 (`single_aerial_manipulator_geometric_l1_direct_actuation`, node
+`autopilot_geometric_l1_direct_actuation_node`, params
+`params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml`, stack script
+`start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh`). DIRECT mode runs the
+paper's **constant-position/constant-yaw specialization** at 250 Hz straight from the
+position reference (the message has no jerk/snap/yaw-rate fields, so ω_d = ω̇_d = 0; do not
+claim full time-varying-trajectory equivalence): u_b = geometric SE(3)
+(position+attitude in N/N·m, with the arm's measurable wrench compensated through the LIVE
+r_os from the arm encoders — at home it reproduces the flown −0.0195 N·m/N to the reported
+precision) plus
+u_L1 = L1 augmentation (predictor on [v;ω], piecewise-constant adaptation with Ḡ inverted
+once per distinct feedback capture stamp (4 ms fixed physics step in Isaac, stamp delta on
+hardware), LPF; matched channel only; predictor fed the allocator's
+ACHIEVED wrench as anti-windup; injection clamped ±6 N / ±1.5/0.8 N·m). No attitude
+integral, no UDE in DIRECT — L1 replaces both; SAFETY is the unchanged baseline for
+takeoff/abort. Attitude gains carried from §7.10.4's sim-validated 1.0/0.55 (the paper's
+KR 1.92/Kω 0.3 gives ζ≈0.2 against the MN4010 rotor-lag pole — do not "restore" them on
+this plant); position pair is the paper's mass-scaled and softened (Kp 4/4/8, Kv 6/6/10);
+L1 poles/bandwidth are a conservative first-flight tune below the paper's 65/80/ωc 6, not
+an RTF correction. **Static-harness checked 2026-08-20, NEVER FLOWN**: synthetic harness
+(§7.10's pre-flight standard) reproduced the hover split 0.597/0.540 exactly, u_L1 ≡ 0 at
+a model-consistent hover, and the adaptation converged to the numerically correct matched
+estimate (γ_f + f_applied = mg ± 0.8 N) against a frozen plant. First campaign = hover
+test. Commands + debug-array layout: Command.md §7.12.
+**DERIVATION + IMPLEMENTATION VERIFIED 2026-08-20 (Command.md §7.12.2).** The paper's
+law re-implemented in its own NED/FRD frame agrees with this ENU/FLU implementation to
+4e-16 N·m over 400 random states with ω up to 1.5 rad/s; the closed loop reproduces the
+paper's eq (27) `I ė_ω = −K_R e_R − K_ω e_ω` exactly (the r_os feedforward cancels d_im1
+and ω×Iω); and the LIVE node matches an independent Python reference to 3e-8 N·m at
+non-trivial states — **including ω = 1.1 rad/s, which the hover bench could never test
+because every centripetal term is identically zero at hover**. Three defects were found
+and fixed in the pass: (a) the UDE was integrating the ROBUST controller's command in
+DIRECT, a command this node never applies, corrupting the SAFETY abort — now fed the
+achieved collective; (b) the L1 predictor used forward EULER, measured to diverge at the
+dt gate's 50 ms ceiling with the paper's own A_s = −65/−80 — now the exact zero-order-hold
+update, the same fix `lagged_thrust_curve.py` records for the rotor lag; (c) **the law and
+the predictor used different gravity constants** (9.80665 vs 9.81), which a 30 s hover soak
+exposed as u_L1 settling at −0.119 N instead of zero — the two form one loop, so a constant
+model disagreement is indistinguishable from a real disturbance and is amplified by
+≈1/(|A_s|·T), 10x here. Every constant shared by the law and the predictor must come from
+one place. NOT a defect but needed to read logs: the PWC estimate under-reads a constant
+disturbance by e^{A_s·T} (10% in sim, ~50% at the paper's hardware poles).
+**POST-REVIEW CORRECTIONS, 2026-08-20:** restored the intended T650 body mass to 2.95 kg
+(the accidental `2.95 - rotor_mass` made the live AM plant 3.662249 kg against the YAML's
+3.746170 kg); the L1 launcher now enforces that total in Isaac; adaptation advances only on
+new feedback samples rather than wall-timer repeats; and arm FK subtracts the bare-airframe
+CoM `[0.00001019,-0.00030900,0.04178889]` m in model axes so r_os has the paper's O→S
+definition. The corrected live-node harness was rerun over hover and three non-trivial
+states, agreeing with the independent reference to 1.34e-6 N, 3.14e-8 N·m, and 1.79e-9 m
+in arm FK; its measured LPF coefficient implies the configured 4.000 ms sample period.
+The earlier claim that the paper printed a negative r_os block in G(R) was a
+typesetting misread: the minus belongs to the exponent in I^-1; paper and code agree after
+the NED/FRD→ENU/FLU thrust-sign conversion.
+
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):

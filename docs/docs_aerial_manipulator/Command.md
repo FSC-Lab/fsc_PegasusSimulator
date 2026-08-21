@@ -1955,6 +1955,71 @@ restore `ude_gain 2.0` and start the attitude pair at §7.10.3's 1.2/0.75;
 `ki_xy 0.15`, `k_pos 0.45` and the kI/c2 split carry as-is. Full per-gain
 rationale lives in the params yaml's comments.
 
+#### 7.10.5 r_os model-mismatch injection (2026-08-20)
+
+`armff_mismatch_{x,y,z}` [m, FLU] were added to THIS node too, so it can be
+A/B'd against the §7.12 geometric+L1 fork under identical CoM uncertainty. A
+constant offset is added to every `r_com` the arm model emits, making the
+controller's CoM model wrong by a known amount while the plant keeps the
+truth. Here the resulting standing moment must be absorbed by the **Goodarzi
+attitude integral** (`geoctl_ki_*` with `c2`, clamped at `geoctl_i_max_xy`
+1.62 N·m) — where the L1 fork uses its matched-channel estimate instead.
+
+**Shipped 0.0, so every existing config and flight on this node is
+bit-identical to before.** Nonzero only for a deliberate robustness
+experiment, and NEVER on hardware. The node prints a magenta startup warning
+whenever it is nonzero. Comparison results: §7.12.4.
+
+#### 7.12.4 CoM-mismatch sweep: L1 vs integral (2026-08-20)
+
+Both nodes flown against an IDENTICAL closed-loop plant (rigid body + MN4010
+rotor lag + the exact allocator effectiveness, wrapping the REAL C++ binaries
+over ROS 2; harness `sweep.py`, scratchpad). The plant holds the true CoM; the
+node boots with `armff_mismatch_x`. Protocol: arm → 8 s settled hover → engage
+DIRECT → 34 s hold; transient = first 8 s, steady = last 12 s. 16 runs + 6
+boundary repeats, all `clean_teardown`.
+
+| dx err | moment | **L1** | **integral (§7.10)** |
+|---|---|---|---|
+| 0 mm | 0 | stable, ss 0.0 mm | stable, ss 1.8 mm |
+| 5 mm | 0.184 N·m | stable, **ss 191 mm**, peak 0.66 m, u_L1 +0.163 | stable, **ss 2 mm**, peak 1.49 m, τ_i −0.184 |
+| 7.5 mm | 0.276 N·m | — | stable, **ss 2 mm**, peak 2.89 m, τ_i −0.276 |
+| 10 mm | 0.367 N·m | stable, ss 382 mm, peak 1.36 m, u_L1 +0.326 | **DIVERGED t=3.3 s** |
+| 20 mm | 0.735 N·m | stable, ss 766 mm, peak 3.43 m, u_L1 +0.652 | DIVERGED t=1.8 s |
+| 25 mm | 0.919 N·m | **DIVERGED t=2.5 s** | — |
+| ≥30 mm | ≥1.10 N·m | DIVERGED | DIVERGED |
+
+**Boundaries: L1 20–25 mm, integral 7.5–10 mm — L1 tolerates ~2.7× more.**
+
+**The two mechanisms fail differently, and that is the whole story:**
+
+- **L1 cancels only 88.7% of a constant moment, at every level** (0.163/0.184,
+  0.326/0.367, 0.652/0.735). That is exactly `e^{A_s·T}` = e^(−30×0.004) =
+  0.887 — the PWC one-sample attenuation of §7.12.2, now confirmed a third
+  time, in the live binary. The uncancelled 11.3% becomes a standing attitude
+  offset and hence a position offset of **38 mm per mm of CoM error**, dead
+  linear. So L1 stays *stable* to 20 mm but is *accurate* nowhere near it.
+- **The integral cancels 100%** (τ_i = −0.184 at 5 mm, −0.276 at 7.5 mm — the
+  needed value to 3 digits), so its steady error stays 2 mm no matter the
+  mismatch. But it is slow (Ti ≈ 0.74 s), so the transient grows until the
+  marginal attitude loop lets go: peak excursion 1.49 m at 5 mm, 2.89 m at
+  7.5 mm, divergence at 10 mm.
+
+**HARDWARE CORROBORATION — the sim reproduces the real failure.** The
+2026-08-19 first hardware flight of the §7.10 geometric node diverged in 1.3 s
+with a measured **+0.33 N·m pitch feedforward overcompensation**
+([[am-geometric-first-hardware-flight]]). 0.33 N·m ÷ 36.74 N = **8.98 mm of
+equivalent CoM error — which falls exactly between this sweep's last stable
+point (7.5 mm) and first divergence (10 mm)** for that same controller. The
+memory note for that flight says the cause was "invisible in sim by
+construction (sim plant IS the model)"; the mismatch injection is what closes
+that blind spot, and the first thing it did was predict the crash.
+
+**Caveats.** Python plant, so no PX4, no DDS jitter, no RTF-0.38 effect —
+absolute boundaries will differ in Isaac; the *ratio* and the mechanisms are
+the transferable result. `armff_base_com_*` was zeroed on the L1 node for the
+sweep so both compute r_com identically. Not yet repeated in Isaac.
+
 ### 7.11 Bare-T650 GEOMETRIC direct actuation — added 2026-08-14
 
 §7.10's geometric controller on §7's **bare T650 plant** (no arm —
@@ -2179,6 +2244,303 @@ the measured phase margin to **10.4°** — i.e. obeying the sufficient conditio
 would make the real loop *worse*. Values were instead authority-matched to the
 flown classic cascade and confirmed in sim. Revisit this if jerk/snap references
 are ever added (`Ω_d ≠ 0` makes `B₂ > 0` and tightens the bound further).
+
+### 7.12 AM-T650 GEOMETRIC + L1-ADAPTIVE direct actuation — added 2026-08-20
+
+The §7.10 rig flown by a **third controller**: the method of *Cai, Yu, Zhang,
+Liang, Fang, Han, "An experiment study for unmanned aerial manipulator systems
+with L1 adaptive augmentation of geometric control", Control Engineering
+Practice 164 (2025) 106418* (PDF in `docs/docs_aerial_manipulator/`),
+implemented as a new PARALLEL FORK in `fsc_autopilot_ros2`
+(`single_aerial_manipulator_geometric_l1_direct_actuation`, installed as
+`autopilot_geometric_l1_direct_actuation_node`). The plant, the Pegasus/PX4
+side and the §7.9 arm stack remain §7.10's architecture. The post-review mass
+and timing corrections below also changed the shared T650 plant constant and
+added fail-fast checks to its launch path.
+
+```
+SAFETY : unchanged baseline (robust position ctrl + UDE → attitude setpoint →
+         PX4 runs attitude+rate+mixer). Takeoff, abort and failsafe path.
+DIRECT : u = u_b + u_L1, 250 Hz, straight from the POSITION reference:
+  u_b  (paper eqs 17/18, ENU/FLU): F_d = -Kp e_p - Kv e_v + m g e3 + m a_d
+         + m R(ω×(ω×r_os));  f_b = F_d·Re3;  R_d from F_d + ref yaw;
+         M_b = -KR e_R - Kω ω + ω×Iω + r_os×(f_b e3 - m ω×(ω×r_os))
+  u_L1 (paper eqs 19-23): predictor on ζ=[v;ω] → piecewise-constant
+         adaptation (Ḡ=[G,G⊥] inverted per state sample, T = 4 ms in this
+         simulation and capture-stamp delta on hardware) → LPF;
+         only the MATCHED estimate [f; M] enters the control channel.
+  → same physical wrench allocator as §7.10 → ActuatorMotors.
+```
+
+Key differences from §7.10 worth having in hand:
+
+- **No attitude integral, no UDE in DIRECT** — the L1 augmentation is the
+  paper's replacement for both. The residual-bias display moved from
+  "integral torque" to `u_L1` (`l1_control_debug` [16..19]).
+- **The arm's wrench is compensated INSIDE the law** through `r_os` (live
+  from `/uav_0/fsc_open_manipulator/joint_states`, home-pose fallback). At
+  home the thrust-moment term reproduces the flown −0.0195 N·m/N to the
+  reported precision.
+- **The DIRECT position loop is the paper's** (`l1geo_kp/kv` in newtons), not
+  the robust controller; `posctl_*` serve SAFETY only.
+- **Scope is hover/constant yaw.** The reference message has acceleration but
+  no jerk, snap, yaw rate, or yaw acceleration, so the implementation sets
+  `omega_d = omega_d_dot = 0`. It is not the paper's complete
+  time-varying-trajectory attitude feedforward.
+- The predictor is advanced with the ACHIEVED wrench (allocator saturation
+  subtracted) — the L1 equivalent of conditional integration — and `u_L1` is
+  clamped (±10 N, ±1.5/0.8 N·m); the estimate gets 2× that range. The 10 N
+  thrust bound is the 2026-08-21 +20% allocation-mismatch stress-test value.
+- `l1adapt_enable: false` in the yaml = pure baseline geometric law (the
+  paper's own A/B).
+
+**STATUS: full SITL flight and gain sweep completed 2026-08-21.** The earlier
+synthetic closed-loop harness (faked PX4/estimator/arm topics, real service
+switch — §7.10's pre-flight standard) was rerun after the mass, sample-clock,
+and CoM-origin corrections. The live C++ node agreed with an independent
+Python reference at hover and three non-trivial states (including ω = 1.1
+rad/s and an off-home arm) to **1.34e-6 N**, **3.14e-8 N·m**, and **1.79e-9 m**
+in arm FK. Its measured sample period was **4.000 ms**. The later live SITL
+stress test and selected gains are recorded in §7.12.4.
+
+#### 7.12.2 Verification pass (2026-08-20) — what was proven, and three fixes
+
+Scripts live in the session scratchpad (not committed): `verify_derivation.py`,
+`verify_node.py`, `verify_l1.py`, `soak.py`.
+
+**Proven, all to machine precision:**
+
+| check | result |
+|---|---|
+| Paper's constant-position/constant-yaw specialization in NED/FRD vs this implementation in ENU/FLU, 400 random states with ω up to 1.5 rad/s | f_b agree to **7e-15 N**, M_b to **4e-16 N·m**, R_d to **6e-16** |
+| Closed loop reproduces the paper's eq (27), `I ė_ω = −K_R e_R − K_ω e_ω` | residual **4e-16 N·m** — the r_os feedforward cancels d_im1 and ω×Iω *exactly* |
+| Translational loop reproduces eq (30), Δ → 0 at perfect attitude | residual **1e-14 N** |
+| LIVE C++ node vs independent Python, rerun after the post-review corrections over 4 states incl. **ω = 1.1 rad/s** and an off-home arm | f_b **1.34e-6 N**, M_b **3.14e-8 N·m**, arm FK **1.79e-9 m** |
+| eq (23) LPF recursion measured in the running binary | α = 0.992032 vs 0.992032 expected, implied dt **4.000 ms** |
+| PWC adaptation recovers a known injected wrench (closed-loop sim) | matches theory to **2e-5** |
+| eq (16) `F(ζ)` and `Ḡ = [G, G⊥]` under the same frame map | **0.000e+00** |
+
+**Correction to the earlier reading of the paper's `G(R)`: there is no sign
+typo.** The apparent minus is the exponent in `I⁻¹`, not a minus on
+`ᴮr_os × e₃`. The paper's NED thrust→moment block is
+`+I⁻¹(ᴮr_os × e₃)`. Its ENU/FLU form in this implementation is
+`−I⁻¹(r_os × e₃)` because positive collective acts along body `+e₃` instead
+of NED/FRD `−e₃`. Equations (4), (7), (12), the displayed matrix, and the
+implemented frame conversion therefore agree.
+
+The ω ≠ 0 cases matter: **the centripetal feedforward terms are identically
+zero at hover**, so the original bench run never tested them at all.
+
+**Three defects found and fixed:**
+
+1. **The UDE was integrating a fictitious input in DIRECT.** `VelocityBasedUDE`
+   integrates `−R e_z · input_.thrust + m g`, and `outerLoop()` fills `input_`
+   with the *robust controller's* command — which this node never applies
+   (the paper's law computes its own thrust). The UDE was therefore booking
+   the difference between the two controllers as a disturbance and handing it
+   to SAFETY on the abort edge. Now fed the achieved collective.
+2. **Predictor integration was forward Euler.** Fine at the shipped poles, but
+   the dt gate admits 50 ms and the paper's own hardware poles are A_s = −65/−80,
+   giving |a|·dt = 4.0 — **measured to diverge to inf**. Replaced with the exact
+   zero-order-hold update (unconditionally stable, reduces to Euler as dt → 0),
+   the same fix `lagged_thrust_curve.py` records for the rotor-lag pole. This
+   is what makes restoring the paper's A_s safe on hardware.
+3. **The law and the L1 predictor used DIFFERENT gravity constants** (9.80665
+   vs 9.81) — caught by a 30 s hover soak, where u_L1 settled at **−0.119 N**
+   instead of zero. The two form one loop, so a constant model disagreement is
+   indistinguishable from a real matched disturbance and is amplified by
+   `e^{A_s T}/(1 − e^{A_s T}) ≈ 1/(|A_s|·T)` — **10× here**, turning a 0.0126 N
+   modelling slip into 0.119 N of thrust and ~1.5 cm of phantom altitude bias.
+   Predicted ζ̃ = −1.340e-4 vs measured −1.34e-4; after the fix the soak sits
+   at exactly zero. **General rule: every constant shared by the law and the
+   predictor must come from one place.**
+
+**One characteristic, not a defect, worth knowing before reading logs:** the
+PWC estimate steady-states at `Ḡ⁻¹ e^{A_s T} Ḡ σ`, i.e. it **under-reads** a
+constant disturbance by one sample of the predictor dynamics — 10% at the
+shipped sim poles, but `e^{-0.65}` ≈ **0.52** at the paper's hardware poles
+with T = 10 ms. So `u_L1` cancels only about half of a constant disturbance in
+one pass and the baseline loop carries the remainder; do not read a
+`γ̂` smaller than the disturbance you injected as a bug.
+
+#### 7.12.3 r_os model-mismatch injection (2026-08-20, user request)
+
+In sim the controller's r_os is otherwise EXACT (the `armff_*` table is the
+plant's own USDA extraction — verified to 0.0 µm at q=0), so a clean hover
+proves plumbing but never exercises what the L1 augmentation is *for*. On
+hardware the mismatch is real and large: the model's home-pose
+**dx = +19.5 mm** against a true value of **~5–11 mm** measured two ways from
+the 2026-08-19 flights — ~11 mm from the geometric rig's over-feedforward
+(+0.33 N·m ÷ ~36 N), ~5 mm back-solved from the baseline ulog's hover rotor
+split (`0819 - T650-AM baseline/log_244`, mean motors [0.558 0.549 0.690
+0.668]; that estimate is contaminated by per-motor thrust-constant spread —
+the same asymmetry behind the km÷2.9 yaw finding, so treat it as a lower
+bound). The model **over-reads dx by roughly 2×**.
+
+New `armff_mismatch_{x,y,z}` [m, FLU] on the L1 node's arm model: a constant
+offset added to EVERY r_os the model emits — live FK, home-pose fallback,
+baseline law, L1 predictor, startup anchors — so the controller is
+**structurally blind** to it; only the USDA plant knows the truth. Exactly the
+hardware situation. The sim yaml ships **+0.0085 x** (the 19.5-vs-11 datum,
+same sign relationship as hardware: controller over-reads). The node WARNS
+loudly (magenta) at startup when nonzero; debug **[41..43]** publish the
+injected value so `[36..38] − [41..43]` recovers the true r_os. **MUST be 0
+in any hardware config** (hardware carries its own mismatch; more would
+compound, not emulate) and 0 for a clean-model sim baseline.
+
+Hover-test expectations WITH the injection: baseline pitch moment
+−1.03 N·m (over-compensating by 0.31), `γ̂_My` (debug [22]) ≈ −0.28 N·m,
+**u_L1 pitch (debug [18]) settling near +0.31 N·m — not near zero**, position
+hold unchanged. That last point IS the robustness claim under test; the A/B is
+the same injection with `l1adapt_enable: false`, where the integrator-less
+baseline turns 0.31 N·m into a standing offset instead. Note the §7.12.2
+synthetic harness CANNOT see the injection (its faked plant has no physics and
+model/predictor stay self-consistent — verified: u_L1 stays 0 on the bench
+with the injection active); only a real Isaac flight exposes it. Plumbing
+verified 2026-08-20 against the live node: M_b pitch −1.0304 N·m, r_os belief
+0.02805, `[36]−[41]` = +0.01955 = the plant truth.
+
+#### 7.12.3 Post-review corrections (2026-08-20)
+
+- Restored `t650_params.BODY_MASS = 2.95 kg` as its own comments and every
+  AM-T650 YAML require. The accidental rotor-mass subtraction made the live
+  UAM 3.662249 kg while the controller modeled 3.746170 kg, a 0.823 N hover
+  error. The L1 launcher now passes the expected total into Isaac and the app
+  aborts on any future mismatch.
+- L1 no longer advances on every 250 Hz wall-timer callback. It ignores held
+  duplicate mocap samples and advances once per distinct capture stamp using
+  the 4 ms Isaac physics step. The actuator message still publishes at 250 Hz
+  wall time for PX4. This removes RTF-dependent fictitious disturbances during
+  acceleration.
+- `r_os` now starts at the bare T650 CoM, not the asset's geometric/model
+  origin. The configured model-frame base CoM is
+  `[0.00001019, -0.00030900, 0.04178889] m`.
+- The external launcher rejects a stale instance of its own controller, and
+  the Pegasus launcher requires the matching controller process rather than
+  accepting any running Micro XRCE-DDS agent.
+
+#### 7.12.4 +20% thrust-coefficient stress-test tuning (2026-08-21)
+
+The controller allocator was set to `5.6159172e-05 N/(rad/s)^2`, +20% from
+Pegasus's computed `4.679931202e-05`; Pegasus itself was not changed. Because
+allocation divides by the controller coefficient, this makes physical thrust
+16.67% lower than the controller predicts. The pre-existing
+`armff_mismatch_x=0.0085 m` injection remained active, so the sweep covered
+the thrust error and the named CoM-model error together.
+
+The original `l1adapt_max_thrust_n=6` was authority-limited: `u_L1` stayed at
+6 N for 93–100% of DIRECT and hover settled near `x=-0.605 m`, `z=0.830 m`
+for the `[0,0,1] m` reference. Raising only the bound to 10 N removed the rail
+but left the known PWC one-sample under-read. Sweeps over `A_s` and `omega_c`
+selected:
+
+```yaml
+l1adapt_as_v: 2.0
+l1adapt_as_omega: 2.0
+l1adapt_omega_c: 6.0
+l1adapt_max_thrust_n: 10.0
+```
+
+At the 4 ms sample time the constant-disturbance factor is
+`exp(-2*0.004)=0.992`. The final full trial (SAFETY takeoff, DIRECT handover,
+0.5 m X step/return and 0.25 m Z step/return) measured 2.4–3.0 cm settled X
+error, 7.3 mm Z error, 5.32–5.44 s X settling with 7.6–8.5% overshoot, and
+2.53 s Z settling with less than 0.1% overshoot. Peak L1 thrust was 8.27 N,
+peak adaptive torque 0.23 N·m, peak tilt 4.80 degrees, and peak motor command
+0.619; no adaptive/motor rail or watchdog event occurred. DIRECT handover L1
+settling improved from 2.58 s at the original `omega_c=2` to 0.88 s, with the
+minimum altitude improving from 0.688 m to about 0.895 m.
+
+The geometric position pair remains `Kp=[4,4,8]`, `Kv=[6,6,10]`. A candidate
+`Kp=[6,6,10]`, `Kv=[8,8,12]` shortened X rise time but increased overshoot to
+12–13%, settling to about 9.1 s, and later crossed the 3 m lateral test bound
+during the Z-return segment. The harness reverted to SAFETY and the candidate
+was rejected.
+
+#### 7.12.1 Run sequence — copy-paste, per machine
+
+Same shape as §7.10.1 (clean slate → build → ROS 2 stack → Pegasus/PX4 + arm →
+OFFBOARD/arm → DIRECT), with only the two launcher names changed. **Every
+command below is absolute-path and self-contained** — each one runs on its own
+from ANY directory, including `~`. The only `cd` left is the one *inside* the
+build command, because `colcon` writes `build/`/`install/` into the current
+directory and so genuinely must run from the workspace root.
+
+**fsc_lab_machine** (the lab desktop, user `fsc-jupiter`). Its `.bashrc`
+already sources ROS 2 and the workspace overlay, so a fresh terminal needs no
+manual `source`:
+
+```bash
+# 0. clean slate            (any terminal — run BOTH lines, in this order)
+~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. build after every pull (any terminal — the cd IS part of the command)
+cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
+
+# 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
+
+# 3. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2)
+~/Source/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh fsc_lab_machine
+
+# 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+
+# 5. take off in SAFETY from the ground station, settle at the hover
+#    reference, THEN hand the vehicle to the geometric+L1 law (terminal 3)
+ros2 service call /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"
+
+# ABORT back to SAFETY — have this line ready BEFORE entering DIRECT
+ros2 service call /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
+
+# 6. PX4 refuses an in-air disarm: land by reference first, then
+ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
+```
+
+**shiqi_machine** (shiqi-desktop) — identical apart from the two repo roots
+(`~/ros2_ws` and `~/fsc_PegasusSimulator`). If `ros2` is not on the PATH in a
+fresh terminal there, prefix the service calls with
+`source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash &&`:
+
+```bash
+# 0. clean slate            (any terminal — run BOTH lines, in this order)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. build after every pull (any terminal — the cd IS part of the command)
+cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
+
+# 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+
+# 3. Pegasus / PX4 SITL + ARM STACK + ARM GROUND STATION   (terminal 2)
+~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh shiqi_machine
+
+# steps 4-6 are machine-independent — use the fsc_lab_machine block above
+```
+
+**Never chain step 0's two lines with a launcher on the same line.**
+`kill_stale_sim_processes.sh` pattern-kills any shell whose command line
+mentions a launcher, so `kill_stale… && start_…` kills the very stack it just
+started (the §7.10.3 harness trap; the same pattern-matching bit me during
+this node's bench-check, killing my own shell twice).
+
+Session name `fsc_geometric_l1_direct_actuation_t650_aerial_manipulator_stack`
+(step 0's `stop_isaacsim_stack.sh` auto-discovers it). Prefix step 2 with
+`AUTO_DIRECT=1` to enter DIRECT pre-arm instead of taking off in SAFETY
+(§7.10's semantics) — but for a first flight of this law, prefer the default:
+take off on the proven baseline and switch in the air, so step 5's abort line
+is a live escape route. All of §7.10.1's other traps apply verbatim (the
+source-tree-yaml rule, the arm repo as a third repo to pull and rebuild, two
+ground stations, `Ctrl-b d` to detach — never Ctrl-C).
+
+`l1_control_debug` (41 elements, FLU): [0..2] e_p, [3..5] e_v, [6..8] e_R,
+[9..11] ω, [12] f_b N, [13..15] M_b N·m, [16] u_L1 thrust, [17..19] u_L1
+torque, [20..23] γ̂_m, [24..25] γ̂_um, [26..31] ζ̃, [32..35] motor commands,
+[36..38] r_os, [39] r_os source (0 none / 1 static / 2 live), [40] L1 active.
 
 ---
 
