@@ -64,6 +64,12 @@ GROUNDTRUTH_LOG="/tmp/indoor_x650_groundtruth.log"
 # deadlocks the HIL link the moment the external controller enters DIRECT.
 # Default 1 keeps stock lockstep behaviour for the baseline flows that source this script.
 LOCKSTEP="${PEGASUS_PX4_LOCKSTEP:-1}"
+EXPECTED_TOTAL_MASS="${PEGASUS_EXPECTED_TOTAL_MASS:-}"
+if [[ -n "$EXPECTED_TOTAL_MASS" ]] &&
+   [[ ! "$EXPECTED_TOTAL_MASS" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "ERROR: PEGASUS_EXPECTED_TOTAL_MASS must be a positive decimal number." >&2
+  exit 2
+fi
 
 command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
 command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
@@ -122,7 +128,8 @@ echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
 echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
-PEGASUS_PX4_LOCKSTEP=$LOCKSTEP \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
+  \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null || true

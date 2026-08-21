@@ -2542,6 +2542,131 @@ ground stations, `Ctrl-b d` to detach — never Ctrl-C).
 torque, [20..23] γ̂_m, [24..25] γ̂_um, [26..31] ζ̃, [32..35] motor commands,
 [36..38] r_os, [39] r_os source (0 none / 1 static / 2 live), [40] L1 active.
 
+### 7.13 Bare-T650 GEOMETRIC + L1-ADAPTIVE direct actuation — added 2026-08-21
+
+The NO-ARM parallel of §7.12, on the bare T650 plant of §7.11 — same paper
+(Cai et al., CEP 164 (2025) 106418), same SAFETY/DIRECT split, same mode
+service NAME, but a separate single-drone node fork
+(`fsc_autopilot_ros2_node/single_drone_geometric_l1_direct_actuation`,
+executable `autopilot_drone_geometric_l1_direct_actuation_node`) with NO arm
+model anywhere: r_os ≡ 0 on a bare airframe, no `armff_*` keys, and the debug
+array is 37 elements ([0..35] identical to §7.12's, [36] = L1 active; no r_os
+block). Params:
+`config/params_single_drone_geometric_l1_direct_actuation_t650.yaml`.
+
+**The executable name is DECORATED, and the decoration is INFIXED**
+("autopilot_" + "drone_" + the rest). So `autopilot_geometric_l1_direct_actuation_node`
+is **NOT** a substring of `autopilot_drone_geometric_l1_direct_actuation_node`:
+neither name matches the other under `pgrep -f`, and each pattern selects
+exactly ONE fork. That is what lets each Pegasus launcher refuse the wrong
+controller — but it also means **every stale-node guard must list BOTH names
+explicitly**. All three L1 scripts shipped on 2026-08-21 with the decorated
+name missing from their guard lists, i.e. unable to detect a stale instance of
+their own controller; found and fixed the same day by direct string test. Do
+not "simplify" those lists back down.
+
+**The shipped yaml is the +20% thrust-coefficient ROBUSTNESS config**
+(`alloc_thrust_coeff 5.6159172e-05` vs the plant's 4.679931e-05, §7.12.4's
+protocol without the r_os injection — there is no arm model to corrupt).
+Physical thrust runs 16.67% below what the controller predicts, and closing
+that gap is u_L1's job: in a settled DIRECT hover expect **u_L1 thrust (debug
+[16]) near +5.9 N, NOT near zero** (predicted +5.95: 4.96 N of missing
+physical thrust × the same wrong coefficient on the way back out), motors
+~0.5025 symmetric, f_b ≈ mg = 29.8 N. Restore the matched kf in the yaml for
+a clean-model baseline.
+
+#### 7.13.1 Run sequence — copy-paste (fsc_lab_machine)
+
+Same shape as §7.12.1; only the two launcher names change. Every §7.12.1 trap
+applies (never chain step 0's lines with a launcher; `Ctrl-b d`, never
+Ctrl-C; source-tree yaml rule). There is no arm repo and no arm ground
+station in this rig, so step 3 brings up two panes where §7.12.1 brings four.
+
+```bash
+# 0. clean slate            (any terminal — run BOTH lines, in this order)
+~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. build after every pull (any terminal — the cd IS part of the command)
+cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
+
+# 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
+~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_stack.sh fsc_lab_machine uav_0
+
+# 3. Pegasus / PX4 SITL     (terminal 2)
+~/Source/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh fsc_lab_machine
+
+# 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+
+# 5. take off in SAFETY from the ground station, settle at the hover
+#    reference, THEN hand the vehicle to the geometric+L1 law (terminal 3)
+ros2 service call /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"
+
+# ABORT back to SAFETY — have this line ready BEFORE entering DIRECT
+ros2 service call /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
+
+# 6. PX4 refuses an in-air disarm: land by reference first, then
+ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
+```
+
+Session name `fsc_geometric_l1_direct_actuation_t650_stack` (step 0
+auto-discovers it — `stop_isaacsim_stack.sh` builds its known-session list by
+grepping `^SESSION=` out of `scripts/isaacsim/start_*.sh`, verified to list
+this one). `AUTO_DIRECT=1` on step 2 enters DIRECT pre-arm, §7.12's semantics.
+shiqi_machine: swap the two repo roots as in §7.12.1.
+
+Every path, argument and service name in the block above was re-verified
+against the scripts and the node source on 2026-08-21: both step-0 scripts are
+executable; step 2/3 take `<machine_config> [uav_prefix]` and `<machine_config>`
+respectively, with `fsc_lab_machine.conf` present; and the mode service resolves
+to `/uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode`
+(node name `fsc_autopilot_ros2`, launch namespace `uav_0`, relative service
+`fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode`).
+
+#### 7.13.2 Campaign results (2026-08-21, +20% kf, full SITL)
+
+Mission: SAFETY takeoff to z 1.0 → DIRECT → 25 s soak → 0.5 m X step/return
+→ 0.25 m Z step/return → SAFETY → reference landing → disarm.
+
+- **The geometric sibling's attitude pair (kr 2.4/kΩ 0.73) is NOT safe on
+  this node.** Its rate-loop crossover (kΩ/I = 9.5 roll / 11.4 pitch rad/s)
+  sits on the MN4010 rotor-lag pole (10.03 1/s); the pure geometric law
+  tolerates that, but the L1 torque channel's ωc = 6 LPF + one-sample delay
+  eat the rest of the margin. Measured: a ~2.4 Hz roll/pitch mode excited by
+  the first X step decayed in run 1 but GREW +3%/s for 55 s in run 2 (u_L1
+  torque envelope 0.12 → 0.62 N·m) until the vehicle flipped — the §7.12.4
+  marginal-system signature, decided by run-to-run scatter. **Shipped kr
+  1.2/kΩ 0.45** (crossover 5.8/7.0 rad/s, wn 3.9/4.3, ζ 0.74/0.81):
+  repeat-tested 3/3, step transient decaying every run.
+- **Settled numbers on the shipped config** (3/3 complete flights, spread
+  under 1%): u_L1 thrust settles **+5.92 N** in every run (predicted +5.95),
+  never railed (bound 10 N, peak 6.6); u_L1 torque ≤ 0.053 N·m vs the 1.5
+  clamp; motors 0.502 mean, symmetric; soak tilt ≤ 0.5°. Z step: rise 2.4 s,
+  settle 3.5 s, overshoot ≤ 2.6%, final error 6 mm. X step: rise 3.9–4.4 s,
+  return overshoot 7–10%, both parking on the standing offset below. DIRECT
+  handover min z = 0.907 m (ref 1.0) in all three runs; X-step transient
+  peak 3.6° tilt, fully decayed within 4 s every run.
+- **A constant ~4–5 cm −x/−y hover offset is the PLANT, not a gain
+  problem.** γ̂_um (debug [24..25], the unmatched estimate) reads a real
+  ~0.20 N lateral force on x650_new.usd (the known built-in thrust-axis/
+  body-frame misalignment class, ~0.4°), and the paper's pure-P position
+  loop parks exactly at e_p = F_lat/Kp — measured Kp·e_p = γ̂_um to a few
+  percent in all three runs. The law has no integrator and the unmatched
+  channel is estimated but physically unactuatable at fixed attitude. It
+  also biases the X-step metrics (the step "undershoots" by the same 4 cm).
+  Raising Kp would shrink it; the §7.12.4-rejected stiffer pair says don't.
+- **DIRECT→SAFETY handover carries a one-off ~6 N vertical surge — an
+  artifact of the ASYMMETRIC injection, expected and bounded.** During
+  DIRECT the SAFETY-path UDE (fed the allocator's believed collective) books
+  the mismatch as a ~6 N disturbance; on the abort edge SAFETY compensates
+  through its own CORRECT thrust model, ballooning z by ~0.5 m for ~2 s
+  until the UDE re-learns (gain 2.0). On hardware a real kf error lives in
+  BOTH models, so this artifact does not transfer. Do not "fix" it by
+  softening ude_gain — that slows the real abort path.
+
 ---
 
 ## Notes

@@ -16,6 +16,13 @@
 - Retired the legacy wrong-frame bare-X650 asset from all runtime selection;
   corrected the standalone allocation model to the new asset's PX4 Quad-X
   rotor-to-corner order.
+- Bare-T650 geometric+L1 direct-actuator SITL launcher at
+  `scripts/indoor_sim/start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh`
+  — the no-arm parallel of the AM geometric+L1 rig: identical bare-T650 plant
+  to the geometric launcher (lockstep off), requiring the paired
+  fsc_autopilot_ros2 single-drone L1 stack (which carries the same +20%
+  controller-side thrust-coefficient robustness mismatch) by its decorated
+  node name. Run sequence and campaign results: Command.md §7.13.
 
 ## Modified
 - Tuned the AM-T650 geometric+L1 simulation controller against a deliberate

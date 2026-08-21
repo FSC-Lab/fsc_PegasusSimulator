@@ -595,6 +595,49 @@ The earlier claim that the paper printed a negative r_os block in G(R) was a
 typesetting misread: the minus belongs to the exponent in I^-1; paper and code agree after
 the NED/FRD→ENU/FLU thrust-sign conversion.
 
+**BARE-T650 GEOMETRIC + L1 (2026-08-21, user request — the no-arm parallel of the §7.12
+rig).** fsc_autopilot_ros2 (dev_CCM) gained a second L1 fork,
+`single_drone_geometric_l1_direct_actuation` (executable
+`autopilot_drone_geometric_l1_direct_actuation_node` — decorated because the AM fork owns
+the plain name. **The decoration is INFIXED** ("autopilot_" + "drone_" + the rest), so
+neither name is a substring of the other and `pgrep -f` on either matches exactly ONE fork
+— every stale-node guard must therefore list BOTH explicitly, which is a defect found and
+fixed 2026-08-21 after all three L1 scripts had been shipped with the decorated name
+missing, i.e. unable to detect a stale instance of their own controller),
+namespace `nodelib::single_drone_l1`: the AM L1 client minus the whole arm model — r_os ≡ 0
+on a bare airframe (the paper's O→S with O = bare CoM), no `armff_*` keys, no joint-state
+subscription, debug array 37 elements ([0..35] = the AM layout, [36] = L1 active). Same
+frozen mode-service name `fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode`.
+Yaml `params_single_drone_geometric_l1_direct_actuation_t650.yaml` = bare-T650 plant/SAFETY
+numbers (mass 3.033921, posctl 1.0/3.0, ude_gain 2.0) + the AM campaign's L1 tune (A_s 2/2,
+ωc 6, 10 N thrust bound) + the SAME deliberate +20% `alloc_thrust_coeff` (5.6159172e-05;
+plant truth 4.679931e-05) — the §7.12.4 robustness protocol minus the r_os injection (no
+arm model to corrupt; the thrust mismatch is the whole test). Scripts: Pegasus
+`scripts/indoor_sim/start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh` (plant twin of the
+geometric launcher; gates on the DECORATED node name, which is what lets it refuse the AM
+stack flying this plant), stack
+`scripts/isaacsim/start_geometric_l1_direct_actuation_t650_stack.sh`, hardware
+`scripts/indoor_exp/start_geometric_l1_direct_actuation_stack_t650.sh` (greps the yaml and
+warns loudly while the +20% coefficient ships — restore the bench motor pair before any
+hardware flight). The older geometric stack/exp scripts' stale-controller lists gained the
+missing fork names. Commands + full campaign results: Command.md §7.13. **SIM-SWEPT
+2026-08-21, three findings that will bite again:** (a) the geometric sibling's attitude
+pair kr 2.4/kΩ 0.73 is NOT safe on the L1 node — its rate-loop crossover (9.5–11.4 rad/s)
+sits on the MN4010 lag pole and the L1 torque channel's ωc=6 LPF + one-sample delay eat
+the remaining margin; measured as a ~2.4 Hz mode that decayed in one run and grew +3%/s to
+a flip in the repeat (marginal, scatter-decided — repeat-test everything). Shipped kr
+1.2/kΩ 0.45, 3/3 clean with the step transient decaying within 4 s every run. (b) A
+constant ~4–5 cm −x/−y hover offset is the PLANT: γ̂_um reads a real ~0.20 N lateral force
+(x650_new.usd's built-in ~0.4° thrust-axis/body-frame misalignment), and the paper's
+integrator-less pure-P position loop parks exactly at F_lat/Kp (Kp·e_p = γ̂_um measured to
+a few percent, 3/3). (c) The
+DIRECT→SAFETY abort carries a one-off ~6 N vertical surge (~0.5 m balloon): the SAFETY-path
+UDE books the DIRECT-only mismatch as a disturbance and hands it to a SAFETY loop whose
+thrust model is honest — an artifact of the ASYMMETRIC sim injection that does not transfer
+to hardware (a real kf error lives in both models). Settled hover: u_L1 thrust +5.92 N in
+all three runs (predicted +5.95 — the mismatch closed), motors 0.502 symmetric, u_L1
+torque ≤0.053 N·m.
+
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):
