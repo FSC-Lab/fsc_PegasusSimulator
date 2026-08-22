@@ -122,5 +122,9 @@ FLY_THROUGH_AXIS = np.array([1.0, 0.0, 0.0])
 APPROACH_SIDE = +1.0
 
 #: Spawn 3 m out on the approach side, yawed 180 deg so body-forward faces the gate.
-DEFAULT_SPAWN_POS = (3.0, 0.0, 0.07)
+#: The +0.5 m in Y is a deliberate lateral offset (requested 2026-08-19): yawed
+#: 180 deg the body's forward is world -X, so body-LEFT is world -Y and world +Y
+#: is the drone's RIGHT -- i.e. it starts half a metre right of the gate centre
+#: line, which is also half a metre right as seen from the chase camera behind it.
+DEFAULT_SPAWN_POS = (3.0, 0.5, 0.07)
 DEFAULT_SPAWN_EULER = (0.0, 0.0, 180.0)

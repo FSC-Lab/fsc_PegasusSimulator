@@ -108,5 +108,28 @@ exec bash
 # section notes these are, if anything, more necessary for it (slightly more lag).
 "$SCRIPT_DIR/apply_x650_px4_gains.sh" "$SESSION" "0.0" 8 &
 
+# Takeoff/hover altitude for this scene. PX4's stock 2.5 m puts the drone above
+# the gate's 2.33 m lintel, so a QGC takeoff has to be flown back down before it
+# can line up on the opening.
+# 2.0 m is the value flown and confirmed in the sim on 2026-08-19 ("the gate is
+# roughly at center"); it puts the vehicle at world z ~ 2.07, since takeoff
+# altitude is relative to home and home is the z = 0.07 spawn. That sits a little
+# above the geometric centre of the opening, which was
+# MEASURED from the asset itself on 2026-08-19 rather than taken on trust:
+# transforming the 924,710 gaussians through the real chain (gate_metric.usda's
+# matrix composed with the usdz's own (x,y,z)->(-x,-z,-y) axis swap) puts the
+# floor at z = -0.046 and a clean 1.40 m-wide aperture at z = 1.33 .. 2.28,
+# confirming gate_splat.py's sill 1.102 / centre 1.746 / lintel 2.328.
+# NOTE QGroundControl's Takeoff dialog has its own altitude field that overrides
+# this parameter -- if the vehicle does not stop at 1.7 m, that field is why.
+# Applied on the same tmux-send-keys principle as the gain script (PX4 has no
+# way to signal readiness, hence the delay) and re-applied on every launch, so
+# it does not matter that PX4 autosaves it into the shared none_iris rootfs.
+GATE_TAKEOFF_ALT="${GATE_TAKEOFF_ALT:-2.0}"
+(
+  sleep 12
+  tmux send-keys -t "$SESSION:0.0" "param set MIS_TAKEOFF_ALT $GATE_TAKEOFF_ALT" Enter
+) &
+
 tmux select-layout -t "$SESSION":0 even-horizontal
 tmux attach-session -t "$SESSION"
