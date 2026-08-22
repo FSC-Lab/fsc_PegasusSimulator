@@ -638,6 +638,69 @@ to hardware (a real kf error lives in both models). Settled hover: u_L1 thrust +
 all three runs (predicted +5.95 — the mismatch closed), motors 0.502 symmetric, u_L1
 torque ≤0.053 N·m.
 
+**WHOLE-BODY DIRECT ACTUATION — THE COUPLED LAW IN fsc_autopilot_ros2, ARM IN TORQUE MODE
+(2026-08-22, user request — controller.py ported to C++, both ground stations live).** A fourth
+AM fork, `single_aerial_manipulator_whole_body_direct_actuation` (node
+`autopilot_whole_body_direct_actuation_node`, substring-safe vs all siblings), runs THE law
+(impedance + GMO + DLS + saturation-consistent coupling) at 250 Hz in DIRECT, commanding the
+4 rotors (ActuatorMotors) AND the 4 arm joint torques over ROS2. Everything is NEW FILES
+(user's incrementality rule): `wb_model/wb_controller` (byte-faithful Eigen port, MODEL kept in
+AM_realign's y-forward frame + one `frame_adapter.hpp` boundary), `wb_reference_builder`
+(drone GS position/yaw → x_cd chain via a CoM anchor captured at DIRECT entry; arm GS joint
+target → slewed q_d → FK-implied EE reference on the law's own model), client with the L1
+fork's SAFETY/watchdog/failsafe plumbing, GATED DIRECT entry (pos/vel/arm-err + freshness —
+the sequencing rule made mechanical), and the arm-hold torques streamed in SAFETY too (one
+continuous torque source across the switch). Arm transport: new `ExternalTorqueController`
+(fsc_open_manipulator, derives TorqueControllerBase: pass-through + clamp + position-limit
+pull-back + stale-PD-fallback with re-arm hysteresis + zero-on-deactivate) → new
+`IsaacTopicEffortSystem` (effort-only bridge twin; zero-seed on activate, NaN = don't publish)
+→ `isaacsim_manipulator/effort_commands` (the name Arm Topic Naming.md had reserved) → new
+`06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py` (05's plant; fresh efforts applied
+clipped ±3.0, stale → PD+gravity hold at the LATCHED pose — a torque stream must never latch).
+Launchers: Pegasus `scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh`
+(06 + torque arm stack + arm GS `controller:=external_torque_controller simulation:=true`) +
+stack `scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh`;
+all existing stale-node guards + stop script + the drone GS motors_debug gained the fork.
+**PARITY-LOCKED**: `generate_wb_truth.py` (Pegasus, utils/) builds the T650 model variant with
+the CORRECT model-frame I0 = [0.07475072, 0.08616121, 0.083401015], Ixy −0.0089 (computed, NOT
+05's un-rotated `_body_dI`; base mass 3.1095500) and dumps 220 cases + GMO rollouts; the gtest
+`WbParityTest` (fixture `tests/data/wb_truth_t650.json`) holds the C++ law to ≤1e-8. Model in
+code (`t650Defaults`), gains in yaml — control_params.py's split. **FIRST DIRECT ENGAGEMENT
+GREW A RATE OSCILLATION (2026-08-22): the in-process-validated attitude tune k_R=4/k_w=1.5/
+M_r_d=AM_realign is NOT valid over the external DDS loop** (transport latency 03 never had) —
+tripped the 360 dps watchdog 20 s in, at 14° tilt. Shipped tune: k_R=2.0/k_w=1.1 and M_r_d =
+the ACTUAL T650 M_r diag at home [0.077681, 0.090738, 0.083401] (the old numbers under-stated
+roll/pitch inertia 20–40%, hidden extra gain via M_r·M_r_d⁻¹); wn 6.9→4.9 rad/s vs the
+10.0 rad/s rotor-lag pole. **SIM-VALIDATED same day, 2 flights / 3 engagements after the
+retune, 179 s of DIRECT**: EE rms 2.36 mm, CoM rms 3.2 mm, u1 = mg exactly, peak joint torque
+0.87/3.0, zero saturations, |e_R| ≤ 0.037, no resonant mode; in-flight arm GS step tracked <1°
+in 4 s with the base held to 5 mm; abort bumpless, re-entry gated, touchdown 0.307/0.311 m.
+tau_max = 3.0 appears in THREE places (wb yaml / ExternalTorqueController / 06) — keep one
+number. Commands: Command.md §7.14. Small trap found live: `pgrep -f` stale-node guards also
+match a SHELL whose command line merely contains the node name — don't monitor a launch from a
+same-name-carrying foreground shell.
+
+**WHOLE-BODY +20% KF ROBUSTNESS TEST FAILED (2026-08-22, user-requested injection).** The
+controller allocator used `5.6159172e-05` while 06 kept the calibrated
+plant truth `4.679931e-05` and measured rotor pole `10.0265 1/s`. A guarded constant-hover
+run entered DIRECT with zero anchored CoM error but was aborted after 7.68 s at 30.45 deg
+tilt: altitude 1.148 -> 0.796 -> 1.385 m, CoM error 1.504 m, `d_hat_z` -9.12 N, `u1` peak
+49.06 N, and two arm joints at the 3.0 N.m clamp for 52.9% of DIRECT samples. Rotor
+unallocated thrust remained numerical zero, all arm/DDS streams stayed live, and the plant
+and controller printed their intended distinct coefficients, so this is the present GMO
+tune failing the multiplicative actuator mismatch rather than a transport or injection
+fault. Full protocol and numbers: Command.md §7.14.2.
+
+**WHOLE-BODY +15% KF HOVER PASSED AFTER RETUNE (2026-08-22).** Current yaml belief is
+`5.38192065e-05` against the unchanged `4.679931e-05` plant and `10.0265 1/s` motor pole.
+The hover-only tune uses k_v=12, k_w=1.5, EE Ky/Dy=2/4, GMO Ko=0.5/0.1/0.1, and an optional
+joint-posture PID (Kp/Kd/Ki=2/0.25/0.05, integral torque clamp 0.8 N.m) to select the
+controller-smoothed home branch without the instability of the rejected Kp=8 cases. Two
+independent clean 90 s runs had zero saturation, <=1.55 deg tilt, 2.0-3.3 mm steady CoM RMS,
+u1=42.262 N and d_hat_z=-5.512 N. Final arm q was within 2.8 deg of [0,40,40,0] and still
+converging. This validates constant hover only, not position or EE steps. Restore
+`4.679931e-05` for matched-model or hardware-oriented use. Details: Command.md §7.14.2.
+
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):

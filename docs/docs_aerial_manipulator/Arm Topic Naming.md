@@ -80,7 +80,7 @@ one simulator today.
 <veh>/isaacsim_manipulator/     ← EXISTS ONLY IN SIMULATION
     joint_states                plant → IsaacTopicSystem::read()
     position_commands           IsaacTopicSystem::write() → plant
-    effort_commands             reserved: torque mode
+    effort_commands             IsaacTopicEffortSystem::write() -> plant (torque mode, 2026-08-22)
 ```
 
 `ros2 topic list | grep fsc_open_manipulator` is the arm's real interface.
@@ -184,7 +184,7 @@ with no error. Match by name.
 | 3 | `/**` flatten, `position_controller_isaac_aerial.yaml` | **done** 2026-08-15 |
 | 4 | Move the Isaac stack under `fsc_open_manipulator/` (launch default, launcher `ARM_NS`, ground station `__ns`) | **done** 2026-08-15 |
 | 5 | `/**` + `namespace` arg for the other 9 configs and their launches (Gazebo + hardware) | todo |
-| 6 | Effort unit conversion in the Dynamixel `SystemInterface` | todo, before torque mode |
+| 6 | Effort unit conversion in the Dynamixel `SystemInterface` | todo, before HARDWARE torque mode (the SIM torque chain shipped 2026-08-22 is all-N·m end to end and does not need it) |
 
 Steps 1–4 are behaviour-preserving *in structure*: step 3 was diffed
 parameter-by-parameter against the previous file (only difference: the
@@ -211,9 +211,14 @@ so it is the one to re-verify on the next flight.
 
 ## 7. Scope
 
-Only the geometric launcher
-(`start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh`, running
-`05_…_ros2_arm_hold.py`) has an arm ROS interface.
+Three launchers have an arm ROS interface: the geometric and geometric+L1
+pair (`start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh` /
+`start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh`, both running
+`05_…_ros2_arm_hold.py` with the POSITION-mode stack) and the whole-body
+launcher (`start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh`,
+running `06_…_ros2_arm_torque.py` with the TORQUE-mode stack —
+`IsaacTopicEffortSystem` + `ExternalTorqueController`, effort on
+`isaacsim_manipulator/effort_commands`, all N·m; Command.md §7.14).
 
 `start_t650_aerial_manipulator_direct_actuator_sitl.sh` and
 `start_t650_aerial_manipulator_baseline_sitl.sh` both run

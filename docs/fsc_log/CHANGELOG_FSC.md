@@ -25,6 +25,30 @@
   node name. Run sequence and campaign results: Command.md §7.13.
 
 ## Modified
+- Retuned the AM-T650 whole-body controller for a simulation-only +15% thrust-
+  coefficient mismatch. Added an optional, reaction-consistent joint-posture
+  PID objective using the controller-smoothed reference, with clamped integral
+  torque to keep the arm on the `[0, 40, 40, 0]` branch. Two clean 90 s hover
+  runs passed with zero saturation, at most 1.55 degrees tilt, and 2.0-3.3 mm
+  steady CoM RMS. This is a hover-only validation; +20% still fails.
+- Injected a simulation-only +20% controller-side thrust-coefficient mismatch
+  into the AM-T650 whole-body DIRECT configuration while preserving the
+  measured 99.7 ms rotor lag and true Isaac coefficient. A guarded hover showed
+  the current GMO tune does not reject it: the run was aborted at 30.5 degrees
+  tilt after 7.7 s with 1.50 m CoM error and two arm joints saturated. The
+  failure, restore value, and telemetry interpretation are in Command.md
+  §7.14.2.
+- Completed the AM-T650 whole-body direct-actuation operator path: the drone
+  ground station now recognizes the whole-body controller and derives total
+  normalized throttle from its four live motor commands without suppressing
+  them when PX4's unrelated `pre_flight_checks_pass` flag is false; the arm ground station
+  exposes `WB-TORQUE`, follows `external_torque_controller`, and routes joint or
+  end-effector targets through that controller's minimum-jerk generator. The
+  coupled law now consumes the exact published smoothed position/velocity
+  reference, fixing activation homing, both Home buttons, and end-effector
+  trajectory tracking. The home pose is `[0, 40, 40, 0]` degrees. Documented the
+  XM430 torque-off requirement for Operating Mode changes and kept the whole-body
+  arm in torque mode for the complete bring-up.
 - Tuned the AM-T650 geometric+L1 simulation controller against a deliberate
   +20% controller-side thrust-coefficient mismatch: raised the adaptive thrust
   bound to 10 N, selected 2 1/s predictor poles and a 6 rad/s filter bandwidth,
