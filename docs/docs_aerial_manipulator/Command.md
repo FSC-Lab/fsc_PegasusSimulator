@@ -1235,14 +1235,17 @@ applying, controllers fail on empty `joints`). Full convention:
 **One-time build on shiqi-desktop** (already done 2026-08-13; repeat after
 pulling the arm repo). Since the same-day repo consolidation there is ONE arm
 repo — the fsc_open_manipulator GitHub repo, cloned at
-`~/colcon_ws/src/fsc_open_manipulator` with its pinned Dynamixel deps beside
-it (`cd ~/colcon_ws && vcs import src < src/fsc_open_manipulator/workspace.repos`).
+`~/ros2_ws/src/fsc_open_manipulator` with its pinned Dynamixel deps beside
+it (`cd ~/ros2_ws && vcs import src < src/fsc_open_manipulator/workspace.repos`;
+`vcs` is not installed on this machine, so clone the three by hand at the
+manifest's pins). It moved out of `~/colcon_ws` on 2026-08-23 — the arm now
+shares ONE workspace with the flight stack, and `~/colcon_ws` is gone.
 This machine has no system ros2_control/pinocchio and no sudo, so a root-less
 deb extract provides them (`~/ros2_ws/rosdeps/local_setup.bash` — its header
 explains how to replace it with a real `sudo apt install` later):
 
 ```bash
-cd ~/colcon_ws
+cd ~/ros2_ws
 source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash
 colcon build --packages-select \
   dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \
@@ -1662,7 +1665,7 @@ colcon build --packages-select dynamixel_interfaces open_manipulator_x_descripti
   open_manipulator_x_bringup open_manipulator_x_custom_controller \
   open_manipulator_x_isaac_bridge custom_gui --symlink-install
 
-# shiqi_machine (workspace ~/colcon_ws; already current as of 2026-08-13 —
+# shiqi_machine (workspace ~/ros2_ws since 2026-08-23, was ~/colcon_ws —
 # same pull+build there after any arm-repo change, plus the ~/ros2_ws/rosdeps
 # overlay sourced before building, see §7.9's "One-time build" block)
 ```
@@ -2726,10 +2729,20 @@ Key things worth having in hand:
 - **DIRECT THROTTLE IS LIVE IN THE DRONE GS.** The whole-body node publishes
   `whole_body_direct_actuation/motors_debug`; the four rotor pies show those
   normalized commands and the total normalized-throttle bar shows their mean.
-  Rendering is keyed to the active direct controller and this live motor
-  stream; it is deliberately not gated by the GUI's historical `connected`
-  field, because that field is actually PX4 `pre_flight_checks_pass` and can
-  be false while the ROS 2 link and DIRECT motor stream are healthy.
+  Rendering is keyed to the active direct controller (a SUBSTRING test on
+  "Direct Actuation", so "Whole-Body Direct Actuation" passes) AND on the
+  GUI's `connected` field — which is actually PX4 `pre_flight_checks_pass`,
+  so if the pies ever blank mid-flight while DIRECT is healthy, that gate is
+  why (an earlier revision of this section claimed the gate had been removed;
+  it has not been, verified in the GUI checkout 2026-08-23).
+  **The GUI must also SUBSCRIBE to this fork's topic.** Its subscription list
+  is per-fork and named `whole_body_direct_actuation/motors_debug` here;
+  until 2026-08-23 the list held only `direct_actuation` and
+  `geometric_direct_actuation`, so the four pies read 0.0% for an entire
+  whole-body DIRECT flight while the node published normally (`ros2 topic
+  info ...` showed `Subscription count: 0` — the one-command diagnosis).
+  Fixed in `ros2_ground_station_gui/src/ROS_Node/ros_single_drone_control.py`;
+  a GUI restart is required to pick it up.
   The same mean is mirrored to PX4's `vehicle_thrust_setpoint` (with body -z
   sign) so PX4's land detector also sees the collective while
   `direct_actuator=true`.
@@ -2806,7 +2819,8 @@ so there is no rosdeps overlay:
 ~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
 # 1a. build the autopilot after every pull   (the cd IS part of the command)
-cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
+#     msgs FIRST since 2026-08-23: the governor's WholeBodyReference is new.
+cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select fsc_autopilot_ros2_msgs fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
 
 # 1b. build the ARM repo — NEW for this rig (torque controller + effort bridge).
 #     The PATH strip is MANDATORY on this machine: the default python3 is the
@@ -2846,7 +2860,8 @@ ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
 ```
 
 **shiqi_machine** (shiqi-desktop) — identical apart from the three repo roots
-(`~/ros2_ws`, `~/fsc_PegasusSimulator`, arm at `~/colcon_ws`) and the root-less
+(`~/ros2_ws`, `~/fsc_PegasusSimulator`, arm also in `~/ros2_ws` since
+2026-08-23) and the root-less
 rosdeps overlay this machine needs for ros2_control:
 
 ```bash
@@ -2855,10 +2870,11 @@ rosdeps overlay this machine needs for ros2_control:
 ~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
 # 1a. build the autopilot after every pull
-cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
+#     msgs FIRST since 2026-08-23: the governor's WholeBodyReference is new.
+cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2_msgs fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
 
 # 1b. build the ARM repo — NEW for this rig (rosdeps overlay required here)
-cd ~/colcon_ws && source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash && colcon build --packages-select open_manipulator_x_isaac_bridge open_manipulator_x_custom_controller custom_gui --symlink-install
+cd ~/ros2_ws && source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash && colcon build --packages-select open_manipulator_x_isaac_bridge open_manipulator_x_custom_controller custom_gui --symlink-install
 
 # 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
@@ -2891,14 +2907,275 @@ switch (different command interfaces and, on XM430 hardware, a torque-off
 Operating Mode change). The active arm-GS controller indicator must read
 `WB-TORQUE`; if it does not, do not send an end-effector command.
 
-`wb_control_debug` (56 elements; DIRECT ticks unless noted): [0] mode (0
+`wb_control_debug` (57 elements; DIRECT ticks unless noted): [0] mode (0
 SAFETY / 1 DIRECT), [1] law hold, [2] gmo_active, [3] controller-smoothed arm
 reference fresh, [4] arm state fresh, [5..8] q, [9..12] controller-smoothed
 q_d, [13..16] tau_joint published N·m,
 [17] u1 N, [18..20] tau_body model frame, [21..23] tau_body actual FLU,
 [24..27] e_y (EE task error), [28..30] e_R, [31..40] d_e_hat (GMO, 10),
 [41..44] motor commands, [45..47] x_cd, [48..50] x_c measured, [51] n_sat,
-[52..54] unallocated torque FRD, [55] unallocated thrust N.
+[52..54] unallocated torque FRD, [55] unallocated thrust N, [56] streamed
+WholeBodyReference fresh (1 = the governor's compatible trajectory is the
+law's reference; 0 = internal builder fallback / SAFETY).
+
+#### 7.14.4 DIRECT-hold instability — measured 2026-08-23, NOT yet fixed
+
+Flown end to end on shiqi_machine (the §7.14.1 sequence, three matched runs,
+settled DIRECT hold 35-72 s, arm reference CONSTANT at home throughout):
+
+| run | EE | alloc_thrust_coeff | pitch range | |v| max | outcome |
+|---|---|---|---|---|---|
+| A | gripper | 5.38192065e-05 (shipped, +15%) | -9.2 .. +9.1 deg | 0.11 m/s | bounded limit cycle, 0.88 Hz |
+| B | gripper | 4.679931e-05 (calibrated) | -25 .. +31 deg | 3.4 m/s | DIVERGED, watchdog -> SAFETY at ~30 s |
+| C | wrist  | 4.679931e-05 (calibrated) | -42 .. +90 deg | 18.4 m/s | DIVERGED, flew 34 m |
+| D | gripper | 4.679931e-05, **governor KILLED** (node on its INTERNAL BUILDER) | -23 .. +28 deg | 4.0 m/s | DIVERGED, flipped at ~26 s |
+
+What this rules OUT, with evidence:
+- **Not the reference path — proven twice.** In the governor runs the streamed
+  reference was static to **0.0 mm** (`x_cd` spread) with
+  `wb_control_debug[56] = 1` throughout and a single plan event, and the ARM
+  swung +-10 deg against a CONSTANT `q_d`. Run **D** then removes the governor
+  entirely (killed; `Publisher count: 0` on the reference topic, so the node
+  falls back to its own builder — the historical path) and it diverges just the
+  same, growing steadily: pitch +-0.9 deg at t = 8-16 s, +-2.1 at 16-20,
+  +-8.6 at 20-26, flipped by 26. A textbook growing unstable mode, with the
+  governor not in the loop at all.
+- **Not the end-effector definition.** Parking the EE back at the wrist (run C)
+  made it strictly worse, so the 2026-08-23 `r_e` = gripper change is not the
+  trigger.
+- **0.88 Hz is the attitude loop's own frequency**: `sqrt(k_R/I) =
+  sqrt(2.0/0.065) = 5.55 rad/s`. The limit cycle sits exactly on it.
+
+What it points AT: **the +15% "stress injection" is the only reason this
+configuration flies.** Believing a kf 15% higher than truth makes the allocator
+command ~13% LESS motor for a given torque, i.e. it is a quiet loop-gain
+reduction. Removing it (the "matched-model baseline" §7.14 recommends)
+un-stabilises the hold. So the shipped yaml is left at 5.38192065e-05, and
+§7.14.2's framing of that number as a robustness result is misleading — it is
+load-bearing tune, not margin.
+
+**Next step is a gain re-tune, not another fix to the governor** (run D is the
+evidence for that sentence — without it the governor could not have been ruled
+out): k_R/k_w and
+K_y/D_y against the MATCHED kf, on the ground rig first (`utils/px4_gmo_gain_sweep.py`
+is the harness, and the 2026-08-10 lesson applies — every candidate repeat-tested,
+since a marginal stack's run-to-run scatter reads as success).
+
+#### 7.14.5 The fix — M_r_d retune, and the kf injection removed (2026-08-23)
+
+**Root cause.** `wb_mrd_x/y/z` was the T650 **I0** diagonal
+`[0.077681, 0.090738, 0.083401]` — the BODY-ONLY inertia. The COUPLED
+rotational inertia with the arm is `~[0.132, 0.112, 0.116]` (read straight off
+`dynamics()`'s M). `M_r_d` is the inertia the law IMPOSES, so the old setting
+asked the vehicle to rotate as if it were about half its real weight. That is a
+~2x bandwidth demand the 99.7 ms rotor lag plus the DDS/HIL transport delay
+cannot honour, and the +15% allocator-kf injection was the only thing holding
+it up (it cuts delivered wrench ~13%, i.e. loop gain).
+
+**Fix: `M_r_d` -> 1.5x I0 = `[0.116522, 0.136107, 0.125102]`, and
+`alloc_thrust_coeff` back to the CALIBRATED `4.679931e-05`.** `k_R`, `k_w`,
+`K_y`, `D_y`, the GMO and the model are untouched.
+
+Screened offline first with `application/robotic_arm/utils/wb_hover_stability.py`,
+which closes the same loop (exact law + exact model + allocator with the
+believed-vs-true kf split + rotor lag + a transport-delay FIFO) in ~5 s per
+candidate. It is scored on **DELAY MARGIN**, because that is what the flight
+showed to be binding:
+
+| M_r_d | delay margin at the calibrated kf |
+|---|---|
+| 1.0x I0 (old) | 24 ms |
+| 1.25x | 28 ms |
+| **1.5x - 2.0x** | **32 ms** |
+| 2.5x | 28 ms (turns over) |
+
+`k_R` moves it barely at all (20-24 ms across 0.5-2.0) and raising `k_w` makes
+it WORSE (12 ms) — damping gain amplifies lag. `K_y`/`D_y` do not affect it.
+**Read that tool's absolute verdicts with suspicion** — it does NOT reproduce
+the flown +15% run (it calls it unstable; the flight held), so it is trusted
+only for the RELATIVE ordering above, and the flight is the gate.
+
+**Flown result** (matched kf, governor streaming, 78 s hold then a
+0.5 m transition):
+
+| | before (I0, +15% kf) | after (1.5x I0, calibrated kf) |
+|---|---|---|
+| pitch | +-9.2 deg limit cycle | **0.14 deg peak-to-peak** |
+| CoM error | 18 mm mean / 55 mm max | **2.6 mm mean / 5.2 mm max** |
+| EE error | 53 mm | **5.1 mm** |
+| arm vs its reference | +-10 deg | **0.11 deg** |
+| position spread | 55 x 31 x 36 mm | **4 x 9 x 0.3 mm** |
+| thrust | - | 36.74-36.76 N (hover = 36.75) |
+
+and at the CALIBRATED kf the old tune DIVERGED outright, so this is not a
+marginal improvement — it is the difference between flying and not. The
+transition (drone-GS target -> Trajectory Planning -> Send) then executed for
+the first time: pitch stayed inside +-0.07 deg, CoM error <= 6 mm, and the
+vehicle arrived at x = 0.480 for a 0.5 m CoM command (the ~20 mm is the
+CoM-vs-base offset of the forward arm) and returned to HOLD.
+
+ONE flight each. Per the 2026-08-10 lesson a marginal stack's run-to-run
+scatter can read as success, so **repeat-test before trusting this on
+hardware** — though the margin here (a decaying transient vs a divergence) is
+far outside that noise band.
+
+**THE +15% INJECTION IS KEPT (user, 2026-08-23), now as a real test.** kf is
+never known exactly on hardware and ~15% is near worst case, so the rig is
+REQUIRED to fly with the allocator believing the wrong number — a tune that
+only works at zero mismatch is not a usable result. Before the retune the
+injection was a CRUTCH (removing it made the hold diverge); after it, the rig
+flies on the true model, so the same number now measures robustness instead of
+providing it. `alloc_thrust_coeff` is therefore back at 5.38192065e-05 with
+the retuned M_r_d.
+
+**FLOWN AND PASSED (2026-08-23).** The retuned `M_r_d` needed NO further
+tuning to carry the injection — the same value is stable at both. Steady state
+over a continuous 53 s window with the allocator believing the wrong kf:
+
+| | old M_r_d + 15% | **retuned M_r_d + 15%** | retuned, matched kf |
+|---|---|---|---|
+| pitch peak-to-peak | 18.4 deg (limit cycle) | **0.197 deg** | 0.14 deg |
+| roll peak-to-peak | ~3 deg | **0.157 deg** | - |
+| CoM error mean | 18 mm, oscillating | **2.85 mm** | 2.6 mm |
+| EE error | 53 mm | **6.1 mm** | 5.1 mm |
+| position spread | 55 x 31 x 36 mm | **8 x 12 x 0.5 mm** | 4 x 9 x 0.3 mm |
+| joint saturation | - | none | none |
+
+i.e. ~93x less attitude motion than the same mismatch produced before the
+retune, and within a whisker of the zero-mismatch case. **The mismatch is
+demonstrably ACTIVE, not bypassed**: `u1` sits at 42.26 N, and
+42.26 x (4.679931/5.38192) = 36.74 N delivered — exactly hover. The allocator
+is commanding 15% high and the loop absorbs it.
+
+The entry transient is bigger than the matched case and worth expecting: CoM
+error starts at ~119 mm and decays 119 -> 26 -> 5 mm over ~40 s as the observer
+learns the ~13% thrust deficit. That is the disturbance estimator doing its
+job, not a fault.
+
+`wb_hover_stability.py` could NOT have predicted this: it reports 0 ms margin
+at +15% for EVERY M_r_d while both flights plainly held, so its +15% branch is
+wrong (the thrust-sag transient trips its divergence test). Screen with it at
+the MATCHED kf only; the mismatch case is a flight question.
+
+#### 7.14.3 The whole-body REFERENCE GOVERNOR — paper-faithful DIRECT commanding (2026-08-23)
+
+In DIRECT the law now always receives the paper's FULL compatible reference
+set — system-CoM chain through snap, base heading, EE position+heading chains,
+consistent q_d — streamed as `fsc_autopilot_ros2_msgs/WholeBodyReference` on
+`whole_body_direct_actuation/reference` by the **whole-body reference
+governor** (`reference_governor/whole_body_reference_governor.py`, its own
+WINDOW `governor` in the step-2 stack session — `Ctrl-b n` / `Ctrl-b 1` to
+reach it; the arm-GS lamp is the primary operator surface, the window carries
+the planning diagnostics). Raw GS steps never reach the law.
+
+**Six panes is the ceiling of the stack row.** The governor was first added as
+a 7th pane and tmux refused it — `no space for new pane` in the 80-col
+DETACHED window the launcher creates — which under `set -e` aborted the script
+*before* the vrc pane, the pane titles and the attach: a stack that looked
+half-started with no way to arm. Every sibling launcher in
+`scripts/isaacsim/` is at exactly 6 for the same reason. Add a WINDOW, never a
+7th pane (or pass `tmux new-session -x/-y` to widen the detached window).
+
+The operator flow after entering DIRECT (unchanged: SAFETY takeoff, settle,
+gated `set_direct_mode`):
+
+1. **HOLD** — on DIRECT entry the governor captures the current rest set
+   (odometry base pose + the controller-smoothed arm reference; with the arm
+   at home this IS the home-pose EE command, computed by FK in the inertial
+   frame) and streams it. The vehicle holds; drone-GS sends stop executing.
+2. **Drone GS send → PENDING** — the base target is captured, NOT executed,
+   and republished on `whole_body_governor/pending_base` for the arm GS.
+   A ride-along plan (arm pose kept) is prepared automatically.
+3. **Arm GS "EE Whole-Body" tab** (NEW second tab of the inverted station;
+   it resolves the governor's topics against the VEHICLE namespace by
+   stripping its own last namespace component — the station runs at
+   `/uav_0/fsc_open_manipulator` while the governor, a flight-stack node,
+   sits at `/uav_0`. Plain relative names left the tab subscribed to
+   `/uav_0/fsc_open_manipulator/whole_body_governor/*`, i.e. permanently on
+   "Not in whole-body DIRECT" while the governor was three states further on;
+   fixed 2026-08-23, override with `-p governor_namespace:=`). Top to bottom
+   (the 2026-08-23 layout):
+   * **`Joint Space`** — the Setpoints tab's table verbatim (row name + unit
+     column, one column per joint) with rows **Range / Home / Solved Target**;
+     Home comes from the controller's `home_position`, Solved Target is drawn
+     as plain boxes with GREEN text (red when out of range) so a read-only
+     value never looks like an editable field. Watch **J4**: with the position inside the drawn region,
+     the usual remaining refusal is the WRIST ROLL running past ±90° to make
+     the commanded heading (measured 92-99° on the failures). Rotate the
+     heading dial to bring it back. Showing the pose the governor's IK SOLVED for the current
+     target, green in range and **red out of it**, from the governor's
+     `whole_body_governor/target_joints` (published on every plan attempt
+     including the infeasible ones — that is exactly when it is needed, and
+     it defaults to the HOLD pose when no target is assigned). It answers
+     "which joint made this infeasible" at a glance instead of as a sentence.
+   * **`Drone Target (From the Drone Ground Station)`** — 4 READ-ONLY cells
+     (X/Y/Z/Yaw) mirroring what the drone GS sent, **amber while PENDING**
+     (captured, not yet executed) and plain once it is the hold. The drone station owns this value; every
+     relative coordinate below is anchored on it.
+   * **The three selectors** — side view + bearing dial (relative to the
+     drone target) + the heading dial (INERTIAL EE heading, with the drone
+     target's heading as a blue rim tick). The side/top views draw the
+     **whole-body usable workspace**, published by the governor on
+     `whole_body_governor/workspace_rz` (a filled 192x192 (r,z) occupancy
+     grid, latched, computed once at startup) — NOT the Setpoints tab's
+     raster. Two reasons that raster is wrong here, both measured 2026-08-23:
+     it models a PITCH wrist with a 126 mm bracket while the flying asset has
+     a coaxial ROLL wrist (~10 cm of disagreement), and it knows nothing of
+     the planner's fold guard, so it drew a region of which only ~2.6% could
+     ever be planned. The published set is a correct NECESSARY bound —
+     measured 0/40 points outside it plan — but position-only, so a target
+     inside can still fail on HEADING. That was ~55% at the original ±90° q4;
+     since q4 was widened to ±120° it is **98%** (measured, same samples).
+     (r, z) is swept over (q2, q3) ALONE: the whole chain is left-multiplied
+     by Rz(q1), so q1 cannot change radius or height (exact to 9 decimals),
+     and q4 is a roll about the EE axis.
+   * **`End-effector Space`, TWO rows, both editable** — `Drone Frame` (the
+     drone target's yaw frame; Yaw 0 = gripper points the way the drone does)
+     and `Inertial Frame` (what is actually published). Editing either rewrites the other through the anchor, so
+     they cannot disagree; the views drive the relative row.
+   * **Buttons** (2026-08-23 naming): `Trajectory Planning` (publishes
+     `whole_body_governor/ee_target`; the governor solves IK on the
+     controller's own model — limits + the certified sigma_nd >= 0.10 margin
+     — and plans the COMPATIBLE transition), `Send Compatible Trajectory`
+     (enabled only on PLANNED), `Clear`, and **`Go Home`** — which calls the
+     governor's `whole_body_governor/go_home` and PLANS a compatible
+     transition to the folded home pose. It deliberately does NOT call the arm
+     controller's own Go Home: in whole-body DIRECT the law tracks the
+     governor's stream, not that reference, so the arm would not move. The
+     governor's `home_pose` parameter and the controller's `home_position`
+     must be moved together (both `[0, 40, 40, 0]` deg today).
+   * **`Status` strip at the BOTTOM** — orange `Calculating` -> green
+     `Planned T=..s` / red `Infeasible` + reason. It sits under the buttons
+     because it reports on what they just did.
+4. **Send Compatible Trajectory** — `whole_body_governor/send`
+   (std_srvs/Trigger; also the button). The planned transition streams
+   sample-by-sample; on completion the goal becomes the new HOLD. `Clear`
+   drops targets back to HOLD.
+
+The transition planner (`utils_planner/transition_planner.py`, Pegasus repo)
+prescribes every task channel A->B on ONE min-snap phase (min-snap is
+REQUIRED: the compatible CoM's velocity depends on the prescribed jerk, so
+min-jerk endpoints would step the CoM velocity at the hold joins) and solves
+the CoM by the same Picard fixed point as `compatible_trajectory.py`.
+Validated offline: dynamic defect 4.4e-8 m, hold-handover mismatch 0.028 mm,
+all derivative chains FD-consistent to ~5e-11, IK round-trip 1e-14 rad.
+Pace knobs are governor parameters (`v_max` 0.30 m/s, `a_max` 0.15 m/s^2,
+`w_max` 0.30 rad/s, `t_min` 3 s).
+
+Safety net unchanged: the governor is silent in SAFETY (takeoff/landing
+byte-identical); if it dies in DIRECT the WB node falls back to its internal
+setpoint builder after `wb_streamed_ref_timeout_s` (0.25 s default) — the
+validated hover-campaign behaviour. While EXECUTING the governor also streams
+the planned q_d to the ExternalTorqueController's `target_joint_setpoint`, so
+a SAFETY abort lands on the CURRENT arm pose, not a stale one. Reverting to
+SAFETY at any moment aborts everything instantly.
+
+Build note for step 1a: the message is new, so build `fsc_autopilot_ros2_msgs`
+BEFORE `fsc_autopilot_ros2` after this pull, and rebuild `custom_gui` (step
+1b) for the new tab. The governor itself is a plain python script — no build.
+In whole-body DIRECT, tab 1 joint/EE commands are superseded by this flow
+(the law does not consume the smoothed joint reference while the stream is
+fresh); use tab 2.
 
 #### 7.14.2 Thrust-coefficient mismatch: +20% fails, retuned +15% hovers
 

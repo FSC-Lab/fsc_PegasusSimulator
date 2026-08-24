@@ -90,7 +90,7 @@ PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
 # machine config. ROSDEPS_SETUP is the root-less ros2_control overlay this
 # machine needs (no sudo) — point it at /dev/null where ros2_control is
 # apt-installed.
-ARM_WS="${FSC_OM_ARM_WS:-$HOME/colcon_ws}"
+ARM_WS="${FSC_OM_ARM_WS:-$HOME/ros2_ws}"
 ARM_ROSDEPS_SETUP="${FSC_OM_ARM_ROSDEPS_SETUP:-$HOME/ros2_ws/rosdeps/local_setup.bash}"
 ARM_ROS2_SETUP="${ROS2_SETUP:-/opt/ros/humble/setup.bash}"
 ARM_WS_SETUP="$ARM_WS/install/setup.bash"
@@ -219,7 +219,9 @@ export DISPLAY='$ARM_DISPLAY'
 echo 'Arm ground station (inverted, torque mode). simulation:=true — Isaac reports N*m.'
 ros2 run custom_gui joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
   -p controller:=external_torque_controller -p simulation:=true \\
-  -p mount_height:=$ARM_GS_MOUNT_HEIGHT
+  -p mount_height:=$ARM_GS_MOUNT_HEIGHT \\
+  -p fallback_min_deg:='[-35.0, -80.0, -40.0, -120.0]' \\
+  -p fallback_max_deg:='[35.0, 50.0, 50.0, 120.0]'
 echo 'Arm ground station exited.'
 exec bash
 "

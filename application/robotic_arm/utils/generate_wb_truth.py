@@ -72,15 +72,13 @@ AM_XFWD_BODY_MASS = 2.4760795
 AM_XFWD_BODY_DIAG_INERTIA = np.diag([0.06334175, 0.06301228, 0.09868092])
 
 
-def make_params_t650():
-    """make_params() with the T650 body override applied CORRECTLY (model frame)."""
-    p = C.make_params()
-    dm = float(t650_params.BODY_MASS) - AM_XFWD_BODY_MASS          # +0.4739205
-    p["m_i"][0] = p["m_i"][0] + dm                                  # 3.1095500
-    dI_actual = np.asarray(t650_params.INERTIA_TENSOR, dtype=float) - AM_XFWD_BODY_DIAG_INERTIA
-    dI_model = R_MODEL.T @ dI_actual @ R_MODEL
-    p["I_i_i"][0] = p["I_i_i"][0] + dI_model
-    return p
+# The T650 whole-body model has ONE definition, in the extension, so this
+# fixture and the governor's planner can never describe different robots (they
+# were briefly duplicated, 2026-08-23). It also carries the EE = GRIPPER offset
+# that the C++ t650Defaults mirrors — the thing this fixture exists to lock.
+from fsc_aerial_manipulation.robotic_arm.utils_planner.transition_planner import (  # noqa: E402
+    make_params_t650,
+)
 
 
 def _rand_unit(rng, horizontal=False):

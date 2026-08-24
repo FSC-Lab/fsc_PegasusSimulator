@@ -74,7 +74,7 @@ PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
 # machine config. ROSDEPS_SETUP is the root-less ros2_control overlay this
 # machine needs (no sudo) — point it at /dev/null where ros2_control is
 # apt-installed.
-ARM_WS="${FSC_OM_ARM_WS:-$HOME/colcon_ws}"
+ARM_WS="${FSC_OM_ARM_WS:-$HOME/ros2_ws}"
 ARM_ROSDEPS_SETUP="${FSC_OM_ARM_ROSDEPS_SETUP:-$HOME/ros2_ws/rosdeps/local_setup.bash}"
 ARM_ROS2_SETUP="${ROS2_SETUP:-/opt/ros/humble/setup.bash}"
 ARM_WS_SETUP="$ARM_WS/install/setup.bash"
