@@ -2540,10 +2540,98 @@ is a live escape route. All of §7.10.1's other traps apply verbatim (the
 source-tree-yaml rule, the arm repo as a third repo to pull and rebuild, two
 ground stations, `Ctrl-b d` to detach — never Ctrl-C).
 
-`l1_control_debug` (41 elements, FLU): [0..2] e_p, [3..5] e_v, [6..8] e_R,
+`l1_control_debug` (**44** elements, FLU): [0..2] e_p, [3..5] e_v, [6..8] e_R,
 [9..11] ω, [12] f_b N, [13..15] M_b N·m, [16] u_L1 thrust, [17..19] u_L1
 torque, [20..23] γ̂_m, [24..25] γ̂_um, [26..31] ζ̃, [32..35] motor commands,
-[36..38] r_os, [39] r_os source (0 none / 1 static / 2 live), [40] L1 active.
+[36..38] r_os, [39] r_os source (0 none / 1 static / 2 live), [40] L1 active,
+**[41..43] the INJECTED r_os model mismatch** (`armff_mismatch_*`, zero unless a
+sim robustness config sets it). This line said 41 until 2026-08-24 — the last
+three were appended with the injection on 2026-08-20 and the doc was not
+updated. They are what lets an analysis recover the TRUE r_os the plant flies
+([36..38] minus [41..43]) instead of the corrupted one the law believes.
+
+#### 7.12.5 FLIGHT TEST — +20% kf AND +10 mm CoM, two matched runs (2026-08-24)
+
+**The AM geometric+L1 node had never flown.** It has now, twice, end to end, with
+BOTH robustness injections active at once and no gain touched. The CoM injection
+was raised `armff_mismatch_x` 0.0085 → **0.010 m** (user request: the round top of
+the 8–14 mm band the 0819 hardware flights bracket, rather than its mid-point);
+`alloc_thrust_coeff` stays **5.6159172e-05** against the plant's 4.679931202e-05,
+i.e. **+20%** exactly.
+
+Mission = §7.13.2's, so the numbers sit beside the bare-T650 campaign's: SAFETY
+takeoff to z = 1.2 → settle → DIRECT → 45 s soak → 0.5 m X step/return → 0.25 m Z
+step/return → 10 s soak → SAFETY → reference landing. Driven by the SAME recorder
+the bare campaign uses (`l1_payload_campaign_driver.py`, AM args below); scored by
+a new `am_l1_robustness_metrics.py` that knows this plant's mass/bound and reads
+the AM-only debug fields [36..43]. Data: `docs/sim_to_real_t650/am_l1_robustness_20260824/`.
+
+```bash
+# after this section's steps 0-3, instead of driving by hand:
+cd ~/Source/fsc_PegasusSimulator/docs/sim_to_real_t650/tools
+source /opt/ros/humble/setup.bash && source ~/Workspaces/fsc_autopilot_ws/install/setup.bash
+/usr/bin/python3 l1_payload_campaign_driver.py --namespace /uav_0 \
+  --hover-z 1.2 --land-z 0.35 --soak 45 --step 15 --out ../am_l1_robustness_20260824/runA_am_l1.npz
+/usr/bin/python3 am_l1_robustness_metrics.py ../am_l1_robustness_20260824/runA_am_l1.npz 10.0
+```
+
+**Settled DIRECT hover, runs A / B — reproducible to the third decimal:**
+
+| quantity | run A | run B | note |
+|---|---|---|---|
+| `u_L1` thrust | 7.303 N (sd 0.004) | 7.303 N (sd 0.003) | predicted 7.350; **73% of the 10 N clamp, 0 samples railed** |
+| `f_b` | 36.796 N | 36.796 N | mg = 36.750 N — the baseline never notices the kf error |
+| commanded → delivered | 44.099 → 36.749 N | 44.099 → 36.750 N | ×(kf_plant/kf_ctrl); **exactly hover, so the mismatch is demonstrably active** |
+| motors | .5969/.5409/.5958/.5404 | .5969/.5409/.5959/.5404 | the documented 0.597/0.540 split |
+| `u_L1` pitch | +0.2354 N·m | +0.2354 N·m | 16% of the 1.5 N·m clamp |
+| residual pitch moment | +0.0115 N·m | +0.0114 N·m | see the accounting trap below |
+| \|e_R\| max | 0.0073 | 0.0073 | tilt ≤ 0.14° in the settled soak |
+| settled \|e\| rms (SOAK2) | 49.0 mm | 33.9 mm | dominated by the standing X offset |
+| Z step final error | −7.4 / −7.2 mm | −7.6 / −7.1 mm | out / return |
+| touchdown | 0.339 m, 0.18° | 0.339 m, 0.18° | seats at the 0.305 m resting height |
+
+**THE ACCOUNTING TRAP, and it inverts the conclusion.** The obvious way to score
+the CoM injection is `dx_err * f_b` = 0.010 × 36.8 = **0.368 N·m**, and against
+that L1's +0.2354 N·m looks like a 64% cancellation — a failure. It is not. The
+moment channel carries the **+20% allocation error too**, and on this channel the
+two injections partly OFFSET: what the plant needs COMMANDED is
+`-dx_true * T * (kf_c/kf_p)` = −0.8622 N·m, the baseline commands −1.0837, so the
+required `u_L1` pitch is **+0.2217 N·m** and the measured +0.2354 is **106% of
+it**. L1 cancels the injected moment essentially exactly. Never score one
+injection without the other when both are on.
+
+**Where the position error comes from — and it is the paper's structure, not a
+tune.** The ~0.011 N·m that L1 leaves uncancelled has nowhere to go: the paper's
+attitude loop is pure P (no integral, §7.12's whole point) so it parks at
+`e_R ≈ 0.0039` rad, and the position loop is pure P/D so it parks at
+`T·e_R / Kp ≈ 0.14/4.0 ≈ 3.5 cm`. Measured settled X offset 3.4–4.9 cm. Same
+mechanism as §7.13's finding (b), different source (there a thrust-axis
+misalignment, here the injected CoM error).
+
+**Do not read the X-STEP "final error" as a settled value.** X shows a slow
+residual mode of tens of seconds — at the end of the 15 s step window x was still
+moving 0.04 m per 6 s — so the −80/−99 mm "final error" on the +0.5 m X step is a
+window artifact. The settled hover offset (45 s soak) is the 3.4–4.9 cm above.
+Z, which does not close through the attitude loop, settles inside its window
+(−7.1 to −7.6 mm, both runs, both directions).
+
+**Live arm state held for 100% of samples in both runs** (debug [39] = 2), r_os
+believed [0.02955, −0.00008, −0.02159] m against a TRUE [0.01955, …] — the
+injection is visible and separable in the log, which is what [41..43] is for.
+The arm stayed at HOME [0, 40.00, 39.97, 0]° throughout DIRECT.
+
+**Known, expected, not a fault:** the DIRECT→SAFETY abort carries a one-off
+~560 mm vertical balloon (A 558, B 567) — §7.13's finding (c): the SAFETY-path
+UDE books the DIRECT-only mismatch as a disturbance and hands it to a loop whose
+thrust model is honest. An artifact of the ASYMMETRIC sim injection; it does not
+transfer to hardware, where a real kf error lives in both models.
+
+**PX4 never disarms this rig** (`Disarming denied: not landed`, forever, even
+seated at exactly 0.305 m with the reference pushed below it). Identical to the
+bare-T650 campaign — runs A and D there end the same way at `--land-z 0.28`, so
+it is NOT the AM and NOT the land target. Consequence is unchanged: **full step-0
+clean and relaunch between missions**, which is what was done between A and B.
+
 
 ### 7.13 Bare-T650 GEOMETRIC + L1-ADAPTIVE direct actuation — added 2026-08-21
 
@@ -2669,6 +2757,247 @@ Mission: SAFETY takeoff to z 1.0 → DIRECT → 25 s soak → 0.5 m X step/retur
   until the UDE re-learns (gain 2.0). On hardware a real kf error lives in
   BOTH models, so this artifact does not transfer. Do not "fix" it by
   softening ude_gain — that slows the real abort path.
+
+#### 7.13.3 769 g PAYLOAD campaign (2026-08-24) — the config the rig ships today
+
+The 2026-08-21 HARDWARE loaded flight (report *L1 Against Battery Fade*, bag
+`debug_recording_l1_direct_..._769g20260821_192638`) saturated: `u_L1` sat on
+its 10 N clamp for **82.2%** of DIRECT while the requirement grew 12.8 -> 15.3 N,
+and the vehicle sagged 0.35 -> 0.65 m. The report's split of that demand is the
+whole story -- **8.28 N was `vehicle_mass` never being told about the payload**
+and only 4.4-6.8 N was the battery fade the campaign was actually testing.
+
+**Three changes, no gain touched.** Plant and controller move TOGETHER:
+
+| | bare | 769 g loaded |
+|---|---|---|
+| Isaac plant (`PEGASUS_PAYLOAD_MASS`) | 0 | **0.769** -> total **3.802921 kg** |
+| `vehicle_mass` | 3.033921 | **3.802921** |
+| `vehicle_thrust_scaling` / `vehicle_idle_thrust` | 0.040232 / 0.203169 | **0.035935 / 0.238967** |
+| `l1adapt_max_thrust_n` | 10.0 | **18.0** |
+| hover command | 0.5025 | **0.5741** |
+| `alloc_thrust_coeff` | 5.6159172e-05 | **unchanged (+20%)** |
+
+`thrust_scaling`/`idle_thrust` are the SAFETY path's tangent linearization and
+had to be **re-derived, not copied** -- +25.3% of mass moves the hover point far
+off the bare anchor (the AM-T650's +23% lesson). The payload is added to the
+Isaac body mass at the CoM with the inertia tensor UNCHANGED, so the sim does
+**not** reproduce the hardware payload's ~4 mm forward CoM shift (0.5 -> 0.8 N.m
+of standing pitch moment); expect a much smaller `u_L1` torque here than on
+hardware.
+
+**`4.679931e-05` IS STILL THE SIM PLANT TRUTH, so +20% is still 5.6159172e-05.**
+The report identified the REAL vehicle's coefficient as the MN4010 **bench**
+value `4.540431e-05` at a fresh pack, i.e. `t650_params.THRUST_FIT_FACTOR`
+(1.030724) is a sim-only hover-command match with no hardware counterpart -- but
+it changed nothing in the simulator ("Fits only -- nothing has been wired into
+the simulator"), and Isaac still builds its thrust curve from
+`t650_params.ROTOR_CONSTANT`. In sim the plant truth is whatever Isaac applies.
+The finding is a **hardware**-yaml item: the flown allocator was 3.0% optimistic
+at the start of that flight and 10.3% by the end.
+
+**Flown 2026-08-24, full SITL, mission = section 7.13.2's** (SAFETY takeoff to
+z 1.0 -> DIRECT -> 45 s soak -> 0.5 m X step/return -> 0.25 m Z step/return ->
+SAFETY -> reference landing). **Two matched runs, A and B, agree to the third
+decimal:**
+
+| | run A | run B | predicted |
+|---|---|---|---|
+| `u_L1` thrust, settled | **7.416 N** | **7.416 N** | 7.461 |
+| -- as a fraction of the clamp | 49.4% of 15 | 49.4% of 15 | -- |
+| samples on the rail | **0 of 28750** | 0 | -- |
+| `u_L1` over the whole 115 s of DIRECT | 6.79-8.23 N | 6.80-8.23 N | -- |
+| baseline `f_b` | 37.353 N | 37.352 N | mg = 37.307 |
+| commanded -> physical | 44.769 -> **37.307 N** | same | = mg exactly |
+| motors | 0.5741 symmetric | 0.5741 | 0.5741 |
+| `u_L1` torque, max abs xy | 0.047 N.m of 1.5 | 0.046 | -- |
+| soak tilt p-p | 0.15 deg | 0.15 deg | -- |
+| X step rise / return overshoot | 3.84 s / 10.9% | 3.30 s / 13.0% | bare: 3.9-4.4 s / 7-10% |
+| Z step rise / overshoot / final err | 2.60 s / 2.0% / 7.3 mm | 2.40 s / 1.5% / 7.2 mm | bare: 2.4 s / <=2.6% / 6 mm |
+| touchdown | 0.305 m, 0.00 deg | 0.305 m | resting height |
+
+`f_b` sitting at mg while the commanded collective is 44.77 N is the report's
+Flight-A signature reproduced: **the baseline law never notices the kf error;
+the augmentation absorbs all of it.** The mismatch is demonstrably ACTIVE --
+44.769 * (4.679931/5.6159172) = 37.307 N delivered = exactly hover.
+
+Two things that are the PLANT, not the tune, both matching 7.13.2's bare
+findings: a constant ~5 cm -x/-y hover offset (gamma_um = [-0.21, -0.11] N, the
+x650_new.usd thrust-axis misalignment; the integrator-less pure-P loop parks at
+F_lat/Kp, which is also the -44 to -49 mm the X step "undershoots" by), and a
+one-off DIRECT->SAFETY vertical surge. The surge is **bigger loaded -- 622 mm vs
+the bare ~500 mm** -- because the SAFETY-path UDE books a larger mismatch (7.4 N
+vs 5.9 N) and hands it to a SAFETY loop whose thrust model is honest. Artifact
+of the ASYMMETRIC sim injection; it does not transfer to hardware.
+
+**Run C -- last week's configuration on the loaded plant -- cannot even take off,
+which is a stronger result than the expected sag.** With `vehicle_mass` at the
+bare 3.033921 and the 10 N bound restored, the vehicle sat at 0.305 m for 60 s
+with a z = 1.5 m reference. Measured commanded collective **32.1 N against a
+37.31 N weight**: the bare-mass gravity feedforward is 29.76 N and the position
+term adds ~2.3 N, so it is 5.2 N short -- and the UDE that would supply the rest
+is gated off by `ude_height_threshold: 0.4` below 0.4 m, which the vehicle
+cannot reach without it. A ground deadlock. (Predicted sag had it flown:
+626 mm at the 10 N bound, ~1 mm at 15 N -- i.e. with the mass wrong the demand
+is 15.005 N and the *raised* bound is consumed exactly, which is why BOTH
+changes were needed, not either one.)
+
+**BOUND RAISED AGAIN, 15 -> 18 N (same day, user request).** 15 N covers the sim's
+kf mismatch with margin, but a real loaded sortie carries TWO independent error sources and
+only the first exists in simulation:
+
+| source | worst case | where measured |
+|---|---|---|
+| allocator kf error | 7.42 N | this campaign, sim, at the shipped +20% |
+| battery fade | 6.8 N, **growing** 4.4 -> 6.8 over 2.5 min | 2026-08-21 hardware |
+| **sum** | **14.2 N** | -> 18 N leaves ~21% margin |
+
+Even railed, the commanded collective is 62.8 N against the allocator's own 99.8 N ceiling;
+the DIRECT watchdog (40 deg tilt / 360 dps) is the real envelope guard, not this clamp. The
+matched estimate automatically gets 2x this value as its own anti-windup range
+(`l1_adaptive_augmentation.cpp:152`, `2.0 * max_thrust_n`), so there is no separate estimate
+bound to move.
+
+**The 15.3 N peak in the hardware flight is NOT what this bound is sized against.** 8.28 N
+of that was `vehicle_mass` left at the bare airframe; with the mass fixed the same flight
+would have asked for ~7.0 N. **If `u_L1` heads for 15 N again with the mass correct, the
+mass or the kf assumption is wrong** -- raising the bound further would only hide it.
+Re-flown at 18 N (run D, 90 s soak): `u_L1` **7.415 N**, identical to runs A and B to the
+third decimal, **41.2% of clamp, 0 samples on the rail**, touchdown 0.305 m.
+
+**GROUND-STATION FIX, same day: the N/T rotor pies read 0.0% for this rig.** Same defect as
+the whole-body fork's on 2026-08-23 and the same one-line fix -- the drone GS's
+`motors_debug` subscription list in
+`ros2_ground_station_gui/src/ROS_Node/ros_single_drone_control.py` is PER-NAMESPACE and did
+not carry `geometric_l1_direct_actuation`. There are exactly FOUR such namespaces across
+the seven forks, and forks SHARE them in pairs (AM + bare-drone):
+`direct_actuation`, `geometric_direct_actuation`, `geometric_l1_direct_actuation`,
+`whole_body_direct_actuation`. **All four are now in the list; add the namespace whenever a
+new fork appears.** Diagnose in one command --
+`ros2 topic info /uav_0/fsc_autopilot_ros2/<ns>/motors_debug` showed
+`Publisher count: 1, Subscription count: 0`, and reads `1 / 1` after the fix. The widget's
+other two gates were already fine: the controller-name test is a SUBSTRING match on
+"Direct Actuation" (so "Geometric+L1 Direct Actuation" passes) and `connected` is really
+PX4 `pre_flight_checks_pass`. **Needs a ground-station restart to take effect.** Verified
+live in DIRECT: M1 57.6 / M2 57.3 / M3 57.4 / M4 57.4%, matching the 0.5741 loaded hover
+command; screenshot in `l1_payload_campaign_20260824/gs_direct_18N.png`. The change is in
+a shared repo on `dev_robotic_arm`, left UNCOMMITTED.
+
+**On this machine the GS pane of every stack script never starts at all** -- `python3` is
+`~/envs/fsc_isaac_env/bin/python3` (3.11) in every shell, and PyQt5 is installed only for
+`/usr/bin/python3` (3.10). Start it by hand:
+`cd ~/Workspaces/fsc_autopilot_ws/src/ros2_ground_station_gui && PYTHONPATH=src /usr/bin/python3 src/single_drone_ground_control.py`.
+The 13 stack scripts were left alone -- it is an environment issue, not a script bug.
+Convenient side effect while it is down: `position_controller/reference` has ZERO
+publishers, so a driver script is unambiguously the only one. The GUI only publishes a
+reference when its Send button is pressed, so the two can coexist.
+
+**Three operating traps, all hit live:**
+- **`PEGASUS_PAYLOAD_MASS` and `vehicle_mass` must move together.** The launcher
+  defaults the payload to 0.769 to match the shipped yaml. Running the launcher
+  bare against this yaml gives the controller a 769 g phantom.
+- **Never fly two missions off one launch.** PX4's land detector never sees this
+  rig land (`Disarming denied: not landed` forever), so the vehicle stays armed;
+  a second run then finds PX4 latched "in flight" AND the SAFETY UDE integrating
+  the ground reaction, and the takeoff produces **zero lift with no error
+  message** (measured: 60 s at ref z = 1.0, altitude constant to 3 decimals).
+  Full step-0 clean and relaunch between flights. The driver now refuses to
+  start against an armed vehicle for exactly this reason.
+- **Land to z = 0.28, not lower.** The bare T650's resting height is **0.305 m**
+  (measured, not the 0.07 m spawn).
+
+Tooling, so the flown configuration is reproducible from the repo rather than
+reconstructed from a bag (the report's own complaint):
+`docs/sim_to_real_t650/tools/l1_payload_campaign_driver.py` (drives the whole
+mission, records odom + the 37-element `l1_control_debug` + the reference
+actually streamed, aborts to SAFETY on a 35 deg / 3.5 m envelope) and
+`l1_payload_campaign_metrics.py`. Runs A/B/C are in
+`docs/sim_to_real_t650/l1_payload_campaign_20260824/`. **Both need the SYSTEM
+python** (`/usr/bin/python3`) -- the default `python3` on this machine is a uv
+3.11 and rclpy is built for 3.10.
+
+```bash
+# after the section 7.13.1 steps 0-3, instead of driving by hand:
+cd ~/Source/fsc_PegasusSimulator/docs/sim_to_real_t650/tools
+source /opt/ros/humble/setup.bash && source ~/Workspaces/fsc_autopilot_ws/install/setup.bash
+/usr/bin/python3 l1_payload_campaign_driver.py --namespace /uav_0 \
+  --hover-z 1.0 --land-z 0.28 --soak 45 --step 15 --out runA_769g.npz
+/usr/bin/python3 l1_payload_campaign_metrics.py runA_769g.npz
+```
+
+Not covered by this campaign: battery fade (the sim has none -- the demand here
+is constant, where hardware's grew 4.4 -> 6.8 N over 2.5 minutes), and the
+payload's CoM offset. On a real loaded sortie budget for BOTH on top of the
+7.5 N measured here, which is what the 15 N bound is sized for.
+
+#### 7.13.4 HARDWARE config split out (2026-08-24)
+
+`params_single_drone_geometric_l1_direct_actuation_t650.yaml` **is now the
+HARDWARE config.** The simulation one it came from is preserved verbatim as
+**`..._t650_sim.yaml`** -- that is the file the three matched SITL runs of
+7.13.3 flew -- and `scripts/isaacsim/start_geometric_l1_direct_actuation_t650_stack.sh`
+now points there. The hardware script
+(`scripts/indoor_exp/start_geometric_l1_direct_actuation_stack_t650.sh`) keeps
+pointing at the unsuffixed name.
+
+**Why the split.** Until now ONE file served both stacks, and on 2026-08-19 the
+AM geometric node's first hardware flight took off on the unmodified simulation
+yaml and diverged in **1.3 s** -- pilot rescue at z = 0.246 m. It was verified
+from the bag that the "FOR HARDWARE swap in the bench pair" header notes had
+never been applied, and two of the three measured causes were the two allocator
+constants below.
+
+**Exactly 10 keys differ, verified by loading both files; all 81 keys present in
+both and EVERY GAIN IDENTICAL:**
+
+| key | sim | hardware | why |
+|---|---|---|---|
+| `alloc_thrust_coeff` | 5.6159172e-05 | **4.540431e-05** | bench. Drops the +20% injection AND the sim's x1.030724 hover-match factor. The 2026-08-21 hover balance put the real coefficient on the bench value to **-0.08%** at a fresh pack, so the sim number starts a flight 3.0% optimistic and ends 10.3% optimistic |
+| `alloc_rotor*_km` | +-0.052867 | **+-0.018164** | bench (= c/kf exactly). The sim value carries `t650_params`' x3.0 stand-in for the unmodelled `I_rotor*omega_dot` reaction. **2.91x**, and NOT inert -- on 2026-08-19 it gave a measured yaw response of 0.35x commanded, exactly 1/2.91 |
+| `l1adapt_fixed_sample_time_s` | 0.004 | **0.0** | measured capture-stamp deltas. 0.004 is Isaac's fixed step. The report recovered 0.0 as the flown hardware value from the LPF recursion (implied dt 3.44/13.05/16.62 ms = the bimodal mocap cadence) |
+| `vehicle_mass` | 3.802921 | **3.878000** | as-flown. **INFERRED from the 2026-08-21 hover balance, NOT weighed** -- 75 g more than bare + payload, likely mounting hardware. See below |
+| `vehicle_thrust_scaling` / `idle_thrust` | 0.035935 / 0.238967 | **0.036128 / 0.247419** | SAFETY tangent linearization, re-derived at the bench kf AND that mass (hover command 0.5910, T/W 2.54) |
+| `vehicle_name` | T650-L1-769g | T650-L1-769g-HW | so the GS says which one is loaded |
+
+**`vehicle_mass` IS THE ONE FIELD THAT STILL NEEDS A SCALE.** 3.878 is an
+inference from an assumed bare mass and a thrust model; the report says plainly
+"weigh the airframe as flown". It is preferred over the arithmetic 3.802921
+because erring 75 g low is 0.74 N the augmentation has to find -- the exact
+error class this revision removes. If the scale says 3.802921, the matching
+linearization pair is **0.036483 / 0.244076** (both alternatives are written
+into the yaml next to the value).
+
+**Kept deliberately, with reasons in the file:**
+- **`l1adapt_as_v/as_omega` 2.0/2.0, `omega_c` 6.0** -- these ARE the hardware
+  values. The report read A_s = -2 straight out of the 2026-08-21 logs; net
+  delivery was 94-95% with a flat 0.09-0.17 N residual, and the measured
+  under-read (2.5-3%) matched the `e^{A_s*T}` prediction (1.6%). The paper's
+  faster 65/80 would chase the last 5%, but that is its own step, not this
+  flight's.
+- **`l1adapt_max_thrust_n` 18.0** -- with the bench kf the allocator error
+  largely goes away, so the dominant remaining demand is battery fade
+  (4.4 -> 6.8 N measured). Expect `u_L1` to settle in the **4-7 N band and walk
+  upward** with the pack. Heading for 15 N means the mass or kf is wrong.
+- **`l1geo_kr/komega` 1.2/0.45 -- the ONE block carried over UNTESTED.** The
+  geometric sibling's hardware guidance is "start 1.2/0.75" (its further
+  softening was an RTF artifact), but this node closes the L1 torque channel
+  around the same axes and its omega_c = 6 LPF + one-sample delay eat margin
+  the geometric node never spends: at 2.4/0.73 in sim a ~2.4 Hz mode decayed in
+  one run and grew +3%/s to a flip in the repeat. The softer pair is kept for a
+  first flight. **Never raise komega for damping against the lag pole.**
+
+**The hardware launcher's pre-flight guard was widened** from the single +20%
+string to all five sim values, and now also PRINTS POSITIVE CONFIRMATION of the
+three that must be right plus the mass -- a silent pass was previously
+indistinguishable from a grep that stopped matching. Tested both ways: it
+passes the hardware file clean and catches the sim file on three counts. One
+trap found while testing: the `0.0` check must be **anchored to end-of-line**,
+because unanchored it is a substring of the sim's `0.004` and reports OK on the
+wrong file.
+
+Verified by launching the node on the hardware yaml under `uav_test` and reading
+every changed parameter back with `ros2 param get`. **STATUS: never flown in
+this form** -- geometric+L1 is unflown on hardware on any airframe.
 
 ### 7.14 AM-T650 WHOLE-BODY direct actuation (torque-mode arm) — added 2026-08-22
 

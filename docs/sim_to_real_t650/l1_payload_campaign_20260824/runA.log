@@ -1,0 +1,44 @@
+[   0.00s] mode -> SAFETY
+[   0.14s] stack up. home=[-0.003, 0.005, 0.305] mode='SAFETY'
+[   0.14s] PHASE OFFBOARD  ref=[-0.003, 0.005, 0.305] mode='SAFETY'
+[   1.16s] service rc/offboard requested
+[   1.16s] PHASE ARM  ref=[-0.003, 0.005, 0.305] mode='SAFETY'
+[   1.18s] service rc/offboard -> std_srvs.srv.Trigger_Response(success=True, message='Offboard mode request sent')
+[   4.18s] service rc/arm requested
+[   4.18s] PHASE TAKEOFF  ref=[-0.003, 0.005, 1.0] mode='SAFETY'
+[   4.20s] service rc/arm -> std_srvs.srv.Trigger_Response(success=True, message='Arm command sent')
+[  13.22s] settled: err=17 mm speed=0.023 m/s
+[  13.22s] PHASE ENTER_DIRECT  ref=[-0.003, 0.005, 1.0] mode='SAFETY'
+[  13.74s] service set_direct_mode(true) requested
+[  13.74s] PHASE CONFIRM  ref=[-0.003, 0.005, 1.0] mode='SAFETY'
+[  13.76s] service set_direct_mode(true) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to DIRECT mode')
+[  14.20s] mode -> DIRECT
+[  14.22s] DIRECT confirmed via mode topic: 'DIRECT'
+[  14.22s] PHASE SOAK  ref=[-0.003, 0.005, 1.0] mode='DIRECT'
+[  59.24s] PHASE STEPX  ref=[0.497, 0.005, 1.0] mode='DIRECT'
+[  74.26s] PHASE STEPX_RET  ref=[-0.003, 0.005, 1.0] mode='DIRECT'
+[  89.26s] PHASE STEPZ  ref=[-0.003, 0.005, 1.25] mode='DIRECT'
+[ 104.28s] PHASE STEPZ_RET  ref=[-0.003, 0.005, 1.0] mode='DIRECT'
+[ 119.30s] PHASE SOAK2  ref=[-0.003, 0.005, 1.0] mode='DIRECT'
+[ 129.30s] service set_direct_mode(false) requested
+[ 129.30s] PHASE SAFETY_SETTLE  ref=[-0.003, 0.005, 1.0] mode='DIRECT'
+[ 129.32s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 129.70s] mode -> SAFETY
+[ 141.32s] PHASE LAND_WAIT  ref=[-0.003, 0.005, 1.0] mode='SAFETY'
+[ 142.32s] PHASE LAND  ref=[-0.003, 0.005, 1.0] mode='SAFETY'
+[ 154.34s] PHASE DISARM  ref=[-0.003, 0.005, 0.28] mode='SAFETY'
+[ 157.36s] service rc/disarm (try 1) requested
+[ 157.38s] service rc/disarm (try 1) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 160.36s] service rc/disarm (try 2) requested
+[ 160.38s] service rc/disarm (try 2) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 163.34s] service rc/disarm (try 3) requested
+[ 163.36s] service rc/disarm (try 3) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 166.36s] service rc/disarm (try 4) requested
+[ 166.38s] service rc/disarm (try 4) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 169.36s] service rc/disarm (try 5) requested
+[ 169.38s] service rc/disarm (try 5) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 172.36s] service rc/disarm (try 6) requested
+[ 172.38s] service rc/disarm (try 6) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 172.38s] !! STILL ARMED after 6 disarm attempts -- relaunch the sim before the next run
+[ 172.38s] PHASE END  ref=[-0.003, 0.005, 0.28] mode='SAFETY'
+saved runA_769g.npz: log (8511, 11), dbg (28889, 38)

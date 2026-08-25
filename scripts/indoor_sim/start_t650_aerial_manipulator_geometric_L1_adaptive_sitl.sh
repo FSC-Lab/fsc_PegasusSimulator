@@ -16,8 +16,12 @@ set -euo pipefail
 #   fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh
 #   (started FIRST — it owns MicroXRCEAgent and brings the drone ground
 #   station; node: autopilot_geometric_l1_direct_actuation_node, params:
-#   params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml,
+#   params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim.yaml,
 #   service ns: fsc_autopilot_ros2/geometric_l1_direct_actuation)
+#   NOTE THE _sim SUFFIX: that config was split sim/hardware on 2026-08-24. The
+#   plain ..._t650.yaml beside it is now the HARDWARE config (bench kf/km, no
+#   robustness injections) and must never be flown here — only the _sim.yaml
+#   carries the +20% kf and +10 mm r_os injections this rig is meant to exercise.
 #
 # The controller subscribes to /uav_0/fsc_open_manipulator/joint_states for
 # the LIVE r_os (CoM offset) term of the paper's control law, which only the

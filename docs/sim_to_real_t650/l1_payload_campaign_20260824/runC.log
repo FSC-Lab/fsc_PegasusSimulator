@@ -1,0 +1,28 @@
+[   0.00s] mode -> SAFETY
+[   0.38s] stack up. home=[-0.003, 0.005, 0.305] mode='SAFETY'
+[   0.38s] PHASE OFFBOARD  ref=[-0.003, 0.005, 0.305] mode='SAFETY'
+[   1.40s] service rc/offboard requested
+[   1.40s] PHASE ARM  ref=[-0.003, 0.005, 0.305] mode='SAFETY'
+[   1.42s] service rc/offboard -> std_srvs.srv.Trigger_Response(success=True, message='Offboard mode request sent')
+[   4.42s] service rc/arm requested
+[   4.42s] PHASE TAKEOFF  ref=[-0.003, 0.005, 1.5] mode='SAFETY'
+[   4.44s] service rc/arm -> std_srvs.srv.Trigger_Response(success=True, message='Arm command sent')
+[  64.44s] !! takeoff never settled -> landing
+[  64.44s] PHASE LAND_WAIT  ref=[-0.003, 0.005, 1.5] mode='SAFETY'
+[  65.46s] PHASE LAND  ref=[-0.003, 0.005, 1.5] mode='SAFETY'
+[  77.48s] PHASE DISARM  ref=[-0.003, 0.005, 0.28] mode='SAFETY'
+[  80.50s] service rc/disarm (try 1) requested
+[  80.52s] service rc/disarm (try 1) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[  83.48s] service rc/disarm (try 2) requested
+[  83.50s] service rc/disarm (try 2) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[  86.50s] service rc/disarm (try 3) requested
+[  86.52s] service rc/disarm (try 3) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[  89.50s] service rc/disarm (try 4) requested
+[  89.52s] service rc/disarm (try 4) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[  92.48s] service rc/disarm (try 5) requested
+[  92.50s] service rc/disarm (try 5) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[  95.48s] service rc/disarm (try 6) requested
+[  95.50s] service rc/disarm (try 6) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[  95.50s] !! STILL ARMED after 6 disarm attempts -- relaunch the sim before the next run
+[  95.50s] PHASE END  ref=[-0.003, 0.005, 0.28] mode='SAFETY'
+saved runC_oldcfg.npz: log (4655, 11), dbg (0, 38)

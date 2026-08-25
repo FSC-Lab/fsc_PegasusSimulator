@@ -9,9 +9,11 @@ set -euo pipefail
 #   external ROS 2 GEOMETRIC+L1 controller -> PX4 ActuatorMotors gate
 #       -> HIL_ACTUATOR_CONTROLS -> calibrated bare-T650 Isaac plant
 #
-# THE PLANT IS IDENTICAL to start_t650_geometric_direct_actuator_sitl.sh's --
-# same x650_new.usd asset, same MN4010 + 15x5" calibration, same 2.95 kg body
-# mass (3.034 kg total), same lockstep-off configuration. No arm, no arm
+# THE PLANT IS THAT OF start_t650_geometric_direct_actuator_sitl.sh PLUS A
+# PAYLOAD -- same x650_new.usd asset, same MN4010 + 15x5" calibration, same
+# lockstep-off configuration, but since 2026-08-24 this launcher defaults to
+# PEGASUS_PAYLOAD_MASS=0.769 kg (see the PAYLOAD block below), so the body mass
+# is 3.719 kg and the total the solver sees is 3.802921 kg. No arm, no arm
 # stack, no arm ground station: with r_os identically zero on a bare airframe
 # the paired controller carries no arm model at all. This script exists as a
 # named parallel so the GEOMETRIC+L1 ROS 2 stack (fsc_autopilot_ros2's
@@ -25,12 +27,13 @@ set -euo pipefail
 # 5.6159172e-05 against this plant's true 4.679931e-05). Pegasus is NOT
 # changed -- the plant keeps the truth, the controller believes the wrong
 # number, and the L1 augmentation is what closes the 16.67% physical thrust
-# deficit (expect u_L1 thrust, l1_control_debug [16], settling near +6 N in a
-# settled DIRECT hover -- not near zero).
+# deficit (expect u_L1 thrust, l1_control_debug [16], settling near +7.5 N in a
+# settled DIRECT hover with the 769 g payload, +6 N bare -- not near zero; the
+# demand is mg*0.2 with the mass matched, so it scales with the payload).
 #
 # Numbers worth having in hand before flying it:
-#   * Expected hover command is ~0.5025, all four motors symmetric (a
-#     front/rear split means an AM yaml got loaded somewhere).
+#   * Expected hover command is ~0.5741 loaded (~0.5025 bare), all four motors
+#     symmetric (a front/rear split means an AM yaml got loaded somewhere).
 #   * Rotor lag: lambda 10.0265 1/s (tau 99.7 ms). The paired attitude pair
 #     (l1geo_kr 2.4 / komega 0.73) is the bare geometric node's sim-flown
 #     loop shape against that pole -- do not stiffen casually.
@@ -129,11 +132,30 @@ else
   echo "Pegasus PX4 lockstep: no tmux server yet; the new session will inherit the export"
 fi
 
+# PAYLOAD (added 2026-08-24): the 769 g loaded campaign. The paired yaml's
+# vehicle_mass, thrust_scaling and idle_thrust are all set for the LOADED plant, so
+# the two MUST move together -- flying this launcher with PEGASUS_PAYLOAD_MASS=0
+# against the loaded yaml gives the controller a 769 g phantom and it will climb.
+# Set PEGASUS_PAYLOAD_MASS=0 ONLY together with restoring the yaml's bare numbers
+# (vehicle_mass 3.033921, thrust_scaling 0.040232, idle_thrust 0.203169).
+PAYLOAD_MASS="${PEGASUS_PAYLOAD_MASS:-0.769}"
+if [[ ! "$PAYLOAD_MASS" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "ERROR: PEGASUS_PAYLOAD_MASS must be a non-negative decimal number." >&2
+  exit 2
+fi
+export PEGASUS_PAYLOAD_MASS="$PAYLOAD_MASS"
+
 echo "Starting bare-T650 direct-actuator SITL (GEOMETRIC+L1-stack pairing)."
-echo "Plant: MN4010 + 15x5\" motors, 3.034 kg total (expected hover command ~0.5025)"
+if [[ "$PAYLOAD_MASS" == "0" || "$PAYLOAD_MASS" == "0.0" ]]; then
+  echo "Plant: MN4010 + 15x5\" motors, 3.034 kg total (expected hover command ~0.5025)"
+else
+  echo "Plant: MN4010 + 15x5\" motors, airframe 3.033921 kg + PAYLOAD ${PAYLOAD_MASS} kg"
+  echo "  -> 3.802921 kg total at 0.769 kg (expected hover command ~0.5741); the Isaac"
+  echo "     pane prints the authoritative total -- the yaml's vehicle_mass must match it."
+fi
 echo "Controller: L1-augmented geometric SE(3) (Cai et al., CEP 2025), no arm model;"
 echo "  the paired yaml carries the +20% thrust-coefficient robustness mismatch,"
-echo "  so u_L1 thrust settling near +6 N in DIRECT hover is EXPECTED."
+echo "  so u_L1 thrust settles near +7.5 N loaded (near +6 N bare) in DIRECT hover."
 echo "Pegasus PX4 lockstep: disabled"
 echo "MicroXRCEAgent: externally owned and detected"
 echo "No controller or actuator publisher will be started by this launcher."

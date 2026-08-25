@@ -51,11 +51,28 @@ from isaacsim import SimulationApp
 HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
+
+# Optional PAYLOAD, in kg, added to the airframe body mass at spawn time (added
+# 2026-08-24 for the 769 g L1-saturation campaign, docs report "L1 Against Battery
+# Fade"). Default 0.0 leaves the bare T650 plant bit-identical, so every existing
+# T650 rig that sources this script is unchanged.
+#
+# The payload is modelled as EXTRA MASS AT THE BODY CoM ONLY: the identified
+# INERTIA_TENSOR is left alone, and no CoM offset is introduced. That matches this
+# repo's standing T650 assumption that added mass is centrally concentrated. It does
+# NOT reproduce the hardware payload's measured ~4 mm forward CoM shift (0.5 -> 0.8
+# N.m of standing pitch moment in the flight report), so a sim run will show a much
+# smaller L1 torque estimate than the corresponding hardware flight.
+_payload_raw = os.environ.get("PEGASUS_PAYLOAD_MASS", "").strip()
+PAYLOAD_MASS = float(_payload_raw) if _payload_raw else 0.0
+if PAYLOAD_MASS < 0.0:
+    raise ValueError(f"PEGASUS_PAYLOAD_MASS must be >= 0, got {PAYLOAD_MASS}")
 simulation_app = SimulationApp({"headless": HEADLESS})
 
 # -----------------------------------
 # The actual script should start here
 # -----------------------------------
+import numpy as np
 import omni.timeline
 from omni.isaac.core.world import World
 import omni.usd
@@ -105,9 +122,11 @@ class FscDroneSim:
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
 
-        # Create the vehicle. Mass, inertia and the MN4010 thrust curve all come from
-        # t650_params via the helper's own defaults -- nothing is passed in here, so
-        # there is exactly one place to change a T650 number.
+        # Create the vehicle. Inertia and the MN4010 thrust curve come from t650_params
+        # via the helper's own defaults, so there is exactly one place to change a T650
+        # number. Body mass is passed explicitly ONLY so an optional payload can be
+        # folded in; with PEGASUS_PAYLOAD_MASS unset this is exactly BODY_MASS.
+        body_mass = t650_params.BODY_MASS + PAYLOAD_MASS
         self.drone_path = spawn_t650_with_mavlink(
             px4_path=self.pg.px4_path,
             px4_default_airframe=self.pg.px4_default_airframe,
@@ -115,14 +134,38 @@ class FscDroneSim:
             spawn_pos=(0.0, 0.0, 0.07),
             spawn_euler=(0.0, 0.0, 0.0),
             enable_lockstep=PX4_LOCKSTEP,
+            body_mass=body_mass,
         )
+        # Recomputed at the ACTUAL flying mass rather than read from t650_params, whose
+        # module-level HOVER_COMMAND / THRUST_TO_WEIGHT are the bare-airframe values.
+        total_mass = body_mass + t650_params.ROTOR_MASS_TOTAL
+        t_hover = total_mass * 9.81 / t650_params.NUM_ROTORS
+        omega_span = t650_params.MAX_ROTOR_VEL - t650_params.ZERO_POSITION_ARMED
+        omega_hover = float(np.sqrt(t_hover / t650_params.ROTOR_CONSTANT))
+        hover_command = (omega_hover - t650_params.ZERO_POSITION_ARMED) / omega_span
+        thrust_to_weight = (
+            t650_params.NUM_ROTORS * t650_params.ROTOR_CONSTANT
+            * t650_params.MAX_ROTOR_VEL ** 2
+        ) / (total_mass * 9.81)
+        if PAYLOAD_MASS > 0.0:
+            print(
+                f"[T650] PAYLOAD {PAYLOAD_MASS:.6f} kg added to the body mass "
+                f"(inertia UNCHANGED -- payload assumed at the body CoM)",
+                flush=True,
+            )
         print(
-            f"[T650] total mass {t650_params.MASS:.6f} kg "
-            f"(body {t650_params.BODY_MASS:.6f} kg + 4 authored rotors "
+            f"[T650] total mass {total_mass:.6f} kg "
+            f"(body {body_mass:.6f} kg = airframe {t650_params.BODY_MASS:.6f} "
+            f"+ payload {PAYLOAD_MASS:.6f} | + 4 authored rotors "
             f"{t650_params.ROTOR_MASS_TOTAL:.6f} kg) | "
             f"inertia {tuple(t650_params.INERTIA_DIAG)} kg.m^2 | "
-            f"expected hover command {t650_params.HOVER_COMMAND:.4f} | "
-            f"thrust/weight {t650_params.THRUST_TO_WEIGHT:.2f}",
+            f"expected hover command {hover_command:.4f} | "
+            f"thrust/weight {thrust_to_weight:.2f}",
+            flush=True,
+        )
+        print(
+            f"[T650] the paired controller yaml's vehicle_mass MUST equal "
+            f"{total_mass:.6f} -- this printout is the truth",
             flush=True,
         )
 

@@ -70,6 +70,16 @@ if [[ -n "$EXPECTED_TOTAL_MASS" ]] &&
   echo "ERROR: PEGASUS_EXPECTED_TOTAL_MASS must be a positive decimal number." >&2
   exit 2
 fi
+# Optional payload mass in kg, folded into the airframe body mass by the Isaac app
+# script (currently only application/px4_base/05_px4_single_drone_t650.py reads it).
+# Baked into the pane command line below for the same reason as LOCKSTEP: a new tmux
+# session inherits the SERVER environment, not this shell's. Empty = bare airframe.
+PAYLOAD_MASS="${PEGASUS_PAYLOAD_MASS:-}"
+if [[ -n "$PAYLOAD_MASS" ]] &&
+   [[ ! "$PAYLOAD_MASS" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "ERROR: PEGASUS_PAYLOAD_MASS must be a non-negative decimal number." >&2
+  exit 2
+fi
 
 command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
 command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
@@ -129,6 +139,7 @@ sleep $DELAY
 echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
+PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true
