@@ -819,6 +819,84 @@ OK on the wrong file.** Verified by launching the node on the hardware yaml unde
 `uav_test` and reading every changed key back. NOT FLOWN in this form; geometric+L1 remains
 unflown on hardware on any airframe. Details: Command.md §7.13.4.
 
+**T650 PLANT THRUST CONSTANT RE-ANCHORED ON MEASURED FLIGHT DATA, AND THE AM-T650
+GEOMETRIC+L1 SIM RETUNE (2026-08-25, user request).** The simulated T650 was
+**15.8% stronger than the real vehicle**, and that surplus was exactly the standing
+thrust compensation the L1/UDE augmentation was always seen carrying in sim.
+`t650_params.THRUST_FIT_FACTOR` **1.030724 -> 0.890066** (`ROTOR_CONSTANT`
+4.679931e-05 -> **4.041283e-05**); previous values, the derived block and the full
+derivation are kept in-file for reversion.
+- **MEASURED, not fitted to a hover command.** `kf_eff = m(g-a_z)/(cos(theta)*sum
+  omega_i^2)` back-solved from the 0820 stepped-payload ulogs, **log_252** (+719 g,
+  the ARM-EQUIVALENT payload: 3.753 kg vs the AM's 3.746, hovering at the same 0.6159
+  collective). All seven flights sit **below** bench (0.883-0.954x) and the spread is
+  NOT payload — logs 249->250 hover at the same collective yet differ **7.8%** because
+  a battery pack was swapped. Regression over all seven: `ln kf = -16.767 +
+  2.149*lnV - 0.264*u`, R^2 = 0.997, i.e. **kf_eff ~ V^2**. The old factor was a
+  hover-match to flight C's fresh pack, so it encoded ~25.3 V as a propeller property.
+- **The correction is folded into kf, NOT the omega-map, on purpose.** The physically
+  faithful fix is a voltage anchor on `ZERO_POSITION_ARMED`/`MAX_ROTOR_VEL`, but the
+  DIRECT allocator carries its own copy of that map (`alloc_omega_idle/max`), so
+  scaling only the plant's would inject a second undeclared mismatch and a robustness
+  campaign needs ONE knob. Cost, stated in-file: sim yaw-torque-to-thrust runs ~12%
+  high. `YAW_TORQUE_FIT_FACTOR` left at 3.0 (its fit was against yaw SHAPE).
+- **`alloc_rotor*_km` MUST MOVE WITH kf** — it is `c_plant/kf_plant`, so the allocator
+  commands `tau_z = km*f` and this ratio is what makes the deliberate
+  `alloc_thrust_coeff` injection scale thrust AND yaw by the same factor. Missing it
+  left yaw delivered at 0.965 of command while thrust was at 0.833. Now **0.0612219**;
+  confirmed by the startup print's yaw scale returning to 3.14041 N.m.
+- **`vehicle_thrust_scaling`/`idle_thrust` are a function of plant kf AND mass** and had
+  to be re-derived (AM: 0.036206/0.236457 -> **0.038962/0.261777**). SAFETY then holds
+  z to -3.5 +- 4.8 mm. **THE OTHER SEVEN T650 SIM YAMLS ARE NOW STALE** on this pair
+  (and on `alloc_thrust_coeff`/`alloc_rotor*_km`); only the AM L1 sim yaml was updated.
+- **HARDWARE IS DELIBERATELY UNCHANGED** at bench `4.540431e-05`. The re-anchor makes
+  the SIMULATED plant match the real vehicle; on hardware the plant IS the real
+  vehicle. 4.041283e-05 is a battery state, not a motor property, and baking one
+  sortie's state in would make the allocator **over-deliver ~7% on a fresh pack** —
+  over-thrust at lift-off, the wrong direction. On a 4.20 V/cell pack bench is only
+  1.8% optimistic (u_L1 ~0.7 N); the 0819 flight's 0.876 loop gain becomes **0.982**,
+  and neither the bench-kf swap (0.903) nor the charge (0.953) gets there alone.
+
+**AM-T650 GEOMETRIC+L1 `_sim.yaml` RETUNED at the new plant** (both injections live),
+5 flights, harness `docs/sim_to_real_t650/tools/am_l1_tune_cycle.sh`, scorer
+`am_l1_transition_metrics.py`, data `am_l1_tuning_20260824/`. Shipped: `l1geo_kr_x/y`
+1.0->**1.5**, `l1geo_komega_x/y` 0.55->**0.70**, `ude_disturbance_lbz/ubz` +-10->**+-2**,
+`l1adapt_omega_c` stays **6**. Abort balloon **560 -> 138 mm**, entry tilt 6.43 ->
+3.81 deg, entry settle 18.7 -> 8.9 s, X-step overshoot 15.6 -> 2.6%.
+- **The entry transient is the ATTITUDE LOOP, not a slow L1** (misdiagnosed first):
+  u_L1 reaches 7.1 of its 7.35 N within **0.73 s**. What tilts the vehicle is the
+  +10 mm r_os over-compensation, ~0.37 N.m of pitch on a `kr = 1.0` loop soft enough
+  to park at 0.37 rad. The 511 mm xy excursion is purely downstream of that tilt.
+- **The abort balloon is a UDE PHANTOM.** In DIRECT the UDE is fed the allocator's
+  BELIEVED achieved collective (44.1 N vs 36.75 delivered), converges to a fictitious
+  -7.35 N and dumps it into SAFETY. On hardware this is CORRECT (a real kf error lives
+  in the SAFETY model too); in sim SAFETY's model is honest, so it is fiction. Capping
+  the z bound caps the balloon: predicted 560*(2/7.35) = 152 mm, measured 136 and 138.
+- **`l1adapt_omega_c` 6 -> 8 DESTABILIZES** (with kr 1.9): a growing **0.62 Hz** mode,
+  steady tilt 0.25 -> 8.81 deg, abort tilt 38.6 deg. The AUGMENTATION drives it —
+  `u_L1 tau_y` rms rose **14x** while attitude error rose 1.75x. Keep omega_c at 6.
+  `kr 1.9` at `omega_c 6` is UNTESTED and its entry numbers looked better.
+- **Steady position hold is ~22-29 mm, structurally**: `T*e_R_y/Kp` against the
+  uncancelled CoM pitch residual. `e_R_y` and `u_L1 tau_y` are identical to 3 decimals
+  across runs; one 10.6 mm run was a lucky outlier. Do not read a single run.
+- **YAW CLAMPS sized against the ALLOCATOR** (`l1geo_max_torque_z` 2.0->**0.40**,
+  `l1adapt_max_torque_z` 0.8->**0.25**, sum 0.65 <= the 0.654 N.m FREE budget). With
+  bench km the yaw ceiling is 0.8724 and the allocator desaturates airmode-style past
+  0.654 — preserving torque but TRADING COLLECTIVE, so a railed yaw channel appears as
+  an **altitude kick** (+8 N at 0.8, +12 N at 1.0). RAISING these is not a safety move:
+  above 0.8724 they deliver nothing. Sim-validated: peak yaw demand 0.0216 N.m = 3% of
+  budget, 0.00% railed. **A CoM offset produces ZERO yaw moment** (`r_os x (0,0,T)` has
+  no z component) — the 8-9 mm dx uncertainty loads `l1adapt_max_torque_xy` (1.5,
+  untouched, ~5x margin).
+- **HARNESS TRAP: never gate arming on `vehicle_status.pre_flight_checks_pass`.** It is
+  **false on this rig while it is armed and flying** (EKF `cs_yaw_align`/`cs_ev_yaw`/
+  `cs_ev_pos` all true, commander "Ready for takeoff!"). Gate on the
+  `estimator_status_flags`. The same false flag is what pinned the ground station's N/T
+  rotor pies at 0.0% for a whole DIRECT flight — fixed in `ros2_ground_station_gui` by
+  gating the display on motors_debug FRESHNESS instead of on `connected`.
+- Score the abort balloon in a window ENDING AT LAND_WAIT; a fixed 25 s window scores
+  the intended descent as balloon (557 mm on a run whose real balloon is 136).
+
 **WHOLE-BODY DIRECT ACTUATION — THE COUPLED LAW IN fsc_autopilot_ros2, ARM IN TORQUE MODE
 (2026-08-22, user request — controller.py ported to C++, both ground stations live).** A fourth
 AM fork, `single_aerial_manipulator_whole_body_direct_actuation` (node

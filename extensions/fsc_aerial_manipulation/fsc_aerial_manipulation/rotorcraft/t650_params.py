@@ -59,16 +59,68 @@ BENCH_ROLLING_MOMENT_COEFFICIENT = 8.247173e-07  # N.m / (rad/s)^2
 # through the same fsc_autopilot_ros2 stack in simulation. Full method and before/after
 # metrics: docs/sim_to_real_t650/REPORT_flightC.md and TUNING_t650.md.
 #
-# THRUST_FIT_FACTOR -- hover-command match at FIXED mass.
-#   The real vehicle's hover command early in flight C (t=5-15 s, before battery sag
-#   accumulates) is 0.5025 +- 0.0009. With MASS pinned at 3.033921 kg, the bench k puts the
-#   simulated hover at 0.5117, i.e. +1.8% too high. Since mass is not available as a
-#   degree of freedom, the thrust constant absorbs the difference:
-#       k = MASS*g/4 / omega_hover^2   with omega_hover set by the measured hover command.
-#   Note this is a mass/thrust trade, not evidence the bench thrust curve is wrong: at the
-#   previous 2.95 kg TOTAL the bench k reproduced the measured hover to +0.14%.
-THRUST_FIT_FACTOR = 1.030724     # -> hover command 0.5025, matching hardware
-ROTOR_CONSTANT = BENCH_ROTOR_CONSTANT * THRUST_FIT_FACTOR          # 4.679933e-05
+# THRUST_FIT_FACTOR -- RE-ANCHORED 2026-08-24 ON THE 0820 STEPPED-PAYLOAD FLIGHTS.
+#
+# !! PREVIOUS VALUE, KEPT FOR REVERSION !!
+#     THRUST_FIT_FACTOR_PREV = 1.030724  -> ROTOR_CONSTANT 4.679931e-05
+#   Derived values it produced (recompute automatically if you restore it):
+#     bare T650 3.033921 kg : hover 0.502525  scaling 0.040232  idle 0.203169  T/W 3.352
+#     AM-T650   3.746170 kg : hover 0.569101  scaling 0.036206  idle 0.236457  T/W 2.715
+#     bare+769g 3.802921 kg : hover 0.574122  scaling 0.035935  idle 0.238967  T/W 2.674
+#   That factor was a HOVER-COMMAND MATCH to flight C (2026-08-06), and flight C was flown
+#   on a nearly fresh pack. It therefore encoded a ~25.3 V battery as if it were a property
+#   of the propeller, and made the simulated vehicle 15.8% stronger than the real one at the
+#   operating point the aerial manipulator actually flies. That surplus is exactly the
+#   standing thrust compensation the L1/UDE augmentation was always seen carrying in
+#   simulation, and it is why a sim-tuned allocator constant under-delivered on hardware.
+#
+# THE SHIPPED VALUE IS MEASURED, NOT FITTED TO A HOVER COMMAND. Back-solved from
+#   docs/experimental_data_ros2_bag/"0820 - T650 baseline - stepped payload hover"/
+#   hover_px4_ulog/log_252_UnknownDate.ulg  -- the +719 g step, chosen because 719 g is the
+#   ARM-EQUIVALENT payload (AM total 3.746 kg vs that flight's 3.753 kg) and it hovers at
+#   the same collective the AM does (measured 0.6159).
+#       kf_eff = m*(g - a_z) / (cos(theta) * sum_i omega_i^2),  omega = 64.0603 + 665.9904*u
+#   over 112 steady samples: kf_eff = 4.041283e-05 N/(rad/s)^2, sample sd 2.4%.
+#
+# ALL SEVEN 0820 HOVERS, for context (bare 3.034 kg -> +719 g, arm dismounted):
+#     log  payload      u       V       kf_eff       /bench
+#     246      0 g   0.5225  24.34 V  4.331429e-05   0.9540
+#     247     69 g   0.5381  24.07 V  4.212756e-05   0.9278
+#     248    119 g   0.5496  23.86 V  4.128784e-05   0.9093
+#     249    219 g   0.5683  23.59 V  4.010399e-05   0.8833
+#     250    419 g   0.5649  24.42 V  4.323084e-05   0.9521   <- pack swap vs 249
+#     251    519 g   0.5822  24.15 V  4.207497e-05   0.9267
+#     252    719 g   0.6159  23.85 V  4.041283e-05   0.8901   <- SHIPPED
+#   Every flight is BELOW the bench constant, and the spread is 8.0% -- but it is not
+#   payload-driven: logs 249->250 hover at the same collective (0.5683 vs 0.5649) yet differ
+#   7.8% in kf because a battery pack was swapped between them. Regressing all seven gives
+#       ln kf = -16.767 + 2.149*ln V - 0.264*u,   R^2 = 0.9972
+#   i.e. kf_eff ~ V^2 with the collective term worth under 2% across the flown range. THE
+#   PROPELLER CONSTANT IS NOT WRONG: BENCH_ROTOR_CONSTANT was fitted by pairing thrust(x)
+#   and rpm(x) at the same throttle, so it is a thrust-vs-omega relation and is immune to
+#   supply voltage. What sags with the battery is the throttle->omega map
+#   (ZERO_POSITION_ARMED / MAX_ROTOR_VEL).
+#
+# SO THIS FACTOR IS A STAND-IN, EXACTLY LIKE YAW_TORQUE_FIT_FACTOR BELOW. The physically
+# faithful refactor is to keep ROTOR_CONSTANT = BENCH_ROTOR_CONSTANT and scale BOTH ends of
+# the omega map by sqrt(0.890066) = 0.943433, i.e. model a 23.50 V pack against the bench's
+# 24.91 V. It is deliberately NOT done here, for one reason: the DIRECT allocator carries
+# its own copy of that same map (alloc_omega_idle / alloc_omega_max in every
+# fsc_autopilot_ros2 T650 yaml). Scaling the plant's map without scaling the controller's
+# would inject a second, undeclared mismatch on top of the deliberate alloc_thrust_coeff
+# one, and a robustness campaign needs exactly one knob. Folding the voltage deficit into k
+# keeps plant and allocator on ONE omega map. The cost, stated so it is not discovered
+# later: torque is c*omega^2 and is NOT reduced by this factor, so the simulated
+# yaw-torque-to-thrust ratio is ~12% higher than a voltage-faithful model would give.
+# YAW_TORQUE_FIT_FACTOR is left alone on purpose -- its 3.0 was fitted against flight C's
+# yaw SHAPE (c/Izz), which this change does not touch.
+#
+# NOTE the assumed mass is load-bearing: kf_eff is linear in it. At log 252 the bare
+# airframe is taken as MASS = 3.033921 kg. If the bare airframe is really 3.109 kg (what the
+# bare-T650 L1 HARDWARE yaml infers from its own hover balance, 75 g more), kf_eff rises
+# 2.0% to 4.122046e-05. WEIGH THE AIRFRAME to close that out.
+THRUST_FIT_FACTOR = 0.890066     # -> ROTOR_CONSTANT 4.041283e-05, log_252 measured
+ROTOR_CONSTANT = BENCH_ROTOR_CONSTANT * THRUST_FIT_FACTOR          # 4.041283e-05
 
 # YAW_TORQUE_FIT_FACTOR -- effective yaw-torque coefficient, not the bench drag coefficient.
 #   The simulated yaw axis is markedly under-powered: on flight C's two yaw steps the
@@ -181,7 +233,7 @@ NUM_ROTORS = 4
 # Recomputed from the constants above rather than hard-coded, so a change to BODY_MASS or to
 # the motor calibration cannot leave these stale:
 #     T_hover     = MASS*g/4                                         = 7.4407 N
-#     omega_hover = sqrt(T_hover / ROTOR_CONSTANT)                   = 404.811 rad/s
+#     omega_hover = sqrt(T_hover / ROTOR_CONSTANT)                   = 429.088 rad/s
 #     HOVER_COMMAND = (omega_hover - omega_idle)/(omega_max - omega_idle)
 # THRUST_SCALING / IDLE_THRUST are the tangent-line linearisation at that point, matching the
 # derivation in fsc_autopilot_ros2's config headers.
@@ -190,9 +242,9 @@ _T_HOVER = MASS * _G / NUM_ROTORS
 _OMEGA_HOVER = float(np.sqrt(_T_HOVER / ROTOR_CONSTANT))
 _OMEGA_SPAN = MAX_ROTOR_VEL - ZERO_POSITION_ARMED
 
-HOVER_COMMAND = (_OMEGA_HOVER - ZERO_POSITION_ARMED) / _OMEGA_SPAN     # 0.511653
-THRUST_SCALING = 1.0 / (2.0 * ROTOR_CONSTANT * _OMEGA_HOVER * _OMEGA_SPAN)  # 0.040846
-IDLE_THRUST = HOVER_COMMAND - THRUST_SCALING * _T_HOVER                # 0.207733
+HOVER_COMMAND = (_OMEGA_HOVER - ZERO_POSITION_ARMED) / _OMEGA_SPAN     # 0.548098
+THRUST_SCALING = 1.0 / (2.0 * ROTOR_CONSTANT * _OMEGA_HOVER * _OMEGA_SPAN)  # 0.043295
+IDLE_THRUST = HOVER_COMMAND - THRUST_SCALING * _T_HOVER                # 0.225955
 
-# Static thrust-to-weight, for reference: 4*k*omega_max^2 / (MASS*g) = 3.25.
+# Static thrust-to-weight, for reference: 4*k*omega_max^2 / (MASS*g) = 2.895.
 THRUST_TO_WEIGHT = (NUM_ROTORS * ROTOR_CONSTANT * MAX_ROTOR_VEL ** 2) / (MASS * _G)

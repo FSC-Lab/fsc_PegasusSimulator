@@ -1,0 +1,44 @@
+[   0.10s] mode -> SAFETY
+[   1.62s] stack up. home=[-0.0, 0.0, 0.305] mode='SAFETY'
+[   1.62s] PHASE OFFBOARD  ref=[-0.0, 0.0, 0.305] mode='SAFETY'
+[   2.64s] service rc/offboard requested
+[   2.64s] PHASE ARM  ref=[-0.0, 0.0, 0.305] mode='SAFETY'
+[   2.66s] service rc/offboard -> std_srvs.srv.Trigger_Response(success=True, message='Offboard mode request sent')
+[   5.66s] service rc/arm requested
+[   5.66s] PHASE TAKEOFF  ref=[-0.0, 0.0, 1.2] mode='SAFETY'
+[   5.68s] service rc/arm -> std_srvs.srv.Trigger_Response(success=True, message='Arm command sent')
+[  24.62s] settled: err=105 mm speed=0.033 m/s
+[  24.62s] PHASE ENTER_DIRECT  ref=[-0.0, 0.0, 1.2] mode='SAFETY'
+[  25.14s] service set_direct_mode(true) requested
+[  25.14s] PHASE CONFIRM  ref=[-0.0, 0.0, 1.2] mode='SAFETY'
+[  25.16s] service set_direct_mode(true) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to DIRECT mode')
+[  25.25s] mode -> DIRECT
+[  25.26s] DIRECT confirmed via mode topic: 'DIRECT'
+[  25.26s] PHASE SOAK  ref=[-0.0, 0.0, 1.2] mode='DIRECT'
+[  70.28s] PHASE STEPX  ref=[0.5, 0.0, 1.2] mode='DIRECT'
+[  85.28s] PHASE STEPX_RET  ref=[-0.0, 0.0, 1.2] mode='DIRECT'
+[ 100.30s] PHASE STEPZ  ref=[-0.0, 0.0, 1.45] mode='DIRECT'
+[ 115.32s] PHASE STEPZ_RET  ref=[-0.0, 0.0, 1.2] mode='DIRECT'
+[ 130.32s] PHASE SOAK2  ref=[-0.0, 0.0, 1.2] mode='DIRECT'
+[ 140.32s] service set_direct_mode(false) requested
+[ 140.32s] PHASE SAFETY_SETTLE  ref=[-0.0, 0.0, 1.2] mode='DIRECT'
+[ 140.34s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 140.75s] mode -> SAFETY
+[ 152.34s] PHASE LAND_WAIT  ref=[-0.0, 0.0, 1.2] mode='SAFETY'
+[ 153.34s] PHASE LAND  ref=[-0.0, 0.0, 1.2] mode='SAFETY'
+[ 165.34s] PHASE DISARM  ref=[-0.0, 0.0, 0.35] mode='SAFETY'
+[ 168.36s] service rc/disarm (try 1) requested
+[ 168.38s] service rc/disarm (try 1) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 171.36s] service rc/disarm (try 2) requested
+[ 171.38s] service rc/disarm (try 2) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 174.36s] service rc/disarm (try 3) requested
+[ 174.38s] service rc/disarm (try 3) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 177.34s] service rc/disarm (try 4) requested
+[ 177.36s] service rc/disarm (try 4) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 180.36s] service rc/disarm (try 5) requested
+[ 180.38s] service rc/disarm (try 5) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 183.36s] service rc/disarm (try 6) requested
+[ 183.38s] service rc/disarm (try 6) -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+[ 183.38s] !! STILL ARMED after 6 disarm attempts -- relaunch the sim before the next run
+[ 183.38s] PHASE END  ref=[-0.0, 0.0, 0.35] mode='SAFETY'
+saved /home/fsc-jupiter/Source/fsc_PegasusSimulator/docs/sim_to_real_t650/am_l1_tuning_20260824/run3_kr19_ude12_wc8.npz: log (8987, 11), dbg (28794, 45)
