@@ -318,7 +318,11 @@ def dynamics(X, params):
     com_i = params.get("com_i")                        # O_{i-1}→CoM_i, link-i frame
     if com_i is None:
         com_i = [l_i[k] / 2.0 for k in range(n)]       # fallback: midpoint approx
-    r0i = [np.zeros(3)]                                # CoM r_{0i}^0
+    # r0i[0] is the BASE link's CoM. Zero (i.e. the base CoM sits on the body
+    # origin, which is the geometric rotor centre) unless params carries a
+    # measured "base_com" — see transition_planner.make_params_t650 and the
+    # C++ wb_base_com_*. Absent key => the flight-validated behaviour.
+    r0i = [np.asarray(params.get("base_com", np.zeros(3)), dtype=float)]
     for i in range(1, n + 1):
         r0i.append(O[i - 1] + R_i_0[i] @ com_i[i - 1])
     r_0c_0 = sum(mi[i] * r0i[i] for i in range(n + 1)) / m_total

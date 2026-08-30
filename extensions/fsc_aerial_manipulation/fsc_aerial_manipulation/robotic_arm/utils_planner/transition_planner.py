@@ -118,9 +118,17 @@ def _load_t650_params_module():
     return mod
 
 
-def make_params_t650():
+def make_params_t650(base_com=None):
     """controller.make_params() with the T650 body override applied CORRECTLY
-    (rotated into the model frame — swaps xx<->yy, flips Ixy)."""
+    (rotated into the model frame — swaps xx<->yy, flips Ixy).
+
+    base_com: bare-airframe CoM relative to the body origin, MODEL frame [m].
+    None/zeros is the asset's own answer and what every simulation run uses.
+    On HARDWARE it is a flight measurement (see the C++ wb_base_com_* block)
+    and it MUST match the value the whole-body node is configured with —
+    the governor builds x_cd from this model while the law computes x_c from
+    its own, so a disagreement is a constant CoM-position error of exactly
+    (m_base/m_total) * the difference."""
     t650 = _load_t650_params_module()
     p = C.make_params()
     dm = float(t650.BODY_MASS) - AM_XFWD_BODY_MASS
@@ -132,6 +140,8 @@ def make_params_t650():
     # com_i[3] is measured from O_chain[3] = manip_joint4, so every mass
     # property — and therefore M, C, g — is untouched by this.
     p["l_i"][3] = p["l_i"][3] + GRIPPER_OFF_WRIST
+    p["base_com"] = (np.zeros(3) if base_com is None
+                     else np.asarray(base_com, dtype=float))
     return p
 
 
