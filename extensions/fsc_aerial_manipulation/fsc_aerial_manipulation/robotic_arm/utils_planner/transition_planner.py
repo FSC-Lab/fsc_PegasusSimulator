@@ -102,7 +102,13 @@ AM_XFWD_BODY_DIAG_INERTIA = np.diag([0.06334175, 0.06301228, 0.09868092])
 # (01_track, the pick/push plans) are flight-validated against the wrist
 # convention and add PAD_OFF_EE themselves where they need the pad, so moving
 # the shared model would double-count it.
-GRIPPER_OFF_WRIST = np.array([0.0, 0.0, -0.0494])   # wrist -> pad midpoint [m]
+GRIPPER_OFF_WRIST = np.array([0.0, 0.0, -0.108])   # wrist -> GRASP POINT [m]
+# 2026-08-31 (user decision): the EE is the URDF's end_effector_link -- the
+# grasp point on the wrist axis between the claw fingertip pads (tips reach
+# 0.124), NOT the 0.0494 pad-midpoint measurement it used to be. One point,
+# three models: this planner, the C++ wb_model (kGripperOffWrist), and the
+# arm GS's l4 all carry 0.108 now; change one, change all, regenerate
+# wb_truth_t650.json.
 
 
 def _load_t650_params_module():
