@@ -18,7 +18,7 @@ set -euo pipefail
 #
 # On top of the base tmux session this launcher adds an "arm" window with two
 # panes: the arm ros2_control stack (controller_manager + spawners) and the
-# ARM GROUND STATION (custom_gui joint_plot_inverted). Together with the drone
+# ARM GROUND STATION (utils_custom_ground_station joint_plot_inverted). Together with the drone
 # ground station from the paired fsc_autopilot stack, the running simulation
 # has TWO ground stations — one per subsystem, exactly like the real rig.
 #
@@ -101,7 +101,7 @@ export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
   echo "  cd $ARM_WS && source $ARM_ROS2_SETUP && source $ARM_ROSDEPS_SETUP \\" >&2
   echo "  && colcon build --packages-select \\" >&2
   echo "     dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \\" >&2
-  echo "     open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \\" >&2
+  echo "     open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge utils_custom_ground_station \\" >&2
   echo "     --symlink-install" >&2
   exit 1
 }
@@ -169,7 +169,7 @@ exec bash
 $ARM_ENV
 export DISPLAY='$ARM_DISPLAY'
 echo 'Arm ground station (inverted). It discovers the active controller on its own.'
-ros2 run custom_gui joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
+ros2 run utils_custom_ground_station joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
   -p torque_constant:=1.81 -p mount_height:=$ARM_GS_MOUNT_HEIGHT
 echo 'Arm ground station exited.'
 exec bash

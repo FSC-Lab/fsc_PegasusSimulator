@@ -127,7 +127,7 @@ export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
   echo "  cd $ARM_WS && source $ARM_ROS2_SETUP && source $ARM_ROSDEPS_SETUP \\" >&2
   echo "  && colcon build --packages-select \\" >&2
   echo "     dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \\" >&2
-  echo "     open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \\" >&2
+  echo "     open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge utils_custom_ground_station \\" >&2
   echo "     --symlink-install" >&2
   exit 1
 }
@@ -217,7 +217,7 @@ exec bash
 $ARM_ENV
 export DISPLAY='$ARM_DISPLAY'
 echo 'Arm ground station (inverted, torque mode). simulation:=true — Isaac reports N*m.'
-ros2 run custom_gui joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
+ros2 run utils_custom_ground_station joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
   -p controller:=external_torque_controller -p simulation:=true \\
   -p mount_height:=$ARM_GS_MOUNT_HEIGHT \\
   -p fallback_min_deg:='[-35.0, -80.0, -40.0, -120.0]' \\

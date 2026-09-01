@@ -1249,7 +1249,7 @@ cd ~/ros2_ws
 source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash
 colcon build --packages-select \
   dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \
-  open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \
+  open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge utils_custom_ground_station \
   --symlink-install
 ```
 
@@ -1346,7 +1346,7 @@ export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v fsc_isaac_env | paste -sd:)
 source /opt/ros/humble/setup.bash
 colcon build --packages-select \
   dynamixel_interfaces open_manipulator_x_description open_manipulator_x_bringup \
-  open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge custom_gui \
+  open_manipulator_x_custom_controller open_manipulator_x_isaac_bridge utils_custom_ground_station \
   --symlink-install
 ```
 
@@ -1663,7 +1663,7 @@ cd ~/Source/Shiqi/fsc_om_ws/src/fsc_open_manipulator && git pull --ff-only
 cd ~/Source/Shiqi/fsc_om_ws && source /opt/ros/humble/setup.bash
 colcon build --packages-select dynamixel_interfaces open_manipulator_x_description \
   open_manipulator_x_bringup open_manipulator_x_custom_controller \
-  open_manipulator_x_isaac_bridge custom_gui --symlink-install
+  open_manipulator_x_isaac_bridge utils_custom_ground_station --symlink-install
 
 # shiqi_machine (workspace ~/ros2_ws since 2026-08-23, was ~/colcon_ws —
 # same pull+build there after any arm-repo change, plus the ~/ros2_ws/rosdeps
@@ -3147,16 +3147,6 @@ so there is no rosdeps overlay:
 ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
 ~/Source/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
-# 1a. build the autopilot after every pull   (the cd IS part of the command)
-#     msgs FIRST since 2026-08-23: the governor's WholeBodyReference is new.
-cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select fsc_autopilot_ros2_msgs fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
-
-# 1b. build the ARM repo — NEW for this rig (torque controller + effort bridge).
-#     The PATH strip is MANDATORY on this machine: the default python3 is the
-#     Isaac env's 3.11 and colcon/rclpy need the system 3.10 (§7.9's warning).
-export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v fsc_isaac_env | paste -sd:)
-cd ~/Source/Shiqi/fsc_om_ws && source /opt/ros/humble/setup.bash && colcon build --packages-select open_manipulator_x_isaac_bridge open_manipulator_x_custom_controller custom_gui --symlink-install
-
 # 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
 
@@ -3167,25 +3157,6 @@ cd ~/Source/Shiqi/fsc_om_ws && source /opt/ros/humble/setup.bash && colcon build
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
 sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
-
-# 5. take off in SAFETY from the ground station, settle at the hover
-#    reference (z = 1.2), THEN hand the vehicle to the whole-body law.
-#    Entry is GATED: a refusal names every red gate (pos err < 0.15 m,
-#    speed < 0.20 m/s, arm err < 0.05 rad, odom + arm states and the
-#    controller-smoothed arm reference fresh).
-ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"
-
-# ABORT back to SAFETY — have this line ready BEFORE entering DIRECT
-ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
-
-# 5b. in DIRECT, pose the arm from the ARM ground station, or by hand:
-ros2 topic pub --once /uav_0/fsc_open_manipulator/external_torque_controller/target_joint_setpoint std_msgs/msg/Float64MultiArray "{data: [0.0, 0.5, 0.6, 0.3]}"
-#     ONE thing at a time — never an arm step and a position step together.
-#     Back to [0, 40, 40, 0] deg (the same service used by both Home buttons):
-ros2 service call /uav_0/fsc_open_manipulator/external_torque_controller/go_home std_srvs/srv/Trigger {}
-
-# 6. PX4 refuses an in-air disarm: land by reference first, then
-ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
 ```
 
 **shiqi_machine** (shiqi-desktop) — identical apart from the three repo roots
@@ -3198,20 +3169,16 @@ rosdeps overlay this machine needs for ros2_control:
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
 ~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
-# 1a. build the autopilot after every pull
-#     msgs FIRST since 2026-08-23: the governor's WholeBodyReference is new.
-cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2_msgs fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
-
-# 1b. build the ARM repo — NEW for this rig (rosdeps overlay required here)
-cd ~/ros2_ws && source /opt/ros/humble/setup.bash && source ~/ros2_ws/rosdeps/local_setup.bash && colcon build --packages-select open_manipulator_x_isaac_bridge open_manipulator_x_custom_controller custom_gui --symlink-install
-
 # 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
 # 3. Pegasus / PX4 SITL + TORQUE-MODE ARM STACK + ARM GROUND STATION (terminal 2)
 ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh shiqi_machine
 
-# steps 4-6 are machine-independent — use the fsc_lab_machine block above
+# 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
 **Never chain step 0's two lines with a launcher on the same line.**
@@ -3499,9 +3466,9 @@ the planned q_d to the ExternalTorqueController's `target_joint_setpoint`, so
 a SAFETY abort lands on the CURRENT arm pose, not a stale one. Reverting to
 SAFETY at any moment aborts everything instantly.
 
-Build note for step 1a: the message is new, so build `fsc_autopilot_ros2_msgs`
-BEFORE `fsc_autopilot_ros2` after this pull, and rebuild `custom_gui` (step
-1b) for the new tab. The governor itself is a plain python script — no build.
+Build note: the message is new, so build `fsc_autopilot_ros2_msgs`
+BEFORE `fsc_autopilot_ros2` after this pull, and rebuild
+`utils_custom_ground_station` for the new tab. The governor itself is a plain python script — no build.
 In whole-body DIRECT, tab 1 joint/EE commands are superseded by this flow
 (the law does not consume the smoothed joint reference while the stream is
 fresh); use tab 2.
