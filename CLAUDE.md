@@ -1183,6 +1183,120 @@ planner self-test, governor loopback, and the GS rendering J4 [-120, 120] with
 with the governor live and planning, so the law/governor/planner path is sound; a full
 Assign→Send→execute cycle has still NOT been flown.
 
+**THE ARM IS NOT AN IDEAL TORQUE SOURCE, AND NOW THE SIM KNOWS (2026-09-03, user
+request off the 0902/0903 applied-torque analysis).** The OM-X servos fly in Dynamixel
+**Operating Mode 16 (PWM)**, so what the arm controller writes is a DUTY, i.e. a VOLTAGE.
+The winding sees `V - Ke*qd` across `R`, so the delivered torque falls by a fixed amount per
+unit of joint speed whatever was asked for:
+`tau_app = clip(tau_cmd, ±tau_cap) − b*(qd − s_emf*qd_ref)`, **`b = Kt²/R =
+[1.102, 0.934, 1.493, 1.102] N·m per rad/s`**. Isaac applied the commanded effort exactly,
+which is the mechanical reason it never reproduced the hardware behaviour. New
+`extensions/.../robotic_arm/servo_model.py` (`DynamixelPwmServo`, pure numpy, self-test
+replays both flights) wired into `06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py`
+through **`PEGASUS_ARM_SERVO_MODEL`** = `pwm` (DEFAULT — droop on joints 2/3, ceiling 3.0) ·
+`pwm_0903` (adds the 2/3 Sep per-joint ceilings [0.370, 2.160, 1.535, 0.370] N·m, which
+reproduces those bags and DELIBERATELY breaks the one-tau_max rule) · `ideal` (the old
+behaviour, for an A/B). **This changes 06's default behaviour on purpose.**
+**THE SWITCH IS A LAUNCHER KNOB, NOT A CONTROLLER PARAMETER (2026-09-04, user request).**
+`start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh` sets
+`PEGASUS_ARM_SERVO_MODEL` (default `pwm`); the base launcher `start_single_drone_x650.sh`
+VALIDATES it against `pwm|pwm_0903|ideal` and BAKES it into the Isaac pane's command line (the
+tmux-server-env trap, same as `PEGASUS_PX4_LOCKSTEP`/`PEGASUS_PAYLOAD_MASS`), and the launcher
+prints the active mode in colour. It deliberately does NOT go in
+`params_single_aerial_manipulator_whole_body_direct_actuation_t650_sim.yaml`: the droop is a
+PLANT property the controller neither applies nor models — that mismatch IS the effect under
+test — so a parameter there would be a knob wired to nothing. That yaml now carries a header
+block saying exactly this and pointing at the real switch. **Trap fixed while wiring it:** the
+base launcher bakes the variable unconditionally, so an unset knob arrives as the EMPTY STRING;
+06 now reads `(os.environ.get(...) or "pwm")` rather than a `get()` default, which would have
+raised SystemExit on every launcher that does not set it.
+**MOVED INTO THE CONTROLLER YAML, 2026-09-04 (user asked three times — their call).** The
+sim yaml now owns it: `sim_arm_backemf_enable: true` plus `sim_arm_backemf_b_j1..j4`
+(`[0.0, 0.9337, 1.4934, 0.0]` N·m per rad/s) in its `1. REALITY MODEL` section. The
+whole-body NODE never declares those keys — rclcpp ignores them, verified by launching a
+node named `fsc_autopilot_ros2` against the file (101 params delivered, the five `sim_*`
+among them, every gain unaffected) — so the WB **launcher** greps them
+(`$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/…_t650_sim.yaml`, path from the machine
+conf) and forwards `PEGASUS_ARM_SERVO_MODEL` + the new `PEGASUS_ARM_SERVO_B` to Isaac.
+**Precedence: environment > yaml > built-in.** `sim_` prefix on purpose: nothing in the
+control law reads them. Cost accepted knowingly: a key in a controller config consumed by a
+shell script, and a bare `ros2 launch` ignores it — only the §7.14.1 launcher path applies it.
+Validated: rcl parser accepts the file; the launcher resolves all five cases (yaml true/false,
+env override of mode and of b, key absent → default + NOTE); two headless Isaac runs confirm
+the coefficients arrive.
+- **IDENTIFIED, not assumed.** The command chain `duty = clip_±885[clip_±max_effort(tau·N·rho)
+  + s_emf*(885*Ke/Vs)*qd_ref]`, `rho = 885*R*I_LSB/Vs`, reproduces the logged Goal PWM to
+  **≤0.23 duty counts (1.8 mN·m) over 32 700 samples**, so the commanded side is exact and the
+  whole gap is the motor. At rest j2/j3 deliver 99.4/94.0% (3 Sep) and 100.1/97.6% (2 Sep).
+  In motion the drop is linear and symmetric with slope 0.950 (j2) and 1.409/1.476 (j3)
+  against `Kt²/R` = 0.934/1.493 with NO fitted parameter (`Kt = Ke` in SI for any DC machine).
+  Model error on the recorded flights 0.247 → 0.134 (3 Sep j2) and 0.222 → 0.067 (j3) N·m rms.
+- **THE LOSS IS ABSOLUTE, NOT A PERCENTAGE.** 0.93/1.49 N·m per rad/s whatever the command,
+  so delivery ≥90% needs `|tau_cmd| ≥ 10*b*|qd|` and the torque REVERSES at `|qd| = tau/b`.
+  A 0.5 N·m command on j3 is faithful only to 0.033 rad/s (1.9 °/s). Never score this with a
+  percentage alone — the commanded torque carries a large static gravity-hold component that
+  the motor does deliver, so eta can read 104% in a phase whose mean error is already 0.04 N·m.
+- **Joints 1 and 4 are deliberately left at b = 0.** Their command (0.03–0.04 N·m rms) never
+  left the current sensor's noise floor in either flight and j1's fit (0.457 vs theory 1.102,
+  R² 0.50) disagrees with theory; `backemf_joints=range(4)` enables them if wanted.
+- **No double-count:** `switch_dof_control_mode(mode="effort")` zeroes the drive stiffness AND
+  damping, so the asset's authored `drive:angular:physics:damping` 1.5/0.7 on manip_joint2/3 is
+  NOT active — before this change the simulated joints had no damping at all. The droop is
+  applied EXPLICITLY as a torque; `b*dt/I` = 0.19/0.30 at the 0.0200 kg·m² armature and 250 Hz
+  (stable below 2). If the physics step ever grows, move it into the PhysX drive damping, which
+  is implicit.
+- `joint_states.effort` out of 06 now carries the **APPLIED** torque, matching what the hardware
+  backend reports there (Present Current); before the servo model existed the two were one number.
+- **NOT modelled and it matters:** gearbox friction. `tau_app` is Kt × Present Current, the
+  ELECTROMAGNETIC torque; the 353.5:1 gearbox's losses sit downstream and the flight data cannot
+  separate them (no torque sensor). A breakaway torque needs a bench measurement.
+  **The fix on the real arm is current-control mode (Mode 0)** — the servo then closes its own
+  current loop, R and Ke drop out and b goes to zero; this model should then be DELETED, not
+  retuned. Also: the controller's configured `back_emf_ke[2] = 2.86` contradicts j2's calibrated
+  `Kt = 2.139` by 34% (it did nothing in these flights because qd_ref ≈ 0, but it is wrong —
+  the calibration implies `[2.323, 2.139, 2.534, 2.323]`).
+- **EXPECT THE WHOLE-BODY TUNE TO CHANGE.** The law's `N1^T u3` arm-reaction pre-compensation is
+  exact only if the arm delivers the modelled torque; with the droop in, the sim now carries the
+  same error hardware does, which is the point. Validated offline against both flights and
+  smoke-tested in Isaac (banner, `b*dt/I`, `|tau|max cmd/app` in the status line, clean 4000-step
+  run); **NOT yet flown in a full whole-body SITL flight.** Report:
+  `docs/experimental_data_ros2_bag/0903 - T650-AM whole-body/analysis/` (extraction +
+  `applied_torque_analysis.py` + `wb_divergence_report.html`).
+- **`utils/wb_hover_stability.py` also runs the servo now** (`--servo pwm` default,
+  `ideal` for the A/B) — the offline screener had the same ideal-arm idealisation. It did
+  NOT repair the tool's absolute verdict: it still calls the flown +15 % kf run divergent in
+  every combination tried (servo on/off x old/new M_r_d), so keep trusting the ORDERING only.
+  **Three STALE constants found there while checking, flagged in-file and deliberately NOT
+  changed** (changing them re-bases every sweep recorded against the tool): `KF_TRUE`
+  4.679931e-05 should be `t650_params.ROTOR_CONSTANT` = 4.041283e-05 since the 2026-08-25
+  re-anchor (15.8 % high — the tool flies the pre-re-anchor, too-strong plant); `KF_SHIPPED`
+  5.38192065e-05 should be the sim yaml's `alloc_thrust_coeff` 4.6474755e-05 (the +15 % RATIO
+  is right, the absolute loop gain is not); and `make_gains()`'s `mrd` is the PRE-retune
+  M_r_d against a yaml that has carried (0.116522, 0.136107, 0.125102) since 2026-08-23.
+- **THE TWO ARM REFERENCES ARE NOT SYNCHRONISED — the arm controller REPLAYS the governor's
+  move 3-4 s LATE (2026-09-03, measured on both 0902 and 0903).** `q_d` (the governor's
+  `whole_body_direct_actuation/reference`, MODEL convention) and `q_cmd`
+  (`external_torque_controller/smoothed_reference_joint_trajectory`) run the SAME move one after
+  the other: 3 Sep joint 3 governor 24.81-27.81 s / arm 28.71-33.05 s (**lag +3.90 s**), 2 Sep
+  joint 3 +3.04 s and joint 2 +4.06 s. **Endpoints agree EXACTLY** (8.28/8.28, 40.00/40.00), so it
+  is a TIMING fault, not wiring or convention, and the lag equals the length of the governor's move
+  — a goal delivered ONCE AT COMPLETION rather than streamed. The measured joint tracks `q_d` and
+  ignores `q_cmd` (correct: the law owns the torque in passthrough), so **every compensation term,
+  the stale-fallback PD hold and the DIRECT-entry gate are all computed against a trajectory
+  nothing is flying.** This is UPSTREAM of the qd_ref-vs-qd_meas choice — feeding the back-EMF term
+  measured velocity fixes what it compensates, not the 3-4 s stale picture.
+  **`external_torque_controller/target_joint_setpoint` recorded ZERO messages in both flights**
+  despite the recorder being subscribed and the governor spending 3.9 s / 11.4 s in EXECUTING;
+  **CORRECTED 2026-09-04 by a live capture:** `ros2 topic info` on that topic reads **Publisher
+  count: 2** (the governor's arm-sync AND the arm GS), so the publisher IS in the graph — the
+  earlier inference from rosbag2's `offered_qos_profiles` (one TRANSIENT_LOCAL profile ⇒ the
+  governor's VOLATILE publisher absent) was WRONG; that field is not a reliable publisher count.
+  What stands is the ZERO MESSAGES: the governor advertised and did not publish during either
+  flight, so the goal reaches the arm controller by a path the recording does not show.
+  **Check `ros2 topic info -v` + `ros2 topic hz` on that topic during EXECUTING before
+  instrumenting anything else.** Charts, the per-joint lag table and the six-term decomposition are
+  in the report artifact; the analysis is `applied_torque_analysis.py`'s `sync` / `ff` payload.
+
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
 below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):

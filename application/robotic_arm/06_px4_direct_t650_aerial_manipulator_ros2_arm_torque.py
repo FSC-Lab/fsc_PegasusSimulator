@@ -59,6 +59,18 @@ HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
 EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
+# ARM SERVO MODEL (2026-09-03). "pwm" = the real Dynamixel PWM-mode servo:
+# torque delivered falls by Kt^2/R per rad/s of joint speed (joints 2 and 3,
+# the two the flights identify). "pwm_0903" adds the per-joint duty ceilings
+# AS FLOWN on 2/3 Sep, which reproduces those bags but is NOT today's arm.
+# "ideal" is the old behaviour, the commanded effort applied exactly.
+# `or "pwm"`, not a get() default: the launcher bakes the variable into the
+# Isaac pane unconditionally, so an unset knob arrives as the EMPTY STRING.
+ARM_SERVO_MODEL = (os.environ.get("PEGASUS_ARM_SERVO_MODEL", "") or "pwm").strip().lower()
+# Per-joint back-EMF coefficients "b1,b2,b3,b4" [N.m per rad/s], normally
+# forwarded by the launcher out of the paired controller yaml's
+# sim_arm_backemf_b_j* keys. Empty = servo_model.py's built-in Kt^2/R.
+ARM_SERVO_B = (os.environ.get("PEGASUS_ARM_SERVO_B", "") or "").strip()
 simulation_app = SimulationApp({"headless": HEADLESS})
 
 # ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
@@ -88,6 +100,8 @@ from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadrat
 from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_multirotor import (
     MultirotorMod, MultirotorConfig)
 from fsc_aerial_manipulation.robotic_arm.utils_controller import controller as C
+from fsc_aerial_manipulation.robotic_arm.servo_model import (
+    DynamixelPwmServo, TAU_CAP_AS_FLOWN)
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  CONFIG (identical to 04 unless marked ARM-ROS2)                         ║
@@ -152,8 +166,34 @@ ARM_HOLD_KD   = 0.25   # [N·m·s/rad]
 ARM_HOLD_RATE = 0.5    # [rad/s] reference slew — transparent to the position
                        # controller's <= 0.2 rad/s min-jerk moves; caps the step
                        # if something publishes a raw far-away target directly
-TAU_MAX       = 3.0    # [N·m]
+TAU_MAX       = 3.0    # [N·m] — one number with the wb yaml and the
+                       # ExternalTorqueController; see servo_model.py for why
+                       # PEGASUS_ARM_SERVO_MODEL=pwm_0903 deliberately differs
 ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7
+
+# ── ARM SERVO: the plant between the commanded torque and the applied one ───
+# Isaac applies a commanded effort exactly; the real XM430s in PWM mode do not.
+# See servo_model.py for the derivation and the flight identification. `ideal`
+# keeps the old behaviour for an A/B.
+_B_OVERRIDE = None
+if ARM_SERVO_B:
+    try:
+        _B_OVERRIDE = np.array([float(v) for v in ARM_SERVO_B.split(",")], float)
+    except ValueError:
+        _B_OVERRIDE = np.empty(0)
+    if _B_OVERRIDE.shape != (4,) or not np.all(np.isfinite(_B_OVERRIDE)):
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_B must be four finite "
+                         f"numbers 'b1,b2,b3,b4' (got {ARM_SERVO_B!r})")
+
+if ARM_SERVO_MODEL == "ideal":
+    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), backemf_joints=())
+elif ARM_SERVO_MODEL == "pwm":
+    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), b=_B_OVERRIDE)
+elif ARM_SERVO_MODEL == "pwm_0903":
+    ARM_SERVO = DynamixelPwmServo(tau_cap=TAU_CAP_AS_FLOWN, b=_B_OVERRIDE)
+else:
+    raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL must be one of "
+                     f"'pwm', 'pwm_0903', 'ideal' (got {ARM_SERVO_MODEL!r})")
 
 R_MODEL = np.array([[0.0, 1.0, 0.0],
                     [-1.0, 0.0, 0.0],
@@ -281,6 +321,19 @@ class AmT650WholeBodyArmSim:
         actrl = self._art.get_articulation_controller()
         for i in self._arm_idx:
             actrl.switch_dof_control_mode(dof_index=i, mode="effort")
+        print(f"[AM-T650-WB] arm servo model '{ARM_SERVO_MODEL}'"
+              f"{' (b from the controller yaml)' if ARM_SERVO_B else ''}: "
+              f"back-EMF droop {np.round(ARM_SERVO.b, 3).tolist()} N·m/(rad/s), "
+              f"ceiling {np.round(ARM_SERVO.tau_cap, 3).tolist()} N·m "
+              f"(b·dt/I = "
+              f"{np.round(ARM_SERVO.explicit_stability_ratio(np.full(4, ARM_ARMATURE), 1.0 / 250.0), 2).tolist()}"
+              f", explicit damping is stable below 2)", flush=True)
+        if ARM_SERVO_MODEL == "pwm_0903":
+            print("[AM-T650-WB] WARNING: 'pwm_0903' uses the 2/3 Sep duty "
+                  "ceilings, NOT the uniform 3.0 N·m the arm has carried since "
+                  "2026-09-04 — the plant and the controllers disagree ON "
+                  "PURPOSE. Use 'pwm' for anything but replaying those bags.",
+                  flush=True)
         print("[AM-T650-WB] arm dofs in effort mode; EXTERNAL TORQUE "
               f"(clip ±{TAU_MAX} N·m, fresh < {CMD_FRESH_S}s) with PD+gravity "
               f"fallback KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} on a stale stream",
@@ -297,6 +350,7 @@ class AmT650WholeBodyArmSim:
         self._ext_active = False         # torque stream has authority
         self._fresh_count = 0            # consecutive fresh commands (re-arm)
         self._tau_applied = np.zeros(len(self._arm_idx))
+        self._tau_cmd_applied = np.zeros(len(self._arm_idx))
         self._t = 0.0
         self._status_t = -1e9
         self.stop_sim = False
@@ -646,7 +700,7 @@ class AmT650WholeBodyArmSim:
                       flush=True)
 
         if self._ext_active:
-            tau = np.clip(np.asarray(self._tau_cmd, float), -TAU_MAX, TAU_MAX)
+            tau_cmd = np.asarray(self._tau_cmd, float)
         else:
             # 05's flight-validated servo-emulation hold, slewed, clamped.
             if self._hold_ref is None:
@@ -654,14 +708,25 @@ class AmT650WholeBodyArmSim:
             d_ref = np.clip(self._q_hold_target - self._hold_ref,
                             -ARM_HOLD_RATE * dt, ARM_HOLD_RATE * dt)
             self._hold_ref = self._hold_ref + d_ref
-            tau = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm
-            tau = np.clip(tau, -TAU_MAX, TAU_MAX)
+            tau_cmd = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm
+
+        # THE SERVO. Both branches go through it: the droop is a property of
+        # the motor, not of whoever computed the command, and on hardware the
+        # controller's own PD fallback pays it too. qd_ref is left at zero —
+        # the arm controller's back-EMF feedforward tracks the REFERENCE
+        # velocity, which whole-body DIRECT holds near zero (measured peak
+        # 0.009 rad/s on joint 2 while the joint itself reached 2.36).
+        tau = ARM_SERVO.applied(tau_cmd, qdot)
         self._art.set_joint_efforts(np.asarray(tau, float),
                                     joint_indices=self._arm_idx)
+        self._tau_cmd_applied = np.clip(tau_cmd, -ARM_SERVO.tau_cap, ARM_SERVO.tau_cap)
         self._tau_applied = tau
 
         # Joint states out — this is what IsaacTopicSystem.read() latches and
         # what /joint_states (broadcaster) and the arm ground station show.
+        # `effort` carries the APPLIED torque, which is what the hardware
+        # backend reports there (the servo's Present Current); before the servo
+        # model existed the two were the same number.
         self._publish_arm_state(q, qdot, tau)
 
         if self._t - self._status_t >= STATUS_PERIOD_S:
@@ -680,7 +745,9 @@ class AmT650WholeBodyArmSim:
             print(f"[AM-T650-WB] t={self._t:7.1f}s  z={p0[2]:6.3f} m  "
                   f"|v|={np.linalg.norm(v0):5.2f} m/s  arm={mode_txt}  "
                   f"q={np.degrees(q).round(1)} deg  "
-                  f"|tau|max={np.abs(tau).max():4.2f} N·m  "
+                  f"|tau|max cmd/app="
+                  f"{np.abs(self._tau_cmd_applied).max():4.2f}/"
+                  f"{np.abs(tau).max():4.2f} N·m  "
                   f"cmds: {cmd_txt}  omega={omega_txt} rad/s", flush=True)
 
     # ── main loop ───────────────────────────────────────────────────────────

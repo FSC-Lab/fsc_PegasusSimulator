@@ -81,6 +81,31 @@ if [[ -n "$PAYLOAD_MASS" ]] &&
   exit 2
 fi
 
+# Arm SERVO MODEL, read by application/robotic_arm/06_*_arm_torque.py only (the
+# whole-body TORQUE plant). This is a PLANT property, not a controller gain --
+# the OM-X servos run in Dynamixel PWM mode, so the torque they deliver falls by
+# Kt^2/R per rad/s of joint speed. See
+# extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/servo_model.py
+#   pwm       (default) the real servo: back-EMF droop on joints 2 and 3
+#   pwm_0903  as above plus the per-joint duty ceilings AS FLOWN on 2/3 Sep
+#   ideal     the pre-2026-09-03 behaviour, commanded effort applied exactly
+# Baked into the pane command line for the same tmux-server reason as LOCKSTEP.
+ARM_SERVO_MODEL="${PEGASUS_ARM_SERVO_MODEL:-}"
+if [[ -n "$ARM_SERVO_MODEL" ]] &&
+   [[ ! "$ARM_SERVO_MODEL" =~ ^(pwm|pwm_0903|ideal)$ ]]; then
+  echo "ERROR: PEGASUS_ARM_SERVO_MODEL must be pwm, pwm_0903 or ideal (got '$ARM_SERVO_MODEL')." >&2
+  exit 2
+fi
+
+# Optional per-joint back-EMF coefficients, "b1,b2,b3,b4" in N.m per rad/s,
+# overriding servo_model.py's built-in Kt^2/R. Empty = use the built-ins.
+ARM_SERVO_B="${PEGASUS_ARM_SERVO_B:-}"
+if [[ -n "$ARM_SERVO_B" ]] &&
+   [[ ! "$ARM_SERVO_B" =~ ^[0-9]+([.][0-9]+)?(,[0-9]+([.][0-9]+)?){3}$ ]]; then
+  echo "ERROR: PEGASUS_ARM_SERVO_B must be four non-negative numbers 'b1,b2,b3,b4' (got '$ARM_SERVO_B')." >&2
+  exit 2
+fi
+
 command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
 command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: missing $PEGASUS_SCRIPT" >&2; exit 1; }
@@ -139,7 +164,8 @@ sleep $DELAY
 echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
-PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS \
+PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS PEGASUS_ARM_SERVO_MODEL=$ARM_SERVO_MODEL \
+PEGASUS_ARM_SERVO_B=$ARM_SERVO_B \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

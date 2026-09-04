@@ -21,7 +21,12 @@ WHAT IS MODELLED — deliberately the loop the flight showed to be at fault:
     the known +0.72 N.m arm moment in g[3:6];
   * the ALLOCATOR with a believable-vs-true kf split (the whole point) and the
     first-order ROTOR LAG, exact zero-order-hold form, lambda = 10.0265 1/s;
-  * the joint-torque clamp (tau_max) the law and plant both apply.
+  * the joint-torque clamp (tau_max) the law and plant both apply;
+  * the ARM SERVO (2026-09-03): PWM-mode back-EMF droop, tau_app = clip(tau) -
+    Kt^2/R * qd on joints 2 and 3, identified from the 0902/0903 flights. Before
+    this the simulated arm delivered its command exactly, which is the same
+    idealisation that kept Isaac from reproducing the hardware. `--servo ideal`
+    restores it for an A/B.
 
 WHAT IS NOT: ground contact, PX4's own loops (DIRECT bypasses them), DDS
 latency, aerodynamics, sensor noise. So this predicts STABILITY and the
@@ -52,8 +57,22 @@ from fsc_aerial_manipulation.robotic_arm.utils_controller import (  # noqa: E402
 from fsc_aerial_manipulation.robotic_arm.utils_planner import (  # noqa: E402
     transition_planner as TP,
 )
+from fsc_aerial_manipulation.robotic_arm import servo_model as SM  # noqa: E402
 
 # ---------------------------------------------------------------- plant knobs
+# STALE, FOUND 2026-09-03, NOT CHANGED HERE (changing them re-bases every sweep
+# result recorded against this tool -- decide deliberately, then re-validate):
+#   KF_TRUE    should be t650_params.ROTOR_CONSTANT = 4.041283e-05 since the
+#              2026-08-25 thrust re-anchor; the value below is 15.8 % HIGH, i.e.
+#              this tool still flies the pre-re-anchor, too-strong plant.
+#   KF_SHIPPED should be the sim yaml's alloc_thrust_coeff = 4.6474755e-05.
+#              The RATIO (+15 %) is right, so the injection is modelled; the
+#              absolute loop gain is not.
+#   make_gains()'s mrd is the PRE-retune M_r_d; the shipped yaml has carried
+#              wb_mrd = (0.116522, 0.136107, 0.125102) since 2026-08-23.
+# Until those three are refreshed, validate() disagrees with both flight
+# campaigns (it calls the +15 % run divergent in every combination tried, with
+# and without the servo model, at both M_r_d values) -- trust the ORDERING only.
 KF_TRUE = 4.679931e-05        # the calibrated plant (t650_params, tuned)
 KF_SHIPPED = 5.38192065e-05   # what the yaml's allocator BELIEVES (+15%)
 KM_TRUE = 2.474152e-06        # rolling-moment coefficient (t650_params tuned)
@@ -152,7 +171,8 @@ def wrench_from_rotors(omega):
 
 
 def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
-             tilt0_deg=0.5, params=None, verbose=False, delay_ms=0.0):
+             tilt0_deg=0.5, params=None, verbose=False, delay_ms=0.0,
+             servo="pwm"):
     """Closed-loop hover from a small attitude perturbation.
 
     Returns dict with the pitch history and a growth verdict. The perturbation
@@ -162,6 +182,9 @@ def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
     p = params if params is not None else TP.make_params_t650()
     n = p["n"]
     ctrl = C.MatlabController(p, gains)
+    srv = servo if not isinstance(servo, str) else (
+        None if servo == "ideal" else SM.DynamixelPwmServo(
+            tau_cap=np.full(4, gains.tau_max)))
 
     # ---- initial state: hover at 1.2 m, arm at home, small pitch offset ----
     R0 = C.joint_rotation(np.array([0.0, 1.0, 0.0]), np.deg2rad(tilt0_deg))
@@ -204,6 +227,10 @@ def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
         tau_body = np.asarray(out["tau_body"], float)
         tau_joint = np.clip(np.asarray(out["tau_joint"], float),
                             -gains.tau_max, gains.tau_max)
+        if srv is not None:
+            # The servo, not the law: the delivered torque is the commanded one
+            # minus Kt^2/R per rad/s of joint speed (servo_model.py).
+            tau_joint = srv.applied(tau_joint, X[18 + n:18 + 2 * n])
 
         # allocator (believed kf) -> rotor lag -> true wrench
         w_cmd = allocate(u1, tau_body, kf_believed)
@@ -262,30 +289,32 @@ def _fmt(r):
             f"(x{r['growth']:.2f})")
 
 
-def validate():
+def validate(servo="pwm"):
     """Reproduce the flight A/B: shipped +15% kf bounded, matched kf diverges."""
-    print("=== validation against the flown runs (Command.md 7.14.4) ===")
+    print(f"=== validation against the flown runs (Command.md 7.14.4), "
+          f"servo={servo} ===")
     p = TP.make_params_t650()
     g = make_gains()
     for kf, lab, expect in ((KF_SHIPPED, "A) shipped +15% kf", "bounded"),
                             (KF_TRUE, "B) matched kf     ", "diverges")):
-        r = simulate(g, kf_believed=kf, params=p, t_end=25.0)
+        r = simulate(g, kf_believed=kf, params=p, t_end=25.0, servo=servo)
         print(f"  {lab}: {_fmt(r)}   [flight: {expect}]")
     return
 
 
-def sweep():
+def sweep(servo="pwm"):
     """Search for a tune that is stable at the CALIBRATED kf."""
     p = TP.make_params_t650()
-    print("=== baseline at the calibrated kf ===")
+    print(f"=== baseline at the calibrated kf, servo={servo} ===")
     base = make_gains()
-    print(f"  {gains_str(base)}: {_fmt(simulate(base, KF_TRUE, params=p))}")
+    print(f"  {gains_str(base)}: "
+          f"{_fmt(simulate(base, KF_TRUE, params=p, servo=servo))}")
 
     print("\n=== attitude loop (k_R, k_w) at the calibrated kf ===")
     best = []
     for k_r, k_w in itertools.product((0.5, 1.0, 2.0, 4.0), (1.5, 3.0, 6.0)):
         gg = make_gains(k_R=k_r, k_w=k_w)
-        r = simulate(gg, KF_TRUE, params=p)
+        r = simulate(gg, KF_TRUE, params=p, servo=servo)
         print(f"  k_R={k_r:<4} k_w={k_w:<4}: {_fmt(r)}")
         if r["stable"]:
             best.append((r["amp_end"], k_r, k_w))
@@ -303,11 +332,15 @@ def main():
                     help="comma list, e.g. k_R=4,k_w=3")
     ap.add_argument("--kf", default="true", choices=("true", "shipped"))
     ap.add_argument("--t-end", type=float, default=25.0)
+    ap.add_argument("--servo", default="pwm", choices=("pwm", "ideal"),
+                    help="arm actuator: 'pwm' is the real PWM-mode servo "
+                         "(back-EMF droop, servo_model.py); 'ideal' is the "
+                         "pre-2026-09-03 exact torque source")
     a = ap.parse_args()
     if a.validate:
-        validate()
+        validate(a.servo)
     if a.sweep:
-        sweep()
+        sweep(a.servo)
     if a.gains:
         over = {}
         for kv in a.gains.split(","):
@@ -315,10 +348,10 @@ def main():
             over[k.strip()] = float(v)
         g = make_gains(**over)
         kf = KF_TRUE if a.kf == "true" else KF_SHIPPED
-        print(f"{gains_str(g)} @ kf={a.kf}: "
-              f"{_fmt(simulate(g, kf, t_end=a.t_end))}")
+        print(f"{gains_str(g)} @ kf={a.kf}, servo={a.servo}: "
+              f"{_fmt(simulate(g, kf, t_end=a.t_end, servo=a.servo))}")
     if not (a.validate or a.sweep or a.gains):
-        validate()
+        validate(a.servo)
 
 
 if __name__ == "__main__":

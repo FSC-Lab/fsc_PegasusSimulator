@@ -115,6 +115,53 @@ export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # the paired whole-body controller YAML.
 export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
 
+# -- ARM SERVO MODEL: the on/off switch for the back-EMF droop (2026-09-04) ----
+# THE SWITCH LIVES HERE, not in the controller YAML: the droop is a property of
+# the PLANT (the OM-X servos in Dynamixel PWM mode deliver tau_cmd - Kt^2/R*qd),
+# and the paired fsc_autopilot_ros2 node never sees it -- it is exactly the
+# modelling error the 2/3 Sep flights exposed. Identified in
+# "docs/experimental_data_ros2_bag/0903 - T650-AM whole-body/analysis/";
+# implementation in .../robotic_arm/servo_model.py.
+#
+#   pwm       ON  - the real servo, droop b = [0, 0.934, 1.493, 0] N.m/(rad/s)
+#   ideal     OFF - the commanded effort applied exactly (pre-2026-09-03)
+#   pwm_0903  ON  + the per-joint duty ceilings AS FLOWN on 2/3 Sep
+#                   ([0.370, 2.160, 1.535, 0.370] N.m instead of a uniform 3.0),
+#                   for replaying those bags. NOT today's arm.
+#
+# Override without editing this file:
+#   PEGASUS_ARM_SERVO_MODEL=ideal <this script> <config>
+# The SOURCE OF TRUTH is the paired controller yaml, so one file describes the
+# whole run (user request, 2026-09-04). The whole-body NODE never declares these
+# keys — rclcpp ignores them — they are here for the plant, which is why they
+# are prefixed sim_ and why this launcher is what reads them.
+# Precedence: environment > yaml > built-in default.
+WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_direct_actuation_t650_sim.yaml}"
+yaml_scalar() {  # $1 = key; prints the value, or nothing if absent/commented
+  [[ -r "$WB_SIM_YAML" ]] || return 0
+  sed -nE "s/^[[:space:]]*$1:[[:space:]]*([^#[:space:]]+).*/\\1/p" "$WB_SIM_YAML" | head -1
+}
+if [[ -z "${PEGASUS_ARM_SERVO_MODEL:-}" ]]; then
+  case "$(yaml_scalar sim_arm_backemf_enable)" in
+    true|True|TRUE|1)    PEGASUS_ARM_SERVO_MODEL=pwm ;;
+    false|False|FALSE|0) PEGASUS_ARM_SERVO_MODEL=ideal ;;
+    "") PEGASUS_ARM_SERVO_MODEL=pwm
+        echo "NOTE: sim_arm_backemf_enable not found in $WB_SIM_YAML — defaulting to 'pwm'." ;;
+    *)  echo "ERROR: sim_arm_backemf_enable must be true or false in $WB_SIM_YAML" >&2; exit 2 ;;
+  esac
+  ARM_SERVO_B_YAML=""
+  for J in j1 j2 j3 j4; do
+    V="$(yaml_scalar "sim_arm_backemf_b_$J")"
+    [[ -n "$V" ]] || { ARM_SERVO_B_YAML=""; break; }
+    ARM_SERVO_B_YAML="${ARM_SERVO_B_YAML:+$ARM_SERVO_B_YAML,}$V"
+  done
+  if [[ -n "$ARM_SERVO_B_YAML" && "$PEGASUS_ARM_SERVO_MODEL" != "ideal" ]]; then
+    export PEGASUS_ARM_SERVO_B="$ARM_SERVO_B_YAML"
+  fi
+  echo "Arm servo model taken from $(basename "$WB_SIM_YAML")"
+fi
+export PEGASUS_ARM_SERVO_MODEL="${PEGASUS_ARM_SERVO_MODEL:-pwm}"
+
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
 [[ -f "$INDOOR_SIM_PEGASUS_SCRIPT" ]] || {
@@ -171,6 +218,12 @@ if tmux setenv -g PEGASUS_PX4_LOCKSTEP 0 2>/dev/null; then
 else
   echo "Pegasus PX4 lockstep: no tmux server yet; the new session will inherit the export"
 fi
+
+case "$PEGASUS_ARM_SERVO_MODEL" in
+  ideal) echo -e "\033[1;33mArm servo model: IDEAL - back-EMF droop OFF (commanded effort applied exactly).\033[0m" ;;
+  pwm_0903) echo -e "\033[1;33mArm servo model: PWM + the 2/3 Sep duty ceilings - replay config, NOT today's arm.\033[0m" ;;
+  *) echo "Arm servo model: PWM (back-EMF droop ON, b = [${PEGASUS_ARM_SERVO_B:-built-in default}] N.m/(rad/s))" ;;
+esac
 
 echo "Starting AM-T650 WHOLE-BODY direct-actuator SITL with the ROS2 TORQUE-mode arm stack."
 echo "Plant: AM_xfwd on T650 motors; controller: whole-body impedance + GMO"
