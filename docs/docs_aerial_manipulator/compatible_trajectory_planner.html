@@ -1,0 +1,929 @@
+<title>Utils - T650-AM - Compatible Trajectory Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&display=swap">
+
+<style>
+:root{
+  --paper:#F7F8FA; --surface:#FFFFFF; --sunk:#EFF2F6;
+  --ink:#14181F; --ink-2:#4A5462; --ink-3:#7C8797;
+  --rule:#DDE2E9; --rule-soft:#EAEEF3;
+
+  --solve:#2C4C8C;  --solve-bg:#E4EAF6;
+  --fiat:#9A6410;   --fiat-bg:#F7EEDC;
+  --free:#17706A;   --free-bg:#DDEFEC;
+  --check:#A83A2E;  --check-bg:#F8E5E2;
+
+  --serif:"Source Serif 4",Charter,Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+/* ---- dark: only the tokens are redefined, never the components ----------- */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1116; --surface:#161B22; --sunk:#1B222B;
+    --ink:#E6EAF0; --ink-2:#A6B0BD; --ink-3:#78838F;
+    --rule:#262E38; --rule-soft:#1E252E;
+    --solve:#8AACE8; --solve-bg:#17223A;
+    --fiat:#DFAE5A;  --fiat-bg:#2E2513;
+    --free:#5FC2B6;  --free-bg:#102E2B;
+    --check:#EC8878; --check-bg:#33201C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1116; --surface:#161B22; --sunk:#1B222B;
+  --ink:#E6EAF0; --ink-2:#A6B0BD; --ink-3:#78838F;
+  --rule:#262E38; --rule-soft:#1E252E;
+  --solve:#8AACE8; --solve-bg:#17223A;
+  --fiat:#DFAE5A;  --fiat-bg:#2E2513;
+  --free:#5FC2B6;  --free-bg:#102E2B;
+  --check:#EC8878; --check-bg:#33201C;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+/* One measured column: prose holds a reading measure, while tables, equation
+   blocks and the interface cards use the full sheet so nothing is cramped and
+   no width is left dead. */
+.sheet{max-width:860px;margin:0 auto;padding:56px 30px 120px}
+.col{max-width:none}
+section p,section .lede,.standfirst{max-width:68ch}
+.note p{max-width:none}
+
+/* ---- masthead ------------------------------------------------------------ */
+header{border-bottom:1.5px solid var(--ink);padding-bottom:26px;margin-bottom:14px}
+.kicker{
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--solve);margin:0 0 14px;font-weight:500;
+}
+h1{
+  font-family:var(--serif);font-weight:600;font-size:clamp(34px,5.4vw,52px);
+  line-height:1.06;letter-spacing:-.018em;margin:0 0 14px;text-wrap:balance;
+}
+.standfirst{font-size:19px;line-height:1.55;color:var(--ink-2);margin:0;max-width:60ch}
+.standfirst em{color:var(--ink);font-style:italic}
+
+.provenance{
+  display:flex;flex-wrap:wrap;gap:6px 26px;margin:16px 0 46px;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3);
+}
+.provenance b{color:var(--ink-2);font-weight:500}
+
+/* ---- section structure --------------------------------------------------- */
+section{margin:0 0 60px}
+h2{
+  font-family:var(--serif);font-weight:600;font-size:27px;letter-spacing:-.012em;
+  margin:0 0 6px;text-wrap:balance;display:flex;gap:14px;align-items:baseline;
+}
+h2 .num{
+  font-family:var(--mono);font-size:13px;font-weight:500;color:var(--solve);
+  letter-spacing:.04em;flex:0 0 auto;
+}
+h3{
+  font-family:var(--mono);font-size:12px;letter-spacing:.11em;text-transform:uppercase;
+  font-weight:600;color:var(--ink-3);margin:34px 0 12px;
+}
+p{margin:0 0 15px}
+.lede{color:var(--ink-2);font-size:18px;margin-bottom:22px}
+b,strong{font-weight:600;color:var(--ink)}
+em{font-style:italic}
+a{color:var(--solve)}
+
+/* ---- inline math + code -------------------------------------------------- */
+var,.v{font-family:var(--serif);font-style:italic;font-size:1.03em}
+sub,sup{font-size:.68em;line-height:0}
+code,kbd{font-family:var(--mono);font-size:.83em;color:var(--ink);
+  background:var(--sunk);padding:1px 5px;border-radius:2px}
+
+/* ---- display equations --------------------------------------------------- */
+.eq{
+  display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;
+  margin:22px 0;padding:15px 18px;background:var(--surface);
+  border:1px solid var(--rule-soft);border-left:2.5px solid var(--eqc,var(--rule));
+  border-radius:2px;overflow-x:auto;
+}
+.eq-body{font-size:16.5px;line-height:1.9}
+.eq-n{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.eq.solve{--eqc:var(--solve)} .eq.fiat{--eqc:var(--fiat)}
+.eq.free{--eqc:var(--free)}   .eq.check{--eqc:var(--check)}
+.eq .an{font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  display:block;margin-top:7px;font-style:normal}
+
+/* ---- the state chip: the document's structural device -------------------- */
+.chip{
+  font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;padding:2.5px 7px;border-radius:2px;white-space:nowrap;
+  vertical-align:1.5px;display:inline-block;
+}
+.c-solve{color:var(--solve);background:var(--solve-bg)}
+.c-fiat{color:var(--fiat);background:var(--fiat-bg)}
+.c-free{color:var(--free);background:var(--free-bg)}
+.c-check{color:var(--check);background:var(--check-bg)}
+
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:26px 0 0}
+.legend div{border-top:2px solid var(--lc);padding-top:10px}
+.legend p{margin:6px 0 0;font-size:14px;color:var(--ink-2);line-height:1.5}
+.l-solve{--lc:var(--solve)} .l-fiat{--lc:var(--fiat)}
+.l-free{--lc:var(--free)}   .l-check{--lc:var(--check)}
+
+/* ---- interface spec ------------------------------------------------------ */
+.io{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px;margin:22px 0}
+.io > div{background:var(--surface);border:1px solid var(--rule);border-radius:2px;padding:20px 22px}
+.io h4{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 14px;font-weight:600}
+.sig{font-family:var(--mono);font-size:12.5px;line-height:1.8;color:var(--ink-2);margin:0 0 14px}
+.sig b{color:var(--ink);font-weight:500}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;align-items:baseline}
+dt{font-family:var(--mono);font-size:12px;color:var(--solve);white-space:nowrap}
+dd{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+
+/* ---- tables -------------------------------------------------------------- */
+.tw{overflow-x:auto;margin:22px 0;border:1px solid var(--rule);border-radius:2px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:14.5px}
+th{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;text-align:left;padding:11px 16px;
+  border-bottom:1px solid var(--rule);background:var(--sunk);white-space:nowrap;
+}
+td{padding:11px 16px;border-bottom:1px solid var(--rule-soft);vertical-align:top;color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:none}
+td:first-child{color:var(--ink)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td .m{font-family:var(--mono);font-size:12.5px}
+
+/* ---- callout ------------------------------------------------------------- */
+.note{
+  border-left:2.5px solid var(--nc,var(--solve));background:var(--surface);
+  padding:18px 22px;margin:24px 0;border-radius:0 2px 2px 0;
+  border-top:1px solid var(--rule-soft);border-right:1px solid var(--rule-soft);
+  border-bottom:1px solid var(--rule-soft);
+}
+.part{margin:76px 0 40px;padding-top:20px;border-top:2.5px solid var(--ink)}
+.part .pl{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--solve);font-weight:600;display:block;margin-bottom:10px}
+.part h2{font-size:31px;margin:0 0 10px;display:block}
+.part p{color:var(--ink-2);font-size:17.5px;margin:0;max-width:66ch}
+.note.free{--nc:var(--free)} .note.check{--nc:var(--check)} .note.fiat{--nc:var(--fiat)}
+.note h4{font-family:var(--serif);font-size:17px;font-weight:600;margin:0 0 8px;color:var(--ink)}
+.note p{margin:0 0 10px;font-size:15.5px;color:var(--ink-2)}
+.note p:last-child{margin-bottom:0}
+
+/* ---- derivation: a genuine 3-step sequence, hence numbered --------------- */
+.deriv{background:var(--surface);border:1px solid var(--rule);border-radius:2px;
+  padding:18px 22px 20px;margin:22px 0}
+.deriv h4{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;margin:0 0 14px}
+.deriv ol{margin:0;padding:0;list-style:none;counter-reset:d;display:grid;gap:13px}
+.deriv li{counter-increment:d;display:grid;grid-template-columns:19px 1fr;gap:13px}
+.deriv li::before{content:counter(d);font-family:var(--mono);font-size:10px;font-weight:600;
+  color:var(--solve);background:var(--solve-bg);border-radius:2px;height:19px;
+  display:grid;place-items:center;margin-top:3px}
+.deriv li > div{font-size:15.5px;color:var(--ink-2);line-height:1.6;max-width:64ch}
+.deriv .ml{display:block;font-size:16px;line-height:2;margin:7px 0 0;color:var(--ink)}
+.deriv .qed{margin:16px 0 0;font-size:14px;color:var(--ink-3);max-width:64ch;line-height:1.55}
+.deriv .qed b{color:var(--ink)}
+
+/* ---- algorithm block ----------------------------------------------------- */
+.algo{
+  background:var(--surface);border:1px solid var(--rule);border-radius:2px;
+  padding:20px 24px;margin:22px 0;font-family:var(--mono);font-size:12.5px;
+  line-height:1.95;color:var(--ink-2);overflow-x:auto;
+  white-space:pre;              /* pseudocode is line-structured */
+}
+.algo .kw{color:var(--solve);font-weight:600}
+.algo .cm{color:var(--ink-3)}
+.algo b{color:var(--ink);font-weight:500}
+
+/* ---- measured figures ---------------------------------------------------- */
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:2px;margin:22px 0}
+.figs div{background:var(--surface);padding:15px 17px}
+.figs .n{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--ink);
+  display:block;font-variant-numeric:tabular-nums;line-height:1.2}
+.figs .l{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);display:block;margin-top:6px}
+
+footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--rule);
+  font-size:14px;color:var(--ink-3);max-width:72ch}
+footer code{font-size:12px}
+/* (P) is the document's index: every symbol links to where it is decided. */
+.eq.problem{border-left-width:3px;--eqc:var(--ink);background:var(--sunk)}
+.eq.problem .eq-body{font-size:17px;line-height:2.15}
+a.pv{color:inherit;text-decoration:none;border-bottom:1px dotted var(--ink-3);
+     cursor:pointer;transition:background .12s,border-color .12s}
+a.pv:hover{background:var(--solve-bg);border-bottom-color:var(--solve);border-bottom-style:solid}
+.howto{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink-3);
+       margin:-8px 0 22px}
+/* landing highlight, so a jump is unmistakable */
+.eq:target,tr:target,.note:target{outline:2px solid var(--solve);outline-offset:3px}
+.eq:target,.note:target{background:var(--solve-bg)}
+tr:target td{background:var(--solve-bg)}
+[id]{scroll-margin-top:18px}
+::selection{background:var(--solve-bg)}
+:focus-visible{outline:2px solid var(--solve);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:640px){body{font-size:16px}.sheet{padding:38px 18px 80px}}
+</style>
+
+<div class="sheet">
+
+<header>
+  <p class="kicker">AM-T650 · whole-body direct actuation · utils_planner/transition_planner.py</p>
+  <h1>Compatible Trajectory Planner</h1>
+  <p class="standfirst">What the planner takes in, what it streams out, and the problem it
+  actually solves — written in the form of an optimization problem so that what is
+  <em>solved</em>, what is <em>frozen by fiat</em>, and what is <em>free but unused</em> can be
+  told apart.</p>
+</header>
+
+<div class="provenance">
+  <span><b>Source</b> transition_planner.py, 654 lines</span>
+  <span><b>Engine</b> compatible_trajectory.py</span>
+  <span><b>Model</b> T650 + OM-X, 3.746174 kg</span>
+  <span><b>Figures</b> measured, this build</span>
+</div>
+
+<div class="part">
+  <span class="pl">Part A</span>
+  <h2>Compatible trajectory generation</h2>
+  <p>Given two complete rest configurations, solve for the reference between them. This is
+  where the underactuation enters, and where almost every choice is made by fiat rather than
+  by search. Where the <em>goal</em> configuration comes from is Part B.</p>
+</div>
+
+<section class="col">
+  <h2><span class="num">§1</span> The problem</h2>
+  <p class="lede">Everything on this page unpacks one statement. Read it first; the rest is
+  what each of its parts turns out to be.</p>
+
+  <div class="eq problem" id="eq-P">
+    <div class="eq-body">
+      <b>minimize</b> &nbsp;
+      <a class="pv" href="#dv-J" title="What the implementation uses: J = 0"><var>J</var></a> [
+      <a class="pv" href="#dv-re" title="Prescribed: a straight line"><var>r</var><sub>e</sub>(·)</a>,
+      <a class="pv" href="#dv-ang" title="Prescribed: linear in s(t)"><var>b</var><sub>1e</sub>(·)</a>,
+      <a class="pv" href="#dv-ang" title="Prescribed: linear in s(t)"><var>b</var><sub>1</sub>(·)</a>,
+      <a class="pv" href="#nullspace" title="Free, and resolved arbitrarily"><var>σ</var>(·)</a>,
+      <a class="pv" href="#dv-T" title="Prescribed: closed form"><var>T</var></a> ]<br>
+
+      <b>over</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; the
+      <a class="pv" href="#dv-re">EE path</a>, the
+      <a class="pv" href="#dv-ang">two heading paths</a>, the
+      <a class="pv" href="#dv-sigma">null-space schedule</a>, and the
+      <a class="pv" href="#dv-T">duration</a><br>
+
+      <b>subject to</b> &nbsp;
+      <a class="pv" href="#eq-A3">(A3)</a>–<a class="pv" href="#eq-A6">(A6)</a> at every
+      <var>t</var>, giving <a class="pv" href="#dv-xc"><var>x</var><sub>c</sub>(<var>t</var>)</a>
+      &nbsp; <span class="chip c-solve">compatibility</span><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <a class="pv" href="#c-joints"><var>Q</var><sub>min</sub> ≤ <var>q</var>(<var>t</var>) ≤
+      <var>Q</var><sub>max</sub></a>, &nbsp;
+      <a class="pv" href="#c-sigma"><var>σ</var><sub>nd</sub>(<var>q</var>) ≥ 0.10</a>, &nbsp;
+      <a class="pv" href="#c-beta"><var>β</var> ≥ 5°</a>
+      &nbsp; <span class="chip c-check">path</span><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <a class="pv" href="#eq-A2">rest conditions</a> at <var>t</var> = 0 and
+      <var>t</var> = <var>T</var><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <a class="pv" href="#c-absent" style="color:var(--ink-3)">‖<var>u</var><sub>1</sub>‖ ≤
+      <var>u</var><sub>max</sub>, &nbsp; ‖<var>τ</var><sub>j</sub>‖ ≤
+      <var>τ</var><sub>max</sub> — <b>not present today</b></a>
+    </div>
+    <div class="eq-n">(P)</div>
+  </div>
+  <p class="howto">every symbol is a link — click through to where it is defined, decided, or discarded</p>
+
+  <h3>Interface</h3>
+  <p>A rest-to-rest transition between two static holds. Both endpoints are full
+  configurations, not just goals — the planner needs the start as much as the finish. Part B
+  is how the goal configuration is obtained from operator setpoints; Part A — this part —
+  is how the trajectory between two configurations is solved.</p>
+
+  <div class="io">
+    <div>
+      <h4>Input</h4>
+      <p class="sig"><b>plan_transition</b>(params, rest0, rest1, opts)</p>
+      <dl>
+        <dt>rest0, rest1</dt>
+        <dd>Each a rest spec <var>(x</var><sub>b</sub><var>, φ, q)</var> — base position in the
+        world (m), base heading in the model frame (rad), and the four joint angles (rad).
+        <b>8 numbers per endpoint.</b></dd>
+        <dt>params</dt>
+        <dd>The coupled model: 5 link masses, joint axes <var>h</var><sub>i</sub>, link offsets
+        <var>l</var><sub>i</sub>, link CoM offsets <var>c</var><sub>i</sub>, and the
+        bare-airframe CoM.</dd>
+        <dt>opts</dt>
+        <dd>Kinematic bounds and numerics: <code>v_max</code> 0.30 m/s, <code>a_max</code>
+        0.15 m/s², <code>w_max</code> 0.30 rad/s, <code>T_min</code> 3 s, polynomial degree 16,
+        201-point solve grid, 801-point check grid.</dd>
+      </dl>
+    </div>
+    <div>
+      <h4>Output</h4>
+      <p class="sig">{ <b>T</b>, <b>ref</b>(t), <b>q1</b>, <b>diag</b> } &nbsp;or&nbsp; <b>ValueError</b></p>
+      <dl>
+        <dt>T</dt><dd>Duration (s), chosen by the planner, not requested.</dd>
+        <dt>ref(t)</dt>
+        <dd>The reference, as a function of elapsed time. Sampled at 100 Hz by the governor and
+        published as <code>WholeBodyReference</code>, which the control law copies
+        <b>verbatim</b>.</dd>
+        <dt>q1</dt><dd>Terminal joints — the next hold's anchor.</dd>
+        <dt>diag</dt>
+        <dd>Defect, singularity margin, joint extrema, peak speeds, endpoint mismatch.</dd>
+        <dt>raises</dt>
+        <dd>An operator-readable <var>ValueError</var> when any feasibility test fails. There is
+        no partial or best-effort plan.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <h3>The 17 fields of ref(t)</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Field</th><th>Symbol</th><th>Derivatives</th><th>Origin</th></tr></thead>
+    <tbody>
+      <tr><td class="m">x_cd</td><td><var>x</var><sub>c</sub></td>
+          <td>through <b>snap</b> (5 fields)</td>
+          <td>the solved polynomial <span class="chip c-solve">solved</span></td></tr>
+      <tr><td class="m">b1_d</td><td><var>b</var><sub>1</sub></td><td>+ 2 (3 fields)</td>
+          <td>prescribed heading <span class="chip c-fiat">prescribed</span></td></tr>
+      <tr><td class="m">r_ed</td><td><var>r</var><sub>e</sub></td><td>+ 2 (3 fields)</td>
+          <td>prescribed EE path <span class="chip c-fiat">prescribed</span></td></tr>
+      <tr><td class="m">b1_de</td><td><var>b</var><sub>1e</sub></td><td>+ 2 (3 fields)</td>
+          <td>prescribed EE heading <span class="chip c-fiat">prescribed</span></td></tr>
+      <tr><td class="m">q_d, qdot_d</td><td><var>q</var>, <var>q̇</var></td><td>2 fields</td>
+          <td>recovered; <var>q̇</var> by finite difference</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Degree 16 is not arbitrary: the message carries the CoM through its <b>fourth</b>
+  derivative, so the polynomial must survive four exact differentiations. <var>q̇</var><sub>d</sub>
+  is the one numerically-differentiated field in the message — a central difference with
+  <var>h</var> = 1 ms, because the joint-recovery map is not differentiated in closed form.</p>
+</section>
+
+
+
+<section class="col">
+  <h2><span class="num">§2</span> The relations that make a trajectory “compatible”</h2>
+  <p class="lede">Compatible means the CoM path is consistent with the attitude that its own
+  acceleration demands. That is a loop, and the loop is the whole problem.</p>
+
+  <h3>Model</h3>
+  <p>Four joints, axes <var>h</var> = (<var>z, x, x, z</var>). Forward kinematics on the
+  chain gives the end-effector and the system centre of mass, both in the base frame:</p>
+
+  <div class="eq">
+    <div class="eq-body" id="eq-A1">
+      <var>R</var><sub>i</sub> = <var>R</var><sub>i−1</sub> Rot(<var>h</var><sub>i</sub>,
+      <var>q</var><sub>i</sub>), &nbsp;&nbsp; <var>O</var><sub>i</sub> =
+      <var>O</var><sub>i−1</sub> + <var>R</var><sub>i</sub> <var>l</var><sub>i</sub>
+      <span class="an">r_0e = O_n &nbsp;·&nbsp; r_0c = (1/m)[ m₀c₀ + Σᵢ mᵢ(O_{i−1} + Rᵢcᵢ) ]</span>
+    </div>
+    <div class="eq-n">(A1)</div>
+  </div>
+
+  <p><b>Joints 2 and 3 share the <var>x</var> axis.</b> That single fact governs everything
+  below: the arm's orientation depends on <var>q</var><sub>2</sub> and <var>q</var><sub>3</sub>
+  only through their sum.</p>
+
+  <h3>Rest points are exact</h3>
+  <p>At rest the thrust is vertical, so <var>R</var><sub>0</sub> = <var>R</var><sub>z</sub>(<var>φ</var>)
+  and the whole reference closes in algebra, with every derivative zero:</p>
+
+  <div class="eq">
+    <div class="eq-body" id="eq-A2">
+      <var>x</var><sub>c</sub> = <var>x</var><sub>b</sub> + <var>R</var><sub>z</sub>(<var>φ</var>)
+      <var>r</var><sub>0c</sub>(<var>q</var>), &nbsp;&nbsp;
+      <var>r</var><sub>e</sub> = <var>x</var><sub>b</sub> + <var>R</var><sub>z</sub>(<var>φ</var>)
+      <var>r</var><sub>0e</sub>(<var>q</var>)
+      <span class="an">both endpoints hit their holds algebraically — no fitting error to absorb</span>
+    </div>
+    <div class="eq-n">(A2)</div>
+  </div>
+
+  <h3>The compatibility loop</h3>
+  <p>Away from rest, four relations close on themselves. Read them as a cycle:</p>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-A3">
+      <var>a</var><sub>c</sub> = <var>ẍ</var><sub>c</sub> + <var>g e</var><sub>3</sub>,
+      &nbsp;&nbsp; <var>b</var><sub>3</sub> = <var>a</var><sub>c</sub> /
+      ‖<var>a</var><sub>c</sub>‖
+      <span class="an">thrust must point along the CoM acceleration — the underactuation constraint</span>
+    </div>
+    <div class="eq-n">(A3)</div>
+  </div>
+  <div class="eq solve">
+    <div class="eq-body" id="eq-A4">
+      <var>R</var><sub>0</sub> = build(<var>b</var><sub>3</sub>, <var>b</var><sub>1</sub>),
+      &nbsp;&nbsp; (<var>α, β, γ</var>) = zxz(<var>R</var><sub>0</sub><sup>T</sup>
+      <var>R</var><sub>e</sub>)
+      <span class="an">attitude from thrust direction + heading; arm angles from the residual rotation</span>
+    </div>
+    <div class="eq-n">(A4)</div>
+  </div>
+  <div class="eq free">
+    <div class="eq-body" id="eq-A5">
+      <var>q</var> = [ <var>α</var>, &nbsp; <var>σβ</var>, &nbsp; (1−<var>σ</var>)<var>β</var>,
+      &nbsp; <var>γ</var> ]
+      <span class="an">three angles, four joints — σ is not determined by the task</span>
+    </div>
+    <div class="eq-n">(A5)</div>
+  </div>
+  <div class="eq solve">
+    <div class="eq-body" id="eq-A6">
+      <var>x</var><sub>c</sub> = <var>r</var><sub>e</sub> + <var>R</var><sub>0</sub>
+      ( <var>r</var><sub>0c</sub>(<var>q</var>) − <var>r</var><sub>0e</sub>(<var>q</var>) )
+      <span class="an">closes the loop: x_c depends on ẍ_c through (A3)–(A5)</span>
+    </div>
+    <div class="eq-n">(A6)</div>
+  </div>
+
+  <div class="deriv">
+    <h4>Where (A6) comes from</h4>
+    <ol>
+      <li><div>Definitions from (A1), both referenced to the body origin
+        <var>O</var><sub>0</sub> = 0:
+        <span class="ml"><var>r</var><sub>0e</sub> = <var>O</var><sub>n</sub>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <var>r</var><sub>0c</sub> = (1/<var>m</var>) [ <var>m</var><sub>0</sub><var>c</var><sub>0</sub>
+        + Σ<sub>i</sub> <var>m</var><sub>i</sub>( <var>O</var><sub>i−1</sub> +
+        <var>R</var><sub>i</sub><var>c</var><sub>i</sub> ) ],
+        &nbsp; <var>m</var> = Σ<sub>i</sub> <var>m</var><sub>i</sub></span></div></li>
+      <li><div>A point at body-frame offset <var>v</var>, in the world:
+        <span class="ml"><var>p</var> = <var>x</var><sub>b</sub> + <var>R</var><sub>0</sub>
+        <var>v</var></span></div></li>
+      <li><div>Applied to each:
+        <span class="ml"><var>r</var><sub>e</sub> = <var>x</var><sub>b</sub> +
+        <var>R</var><sub>0</sub> <var>r</var><sub>0e</sub>(<var>q</var>)
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <var>x</var><sub>c</sub> = <var>x</var><sub>b</sub> + <var>R</var><sub>0</sub>
+        <var>r</var><sub>0c</sub>(<var>q</var>)</span></div></li>
+      <li><div>Subtract; <var>x</var><sub>b</sub> cancels:
+        <span class="ml"><var>x</var><sub>c</sub> − <var>r</var><sub>e</sub> =
+        <var>R</var><sub>0</sub> ( <var>r</var><sub>0c</sub> − <var>r</var><sub>0e</sub> )
+        &nbsp;&nbsp;⟹&nbsp;&nbsp; <var>x</var><sub>c</sub> = <var>r</var><sub>e</sub> +
+        <var>R</var><sub>0</sub> ( <var>r</var><sub>0c</sub> − <var>r</var><sub>0e</sub> )
+        &nbsp;&nbsp;= (A6)</span></div></li>
+    </ol>
+    <p class="qed">Exact for arbitrary <var>R</var><sub>0</sub> — no small angle, no rest
+    condition, no dynamics. Verified to <b>8.9e−16 m</b> over 500 random
+    (<var>q</var>, <var>x</var><sub>b</sub>, <var>R</var><sub>0</sub>).</p>
+  </div>
+
+  <p>Substituting (A3)–(A5) into (A6) eliminates <var>R</var><sub>0</sub> and <var>q</var>,
+  leaving <var>x</var><sub>c</sub> alone on both sides:</p>
+
+  <div class="deriv">
+    <h4>Substitution</h4>
+    <ol>
+      <li><div>(A3) — thrust direction, as a functional of the unknown:
+        <span class="ml"><var>b</var><sub>3</sub>[<var>x</var><sub>c</sub>] =
+        ( <var>ẍ</var><sub>c</sub> + <var>g e</var><sub>3</sub> ) /
+        ‖ <var>ẍ</var><sub>c</sub> + <var>g e</var><sub>3</sub> ‖</span></div></li>
+      <li><div>(A4) — attitude, with <var>Π</var> = <var>I</var> −
+        <var>b</var><sub>3</sub><var>b</var><sub>3</sub><sup>T</sup>:
+        <span class="ml"><var>b</var><sub>1c</sub> = <var>Π b</var><sub>1</sub> /
+        ‖<var>Π b</var><sub>1</sub>‖, &nbsp;&nbsp;
+        <var>b</var><sub>2c</sub> = <var>b</var><sub>3</sub> × <var>b</var><sub>1c</sub>
+        &nbsp;&nbsp;⟹&nbsp;&nbsp;
+        <var>B</var>[<var>x</var><sub>c</sub>] = [ <var>b</var><sub>1c</sub> &nbsp;
+        <var>b</var><sub>2c</sub> &nbsp; <var>b</var><sub>3</sub> ]</span></div></li>
+      <li><div>(A4) + (A5) — joints, with <var>Λ</var>(<var>M</var>, <var>σ</var>) =
+        [ <var>a</var>, <var>σb</var>, (1−<var>σ</var>)<var>b</var>, <var>c</var> ] and
+        (<var>a</var>, <var>b</var>, <var>c</var>) = zxz(<var>M</var>):
+        <span class="ml"><var>q</var>[<var>x</var><sub>c</sub>] = <var>Λ</var>(
+        <var>B</var>[<var>x</var><sub>c</sub>]<sup>T</sup> <var>R</var><sub>e</sub>,
+        <var>σ</var> )</span></div></li>
+      <li><div>into (A6), with <var>Δ</var>(<var>q</var>) = <var>r</var><sub>0c</sub>(<var>q</var>)
+        − <var>r</var><sub>0e</sub>(<var>q</var>) &nbsp;⟹&nbsp; (A7)</div></li>
+    </ol>
+  </div>
+
+  <div class="eq solve" id="eq-A7">
+    <div class="eq-body">
+      <var>x</var><sub>c</sub> = <var>r</var><sub>e</sub> +
+      <var>B</var>[<var>x</var><sub>c</sub>] &nbsp;<var>Δ</var>( <var>Λ</var>(
+      <var>B</var>[<var>x</var><sub>c</sub>]<sup>T</sup> <var>R</var><sub>e</sub>,
+      <var>σ</var> ) ) &nbsp;≡&nbsp; <b>F</b>[<var>x</var><sub>c</sub>]
+      <span class="an">r_e, R_e, b1, sigma are prescribed data — x_c is the only unknown</span>
+    </div>
+    <div class="eq-n">(A7)</div>
+  </div>
+
+  <p><b>F</b> depends on <var>x</var><sub>c</sub> only through <var>ẍ</var><sub>c</sub>, and
+  pointwise in <var>t</var>: at each instant (A7) is <em>algebraic</em> in
+  (<var>x</var><sub>c</sub>, <var>ẍ</var><sub>c</sub>). Coupling across time enters solely
+  through the polynomial, so on its coefficients <var>C</var> (3 × 17) the fixed point is</p>
+
+  <div class="eq solve">
+    <div class="eq-body">
+      <var>C</var> ← Fit { <b>F</b>[ <var>p</var><sub>c</sub>(· ; <var>C</var>) ](<var>t</var><sub>k</sub>) },
+      &nbsp;&nbsp; <var>k</var> = 1 … 201
+      <span class="an">fit -> differentiate -> evaluate -> refit: the Picard scheme of §4</span>
+    </div>
+    <div class="eq-n">(A8)</div>
+  </div>
+
+  <p>Differential flatness <em>with a loop in it</em>: the flat outputs would determine
+  everything, except that one of them is defined through its own second derivative. An
+  independent implementation of (A7) reproduces the planner's defect exactly —
+  <b>5.48e−08 m</b>.</p>
+
+  <div class="note free" id="nullspace">
+    <h4>Equation (A5) hides a degree of freedom</h4>
+    <p>The z-x-z decomposition returns <b>three</b> angles for <b>four</b> joints. The split
+    <var>σ</var> — how <var>β</var> divides between <var>q</var><sub>2</sub> and
+    <var>q</var><sub>3</sub> — is unconstrained by the task. Measured, holding
+    (<var>α, β, γ</var>) fixed and varying only <var>σ</var>:</p>
+    <div class="tw">
+    <table>
+      <thead><tr><th>σ</th><th>q₂, q₃ (deg)</th><th>EE offset r₀ₑ (m)</th><th>EE heading change</th></tr></thead>
+      <tbody>
+        <tr><td class="num">0.20</td><td class="num">16.0, 64.0</td><td class="num m">[−0.035, 0.208, −0.095]</td><td rowspan="3" style="vertical-align:middle"><b>exactly 0</b><br><span style="font-size:13px">(0.00e+00 across the range)</span></td></tr>
+        <tr><td class="num">0.50</td><td class="num">40.0, 40.0</td><td class="num m">[−0.042, 0.249, −0.061]</td></tr>
+        <tr><td class="num">0.80</td><td class="num">64.0, 16.0</td><td class="num m">[−0.047, 0.274, −0.013]</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>The EE <em>heading</em> is invariant; the EE <em>position</em> sweeps <b>10.6 cm</b>, and
+    the CoM offset moves with it. So <var>σ</var> is a real, consequential null space — one
+    scalar function of time, free at every instant.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">§3</span> What the implementation does with (P)</h2>
+  <p class="lede">The general problem stated at the top is an infinite-dimensional trajectory
+  optimization. What the implementation solves is that problem with almost every decision
+  variable pinned and the cost function removed — variable by variable:</p>
+
+  <h3>What the implementation does with each variable</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Decision variable</th><th>Status</th><th>Value imposed</th></tr></thead>
+    <tbody>
+      <tr id="dv-re"><td><var>r</var><sub>e</sub>(<var>t</var>) — EE path</td>
+          <td><span class="chip c-fiat">prescribed</span></td>
+          <td class="m">p_e0 + Δp · s(t) &nbsp;— a straight line</td></tr>
+      <tr id="dv-ang"><td><var>α, β, γ, ψ</var> — the four angle channels</td>
+          <td><span class="chip c-fiat">prescribed</span></td>
+          <td class="m">linear in s(t), endpoint to endpoint</td></tr>
+      <tr id="dv-s"><td><var>s</var>(<var>t</var>) — the timing profile</td>
+          <td><span class="chip c-fiat">prescribed</span></td>
+          <td class="m">one shared septic min-snap, all channels</td></tr>
+      <tr id="dv-sigma"><td><var>σ</var>(<var>t</var>) — the null space</td>
+          <td><span class="chip c-free">free, unused</span></td>
+          <td class="m">σ₀ + (σ₁ − σ₀) · s(t) &nbsp;— linear, arbitrary</td></tr>
+      <tr id="dv-T"><td><var>T</var> — duration</td>
+          <td><span class="chip c-fiat">prescribed</span></td>
+          <td class="m">closed form from peak-factor bounds</td></tr>
+      <tr id="dv-xc"><td><var>x</var><sub>c</sub>(<var>t</var>) — the CoM</td>
+          <td><span class="chip c-solve">solved</span></td>
+          <td>the <b>only</b> remaining unknown</td></tr>
+      <tr id="dv-J"><td><var>J</var> — the cost</td>
+          <td><span class="chip c-check">absent</span></td>
+          <td><b><var>J</var> ≡ 0.</b> Nothing is minimized.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>With every path variable pinned, (P) collapses to a <b>feasibility problem with a unique
+  solution</b>: find the <var>x</var><sub>c</sub> consistent with its own thrust direction. No
+  search, no trade-off, no objective — which is why calling it an optimization would be
+  generous.</p>
+
+  <div class="note fiat">
+    <h4>Why min-snap is structural, not stylistic</h4>
+    <p>The solved CoM's <em>velocity</em> depends on the prescribed <em>jerk</em>, because
+    <var>R</var><sub>0</sub> rotates with <var>ẍ</var><sub>c</sub><sup>′</sup> through the
+    thrust-direction map (A3). A min-<em>jerk</em> profile has jerk discontinuities at segment
+    joins, which would step the solved CoM velocity there. The septic
+    <var>s</var> = 35<var>u</var><sup>4</sup> − 84<var>u</var><sup>5</sup> +
+    70<var>u</var><sup>6</sup> − 20<var>u</var><sup>7</sup> zeroes velocity, acceleration
+    <em>and</em> jerk at both ends.</p>
+  </div>
+
+  <div class="legend">
+    <div class="l-solve"><span class="chip c-solve">solved</span>
+      <p>Genuinely determined and computed — the fixed point.</p></div>
+    <div class="l-fiat"><span class="chip c-fiat">prescribed</span>
+      <p>Pinned to one shape by the implementation. Could be a decision variable.</p></div>
+    <div class="l-free"><span class="chip c-free">free, unused</span>
+      <p>Mathematically unconstrained, and resolved arbitrarily.</p></div>
+    <div class="l-check"><span class="chip c-check">verified</span>
+      <p>Tested after the fact. Violations cause refusal, never a re-solve.</p></div>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">§4</span> How the fixed point is solved</h2>
+  <p class="lede">Picard iteration on a degree-16 polynomial. Assume a CoM, compute the arm pose
+  its thrust direction implies, recompute the CoM that pose gives, refit, repeat.</p>
+
+  <div class="algo">
+<span class="cm">// grid t_k, k = 1…201 over [0, T]; p_e, R_e, b1, b1e, σ from the prescribed task</span>
+<b>p_c</b><sup>(0)</sup> ← fit<sub>deg 16</sub>( <b>p_e</b> )                <span class="cm">seed: the EE path itself</span>
+
+<span class="kw">repeat</span> <span class="kw">for</span> m = 0, 1, 2, …
+    <span class="kw">for each</span> k:
+        a<sub>c</sub>  ← <b>p̈_c</b><sup>(m)</sup>(t<sub>k</sub>) + g e₃          <span class="cm">(A3)</span>
+        R₀  ← build( a<sub>c</sub>/‖a<sub>c</sub>‖, b₁(t<sub>k</sub>) )         <span class="cm">(A4)</span>
+        q   ← [α, σβ, (1−σ)β, γ] from zxz(R₀ᵀR<sub>e</sub>)  <span class="cm">(A4)(A5)</span>
+        y<sub>k</sub>  ← p<sub>e</sub>(t<sub>k</sub>) + R₀ ( r<sub>0c</sub>(q) − r<sub>0e</sub>(q) )   <span class="cm">(A6)</span>
+    <b>p_c</b><sup>(m+1)</sup> ← fit<sub>deg 16</sub>( y )              <span class="cm">unconstrained least squares</span>
+<span class="kw">until</span> max<sub>k</sub> ‖ <b>p_c</b><sup>(m+1)</sup> − <b>p_c</b><sup>(m)</sup> ‖ &lt; 10⁻¹⁰ m
+  </div>
+
+  <p>The iteration is a contraction because the arm's CoM-to-EE offset is small (≈0.2 m)
+  compared with the lever the thrust direction exerts on it — each pass changes
+  <var>R</var><sub>0</sub> only slightly. Measured on a combined base + arm transition:</p>
+
+  <div class="figs">
+    <div><span class="n">10</span><span class="l">Picard iterations</span></div>
+    <div><span class="n">5.5e−08</span><span class="l">Dynamic defect, m</span></div>
+    <div><span class="n">2.7e−05</span><span class="l">Endpoint mismatch, m</span></div>
+    <div><span class="n">646</span><span class="l">Solve wall time, ms</span></div>
+    <div><span class="n">1.1</span><span class="l">ref(t) eval, ms</span></div>
+  </div>
+
+  <p>The defect is the residual of (A6) on the 801-point check grid — <b>55 nanometres</b>, so
+  the returned trajectory is compatible to well below anything the plant could express. The
+  1.1 ms evaluation sits inside the governor's 10 ms budget at 100 Hz, but it runs in Python
+  under the GIL, which is why the solve carries a yield hook: one uninterrupted Picard pass is
+  ~26 ms and would otherwise stall the stream past its 250 ms staleness window.</p>
+</section>
+
+<section class="col">
+  <h2><span class="num">§5</span> Constraints are verified, never enforced</h2>
+  <p class="lede">Nothing below enters the solve. Every one is a test applied to the finished
+  trajectory, and failing one raises rather than triggers a search.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Test</th><th>Bound</th><th>When</th><th>On failure</th></tr></thead>
+    <tbody>
+      <tr id="c-beta"><td>Wrist singularity, endpoints</td><td class="num m">β ≥ 5°</td><td>before</td>
+          <td>“z-x-z recovery is ill-posed”</td></tr>
+      <tr><td>Joint range, endpoints</td><td class="num m">Q_min … Q_max</td><td>before</td>
+          <td>“joints outside the working range”</td></tr>
+      <tr id="c-joints"><td><b>Joint range, whole path</b></td>
+          <td class="num m">±35°, −80…50°, −40…50°, ±120°</td><td>after, 801 pts</td>
+          <td>“recovered joint path exceeds the working range”</td></tr>
+      <tr id="c-sigma"><td><b>Singularity margin, whole path</b></td>
+          <td class="num m">σ_nd(J₃ᵧ/L) ≥ 0.10</td><td>after, 801 pts</td>
+          <td>“leaves the certified-safe set”</td></tr>
+      <tr><td>CoM endpoint mismatch</td><td class="num m">≤ 2 mm</td><td>after</td>
+          <td>“refusing a stepped hold handover”</td></tr>
+      <tr><td colspan="4" style="color:var(--ink-3)">Speed and acceleration are not
+          constraints — they size <var>T</var>:
+          <span class="m">T = clip( max( 2.1875·d/v<sub>max</sub>, √(peak·d/a<sub>max</sub>),
+          2.1875·d<sub>ang</sub>/ω<sub>max</sub> ), 3, 40 s )</span></td></tr>
+      <tr id="c-absent"><td colspan="4" style="color:var(--check)"><b>Absent entirely:</b> thrust bounds,
+          joint-torque limits, obstacle avoidance, actuator rate limits.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">§6</span> The cost of prescribing instead of searching</h2>
+  <p class="lede">Because the path is fixed before feasibility is tested, a task that is
+  perfectly achievable can be refused — on the strength of a choice the planner made, not the
+  task's own geometry.</p>
+
+  <p>Sixty random goals from the folded home pose produced 19 refusals. <b>Three of those had
+  both endpoints legal</b> and failed only because the prescribed path left the joint box. One
+  of them, goal <span class="m">q = [−10.1, −12.5, 28.9, 98.2]°</span>, refused because
+  <var>q</var><sub>3</sub> reaches 55.0° against its +50° limit:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>s</th><th>β (deg)</th><th>q₂, q₃ as planned</th><th>Legal σ range</th><th></th></tr></thead>
+    <tbody>
+      <tr><td class="num">0.00</td><td class="num">80.0</td><td class="num">40.0, 40.0</td>
+          <td class="num m">[+0.375, +0.625]</td><td></td></tr>
+      <tr><td class="num">0.45</td><td class="num">55.1</td><td class="num">0.3, <b>54.8</b></td>
+          <td class="num m">[+0.092, +0.908]</td>
+          <td><span class="chip c-check">violates</span></td></tr>
+      <tr><td class="num">0.50</td><td class="num">48.2</td><td class="num">−6.3, <b>54.5</b></td>
+          <td class="num m">[−0.037, +1.037]</td>
+          <td><span class="chip c-check">violates</span></td></tr>
+      <tr><td class="num">1.00</td><td class="num">16.4</td><td class="num">−12.5, 28.9</td>
+          <td class="num m">[−2.049, +3.049]</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note free">
+    <h4>A legal schedule exists at every sample</h4>
+    <p><b>5 of 21</b> samples violate a joint limit under the planner's linear
+    <var>σ</var>. <b>21 of 21</b> admit some legal <var>σ</var>, and both endpoints sit inside
+    their own ranges by construction. The plan is refused because of the interpolation, not
+    because the task is infeasible.</p>
+    <p>One caveat, stated plainly: re-scheduling <var>σ</var> changes
+    <var>r</var><sub>0e</sub> and <var>r</var><sub>0c</sub>, hence the CoM, hence the fixed
+    point — so this is a <em>necessary</em> condition, not proof that a re-solve converges. It
+    does rule out “the task is impossible”.</p>
+  </div>
+
+  <p>That makes <var>σ</var>(<var>t</var>) the cheapest place to start: it is already a free
+  function, it is already computed every iteration, and constraining it against the joint box
+  and the singularity margin needs no change to the compatibility machinery. The prescribed EE
+  path, the shared timing profile and the duration are the larger prizes, and the ones that
+  would require a real solver.</p>
+</section>
+
+<div class="part">
+  <span class="pl">Part B</span>
+  <h2>Inverse kinematics — setpoints to a goal configuration</h2>
+  <p>Part A assumed both endpoints were complete configurations. Only the start one is
+  measured; the goal has to be built from what the two ground stations actually send — a base
+  pose and, optionally, an end-effector pose. The order in which that is done constrains
+  everything Part A then sees.</p>
+</div>
+
+
+<section class="col">
+  <h2><span class="num">§7</span> What the goal configuration is made of</h2>
+  <p class="lede">The base is settled first, from the drone ground station. Only then is the arm
+  asked anything — and in two of the three cases it is not asked at all.</p>
+
+  <div class="eq fiat">
+    <div class="eq-body" id="eq-B1">
+      (<var>x</var><sub>b1</sub>, <var>φ</var><sub>1</sub>) ← pending base target,
+      else the current hold's base
+      <span class="an">the base pose is FIXED before the arm problem is posed</span>
+    </div>
+    <div class="eq-n">(B1)</div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Case</th><th>q₁ comes from</th><th>IK?</th></tr></thead>
+    <tbody>
+      <tr><td><code>go_home</code> Trigger</td>
+          <td>the folded home pose <span class="m">[0, 40°, 40°, 0]</span></td>
+          <td><span class="chip c-fiat">no</span></td></tr>
+      <tr><td>base target only — “ride-along”</td>
+          <td>the current hold's <var>q</var>, unchanged: the arm keeps its pose while the base flies</td>
+          <td><span class="chip c-fiat">no</span></td></tr>
+      <tr><td>EE target present</td>
+          <td><span class="m">ik_world(params, x_b1, φ1, p_e, az, q_seed = hold q)</span></td>
+          <td><span class="chip c-solve">yes</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note check">
+    <h4>This is not a whole-body IK</h4>
+    <p>Because (B1) pins the base <em>before</em> the arm is solved, an end-effector target that
+    is perfectly reachable with a slightly different base pose is <b>refused</b> — the base is
+    not a decision variable at this stage. Structurally the same failure as the prescribed path
+    in Part A: something is fixed first, the remainder is then found infeasible, and there is no
+    way back.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">§8</span> The 4-DOF task and its residual</h2>
+  <p class="lede">Four scalar constraints against four joints — square by design, matching the
+  law's own task variable <var>y</var> = [<var>r</var><sub>e</sub>;
+  <var>b</var><sub>1e</sub>].</p>
+
+  <h3>World to base frame</h3>
+  <p>The goal is a rest point, so the thrust is vertical and
+  <var>R</var><sub>0</sub> = <var>R</var><sub>z</sub>(<var>φ</var>) exactly — there is no
+  roll or pitch to account for, and the whole task reduces to the base frame:</p>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-B2">
+      <var>r</var><sub>e</sub><sup>rel</sup> =
+      <var>R</var><sub>z</sub>(<var>φ</var>)<sup>T</sup>
+      ( <var>p</var><sub>e</sub><sup>world</sup> − <var>x</var><sub>b</sub> ),
+      &nbsp;&nbsp;&nbsp;
+      <var>az</var><sup>rel</sup> = <var>az</var><sup>world</sup> − <var>φ</var>
+      <span class="an">exact only because the endpoint is a REST point</span>
+    </div>
+    <div class="eq-n">(B2)</div>
+  </div>
+
+  <h3>The residual</h3>
+  <div class="eq solve">
+    <div class="eq-body" id="eq-B3">
+      <var>f</var>(<var>q</var>) =
+      [ &nbsp;<var>r</var><sub>0e</sub>(<var>q</var>) − <var>r</var><sub>e</sub><sup>rel</sup>
+      &nbsp;∈ ℝ³ &nbsp;;&nbsp;
+      wrap( <var>az</var><sup>rel</sup> − <var>az</var>(<var>q</var>) ) &nbsp;∈ ℝ¹ ]
+      <span class="an">3 position + 1 heading = 4 equations, 4 unknowns</span>
+    </div>
+    <div class="eq-n">(B3)</div>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-B4">
+      <var>az</var>(<var>q</var>) = atan2( <var>b</var><sub>1e</sub>[1],
+      <var>b</var><sub>1e</sub>[0] ), &nbsp;&nbsp;
+      wrap(<var>d</var>) = atan2( sin <var>d</var>, cos <var>d</var> )
+      <span class="an">horizontal projection of the EE's first axis; wrapping removes the branch cut</span>
+    </div>
+    <div class="eq-n">(B4)</div>
+  </div>
+
+  <p>Both <var>r</var><sub>0e</sub> and <var>R</var><sub>e</sub> come from the <b>same exact
+  chain the controller uses</b> (A1), not a simplified model — so a converged IK solution is
+  consistent with the law's own kinematics by construction.</p>
+
+  <p><b>Only the azimuth is constrained, not the full orientation.</b> The remaining two
+  end-effector orientation degrees of freedom are whatever the position solution happens to
+  produce. That matches the task variable the law tracks, but it does mean an operator cannot
+  command a full EE pose. If <var>b</var><sub>1e</sub> comes out near-vertical the azimuth is
+  undefined and the solve raises rather than returning nonsense.</p>
+</section>
+
+<section class="col">
+  <h2><span class="num">§9</span> Gauss–Newton with a finite-difference Jacobian</h2>
+  <p class="lede">No analytic Jacobian, no damping factor, no joint limits in the loop.</p>
+
+  <div class="algo">
+seeds = [ <b>q_seed</b> (current hold), <b>folded home</b> [0,40°,40°,0], <b>zeros</b> ]
+
+<span class="kw">for each</span> seed:
+    q ← seed
+    <span class="kw">for</span> 80 iterations:
+        f ← f(q)                                  <span class="cm">(B3)</span>
+        <span class="kw">if</span> ‖f‖ &lt; 1e-10: <span class="kw">break</span>
+        <span class="kw">for</span> j = 1…4:
+            J[:,j] ← ( f(q + ε e<sub>j</sub>) − f ) / ε        <span class="cm">ε = 1e-6, forward difference</span>
+        dq ← lstsq( J, −f )                       <span class="cm">SVD pseudo-inverse, rcond=None</span>
+        <span class="kw">if</span> ‖dq‖ &gt; 0.5: dq ← dq · 0.5/‖dq‖        <span class="cm">step cap, radians</span>
+        q ← q + dq
+    keep the lowest residual; stop early <span class="kw">if</span> ‖f‖ &lt; 1e-8
+  </div>
+
+  <p>Two things stand in for damping, and neither is Levenberg–Marquardt: there is no
+  <var>λ</var> and no (<var>J</var><sup>T</sup><var>J</var> + <var>λI</var>)<sup>−1</sup>.
+  Instead, <b>lstsq pseudo-inverts through an SVD</b>, so ill-conditioned directions near a
+  singularity are truncated rather than amplified; and a <b>0.5 rad step cap</b> bounds the
+  Newton step without changing its direction.</p>
+
+  <p>The Jacobian is numerical — four extra forward-kinematics evaluations per iteration. For a
+  4-DOF arm that is cheap enough that nobody derived the analytic form. The three seeds are the
+  only defence against multiple IK branches: there is no global search and no branch
+  enumeration, so a solution reachable only from a fourth basin is simply missed. Seeding from
+  the current hold biases the answer toward the pose nearest where the arm already is.</p>
+
+  <div class="figs">
+    <div><span class="n">5</span><span class="l">Newton steps</span></div>
+    <div><span class="n">3.2e−13</span><span class="l">Round-trip error, rad</span></div>
+    <div><span class="n">1.6e−13</span><span class="l">Residual ‖f‖</span></div>
+    <div><span class="n">4.1</span><span class="l">Solve time, ms</span></div>
+  </div>
+
+  <h3>Acceptance</h3>
+  <p><var>q</var><sub>1</sub> and <var>q</var><sub>4</sub> are wrapped to (−π, π], then three
+  independent tests decide:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Test</th><th>Threshold</th><th>Refusal reported to the operator</th></tr></thead>
+    <tbody>
+      <tr><td>Convergence</td><td class="num m">‖f‖ &lt; 1e-8</td>
+          <td>“IK did not converge (target outside the reachable set?)”</td></tr>
+      <tr><td>Joint limits</td><td class="num m">Q_min ≤ q ≤ Q_max</td>
+          <td>reports <var>q</var> in degrees against both bounds</td></tr>
+      <tr><td>Singularity margin</td><td class="num m">σ_nd ≥ 0.10</td>
+          <td>reports the achieved <var>σ</var><sub>nd</sub></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note check">
+    <h4>Limits are not in the loop — and the failure is returned, not discarded</h4>
+    <p>There is no clamping, no projection, no barrier. The iterate is free to wander outside
+    the joint box and come back, and a converged solution outside the box is <em>reported</em>,
+    never corrected. Same verify-don't-enforce pattern as Part A, with the same consequence: an
+    out-of-range solution is a refusal even where a legal alternative branch may exist.</p>
+    <p><var>q</var><sub>1</sub> comes back <b>even when the solve fails</b>, on purpose — that
+    is what feeds <code>whole_body_governor/target_joints</code>, published on every plan
+    attempt including infeasible ones, so the arm ground station's joint row can show
+    <em>which</em> joint went out and by how much rather than just “infeasible”.</p>
+  </div>
+</section>
+
+<footer>
+  <p>All figures measured on this build: <code>transition_planner.py</code> self-test model
+  (T650 + OM-X, 3.746174 kg, gripper grasp point), single-segment unconstrained degree-16 fit,
+  201-point Picard grid, 801-point verification grid. The refusal study is 60 random goals from
+  the folded home pose <span class="m">[0, 40, 40, 0]°</span> with a fixed seed.</p>
+</footer>
+
+</div>
