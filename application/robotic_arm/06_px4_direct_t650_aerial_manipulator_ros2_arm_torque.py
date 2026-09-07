@@ -148,12 +148,60 @@ ARM_STATE_TOPIC     = "/uav_0/isaacsim_manipulator/joint_states"
 # The name Arm Topic Naming.md reserved for torque mode — written ONLY by
 # IsaacTopicEffortSystem, read ONLY by this plant.
 ARM_EFFORT_TOPIC    = "/uav_0/isaacsim_manipulator/effort_commands"
+
+# --- PLANNED-TRAJECTORY VISUALISATION (2026-09-04, user request) -----------
+# BLUE  = the drone reference path (the system CoM the law tracks) + an arrow
+#         along the vehicle's NOSE.
+# RED   = the end-effector reference path + an arrow along the GRIPPER AXIS,
+#         where the claw actually aims (tilts ~10 deg down at the home pose).
+# Both arrows come from the whole-body planner already converted. It does NOT send the
+# law's own b1_d/b1_de: those are MODEL-frame x-axes and the model frame is the
+# actual one yawed by -90, so drawing them raw put the drone's heading arrow
+# 90 deg off its nose (2026-09-04). The conversion belongs on the whole-body planner's
+# side, where the frame boundary already lives.
+# The data is the whole-body planner's own reference, already in the WORLD frame and
+# already sampled, arriving as a plain Float64MultiArray (12 doubles per
+# sample: x_cd, nose, r_ed, claw). Deliberately not WholeBodyReference: this
+# process has core message packages only, and re-deriving the model<->actual
+# frame conversion here would put a second copy of the whole-body planner's frame
+# boundary somewhere with no business owning one.
+TRAJ_VIZ            = os.environ.get("PEGASUS_TRAJ_VIZ", "1") == "1"
+VIZ_PATH_TOPIC      = "/uav_0/whole_body_planner/viz_path"
+VIZ_POSE_TOPIC      = "/uav_0/whole_body_planner/viz_pose"
+VIZ_BLUE            = (0.20, 0.55, 1.00, 1.0)
+VIZ_RED             = (1.00, 0.25, 0.25, 1.0)
+VIZ_CURVE_WIDTH     = 3.0
+VIZ_ARROW_WIDTH     = 6.0
+VIZ_ARROW_DRONE     = 0.45      # m, heading arrow length on the vehicle
+VIZ_ARROW_EE        = 0.22      # m, shorter so it reads as the smaller body
+VIZ_REDRAW_STEPS    = 8         # debug_draw is cleared and rebuilt each time
 # External-torque freshness: stale after this sim-time age (matches the
 # ExternalTorqueController's command_timeout_s), re-engage only after this
 # many consecutive fresh commands (hysteresis — no chattering at the
 # boundary between the torque stream and the PD hold).
 CMD_FRESH_S   = 0.3
 REARM_FRESH_N = 3
+
+# ── ROBUSTNESS INJECTION: PLANT-SIDE MODEL UNCERTAINTY (2026-09-05) ──────────
+# The controller's model is the shipped one; the PLANT is perturbed, which is
+# what "model uncertainty" means physically and keeps the controller config
+# honest. Set from section 1 of the whole-body sim yaml and forwarded by the
+# launcher. 1.0 / 0.0 = nominal, i.e. every existing rig is bit-identical.
+def _envf(name, default):
+    v = (os.environ.get(name) or "").strip()
+    if not v:
+        return default
+    try:
+        return float(v)
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] {name} must be a number, got '{v}'")
+
+
+PLANT_MASS_SCALE    = _envf("PEGASUS_PLANT_MASS_SCALE", 1.0)
+PLANT_INERTIA_SCALE = _envf("PEGASUS_PLANT_INERTIA_SCALE", 1.0)
+PLANT_COM_SHIFT = np.array([_envf("PEGASUS_PLANT_COM_SHIFT_X", 0.0),
+                            _envf("PEGASUS_PLANT_COM_SHIFT_Y", 0.0),
+                            _envf("PEGASUS_PLANT_COM_SHIFT_Z", 0.0)], float)
 
 T650_BODY_MASS    = float(t650_params.BODY_MASS)
 # Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
@@ -381,6 +429,120 @@ class AmT650WholeBodyArmSim:
             JointState, ARM_STATE_TOPIC, 10)
         self._arm_eff_sub = self._arm_node.create_subscription(
             JointState, ARM_EFFORT_TOPIC, self._on_arm_effort, 10)
+
+        # --- planned-trajectory visualisation -------------------------------
+        self._viz_path = None       # (N, 12) world-frame samples of the plan
+        self._viz_pose = None       # (12,)  the current reference sample
+        self._draw = None
+        self._draw_ok = False
+        if TRAJ_VIZ and not HEADLESS:
+            from std_msgs.msg import Float64MultiArray
+            from rclpy.qos import (DurabilityPolicy, QoSProfile,
+                                   ReliabilityPolicy)
+            # The path is LATCHED on the whole-body planner's side, so match it or a
+            # plan made before Isaac subscribed never arrives.
+            latched = QoSProfile(depth=1,
+                                 reliability=ReliabilityPolicy.RELIABLE,
+                                 durability=DurabilityPolicy.TRANSIENT_LOCAL)
+            self._viz_path_sub = self._arm_node.create_subscription(
+                Float64MultiArray, VIZ_PATH_TOPIC, self._on_viz_path, latched)
+            self._viz_pose_sub = self._arm_node.create_subscription(
+                Float64MultiArray, VIZ_POSE_TOPIC, self._on_viz_pose, 10)
+            self._acquire_debug_draw()
+
+    def _acquire_debug_draw(self):
+        """debug_draw moved namespaces across Isaac versions; try both and
+        enable the extension first in case it is present but not loaded.
+        Degrades to no drawing rather than taking the sim down with it."""
+        import importlib
+        try:
+            from omni.isaac.core.utils.extensions import enable_extension
+        except Exception:
+            enable_extension = None
+        last = None
+        for ext in ("omni.isaac.debug_draw", "isaacsim.util.debug_draw"):
+            try:
+                if enable_extension is not None:
+                    try:
+                        enable_extension(ext)
+                    except Exception:
+                        pass
+                self._draw = importlib.import_module(
+                    ext + "._debug_draw").acquire_debug_draw_interface()
+                print(f"[AM-T650-WB] trajectory viz: {ext} acquired "
+                      f"(BLUE = drone, RED = end-effector)", flush=True)
+                return
+            except Exception as exc:
+                last = exc
+        print(f"[AM-T650-WB] trajectory viz: no debug_draw module — "
+              f"curves off ({last})", flush=True)
+
+    def _on_viz_path(self, msg):
+        d = np.asarray(msg.data, float)
+        self._viz_path = (d.reshape(-1, 12)
+                          if d.size >= 12 and d.size % 12 == 0 else None)
+
+    def _on_viz_pose(self, msg):
+        d = np.asarray(msg.data, float)
+        self._viz_pose = d if d.size == 12 else None
+
+    @staticmethod
+    def _arrow_lines(p, direction, length, starts, ends):
+        """Shaft + two head strokes for one arrow."""
+        d = np.asarray(direction, float)
+        n = float(np.linalg.norm(d))
+        if not np.isfinite(n) or n < 1e-9:
+            return
+        u = d / n
+        p = np.asarray(p, float)
+        tip = p + length * u
+        # any axis not parallel to u, so the head has a plane to open in
+        ref = np.array([0.0, 0.0, 1.0]) if abs(u[2]) < 0.9 else \
+            np.array([1.0, 0.0, 0.0])
+        perp = np.cross(u, ref)
+        perp /= (np.linalg.norm(perp) + 1e-12)
+        back = tip - 0.30 * length * u
+        starts.append(tuple(p))
+        ends.append(tuple(tip))
+        for side in (+1.0, -1.0):
+            starts.append(tuple(tip))
+            ends.append(tuple(back + side * 0.15 * length * perp))
+
+    def _draw_trajectory(self):
+        """Redraw both curves and both heading arrows. debug_draw is cleared
+        and rebuilt wholesale, so everything on screen is drawn here."""
+        if self._draw is None:
+            return
+        starts, ends, colors, widths = [], [], [], []
+        path = self._viz_path
+        if path is not None and len(path) > 1:
+            for col, o in ((VIZ_BLUE, 0), (VIZ_RED, 6)):
+                pts = path[:, o:o + 3]
+                starts.extend(tuple(v) for v in pts[:-1])
+                ends.extend(tuple(v) for v in pts[1:])
+                colors.extend([col] * (len(pts) - 1))
+                widths.extend([VIZ_CURVE_WIDTH] * (len(pts) - 1))
+        pose = self._viz_pose
+        if pose is not None:
+            for col, o, ln in ((VIZ_BLUE, 0, VIZ_ARROW_DRONE),
+                               (VIZ_RED, 6, VIZ_ARROW_EE)):
+                n0 = len(starts)
+                self._arrow_lines(pose[o:o + 3], pose[o + 3:o + 6], ln,
+                                  starts, ends)
+                added = len(starts) - n0
+                colors.extend([col] * added)
+                widths.extend([VIZ_ARROW_WIDTH] * added)
+        try:
+            self._draw.clear_lines()
+            if starts:
+                self._draw.draw_lines(starts, ends, colors, widths)
+                if not self._draw_ok:
+                    self._draw_ok = True
+                    print(f"[AM-T650-WB] trajectory viz: first draw "
+                          f"({len(starts)} segments)", flush=True)
+        except Exception as exc:
+            print(f"[AM-T650-WB] trajectory viz disabled: {exc}", flush=True)
+            self._draw = None
         print(f"[AM-T650-WB] arm ROS2 bridge up: states -> {ARM_STATE_TOPIC}, "
               f"efforts <- {ARM_EFFORT_TOPIC} (names {ARM_ROS_JOINT_NAMES})",
               flush=True)
@@ -575,11 +737,39 @@ class AmT650WholeBodyArmSim:
         I_old = (np.array(I_attr.Get(), float)
                  if I_attr and I_attr.HasValue() else None)
 
-        mass_api.CreateMassAttr().Set(T650_BODY_MASS)
+        # ROBUSTNESS INJECTION. The PLANT is perturbed; the controller's model is
+        # not. self._body_dm / _body_dI are deliberately computed from the
+        # NOMINAL values, so 06's own in-process model (the arm-hold gravity
+        # comp) keeps believing the nominal plant — the mismatch is the point.
+        # PLANT_MASS_SCALE scales the VEHICLE TOTAL, not the body: the arm and
+        # rotor links keep their authored masses, so the body carries the whole
+        # delta. Scaling the body directly would have meant only +7.9% total at
+        # a nominal +10%, and the report would have said 10% while the plant
+        # flew 7.9.
+        total_nominal = T650_BODY_MASS + m_rest
+        mass_plant = total_nominal * PLANT_MASS_SCALE - m_rest
+        inertia_plant = T650_BODY_INERTIA * PLANT_INERTIA_SCALE
+
+        mass_api.CreateMassAttr().Set(mass_plant)
         self._body_dm = T650_BODY_MASS - m_old
         # Authors diagonalInertia + principalAxes, the only representation USD/PhysX has —
         # a straight diagonalInertia write would silently drop the Ixy product.
-        moments, quat = author_inertia_tensor(mass_api, T650_BODY_INERTIA)
+        moments, quat = author_inertia_tensor(mass_api, inertia_plant)
+        if np.any(PLANT_COM_SHIFT):
+            com_attr = mass_api.CreateCenterOfMassAttr()
+            com_old = np.array(com_attr.Get(), float) if com_attr.HasValue() \
+                else np.zeros(3)
+            com_new = com_old + PLANT_COM_SHIFT
+            com_attr.Set(Gf.Vec3f(*com_new.astype(float)))
+            print(f"[AM-T650-WB] INJECTION body CoM {com_old.round(5)} -> "
+                  f"{com_new.round(5)} m (shift {PLANT_COM_SHIFT.round(5)})",
+                  flush=True)
+        if PLANT_MASS_SCALE != 1.0 or PLANT_INERTIA_SCALE != 1.0:
+            print(f"[AM-T650-WB] INJECTION vehicle TOTAL mass x{PLANT_MASS_SCALE:.4f} "
+                  f"({total_nominal:.6f} -> {total_nominal * PLANT_MASS_SCALE:.6f} kg; "
+                  f"body {T650_BODY_MASS:.6f} -> {mass_plant:.6f}), body inertia "
+                  f"x{PLANT_INERTIA_SCALE:.4f}. The controller still believes "
+                  f"the nominal model.", flush=True)
         if I_old is not None:
             self._body_dI = T650_BODY_INERTIA - np.diag(I_old)
             print(f"[AM-T650-WB] body inertia diag {I_old.round(6)} -> "
@@ -594,7 +784,11 @@ class AmT650WholeBodyArmSim:
         print(f"[AM-T650-WB] inertia round-trip off the stage: max err {err:.2e} kg·m²",
               flush=True)
 
+        # The consistency gate compares the NOMINAL total against what the
+        # controller believes. A deliberate mass injection must not trip it —
+        # that mismatch is the experiment, not a stale config.
         total_mass = T650_BODY_MASS + m_rest
+        total_mass_plant = mass_plant + m_rest
         if EXPECTED_TOTAL_MASS:
             expected_total_mass = float(EXPECTED_TOTAL_MASS)
             if not math.isclose(total_mass, expected_total_mass, rel_tol=0.0,
@@ -610,7 +804,11 @@ class AmT650WholeBodyArmSim:
               f"{T650_BODY_MASS:.6f} kg (delta {self._body_dm:+.6f}); "
               f"other bodies {m_rest:.6f} kg; "
               f"TOTAL {m_old + m_rest:.6f} -> {total_mass:.6f} kg "
-              f"(weight {total_mass * 9.81:.2f} N). "
+              f"(weight {total_mass * 9.81:.2f} N)"
+              + (f"; PLANT FLIES {total_mass_plant:.6f} kg "
+                 f"(weight {total_mass_plant * 9.81:.2f} N) under the "
+                 f"x{PLANT_MASS_SCALE:.4f} injection" if PLANT_MASS_SCALE != 1.0 else "")
+              + ". "
               f"vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. "
               f"The .usda is untouched.", flush=True)
 
@@ -764,6 +962,11 @@ class AmT650WholeBodyArmSim:
                and (not STEP_LIMIT or steps < STEP_LIMIT)):
             self.world.step(render=not HEADLESS)
             steps += 1
+            # Drawn from the RENDER loop, not the physics callback: the lines
+            # only need to keep up with the eye, and clear+rebuild at 250 Hz
+            # would be pure waste.
+            if self._draw is not None and steps % VIZ_REDRAW_STEPS == 0:
+                self._draw_trajectory()
         carb.log_warn("[AM-T650-WB] Simulation App is closing.")
         try:
             self._arm_node.destroy_node()

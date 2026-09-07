@@ -286,7 +286,7 @@ def _arm_kin(q, params):
     r0e = O[n]
     # Base link CoM: at the body origin (contributing zero) unless params
     # carries a measured "base_com" — the same key controller.dynamics() and
-    # the C++ wb_base_com_* honour, so planner, governor and law cannot end up
+    # the C++ wb_base_com_* honour, so planner, whole-body planner and law cannot end up
     # describing different vehicles.
     base_com = np.asarray(params.get("base_com", np.zeros(3)), dtype=float)
     r0c = (mi[0] * base_com

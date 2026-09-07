@@ -51,3 +51,10 @@ log/
 # whose small demo USD files stay tracked in git as-is.
 extensions/fsc_aerial_manipulation/**/assets/
 application/robotic_arm/assets/
+# Recorded flight data from the whole-body simulation campaigns. One .npz is a
+# full run's odometry + 89-channel control debug at 250 Hz, so a campaign
+# directory is 50-125 MB and the four of them plus results/ come to ~355 MB.
+# The FIGURES, LOGS and analysis notes beside them ARE tracked (~4.5 MB total)
+# because they are what the write-ups cite; the raw arrays are regenerable by
+# re-flying, and are distributed out-of-band like the USD assets above.
+*.npz

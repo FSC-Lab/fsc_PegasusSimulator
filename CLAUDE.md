@@ -954,13 +954,378 @@ fault. Full protocol and numbers: Command.md §7.14.2.
 `5.38192065e-05` against the unchanged `4.679931e-05` plant and `10.0265 1/s` motor pole.
 The hover-only tune uses k_v=12, k_w=1.5, EE Ky/Dy=2/4, GMO Ko=0.5/0.1/0.1, and an optional
 joint-posture PID (Kp/Kd/Ki=2/0.25/0.05, integral torque clamp 0.8 N.m) to select the
-controller-smoothed home branch without the instability of the rejected Kp=8 cases. Two
+controller-smoothed home branch without the instability of the rejected Kp=8 cases
+(**that PID no longer exists — DELETED 2026-09-05, see the entry below**). Two
 independent clean 90 s runs had zero saturation, <=1.55 deg tilt, 2.0-3.3 mm steady CoM RMS,
 u1=42.262 N and d_hat_z=-5.512 N. Final arm q was within 2.8 deg of [0,40,40,0] and still
 converging. This validates constant hover only, not position or EE steps. Restore
 `4.679931e-05` for matched-model or hardware-oriented use. Details: Command.md §7.14.2.
 
-**WHOLE-BODY REFERENCE GOVERNOR — PAPER-FAITHFUL DIRECT COMMANDING (2026-08-23, user
+**ONE ARM REFERENCE, ONE PLANNER PER MODE — THE TORQUE CONTROLLER NOW ONLY
+TRACKS (2026-09-05, user design).** The min-jerk generator lived inside
+`TorqueControllerBase`, so in whole-body DIRECT it ran IN SERIES with the
+whole-body planner's B-spline plan: the whole-body planner poked `target_joint_setpoint` and the
+controller re-profiled it. The 0902/0903 flights measured the arm REPLAYING the
+whole-body planner's move **3-4 s late** with endpoints agreeing exactly. Fixed
+structurally, all new/additive:
+- **NEW node `arm_planner`** (`open_manipulator_x_custom_controller/
+  src/arm_planner_node.cpp`, ~320 lines, C++). Owns the arm reference
+  in **SAFETY only** — including the ground station's
+  `<ctrl>/target_joint_setpoint` + `<ctrl>/go_home` interface at the SAME names,
+  because the controller no longer advertises them — runs the SAME min-jerk
+  profile (moved verbatim, so the tuned motion is preserved), and streams
+  `<ctrl>/reference_joint_trajectory` (`trajectory_msgs/JointTrajectory`) at
+  100 Hz. In DIRECT it goes **SILENT** and REFUSES targets/go_home rather than
+  queueing them; it also tracks the measured joints while silent, so a SAFETY
+  revert resumes from where the arm IS, not a stale goal.
+- **`whole_body_planner`** publishes the same message on the same
+  topic in DIRECT, every stream tick (100 Hz, was a separate 20 Hz
+  `arm_sync_rate` timer — retired), carrying the plan's own `q_d`/`qdot_d`.
+  The `target_joint_setpoint` poke and the one-shot `_publish_arm_sync` sites
+  are gone: ONE publish site.
+- **`TorqueControllerBase`** gained `external_reference_topic` (default `""`)
+  and `external_reference_timeout` (0.2 s). Non-empty = PURE TRACKING: the
+  internal generator is switched off AT THE INTERFACE (`~/target_joint_setpoint`,
+  `~/sine_reference_trajectory`, `~/go_home` are NOT advertised), no activation
+  homing (homing is a plan), and a stale stream **FREEZES** the last reference
+  rather than inventing a fallback trajectory. **The empty default keeps
+  `ComputedTorqueController`, `PositionController` and every bench/hardware
+  workflow byte-identical** — only `torque_controller_isaac_aerial.yaml` opts in.
+- **The reference FANS OUT, it does not loop through the controller.** The WB
+  node subscribes `reference_joint_trajectory` directly (type changed
+  JointState -> JointTrajectory, `wb_arm_reference_topic` repointed, builder
+  setter renamed `setSmoothedReference` -> `setPlannerReference`). It used to
+  read the controller's `smoothed_reference_joint_trajectory` — a CONTROLLER
+  emitting a reference and the flight node consuming a controller's output, the
+  wrong direction, and what hid the second generator. That topic keeps its name
+  and type and is now TELEMETRY ONLY: `effort` = the commanded torque the arm GS
+  plots, position/velocity = an echo. Measured live: reference 2 pub / 2 sub,
+  echo 1 pub / 1 sub (the plot). `comparison_driver.py`'s wb path publishes
+  JointTrajectory now too.
+Loopback-validated (`open_manipulator_x_custom_controller/test/
+test_arm_planner.py`, fake joint states + fake mode, no Isaac):
+9/9 — 100 Hz in SAFETY, seeds/homes on the measured pose, tracks a GS joint
+target (max inter-sample step 3.75 mrad), 0 messages in DIRECT, target and
+go_home both refused there, resumes on the measured pose after revert. The
+whole-body planner's own three tests pass, with `arm syncs 550` against 546 reference
+samples (the full stream rate, was 20 Hz). **NOT yet flown.**
+Topic contract: `docs/docs_aerial_manipulator/Arm Topic Naming.md`.
+
+**THE JOINT-POSTURE PID IS LOAD-BEARING — REMOVED, FLOWN, REVERTED (2026-09-05,
+user request; the term is not in the published law but this rig needs it).**
+`wb_controller.cpp` adds a clamped joint-space PID on `(q_d - q, qdot_d - qdot)`
+to `u3`. It was deleted (term, `WbGains` fields, all five
+`wb_posture_kp/_kd/_ki/_i_max/_ramp_s`, keys in all three whole-body yamls),
+flown, and PUT BACK. **Seven 75-90 s DIRECT soaks on the 7.14.1 sequence, one
+variable at a time:** +15% kf WITH the PID = stable (CoM 2.9 mm, EE 6.5 mm,
+tilt 0.04 deg, |e_R| 0.066, peak tau 0.74, 0% clamp); +15% WITHOUT = DIVERGES,
+abort 32 s, **51% of samples on the 3.0 N.m joint clamp**, tilt 32 deg, CoM
+error 1.49 m; +7.5% WITHOUT diverges (abort 15 s); **MATCHED kf WITHOUT is
+1 PASS IN 3** (75 s, then abort 17 s, then abort 3.7 s — same config all three,
+the 2026-08-10 run-to-run-scatter lesson; a single completed run proves
+nothing, and reading the first one alone briefly shipped an unstable config).
+**MECHANISM** (first 5 s without it): the arm leaves home at once — q2 spans
+-10.8..50.0 deg, q3 -77.6..50.0, hits the +50 stop at t = 0.8 s and crosses
+into NEGATIVE q2/q3, this asset's **elbow-singular branch**; J_3y degrades, the
+DLS solve demands torque the servos cannot give, all four rail, and the
+reaction takes the base. With the PID the same window keeps q2 31-43, q3 39-43.
+**THE EE TASK CANNOT SUBSTITUTE AND STIFFENING IT IS WORSE**: at `K_y` = 2 a
+200 mm task error is 0.4 N of restoring force, and that softening happened in
+the SAME +15% campaign that added the PID — **the two are a compensating pair,
+only ever validated together** (every `controller.py` config that flies with no
+posture anchor uses `K_y` 8-200) — but undoing both, `K_y` 2->20 / `D_y` 4->9,
+was the WORST of the seven runs, abort at 3.8 s / 36 deg tilt. A stiff task on
+this laggy plant is its own instability. **TREE STATE: term restored, +15%
+injection restored, both yamls carry a DO-NOT-DELETE note at `wb_dls_lambda`
+and the sim yaml's `alloc_thrust_coeff` block records that the two must move
+together.** Parity 4/4 and WbReferenceBuilderTest 2/2 both before and after, so
+the C++/Python law agreement is unaffected either way. What removal actually
+needs is a RETUNE with mismatch margin (M_r_d, GMO bandwidths, K_y/D_y, a
+gentler DIRECT entry), not a one-line edit. Declared-deviation note for papers:
+in steady flight the term is 0.004 of 0.77 N.m (0.5%) at the flown 0.11 deg arm
+error, added straight to `u3` with NO null-space projection (there is none —
+the 4-DOF task has isolated but non-unique solutions, `[0,40,40,0]` and
+`[0,128.7,-108.4,0]` deg agreeing on the EE pose to 4.7e-16). Campaign driver +
+per-run metrics: `docs/docs_aerial_manipulator/posture_removal_20260905/`;
+tables: Command.md 7.14.6.
+
+**L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER — IMPLEMENTED, PARITY-LOCKED AND
+SIM-VALIDATED (2026-09-06, user request).** The working note "Decompose the lumped
+disturbances into end-effector and orthogonal components" (2026-08-27, in the manuscript
+repo's `disturbance observer design/`) is implemented as an ALTERNATIVE ESTIMATOR for the
+whole-body law and flown against the GMO on the same plant. Everything is NEW FILES; the
+GMO path is byte-identical and `WbParityTest` passes 4/4 before and after.
+- **What it replaces.** The GMO's `d_hat = K_o (p - p_hat)` closed on its own predictor
+  IS `K_o/(s+K_o)` applied to the true residual, so ONE gain buys both estimate accuracy
+  and loop robustness — which is why this rig's `K_o` is pinned at 0.5/0.1/0.1 (1.0 on the
+  body channels crashed it). The L1 law splits them: a DEADBEAT piecewise-constant
+  inversion whose accuracy is the sample period alone, then an explicit
+  `C(s) = omega_c/(s+omega_c)` that alone decides robustness. It also ATTRIBUTES the task
+  force: a momentum residual measures only `d + d_e`, so the GMO's lumped
+  `(J_y^#)^T d_hat` hands `u3` the internal disturbance as a PHANTOM CONTACT FORCE, and
+  the repair is the four directions no wrench can reach (`N(J_e)`, the arm self-motions,
+  where `Z_0^T J_e^T = 0` exactly — no contact flag anywhere).
+- **Where it lives.** `wb_l1_observer.{hpp,cpp}` in the whole-body fork + the Python
+  reference `extensions/.../utils_controller/l1_observer.py` (run it for its self-test);
+  selected by `wb_l1_observer_type` (default `"gmo"`, so every existing yaml is
+  unaffected); second executable `autopilot_whole_body_l1_direct_actuation_node` over the
+  SAME client — the law is identical, only the update rule changes, so a fork would have
+  been a copy that could drift. **Shared ROS namespace on purpose**: the drone GS, the
+  whole-body planner and the stop scripts need no changes, and the two rigs are mutually
+  exclusive anyway; `vehicle_name` tells them apart. Pegasus launcher
+  `scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_direct_actuation_sitl.sh`,
+  stack `scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh`,
+  yaml `..._whole_body_l1_..._t650_sim.yaml` = its GMO twin plus one block (DIFF THEM
+  before every campaign). Every stale-node guard in both repos gained the new name. The
+  comparison harness gained a third case `wb_l1`.
+- **TWO PLACES THE NOTE LEAVES A CHOICE, both measured, both changed the implementation.**
+  (a) **`Phi` is not the deadbeat gain of the predictor that can actually be run.** The
+  `(h+u)` term must be plain Euler (the plant integrates it exactly; any other weight
+  leaves a `(weight-dt)(h+u)` bias, ~0.15 N on z at hover), so the exact gain is
+  `Phi_d = dt(I-e^{A_s Ts})(I-e^{A_s dt})^-1`, which equals the note's `Phi` in the
+  fine-sub-step limit and `dt` at one-tick adaptation. Using `Phi` measures a REAL DC
+  error of `a*Ts`: 0.8% at `A_s=2`, **6.9% at `A_s=20`**; with `Phi_d` it is 2.5e-13.
+  **Corollary: at one-tick adaptation `A_s` drops out of the estimate entirely** — it only
+  weights the average within an interval, so `wb_l1_a_*` and `wb_l1_adapt_period_s` are
+  ONE trade, not two, and `A_s` is inert in noise-free simulation.
+  (b) **The note's minimum-norm `L_c = B_a G^+` makes the phantom force WORSE on this
+  plant.** The collective's coupling into the wrench-free rows is
+  `a_3 = [0, -0.002, -0.103, -0.001]` against the joints' exact `I_4`, so minimum norm
+  compares NEWTONS with NEWTON-METRES and books a 5.5 N thrust deficit as joint torque:
+  measured 0.04 N of 5.5 found and the attributed `|F_hat_y|` **4.5x worse** than not
+  decomposing (0.89 -> 4.00). Generalized to `L_c = B_a W G^T (G W G^T)^-1` with a
+  diagonal prior variance — every property the note's proof uses survives for ANY `W > 0`
+  (`Z_0^T L_c = I_4`, range still in `R(B_a)` so the lateral rows stay frozen, Lyapunov in
+  the `W^-1` metric). `W = 1,1,1` is the note's own choice and the CODE DEFAULT; the yaml
+  ships `(100, 0.25, 0.0025)` and finds 4.90 N of 5.5.
+  (c) **The note's persistency-of-excitation remedy is useless here**, measured: a
+  vigorous 60 s arm sweep gives an averaged projector with eigenvalues down to 4e-4, and
+  **400 s of sweeping moved the collective estimate from -0.04 to -0.30 N** of a true
+  -5.5. The metric in (b) is what actually fixes it; `omega_i` changes only how fast the
+  fixed point is reached, not where (identical from 0.2 to 10 rad/s).
+- **PARITY-LOCKED.** `generate_wb_l1_truth.py` -> `wb_l1_truth_t650.json` (5 gain sets x
+  40 steps, covering N=1 and N=5 adaptation, unequal `A_s`, both `L_c` metrics, decompose
+  on/off, and a set whose bounds clamp); `WbL1ParityTest` holds the C++ to **1e-8**, the
+  same gate as the law's own. Also verified: `J_e Z_0 = 0` to 4e-17, `rank J_e = 6`
+  everywhere, `J_y = S_e Jbar_e` to 3e-16, and `w_hat` IDENTICAL to 2.7e-15 with no
+  contact wrench, a 2.6 N one and a 26 N one — the property that makes the scheme
+  contact-flag-free.
+- **FLOWN, 4 x 110 s DIRECT, none aborted** (`docs/docs_aerial_manipulator/
+  l1_observer_20260906/`, harness `application/robotic_arm/utils/wb_l1_*`). The `_sim`
+  plant carries all three factors the user asked about: **thrust loss** (+15% allocator
+  kf), **model uncertainty** (mass and inertia x1.10, CoM shift 10/10/5 mm) and **motor
+  delay** (rotor lag lambda = 10.0265 1/s) — together 10.8 N the observer must find, and
+  `u1` = 47.559 N / `d_hat_z` = -10.809 N are identical to 3 decimals across runs, which
+  is the check that the plant really was the same in each.
+
+  | omega_c | rise90 | entry sag | recovery | steady CoM | \|e_R\| | tilt pp | **phantom F_y** |
+  |---|---|---|---|---|---|---|---|
+  | GMO K_o .5/.1/.1 | 2.86 s | 463 mm | 49.3 s | 4.59 mm | .0885 | 0.108 | **1.884 N** |
+  | L1, = K_o | 3.28 s | 428 mm | 49.2 s | 3.17 mm | .0934 | 0.337 | **0.065 N** |
+  | **L1, 2/.5/.5** | 1.38 s | 187 mm | 21.0 s | **1.65 mm** | .0059 | 0.564 | **0.055 N** |
+  | L1, 6/2/1 | 0.73 s | 69 mm | never | 52.0 mm | .2615 | 22.24 | 2.045 N |
+
+  **At matched bandwidth the two are indistinguishable and must be** (both reach `f_d`
+  and `u_2` through the same first-order filter) — that is the sanity check. **The
+  phantom force is a separate axis and collapses 29x at zero cost**, and three numbers
+  show it is the mechanism: `w_hat_thrust` = -10.753 of -10.81 (the null channel booked
+  **99.5%** of the residual to the COLLECTIVE), `w_e_hat` = 0.074 N (correct — nothing is
+  touching the arm), and `sigma(d_hat^c)` 0.657 N vs `sigma(d_hat_f)` 0.0021 N (the
+  deadbeat estimate really is a noisy 250 Hz momentum difference and the filter really
+  does remove it). **omega_c = 2/0.5/0.5 is the shipped winner**, 4-5x the GMO's ceiling,
+  better on every metric with zero saturation. **6/2/1 is past the limit** and fails as
+  predicted: best ENTRY of the four, then a 22 deg p-p limit cycle with `d_hat_z` swinging
+  -5..-20 N onto its own bound and 10.4% of samples on the joint clamp — 6 rad/s sits on
+  the 10.03 rad/s rotor-lag pole.
+- **NOT covered, state it rather than imply it:** no contact in any flight (so the TRUE
+  wrench estimate is untested — `w_e_hat` ~ 0 when the answer is 0 is necessary, not
+  sufficient); no arm motion; `sim_arm_backemf_enable` false, so **`lc_var_q = 0.0025` is
+  the one shipped number the campaign did not test** and it must be RAISED once the droop
+  is on; ONE flight per configuration, which near a stability boundary on this rig proves
+  nothing (the 2026-08-10 scatter lesson); and the 6/2/1 run raised all three channel
+  groups together, so which one binds is unresolved. NOT flown on hardware.
+- **THE RIG'S STANDARD TEST ALSO FLIES (2026-09-06, user request): 1 m hover, x/y/yaw
+  steps, compatible trajectory.** Five attempts, four completed; run E flew every leg.
+  Steps x/y ±0.5 m peak 203-268 mm and settle 50-63 mm; yaw ±30 deg peaks 30/9.4 mm and
+  settles 6.7/0.9 mm; **the COMPATIBLE-TRAJECTORY leg (EE −6 cm) is the best-tracked
+  motion in the mission — 9.8 mm peak, 0.74 mm settled, 0.17 deg tilt** while the arm
+  moves and the base counter-moves, which is the expected ordering because it is the only
+  leg whose reference is dynamically consistent by construction. Zero saturation,
+  `u1`/`d_hat_z`/`w_hat_thrust` 47.57/−10.814/−10.738 N across runs C/D/E to 3 decimals.
+  The ~55 mm settled translation residual is the structural `T*e_R/K_p` offset, not a
+  tune. **One attempt in five aborted 8.4 s after DIRECT entry** (growing lateral
+  oscillation, arm on the 3.0 N.m clamp 21.4% of samples) — runs B-E flew the same 1 m,
+  so it is the run-to-run scatter 7.14.6 records, NOT the observer or the altitude.
+- **A STEP IS NOT A REFERENCE PUBLISH in whole-body DIRECT**, and two traps in driving the
+  handshake both produce a plausible log with the steps silently not happening (each cost
+  a flight): (a) the planner's unchanged-target guard is inactive while it is HOLDing, so
+  a full-rate `position_controller/reference` stream drags it back out of HOLD every tick
+  — publish on CHANGE in DIRECT; (b) its status carries suffixes (`PLANNED T=5.2s`,
+  `INFEASIBLE: <reason>`), so a state check must take the FIRST TOKEN, splitting on
+  whitespace AND ':' — stripping only the colon never matches `PLANNED` and times every
+  leg out while the planner reports a good plan. Also require `EXECUTING` before `HOLD`
+  counts as completion, since HOLD is where a leg starts.
+- **THE EE WORKSPACE AT THE FOLDED HOME IS SMALL AND LOPSIDED, and both obvious step
+  directions are outside it** (measured, each refused in ~0.1 s with a readable reason):
+  reaching OUT 0.15 m gives `IK did not converge` — the gripper already sits 0.26 m from
+  the body origin, its own reach (0.16 m wrist at beta = 80 deg + the 0.108 m gripper
+  offset); retracting IN 0.05 m gives `joint limits: q3 = 63.0 vs 50` because retracting
+  FOLDS it further and q3 is already at 40. **DOWN is the direction with room** (it
+  unfolds): 0.06 m down solves to q = [0, 27.1, 38.8, 0] deg and flies. Map it with
+  `transition_planner.ik_position_azimuth` before guessing; the planner publishes the
+  true reachable set on `whole_body_planner/workspace_rz`.
+- Traps found while building the harness: **`vehicle_status` never publishes on this PX4
+  v1.16 / px4_msgs release/1.16 pairing — it is `vehicle_status_v1`**, and subscribing to
+  the un-suffixed name strands a driver in its WAIT phase with no error at all; the
+  system `python3` has numpy 2.2.6 in `~/.local` against an apt matplotlib built for
+  numpy 1.x, so plotting needs `PYTHONNOUSERSITE=1`; and **`pkill -f "[w]b_..."` still
+  kills your own shell if the SAME command line later mentions the target in plain text**
+  — the bracket trick protects the pattern, not the rest of the line.
+  Full write-up: `docs/docs_aerial_manipulator/L1 Augmented Disturbance Observer.md`;
+  commands: Command.md 7.15.
+
+**THE L1 OBSERVER'S FOLLOW-UP CAMPAIGN — LAW AUDIT, POSTURE, BACK-EMF
+(2026-09-06, user request).** Three questions, 12 flights, data
+`docs/docs_aerial_manipulator/l1_final_20260906/`, tables Command.md 7.15.7,
+write-up `L1 Augmented Disturbance Observer.md` 6.
+- **THE LAW CARRIES EXACTLY ONE TERM THE MANUSCRIPT DOES NOT**, audited line by
+  line: the clamped joint-space PID on `u3`. The DLS regularisation and the
+  saturation-consistent rebuild are numerics and actuator bookkeeping, not force
+  terms. The node now PRINTS which way each run is configured (`LAW CHECK` in
+  the controller pane, green when the four `wb_posture_*` are 0) — a silent
+  pass is indistinguishable from a check that stopped matching.
+- **REMOVING IT ON THE L1 PATH FAILS TOO: 2 aborts of 2** (7.7 s / 8.0 s,
+  32-47% of samples on the 3.0 N.m joint clamp), so the L1's attribution does
+  NOT make the posture anchor unnecessary — and WHY is the useful part.
+  **The two observers fail for different reasons and only one is an observer
+  problem.** The GMO's is attribution (lumped residual arrives in `u3` as a
+  phantom contact force, measured 1.35-1.89 N; the task yields). The L1 fixes
+  exactly that — phantom force **0.044-0.132 N, 13-40x smaller** — and still
+  cannot select an IK BRANCH, because nothing in a task-space law can: the
+  4-DOF EE task has isolated but non-unique solutions. Under the entry
+  transient q3 hits its +50 stop at t = 1 s then crosses into NEGATIVE q3, the
+  elbow-singular branch, q1 rails at -35, `J_3y` degrades and the DLS solve
+  demands torque the servos cannot give. **Keep it, declare it** (0.5% of `u3`
+  in steady flight); the real fix is an explicit branch guard, not a gain.
+- **THE ARM'S BACK-EMF DROOP DEFEATS BOTH OBSERVERS, 4 runs of 4.** With
+  `sim_arm_backemf_enable: true` (`b = [0, 0.9337, 1.4934, 0]` N.m per rad/s)
+  the GMO aborts at 9.7/10.8 s and the L1 at 5.8/5.8 s; with it off both fly
+  the full 8-leg mission twice each. Repeats agree to a few percent — not
+  scatter. **Neither should be expected to compensate it**: (a) `-b*qdot` is a
+  GAIN error, a feedback path, and `b/I ~ 75 1/s` against the observers' arm
+  channel at 0.5 (L1) / 0.1 (GMO) rad/s is 150-750x too fast; (b) the damage
+  lands on the BASE, because `tau = T^T u` makes the rotors pre-compensate the
+  arm reaction `N1^T u3` that never arrives; (c) it closes a POSITIVE LOOP
+  around the (normal, large) DIRECT-entry transient — measured droop 0.09 N.m
+  at t = 1 s with tilt already 5.5 deg, then **1.70 N.m** by t = 7 s. The two
+  fail differently, which is diagnostic: the GMO takes 10 s and RAILS the clamp
+  (4.9-9.2%) before drifting 2.1-2.4 m; the L1 takes 5.8 s, reaches a HIGHER
+  tilt (31-32 deg) and never touches the clamp — its faster arm channel
+  responds sooner and drives the base harder. NOT concluded: that the law
+  cannot fly a PWM-mode arm. Untried: a gentler DIRECT entry, an explicit
+  `+b*qdot` arm feedforward (one line, `b` identified to +-5%), and on hardware
+  the real fix, current-control Mode 0, where `b -> 0` and this model should be
+  DELETED not compensated.
+- **COMPARISON, same plant/mission/driver, ideal arm, 16 s hold per leg**
+  (figure `compare_gmo_l1.png`, scorer `utils/wb_compare_metrics.py`, CoM error
+  mm as peak/rms/settled): step x +-0.5 m GMO 296/96/6.8 and 251/80/5.0 vs L1
+  **193/61/2.6** and **209/66/3.0**; step y GMO 267/86/2.5, 268/85/4.9 vs L1
+  238/76/5.1, 222/70/4.9; yaw +-30 deg indistinguishable (<10 mm either way);
+  **compatible trajectory GMO 64/39/14.7 and 57/33/18.9 vs L1 47/18/2.6 and
+  35/13/1.4** — 2.4-2.9x rms and 6-13x settled, the expected ordering because
+  it is the leg where arm and base move together and a LUMPED estimate is most
+  wrong. **The most reproducible difference is the DIRECT-ENTRY transient**
+  (3 runs each): peak 1273/1273/1305 mm recovering to <50 mm in 37.9/38.6/39.3 s
+  vs **796/800/854 mm in 7.1/7.6/7.7 s** — 1.6x peak, **5x recovery**, the
+  `omega_c`-vs-`K_o` bandwidth split doing what it exists for.
+- **A HOLD-LENGTH TRAP THAT INVERTS THE VERDICT, and it cost a pair of runs.**
+  At the driver's default 6 s hold the L1 scored 65-72 mm "settled" against the
+  GMO's 6-21 mm, i.e. WORSE. Artifact: this rig has a slow, lightly damped
+  position mode, so at 6 s neither has settled and the 2 s average lands at an
+  arbitrary phase. At 16 s the ordering inverts. **Never compare settled errors
+  across runs with different `--hold-between`.**
+- **THE COMPATIBLE-TRAJECTORY LEG NOW MOVES ALL FOUR JOINTS** (user request).
+  Down alone was a pure fold — q1 = q4 = 0 throughout, so the arm-yaw and wrist
+  channels were never exercised. Now lateral 0.08 m + down 0.07 m + 60 deg EE
+  heading (`--ee-lat` / `--ee-yaw`), mapped offline with
+  `transition_planner.ik_position_azimuth` BEFORE flying: q = [17.6, 31.0, 29.8,
+  61.9] deg, every joint moving >=9 deg, sigma_nd 0.297 vs the 0.10 keep-out.
+  **THE LATERAL AXIS IS WORLD Y, NOT X** — measured, one refused leg: the frame
+  adapter's `R0_model = R0_actual*Rz(-90)` puts model +y (ALONG the arm,
+  radially OUT) on world +x, so a world-X lateral step is a reach outward and
+  the planner refuses it in 0.13 s with "IK did not converge". Confirmed live by
+  the driver's own mission anchor print (base [0.26, 0.203, 0.982], EE [0.517,
+  0.204, 0.888] — the arm on world +x at yaw 0). The world-Y SIGN does not
+  matter: the workspace is symmetric across the arm (sigma_nd 0.295 vs 0.297)
+  and 60 deg of heading moves q4 a lot either way.
+- **The joint_state_broadcaster's order on this rig is `[q2, q3, q1, q4]`**, not
+  joint1..4 — at the ground pose it reads (40, 40, 0, 0) for the home
+  [0, 40, 40, 0] deg, and in flight column 2 pins at exactly -35 (q1's stop)
+  while column 3 reaches 87 (only q4 has that range). Mislabelling it makes an
+  elbow excursion look like a wrist one.
+
+**WHOLE-BODY L1 TUNING — TWO PARAMETERS, TWO USER-REPORTED SYMPTOMS FIXED
+(2026-09-06).** 16 flights, data `docs/docs_aerial_manipulator/l1_tune_20260906/`,
+tables Command.md 7.15.8. All three disturbance sources stayed ACTIVE (+15% kf,
+mass/inertia x1.10 + 10/10/5 mm CoM, rotor lag); back-EMF off per the request.
+Changed: `ude_height_threshold` 0.4 -> **0.35**, `wb_ky_psi`/`wb_dy_psi` 1.0 ->
+**0.3**. Nothing else.
+- **THE SLOW SAFETY TAKEOFF IS A UDE GATE SITTING ABOVE THE RESTING HEIGHT.**
+  `sim_plant_mass_scale 1.10` makes the plant 4.120787 kg while the controller
+  keeps `vehicle_mass 3.746170` — the gravity feedforward is **3.67 N short**,
+  only the UDE can supply a constant force error, the gate disabled it below
+  0.40 m, and the vehicle **RESTS at 0.305 m**. Measured: creeps at 0.003 m/s
+  for **22 s**, crosses 0.40, then climbs normally. The bare-T650 deadlock
+  (7.13.3 run C) in slow motion; the yaml comment already warned about it, the
+  value had just never been checked against this rig's resting height. Fixed:
+  0.95 m in **9.2/9.6 s vs 28.2 s**. NOT fixed by correcting the mass — that
+  deletes the disturbance under test.
+  **THE OBVIOUS VALUE IS UNSAFE AND ONE RUN WOULD HAVE SHIPPED IT.** 0.32
+  flies, but across **33 recorded runs the seated peak reaches 0.3338 m** (the
+  arming transient), so 0.32 is crossed while still on the ground in **29 of
+  33** and the UDE would integrate the ground reaction. 0.35 clears it by
+  16 mm, 0 of 33. The gate is on MEASURED altitude and dropping below HOLDS the
+  integral rather than resetting it (`ude_base.cpp:47`), so a bounce costs
+  nothing — only the seated case matters.
+- **THE J1/J4 TORQUE RIPPLE IS THE EE HEADING CHANNEL'S LOOP GAIN.** q1 and q4
+  carry ~0 MEAN torque (q2/q3 hold gravity) but ALL the ripple, ~70% of it in a
+  **3.90 Hz** line; the EE heading task row oscillates at exactly that
+  frequency and heading IS the (q1,q4) pair. **On the FULL mission the shipped
+  gains drove q4 across its entire +-3.0 N.m clamp (6.00 N.m p-p)** — invisible
+  in a hover-only test, because only the trajectory leg's 60 deg heading sweep
+  exercises the channel. At 0.3: **0.062 N.m p-p (96x), peak arm torque
+  3.00 -> 0.85, 0.0% clamped**, and heading tracking IMPROVED (e_psi std
+  1.17e-3 -> 5.6e-4 rad) — a self-excited oscillation, not useful stiffness.
+  **THE RIPPLE IS L1-SPECIFIC AND THE GMO YAML DOES NOT CARRY THIS CHANGE** —
+  measured both ways: the GMO's own q4 ripple is 0.0042 N.m std at `ky/dy_psi`
+  1.0 against the L1's 0.4833, and 0.3 moves it to 0.0046, i.e. nothing. What
+  differs is what feeds that task row: the GMO's `F_hat_y` is the smooth lumped
+  `(J_y^#)^T d_hat` off a heavily filtered estimate, the L1's is the attributed
+  `Lam_y S_e Lam_e^-1 w_hat_e` rebuilt every tick from a DEADBEAT one, and the
+  heading row is the least-filtered path it takes. **`ude_height_threshold`
+  0.35 IS mirrored into the GMO yaml** — it helps both (GMO takeoff
+  29.7 -> 15.5 s), since the mass mismatch and resting height are shared.
+  **NOT an anomalous `M_Y_psi`**: reading 0.05 against x/y/z's 1.0 as a 20x
+  amplification is a UNITS ERROR (kg.m^2 vs kg); the real per-row amplification
+  is `Lam_y*M_y^-1 = [0.485, 1.320, 0.778, 0.404]` and the heading row is
+  unremarkable. Four routes all work (`my_psi` 0.3 or 1.0, `dls_lambda` 0.6,
+  `ky/dy_psi` 0.3); the last measured best on the trajectory legs and tilt.
+- **OBSERVER BANDWIDTH IS NOT THE LEVER, AND IT IS THE ROTATIONAL CHANNEL THAT
+  BINDS.** The earlier sweep moved all three `omega_c` groups at once and left
+  "which one binds" open. One group at a time: rotational 0.5 -> 1.5 degrades
+  badly (tail 2.7 -> 279 mm, tilt 34 deg, 4.5% clamped) and 0.5 -> 3.0 **aborts
+  in 12 s**; translational 2 -> 4 and arm 0.5 -> 1.5 change essentially
+  nothing. So 0.5 is already the rotational ceiling, and **the DIRECT-entry
+  transient is not observer-limited** — no `omega_c` will fix it. It is the
+  SAFETY->DIRECT handover (SAFETY's UDE has the ~10.8 N, DIRECT's observer
+  restarts at zero); closing it means SEEDING the L1 from the UDE at the mode
+  switch, which is a code change, not a gain.
+- Tooling: `utils/wb_tune_score.py` (entry transient + dominant-mode amplitude
+  and FREQUENCY — a tune that moves the frequency changed which element
+  dominates, one that moves only the amplitude did not);
+  `wb_l1_set_gains.py` now also takes LAW gains by their full `wb_` name.
+
+**WHOLE-BODY WHOLE-BODY PLANNER — PAPER-FAITHFUL DIRECT COMMANDING (2026-08-23, user
 design).** In whole-body DIRECT the law now always receives the paper's FULL reference set
 (CoM chain through snap, base heading, EE position+heading chains, consistent q_d) instead
 of GS steps, streamed as the NEW `fsc_autopilot_ros2_msgs/WholeBodyReference` (MODEL-frame
@@ -979,20 +1344,20 @@ ADDITIVE — no original file's behaviour changed:
   python3, run the file): defect 4.4e-8 m, hold handover 0.028 mm / ~1e-5 m/s, FD-consistency
   5e-11, IK round-trip 1e-14 rad, σ_nd ≥ 0.51 on the test transit, wrist-singular and
   out-of-range goals refused with operator-readable reasons.
-- **fsc_autopilot_ros2 (dev_CCM): the governor**
-  (`.../single_aerial_manipulator_whole_body_direct_actuation/reference_governor/
-  whole_body_reference_governor.py`, plain rclpy script, no build; own tmux WINDOW
-  `governor` in the stack launcher — SIX PANES is that row's ceiling, a 7th split fails
+- **fsc_autopilot_ros2 (dev_CCM): the whole-body planner**
+  (`.../single_aerial_manipulator_whole_body_direct_actuation/planner/
+  whole_body_planner.py`, plain rclpy script, no build; own tmux WINDOW
+  `whole-body planner` in the stack launcher — SIX PANES is that row's ceiling, a 7th split fails
   with `no space for new pane` in the 80-col detached window and `set -e` then kills the
   launcher before the vrc pane/titles/attach; imports the planner via `pegasus_root` param /
   `FSC_PEGASUS_ROOT`). State machine: silent in SAFETY (takeoff byte-identical) → on
   DIRECT (from the node's latched `/mode` topic) captures the rest hold from odom + the
   smoothed arm reference and streams at 100 Hz → drone-GS reference = PENDING base (never
-  executed; republished latched on `whole_body_governor/pending_base`, auto ride-along
-  plan) → arm-GS EE target (`whole_body_governor/ee_target`, world PoseStamped) = replan
-  (worker thread, `_plan_gen` supersedence; status latched on `whole_body_governor/status`:
+  executed; republished latched on `whole_body_planner/pending_base`, auto ride-along
+  plan) → arm-GS EE target (`whole_body_planner/ee_target`, world PoseStamped) = replan
+  (worker thread, `_plan_gen` supersedence; status latched on `whole_body_planner/status`:
   HOLD/PENDING/CALCULATING/PLANNED/INFEASIBLE:<reason>/EXECUTING) → Trigger
-  `whole_body_governor/send` executes; completion re-holds at the goal and one-shot-seats
+  `whole_body_planner/send` executes; completion re-holds at the goal and one-shot-seats
   the arm smoother there. While EXECUTING it also streams q_d to the
   ExternalTorqueController's target_joint_setpoint (20 Hz) so a SAFETY abort lands on the
   CURRENT pose. Frame boundary mirrors frame_adapter: φ_model = ψ_actual − π/2,
@@ -1013,8 +1378,8 @@ ADDITIVE — no original file's behaviour changed:
   inertial EE heading with the pending-base heading as a rim tick). Inertial world X/Y/Z +
   heading boxes; visualization base-relative about the PENDING base; lamp orange
   Calculating → green Planned / red Infeasible+reason; Assign(plan)/Send(execute)/Clear.
-  Guidance verdict from tab 1's raster only — the governor is authoritative (the raster is
-  mount-plate-anchored, the governor body-origin-anchored: cm-level display bias near the
+  Guidance verdict from tab 1's raster only — the whole-body planner is authoritative (the raster is
+  mount-plate-anchored, the whole-body planner body-origin-anchored: cm-level display bias near the
   boundary, stated in the tooltip). Screenshot-validated on the live pipe (frame math
   confirmed: base (0.5,0.2,1.4,15°) + pick → world boxes exact). One trap: this Qt style's
   QPalette::Mid is near-white — the dial uses hard-coded grays.
@@ -1022,7 +1387,7 @@ ADDITIVE — no original file's behaviour changed:
   smoothed joint path while the stream is fresh); tab 2 is the EE surface.
 Full operator flow + debug layout: Command.md §7.14.3.
 **FIRST WHOLE-BODY DIRECT FLIGHT, 2026-08-23 — two GROUND-STATION wiring bugs found and
-fixed (neither in the law, the governor or the planner; both were topic plumbing):**
+fixed (neither in the law, the whole-body planner or the planner; both were topic plumbing):**
 (1) **Drone GS N/T rotor pies stuck at 0.0%** through the whole DIRECT flight. Its
 motors_debug subscription list is PER-FORK and held only `direct_actuation` +
 `geometric_direct_actuation`; this fork publishes `whole_body_direct_actuation/motors_debug`.
@@ -1035,27 +1400,27 @@ the GUI's other gates were already fine: the controller-name test is a SUBSTRING
 NOTE the §7.14 text claiming the `connected` gate had been removed was WRONG — it is still
 there (it is really PX4 `pre_flight_checks_pass`); Command.md now says so.
 (2) **Arm GS "EE Whole-Body" tab dead** — lamp stuck on "Not in whole-body DIRECT",
-"waiting for the governor", buttons greyed, while the governor was actually at
+"waiting for the whole-body planner", buttons greyed, while the whole-body planner was actually at
 `PLANNED T=10.3s`. NAMESPACE MISMATCH: the arm station runs at
-`/uav_0/fsc_open_manipulator` (owner-prefix convention) but the governor is a FLIGHT-STACK
+`/uav_0/fsc_open_manipulator` (owner-prefix convention) but the whole-body planner is a FLIGHT-STACK
 node at `/uav_0`, so the panel's plain relative names resolved to
-`/uav_0/fsc_open_manipulator/whole_body_governor/*` and matched nothing (both sets of
+`/uav_0/fsc_open_manipulator/whole_body_planner/*` and matched nothing (both sets of
 topics existed side by side — the giveaway in `ros2 topic list`). The panel now resolves
 against the vehicle namespace by stripping its own last namespace component (root and
-single-component namespaces handled; `governor_namespace` parameter overrides).
+single-component namespaces handled; `planner_namespace` parameter overrides).
 Verified isolated from the flying vehicle under `/uav_test/fsc_open_manipulator` →
-subscribes `/uav_test/whole_body_governor/*`, and screenshot-confirmed the panel then
+subscribes `/uav_test/whole_body_planner/*`, and screenshot-confirmed the panel then
 activates (green PLANNED, base target populated, all three buttons enabled).
 BOTH FIXES NEED A GROUND-STATION RESTART to take effect.
 **Arm-GS panel then RESTRUCTURED to the user's spec (same day)**: joint-limit grid
-(Setpoints styling, green/red) fed by a new governor topic
-`whole_body_governor/target_joints` — published on EVERY plan attempt including
+(Setpoints styling, green/red) fed by a new whole-body planner topic
+`whole_body_planner/target_joints` — published on EVERY plan attempt including
 infeasible ones, since that is exactly when the row earns its place, and defaulting to
 the hold pose · read-only drone-target row (amber while pending) · the three selectors ·
 the EE target as TWO editable rows, relative-to-drone and inertial, each rewriting the
 other through the anchor (heading stored inertially so it does not swing with base yaw) ·
-buttons `Trajectory Planning` / `Send Compatible Trajectory` / `Clear` · governor status
-strip moved to the BOTTOM. Screenshot-verified against a fake governor at /uav_test.
+buttons `Trajectory Planning` / `Send Compatible Trajectory` / `Clear` · whole-body planner status
+strip moved to the BOTTOM. Screenshot-verified against a fake whole-body planner at /uav_test.
 Full layout: Command.md §7.14.3 step 3.
 **EE = THE GRIPPER, and the tab now draws the RIGHT workspace (2026-08-23,
 user's definition + "most setpoints are infeasible" report).** Two findings,
@@ -1075,16 +1440,16 @@ q4 = 0/90), so position stays a (q1,q2,q3) problem and q4 buys the heading,
 exactly as the z-x-z recovery assumes. Only l_i[3] moves — com_i[3] is measured
 from O_chain[3] = manip_joint4, so no mass property changes. Fixture
 regenerated, **WbParityTest 4/4**, planner self-test passes (defect 4.8e-8 m,
-sigma_nd 0.404), governor loopback passes (hold r_ed 0.1465 -> 0.1952).
+sigma_nd 0.404), whole-body planner loopback passes (hold r_ed 0.1465 -> 0.1952).
 `generate_wb_truth.py`'s duplicate `make_params_t650` was DELETED — it now
-imports the extension's, so fixture and governor cannot describe different
+imports the extension's, so fixture and whole-body planner cannot describe different
 robots. **K_y/D_y were tuned against the wrist EE and have not been re-flown.**
 (b) The tab was drawing the Setpoints raster, which is wrong here twice over:
 that model has a PITCH wrist with a 126 mm bracket while the asset has the
 coaxial ROLL wrist (~10 cm out), and it ignores the fold guard — of the region
 it drew, only **2.6%** could ever be planned, which is exactly the "most
-setpoints are infeasible" the user hit. The governor now publishes the true
-usable set (`whole_body_governor/workspace_rz`, filled 192x192 (r,z) occupancy
+setpoints are infeasible" the user hit. The whole-body planner now publishes the true
+usable set (`whole_body_planner/workspace_rz`, filled 192x192 (r,z) occupancy
 grid, latched, one (q2,q3) sweep: r/z are EXACTLY q1-independent because the
 chain is left-multiplied by Rz(q1)) and the panel draws that. Measured
 afterwards: **0/40 points outside it plan** (a correct necessary bound), ~55%
@@ -1095,7 +1460,7 @@ red. The guidance line says exactly this.
 click trajectory planning then send, the aerial manipulator will oscillate"). The
 reference itself was never at fault — both plans are smooth offline (peak 17 deg/s, no
 overshoot, defect 1e-8). The chain was:
-1. **The governor's Picard solve holds the GIL for ~0.26 s in ONE block**, against the
+1. **The whole-body planner's Picard solve holds the GIL for ~0.26 s in ONE block**, against the
    node's `wb_streamed_ref_timeout_s` of **0.25 s** — so the streamed reference went
    stale during EVERY solve. Fixed with a `yield_hook`/`yield_every` in
    `plan_transition`, called every 32 grid samples in BOTH the Picard and diagnostics
@@ -1106,10 +1471,10 @@ overshoot, defect 1e-8). The chain was:
    `outer_ref_` — the RAW ground-station setpoint, a METRE away once the operator had
    sent a new drone target. Every stall therefore flicked the law onto a distant
    reference and back: the lurch. Now a `streamed_ref_seen_` latch makes the builder
-   fallback available ONLY before the governor's first sample of an engagement (cleared
+   fallback available ONLY before the whole-body planner's first sample of an engagement (cleared
    in `switchMode`); after that a stale stream FREEZES the last streamed setpoint with
    all derivatives zeroed. That is also the *correct* reference during a solve, since
-   the governor streams a static hold while it plans.
+   the whole-body planner streams a static hold while it plans.
 3. **Every repeated ground-station message restarted the solve** — a second click or a
    periodic republish flickered CALCULATING <-> PLANNED so a stable PLANNED could not be
    caught (this is the "Status automatically updates another trajectory" the user saw),
@@ -1118,7 +1483,7 @@ overshoot, defect 1e-8). The chain was:
 Also fixed while chasing it: the planning worker caught only `ValueError`/`LinAlgError`,
 so any other error killed the thread silently and left the GUI on an orange
 "Calculating…" for ever — it now catches everything, reports INFEASIBLE with the message
-and logs a traceback. Regression: `reference_governor/test_replan_stream.py` (stream rate
+and logs a traceback. Regression: `planner/test_replan_stream.py` (stream rate
 + worst gap across a re-plan, setpoint immobility while solving, and the repeated-target
 case).
 **FLOWN END-TO-END 2026-08-23 (§7.14.1, three matched runs): the three reference defects
@@ -1129,9 +1494,9 @@ attitude loop's `sqrt(k_R/I) = sqrt(2.0/0.065) = 5.55 rad/s`, with the ARM swing
 against a CONSTANT `q_d`. Closed-loop, not commanded. A/B/C/D: gripper EE + the shipped +15%
 kf = bounded ±9° cycle; gripper EE + the CALIBRATED kf = DIVERGED (roll ±176°, watchdog →
 SAFETY in ~30 s); WRIST EE + calibrated kf = worse still (flew 34 m at 18 m/s); and **run D,
-the governor KILLED so the node runs its own internal builder (`Publisher count: 0` on the
+the whole-body planner KILLED so the node runs its own internal builder (`Publisher count: 0` on the
 reference topic), diverges IDENTICALLY** — pitch ±0.9° at t=8-16 s, ±2.1 at 16-20, ±8.6 at
-20-26, flipped by 26: a growing unstable mode with the governor not in the loop at all.
+20-26, flipped by 26: a growing unstable mode with the whole-body planner not in the loop at all.
 That is what rules the reference path out; without run D it could not have been. So the
 `r_e` = gripper change is NOT the trigger, and **the +15% "stress injection" is the only
 reason this configuration flies** — a higher believed kf makes the allocator command ~13%
@@ -1153,10 +1518,10 @@ transport-delay FIFO, ~5 s/candidate) scored on **DELAY MARGIN**, which is what 
 and raising k_w makes it WORSE; K_y/D_y do not affect it. **That tool is NOT validated in
 absolute terms** — it calls the flown +15% run unstable when the flight held it — so trust
 only the RELATIVE ordering and fly the winner.
-FLOWN (matched kf, governor streaming): pitch limit cycle **±9.2° → 0.14° p-p**, CoM error
+FLOWN (matched kf, whole-body planner streaming): pitch limit cycle **±9.2° → 0.14° p-p**, CoM error
 **18 → 2.6 mm** mean, EE error **53 → 5.1 mm**, arm-vs-reference **±10° → 0.11°**, thrust
 36.74–36.76 N against a 36.75 N hover, no saturation — and at the calibrated kf the OLD
-tune diverged outright. The governor cycle (drone-GS target → Trajectory Planning → Send)
+tune diverged outright. The whole-body planner cycle (drone-GS target → Trajectory Planning → Send)
 then executed for the FIRST time: pitch within ±0.07°, CoM error ≤6 mm, arrived at
 x = 0.480 for a 0.5 m CoM command (the ~20 mm is the forward arm's CoM-vs-base offset) and
 returned to HOLD. ONE flight each — repeat-test before hardware (the 2026-08-10 lesson),
@@ -1178,9 +1543,9 @@ adopts that one LIVE, and the whole-body launcher now also passes matching
 `fallback_*_deg` so the joint row is right before the controller answers).
 The hardware/gazebo arm configs deliberately keep ±90: widening the real arm is
 a cabling/mechanical call, not a sim one. Verified after the change: parity 4/4,
-planner self-test, governor loopback, and the GS rendering J4 [-120, 120] with
+planner self-test, whole-body planner loopback, and the GS rendering J4 [-120, 120] with
 105° GREEN (it would have been red before). NOT yet flown. The flight itself reached DIRECT
-with the governor live and planning, so the law/governor/planner path is sound; a full
+with the whole-body planner live and planning, so the law/whole-body planner/planner path is sound; a full
 Assign→Send→execute cycle has still NOT been flown.
 
 **THE ARM IS NOT AN IDEAL TORQUE SOURCE, AND NOW THE SIM KNOWS (2026-09-03, user
@@ -1273,25 +1638,25 @@ the coefficients arrive.
   5.38192065e-05 should be the sim yaml's `alloc_thrust_coeff` 4.6474755e-05 (the +15 % RATIO
   is right, the absolute loop gain is not); and `make_gains()`'s `mrd` is the PRE-retune
   M_r_d against a yaml that has carried (0.116522, 0.136107, 0.125102) since 2026-08-23.
-- **THE TWO ARM REFERENCES ARE NOT SYNCHRONISED — the arm controller REPLAYS the governor's
-  move 3-4 s LATE (2026-09-03, measured on both 0902 and 0903).** `q_d` (the governor's
+- **THE TWO ARM REFERENCES ARE NOT SYNCHRONISED — the arm controller REPLAYS the whole-body planner's
+  move 3-4 s LATE (2026-09-03, measured on both 0902 and 0903).** `q_d` (the whole-body planner's
   `whole_body_direct_actuation/reference`, MODEL convention) and `q_cmd`
   (`external_torque_controller/smoothed_reference_joint_trajectory`) run the SAME move one after
-  the other: 3 Sep joint 3 governor 24.81-27.81 s / arm 28.71-33.05 s (**lag +3.90 s**), 2 Sep
+  the other: 3 Sep joint 3 whole-body planner 24.81-27.81 s / arm 28.71-33.05 s (**lag +3.90 s**), 2 Sep
   joint 3 +3.04 s and joint 2 +4.06 s. **Endpoints agree EXACTLY** (8.28/8.28, 40.00/40.00), so it
-  is a TIMING fault, not wiring or convention, and the lag equals the length of the governor's move
+  is a TIMING fault, not wiring or convention, and the lag equals the length of the whole-body planner's move
   — a goal delivered ONCE AT COMPLETION rather than streamed. The measured joint tracks `q_d` and
   ignores `q_cmd` (correct: the law owns the torque in passthrough), so **every compensation term,
   the stale-fallback PD hold and the DIRECT-entry gate are all computed against a trajectory
   nothing is flying.** This is UPSTREAM of the qd_ref-vs-qd_meas choice — feeding the back-EMF term
   measured velocity fixes what it compensates, not the 3-4 s stale picture.
   **`external_torque_controller/target_joint_setpoint` recorded ZERO messages in both flights**
-  despite the recorder being subscribed and the governor spending 3.9 s / 11.4 s in EXECUTING;
+  despite the recorder being subscribed and the whole-body planner spending 3.9 s / 11.4 s in EXECUTING;
   **CORRECTED 2026-09-04 by a live capture:** `ros2 topic info` on that topic reads **Publisher
-  count: 2** (the governor's arm-sync AND the arm GS), so the publisher IS in the graph — the
+  count: 2** (the whole-body planner's arm-sync AND the arm GS), so the publisher IS in the graph — the
   earlier inference from rosbag2's `offered_qos_profiles` (one TRANSIENT_LOCAL profile ⇒ the
-  governor's VOLATILE publisher absent) was WRONG; that field is not a reliable publisher count.
-  What stands is the ZERO MESSAGES: the governor advertised and did not publish during either
+  whole-body planner's VOLATILE publisher absent) was WRONG; that field is not a reliable publisher count.
+  What stands is the ZERO MESSAGES: the whole-body planner advertised and did not publish during either
   flight, so the goal reaches the arm controller by a path the recording does not show.
   **Check `ros2 topic info -v` + `ros2 topic hz` on that topic during EXECUTING before
   instrumenting anything else.** Charts, the per-joint lag table and the six-term decomposition are

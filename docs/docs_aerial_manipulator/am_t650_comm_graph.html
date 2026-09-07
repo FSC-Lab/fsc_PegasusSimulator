@@ -289,6 +289,17 @@
 h3.grp { font-family:var(--mono); font-size:12px; letter-spacing:.09em; text-transform:uppercase;
          color:var(--ink-2); margin:26px 0 10px; font-weight:600; }
 h3.grp .gc { color:var(--ink-3); font-weight:400; }
+.msgdef { margin:10px 0 4px; border:1px solid var(--rule-soft); border-radius:4px;
+  overflow:hidden; }
+.msgdef .mgrp { background:var(--surface-2); color:var(--ink-3); font-family:var(--mono);
+  font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; padding:5px 10px;
+  border-top:1px solid var(--rule-soft); }
+.msgdef .mgrp:first-child { border-top:none; }
+.msgdef .mrow { display:grid; grid-template-columns:minmax(190px,auto) 1fr; gap:0 14px;
+  padding:4px 10px; border-top:1px solid var(--rule-soft); font-size:12.5px;
+  align-items:baseline; }
+.msgdef .mrow code { font-size:12px; color:var(--ink); }
+.msgdef .mrow span { color:var(--ink-2); }
 .wire { margin:8px 0 0; font-size:12px; color:var(--ink-3); display:flex; flex-wrap:wrap;
         gap:5px; align-items:baseline; }
 .wl { font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase;
@@ -382,7 +393,7 @@ of them. Boxes and edge labels in every diagram are links into sections 2 and 3.
 
 <h3 class="grp" id="g-states">1.1 · State machines</h3>
 <p class="lede">Three machines run at once and they are <b>not</b> nested: the flight mode owns the
-vehicle, the governor owns the reference, and a three-layer freshness chain owns the arm's torque. Only
+vehicle, the whole-body planner owns the reference, and a three-layer freshness chain owns the arm's torque. Only
 the first can hurt you — the other two degrade to a hold.</p>
 
 <h4 class="sub-grp">1.1.1 · Flight mode — the one that owns the vehicle</h4>
@@ -427,11 +438,11 @@ the first can hurt you — the other two degrade to a hold.</p>
   <span><span class="sw" style="background:var(--crit-bg);border-color:var(--crit)"></span><b>failsafe / refused</b></span>
 </div>
 
-<h4 class="sub-grp">1.1.2 · Reference governor — only alive inside DIRECT</h4>
+<h4 class="sub-grp">1.1.2 · Reference whole-body planner — only alive inside DIRECT</h4>
 <p class="lede">This is the machine you actually drive during a flight, and every state of it is printed
-verbatim on <code>whole_body_governor/status</code>. <b>Nothing here moves the vehicle until you press
+verbatim on <code>whole_body_planner/status</code>. <b>Nothing here moves the vehicle until you press
 Send</b> — a planned transition sits in <code>PLANNED</code> indefinitely, still streaming the hold.</p>
-<svg viewBox="0 0 1240 566" role="img" aria-label="Whole-body reference governor state machine" class="cg sm">
+<svg viewBox="0 0 1240 566" role="img" aria-label="Whole-body planner state machine" class="cg sm">
 <defs><marker id="sm-g" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
 <path class="tr " marker-end="url(#sm-g)" d="M196,241 L266,241"/>
 <path class="tr " marker-end="url(#sm-g)" d="M436,241 L506,241"/>
@@ -448,18 +459,18 @@ Send</b> — a planned transition sits in <code>PLANNED</code> indefinitely, sti
 <rect class="tlbg" x="654" y="179" width="124" height="13" rx="2"/><text class="tl " x="716" y="188" text-anchor="middle">worker starts the solve</text>
 <rect class="tlbg" x="957" y="179" width="38" height="13" rx="2"/><text class="tl " x="976" y="188" text-anchor="middle">solved</text>
 <rect class="tlbg" x="850" y="351" width="291" height="13" rx="2"/><text class="tl auto" x="854" y="360" text-anchor="start">refused — no IK, wrist-singular, or outside workspace_rz</text>
-<rect class="tlbg" x="978" y="321" width="129" height="13" rx="2"/><a href="#n-whole_body_reference_governor"><text class="tl " x="1103" y="330" text-anchor="end">whole_body_governor/send</text></a>
+<rect class="tlbg" x="978" y="321" width="129" height="13" rx="2"/><a href="#n-whole_body_planner"><text class="tl " x="1103" y="330" text-anchor="end">whole_body_planner/send</text></a>
 <rect class="tlbg" x="507" y="513" width="316" height="13" rx="2"/><text class="tl " x="665" y="522" text-anchor="middle">plan complete · re-hold at the goal and seat the arm smoother</text>
 <rect class="tlbg" x="638" y="331" width="58" height="13" rx="2"/><text class="tl " x="692" y="340" text-anchor="end">new target</text>
-<rect class="tlbg" x="496" y="133" width="205" height="13" rx="2"/><a href="#n-whole_body_reference_governor"><text class="tl opt" x="598" y="142" text-anchor="middle">clear Trigger — refused while EXECUTING</text></a>
+<rect class="tlbg" x="496" y="133" width="205" height="13" rx="2"/><a href="#n-whole_body_planner"><text class="tl opt" x="598" y="142" text-anchor="middle">clear Trigger — refused while EXECUTING</text></a>
 <rect class="tlbg" x="510" y="53" width="316" height="13" rx="2"/><a href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode"><text class="tl auto" x="668" y="62" text-anchor="middle">mode = SAFETY — from ANY state: targets dropped, stream stops</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-idle" x="26" y="210" width="170" height="62" rx="4"/><text class="snt" x="111" y="228" text-anchor="middle">IDLE</text><text class="sn" x="111" y="242" text-anchor="middle">SAFETY — publishes</text><text class="sn" x="111" y="256" text-anchor="middle">nothing at all</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-safe" x="266" y="210" width="170" height="62" rx="4"/><text class="snt" x="351" y="228" text-anchor="middle">HOLD</text><text class="sn" x="351" y="242" text-anchor="middle">streams a static rest</text><text class="sn" x="351" y="256" text-anchor="middle">reference @ 100 Hz</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-warn" x="506" y="210" width="175" height="62" rx="4"/><text class="snt" x="594" y="228" text-anchor="middle">PENDING</text><text class="sn" x="594" y="242" text-anchor="middle">target accepted,</text><text class="sn" x="594" y="256" text-anchor="middle">nothing moves</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-warn" x="751" y="210" width="190" height="62" rx="4"/><text class="snt" x="846" y="228" text-anchor="middle">CALCULATING</text><text class="sn" x="846" y="242" text-anchor="middle">Picard solve on a</text><text class="sn" x="846" y="256" text-anchor="middle">worker thread</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-warn" x="1011" y="210" width="200" height="62" rx="4"/><text class="snt" x="1111" y="228" text-anchor="middle">PLANNED T=…</text><text class="sn" x="1111" y="242" text-anchor="middle">ready — still holding,</text><text class="sn" x="1111" y="256" text-anchor="middle">waiting for Send</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-crit" x="751" y="430" width="190" height="62" rx="4"/><text class="snt" x="846" y="448" text-anchor="middle">INFEASIBLE: reason</text><text class="sn" x="846" y="462" text-anchor="middle">the goal is rejected,</text><text class="sn" x="846" y="476" text-anchor="middle">hold is unaffected</text></a>
-<a href="#t-uav_0-whole_body_governor-status"><rect class="st s-act" x="1011" y="430" width="200" height="62" rx="4"/><text class="snt" x="1111" y="448" text-anchor="middle">EXECUTING T=…</text><text class="sn" x="1111" y="462" text-anchor="middle">streams the plan, and q_d</text><text class="sn" x="1111" y="476" text-anchor="middle">to the arm @ 20 Hz</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-idle" x="26" y="210" width="170" height="62" rx="4"/><text class="snt" x="111" y="228" text-anchor="middle">IDLE</text><text class="sn" x="111" y="242" text-anchor="middle">SAFETY — publishes</text><text class="sn" x="111" y="256" text-anchor="middle">nothing at all</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-safe" x="266" y="210" width="170" height="62" rx="4"/><text class="snt" x="351" y="228" text-anchor="middle">HOLD</text><text class="sn" x="351" y="242" text-anchor="middle">streams a static rest</text><text class="sn" x="351" y="256" text-anchor="middle">reference @ 100 Hz</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-warn" x="506" y="210" width="175" height="62" rx="4"/><text class="snt" x="594" y="228" text-anchor="middle">PENDING</text><text class="sn" x="594" y="242" text-anchor="middle">target accepted,</text><text class="sn" x="594" y="256" text-anchor="middle">nothing moves</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-warn" x="751" y="210" width="190" height="62" rx="4"/><text class="snt" x="846" y="228" text-anchor="middle">CALCULATING</text><text class="sn" x="846" y="242" text-anchor="middle">the planner runs on a</text><text class="sn" x="846" y="256" text-anchor="middle">worker thread</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-warn" x="1011" y="210" width="200" height="62" rx="4"/><text class="snt" x="1111" y="228" text-anchor="middle">PLANNED T=…</text><text class="sn" x="1111" y="242" text-anchor="middle">ready — still holding,</text><text class="sn" x="1111" y="256" text-anchor="middle">waiting for Send</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-crit" x="751" y="430" width="190" height="62" rx="4"/><text class="snt" x="846" y="448" text-anchor="middle">INFEASIBLE: reason</text><text class="sn" x="846" y="462" text-anchor="middle">the goal is rejected,</text><text class="sn" x="846" y="476" text-anchor="middle">hold is unaffected</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><rect class="st s-act" x="1011" y="430" width="200" height="62" rx="4"/><text class="snt" x="1111" y="448" text-anchor="middle">EXECUTING T=…</text><text class="sn" x="1111" y="462" text-anchor="middle">streams the plan, and q_d</text><text class="sn" x="1111" y="476" text-anchor="middle">to the arm @ 20 Hz</text></a>
 </svg>
 <div class="glegend">
   <span><b>Segment a bag on this.</b> <code>status</code> is a latched String and its edges are the only
@@ -506,7 +517,7 @@ topics are drawn; all 99 are listed in section 3.</p>
 
 <h4 class="sub-grp" id="g-safety">1.2.1 · Baseline — SAFETY mode</h4>
 <p class="lede">PX4 owns attitude, rate and mixing. The controller publishes attitude setpoints at 100 Hz
-and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></p>
+and the arm rides a PD+gravity hold. <b>The whole-body planner is completely silent.</b></p>
 <svg viewBox="0 0 1240 812" role="img" aria-label="Baseline SAFETY communication graph" class="cg">
 <defs><marker id="ah-safety" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
 <path class="eg live" marker-end="url(#ah-safety)" d="M238,65 L256,65 L256,340 L316,340"/>
@@ -517,10 +528,10 @@ and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></
 <a href="#t-uav_0-fsc_autopilot_ros2-position_controller-reference"><text class="el dim" x="290" y="132" text-anchor="start">position_controller/reference</text></a>
 <path class="eg dim" marker-end="url(#ah-safety)" d="M429,78 L429,150"/>
 <rect class="elbg dim" x="431" y="111" width="53" height="13" rx="2"/>
-<a href="#t-uav_0-whole_body_governor-ee_target"><text class="el dim" x="435" y="120" text-anchor="start">ee_target</text></a>
+<a href="#t-uav_0-whole_body_planner-ee_target"><text class="el dim" x="435" y="120" text-anchor="start">ee_target</text></a>
 <path class="eg dim" marker-end="url(#ah-safety)" d="M542,167 L570,167 L570,44 L542,44"/>
 <rect class="elbg dim" x="574" y="101" width="195" height="13" rx="2"/>
-<a href="#t-uav_0-whole_body_governor-status"><text class="el dim" x="578" y="110" text-anchor="start">status · target_joints · workspace_rz</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><text class="el dim" x="578" y="110" text-anchor="start">status · target_joints · workspace_rz</text></a>
 <path class="eg live" marker-end="url(#ah-safety)" d="M1108,78 L1108,296"/>
 <rect class="elbg" x="985" y="191" width="119" height="13" rx="2"/>
 <a href="#t-uav_0-fmu-in-vehicle_command"><text class="el" x="1100" y="200" text-anchor="end">fmu/in/vehicle_command</text></a>
@@ -531,8 +542,11 @@ and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></
 <rect class="elbg" x="349" y="245" width="28" height="13" rx="2"/>
 <a href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode"><text class="el" x="373" y="254" text-anchor="end">mode</text></a>
 <path class="eg dim" marker-end="url(#ah-safety)" d="M542,192 L610,192 L610,447 L542,447"/>
-<rect class="elbg dim" x="614" y="321" width="154" height="13" rx="2"/>
-<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint"><text class="el dim" x="618" y="330" text-anchor="start">target_joint_setpoint · 20 Hz</text></a>
+<rect class="elbg dim" x="614" y="321" width="196" height="13" rx="2"/>
+<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory"><text class="el dim" x="618" y="330" text-anchor="start">reference_joint_trajectory (silent here)</text></a>
+<path class="eg live" marker-end="url(#ah-safety)" d="M238,592 L277,592 L277,472 L316,472"/>
+<rect class="elbg" x="150" y="527" width="196" height="13" rx="2"/>
+<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory"><text class="el" x="154" y="536" text-anchor="start">reference_joint_trajectory · 100 Hz</text></a>
 <path class="eg live" marker-end="url(#ah-safety)" d="M542,313 L1004,313"/>
 <rect class="elbg" x="667" y="297" width="215" height="13" rx="2"/>
 <a href="#t-uav_0-fmu-in-vehicle_attitude_setpoint"><text class="el" x="775" y="306" text-anchor="middle">fmu/in/vehicle_attitude_setpoint · 100 Hz</text></a>
@@ -557,9 +571,9 @@ and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></
 <path class="eg live" marker-end="url(#ah-safety)" d="M379,362 L379,430"/>
 <rect class="elbg" x="223" y="391" width="154" height="13" rx="2"/>
 <a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-joint_torque_command"><text class="el" x="373" y="400" text-anchor="end">joint_torque_command · 250 Hz</text></a>
-<path class="eg live" marker-end="url(#ah-safety)" d="M479,430 L479,362"/>
-<rect class="elbg" x="483" y="391" width="99" height="13" rx="2"/>
-<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-smoothed_reference_joint_trajectory"><text class="el" x="487" y="400" text-anchor="start">smoothed_reference</text></a>
+<path class="eg live" marker-end="url(#ah-safety)" d="M238,592 L262,592 L262,348 L316,348"/>
+<rect class="elbg" x="150" y="365" width="164" height="13" rx="2"/>
+<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory"><text class="el" x="154" y="374" text-anchor="start">arm reference — the hold tracks it</text></a>
 <path class="eg live" marker-end="url(#ah-safety)" d="M316,592 L276,592 L276,352 L316,352"/>
 <rect class="elbg" x="203" y="511" width="69" height="13" rx="2"/>
 <a href="#t-uav_0-fsc_open_manipulator-joint_states"><text class="el" x="268" y="520" text-anchor="end">joint_states</text></a>
@@ -584,9 +598,9 @@ and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></
 <text class="nt" x="1108" y="46" text-anchor="middle">virtual_rc</text>
 <text class="ns" x="1108" y="60" text-anchor="middle">arm · offboard triggers</text>
 </a>
-<a href="#n-whole_body_reference_governor">
+<a href="#n-whole_body_planner">
 <rect class="nb n-ctl" x="316" y="150" width="226" height="56" rx="4"/>
-<text class="nt" x="429" y="170" text-anchor="middle">whole_body_reference_governor</text>
+<text class="nt" x="429" y="170" text-anchor="middle">whole_body_planner</text>
 <text class="ns" x="429" y="184" text-anchor="middle">plans the compatible task</text>
 </a>
 <a href="#n-fsc_autopilot_ros2">
@@ -615,6 +629,11 @@ and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></
 <rect class="nb n-sim" x="1004" y="700" width="208" height="52" rx="4"/>
 <text class="nt" x="1108" y="720" text-anchor="middle">simulator_vehicle_0</text>
 <text class="ns" x="1108" y="734" text-anchor="middle">Pegasus vehicle state</text>
+</a>
+<a href="#n-arm_planner">
+<rect class="nb n-arm" x="28" y="566" width="210" height="52" rx="4"/>
+<text class="nt" x="133" y="586" text-anchor="middle">…/arm_planner</text>
+<text class="ns" x="133" y="600" text-anchor="middle">owns the arm reference in SAFETY</text>
 </a>
 <a href="#n-controller_manager">
 <rect class="nb n-arm" x="28" y="430" width="210" height="56" rx="4"/>
@@ -653,7 +672,7 @@ and the arm rides a PD+gravity hold. <b>The governor is completely silent.</b></
 
 <h4 class="sub-grp" id="g-direct">1.2.2 · Whole-body DIRECT mode</h4>
 <p class="lede">The controller owns position, attitude, rate, mixing <em>and</em> the four joint torques;
-PX4 runs no control law. The governor becomes the source of the reference, the ground-station setpoint
+PX4 runs no control law. The whole-body planner becomes the source of the reference, the ground-station setpoint
 becomes a <em>pending</em> target, and <code>vehicle_attitude_setpoint</code> goes silent.</p>
 <svg viewBox="0 0 1240 812" role="img" aria-label="Whole-body DIRECT communication graph" class="cg">
 <defs><marker id="ah-direct" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
@@ -665,10 +684,10 @@ becomes a <em>pending</em> target, and <code>vehicle_attitude_setpoint</code> go
 <a href="#t-uav_0-fsc_autopilot_ros2-position_controller-reference"><text class="el" x="290" y="132" text-anchor="start">position_controller/reference</text></a>
 <path class="eg live" marker-end="url(#ah-direct)" d="M429,78 L429,150"/>
 <rect class="elbg" x="431" y="111" width="53" height="13" rx="2"/>
-<a href="#t-uav_0-whole_body_governor-ee_target"><text class="el" x="435" y="120" text-anchor="start">ee_target</text></a>
+<a href="#t-uav_0-whole_body_planner-ee_target"><text class="el" x="435" y="120" text-anchor="start">ee_target</text></a>
 <path class="eg live" marker-end="url(#ah-direct)" d="M542,167 L570,167 L570,44 L542,44"/>
 <rect class="elbg" x="574" y="101" width="195" height="13" rx="2"/>
-<a href="#t-uav_0-whole_body_governor-status"><text class="el" x="578" y="110" text-anchor="start">status · target_joints · workspace_rz</text></a>
+<a href="#t-uav_0-whole_body_planner-status"><text class="el" x="578" y="110" text-anchor="start">status · target_joints · workspace_rz</text></a>
 <path class="eg live" marker-end="url(#ah-direct)" d="M1108,78 L1108,296"/>
 <rect class="elbg" x="985" y="191" width="119" height="13" rx="2"/>
 <a href="#t-uav_0-fmu-in-vehicle_command"><text class="el" x="1100" y="200" text-anchor="end">fmu/in/vehicle_command</text></a>
@@ -679,8 +698,11 @@ becomes a <em>pending</em> target, and <code>vehicle_attitude_setpoint</code> go
 <rect class="elbg" x="349" y="245" width="28" height="13" rx="2"/>
 <a href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode"><text class="el" x="373" y="254" text-anchor="end">mode</text></a>
 <path class="eg live" marker-end="url(#ah-direct)" d="M542,192 L610,192 L610,447 L542,447"/>
-<rect class="elbg" x="614" y="321" width="154" height="13" rx="2"/>
-<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint"><text class="el" x="618" y="330" text-anchor="start">target_joint_setpoint · 20 Hz</text></a>
+<path class="eg dim" marker-end="url(#ah-direct)" d="M238,592 L277,592 L277,472 L316,472"/>
+<rect class="elbg dim" x="150" y="527" width="150" height="13" rx="2"/>
+<a href="#n-arm_planner"><text class="el dim" x="154" y="536" text-anchor="start">arm_planner silent — drives nothing here</text></a>
+<rect class="elbg" x="614" y="321" width="196" height="13" rx="2"/>
+<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory"><text class="el" x="618" y="330" text-anchor="start">reference_joint_trajectory · 100 Hz</text></a>
 <path class="eg dim" marker-end="url(#ah-direct)" d="M542,313 L1004,313"/>
 <rect class="elbg dim" x="667" y="297" width="215" height="13" rx="2"/>
 <a href="#t-uav_0-fmu-in-vehicle_attitude_setpoint"><text class="el dim" x="775" y="306" text-anchor="middle">fmu/in/vehicle_attitude_setpoint · 100 Hz</text></a>
@@ -705,9 +727,9 @@ becomes a <em>pending</em> target, and <code>vehicle_attitude_setpoint</code> go
 <path class="eg live" marker-end="url(#ah-direct)" d="M379,362 L379,430"/>
 <rect class="elbg" x="223" y="391" width="154" height="13" rx="2"/>
 <a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-joint_torque_command"><text class="el" x="373" y="400" text-anchor="end">joint_torque_command · 250 Hz</text></a>
-<path class="eg live" marker-end="url(#ah-direct)" d="M479,430 L479,362"/>
-<rect class="elbg" x="483" y="391" width="99" height="13" rx="2"/>
-<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-smoothed_reference_joint_trajectory"><text class="el" x="487" y="400" text-anchor="start">smoothed_reference</text></a>
+<path class="eg live" marker-end="url(#ah-direct)" d="M470,206 L470,296"/>
+<rect class="elbg" x="474" y="244" width="164" height="13" rx="2"/>
+<a href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory"><text class="el" x="478" y="253" text-anchor="start">arm reference — gate · debug</text></a>
 <path class="eg live" marker-end="url(#ah-direct)" d="M316,592 L276,592 L276,352 L316,352"/>
 <rect class="elbg" x="203" y="511" width="69" height="13" rx="2"/>
 <a href="#t-uav_0-fsc_open_manipulator-joint_states"><text class="el" x="268" y="520" text-anchor="end">joint_states</text></a>
@@ -732,9 +754,9 @@ becomes a <em>pending</em> target, and <code>vehicle_attitude_setpoint</code> go
 <text class="nt" x="1108" y="46" text-anchor="middle">virtual_rc</text>
 <text class="ns" x="1108" y="60" text-anchor="middle">arm · offboard triggers</text>
 </a>
-<a href="#n-whole_body_reference_governor">
+<a href="#n-whole_body_planner">
 <rect class="nb n-ctl" x="316" y="150" width="226" height="56" rx="4"/>
-<text class="nt" x="429" y="170" text-anchor="middle">whole_body_reference_governor</text>
+<text class="nt" x="429" y="170" text-anchor="middle">whole_body_planner</text>
 <text class="ns" x="429" y="184" text-anchor="middle">plans the compatible task</text>
 </a>
 <a href="#n-fsc_autopilot_ros2">
@@ -763,6 +785,11 @@ becomes a <em>pending</em> target, and <code>vehicle_attitude_setpoint</code> go
 <rect class="nb n-sim" x="1004" y="700" width="208" height="52" rx="4"/>
 <text class="nt" x="1108" y="720" text-anchor="middle">simulator_vehicle_0</text>
 <text class="ns" x="1108" y="734" text-anchor="middle">Pegasus vehicle state</text>
+</a>
+<a href="#n-arm_planner">
+<rect class="nb n-arm dim" x="28" y="566" width="210" height="52" rx="4"/>
+<text class="nt dim" x="133" y="586" text-anchor="middle">…/arm_planner</text>
+<text class="ns dim" x="133" y="600" text-anchor="middle">silent — the whole-body planner owns the arm</text>
 </a>
 <a href="#n-controller_manager">
 <rect class="nb n-arm" x="28" y="430" width="210" height="56" rx="4"/>
@@ -803,7 +830,7 @@ section 3. Parameter services are omitted — every node has the standard six.</
   <div class="c-type">ros2_ground_station_gui &middot; started by step 2</div>
   <p class="c-desc"><b>The drone ground station.</b> Your position setpoints leave here on
       <code>position_controller/reference</code> — in SAFETY they go straight to the controller, in
-      whole-body DIRECT the governor takes them as a <em>pending</em> base target that is only executed
+      whole-body DIRECT the whole-body planner takes them as a <em>pending</em> base target that is only executed
       when you press Send. It watches controller state, the per-fork <code>motors_debug</code> and PX4
       status. Its N/T rotor pies read 0.0% unless this fork's <code>motors_debug</code> name is in the
       GUI's per-namespace subscription list — a defect that has bitten three forks in a row.</p>
@@ -815,13 +842,13 @@ section 3. Parameter services are omitted — every node has the standard six.</
   <div class="c-type">open_manipulator_x_custom_controller / custom_gui &middot; started by step 3</div>
   <p class="c-desc"><b>The arm ground station</b>, run inverted for the aerial mount. Tab 1 commands joints and the
       EE directly through <code>target_joint_setpoint</code>; tab 2 (&ldquo;EE Whole-Body&rdquo;) is the
-      whole-body surface and drives the governor's Trigger services. In whole-body DIRECT tab 1's
-      commands are superseded — the law ignores the smoothed joint path while the governor's stream is
-      fresh. Note this node and the governor <b>both publish <code>target_joint_setpoint</code></b>.</p>
-  <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-sine_reference_trajectory">sine_reference_trajectory</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint">target_joint_setpoint</a> <a class="nl" href="#t-uav_0-whole_body_governor-ee_target">whole_body_governor/ee_target</a></div>
-    <div><span class="wl">subscribes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-smoothed_reference_joint_trajectory">smoothed_reference_joint_trajectory</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-robot_description">robot_description</a> <a class="nl" href="#t-uav_0-whole_body_governor-current_ee_body">current_ee_body</a> <a class="nl" href="#t-uav_0-whole_body_governor-pending_base">whole_body_governor/pending_base</a> <a class="nl" href="#t-uav_0-whole_body_governor-status">whole_body_governor/status</a> <a class="nl" href="#t-uav_0-whole_body_governor-target_joints">whole_body_governor/target_joints</a> <a class="nl" href="#t-uav_0-whole_body_governor-workspace_rz">whole_body_governor/workspace_rz</a></div>
+      whole-body surface and drives the whole-body planner's Trigger services. In whole-body DIRECT tab 1's
+      commands are superseded — the law ignores the smoothed joint path while the whole-body planner's stream is
+      fresh. Note this node and the whole-body planner <b>both publish <code>target_joint_setpoint</code></b>.</p>
+  <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-sine_reference_trajectory">sine_reference_trajectory</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint">target_joint_setpoint</a> <a class="nl" href="#t-uav_0-whole_body_planner-ee_target">whole_body_planner/ee_target</a></div>
+    <div><span class="wl">subscribes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory">reference_joint_trajectory</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-robot_description">robot_description</a> <a class="nl" href="#t-uav_0-whole_body_planner-current_ee_body">current_ee_body</a> <a class="nl" href="#t-uav_0-whole_body_planner-pending_base">whole_body_planner/pending_base</a> <a class="nl" href="#t-uav_0-whole_body_planner-status">whole_body_planner/status</a> <a class="nl" href="#t-uav_0-whole_body_planner-target_joints">whole_body_planner/target_joints</a> <a class="nl" href="#t-uav_0-whole_body_planner-workspace_rz">whole_body_planner/workspace_rz</a></div>
     <div><span class="wl">serves</span> <span class="muted">—</span></div>
-    <div><span class="wl">calls</span> <code class="sv">list_controllers</code> <code class="sv">switch_controller</code> <code class="sv">external_torque_controller/go_home</code> <code class="sv">whole_body_governor/clear</code> <code class="sv">whole_body_governor/go_home</code> <code class="sv">whole_body_governor/send</code></div></div></article><article class="card ncard" id="n-virtual_rc">
+    <div><span class="wl">calls</span> <code class="sv">list_controllers</code> <code class="sv">switch_controller</code> <code class="sv">external_torque_controller/go_home</code> <code class="sv">whole_body_planner/clear</code> <code class="sv">whole_body_planner/go_home</code> <code class="sv">whole_body_planner/send</code></div></div></article><article class="card ncard" id="n-virtual_rc">
   <div class="c-head"><code class="c-path">/virtual_rc</code><span class="tier t-situ">Operator</span></div>
   <div class="c-type">fsc_autopilot_ros2 &middot; started by step 2</div>
   <p class="c-desc"><b>Step 4 of the run sequence talks to this node.</b> Four <code>std_srvs/Trigger</code>
@@ -844,23 +871,61 @@ section 3. Parameter services are omitted — every node has the standard six.</
       <code>whole_body_direct_actuation/set_direct_mode</code> and are <b>refused</b> unless the
       position, velocity and arm-error gates pass.</p>
   <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fmu-in-actuator_motors">actuator_motors</a> <a class="nl" href="#t-uav_0-fmu-in-offboard_control_mode">offboard_control_mode</a> <a class="nl" href="#t-uav_0-fmu-in-vehicle_attitude_setpoint">vehicle_attitude_setpoint</a> <a class="nl" href="#t-uav_0-fmu-in-vehicle_thrust_setpoint">vehicle_thrust_setpoint</a> <a class="nl" href="#t-uav_0-fmu-in-vehicle_torque_setpoint">vehicle_torque_setpoint</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-attitude_setpoint_debug">attitude_setpoint_debug</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-controller_type">fsc_autopilot_ros2/controller_type</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-position_controller-state">position_controller/state</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-position_controller-ude">position_controller/ude</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-vehicle_info">fsc_autopilot_ros2/vehicle_info</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode">whole_body_direct_actuation/mode</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-motors_debug">whole_body_direct_actuation/motors_debug</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-wb_control_debug">wb_control_debug</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-joint_torque_command">joint_torque_command</a></div>
-    <div><span class="wl">subscribes</span> <a class="nl" href="#t-uav_0-fmu-out-estimator_status_flags">estimator_status_flags</a> <a class="nl" href="#t-uav_0-fmu-out-sensor_combined">sensor_combined</a> <a class="nl" href="#t-uav_0-fmu-out-vehicle_attitude">vehicle_attitude</a> <a class="nl" href="#t-uav_0-fmu-out-vehicle_odometry">vehicle_odometry</a> <a class="nl" href="#t-uav_0-fmu-out-vehicle_status_v1">vehicle_status_v1</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-position_controller-reference">position_controller/reference</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-reference">whole_body_direct_actuation/reference</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-smoothed_reference_joint_trajectory">smoothed_reference_joint_trajectory</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a> <a class="nl" href="#t-uav_0-state_estimator-local_position-odom">local_position/odom</a></div>
+    <div><span class="wl">subscribes</span> <a class="nl" href="#t-uav_0-fmu-out-estimator_status_flags">estimator_status_flags</a> <a class="nl" href="#t-uav_0-fmu-out-sensor_combined">sensor_combined</a> <a class="nl" href="#t-uav_0-fmu-out-vehicle_attitude">vehicle_attitude</a> <a class="nl" href="#t-uav_0-fmu-out-vehicle_odometry">vehicle_odometry</a> <a class="nl" href="#t-uav_0-fmu-out-vehicle_status_v1">vehicle_status_v1</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-position_controller-reference">position_controller/reference</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-reference">whole_body_direct_actuation/reference</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory">external_torque_controller/reference_joint_trajectory</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a> <a class="nl" href="#t-uav_0-state_estimator-local_position-odom">local_position/odom</a></div>
     <div><span class="wl">serves</span> <code class="sv">activate_controller</code> <code class="sv">list_controllers</code> <code class="sv">set_direct_mode</code></div>
-    <div><span class="wl">calls</span> <span class="muted">—</span></div></div></article><article class="card ncard" id="n-whole_body_reference_governor">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_reference_governor</code><span class="tier t-crit">Flight</span></div>
-  <div class="c-type">…/reference_governor/whole_body_reference_governor.py (plain rclpy, no build) &middot; started by step 2</div>
+    <div><span class="wl">calls</span> <span class="muted">—</span></div></div></article><article class="card ncard" id="n-whole_body_planner">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner</code><span class="tier t-crit">Flight</span></div>
+  <div class="c-type">…/planner/whole_body_planner.py (plain rclpy, no build) &middot; started by step 2</div>
   <p class="c-desc"><b>Silent in SAFETY; the source of the reference in DIRECT.</b> On the DIRECT edge it
       captures a rest hold <b>entirely from measurement</b> — base position from odometry, base heading
       from PX4, arm pose from the encoders — then streams the law's <em>full</em> reference set: CoM
       chain through snap, base heading, EE position and heading, and a consistent q_d, at 100 Hz in the
-      MODEL frame. Targets arrive from the two ground stations, are planned on a worker thread (Picard
-      fixed point, min-snap phases) and are executed only on the <code>send</code> Trigger. It imports
-      the planner from the Pegasus tree, so <code>pegasus_root</code> / <code>FSC_PEGASUS_ROOT</code>
-      must resolve.</p>
-  <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-reference">whole_body_direct_actuation/reference</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint">target_joint_setpoint</a> <a class="nl" href="#t-uav_0-whole_body_governor-current_ee">whole_body_governor/current_ee</a> <a class="nl" href="#t-uav_0-whole_body_governor-current_ee_body">current_ee_body</a> <a class="nl" href="#t-uav_0-whole_body_governor-pending_base">whole_body_governor/pending_base</a> <a class="nl" href="#t-uav_0-whole_body_governor-status">whole_body_governor/status</a> <a class="nl" href="#t-uav_0-whole_body_governor-target_joints">whole_body_governor/target_joints</a> <a class="nl" href="#t-uav_0-whole_body_governor-workspace_rz">whole_body_governor/workspace_rz</a></div>
-    <div><span class="wl">subscribes</span> <div class="role"><span class="rl">initial condition</span> <a class="nl" href="#t-uav_0-fmu-out-vehicle_attitude">vehicle_attitude</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a> <a class="nl" href="#t-uav_0-state_estimator-local_position-odom">local_position/odom</a><p class="rwhy">Captured ONCE, on the SAFETY&nbsp;→&nbsp;DIRECT edge, as a rest spec (x_b, φ, q). All three are MEASUREMENTS, and all three are the law's own sources, so the engagement starts at zero error and the planner and the law cannot disagree about where the vehicle is. After the capture the governor is open-loop — during EXECUTING the reference is <code>plan["ref"](t)</code>, a pure function of elapsed time — and each transition re-anchors on the previous plan's terminal rest, not on a fresh reading. So this is the only point where reality enters the reference, which is what the DIRECT-entry gates (0.15 m / 0.20 m/s / 0.05 rad) are protecting.</p></div><div class="role"><span class="rl">target setpoint</span> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-position_controller-reference">position_controller/reference</a> <a class="nl" href="#t-uav_0-whole_body_governor-ee_target">whole_body_governor/ee_target</a><p class="rwhy">The goal end of a transition, from the two ground stations. Accepted but NOT executed: the base target is held as PENDING and the EE target triggers a re-plan on a worker thread. Nothing moves until the <code>send</code> Trigger. An unchanged target (1 mm / 2 mrad) is ignored, so a repeated click cannot restart a solve.</p></div><div class="role"><span class="rl">mode</span> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode">whole_body_direct_actuation/mode</a><p class="rwhy">The enable. <code>DIRECT</code> captures the hold and starts the 100 Hz stream; <code>SAFETY</code> drops every target and goes silent.</p></div></div>
-    <div><span class="wl">serves</span> <code class="sv">whole_body_governor/clear</code> <code class="sv">whole_body_governor/go_home</code> <code class="sv">whole_body_governor/send</code></div>
-    <div><span class="wl">calls</span> <span class="muted">—</span></div></div></article><h3 class="grp">Robotic arm — ros2_control <span class="gc">4</span></h3><p class="lede">The arm's own stack, identical in name and shape to the hardware one. Only the bottom plugin differs.</p><article class="card ncard" id="n-controller_manager">
+      MODEL frame. Targets arrive from the two ground stations, are planned on a worker thread and are
+      executed only on the <code>send</code> Trigger.</p>
+  <p class="c-desc"><b>Why the name (2026-09-05).</b> This node and
+      <a class="nl" href="#n-arm_planner">arm_planner</a> do the same job for different scopes, so they
+      are named as the pair they are: the qualifier carries the scope, and the node name and its topic
+      prefix are now the same string. It was called <em>whole_body_reference_governor</em> with topics
+      under <em>whole_body_governor/</em> &mdash; two names for one thing, and a word that hid the fact
+      that the arm had a second planner of its own. Planning is not all it does &mdash; it also gates on
+      mode, captures the hold from measurement, answers both ground stations and publishes the reachable
+      workspace &mdash; but it is the part that matters to everyone reading the graph. The optimizer it
+      calls is a separate component (<code>flat_planner</code>).</p>
+  <p class="c-desc"><b>Two planner backends</b>, selected by <code>planner</code> in section 5 of the
+      controller yaml. <code>bspline</code> (the default) parameterizes the flat outputs as B-splines
+      and optimizes their control points; <code>straight_line</code> is the flight-validated original,
+      which prescribes a straight EE path and solves the CoM by a Picard fixed point. Their EE paths
+      differ by ~2&nbsp;cm, so this is a trajectory choice, not a tuning knob. The planner is imported
+      from the Pegasus tree, so <code>pegasus_root</code> / <code>FSC_PEGASUS_ROOT</code> must
+      resolve.</p>
+  <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-reference">whole_body_direct_actuation/reference</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint">target_joint_setpoint</a> <a class="nl" href="#t-uav_0-whole_body_planner-current_ee">whole_body_planner/current_ee</a> <a class="nl" href="#t-uav_0-whole_body_planner-current_ee_body">current_ee_body</a> <a class="nl" href="#t-uav_0-whole_body_planner-pending_base">whole_body_planner/pending_base</a> <a class="nl" href="#t-uav_0-whole_body_planner-status">whole_body_planner/status</a> <a class="nl" href="#t-uav_0-whole_body_planner-target_joints">whole_body_planner/target_joints</a> <a class="nl" href="#t-uav_0-whole_body_planner-workspace_rz">whole_body_planner/workspace_rz</a></div>
+    <div><span class="wl">subscribes</span> <div class="role"><span class="rl">initial condition</span> <a class="nl" href="#t-uav_0-fmu-out-vehicle_attitude">vehicle_attitude</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a> <a class="nl" href="#t-uav_0-state_estimator-local_position-odom">local_position/odom</a><p class="rwhy">Captured ONCE, on the SAFETY&nbsp;→&nbsp;DIRECT edge, as a rest spec (x_b, φ, q). All three are MEASUREMENTS, and all three are the law's own sources, so the engagement starts at zero error and the planner and the law cannot disagree about where the vehicle is. After the capture the whole-body planner is open-loop — during EXECUTING the reference is <code>plan["ref"](t)</code>, a pure function of elapsed time — and each transition re-anchors on the previous plan's terminal rest, not on a fresh reading. So this is the only point where reality enters the reference, which is what the DIRECT-entry gates (0.15 m / 0.20 m/s / 0.05 rad) are protecting.</p></div><div class="role"><span class="rl">target setpoint</span> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-position_controller-reference">position_controller/reference</a> <a class="nl" href="#t-uav_0-whole_body_planner-ee_target">whole_body_planner/ee_target</a><p class="rwhy">The goal end of a transition, from the two ground stations. Accepted but NOT executed: the base target is held as PENDING and the EE target triggers a re-plan on a worker thread. Nothing moves until the <code>send</code> Trigger. An unchanged target (1 mm / 2 mrad) is ignored, so a repeated click cannot restart a solve.</p></div><div class="role"><span class="rl">mode</span> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode">whole_body_direct_actuation/mode</a><p class="rwhy">The enable. <code>DIRECT</code> captures the hold and starts the 100 Hz stream; <code>SAFETY</code> drops every target and goes silent.</p></div></div>
+    <div><span class="wl">serves</span> <code class="sv">whole_body_planner/clear</code> <code class="sv">whole_body_planner/go_home</code> <code class="sv">whole_body_planner/send</code></div>
+    <div><span class="wl">calls</span> <span class="muted">—</span></div></div></article><article class="card ncard" id="n-arm_planner">
+  <div class="c-head"><code class="c-path">/uav_0/fsc_open_manipulator/arm_planner</code><span class="tier t-crit">Flight</span></div>
+  <div class="c-type">open_manipulator_x_custom_controller/arm_planner_node (C++) &middot; started with the arm stack</div>
+  <p class="c-desc"><b>The whole-body planner's sibling: same job, arm scope, opposite mode.</b> It owns the
+      arm reference in <b>SAFETY</b> &mdash; and on the bench, where there is no flight stack at all &mdash;
+      taking the arm ground station's joint targets and <code>go_home</code> at the controller's own names,
+      running the min-jerk profile that used to live inside the controller, and streaming
+      <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory">reference_joint_trajectory</a>
+      at 100 Hz.</p>
+  <p class="c-desc"><b>In whole-body DIRECT it publishes nothing at all</b> &mdash; not to the arm
+      controller and not to the flight node &mdash; and <em>refuses</em> targets and
+      <code>go_home</code> rather than queueing them, because
+      <a class="nl" href="#n-whole_body_planner">whole_body_planner</a> owns every reference there. While
+      silent it tracks the measured joints, so a SAFETY revert resumes from where the arm actually is
+      instead of from a stale goal &mdash; an abort mid-transition cannot step the arm.</p>
+  <p class="c-desc"><b>Why it exists.</b> The generator was inside
+      <code>TorqueControllerBase</code>, so in DIRECT it re-profiled the whole-body planner's B-spline: two
+      planners in series, measured on the 09-02 and 09-03 flights as the arm replaying the planned move
+      3&ndash;4 s late. Only the aerial Isaac config opts into pure tracking
+      (<code>external_reference_topic</code>), so the bench and hardware controllers keep their own
+      generator and are byte-identical. One consequence: the <b>sine sweep is not available on this rig</b>
+      &mdash; the planner logs a throttled refusal rather than swallowing the command.</p>
+  <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory">external_torque_controller/reference_joint_trajectory</a></div>
+    <div><span class="wl">subscribes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint">external_torque_controller/target_joint_setpoint</a> <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode">whole_body_direct_actuation/mode</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">joint_states</a></div>
+    <div><span class="sv">serves</span> <code class="sv">external_torque_controller/go_home</code></div></div></article><h3 class="grp">Robotic arm — ros2_control <span class="gc">4</span></h3><p class="lede">The arm's own stack, identical in name and shape to the hardware one. Only the bottom plugin differs.</p><article class="card ncard" id="n-controller_manager">
   <div class="c-head"><code class="c-path">/uav_0/fsc_open_manipulator/controller_manager</code><span class="tier t-imp">Robotic</span></div>
   <div class="c-type">controller_manager &middot; started by step 3</div>
   <p class="c-desc">The ros2_control host: it loads the hardware plugin and the two controllers, and owns the
@@ -887,7 +952,7 @@ section 3. Parameter services are omitted — every node has the standard six.</
   <div class="c-type">joint_state_broadcaster &middot; started by step 3</div>
   <p class="c-desc">Publishes <code>fsc_open_manipulator/joint_states</code> — position, velocity and the servo's
       Present Current in the <code>effort</code> field. This is the arm's public state, identical in name
-      and content on hardware. Three nodes read it: the controller, the governor and the arm GS.</p>
+      and content on hardware. Three nodes read it: the controller, the whole-body planner and the arm GS.</p>
   <div class="io"><div><span class="wl">publishes</span> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_state_broadcaster-transition_event">joint_state_broadcaster/transition_event</a> <a class="nl" href="#t-uav_0-fsc_open_manipulator-joint_states">fsc_open_manipulator/joint_states</a></div>
     <div><span class="wl">subscribes</span> <span class="muted">—</span></div>
     <div><span class="wl">serves</span> <span class="muted">—</span></div>
@@ -1002,17 +1067,17 @@ something subscribes to it — mostly PX4 bridge inputs the agent never fills.</
 <div class="controls frow">
   <span class="frow-label">Group</span>
   <button class="btn gbtn" data-g="all" aria-pressed="true">All</button>
-  <button class="btn gbtn" data-g="wb" aria-pressed="false">Whole-body &amp; governor</button><button class="btn gbtn" data-g="ctl" aria-pressed="false">Flight controller</button><button class="btn gbtn" data-g="arm" aria-pressed="false">Robotic arm</button><button class="btn gbtn" data-g="est" aria-pressed="false">State estimation</button><button class="btn gbtn" data-g="gt" aria-pressed="false">Simulator ground truth</button><button class="btn gbtn" data-g="px4in" aria-pressed="false">PX4 inbound</button><button class="btn gbtn" data-g="px4out" aria-pressed="false">PX4 outbound</button><button class="btn gbtn" data-g="infra" aria-pressed="false">Infrastructure</button>
+  <button class="btn gbtn" data-g="wb" aria-pressed="false">Whole-body &amp; planners</button><button class="btn gbtn" data-g="ctl" aria-pressed="false">Flight controller</button><button class="btn gbtn" data-g="arm" aria-pressed="false">Robotic arm</button><button class="btn gbtn" data-g="est" aria-pressed="false">State estimation</button><button class="btn gbtn" data-g="gt" aria-pressed="false">Simulator ground truth</button><button class="btn gbtn" data-g="px4in" aria-pressed="false">PX4 inbound</button><button class="btn gbtn" data-g="px4out" aria-pressed="false">PX4 outbound</button><button class="btn gbtn" data-g="infra" aria-pressed="false">Infrastructure</button>
 </div>
-<div class="cards" id="tlist"><h3 class="grp" data-g="wb">Whole-body &amp; governor <span class="gc">11</span></h3><article class="card" id="t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode" data-t="imp" data-g="wb">
+<div class="cards" id="tlist"><h3 class="grp" data-g="wb">Whole-body &amp; planners <span class="gc">11</span></h3><article class="card" id="t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-mode" data-t="imp" data-g="wb">
   <div class="c-head"><code class="c-path">/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/mode</code>
     <span class="tier t-imp">Important</span></div>
   <div class="c-type">std_msgs/msg/String</div>
   <p class="c-desc"><b>The one topic that tells you which flight phase you are in.</b> Latched String, <code>SAFETY</code>
-  or <code>DIRECT</code>. The governor watches it to know when to start streaming; anything analysing a
+  or <code>DIRECT</code>. The whole-body planner watches it to know when to start streaming; anything analysing a
   bag should segment on its edges.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a>
-     <span class="wl">sub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a></p>
+     <span class="wl">sub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a></p>
   </article><article class="card" id="t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-motors_debug" data-t="imp" data-g="wb">
   <div class="c-head"><code class="c-path">/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/motors_debug</code>
     <span class="tier t-imp">Important</span></div>
@@ -1026,13 +1091,94 @@ something subscribes to it — mostly PX4 bridge inputs the agent never fills.</
   <div class="c-head"><code class="c-path">/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/reference</code>
     <span class="tier t-crit">Critical</span></div>
   <div class="c-type">fsc_autopilot_ros2_msgs/msg/WholeBodyReference</div>
-  <p class="c-desc"><b>The governor's reference stream, and the whole point of this rig.</b> Carries the paper's complete
-  reference set in the MODEL frame — CoM position through snap, base heading, EE position and heading
-  chains, and a consistent q_d. 100 Hz while DIRECT is engaged, silent otherwise. A <em>fresh</em>
-  sample is the law's reference verbatim; if it goes stale past
-  <code>wb_streamed_ref_timeout_s</code> (0.25 s) the law freezes the last streamed setpoint with its
-  derivatives zeroed, rather than reverting to a distant ground-station target.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="c-desc"><b>The reference stream, and the whole point of this rig.</b> 100 Hz while DIRECT
+  is engaged, silent otherwise. A <em>fresh</em> sample is the law's reference verbatim; if it goes
+  stale past <code>wb_streamed_ref_timeout_s</code> (0.25 s) the law freezes the last streamed
+  setpoint with its derivatives zeroed, rather than reverting to a distant ground-station target.</p>
+
+  <div class="msgdef">
+    <div class="mgrp">std_msgs/Header</div>
+    <div class="mrow"><code>header</code><span>stamp is the publish time; <code>frame_id</code> unused</span></div>
+
+    <div class="mgrp">1 · CoM translation trajectory — geometry_msgs/Vector3 ×5</div>
+    <div class="mrow"><code>x_cd</code><span>SYSTEM CoM position, world [m]. Not the base: Newton for the whole assembly is <code>m·ẍ_c = f·R₀e₃ − mg·e₃</code>, so this is the point whose acceleration fixes the thrust direction</span></div>
+    <div class="mrow"><code>x_cd_dot</code><span>[m/s]</span></div>
+    <div class="mrow"><code>x_cd_ddot</code><span>[m/s²] — sets the thrust magnitude and direction</span></div>
+    <div class="mrow"><code>x_cd_d3</code><span>jerk [m/s³] — sets the body rate ω</span></div>
+    <div class="mrow"><code>x_cd_d4</code><span>snap [m/s⁴] — sets ω̇, hence the body torque. This is why the chain runs to the fourth derivative and not the second</span></div>
+
+    <div class="mgrp">2 · Drone heading direction — geometry_msgs/Vector3 ×3</div>
+    <div class="mrow"><code>b1_d</code><span>desired base heading, world UNIT vector — the MODEL body-x direction, which is 90° off the airframe's nose (see the frame contract below)</span></div>
+    <div class="mrow"><code>b1_d_dot</code><span>[1/s]</span></div>
+    <div class="mrow"><code>b1_d_ddot</code><span>[1/s²]</span></div>
+
+    <div class="mgrp">3 · End-effector position trajectory — geometry_msgs/Vector3 ×3</div>
+    <div class="mrow"><code>r_ed</code><span>EE (gripper grasp point) position, world [m]</span></div>
+    <div class="mrow"><code>r_ed_dot</code><span>[m/s]</span></div>
+    <div class="mrow"><code>r_ed_ddot</code><span>[m/s²] — the impedance law's acceleration feedforward</span></div>
+
+    <div class="mgrp">4 · End-effector heading direction — geometry_msgs/Vector3 ×3</div>
+    <div class="mrow"><code>b1_de</code><span>desired EE heading, world UNIT vector. With <code>r_ed</code> this is the task variable <code>y = [r_e; b_1e]</code> — 4 scalars against 4 joints, square by design</span></div>
+    <div class="mrow"><code>b1_de_dot</code><span>[1/s]</span></div>
+    <div class="mrow"><code>b1_de_ddot</code><span>[1/s²]</span></div>
+
+    <div class="mgrp">5 · Joint reference — float64[4] ×2 · <em>branch selection, not a fifth task</em></div>
+    <div class="mrow"><code>q_d</code><span>[rad]. Groups 1–4 already fix <code>q</code>: the task is 3 position + 1 azimuth on 4 joints, so solutions are ISOLATED — there is no null space to fill. But they are not UNIQUE. From the home pose, <code>[0, 40, 40, 0]°</code> and <code>[0, 128.7, −108.4, 0]°</code> give the identical EE position and azimuth to machine precision, and the law integrates torques with no knowledge of joint limits, so the DIRECT-entry transient can walk <code>q</code> off its branch. <code>q_d</code> is what says which one</span></div>
+    <div class="mrow"><code>qdot_d</code><span>[rad/s] — the damping reference of that same term</span></div>
+  </div>
+
+  <p class="c-desc"><b>Why the joint reference is here at all.</b> It feeds one term, a clamped
+  joint-space PID inside <code>u3</code> (<code>wb_posture_kp/kd/ki</code> = 2.0 / 0.25 / 0.05,
+  integral clamped to 0.8 N·m). Applied <em>inside</em> <code>u3</code> on purpose, so
+  <code>T&#x1D40;</code> also hands the base the matching arm-reaction compensation and the
+  saturation-consistent rebuild stays valid; in the SAFETY hold <code>u3</code> is zeroed outright.</p>
+
+  <p class="c-desc"><b>It is not in the published law, and it is not optional either.</b> Deleting it
+  was tried on 2026-09-05 and DIRECT stopped holding. Seven 75–90 s soaks, one variable at a time:</p>
+  <div class="msgdef">
+    <div class="mgrp">DIRECT soak outcomes — posture term removed unless stated</div>
+    <div class="mrow"><code>+15%&nbsp;kf,&nbsp;term&nbsp;present</code><span><b>stable, 75 s</b> — CoM 2.9 mm, EE 6.5 mm, tilt 0.04°, peak joint torque 0.74 N·m, 0% at the clamp</span></div>
+    <div class="mrow"><code>+15%&nbsp;kf</code><span><b>diverged</b>, abort at 32 s — CoM error 1.49 m, tilt 32°, <b>51% of samples on the 3.0 N·m joint clamp</b></span></div>
+    <div class="mrow"><code>+7.5%&nbsp;kf</code><span><b>diverged</b>, abort at 15 s</span></div>
+    <div class="mrow"><code>matched&nbsp;kf&nbsp;×3</code><span><b>1 pass in 3</b> — 75 s, then abort 17 s, then abort 3.7 s, same configuration: marginal, not stable</span></div>
+    <div class="mrow"><code>+15%,&nbsp;K_y&nbsp;20</code><span><b>diverged</b>, abort at 3.8 s — stiffening the EE task instead is the <em>worst</em> of the seven</span></div>
+  </div>
+
+  <p class="c-desc"><b>What actually goes wrong.</b> Within 5 s of DIRECT entry the arm leaves home —
+  q2 sweeps −10.8…50.0° and q3 −77.6…50.0°, hitting the +50° stop at t = 0.8 s and crossing into
+  negative q2/q3, this asset's <b>elbow-singular branch</b>. <code>J₃ᵧ</code> degrades, the damped
+  least-squares solve asks for torque the servos cannot give, all four joints rail, and the arm's
+  reaction takes the base. With the term in, that same window holds q2 at 31–43° and q3 at 39–43°.</p>
+
+  <p class="c-desc"><b>The EE task cannot stand in for it.</b> At <code>K_y</code> = 2 N/m a 200 mm
+  task error is 0.4 N of restoring force — the arm is effectively free. That softening happened in the
+  <em>same</em> +15% campaign that added the PID, so the two are a compensating pair that was only ever
+  validated together. Undoing both at once does not work either: <code>K_y</code> 2→20 with
+  <code>D_y</code> 4→9 aborted at 3.8 s. Removing the term needs a retune with mismatch margin —
+  <code>M_r_d</code>, the GMO bandwidths, <code>K_y</code>/<code>D_y</code>, a gentler entry — not a
+  one-line edit.</p>
+
+  <p class="c-desc"><b>It is not projected into a null space, because there isn't one</b> — it is added
+  straight to <code>u3</code>. So an inconsistent <code>q_d</code> does not sit harmlessly in unused
+  freedom: it fights the Cartesian task. That is why the gains are small and the integral clamped, and
+  why the planner derives <code>q_d</code> from the same solve as groups 1–4 rather than accepting it as
+  an independent command. In steady flight it contributes <b>0.004 N·m against a 0.77 N·m gravity load —
+  0.5%</b>, at the flown 0.11° arm-vs-reference error. Small, and load-bearing: it is what holds q on
+  its branch through the entry transient.</p>
+  <p class="c-desc"><b>Instrumentation gap worth knowing:</b> the streamed <code>q_d</code> is
+  <em>not</em> in <code>wb_control_debug</code>. Slots [9..12] carry
+  <code>wb_ref_builder_-&gt;qReference()</code> — the node's own smoothed arm reference, a different
+  quantity that coincides only when the stream is stale. To check joint tracking against what the
+  whole-body planner actually commanded, record this topic and compare it with
+  <code>fsc_open_manipulator/joint_states</code>; the debug array alone cannot answer it.</p>
+
+  <p class="c-desc"><b>16 fields, 50 doubles.</b> Every quantity is in the law's MODEL frame —
+  AM_realign's y-forward body frame, not the flying asset's x-forward FLU. World positions share the
+  common ENU world; the two heading vectors are MODEL body-x directions in it. The publisher owns
+  every actual↔model conversion (<code>φ_model = ψ_actual − π/2</code>), so the controller copies
+  fields verbatim with no frame math — which is also why a consumer that draws <code>b1_d</code> as
+  "the nose" gets an arrow 90° out.</p>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a></p>
   </article><article class="card" id="t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-wb_control_debug" data-t="imp" data-g="wb">
   <div class="c-head"><code class="c-path">/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/wb_control_debug</code>
@@ -1045,67 +1191,67 @@ something subscribes to it — mostly PX4 bridge inputs the agent never fills.</
   Nothing subscribes to it — it exists to be recorded.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a>
      <span class="wl">sub 0</span> <span class="muted">—</span></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-current_ee" data-t="situ" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/current_ee</code>
+  </article><article class="card" id="t-uav_0-whole_body_planner-current_ee" data-t="situ" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/current_ee</code>
     <span class="tier t-situ">Situational</span><span class="flag">no subscriber</span></div>
   <div class="c-type">geometry_msgs/msg/PoseStamped</div>
-  <p class="c-desc">The arm's current grasp point in the world, from the governor's own model on the measured joints.
+  <p class="c-desc">The arm's current grasp point in the world, from the whole-body planner's own model on the measured joints.
   Nothing subscribes to it here — the arm GS uses the body-frame twin instead.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 0</span> <span class="muted">—</span></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-current_ee_body" data-t="situ" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/current_ee_body</code>
+  </article><article class="card" id="t-uav_0-whole_body_planner-current_ee_body" data-t="situ" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/current_ee_body</code>
     <span class="tier t-situ">Situational</span></div>
   <div class="c-type">geometry_msgs/msg/PoseStamped</div>
   <p class="c-desc">The same grasp point expressed relative to the vehicle body, which is what the arm GS draws. Split
   from the inertial version because the two answer different questions and the GS needs both.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-ee_target" data-t="imp" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/ee_target</code>
+  </article><article class="card" id="t-uav_0-whole_body_planner-ee_target" data-t="imp" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/ee_target</code>
     <span class="tier t-imp">Important</span></div>
   <div class="c-type">geometry_msgs/msg/PoseStamped</div>
   <p class="c-desc">The end-effector goal, as an inertial world PoseStamped from the arm GS's EE Whole-Body tab. Arrival
-  triggers a re-plan on the governor's worker thread; an unchanged target (within 1 mm / 2 mrad) is
+  triggers a re-plan on the whole-body planner's worker thread; an unchanged target (within 1 mm / 2 mrad) is
   ignored so a repeated click cannot restart the solve.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a>
-     <span class="wl">sub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-pending_base" data-t="imp" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/pending_base</code>
+     <span class="wl">sub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a></p>
+  </article><article class="card" id="t-uav_0-whole_body_planner-pending_base" data-t="imp" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/pending_base</code>
     <span class="tier t-imp">Important</span></div>
   <div class="c-type">geometry_msgs/msg/PoseStamped</div>
-  <p class="c-desc">The base target the governor has <em>accepted but not executed</em>, republished latched. This is the
+  <p class="c-desc">The base target the whole-body planner has <em>accepted but not executed</em>, republished latched. This is the
   drone GS's reference held in escrow — nothing moves until the <code>send</code> Trigger.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-status" data-t="imp" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/status</code>
+  </article><article class="card" id="t-uav_0-whole_body_planner-status" data-t="imp" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/status</code>
     <span class="tier t-imp">Important</span></div>
   <div class="c-type">std_msgs/msg/String</div>
   <p class="c-desc">Latched String: <code>IDLE</code>, <code>HOLD</code>, <code>PENDING</code>,
   <code>CALCULATING</code>, <code>PLANNED T=…</code>, <code>INFEASIBLE:&lt;reason&gt;</code>,
   <code>EXECUTING T=…</code>. The state machine you drive from the arm GS, and the timeline any bag
   analysis should segment on.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-target_joints" data-t="situ" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/target_joints</code>
+  </article><article class="card" id="t-uav_0-whole_body_planner-target_joints" data-t="situ" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/target_joints</code>
     <span class="tier t-situ">Situational</span></div>
   <div class="c-type">std_msgs/msg/Float64MultiArray</div>
   <p class="c-desc">The solved goal joint angles, published on <b>every</b> plan attempt including infeasible ones —
   which is exactly when the arm GS's joint-limit row earns its place, because it shows which joint left
   its range and by how much.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
-  </article><article class="card" id="t-uav_0-whole_body_governor-workspace_rz" data-t="situ" data-g="wb">
-  <div class="c-head"><code class="c-path">/uav_0/whole_body_governor/workspace_rz</code>
+  </article><article class="card" id="t-uav_0-whole_body_planner-workspace_rz" data-t="situ" data-g="wb">
+  <div class="c-head"><code class="c-path">/uav_0/whole_body_planner/workspace_rz</code>
     <span class="tier t-situ">Situational</span></div>
   <div class="c-type">std_msgs/msg/Float64MultiArray</div>
   <p class="c-desc">A latched 192×192 (r, z) occupancy grid of the <b>genuinely reachable</b> whole-body workspace — one
   (q2, q3) sweep, exactly q1-independent. The arm GS draws this instead of its own raster, because its
   built-in model has a pitch wrist and a 126 mm bracket this asset does not have: only 2.6% of what it
   used to draw could ever be planned.</p>
-  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
   </article><h3 class="grp" data-g="ctl">Flight controller <span class="gc">10</span></h3><article class="card" id="t-uav_0-fsc_autopilot_ros2-attitude_setpoint_debug" data-t="imp" data-g="ctl">
   <div class="c-head"><code class="c-path">/uav_0/fsc_autopilot_ros2/attitude_setpoint_debug</code>
@@ -1169,7 +1315,7 @@ control: [0.58932, 0.53319, 0.58953, 0.53158,
   <div class="c-type">fsc_autopilot_ros2_msgs/msg/PositionControllerReference</div>
   <p class="c-desc"><b>Your command channel.</b> Where you stream the takeoff and landing setpoint. Exactly <b>one publisher</b> — two interleaving streams make the vehicle chase both. Silent while holding is normal and safe: the node latches the last reference it received.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-single_drone_gui_node">single_drone_gui_node</a>
-     <span class="wl">sub 2</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a></p>
+     <span class="wl">sub 2</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a></p>
   <div class="c-sample"><span class="c-label k-field">message fields</span><pre>header        std_msgs/Header
 position      {x, y, z}     m,     ENU inertial
 velocity      {x, y, z}     m/s,   feedforward (0 for a step)
@@ -1243,31 +1389,67 @@ info:
   in flight.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a>
      <span class="wl">sub 1</span> <a class="nl" href="#n-external_torque_controller">external_torque_controller</a></p>
-  </article><article class="card" id="t-uav_0-fsc_open_manipulator-external_torque_controller-smoothed_reference_joint_trajectory" data-t="crit" data-g="arm">
+  </article><article class="card" id="t-uav_0-fsc_open_manipulator-external_torque_controller-smoothed_reference_joint_trajectory" data-t="imp" data-g="arm">
   <div class="c-head"><code class="c-path">/uav_0/fsc_open_manipulator/external_torque_controller/smoothed_reference_joint_trajectory</code>
-    <span class="tier t-crit">Critical</span></div>
+    <span class="tier t-imp">Important</span></div>
   <div class="c-type">sensor_msgs/msg/JointState</div>
-  <p class="c-desc"><b>The arm controller's own min-jerk reference</b> — position, velocity and the post-clamp commanded
-  torque, at <b>250 Hz</b> here (<code>state_publish_rate: 250.0</code>, not the 50 Hz the position-mode
-  config uses). <b>It is not on the reference path.</b> The law ignores it while the governor's stream
-  is fresh, and the governor does not read it at all. What depends on it: the flight node's SAFETY arm
-  hold, its DIRECT-entry gate, and every friction, stiction, dither and back-EMF feedforward in
-  <code>TorqueControllerBase</code>, all keyed to <code>qd_cmd_</code>. Measured on 2 and 3 Sep it lags
-  the governor's plan by a whole transition — <b>3.0 to 4.1 s</b> — because the governor sends a 20 Hz
-  stream of <em>goals</em> and each one restarts <code>start_move()</code> from zero velocity, replanning
-  at <code>max(1.5 s, 1.875·Δ/0.2)</code>. A 40° joint move takes 6.6 s whatever the governor planned.</p>
+  <p class="c-desc"><b>Controller telemetry, not a reference source.</b> <code>effort</code> is the torque
+  this controller actually commanded, post-clamp &mdash; genuinely its own output, and what the arm ground
+  station plots as the dashed command curves. <code>position</code>/<code>velocity</code> is now only an
+  <em>echo</em> of the reference it is tracking, published so a bag shows what the controller believed it
+  was following.</p>
+  <p class="c-desc"><b>The flight node no longer reads it (2026-09-05).</b> It used to take its arm
+  reference from here, which made a <em>controller</em> the emitter of a reference and this node the
+  consumer of a controller's output &mdash; the wrong direction, and it hid the second min-jerk generator
+  that re-profiled the planned trajectory. Both now read the same
+  <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory">reference_joint_trajectory</a>
+  from the planner that owns it, so the reference fans out from one source instead of looping through the
+  controller.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-external_torque_controller">external_torque_controller</a>
-     <span class="wl">sub 2</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
+     <span class="wl">sub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a></p>
+  </article><article class="card" id="t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory" data-t="crit" data-g="arm">
+  <div class="c-head"><code class="c-path">/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory</code>
+    <span class="tier t-crit">Flight</span></div>
+  <div class="c-type">trajectory_msgs/msg/JointTrajectory &middot; 100 Hz &middot; one point (position, velocity, acceleration)</div>
+  <p class="c-desc"><b>THE arm reference. Exactly one node publishes it at any instant, chosen by flight
+  mode.</b> In SAFETY that is <a class="nl" href="#n-arm_planner">arm_planner</a>; in whole-body DIRECT it
+  is <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>, streaming the compatible plan's own
+  <code>q_d</code>/<code>qdot_d</code> from the same sample the law gets. Both gate on the latched
+  <code>whole_body_direct_actuation/mode</code>, so <code>ros2 topic info</code> shows two publishers of
+  which one is always quiet.</p>
+  <p class="c-desc"><b>Two subscribers, two different uses.</b> The arm controller
+  <em>tracks</em> it in both modes. The flight node uses it for the SAFETY arm hold, the
+  DIRECT-entry gate and <code>wb_control_debug[9..12]</code> &mdash; but once airborne in DIRECT the
+  law's arm reference is <code>q_d</code> inside
+  <a class="nl" href="#t-uav_0-fsc_autopilot_ros2-whole_body_direct_actuation-reference">whole_body_direct_actuation/reference</a>,
+  from the same planner and the same solve, so on that path this topic is gate and telemetry rather
+  than the tracked reference.</p>
+  <p class="c-desc"><b>The controller only tracks it.</b> With
+  <code>external_reference_topic</code> set, <code>TorqueControllerBase</code>'s own min-jerk generator is
+  switched off <em>at the interface</em> &mdash; it advertises no
+  <code>target_joint_setpoint</code>, <code>sine_reference_trajectory</code> or <code>go_home</code> &mdash;
+  there is no activation homing, and a stale stream <b>freezes</b> the last reference rather than inventing
+  a fallback trajectory.</p>
+  <p class="c-desc"><b>What this replaced (2026-09-05).</b> The generator used to live inside the
+  controller, so in DIRECT it ran <em>in series</em> with the whole-body planner's B-spline: the planner
+  poked a setpoint and the controller re-profiled it. The 09-02 and 09-03 flights measured the arm
+  <b>replaying the planner's move 3&ndash;4 s late</b>, endpoints agreeing exactly. One reference, one
+  planner, no second smoother.</p>
+  <p class="wire"><span class="wl">pub 2</span> <a class="nl" href="#n-arm_planner">arm_planner</a> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a>
+     <span class="wl">sub 1</span> <a class="nl" href="#n-external_torque_controller">external_torque_controller</a></p>
   </article><article class="card" id="t-uav_0-fsc_open_manipulator-external_torque_controller-target_joint_setpoint" data-t="imp" data-g="arm">
   <div class="c-head"><code class="c-path">/uav_0/fsc_open_manipulator/external_torque_controller/target_joint_setpoint</code>
     <span class="tier t-imp">Important</span></div>
   <div class="c-type">std_msgs/msg/Float64MultiArray</div>
-  <p class="c-desc">The goal the arm controller min-jerks toward. <b>Two publishers:</b> the governor streams the planned
-  q_d here at 20 Hz while EXECUTING (so a SAFETY abort lands on the current pose, not a stale one), and
-  the arm ground station publishes it from tab 1. Every new setpoint <em>restarts</em> the min-jerk from
-  zero velocity, which is why it cannot follow a trajectory — see the smoothed-reference note.</p>
-  <p class="wire"><span class="wl">pub 2</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a>
-     <span class="wl">sub 1</span> <a class="nl" href="#n-external_torque_controller">external_torque_controller</a></p>
+  <p class="c-desc">The arm ground station's joint goal, from tab 1 &mdash; it solves end-effector targets to
+  joint angles itself and publishes the result here. <b>Served by
+  <a class="nl" href="#n-arm_planner">arm_planner</a> now, not by the controller</b>, at the same name, so
+  the station needed no change. The planner min-jerks toward it and streams the result on
+  <a class="nl" href="#t-uav_0-fsc_open_manipulator-external_torque_controller-reference_joint_trajectory">reference_joint_trajectory</a>.
+  In whole-body DIRECT the planner <em>refuses</em> it &mdash; it does not queue it &mdash; and says why,
+  because the whole-body planner owns the arm there.</p>
+  <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a>
+     <span class="wl">sub 1</span> <a class="nl" href="#n-arm_planner">arm_planner</a></p>
   </article><article class="card" id="t-uav_0-fsc_open_manipulator-external_torque_controller-transition_event" data-t="noise" data-g="arm">
   <div class="c-head"><code class="c-path">/uav_0/fsc_open_manipulator/external_torque_controller/transition_event</code>
     <span class="tier t-noise">Noise</span><span class="flag">no subscriber</span></div>
@@ -1293,14 +1475,14 @@ goal_state   {id, label}</pre></div></article><article class="card" id="t-uav_0-
   <p class="c-desc"><b>The measured arm state — the law's arm feedback and the planner's initial condition.</b>
   <b>250 Hz</b> from <code>joint_state_broadcaster</code>, which has no rate parameter of its own: it
   publishes once per controller_manager cycle, so <code>update_rate</code> <i>is</i> this topic's rate.
-  Three nodes read it — the law, the arm GS, and the governor, which captures the rest pose from it at
+  Three nodes read it — the law, the arm GS, and the whole-body planner, which captures the rest pose from it at
   DIRECT entry. <b>The one measured arm state identical in sim and on real hardware</b>, which is why
   <code>armff_joint_topic</code> points here and not at the servo bus, and why the capture belongs here:
   the encoders are the only arm source that exists on the bus. <b>The name order is not sorted</b> —
   which is exactly why consumers match joints <i>by name</i>; positional indexing would read joint2's
   angle as joint1's and compute a badly wrong CoM.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-joint_state_broadcaster">joint_state_broadcaster</a>
-     <span class="wl">sub 3</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a></p>
+     <span class="wl">sub 3</span> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-arm_joint_plot_inverted">arm_joint_plot_inverted</a> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a></p>
   <div class="c-sample"><span class="c-label k-field">message fields</span><pre>frame_id: base_link
 name:     [joint2,   joint3,   joint1,    joint4]   &lt;-- NOT sorted
 position: [0.698441, 0.697977, 0.000421, -0.000013]  rad
@@ -1387,7 +1569,7 @@ linear_acceleration:    {x, y, z}     m/s^2
   <div class="c-head"><code class="c-path">/uav_0/state_estimator/local_position/odom</code>
     <span class="tier t-crit">Critical</span></div>
   <div class="c-type">nav_msgs/msg/Odometry</div>
-  <p class="c-desc"><b>The controller's position feedback</b>, at 250 Hz, and the base half of the governor's capture.
+  <p class="c-desc"><b>The controller's position feedback</b>, at 250 Hz, and the base half of the whole-body planner's capture.
   On <em>every</em> indoor stack — all 8 hardware and all 10 sim scripts — this is a <b>straight
   passthrough of <code>/uav_0/mocap</code></b> by <code>MocapOdomBridge</code>: pose, twist and header,
   unmodified. It is <b>not</b> fused with PX4. A fused variant (<code>px4_fused_odom_bridge</code>, via
@@ -1399,7 +1581,7 @@ linear_acceleration:    {x, y, z}     m/s^2
   <code>cs_ev_pos</code> both exist. <b>Position only</b> is taken from here; attitude comes from PX4.
   This is the topic whose silent freeze caused the 2026-08-03 fly-away.</p>
   <p class="wire"><span class="wl">pub 1</span> <a class="nl" href="#n-uav_0_node">uav_0_node</a>
-     <span class="wl">sub 3</span> <a class="nl" href="#n-single_drone_gui_node">single_drone_gui_node</a> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a></p>
+     <span class="wl">sub 3</span> <a class="nl" href="#n-single_drone_gui_node">single_drone_gui_node</a> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a></p>
   <div class="c-sample"><span class="c-label k-field">message fields</span><pre>header.frame_id: map
 pose.pose.position:     x -0.00056  y  0.00143  z  0.99831   m, ENU
 pose.pose.orientation:  x -0.00086  y  0.00077  z  0.00074  w 1.0
@@ -1866,13 +2048,13 @@ round_trip_time    uint32    us</pre></div></article><article class="card" id="t
     <span class="tier t-crit">Critical</span></div>
   <div class="c-type">px4_msgs/msg/VehicleAttitude</div>
   <p class="c-desc"><b>Attitude for the whole stack</b>, and the most-subscribed topic in the graph. The law and the
-  governor both take attitude from here, <b>not</b> from the odometry message's orientation field — so
+  whole-body planner both take attitude from here, <b>not</b> from the odometry message's orientation field — so
   the reference and the loop that tracks it derive heading from one estimator.
   <code>quat_reset_counter</code> increments on an EKF2 yaw reset, and <b>nothing in this stack watches
-  it</b>: a reset mid-DIRECT would make the law physically rotate the vehicle to re-track a governor
+  it</b>: a reset mid-DIRECT would make the law physically rotate the vehicle to re-track a whole-body planner
   heading that has not moved. Open item.</p>
   <p class="wire"><span class="wl">pub 1</span> <span class="muted">—</span>
-     <span class="wl">sub 5</span> <a class="nl" href="#n-single_drone_gui_node">single_drone_gui_node</a> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-uav_0_node">uav_0_node</a> <a class="nl" href="#n-whole_body_reference_governor">whole_body_reference_governor</a></p>
+     <span class="wl">sub 5</span> <a class="nl" href="#n-single_drone_gui_node">single_drone_gui_node</a> <a class="nl" href="#n-fsc_autopilot_ros2">fsc_autopilot_ros2</a> <a class="nl" href="#n-uav_0_node">uav_0_node</a> <a class="nl" href="#n-whole_body_planner">whole_body_planner</a></p>
   <div class="c-sample"><span class="c-label k-field">message fields</span><pre>timestamp: 724288000
 q: [0.70729, -0.00018, -0.00076, 0.70692]     # NED, w first
 delta_q_reset: [0.70700, 0.0, 0.0, 0.70722]
@@ -2114,7 +2296,7 @@ goal_state   {id, label}</pre></div></article></div>
   (steps 0, 2, 3 — never armed, never flown): <code>ros2 node list</code>, <code>ros2 node info</code>
   for all 13, and <code>ros2 topic info</code> for all 99. Traffic behaviour per phase is from the source
   and from the 2/3 Sep flight bags, not from a live DIRECT engagement.</p>
-  <p>The <code>whole_body_reference_governor</code> entry reflects a governor change made
+  <p>The <code>whole_body_planner</code> entry reflects a whole-body planner change made
   later the same day — it reads PX4 attitude and the arm encoders — so its subscriptions,
   and the two topic counts and one edge that follow from them, post-date the capture.</p>
 </footer>

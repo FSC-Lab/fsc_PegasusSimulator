@@ -73,7 +73,7 @@ AM_XFWD_BODY_DIAG_INERTIA = np.diag([0.06334175, 0.06301228, 0.09868092])
 
 
 # The T650 whole-body model has ONE definition, in the extension, so this
-# fixture and the governor's planner can never describe different robots (they
+# fixture and the whole-body planner's planner can never describe different robots (they
 # were briefly duplicated, 2026-08-23). It also carries the EE = GRIPPER offset
 # that the C++ t650Defaults mirrors — the thing this fixture exists to lock.
 from fsc_aerial_manipulation.robotic_arm.utils_planner.transition_planner import (  # noqa: E402

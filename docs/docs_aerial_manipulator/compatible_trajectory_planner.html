@@ -45,13 +45,12 @@ body{
   font-family:var(--serif); font-size:17px; line-height:1.62;
   -webkit-font-smoothing:antialiased;
 }
-/* One measured column: prose holds a reading measure, while tables, equation
-   blocks and the interface cards use the full sheet so nothing is cramped and
-   no width is left dead. */
+/* One measured column. The SHEET is the measure — every block, prose included,
+   runs the full width of whatever contains it, so no line breaks early and no
+   width is left dead on the right. */
 .sheet{max-width:860px;margin:0 auto;padding:56px 30px 120px}
 .col{max-width:none}
-section p,section .lede,.standfirst{max-width:68ch}
-.note p{max-width:none}
+section p,section .lede,.standfirst,.note p{max-width:none}
 
 /* ---- masthead ------------------------------------------------------------ */
 header{border-bottom:1.5px solid var(--ink);padding-bottom:26px;margin-bottom:14px}
@@ -63,7 +62,7 @@ h1{
   font-family:var(--serif);font-weight:600;font-size:clamp(34px,5.4vw,52px);
   line-height:1.06;letter-spacing:-.018em;margin:0 0 14px;text-wrap:balance;
 }
-.standfirst{font-size:19px;line-height:1.55;color:var(--ink-2);margin:0;max-width:60ch}
+.standfirst{font-size:19px;line-height:1.55;color:var(--ink-2);margin:0}
 .standfirst em{color:var(--ink);font-style:italic}
 
 .provenance{
@@ -165,7 +164,7 @@ td .m{font-family:var(--mono);font-size:12.5px}
 .part .pl{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
   color:var(--solve);font-weight:600;display:block;margin-bottom:10px}
 .part h2{font-size:31px;margin:0 0 10px;display:block}
-.part p{color:var(--ink-2);font-size:17.5px;margin:0;max-width:66ch}
+.part p{color:var(--ink-2);font-size:17.5px;margin:0}
 .note.free{--nc:var(--free)} .note.check{--nc:var(--check)} .note.fiat{--nc:var(--fiat)}
 .note h4{font-family:var(--serif);font-size:17px;font-weight:600;margin:0 0 8px;color:var(--ink)}
 .note p{margin:0 0 10px;font-size:15.5px;color:var(--ink-2)}
@@ -181,10 +180,14 @@ td .m{font-family:var(--mono);font-size:12.5px}
 .deriv li::before{content:counter(d);font-family:var(--mono);font-size:10px;font-weight:600;
   color:var(--solve);background:var(--solve-bg);border-radius:2px;height:19px;
   display:grid;place-items:center;margin-top:3px}
-.deriv li > div{font-size:15.5px;color:var(--ink-2);line-height:1.6;max-width:64ch}
+.deriv li > div{font-size:15.5px;color:var(--ink-2);line-height:1.6}
 .deriv .ml{display:block;font-size:16px;line-height:2;margin:7px 0 0;color:var(--ink)}
-.deriv .qed{margin:16px 0 0;font-size:14px;color:var(--ink-3);max-width:64ch;line-height:1.55}
+.deriv .qed{margin:16px 0 0;font-size:14px;color:var(--ink-3);line-height:1.55}
 .deriv .qed b{color:var(--ink)}
+.deriv .rng{display:block;margin:8px 0;font-size:15.5px;line-height:1.7;color:var(--ink);
+  overflow-x:auto;white-space:nowrap}
+.deriv .mat,.eq .mat{font-family:var(--mono);font-size:11.5px;line-height:1.85;white-space:pre;
+  overflow-x:auto;display:block;margin:9px 0 4px;color:var(--ink)}
 
 /* ---- algorithm block ----------------------------------------------------- */
 .algo{
@@ -207,7 +210,7 @@ td .m{font-family:var(--mono);font-size:12.5px}
   color:var(--ink-3);display:block;margin-top:6px}
 
 footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--rule);
-  font-size:14px;color:var(--ink-3);max-width:72ch}
+  font-size:14px;color:var(--ink-3)}
 footer code{font-size:12px}
 /* (P) is the document's index: every symbol links to where it is decided. */
 .eq.problem{border-left-width:3px;--eqc:var(--ink);background:var(--sunk)}
@@ -331,7 +334,7 @@ tr:target td{background:var(--solve-bg)}
       <dl>
         <dt>T</dt><dd>Duration (s), chosen by the planner, not requested.</dd>
         <dt>ref(t)</dt>
-        <dd>The reference, as a function of elapsed time. Sampled at 100 Hz by the governor and
+        <dd>The reference, as a function of elapsed time. Sampled at 100 Hz by the whole-body planner and
         published as <code>WholeBodyReference</code>, which the control law copies
         <b>verbatim</b>.</dd>
         <dt>q1</dt><dd>Terminal joints — the next hold's anchor.</dd>
@@ -344,7 +347,7 @@ tr:target td{background:var(--solve-bg)}
     </div>
   </div>
 
-  <h3>The 17 fields of ref(t)</h3>
+  <h3>The 16 fields of ref(t)</h3>
   <div class="tw">
   <table>
     <thead><tr><th>Field</th><th>Symbol</th><th>Derivatives</th><th>Origin</th></tr></thead>
@@ -429,6 +432,99 @@ tr:target td{background:var(--solve-bg)}
       <span class="an">attitude from thrust direction + heading; arm angles from the residual rotation</span>
     </div>
     <div class="eq-n">(A4)</div>
+  </div>
+
+  <div class="deriv">
+    <h4>build and zxz, written out</h4>
+    <ol>
+      <li><div><b>build</b> — project the heading onto the rotor plane. (A3) has already spent
+        <var>b</var><sub>3</sub>, so the only freedom left in the attitude is a rotation about
+        it, and <var>b</var><sub>1</sub> is used for nothing but that angle. With
+        <var>Π</var> = <var>I</var> − <var>b</var><sub>3</sub><var>b</var><sub>3</sub><sup>T</sup>
+        the projector onto the plane ⟂ <var>b</var><sub>3</sub>:
+        <span class="ml"><var>b</var><sub>1c</sub> = <var>Π b</var><sub>1</sub> /
+        ‖<var>Π b</var><sub>1</sub>‖</span>
+        <var>b</var><sub>1</sub> need not be a unit vector, and its component along
+        <var>b</var><sub>3</sub> is discarded. If ‖<var>Π b</var><sub>1</sub>‖ &lt; 10<sup>−9</sup>
+        the requested heading is parallel to the thrust axis and carries no azimuth at all; a
+        fixed axis is substituted (<var>e</var><sub>1</sub>, or <var>e</var><sub>2</sub> when
+        |<var>b</var><sub>3</sub>·<var>e</var><sub>1</sub>| &gt; 0.9) so the frame stays defined
+        rather than the heading being honoured.</div></li>
+
+      <li><div><b>build</b> — close the frame with one cross product:
+        <span class="ml"><var>b</var><sub>2c</sub> = <var>b</var><sub>3</sub> ×
+        <var>b</var><sub>1c</sub>, &nbsp;&nbsp;&nbsp;&nbsp;
+        <var>R</var><sub>0</sub> = [ <var>b</var><sub>1c</sub> &nbsp;&nbsp;
+        <var>b</var><sub>2c</sub> &nbsp;&nbsp; <var>b</var><sub>3</sub> ]</span>
+        Columns are the body axes written in the world. One Gram–Schmidt pass, orthonormal with
+        det = +1 by construction, so nothing is ever re-orthogonalized — and it is the same
+        construction the control law uses for its own <var>R</var><sub>0c</sub>, which is why
+        the reference cannot disagree with the law about what attitude a thrust direction
+        means.</div></li>
+
+      <li><div><b>zxz</b> — recognise the residual. Because the joint axes are
+        (<var>z, x, x, z</var>) and joints 2 and 3 share the <var>x</var> axis,
+        <var>R</var><sub>0</sub><sup>T</sup><var>R</var><sub>e</sub> is
+        <em>exactly</em> <var>R</var><sub>z</sub>(<var>α</var>)
+        <var>R</var><sub>x</sub>(<var>β</var>) <var>R</var><sub>z</sub>(<var>γ</var>) — the arm's
+        own rotation chain, not a fitted approximation of it. Writing
+        <var>M</var> ≡ <var>R</var><sub>0</sub><sup>T</sup><var>R</var><sub>e</sub> and
+        <var>c</var> = cos, <var>s</var> = sin:
+        <span class="mat">⎡ cα cγ − sα cβ sγ   −cα sγ − sα cβ cγ    sα sβ ⎤
+⎢ sα cγ + cα cβ sγ   −sα sγ + cα cβ cγ   −cα sβ ⎥
+⎣       sβ sγ               sβ cγ           cβ  ⎦</span>
+        The 2×2 block is where all three angles are tangled; the <b>third column</b> and
+        <b>third row</b> are not, and that is the whole trick.</div></li>
+
+      <li><div><b>zxz</b> — read the angles off those two:
+        <span class="ml"><var>β</var> = atan2( √(<var>M</var><sub>13</sub><sup>2</sup> +
+        <var>M</var><sub>23</sub><sup>2</sup>), <var>M</var><sub>33</sub> )
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <var>α</var> = atan2( <var>M</var><sub>13</sub>, −<var>M</var><sub>23</sub> )
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <var>γ</var> = atan2( <var>M</var><sub>31</sub>, <var>M</var><sub>32</sub> )</span>
+        Three two-argument atan2 calls: no arcsin, no arccos, so no quadrant is lost and no
+        precision is thrown away at the ends of the range. The square root is
+        ‖(sin <var>β</var>)‖ ≥ 0, which is what selects the branch. When it falls below
+        10<sup>−9</sup>, <var>M</var> has collapsed to
+        <var>R</var><sub>z</sub>(<var>α</var> + <var>γ</var>) and only the <em>sum</em> is
+        observable; the code then sets <var>γ</var> = 0 and takes
+        <var>α</var> = atan2(−<var>M</var><sub>12</sub>, <var>M</var><sub>11</sub>), putting the
+        entire rotation into the arm's yaw joint.</div></li>
+    </ol>
+    <p class="qed"><b>Ranges.</b> The chart itself returns
+    <span class="rng"><var>α</var> ∈ (−<var>π</var>, <var>π</var>] &nbsp;&nbsp;
+    <var>β</var> ∈ [0, <var>π</var>] &nbsp;&nbsp;
+    <var>γ</var> ∈ (−<var>π</var>, <var>π</var>]</span>
+    — a full turn on each <var>z</var>, half a turn on the <var>x</var>, because
+    <var>β</var> ≥ 0 <em>is</em> the branch choice: the mirror solution
+    (<var>α</var>+<var>π</var>, −<var>β</var>, <var>γ</var>+<var>π</var>) is the same rotation
+    with the arm folded the other way — the badly-conditioned side, where
+    <var>σ</var><sub>nd</sub> collapses. What the arm can actually be asked for is narrower on
+    all three, because (A5) lands the chart in the joint box
+    <code>Q_MIN</code> … <code>Q_MAX</code>:
+    <span class="rng"><var>q</var><sub>1</sub> ∈ [−35°, +35°] &nbsp;&nbsp;
+    <var>q</var><sub>2</sub> ∈ [−80°, +50°] &nbsp;&nbsp;
+    <var>q</var><sub>3</sub> ∈ [−40°, +50°] &nbsp;&nbsp;
+    <var>q</var><sub>4</sub> ∈ [−120°, +120°]</span>
+    <span class="rng"><var>α</var> = <var>q</var><sub>1</sub> ∈ [−35°, +35°] &nbsp;&nbsp;
+    <var>β</var> = <var>q</var><sub>2</sub> + <var>q</var><sub>3</sub> ∈ [5°, 100°] &nbsp;&nbsp;
+    <var>γ</var> = <var>q</var><sub>4</sub> ∈ [−120°, +120°]</span>
+    The two edges come from different places. The ceiling is arithmetic — the two +50° stops
+    summed, since <var>β</var> is not a joint. The floor is a <em>chosen</em> guard,
+    <code>beta_min_deg</code> = 5°, tested on both endpoints: at <var>β</var> = 0 the chart
+    collapses to <var>R</var><sub>z</sub>(<var>α</var> + <var>γ</var>), the two <var>z</var>
+    angles stop being separable, and the recovery would dump the whole rotation into
+    <var>q</var><sub>1</sub> — stepping the very joint path <var>q̇</var><sub>d</sub>
+    differentiates. It is a guard against nonsense input, not an operating limit: the folded
+    home pose sits at <var>β</var> = 80°. The box's own −120° lower edge never binds, the
+    <var>β</var> ≥ 0 branch having already excluded it. So the chart's other degeneracy, <var>β</var> = <var>π</var>, is unreachable and
+    <var>β</var> → 0 is the only one that can occur. Outside these the planner refuses — it
+    never re-branches. Checked on this build: the read-off reconstructs <var>M</var> to
+    <b>2.2e−16</b> over 5000 random rotations, and the frame above matches the law's
+    <var>R</var><sub>0c</sub> to <b>5.0e−15</b>. Note what does <em>not</em> come out:
+    <var>β</var> is the <em>sum</em> <var>q</var><sub>2</sub> + <var>q</var><sub>3</sub>, which is
+    exactly where the null space of (A5) comes from.</p>
   </div>
   <div class="eq free">
     <div class="eq-body" id="eq-A5">
@@ -657,7 +753,7 @@ tr:target td{background:var(--solve-bg)}
 
   <p>The defect is the residual of (A6) on the 801-point check grid — <b>55 nanometres</b>, so
   the returned trajectory is compatible to well below anything the plant could express. The
-  1.1 ms evaluation sits inside the governor's 10 ms budget at 100 Hz, but it runs in Python
+  1.1 ms evaluation sits inside the whole-body planner's 10 ms budget at 100 Hz, but it runs in Python
   under the GIL, which is why the solve carries a yield hook: one uninterrupted Picard pass is
   ~26 ms and would otherwise stall the stream past its 250 ms staleness window.</p>
 </section>
@@ -913,9 +1009,667 @@ seeds = [ <b>q_seed</b> (current hold), <b>folded home</b> [0,40°,40°,0], <b>z
     never corrected. Same verify-don't-enforce pattern as Part A, with the same consequence: an
     out-of-range solution is a refusal even where a legal alternative branch may exist.</p>
     <p><var>q</var><sub>1</sub> comes back <b>even when the solve fails</b>, on purpose — that
-    is what feeds <code>whole_body_governor/target_joints</code>, published on every plan
+    is what feeds <code>whole_body_planner/target_joints</code>, published on every plan
     attempt including infeasible ones, so the arm ground station's joint row can show
     <em>which</em> joint went out and by how much rather than just “infeasible”.</p>
+  </div>
+</section>
+
+<div class="part">
+  <span class="pl">Part C</span>
+  <h2>B-spline trajectory optimization in the flat outputs</h2>
+  <p>The reformulation the simulation whole-body planner now runs (<code>flat_bspline_planner.py</code>).
+  Parts A and B remain the description of <code>transition_planner.py</code>, which hardware
+  still flies. Equations first; prose only where a choice needs its reason.</p>
+</div>
+
+<section class="col">
+  <h2><span class="num">§10</span> B-spline curves</h2>
+
+  <div class="eq">
+    <div class="eq-body" id="eq-C1">
+      <var>z</var>(<var>t</var>) = Σ<sub><var>i</var>=0</sub><sup><var>n</var>−1</sup>
+      <var>c</var><sub>i</sub> <var>N</var><sub>i,p</sub>(<var>t</var>), &nbsp;&nbsp;
+      <var>t</var> ∈ [0, <var>T</var>], &nbsp;&nbsp; <var>c</var><sub>i</sub> ∈ ℝ<sup>d</sup>
+      <span class="an">a degree-p B-spline curve: n control points c_i, basis functions N_{i,p}</span>
+    </div>
+    <div class="eq-n">(C1)</div>
+  </div>
+
+  <div class="eq">
+    <div class="eq-body" id="eq-C2">
+      <var>N</var><sub>i,0</sub>(<var>t</var>) = 𝟙[<var>u</var><sub>i</sub> ≤ <var>t</var> &lt;
+      <var>u</var><sub>i+1</sub>], &nbsp;&nbsp;
+      <var>N</var><sub>i,p</sub>(<var>t</var>) =
+      <span style="display:inline-block;vertical-align:middle;text-align:center;line-height:1.15">
+        <span style="border-bottom:1px solid currentColor;padding:0 2px"><var>t</var> − <var>u</var><sub>i</sub></span><br>
+        <span><var>u</var><sub>i+p</sub> − <var>u</var><sub>i</sub></span></span>
+      <var>N</var><sub>i,p−1</sub>(<var>t</var>) +
+      <span style="display:inline-block;vertical-align:middle;text-align:center;line-height:1.15">
+        <span style="border-bottom:1px solid currentColor;padding:0 2px"><var>u</var><sub>i+p+1</sub> − <var>t</var></span><br>
+        <span><var>u</var><sub>i+p+1</sub> − <var>u</var><sub>i+1</sub></span></span>
+      <var>N</var><sub>i+1,p−1</sub>(<var>t</var>)
+      <span class="an">Cox–de Boor recursion; a 0/0 term is taken as 0</span>
+    </div>
+    <div class="eq-n">(C2)</div>
+  </div>
+
+  <div class="eq fiat">
+    <div class="eq-body" id="eq-C3">
+      <var>u</var> = ( 0, …, 0<sub>(p+1)</sub>, &nbsp;<var>T</var>/<var>M</var>, 2<var>T</var>/<var>M</var>,
+      …, (<var>M</var>−1)<var>T</var>/<var>M</var>, &nbsp;<var>T</var>, …, <var>T</var><sub>(p+1)</sub> ),
+      &nbsp;&nbsp; <var>n</var> = <var>M</var> + <var>p</var>
+      <span class="an">clamped, uniform interior knots, M spans — the one knot family used throughout</span>
+    </div>
+    <div class="eq-n">(C3)</div>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C4">
+      <var>z</var><sup>(1)</sup>(<var>t</var>) = Σ<sub>i=0</sub><sup>n−2</sup>
+      <var>c</var><sub>i</sub><sup>(1)</sup> <var>N</var><sub>i,p−1</sub>(<var>t</var>), &nbsp;&nbsp;
+      <var>c</var><sub>i</sub><sup>(1)</sup> = <var>p</var>
+      <span style="display:inline-block;vertical-align:middle;text-align:center;line-height:1.15">
+        <span style="border-bottom:1px solid currentColor;padding:0 2px"><var>c</var><sub>i+1</sub> − <var>c</var><sub>i</sub></span><br>
+        <span><var>u</var><sub>i+p+1</sub> − <var>u</var><sub>i+1</sub></span></span>
+      &nbsp;&nbsp;⟹&nbsp;&nbsp; <var>c</var><sup>(r)</sup> = <var>D</var><sub>r</sub> <var>c</var>,
+      &nbsp; <var>D</var><sub>r</sub> = Δ<sub>p−r+1</sub> ⋯ Δ<sub>p</sub> ∈ ℝ<sup>(n−r)×n</sup>
+      <span class="an">the derivative is a B-spline of degree p−1 whose control points are scaled DIFFERENCES; Δ_p is the bidiagonal difference operator of (C4), so every derivative is LINEAR in c</span>
+    </div>
+    <div class="eq-n">(C4)</div>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C5">
+      ∫<sub>0</sub><sup>T</sup> ‖<var>z</var><sup>(r)</sup>(<var>t</var>)‖² d<var>t</var> =
+      Σ<sub>a=1</sub><sup>d</sup> <var>c</var><sub>a</sub><sup>T</sup> <var>Q</var><sub>r</sub>
+      <var>c</var><sub>a</sub>, &nbsp;&nbsp;
+      <var>Q</var><sub>r</sub> = <var>D</var><sub>r</sub><sup>T</sup> <var>G</var><sub>p−r</sub>
+      <var>D</var><sub>r</sub>, &nbsp;&nbsp;
+      [<var>G</var><sub>p−r</sub>]<sub>ij</sub> = ∫<sub>0</sub><sup>T</sup>
+      <var>N</var><sub>i,p−r</sub> <var>N</var><sub>j,p−r</sub> d<var>t</var>
+      <span class="an">c_a = the a-th coordinate of every control point; G is the Gram matrix of the derivative basis, exact by Gauss–Legendre per span; Q_r ⪰ 0 with null space = polynomials of degree &lt; r</span>
+    </div>
+    <div class="eq-n">(C5)</div>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C6">
+      <var>Q</var><sub>r</sub>(<var>T</var>) = <var>T</var><sup>1−2r</sup> <var>Q</var><sub>r</sub>(1)
+      <span class="an">on the knots of (C3): N_i^T(t) = N_i^1(t/T), D_r scales as T^−r, G as T — one positive scalar, which cancels in any minimizer</span>
+    </div>
+    <div class="eq-n">(C6)</div>
+  </div>
+
+  <h3>Why this basis</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Property</th><th>Statement</th><th>What it buys in (P′)</th></tr></thead>
+    <tbody>
+      <tr><td>Linearity</td><td>(C1), (C4): <var>z</var> and every <var>z</var><sup>(r)</sup> are linear in <var>c</var></td>
+          <td>cost is a quadratic form (C5); derivative bounds are linear</td></tr>
+      <tr><td>Clamped ends</td><td><var>z</var>(0) = <var>c</var><sub>0</sub>, <var>z</var>(<var>T</var>) = <var>c</var><sub>n−1</sub>;
+          &nbsp;<var>z</var><sup>(1..k)</sup>(0) = 0 ⟺ <var>c</var><sub>0</sub> = ⋯ = <var>c</var><sub>k</sub></td>
+          <td>rest conditions are equalities on individual control points</td></tr>
+      <tr><td>Local convex hull</td><td>on span <var>i</var>: <var>z</var>(<var>t</var>) ∈ conv{<var>c</var><sub>i−p</sub>, …, <var>c</var><sub>i</sub>}</td>
+          <td>a box on <var>c</var> is a box on the curve (sufficient, not tight)</td></tr>
+      <tr><td>Built-in continuity</td><td>C<sup>p−1</sup> across every simple knot</td>
+          <td>no continuity equalities; no joins to ring</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">§11</span> Trajectory parameterization</h2>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C7">
+      <var>z</var>(<var>t</var>) = [ <var>x</var><sub>c</sub>(<var>t</var>) ; <var>ψ</var>(<var>t</var>) ;
+      <var>q</var>(<var>t</var>) ] ∈ ℝ<sup>8</sup>
+      <span class="an">flat outputs: system CoM, platform heading, joint angles — 8 outputs, 8 inputs (f, τ ∈ ℝ³, τ_j ∈ ℝ⁴); m ẍ_c = f R₀e₃ − m g e₃ makes b₃ a function of ẍ_c alone, so nothing downstream needs solving</span>
+    </div>
+    <div class="eq-n">(C7)</div>
+  </div>
+
+  <p>Each channel is a curve of the form (C1) on the shared knots (C3), clamped to its own degree:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Channel</th><th>dim</th><th>degree p</th><th>continuity</th><th>control points n = M+p</th><th>pinned per end</th><th>decision variable</th></tr></thead>
+    <tbody>
+      <tr><td><var>x</var><sub>c</sub></td><td class="num">3</td><td class="num">7</td><td>C⁶</td>
+          <td class="num"><var>n</var><sub>x</sub> = 19</td><td class="num">5</td>
+          <td><var>C</var><sub>x</sub> ∈ ℝ<sup>n<sub>x</sub>×3</sup></td></tr>
+      <tr><td><var>ψ</var></td><td class="num">1</td><td class="num">5</td><td>C⁴</td>
+          <td class="num"><var>n</var><sub>ψ</sub> = 17</td><td class="num">3</td>
+          <td><var>c</var><sub>ψ</sub> ∈ ℝ<sup>n<sub>ψ</sub></sup></td></tr>
+      <tr><td><var>q</var></td><td class="num">4</td><td class="num">5</td><td>C⁴</td>
+          <td class="num"><var>n</var><sub>q</sub> = 17</td><td class="num">3</td>
+          <td><var>C</var><sub>q</sub> ∈ ℝ<sup>n<sub>q</sub>×4</sup></td></tr>
+      <tr><td>duration</td><td class="num">1</td><td colspan="4"></td><td><var>T</var> ∈ ℝ<sub>&gt;0</sub></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C8">
+      <var>ξ</var> = ( <var>C</var><sub>x</sub>, <var>c</var><sub>ψ</sub>, <var>C</var><sub>q</sub>, <var>T</var> )
+      &nbsp;&nbsp; — &nbsp; 3·19 + 17 + 4·17 = <b>142</b> control-point scalars, <b>82</b> free once (C10) is imposed, plus <var>T</var>
+      <span class="an">M = 12 spans. Degree 7 on x_c because r̈_e depends linearly on x_c⁽⁴⁾: p = 5 would leave snap piecewise-linear and kink the EE acceleration at every knot</span>
+    </div>
+    <div class="eq-n">(C8)</div>
+  </div>
+
+  <p>Everything else is <em>derived</em> from <var>ξ</var>, never a variable — the platform attitude
+  <var>R</var><sub>0</sub> = build(<var>b</var><sub>3</sub>, <var>b</var><sub>1</sub>(<var>ψ</var>)) with
+  <var>b</var><sub>3</sub> = (<var>ẍ</var><sub>c</sub> + <var>g e</var><sub>3</sub>)/‖·‖; the EE pose
+  <var>R</var><sub>e</sub> = <var>R</var><sub>0</sub>∏Rot(<var>h</var><sub>i</sub>, <var>q</var><sub>i</sub>),
+  <var>r</var><sub>e</sub> = <var>x</var><sub>c</sub> − <var>R</var><sub>0</sub>(<var>r</var><sub>0c</sub>(<var>q</var>) −
+  <var>r</var><sub>0e</sub>(<var>q</var>)); and the inputs <var>f</var>, <var>τ</var>, <var>τ</var><sub>j</sub> of (C13).
+  The endpoints enter in flat coordinates by algebra at a rest point, where <var>R</var><sub>0</sub> = <var>R</var><sub>z</sub>(<var>ψ</var>):</p>
+
+  <div class="eq">
+    <div class="eq-body" id="eq-C9">
+      <var>x</var><sub>c,k</sub> = <var>x</var><sub>b,k</sub> + <var>R</var><sub>z</sub>(<var>ψ</var><sub>k</sub>)
+      <var>r</var><sub>0c</sub>(<var>q</var><sub>k</sub>), &nbsp;&nbsp; <var>k</var> ∈ {0, 1}
+      <span class="an">from the two rest specs (x_b, ψ, q); the joint endpoints q₀, q₁ are used as given</span>
+    </div>
+    <div class="eq-n">(C9)</div>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">§12</span> Optimization problem</h2>
+
+  <h3>Cost</h3>
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C10">
+      <var>J</var>(<var>ξ</var>) = <var>w</var><sub>x</sub> ∫<sub>0</sub><sup>T</sup> ‖<var>x</var><sub>c</sub><sup>(4)</sup>‖² d<var>t</var>
+      + <var>w</var><sub>ψ</sub> ∫<sub>0</sub><sup>T</sup> <var>ψ̈</var>² d<var>t</var>
+      + <var>w</var><sub>q</sub> ∫<sub>0</sub><sup>T</sup> ‖<var>q</var><sup>(3)</sup>‖² d<var>t</var>
+      &nbsp;=&nbsp; <var>w</var><sub>x</sub> tr(<var>C</var><sub>x</sub><sup>T</sup><var>Q</var><sub>4</sub><var>C</var><sub>x</sub>)
+      + <var>w</var><sub>ψ</sub> <var>c</var><sub>ψ</sub><sup>T</sup><var>Q</var><sub>2</sub><var>c</var><sub>ψ</sub>
+      + <var>w</var><sub>q</sub> tr(<var>C</var><sub>q</sub><sup>T</sup><var>Q</var><sub>3</sub><var>C</var><sub>q</sub>)
+      <span class="an">snap of the CoM (the body torque depends on x_c⁽⁴⁾ through R̈₀) · yaw acceleration (yaw torque ∝ ψ̈) · joint jerk (τ_j ∝ q̈, so this keeps the joint torque C¹). Q_r per channel from (C5) at that channel's degree</span>
+    </div>
+    <div class="eq-n">(C10)</div>
+  </div>
+
+  <h3>Constraints</h3>
+
+  <p><b>Rest at both ends.</b> Value plus vanishing derivatives, through snap for the CoM so that
+  <var>ω</var> = 0 <em>and</em> <var>ω̇</var> = 0 — zero body torque at the handover, not merely zero speed:</p>
+  <div class="eq fiat">
+    <div class="eq-body" id="eq-C11">
+      <var>x</var><sub>c</sub>(0) = <var>x</var><sub>c,0</sub>, &nbsp; <var>x</var><sub>c</sub>(<var>T</var>) = <var>x</var><sub>c,1</sub>,
+      &nbsp; <var>x</var><sub>c</sub><sup>(k)</sup>(0) = <var>x</var><sub>c</sub><sup>(k)</sup>(<var>T</var>) = 0, &nbsp;<var>k</var> = 1…4<br>
+      <var>ψ</var>(0) = <var>ψ</var><sub>0</sub>, &nbsp; <var>ψ</var>(<var>T</var>) = <var>ψ</var><sub>1</sub>,
+      &nbsp; <var>ψ̇</var> = <var>ψ̈</var> = 0 at 0 and <var>T</var><br>
+      <var>q</var>(0) = <var>q</var><sub>0</sub>, &nbsp; <var>q</var>(<var>T</var>) = <var>q</var><sub>1</sub>,
+      &nbsp; <var>q̇</var> = <var>q̈</var> = 0 at 0 and <var>T</var><br>
+      ⟺ &nbsp; <var>c</var><sub>x,0</sub> = ⋯ = <var>c</var><sub>x,4</sub> = <var>x</var><sub>c,0</sub>, &nbsp;
+      <var>c</var><sub>x,n−5</sub> = ⋯ = <var>c</var><sub>x,n−1</sub> = <var>x</var><sub>c,1</sub>; &nbsp;
+      <var>c</var><sub>ψ,0..2</sub> = <var>ψ</var><sub>0</sub>, <var>c</var><sub>ψ,n−3..n−1</sub> = <var>ψ</var><sub>1</sub>; &nbsp;
+      <var>c</var><sub>q,0..2</sub> = <var>q</var><sub>0</sub>, <var>c</var><sub>q,n−3..n−1</sub> = <var>q</var><sub>1</sub>
+      <span class="an">clamped ends make these EQUALITIES ON INDIVIDUAL CONTROL POINTS — the "⟺" is exact for the knots (C3), not an approximation</span>
+    </div>
+    <div class="eq-n">(C11)</div>
+  </div>
+
+  <p><b>Joint angle bounds.</b> Pointwise, and its sufficient control-point form by the convex hull:</p>
+  <div class="eq check">
+    <div class="eq-body" id="eq-C12">
+      <var>Q</var><sub>min</sub> ≤ <var>q</var>(<var>t</var>) ≤ <var>Q</var><sub>max</sub> &nbsp;∀<var>t</var> ∈ [0, <var>T</var>]
+      &nbsp;&nbsp;⇐&nbsp;&nbsp; <var>Q</var><sub>min</sub> ≤ <var>c</var><sub>q,i</sub> ≤ <var>Q</var><sub>max</sub> &nbsp;∀<var>i</var>
+      <span class="an">Q_min = (−35°, −80°, −40°, −120°), Q_max = (35°, 50°, 50°, 120°). A box on the decision variables; the endpoints q₀, q₁ are tested directly and refused by name</span>
+    </div>
+    <div class="eq-n">(C12)</div>
+  </div>
+
+  <p><b>Velocity and acceleration bounds.</b> Pointwise on the CoM (Euclidean) and on every angle channel
+  (per component), with their sufficient control-point forms from (C4):</p>
+  <div class="eq check">
+    <div class="eq-body" id="eq-C13">
+      ‖<var>ẋ</var><sub>c</sub>(<var>t</var>)‖ ≤ <var>v</var><sub>max</sub>, &nbsp;
+      ‖<var>ẍ</var><sub>c</sub>(<var>t</var>)‖ ≤ <var>a</var><sub>max</sub>, &nbsp;
+      |<var>ψ̇</var>|, |<var>q̇</var><sub>j</sub>| ≤ <var>ω</var><sub>max</sub>, &nbsp;
+      |<var>ψ̈</var>|, |<var>q̈</var><sub>j</sub>| ≤ <var>ω̇</var><sub>max</sub>
+      &nbsp;∀<var>t</var><br>
+      ⇐ &nbsp; ‖(<var>D</var><sub>1</sub><var>C</var><sub>x</sub>)<sub>i,:</sub>‖ ≤ <var>v</var><sub>max</sub>, &nbsp;
+      ‖(<var>D</var><sub>2</sub><var>C</var><sub>x</sub>)<sub>i,:</sub>‖ ≤ <var>a</var><sub>max</sub>, &nbsp;
+      |(<var>D</var><sub>1</sub><var>c</var><sub>ψ</sub>)<sub>i</sub>|, |(<var>D</var><sub>1</sub><var>C</var><sub>q</sub>)<sub>i,j</sub>| ≤ <var>ω</var><sub>max</sub>, &nbsp;
+      |(<var>D</var><sub>2</sub> ·)<sub>i</sub>| ≤ <var>ω̇</var><sub>max</sub> &nbsp;∀<var>i</var>, <var>j</var>
+      <span class="an">the scalar forms are LINEAR two-sided bounds; the two Euclidean forms are second-order cones (per-axis boxes at v_max/√3 make them linear, at a cost in conservatism). v_max 0.30 m/s, a_max 0.15 m/s², ω_max 0.30 rad/s, ω̇_max 0.60 rad/s²</span>
+    </div>
+    <div class="eq-n">(C13)</div>
+  </div>
+
+  <p><b>Control-input bounds.</b> Rotor speeds and joint torques, through the plant model. With generalized
+  coordinates (<var>r</var><sub>0</sub>, <var>R</var><sub>0</sub>, <var>q</var>), velocity
+  <var>ν</var> = (<var>ṙ</var><sub>0</sub>, <var>ω</var>, <var>q̇</var>) and acceleration
+  <var>ν̇</var> = (<var>r̈</var><sub>0</sub>, <var>ω̇</var>, <var>q̈</var>) — every one of them an explicit
+  function of <var>ξ</var> through §11:</p>
+  <div class="eq check">
+    <div class="eq-body" id="eq-C14">
+      <var>f</var>(<var>t</var>) = <var>m</var> ‖<var>ẍ</var><sub>c</sub> + <var>g e</var><sub>3</sub>‖, &nbsp;&nbsp;
+      [ <var>F</var> ; <var>τ</var> ; <var>τ</var><sub>j</sub> ] =
+      <var>M</var>(<var>R</var><sub>0</sub>, <var>q</var>) <var>ν̇</var> +
+      <var>C</var>(<var>R</var><sub>0</sub>, <var>q</var>, <var>ν</var>) <var>ν</var> +
+      <var>g</var>(<var>R</var><sub>0</sub>, <var>q</var>), &nbsp;&nbsp;
+      <var>F</var> = <var>f R</var><sub>0</sub><var>e</var><sub>3</sub><br>
+      <var>F</var><sub>rot</sub> = <var>B</var><sup>−1</sup> [ <var>f</var> ; <var>τ</var> ], &nbsp;&nbsp;
+      <var>B</var> = <span class="mat" style="display:inline-block;vertical-align:middle;margin:0 6px">⎡   1     1     1     1   ⎤
+⎢  y₁    y₂    y₃    y₄  ⎥
+⎢ −x₁   −x₂   −x₃   −x₄  ⎥
+⎣ σ₁κ   σ₂κ   σ₃κ   σ₄κ  ⎦</span>, &nbsp; <var>κ</var> = <var>k</var><sub>m</sub>/<var>k</var><sub>f</sub><br>
+      <var>k</var><sub>f</sub> <var>ω</var><sub>min</sub>² ≤ <var>F</var><sub>rot,i</sub>(<var>t</var>) ≤ <var>k</var><sub>f</sub> <var>ω</var><sub>max</sub>², &nbsp;<var>i</var> = 1…4, &nbsp;&nbsp;
+      ‖<var>τ</var><sub>j</sub>(<var>t</var>)‖<sub>∞</sub> ≤ <var>τ</var><sub>max</sub>
+      &nbsp;∀<var>t</var>
+      <span class="an">bounded in FORCE, not in rotor speed: f = k_f ω² is a fixed map, so the speed limits convert ONCE into the interval above — and the constraint function then stays smooth and signed, where √(F/k_f) is nondifferentiable at 0 and undefined for the negative allocation that IS the infeasibility. (x_i, y_i, σ_i) rotor positions and spin signs; ω ∈ [64.06, 730.05] rad/s ⇒ F ∈ [0.166, 21.54] N; τ_max = 3.0 N·m</span>
+    </div>
+    <div class="eq-n">(C14)</div>
+  </div>
+
+  <p><b>(C14) splits, and only one half is nonlinear.</b> Write the per-rotor force as its collective
+  share plus the torque-induced differential, <var>F</var><sub>rot,i</sub> = <var>f</var>/4 +
+  Δ<var>F</var><sub>i</sub>. The collective share obeys Newton for the whole system and therefore
+  contains no <var>q</var>, no mass matrix and no arm dynamics at all:</p>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C14b">
+      <var>f</var>(<var>t</var>) = <var>m</var>‖<var>ẍ</var><sub>c</sub> + <var>g e</var><sub>3</sub>‖
+      ≤ 4<var>k</var><sub>f</sub><var>ω</var><sub>max</sub>²
+      &nbsp;&nbsp;⟸&nbsp;&nbsp;
+      ‖<var>ẍ</var><sub>c</sub>(<var>t</var>)‖ ≤ 4<var>k</var><sub>f</sub><var>ω</var><sub>max</sub>²/<var>m</var> − <var>g</var>
+      &nbsp;&nbsp;⟸&nbsp;&nbsp;
+      ‖(<var>D</var><sub>2</sub><var>C</var><sub>x</sub>)<sub>i,:</sub>‖ ≤
+      4<var>k</var><sub>f</sub><var>ω</var><sub>max</sub>²/<var>m</var> − <var>g</var> &nbsp;∀<var>i</var>
+      <span class="an">triangle inequality, then the convex hull: a SECOND-ORDER CONE on the control points — exactly the form (C13) already has for a_max, so it belongs in the convex program, not in the nonlinear residue. The lower rotor bound gives ‖ẍ_c‖ ≤ g − 4k_f ω_min²/m the same way</span>
+    </div>
+    <div class="eq-n">(C14b)</div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Half of (C14)</th><th>Depends on</th><th>Form in <var>ξ</var></th><th>Measured on the test plan</th></tr></thead>
+    <tbody>
+      <tr><td>collective <var>f</var>/4</td><td><var>ẍ</var><sub>c</sub> only</td>
+          <td><span class="chip c-solve">SOC — convex</span></td>
+          <td>37.00 N, <b>43%</b> of the ceiling; limit ‖<var>ẍ</var><sub>c</sub>‖ ≤ 13.19 m/s² against
+          <var>a</var><sub>max</sub> = 0.15 — <b>88× slack</b>, so <b>discharged by (C13)</b> and never
+          evaluated through the dynamics</td></tr>
+      <tr><td>differential Δ<var>F</var><sub>i</sub></td><td><var>τ</var>, hence M, C, g and all of <var>q</var></td>
+          <td><span class="chip c-check">nonlinear — irreducible</span></td>
+          <td>0.960 N, <b>4.5%</b> of the ceiling</td></tr>
+      <tr><td>joint torque <var>τ</var><sub>j</sub></td><td>the same</td>
+          <td><span class="chip c-check">nonlinear — irreducible</span></td>
+          <td>0.771 of 3.0 N·m, of which <b>0.770 is gravity</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <h4>The frame convention of the generalized velocity</h4>
+    <p>Checking <var>τ</var><sub>[0:3]</sub> against Newton rather than assuming it caught a wiring
+    error worth recording. The two agreed at the endpoints to <b>7e−15 N</b> and then drifted —
+    <b>1.4e−02 N</b> of magnitude and <b>0.76°</b> of <em>direction</em> — the moment the CoM
+    accelerated, with every velocity still zero.</p>
+    <p>The diagnosis is in the gravity block: <var>g</var><sub>[0:3]</sub> =
+    <var>m g R</var><sub>0</sub><sup>T</sup><var>e</var><sub>3</sub> to 7e−15, i.e. it <em>rotates with
+    the vehicle</em>, which a world-frame translation coordinate could never do. The model's
+    generalized velocity is <b>(<var>v</var><sub>body</sub>, <var>ω</var><sub>body</sub>,
+    <var>q̇</var>)</b> — body frame in both of the first two blocks — so the first acceleration block is
+    <span class="ml"><var>ν̇</var><sub>1</sub> = <var>R</var><sub>0</sub><sup>T</sup><var>r̈</var><sub>0</sub>
+    − <var>ω</var> × <var>v</var><sub>body</sub></span>
+    and <var>τ</var><sub>[0:3]</sub> is a body-frame force, so the identity to check is
+    <var>τ</var><sub>[0:3]</sub> = <var>m R</var><sub>0</sub><sup>T</sup><var>a</var><sub>c</sub>. The
+    −<var>ω</var>×<var>v</var> term cannot be hiding in <var>C</var>: <code>dynamics()</code> never
+    reads the linear-velocity slot, so <var>C</var> has no term in <var>v</var><sub>body</sub> at all.
+    With the correct form the identity is exact — <b>2.1e−14 N</b>, against 1.4e−02 before — and it is
+    now asserted rather than tolerated. The physical conclusions did not move (peak joint torque
+    0.7712 → 0.7700 N·m, differential 0.960 → 0.962 N), but the first-order effect was on
+    <var>q</var><sub>1</sub>, whose torque changed by 168%.</p>
+  </div>
+
+  <p><b>Duration.</b></p>
+  <div class="eq fiat">
+    <div class="eq-body" id="eq-C15">
+      <var>T</var><sub>min</sub> ≤ <var>T</var> ≤ <var>T</var><sub>max</sub>
+      <span class="an">T_min = 3 s (the anti-aggressiveness floor), T_max = 40 s (refuse rather than crawl)</span>
+    </div>
+    <div class="eq-n">(C15)</div>
+  </div>
+
+  <h3>The problem</h3>
+  <div class="eq problem" id="eq-P2">
+    <div class="eq-body">
+      <b>minimize</b><sub><var>ξ</var> = (C<sub>x</sub>, c<sub>ψ</sub>, C<sub>q</sub>, T)</sub> &nbsp;
+      <var>J</var>(<var>ξ</var>) &nbsp; (C10)<br>
+      <b>subject to</b> &nbsp; rest conditions &nbsp;(C11) &nbsp;
+      <span class="chip c-fiat">linear equalities</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; joint box &nbsp;(C12) &nbsp;
+      <span class="chip c-fiat">linear inequalities</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; speed / acceleration &nbsp;(C13) &nbsp;
+      <span class="chip c-fiat">linear</span> <span class="chip c-solve">or SOC</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; rotor bounds &nbsp;(C14), (C14b) &nbsp;
+      <span class="chip c-solve">collective: SOC</span>
+      <span class="chip c-check">differential: nonlinear</span><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; joint-torque bound &nbsp;(C14) &nbsp;
+      <span class="chip c-check">nonlinear — carried by T, see (C17)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; duration &nbsp;(C15) &nbsp;
+      <span class="chip c-fiat">box on T</span>
+    </div>
+    <div class="eq-n">(P′)</div>
+  </div>
+
+  <h3>What class of problem this is</h3>
+  <p>Not a QP. Three separate things break that: (C14) is nonlinear in <var>ξ</var> through the
+  inverse dynamics; the cost couples <var>c</var> and <var>T</var> as
+  <var>T</var><sup>1−2r</sup><var>c</var><sup>T</sup><var>Q</var><sub>r</sub>(1)<var>c</var>, which is
+  nonconvex jointly; and with <var>T</var> free even (C13) becomes ‖<var>D</var><sub>2</sub><var>C</var><sub>x</sub>‖
+  ≤ <var>a</var><sub>max</sub><var>T</var>², whose feasible set is not convex. On top of that every
+  constraint is written “∀<var>t</var> ∈ [0, <var>T</var>]”, so (P′) is strictly a
+  <b>semi-infinite program</b>: infinitely many inequalities over a one-dimensional index.</p>
+
+  <p>It is reduced to finitely many by three devices, which give different guarantees and should not be
+  confused:</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Device</th><th>Applied to</th><th>Guarantee</th></tr></thead>
+    <tbody>
+      <tr><td>Convex-hull relaxation</td><td>(C12), (C14b)</td>
+          <td><b>Sufficient and rigorous</b> — no sampling error, but conservative</td></tr>
+      <tr><td>1-D global max of the shape<br><span style="font-size:13px">65-point scan + golden section</span></td>
+          <td>(C13)</td>
+          <td>Exact if the coarse scan brackets the maximum; safe for a degree-≤7 spline on 12 spans,
+          not proven</td></tr>
+      <tr><td>Discretization</td><td>(C14)</td>
+          <td><b>None between samples.</b> 21 points to size, re-verified on 61 — which is why a plan
+          cannot end up contradicting its own diagnostics</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>What remains is a finite-dimensional <b>smooth nonconvex NLP</b> in
+  <var>ξ</var> ∈ ℝ<sup>143</sup> (142 control-point scalars and <var>T</var>). In standard form:</p>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C16">
+      <b>minimize</b><sub><var>x</var> ∈ ℝ<sup>N</sup></sub> &nbsp; <var>f</var>(<var>x</var>)
+      &nbsp;&nbsp;&nbsp;&nbsp; <b>subject to</b> &nbsp;
+      <var>h</var>(<var>x</var>) = 0, &nbsp;&nbsp; <var>g</var>(<var>x</var>) ≤ 0, &nbsp;&nbsp;
+      <var>x</var><sub>l</sub> ≤ <var>x</var> ≤ <var>x</var><sub>u</sub>
+      <span class="an">f, g, h ∈ C^∞ wherever a_c ≠ 0 and ‖Π b₁‖ ≠ 0 — the two flatness singularities of §10, both carrying ~2 orders of margin here</span>
+    </div>
+    <div class="eq-n">(C16)</div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Standard NLP (C16)</th><th>Trajectory problem (P′)</th><th>Structure</th></tr></thead>
+    <tbody>
+      <tr><td><var>x</var></td>
+          <td>[ vec(<var>C</var><sub>x</sub>) ; <var>c</var><sub>ψ</sub> ; vec(<var>C</var><sub>q</sub>) ; <var>T</var> ] ∈ ℝ<sup>143</sup></td>
+          <td>—</td></tr>
+      <tr><td><var>f</var>(<var>x</var>)</td>
+          <td>Σ<sub>r</sub> <var>w</var><sub>r</sub> <var>T</var><sup>1−2r</sup> tr(<var>C</var><sup>T</sup><var>Q</var><sub>r</sub>(1)<var>C</var>)</td>
+          <td>quadratic in <var>c</var>, negative power in <var>T</var> — nonconvex jointly, convex in
+          <var>c</var> for fixed <var>T</var></td></tr>
+      <tr><td><var>h</var>(<var>x</var>) = 0</td><td>(C11), 60 rows</td>
+          <td><b>linear</b>, and in <var>c</var> only</td></tr>
+      <tr><td rowspan="4"><var>g</var>(<var>x</var>) ≤ 0</td>
+          <td>(C12) joint box, on control points</td><td><b>linear</b> in <var>c</var></td></tr>
+      <tr><td>(C13) at fixed <var>T</var></td><td>linear (per-component) or SOC (Euclidean)</td></tr>
+      <tr><td>(C13) with <var>T</var> free · (C14b) collective</td><td>nonconvex · SOC in <var>c</var></td></tr>
+      <tr><td>(C14) differential rotor force, joint torque</td>
+          <td><b>nonconvex, dense</b> — every sample calls the inverse dynamics</td></tr>
+      <tr><td><var>x</var><sub>l</sub>, <var>x</var><sub>u</sub></td><td>(C15) on <var>T</var>; <var>Q</var><sub>min/max</sub> on <var>C</var><sub>q</sub></td>
+          <td>box</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>How it is solved: no NLP solver</h3>
+  <p>(C16) is never handed to an NLP solver — no interior-point method, no SQP, no
+  <var>λ</var>, no line search. Two structural facts collapse it into a convex subproblem plus a
+  one-dimensional search, and the whole plan is then a linear solve and a root find.</p>
+
+  <div class="deriv">
+    <h4>Why the split is legitimate</h4>
+    <ol>
+      <li><div><b>The shape does not depend on <var>T</var>.</b> By (C6) the cost matrices scale by one
+        positive scalar, which cancels in the minimizer, so the inner subproblem's solution
+        <var>c</var>* is the same for every duration. <var>T</var> therefore appears in no equation
+        that subproblem sees, and the coupling that made (C16) nonconvex is gone.
+        <span class="ml">measured: max |<var>c</var>*(<var>T</var> = 4 s) − <var>c</var>*(<var>T</var> = 17 s)| = <b>0.00e+00</b></span></div></li>
+      <li><div><b>The cost is strictly decreasing in <var>T</var>.</b> Writing the unit-interval shape
+        as <var>Z</var>, every term of (C10) scales as a negative power:
+        <span class="ml"><var>J</var>(<var>c</var>*, <var>T</var>) =
+        <var>w</var><sub>x</sub><var>T</var><sup>−7</sup><var>J</var><sub>x</sub>(<var>Z</var>) +
+        <var>w</var><sub>ψ</sub><var>T</var><sup>−3</sup><var>J</var><sub>ψ</sub>(<var>Z</var>) +
+        <var>w</var><sub>q</sub><var>T</var><sup>−5</sup><var>J</var><sub>q</sub>(<var>Z</var>)</span>
+        so <b>minimizing <var>J</var> over <var>T</var> is minimizing <var>T</var></b>, and (P′)'s outer
+        problem is a one-dimensional feasibility search rather than an optimization.
+        <span class="ml">measured: <var>J</var> = 32.5, 1.02, 0.223, 0.0250, 2.36e−3, 4.23e−5 at
+        <var>T</var> = 3, 5, 6.31, 9, 14, 40 s</span></div></li>
+    </ol>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C17">
+      <b>inner</b> &nbsp; <var>c</var>* = argmin <var>J</var><sub>r</sub>(<var>c</var>) s.t. (C11), (C12)
+      &nbsp; <span class="chip c-solve">convex QP, solved once</span><br>
+      <b>outer</b> &nbsp; <var>T</var>* = min { <var>T</var> : (C13), (C14), (C15) hold at
+      <var>c</var>* } = max( <var>T</var><sub>min</sub>, <var>T</var><sub>v</sub>,
+      <var>T</var><sub>a</sub>, <var>T</var><sub>ω</sub>, <var>T</var><sub>ω̇</sub>,
+      <var>T</var><sub>u</sub> )
+      <span class="an">the kinematic bounds give T_v = p₁/v_max, T_a = √(p₂/a_max), … in CLOSED FORM, exact because z⁽ᵏ⁾ scales as T⁻ᵏ; T_u — the input bound — is the only one that needs a search</span>
+    </div>
+    <div class="eq-n">(C17)</div>
+  </div>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C18">
+      peak(<var>T</var>) ≈ peak<sub>∞</sub> + <var>K</var>/<var>T</var>², &nbsp;&nbsp;
+      <var>T</var> ← <var>T</var>·√( (peak − peak<sub>∞</sub>) / (bound − peak<sub>∞</sub>) ),
+      &nbsp; iterated to feasibility or to <var>T</var><sub>max</sub>
+      <span class="an">M ν̇ is linear and C ν quadratic in the derivatives, and both scale as 1/T², so one measurement sets the step. peak_∞ is the quasi-static sweep — every derivative frozen. 2–3 evaluations, not a bisection</span>
+    </div>
+    <div class="eq-n">(C18)</div>
+  </div>
+
+  <div class="note check">
+    <h4>The one place this is not exact, and what it costs</h4>
+    <p><b>peak(<var>T</var>) is not monotone.</b> Measured on one transition, the joint-torque peak falls
+    0.77017 N·m at <var>T</var> = 3 s to <b>0.76189 at <var>T</var> = 10 s</b> and then <em>rises</em> back
+    to 0.76268 as <var>T</var> → ∞ — it dips ~0.1% <em>below</em> its own quasi-static limit, because the
+    arm's inertial torque can oppose gravity at the instant of the peak. <var>K</var> in (C18) is not
+    a constant and is not always positive.</p>
+    <p>Two consequences, both now handled. A bound below peak<sub>∞</sub> may still be met at a finite
+    <var>T</var>, so <b>peak<sub>∞</sub> is a diagnosis, not an infeasibility certificate</b> — the verdict
+    is taken at <var>T</var><sub>max</sub>, and (C18) falls back to geometric growth wherever the
+    1/<var>T</var>² law does not apply. Feasibility is checked after every step and a search that ends
+    still violating <b>raises</b>.</p>
+    <p><b>And the decomposition is a feasible point, not a global optimum of (P′).</b> When (C14) binds,
+    the true optimum would deform the <em>shape</em> to lower the peak; (C17) only slows down. On this
+    plant that costs almost nothing — the peak is <b>99.9% gravity</b> (0.7704 of 0.7712 N·m), and no
+    shape change reduces gravity. If a future payload made the dynamic share large, this is the
+    approximation that would have to go, and (C14) would move into an SQP over <var>c</var>.</p>
+  </div>
+
+  <h3>The inner subproblem, and the routines that actually run</h3>
+  <p>With <var>T</var> fixed and (C14) removed, what is left is a <b>convex QP</b>: quadratic cost,
+  linear equalities (C11), box inequalities (C12). Because <var>H</var> is block-diagonal and every
+  constraint acts on one channel at a time, it <b>separates into 8 scalar QPs</b> — three for
+  <var>x</var><sub>c</sub>, one for <var>ψ</var>, four for <var>q</var> — each of size
+  <var>n</var> ≤ 19. And the box is inactive in every case measured, leaving an
+  <em>equality-constrained</em> QP whose KKT system is the closed-form partition of each channel's
+  <var>Q</var><sub>r</sub> into pinned (<var>x</var>) and free (<var>f</var>) control points:</p>
+
+  <div class="eq solve">
+    <div class="eq-body" id="eq-C19">
+      <var>Q</var><sub>ff</sub> <var>c</var><sub>f</sub> = − <var>Q</var><sub>fx</sub> <var>c</var><sub>x</sub>
+      &nbsp;&nbsp; (one SPD solve per channel; by (C6) the answer is independent of <var>T</var>)
+      <span class="an">Q_r built once on [0, 1] and cached; a plan is 8 solves of size ≤ 19</span>
+    </div>
+    <div class="eq-n">(C19)</div>
+  </div>
+
+  <p>That case is not an assumption; it is measured. For the joint channels the unconstrained minimizer of
+  ∫‖<var>q</var><sup>(3)</sup>‖² under (C11) is the global min-jerk quintic (it lies in the degree-5 spline
+  space), whose derivative 30<var>u</var>²(1−<var>u</var>)² ≥ 0 makes it monotone — so (C12) holds whenever
+  both endpoints do, and a convex-hull box on the control points is wired up but has never bound. The
+  remaining constraints are all met through <var>T</var>, which the shape does not depend on:</p>
+
+  <p>with <var>p</var><sub>k</sub> = max<sub>s∈[0,1]</sub>‖<var>Z</var><sup>(k)</sup>(<var>s</var>)‖
+  read off the unit-interval shape, and <var>T</var><sub>min</sub>/<var>T</var><sub>max</sub> of (C15)
+  applied as the floor and ceiling of (C17) — a longer <var>T</var> can only loosen every bound above it,
+  which is what makes the floor safe to apply last.</p>
+
+  <h3>Where the time goes, and on which computer</h3>
+  <p>It runs <b>on the vehicle</b>: the hardware launcher starts the whole-body planner in its own tmux window
+  on the drone's companion computer, beside the control node, not on a ground laptop. That is why the
+  planner was ported to C++ (below) — the numbers in this table are the <b>Python</b> original on an
+  Intel i9-14900K desktop, and an Orin's single-thread throughput is several times lower on a workload
+  that was entirely interpreter-bound.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Configuration</th><th>Plan</th><th>What dominates</th></tr></thead>
+    <tbody>
+      <tr><td><b>As shipped</b> — (C14) on, <code>Ncheck</code> 101</td><td class="num m">192 ms</td>
+          <td>82 <code>dynamics()</code> calls at <b>1.63 ms</b> each — 21 to size <var>T</var>,
+          61 to verify and report</td></tr>
+      <tr><td>… as flown, with the yield hook</td><td class="num m">218 ms</td>
+          <td>+26 ms of deliberate <code>sleep</code>, the price of keeping the 100 Hz stream alive</td></tr>
+      <tr><td><code>Ncheck</code> 41</td><td class="num m">149 ms</td>
+          <td>the verify/report grid shrinks with it</td></tr>
+      <tr><td>(C14) off, <code>Ncheck</code> 41</td><td class="num m">45 ms</td>
+          <td>no inverse dynamics at all</td></tr>
+      <tr><td>Shape only — the actual optimization</td><td class="num m">10.4 ms</td>
+          <td>1.2 ms of QP, 9 ms of peak search</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><b>The optimization was 1.2 ms of a 192 ms plan.</b> Everything else is evaluating constraints and
+  diagnostics, and (C14) is nearly all of it — which is the practical form of the same point (C14b)
+  makes structurally. Two costs were pure waste and are gone: the verify sweep and the report sweep ran
+  the identical 61 samples twice (−98 ms), and with (C14) switched off the report still computed
+  inverse dynamics for rows it then skipped (−67 ms).</p>
+
+  <div class="note">
+    <h4>Ported to C++ — 110× end to end, and the discretization guarantee comes with it</h4>
+    <p>The planner is now <code>client_lib/src/flat_planner.cpp</code>, beside the model it calls.
+    It links <code>computeDynamics</code> <b>directly</b> — no binding, no wrapper, no second copy of
+    the model that could drift from the one the law flies — and it is held to the Python by
+    <code>flat_planner_selftest</code>, which compares <b>all 16 reference fields over 37 samples</b>
+    and agrees to <b>3.6e−12</b>, with <var>T</var> matching to 3.4e−13 and the dilation case
+    reproducing its 2 iterations exactly.</p>
+    <div class="tw">
+    <table>
+      <thead><tr><th>Same plan, same machine</th><th>Python</th><th>C++</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Full plan, <code>Ncheck</code> 101</td><td class="num m">192 ms</td>
+            <td class="num m">1.62 ms</td><td class="num"><b>119×</b></td></tr>
+        <tr><td>Shape only — the optimization</td><td class="num m">10.4 ms</td>
+            <td class="num m">0.08 ms</td><td class="num">130×</td></tr>
+        <tr><td><code>ref(t)</code> evaluation</td><td class="num m">0.65 ms</td>
+            <td class="num m">0.0006 ms</td><td class="num">1000×</td></tr>
+        <tr><td><b>401-point verification</b></td><td class="num m">~650 ms</td>
+            <td class="num m"><b>6.1 ms</b></td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>The last row is the one that matters. The weakest guarantee in this formulation was the
+    discretization of (C14) — 21 samples to size, 61 to verify, nothing said in between. At 6 ms a
+    401-point verification is affordable on the vehicle, so <b>C++ buys the guarantee, not just the
+    clock</b>. The <code>ref(t)</code> figure has a second use: at 0.6 µs the whole-body planner's 100 Hz stream
+    stops needing a yield hook at all.</p>
+    <p>Two things did NOT get ported, deliberately: the bound-constrained fallback for an active joint
+    box (it has never triggered, and adding an unexercised path is how the two implementations start
+    to differ), and the Python planner itself, which stays as the reference the fixture is generated
+    from.</p>
+  </div>
+
+  <div class="note">
+    <h4>Why it is that much faster</h4>
+    <p><code>computeDynamics()</code> — the Eigen port of this exact
+    <code>dynamics()</code>, parity-locked to ≤1e−8 by the gtest fixture — already runs at 250 Hz
+    inside the control node on the same vehicle. Timed here against the Python, same machine, same
+    state:</p>
+    <div class="figs">
+      <div><span class="n">6.3 µs</span><span class="l">C++ / Eigen</span></div>
+      <div><span class="n">1003 µs</span><span class="l">Python / numpy</span></div>
+      <div><span class="n">159×</span><span class="l">ratio</span></div>
+    </div>
+    <p>Nothing about that is surprising — the model is hundreds of operations on 3×3 and 10×10
+    matrices, where numpy's per-call overhead dwarfs the arithmetic. Two further wins came from the
+    port rather than the language: the basis evaluation returns <b>every derivative order in one
+    pass</b> (NURBS A2.3) where the Python walks a separately-built derivative spline per order —
+    five passes for <var>x</var><sub>c</sub> against one — and every hot path runs on stack scratch,
+    since the degree ceiling of 7 bounds the working set.</p>
+  </div>
+
+  <p><b>Latency is not on any critical path either way.</b> Planning happens in a worker thread while
+  the vehicle HOLDS; nothing waits on it but the operator, and the whole-body planner streams a static hold
+  throughout. Measured end to end in the Python loopback rig, ground-station target to
+  <code>PLANNED</code>: <b>258 ms</b>. What must survive is the 100 Hz reference stream — which the
+  Python needs a yield hook for, and the C++ does not.</p>
+
+  <p>Other measurements on this build: (A6) defect <b>2.3e−16 m</b> (an identity here, not a solved
+  fixed point); rest residual over every derivative field <b>1.7e−12</b>; asked for
+  <var>v</var><sub>max</sub> = 0.05 the plan achieves 0.050000. On the test transition the peak joint
+  torque is 0.770 N·m of which <b>0.770 is gravity</b> — (C14) is a pose constraint on this plant, not
+  a speed one, which is why its quasi-static test comes first and why it is the one class worth
+  switching off.</p>
+
+  <h3>Solver inventory</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Piece</th><th>Method</th><th>Routine</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td>Cost matrices <var>Q</var><sub>r</sub></td>
+          <td>Gauss–Legendre per span, exact for a degree-2(<var>p</var>−<var>r</var>) integrand;
+          built on [0, 1] and cached by (<var>p</var>, <var>M</var>, <var>r</var>)</td>
+          <td class="m">own — Newton on the Legendre roots</td>
+          <td class="num m">once per basis</td></tr>
+      <tr><td>Inner QP, box inactive</td><td>equality-constrained KKT in closed form (C19)</td>
+          <td class="m">Eigen <code>.ldlt()</code> on the free block</td>
+          <td class="num m">0.08 ms</td></tr>
+      <tr><td>Inner QP, box active</td><td>bound-constrained QP on the free block</td>
+          <td class="m">not implemented in C++ — never triggered</td>
+          <td class="num m">—</td></tr>
+      <tr><td>Basis evaluation</td>
+          <td>value and every derivative order in ONE pass (NURBS A2.3)</td>
+          <td class="m">own — <code>dersBasisFuns</code>, stack scratch</td>
+          <td class="num m">0.6 µs / ref(t)</td></tr>
+      <tr><td>Peak of the shape</td><td>65-point scan, then golden section (25 iterations)</td>
+          <td class="m">own — <code>scanMax</code></td><td class="num m">&lt;0.1 ms</td></tr>
+      <tr><td><var>T</var> from (C13)</td><td>closed form, no search</td><td class="m">—</td>
+          <td class="num m">~0</td></tr>
+      <tr><td><var>T</var> from (C14)</td><td>fixed-point on the 1/<var>T</var>² law (C18),
+          geometric fallback, verdict at <var>T</var><sub>max</sub></td>
+          <td class="m">own — <code>computeDynamics</code> per sample</td>
+          <td class="num m">1.5 ms</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><b>No NLP solver appears anywhere</b>, and that is the point of the decomposition rather than an
+  omission: a general transcription of (C16) — discretize, hand to IPOPT or SNOPT with analytic or AD
+  derivatives — would need a good initial guess, would return a local KKT point, and would not be
+  bounded in wall time. What is given up in exchange is stated above: a feasible point, not a KKT
+  point of (P′).</p>
+
+  <div class="note check">
+    <h4>What this is not</h4>
+    <p>The EE path is <em>not</em> a straight line — that was a prescription in Part A, and here it is a
+    consequence of (C10); the two differ by ~2 cm on a typical transition. Not yet flown; the sim whole-body planner
+    runs it, hardware keeps Part A.</p>
   </div>
 </section>
 

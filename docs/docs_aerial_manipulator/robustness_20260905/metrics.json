@@ -1,0 +1,392 @@
+{
+  "A1_pid_on": {
+    "stable": true,
+    "reason": "",
+    "direct_s": 60.0,
+    "com_steady_mm": 11.8,
+    "com_max_mm": 1292.6,
+    "ee_steady_mm": 21.5,
+    "eR_max": 0.4112,
+    "tilt_steady_deg": 0.039,
+    "tilt_max_deg": 8.48,
+    "tau_max_Nm": 0.729,
+    "clamp_pct": 0.0,
+    "u1_steady_N": 47.56,
+    "z_min_m": 0.745,
+    "q_final_deg": [
+      0.64,
+      37.17,
+      39.24,
+      -0.09
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.0, -0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        35.92,
+        "hover settled: err=18 mm tilt=0.06deg"
+      ],
+      [
+        35.92,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        36.26,
+        "-> DIRECT"
+      ],
+      [
+        96.28,
+        "soak complete (60.0 s)"
+      ],
+      [
+        96.28,
+        "-> REVERT"
+      ],
+      [
+        102.3,
+        "-> LAND"
+      ],
+      [
+        111.32,
+        "-> DONE"
+      ]
+    ]
+  },
+  "A2_pid_on": {
+    "stable": true,
+    "reason": "",
+    "direct_s": 60.0,
+    "com_steady_mm": 8.53,
+    "com_max_mm": 1294.2,
+    "ee_steady_mm": 19.29,
+    "eR_max": 0.4144,
+    "tilt_steady_deg": 0.041,
+    "tilt_max_deg": 8.35,
+    "tau_max_Nm": 0.727,
+    "clamp_pct": 0.0,
+    "u1_steady_N": 47.56,
+    "z_min_m": 0.765,
+    "q_final_deg": [
+      0.62,
+      36.99,
+      39.22,
+      -0.08
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        34.68,
+        "hover settled: err=19 mm tilt=0.11deg"
+      ],
+      [
+        34.68,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        34.94,
+        "-> DIRECT"
+      ],
+      [
+        94.96,
+        "soak complete (60.0 s)"
+      ],
+      [
+        94.96,
+        "-> REVERT"
+      ],
+      [
+        100.98,
+        "-> LAND"
+      ],
+      [
+        110.0,
+        "-> DONE"
+      ]
+    ]
+  },
+  "A3_pid_on": {
+    "stable": true,
+    "reason": "",
+    "direct_s": 60.0,
+    "com_steady_mm": 13.25,
+    "com_max_mm": 1309.3,
+    "ee_steady_mm": 22.39,
+    "eR_max": 0.4158,
+    "tilt_steady_deg": 0.041,
+    "tilt_max_deg": 8.52,
+    "tau_max_Nm": 0.729,
+    "clamp_pct": 0.0,
+    "u1_steady_N": 47.56,
+    "z_min_m": 0.755,
+    "q_final_deg": [
+      0.66,
+      36.77,
+      39.24,
+      -0.06
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.0, -0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        36.42,
+        "hover settled: err=21 mm tilt=0.11deg"
+      ],
+      [
+        36.42,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        36.56,
+        "-> DIRECT"
+      ],
+      [
+        96.58,
+        "soak complete (60.0 s)"
+      ],
+      [
+        96.58,
+        "-> REVERT"
+      ],
+      [
+        102.6,
+        "-> LAND"
+      ],
+      [
+        111.62,
+        "-> DONE"
+      ]
+    ]
+  },
+  "B1_pid_off_base": {
+    "stable": false,
+    "reason": "tilt=3.7deg poserr=1.51m z=1.03",
+    "direct_s": 4.9,
+    "com_steady_mm": 1206.19,
+    "com_max_mm": 1462.6,
+    "ee_steady_mm": 1081.63,
+    "eR_max": 0.9689,
+    "tilt_steady_deg": 6.121,
+    "tilt_max_deg": 10.5,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 14.63,
+    "u1_steady_N": 46.06,
+    "z_min_m": 0.78,
+    "q_final_deg": [
+      -34.99,
+      -12.01,
+      -2.48,
+      79.48
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.0, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        36.02,
+        "hover settled: err=19 mm tilt=0.07deg"
+      ],
+      [
+        36.02,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        36.28,
+        "-> DIRECT"
+      ],
+      [
+        41.2,
+        "!! ABORT: tilt=3.7deg poserr=1.51m z=1.03"
+      ],
+      [
+        41.2,
+        "-> LAND"
+      ],
+      [
+        50.22,
+        "-> DONE"
+      ]
+    ]
+  },
+  "B2_pid_off_dy16": {
+    "stable": false,
+    "reason": "tilt=12.3deg poserr=1.51m z=0.39",
+    "direct_s": 3.7,
+    "com_steady_mm": 1303.62,
+    "com_max_mm": 1516.3,
+    "ee_steady_mm": 1451.9,
+    "eR_max": 0.6831,
+    "tilt_steady_deg": 13.225,
+    "tilt_max_deg": 25.28,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 60.75,
+    "u1_steady_N": 61.19,
+    "z_min_m": 0.388,
+    "q_final_deg": [
+      -32.75,
+      30.76,
+      -47.36,
+      -9.92
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        36.16,
+        "hover settled: err=18 mm tilt=0.07deg"
+      ],
+      [
+        36.16,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        36.46,
+        "-> DIRECT"
+      ],
+      [
+        40.18,
+        "!! ABORT: tilt=12.3deg poserr=1.51m z=0.39"
+      ],
+      [
+        40.18,
+        "-> LAND"
+      ],
+      [
+        49.2,
+        "-> DONE"
+      ]
+    ]
+  },
+  "B3_pid_off_kot2": {
+    "stable": false,
+    "reason": "tilt=7.2deg poserr=1.50m z=1.04",
+    "direct_s": 3.84,
+    "com_steady_mm": 1174.65,
+    "com_max_mm": 1447.3,
+    "ee_steady_mm": 946.04,
+    "eR_max": 0.991,
+    "tilt_steady_deg": 9.578,
+    "tilt_max_deg": 11.83,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 19.69,
+    "u1_steady_N": 43.69,
+    "z_min_m": 1.008,
+    "q_final_deg": [
+      -35.0,
+      -21.17,
+      35.74,
+      95.0
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, -0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        36.26,
+        "hover settled: err=20 mm tilt=0.04deg"
+      ],
+      [
+        36.26,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        36.72,
+        "-> DIRECT"
+      ],
+      [
+        40.58,
+        "!! ABORT: tilt=7.2deg poserr=1.50m z=1.04"
+      ],
+      [
+        40.58,
+        "-> LAND"
+      ],
+      [
+        49.6,
+        "-> DONE"
+      ]
+    ]
+  }
+}

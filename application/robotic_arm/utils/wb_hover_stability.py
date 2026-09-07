@@ -7,7 +7,7 @@ WHY THIS EXISTS (2026-08-23). Flying the AM-T650 whole-body rig showed the
 DIRECT hold is UNSTABLE at the calibrated thrust coefficient and only bounded
 because the shipped yaml carries a +15% allocator-kf mismatch that quietly cuts
 loop gain ~13% (Command.md 7.14.4, runs A-D — including run D, which removes
-the reference governor entirely and diverges just the same, so the fault is the
+the whole-body planner entirely and diverges just the same, so the fault is the
 TUNE, not the reference path). Re-tuning by flying is ~3 minutes per candidate
 and every unstable one crashes the sim; this closes the same loop in ~5 s so a
 sweep is practical, and the winners then go to the full stack for confirmation.
@@ -193,7 +193,7 @@ def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
     X[3:12] = R0.flatten(order="F")
     X[12:12 + n] = HOME
 
-    # ---- reference: the static hold the governor streams --------------------
+    # ---- reference: the static hold the whole-body planner streams --------------------
     dyn0 = C.dynamics(X, p)
     x_cd = X[0:3] + np.eye(3) @ dyn0["r_0c_0"]
     r_ed = X[0:3] + np.eye(3) @ dyn0["r_0e_0"]

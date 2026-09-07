@@ -2,7 +2,7 @@
 transition_planner.py — dynamically-compatible SETPOINT-TO-SETPOINT
 transitions for the whole-body aerial manipulator (2026-08-23).
 
-The engine behind the whole-body REFERENCE GOVERNOR (fsc_autopilot_ros2's
+The engine behind the whole-body WHOLE-BODY PLANNER (fsc_autopilot_ros2's
 single_aerial_manipulator_whole_body_direct_actuation fork): in whole-body
 DIRECT mode the operator's drone-GS base target and arm-GS inertial EE target
 define a GOAL rest configuration, and this module plans the compatible
@@ -18,7 +18,7 @@ NEW FILE, additive on purpose: compatible_trajectory.py (the flight-validated
 catalogue engine) is imported, never modified.
 
 Everything here lives in the MODEL frame (AM_realign's y-forward body frame —
-the frame controller.make_params()/wb_types.hpp declare). The governor owns
+the frame controller.make_params()/wb_types.hpp declare). The whole-body planner owns
 every actual<->model conversion at its ROS boundary, mirroring the C++
 frame_adapter.
 
@@ -132,7 +132,7 @@ def make_params_t650(base_com=None):
     None/zeros is the asset's own answer and what every simulation run uses.
     On HARDWARE it is a flight measurement (see the C++ wb_base_com_* block)
     and it MUST match the value the whole-body node is configured with —
-    the governor builds x_cd from this model while the law computes x_c from
+    the whole-body planner builds x_cd from this model while the law computes x_c from
     its own, so a disagreement is a constant CoM-position error of exactly
     (m_base/m_total) * the difference."""
     t650 = _load_t650_params_module()
@@ -363,7 +363,7 @@ def plan_transition(params, rest0, rest1, opts=None):
             "q": (4,) joints}. Returns a plan dict:
       T          duration [s]
       ref(t)     full reference dict (rest_ref keys) at time t (clamped)
-      q1         terminal joints (rest1["q"], for the governor's next hold)
+      q1         terminal joints (rest1["q"], for the whole-body planner's next hold)
       diag       defect / margins / peaks / endpoint mismatch
     Raises ValueError with an operator-readable reason when infeasible.
     """

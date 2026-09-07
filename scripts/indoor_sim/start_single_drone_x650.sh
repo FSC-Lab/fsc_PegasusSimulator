@@ -100,6 +100,13 @@ fi
 # Optional per-joint back-EMF coefficients, "b1,b2,b3,b4" in N.m per rad/s,
 # overriding servo_model.py's built-in Kt^2/R. Empty = use the built-ins.
 ARM_SERVO_B="${PEGASUS_ARM_SERVO_B:-}"
+# Plant-side model-uncertainty injection (whole-body robustness tests). Baked
+# into the pane command line, NOT exported: the tmux server keeps its own env.
+PLANT_MASS_SCALE="${PEGASUS_PLANT_MASS_SCALE:-1.0}"
+PLANT_INERTIA_SCALE="${PEGASUS_PLANT_INERTIA_SCALE:-1.0}"
+PLANT_COM_X="${PEGASUS_PLANT_COM_SHIFT_X:-0.0}"
+PLANT_COM_Y="${PEGASUS_PLANT_COM_SHIFT_Y:-0.0}"
+PLANT_COM_Z="${PEGASUS_PLANT_COM_SHIFT_Z:-0.0}"
 if [[ -n "$ARM_SERVO_B" ]] &&
    [[ ! "$ARM_SERVO_B" =~ ^[0-9]+([.][0-9]+)?(,[0-9]+([.][0-9]+)?){3}$ ]]; then
   echo "ERROR: PEGASUS_ARM_SERVO_B must be four non-negative numbers 'b1,b2,b3,b4' (got '$ARM_SERVO_B')." >&2
@@ -166,6 +173,10 @@ echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
 PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS PEGASUS_ARM_SERVO_MODEL=$ARM_SERVO_MODEL \
 PEGASUS_ARM_SERVO_B=$ARM_SERVO_B \
+PEGASUS_PLANT_MASS_SCALE=$PLANT_MASS_SCALE \
+PEGASUS_PLANT_INERTIA_SCALE=$PLANT_INERTIA_SCALE \
+PEGASUS_PLANT_COM_SHIFT_X=$PLANT_COM_X PEGASUS_PLANT_COM_SHIFT_Y=$PLANT_COM_Y \
+PEGASUS_PLANT_COM_SHIFT_Z=$PLANT_COM_Z \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

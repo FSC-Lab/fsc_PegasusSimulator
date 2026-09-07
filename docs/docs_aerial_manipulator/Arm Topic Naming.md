@@ -224,3 +224,53 @@ running `06_…_ros2_arm_torque.py` with the TORQUE-mode stack —
 `start_t650_aerial_manipulator_baseline_sitl.sh` both run
 `04_px4_direct_t650_aerial_manipulator_hold.py`, which holds the arm entirely
 in-process and publishes **no arm topics**. Nothing here affects them.
+
+## The arm reference has exactly one source at a time (2026-09-05)
+
+`external_torque_controller/reference_joint_trajectory`
+(`trajectory_msgs/JointTrajectory`, 100 Hz) is THE arm reference. The torque
+controller only tracks it; it generates nothing.
+
+| flight mode | who publishes it | who is silent |
+|---|---|---|
+| SAFETY (and the bench, with no flight stack) | `arm_planner` | `whole_body_planner` |
+| whole-body DIRECT | `whole_body_planner` | `arm_planner` |
+
+Both publish the same message on the same topic and gate on the flight node's
+latched `fsc_autopilot_ros2/whole_body_direct_actuation/mode`, so
+`ros2 topic info` on the reference shows two publishers of which one is always
+quiet. The ground station is unchanged: it still solves end-effector targets to
+joint angles itself and drives `external_torque_controller/target_joint_setpoint`
+and `external_torque_controller/go_home` — those are now served by the PLANNER
+at the same names, because the controller no longer advertises them.
+
+**What this replaced, and why.** The min-jerk generator used to live inside
+`TorqueControllerBase`, so in DIRECT it ran in series with the whole-body planner's
+B-spline plan: the whole-body planner poked `target_joint_setpoint` and the controller
+re-profiled it. The 2026-09-02 and 09-03 flights measured the arm replaying the
+whole-body planner's move **3–4 s late** with the endpoints agreeing exactly. One
+reference, one planner, no second smoother.
+
+**The reference fans out; it does not loop through the controller.** Both the
+torque controller and the whole-body flight node subscribe to
+`reference_joint_trajectory` directly. Until 2026-09-05 the flight node took its
+arm reference from `smoothed_reference_joint_trajectory` instead — a *controller*
+emitting a reference and a flight node consuming a controller's output, which is
+the wrong direction and is what hid the second generator.
+
+`smoothed_reference_joint_trajectory` keeps its name and type and is now
+**controller telemetry only**: its `effort` is the torque the controller actually
+commanded post-clamp (genuinely its own output, and what the arm ground station
+plots), while its position/velocity is an echo of the reference above. One
+publisher, one subscriber — the ground station.
+
+Live check:
+
+```bash
+ros2 topic info -v .../external_torque_controller/reference_joint_trajectory
+#   Publisher count: 2   arm_planner, whole_body_planner   (one always quiet)
+#   Subscription count: 2  external_torque_controller, fsc_autopilot_ros2
+ros2 topic info -v .../external_torque_controller/smoothed_reference_joint_trajectory
+#   Publisher count: 1   external_torque_controller
+#   Subscription count: 1  arm_joint_plot_inverted   (the plot, nothing else)
+```

@@ -480,6 +480,12 @@ def dynamics(X, params):
         "M_tilde": M_tilde, "C_tilde": C_tilde, "g_tilde": g_tilde, "T": T,
         "M": M, "C": C, "g": g,
         "A": A, "N1": N1, "r_0c_0": r_0c_0, "r_0e_0": r_0e_0, "R_e_0": R_e_0,
+        # A_e: arm-only EE Jacobian in the BASE frame, rdot_0e^0 = A_e qdot.
+        # Additive (2026-09-06) — the L1 augmentation's contact decomposition
+        # needs the full end-effector Jacobian J_e, whose arm block this is.
+        # No existing consumer reads it; _DYN_KEYS in generate_wb_truth.py is
+        # an explicit list, so the parity fixture is unaffected.
+        "A_e": A_e,
         "J_y": J_y, "J_y_dot": J_y_dot, "Lambda_y": Lambda_y,
         "J_1y": J_1y, "J_2y": J_2y, "J_3y": J_3y,
         "J_q_omega_e": Jq_e, "J_q_dot_omega_e": Jqd_e, "omega_0e_0": w0e,

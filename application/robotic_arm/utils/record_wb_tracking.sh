@@ -45,13 +45,13 @@ ros2 bag record -o "wb_tracking_$(date +%Y%m%d_%H%M%S)" \
   /$NS/fsc_autopilot_ros2/attitude_setpoint_debug \
   /$NS/fsc_autopilot_ros2/controller_type \
   /$NS/fsc_autopilot_ros2/vehicle_info \
-  `# --- governor: what was commanded, planned, and where the EE actually is ---` \
-  /$NS/whole_body_governor/status \
-  /$NS/whole_body_governor/ee_target \
-  /$NS/whole_body_governor/pending_base \
-  /$NS/whole_body_governor/target_joints \
-  /$NS/whole_body_governor/current_ee \
-  /$NS/whole_body_governor/current_ee_body \
+  `# --- whole-body planner: what was commanded, planned, and where the EE actually is ---` \
+  /$NS/whole_body_planner/status \
+  /$NS/whole_body_planner/ee_target \
+  /$NS/whole_body_planner/pending_base \
+  /$NS/whole_body_planner/target_joints \
+  /$NS/whole_body_planner/current_ee \
+  /$NS/whole_body_planner/current_ee_body \
   `# --- arm: measured joints and the commanded/smoothed references ---` \
   /$NS/fsc_open_manipulator/joint_states \
   /$NS/isaacsim_manipulator/joint_states \
