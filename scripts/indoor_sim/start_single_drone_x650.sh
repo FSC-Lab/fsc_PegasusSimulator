@@ -112,6 +112,23 @@ if [[ ! "$PLANT_KF_SCALE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "ERROR: PEGASUS_PLANT_KF_SCALE must be a non-negative decimal (got '$PLANT_KF_SCALE')." >&2
   exit 2
 fi
+# Arm count<->torque path: whether the int16 Goal PWM register is modelled, and
+# the counts-per-N.m the command chain BELIEVES vs the winding actually HAS.
+# Empty count lists = servo_model.py's calibrated value on both sides.
+ARM_COUNTS_ENABLE="${PEGASUS_ARM_COUNTS_ENABLE:-0}"
+ARM_COUNTS_NOMINAL="${PEGASUS_ARM_COUNTS_NOMINAL:-}"
+ARM_COUNTS_TRUE="${PEGASUS_ARM_COUNTS_TRUE:-}"
+if [[ ! "$ARM_COUNTS_ENABLE" =~ ^[01]$ ]]; then
+  echo "ERROR: PEGASUS_ARM_COUNTS_ENABLE must be 0 or 1 (got '$ARM_COUNTS_ENABLE')." >&2
+  exit 2
+fi
+for _CL in "$ARM_COUNTS_NOMINAL" "$ARM_COUNTS_TRUE"; do
+  if [[ -n "$_CL" ]] &&
+     [[ ! "$_CL" =~ ^[0-9]+([.][0-9]+)?(,[0-9]+([.][0-9]+)?){3}$ ]]; then
+    echo "ERROR: PEGASUS_ARM_COUNTS_* must be four positive numbers 'c1,c2,c3,c4' (got '$_CL')." >&2
+    exit 2
+  fi
+done
 if [[ -n "$ARM_SERVO_B" ]] &&
    [[ ! "$ARM_SERVO_B" =~ ^[0-9]+([.][0-9]+)?(,[0-9]+([.][0-9]+)?){3}$ ]]; then
   echo "ERROR: PEGASUS_ARM_SERVO_B must be four non-negative numbers 'b1,b2,b3,b4' (got '$ARM_SERVO_B')." >&2
@@ -183,6 +200,9 @@ PEGASUS_PLANT_INERTIA_SCALE=$PLANT_INERTIA_SCALE \
 PEGASUS_PLANT_COM_SHIFT_X=$PLANT_COM_X PEGASUS_PLANT_COM_SHIFT_Y=$PLANT_COM_Y \
 PEGASUS_PLANT_COM_SHIFT_Z=$PLANT_COM_Z \
 PEGASUS_PLANT_KF_SCALE=$PLANT_KF_SCALE \
+PEGASUS_ARM_COUNTS_ENABLE=$ARM_COUNTS_ENABLE \
+PEGASUS_ARM_COUNTS_NOMINAL=$ARM_COUNTS_NOMINAL \
+PEGASUS_ARM_COUNTS_TRUE=$ARM_COUNTS_TRUE \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

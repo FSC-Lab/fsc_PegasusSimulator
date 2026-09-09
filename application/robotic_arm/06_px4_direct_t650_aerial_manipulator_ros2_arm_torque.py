@@ -71,6 +71,18 @@ ARM_SERVO_MODEL = (os.environ.get("PEGASUS_ARM_SERVO_MODEL", "") or "pwm").strip
 # forwarded by the launcher out of the paired controller yaml's
 # sim_arm_backemf_b_j* keys. Empty = servo_model.py's built-in Kt^2/R.
 ARM_SERVO_B = (os.environ.get("PEGASUS_ARM_SERVO_B", "") or "").strip()
+# COUNT <-> TORQUE TRANSFORMATION (2026-09-08). The real command is an int16
+# Goal PWM register, not a torque: the chain converts N.m to counts with the
+# calibration it BELIEVES and the winding makes torque per count according to
+# the calibration that is TRUE. "1" routes the command through that register
+# (truncation toward zero + the +-885 rail); the two count lists, "c1,c2,c3,c4"
+# in counts per N.m, are the same quantity the arm repo calls
+# nm_to_effort_joints. Normally forwarded by the launcher out of the paired
+# controller yaml's sim_arm_counts_* keys. Empty = servo_model.py's calibrated
+# NM_TO_COUNTS on both sides, i.e. a perfectly calibrated arm.
+ARM_COUNTS_ENABLE = (os.environ.get("PEGASUS_ARM_COUNTS_ENABLE", "") or "0").strip() == "1"
+ARM_COUNTS_NOMINAL = (os.environ.get("PEGASUS_ARM_COUNTS_NOMINAL", "") or "").strip()
+ARM_COUNTS_TRUE = (os.environ.get("PEGASUS_ARM_COUNTS_TRUE", "") or "").strip()
 simulation_app = SimulationApp({"headless": HEADLESS})
 
 # ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
@@ -246,12 +258,43 @@ if ARM_SERVO_B:
         raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_B must be four finite "
                          f"numbers 'b1,b2,b3,b4' (got {ARM_SERVO_B!r})")
 
+def _counts_env(raw, name):
+    """Parse "c1,c2,c3,c4" counts per N.m, or None when unset."""
+    if not raw:
+        return None
+    try:
+        v = np.array([float(x) for x in raw.split(",")], float)
+    except ValueError:
+        v = np.empty(0)
+    if v.shape != (4,) or not np.all(np.isfinite(v)) or np.any(v <= 0.0):
+        raise SystemExit(f"[AM-T650-WB] {name} must be four finite positive "
+                         f"numbers 'c1,c2,c3,c4' in counts per N·m (got {raw!r})")
+    return v
+
+
+_COUNTS_NOMINAL = _counts_env(ARM_COUNTS_NOMINAL, "PEGASUS_ARM_COUNTS_NOMINAL")
+_COUNTS_TRUE = _counts_env(ARM_COUNTS_TRUE, "PEGASUS_ARM_COUNTS_TRUE")
+# The digital path engages if the register is modelled OR the two calibrations
+# disagree; either alone is a real effect, and both default to off/matched.
+_DIGITAL = dict(quantize=ARM_COUNTS_ENABLE,
+                nm_to_counts_nominal=_COUNTS_NOMINAL,
+                nm_to_counts_true=_COUNTS_TRUE)
+
 if ARM_SERVO_MODEL == "ideal":
-    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), backemf_joints=())
+    # `ideal` switches off the BACK-EMF DROOP, nothing else. The count↔torque
+    # register is an independent effect with its own switch, so it still
+    # applies here — the two must stay orthogonal or one knob silently
+    # disables the other (measured 2026-09-08: with the yaml's
+    # sim_arm_backemf_enable false, a +10% calibration injection reached the
+    # launcher, was reported ACTIVE, and then did nothing at all).
+    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), backemf_joints=(),
+                                  **_DIGITAL)
 elif ARM_SERVO_MODEL == "pwm":
-    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), b=_B_OVERRIDE)
+    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), b=_B_OVERRIDE,
+                                  **_DIGITAL)
 elif ARM_SERVO_MODEL == "pwm_0903":
-    ARM_SERVO = DynamixelPwmServo(tau_cap=TAU_CAP_AS_FLOWN, b=_B_OVERRIDE)
+    ARM_SERVO = DynamixelPwmServo(tau_cap=TAU_CAP_AS_FLOWN, b=_B_OVERRIDE,
+                                  **_DIGITAL)
 else:
     raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL must be one of "
                      f"'pwm', 'pwm_0903', 'ideal' (got {ARM_SERVO_MODEL!r})")
@@ -389,6 +432,36 @@ class AmT650WholeBodyArmSim:
               f"(b·dt/I = "
               f"{np.round(ARM_SERVO.explicit_stability_ratio(np.full(4, ARM_ARMATURE), 1.0 / 250.0), 2).tolist()}"
               f", explicit damping is stable below 2)", flush=True)
+        # COUNT <-> TORQUE. Always print the verdict: a silent pass and a knob
+        # that never reached the plant look identical otherwise (the 0824
+        # lesson from the hardware-yaml guard).
+        if ARM_SERVO.digital:
+            g = ARM_SERVO.gain_error
+            print(f"[AM-T650-WB] COUNT↔TORQUE PATH ACTIVE: register "
+                  f"{'quantized (trunc toward zero) + ±%g rail' % ARM_SERVO.pwm_full_scale if ARM_SERVO.quantize else 'continuous'}"
+                  f", 1 count = "
+                  f"{np.round(ARM_SERVO.quantum_nm() * 1e3, 2).tolist()} mN·m",
+                  flush=True)
+            print(f"[AM-T650-WB]   counts/N·m nominal "
+                  f"{ARM_SERVO.nm_to_counts_nominal.tolist()} vs true "
+                  f"{ARM_SERVO.nm_to_counts_true.tolist()}", flush=True)
+            if not np.allclose(g, 1.0):
+                print(f"\033[1;31m[AM-T650-WB]   ARM CALIBRATION MISMATCH: the "
+                      f"joints deliver {np.round(g * 100.0, 1).tolist()} % of "
+                      f"every commanded N·m. The controller is NOT told; this "
+                      f"IS the effect under test.\033[0m", flush=True)
+                # b = Kt^2/R moves with the true calibration. `b` is set
+                # independently (only joints 2/3 are identified), so report the
+                # consistent value rather than overriding the yaml silently.
+                print(f"[AM-T650-WB]   NOTE b consistent with the true "
+                      f"calibration would be "
+                      f"{np.round(ARM_SERVO.implied_b_true(), 3).tolist()}; "
+                      f"b in use is {np.round(ARM_SERVO.b, 3).tolist()}",
+                      flush=True)
+        else:
+            print("[AM-T650-WB] count↔torque path OFF: the arm command stays a "
+                  "continuous torque (perfect calibration, no register)",
+                  flush=True)
         if ARM_SERVO_MODEL == "pwm_0903":
             print("[AM-T650-WB] WARNING: 'pwm_0903' uses the 2/3 Sep duty "
                   "ceilings, NOT the uniform 3.0 N·m the arm has carried since "

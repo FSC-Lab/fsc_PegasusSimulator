@@ -117,6 +117,7 @@ class Driver(Node):
         self.mode = ""
         self.armed = None
         self.q_meas = None
+        self.tau_meas = None
         self.log = []
         self.dbg_log = []
 
@@ -212,6 +213,22 @@ class Driver(Node):
     def on_joints(self, m):
         if len(m.position) >= 4:
             self.q_meas = np.asarray(m.position[:4], dtype=float)
+        # APPLIED joint torque (2026-09-08). Isaac puts the torque the servo
+        # actually made into .effort -- the same field the hardware backend
+        # fills from Present Current -- so with a count<->torque calibration
+        # error in the plant this is what the arm DELIVERED, against the debug
+        # array's [13..16] which is what the law COMMANDED.
+        #
+        # Resolved BY NAME into model order joint1..joint4. The broadcaster
+        # publishes [joint2, joint3, joint1, joint4] and the debug array is in
+        # model order, so taking effort[:4] positionally would compare joint2's
+        # delivered torque against joint1's command.
+        if len(m.effort) >= 4 and len(m.name) >= 4:
+            try:
+                idx = [list(m.name).index(f"joint{j + 1}") for j in range(4)]
+            except ValueError:
+                idx = list(range(4))
+            self.tau_meas = np.asarray([m.effort[i] for i in idx], dtype=float)
 
     def on_wbref(self, m):
         v = lambda a: (a.x, a.y, a.z)          # noqa: E731
@@ -475,7 +492,9 @@ class Driver(Node):
             self.log.append(np.concatenate((
                 [self.now()], self.odom, self.ref_p, [self.ref_psi],
                 self.q_meas if self.q_meas is not None else np.full(4, np.nan),
-                [1.0 if self.is_direct() else 0.0])))
+                [1.0 if self.is_direct() else 0.0],
+                self.tau_meas if self.tau_meas is not None
+                else np.full(4, np.nan))))
 
         # ---- abort envelope ----
         if (self.odom is not None
@@ -688,7 +707,12 @@ class Driver(Node):
             log_cols=np.array(
                 ["t", "x", "y", "z", "vx", "vy", "vz", "tilt_deg", "yaw",
                  "ref_x", "ref_y", "ref_z", "ref_psi",
-                 "q1", "q2", "q3", "q4", "direct"], dtype=object),
+                 "q1", "q2", "q3", "q4", "direct",
+                 # APPLIED torque, model order joint1..joint4 (resolved by
+                 # name in on_joints). The q columns above are NOT -- they are
+                 # the broadcaster's [joint2, joint3, joint1, joint4].
+                 "tau_app1", "tau_app2", "tau_app3", "tau_app4"],
+                dtype=object),
             dbg_cols=np.array(["t"] + [f"d{i}" for i in range(w if self.dbg_log else 0)],
                               dtype=object))
         print(f"\nwrote {path}  log {log.shape}  dbg {dbg.shape}", flush=True)

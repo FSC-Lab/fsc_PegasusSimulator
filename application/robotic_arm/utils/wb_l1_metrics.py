@@ -151,6 +151,45 @@ def score(path, settle=20.0):
     out["dhat_xy_N"] = np.nanmean(np.linalg.norm(d[:, D_DHAT][:, :2], axis=1)[soak])
     out["dhat_rot_Nm"] = np.nanmean(np.linalg.norm(d[:, D_DHAT][:, 3:6], axis=1)[soak])
 
+    # ---- the ARM joint channels (2026-09-08) -------------------------------
+    # d_hat's last four entries are the generalized coordinates of the arm, so
+    # this is where an arm-side actuator error has to land: the servo delivers
+    # nominal/true of what the law commanded, and the missing torque is a
+    # disturbance on exactly these channels. Reported per joint, signed --
+    # a norm would hide which joint and which way.
+    for j in range(4):
+        out[f"dhat_q{j + 1}_Nm"] = float(np.nanmean(d[soak, D_DHAT][:, 6 + j]))
+        out[f"tau_q{j + 1}_Nm"] = float(np.nanmean(d[soak, D_TAU][:, j]))
+    # The command the law had to raise to cover the shortfall is the direct
+    # signature of a gain error; against a matched run it is the whole effect.
+    out["tau_arm_absmean_Nm"] = float(
+        np.nanmean(np.abs(d[soak, D_TAU])))
+
+    # Joint tracking: measured q against the streamed q_d. This is the answer
+    # to "did the arm sag" -- an actuator that under-delivers shows up here
+    # first, before anything reaches the base.
+    #
+    # ORDERING TRAP, verified from the data (2026-09-08): the log's four joint
+    # columns are labelled q1..q4 by the driver's log_cols but are actually in
+    # the ros2_control BROADCASTER order [joint2, joint3, joint1, joint4] --
+    # the same ordering CLAUDE.md flags for wb_arm_joint_topic. wbref's q_d is
+    # in MODEL order (joint1..joint4). Confirmed by the home pose: the log
+    # columns read [34.6, 38.0, 0.2, -0.1] deg against q_d [0, 40.1, 40.1, 0].
+    # Comparing them index-for-index scores joint2 against joint1's reference
+    # and invents ~35 deg of error. LOG_Q_OF_JOINT[j] is the log offset of
+    # joint j+1.
+    LOG_Q_OF_JOINT = (2, 0, 1, 3)
+    wbref = z["wbref"] if "wbref" in z.files else np.zeros((0, 1))
+    if log.size and wbref.shape[0] > 10 and wbref.shape[1] >= 23:
+        lt, wt = log[:, 0], wbref[:, 0]
+        m = (lt >= t_dir + settle) & (lt <= t_end)
+        if m.sum() > 10:
+            for j in range(4):
+                qd = np.interp(lt[m], wt, wbref[:, 19 + j])
+                e = np.degrees(log[m, 13 + LOG_Q_OF_JOINT[j]] - qd)
+                out[f"q{j + 1}_err_deg"] = float(np.mean(e))
+                out[f"q{j + 1}_abserr_deg"] = float(np.mean(np.abs(e)))
+
     # THE HEADLINE: in free flight this is entirely phantom.
     fy_f = np.linalg.norm(d[:, D_FY][:, :3], axis=1)
     out["phantom_Fy_force_N"] = np.nanmean(fy_f[soak])
@@ -216,6 +255,16 @@ ROWS = [
     ("n_sat_frac", "{:.3f}", ""), ("stream_fresh_frac", "{:.3f}", ""),
     ("dhat_z_N", "{:.3f}", "N"), ("dhat_xy_N", "{:.3f}", "N"),
     ("dhat_rot_Nm", "{:.4f}", "N.m"),
+    # Arm channels: where an arm-side actuator error (servo calibration,
+    # count<->torque) lands, and the command the law raised to cover it.
+    ("dhat_q1_Nm", "{:.4f}", "N.m"), ("dhat_q2_Nm", "{:.4f}", "N.m"),
+    ("dhat_q3_Nm", "{:.4f}", "N.m"), ("dhat_q4_Nm", "{:.4f}", "N.m"),
+    ("tau_q1_Nm", "{:.4f}", "N.m"), ("tau_q2_Nm", "{:.4f}", "N.m"),
+    ("tau_q3_Nm", "{:.4f}", "N.m"), ("tau_q4_Nm", "{:.4f}", "N.m"),
+    ("tau_arm_absmean_Nm", "{:.4f}", "N.m"),
+    ("q1_err_deg", "{:.3f}", "deg"), ("q2_err_deg", "{:.3f}", "deg"),
+    ("q3_err_deg", "{:.3f}", "deg"), ("q4_err_deg", "{:.3f}", "deg"),
+    ("q2_abserr_deg", "{:.3f}", "deg"), ("q3_abserr_deg", "{:.3f}", "deg"),
     ("phantom_Fy_force_N", "{:.4f}", "N"),
     ("phantom_Fy_late_N", "{:.4f}", "N"),
     ("phantom_Fy_max_N", "{:.4f}", "N"),

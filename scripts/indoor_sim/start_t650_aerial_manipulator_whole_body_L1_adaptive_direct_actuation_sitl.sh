@@ -203,6 +203,55 @@ if [[ -n "${PEGASUS_PLANT_KF_SCALE:-}" && "${PEGASUS_PLANT_KF_SCALE}" != "1.0" ]
   echo -e "\033[1;33mThe PLANT is perturbed; the controller believes the nominal model.\033[0m"
 fi
 
+# ── ARM COUNT <-> TORQUE: the digital command path ──────────────────────────
+# The real arm command is an int16 Goal PWM register, not a torque. Same
+# precedence rule again: environment > yaml > built-in. Absent keys leave the
+# arm a perfectly calibrated continuous torque source, i.e. the pre-2026-09-08
+# plant, so a yaml without them behaves exactly as before.
+if [[ -z "${PEGASUS_ARM_COUNTS_ENABLE:-}" ]]; then
+  case "$(yaml_scalar sim_arm_counts_enable)" in
+    true|True|TRUE|1)    export PEGASUS_ARM_COUNTS_ENABLE=1 ;;
+    false|False|FALSE|0) export PEGASUS_ARM_COUNTS_ENABLE=0 ;;
+    "")                  export PEGASUS_ARM_COUNTS_ENABLE=0 ;;
+    *)  echo "ERROR: sim_arm_counts_enable must be true or false in $WB_SIM_YAML" >&2; exit 2 ;;
+  esac
+fi
+for KV in "PEGASUS_ARM_COUNTS_NOMINAL:sim_arm_counts_nominal" \
+          "PEGASUS_ARM_COUNTS_TRUE:sim_arm_counts_true"; do
+  VAR="${KV%%:*}"; KEY="${KV##*:}"
+  [[ -n "${!VAR:-}" ]] && continue
+  LIST=""
+  for J in j1 j2 j3 j4; do
+    V="$(yaml_scalar "${KEY}_$J")"
+    # All four or none: a partial list would silently model three joints.
+    [[ -n "$V" ]] || { LIST=""; break; }
+    LIST="${LIST:+$LIST,}$V"
+  done
+  [[ -n "$LIST" ]] && export "$VAR=$LIST"
+done
+# Only claim ACTIVE when something actually changes: quantization on, or the
+# two calibrations genuinely differ. Setting TRUE to the nominal value is a
+# MATCHED run and must not look like an injection -- a banner that fires either
+# way is worth nothing.
+ARM_COUNTS_MISMATCH=0
+if [[ -n "${PEGASUS_ARM_COUNTS_TRUE:-}" ]]; then
+  ARM_COUNTS_MISMATCH=$(awk -v a="${PEGASUS_ARM_COUNTS_NOMINAL:-160.0,173.8,146.7,160.0}" \
+                            -v b="$PEGASUS_ARM_COUNTS_TRUE" '
+    BEGIN { n=split(a,A,","); split(b,B,",");
+            for (i=1;i<=n;i++) if ((A[i]-B[i])^2 > 1e-18) { print 1; exit } print 0 }')
+fi
+if [[ "${PEGASUS_ARM_COUNTS_ENABLE:-0}" == "1" || "$ARM_COUNTS_MISMATCH" == "1" ]]; then
+  echo -e "\033[1;31mARM COUNT<->TORQUE PATH ACTIVE: register quantized=${PEGASUS_ARM_COUNTS_ENABLE:-0}, counts/N.m nominal [${PEGASUS_ARM_COUNTS_NOMINAL:-calibrated}] vs true [${PEGASUS_ARM_COUNTS_TRUE:-calibrated}]\033[0m"
+  if [[ "$ARM_COUNTS_MISMATCH" == "1" ]]; then
+    echo -e "\033[1;33mDelivered torque scales as nominal/true; the controller is not told. Isaac prints the percentage.\033[0m"
+  else
+    echo -e "\033[1;33mCalibration MATCHED: register quantization only, no gain error.\033[0m"
+  fi
+else
+  echo "Arm count<->torque path off: continuous torque, perfect calibration."
+fi
+
+
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
 [[ -f "$INDOOR_SIM_PEGASUS_SCRIPT" ]] || {
