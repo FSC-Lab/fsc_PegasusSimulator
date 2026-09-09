@@ -2332,3 +2332,137 @@ hard-coding them, so they cannot go stale when a constant changes.
 - [ ] `ArticulationRootAPI` and `RigidBodyAPI` are applied to the **same** prim — PhysX 5 does not form a valid articulation when they are on separate prims
 - [ ] Override `update_state` to read from `self._stage_prefix` (not `+ "/body"`)
 - [ ] Call `apply_force` / `apply_torque` with `body_part=""`
+
+**THE JOINT-POSTURE TERM: MECHANISM FOUND, TWO PAPER-CONSISTENT FIXES FLOWN 3/3
+WITHOUT IT (2026-09-09, user request — the three questions: which disturbance,
+can gains fix it, what is the minimal provable change).** Full write-up
+`docs/docs_aerial_manipulator/Removing the Joint-Posture Term.md`; data + drivers
+`docs/docs_aerial_manipulator/posture_ablation_20260909/`; offline tool
+`application/robotic_arm/utils/wb_entry_sim.py` (exact law + L1 observer + plant
+injections + joint stops + rotor lag; reproduces every flight to the mm — the +5%
+model flight parked the arm at q = [−35, 11, 24, 30] deg with e_y 214 mm, the sim
+said [−35, 9, 26, 31] and 214 mm; the anchor-only fix flew 102.7 mm, the sim said
+102.7). **Neither failure is a gain problem; both are the manuscript modelling `d_e`
+as the CONTACT wrench only:**
+- **Mechanism 1 — entry transient vs. workspace.** At the SAFETY→DIRECT switch the
+  observer restarts at zero, the unlearned 10.8 N / 0.4 N·m drive a 0.8–1.3 m base
+  excursion, and the WORLD-fixed EE reference is unreachable (arm workspace ~5 cm at
+  the folded home). `e_y` tracks `e_x` 1:1, q3 hits +50 deg at 1 s, then crosses into
+  the elbow-singular branch. With the PID on the same 0.8 m transient happens and the
+  arm simply never moves — the 2 N·m/rad PID overrides the 2 N/m task, which is why
+  `K_y` had to drop to 2 when the PID was added: a compensating pair.
+- **Mechanism 2 — the internal disturbance is a permanent phantom contact force.**
+  `(J_y^#)^T` maps 0.22 N of task force per N of vertical deficit at home; the
+  impedance renders it, so the arm walks off home by F/K_y: 5% model → 0.41 N →
+  214 mm at K_y 2 (measured 214–218), then a stop, then the branch. The L1
+  attribution does NOT remove it (closed loop = F̂_ext + M_y Λ^-1 (F − F̂)).
+- **Ablation flights, PID off, plant-side kf, matched allocator** (hover soak):
+  delay-only 3/3 clean; +5% model 2/2 vehicle ok but ARM parked off-branch (214 mm);
+  +5% kf 1 abort / 1 ok with the arm on the negative branch; +5%+5% ok, elbow branch,
+  clamped. **Plant-side kf ≤0.90 CANNOT TAKE OFF** (SAFETY gravity FF short + UDE
+  height gate = 7.13.3 run C deadlock) — those rows are invalid, so the fix flights
+  used the allocator-side +17.6% (the 09-06 configuration). Yesterday's 17-flight
+  in-law sweep (`l1_inlaw_20260909`) and today's offline sweep of EVERY gain group
+  (k_x/k_v, k_R/k_w, K_y/D_y 0.5–200, M_y, DLS, ω_c, seeds): nothing survives.
+- **The fix, two options, both default-off in the C++ (parity 9/9 unchanged):**
+  `wb_ee_anchor_com` (free-flight EE reference = planned EE-minus-CoM offset held
+  about the ACTUAL CoM: r_ed + e_x, derivatives + e_vx/+e_ax, no differentiation;
+  proof = change of error variable, u3 untouched) and `wb_u3_internal_ff`
+  (coupling feedforward carries u + d̂, i.e. `inner += (J_y^#)^T d̂_e`; proof = one
+  exponentially decaying observer-error input, the same treatment u1/u2 already get).
+  Flown at the full injection, posture 0, K_y 20/D_y 12: **3/3 completed, peak e_y
+  29–31 mm through a 0.85–0.92 m base transient, settled 1.2 mm, arm back at
+  [0,40,41,−1], 0% clamp** (K_y 50/20: 15 mm / 0.5 mm). Anchor alone: flies with a
+  102.7 mm steady offset (= 2.4 N phantom / 20). Feedforward alone at K_y 2: arm at
+  the stops, 68% clamped. **The shipped yaml is UNCHANGED** (posture on, K_y 2, both
+  keys false) — adopting = keys true, K_y 20 / D_y 12, posture 0. Provable joint
+  potential, if a branch selector is still wanted: `K_y e_y + J_3y^{-T} K_q e_q`
+  (a potential in y through the local diffeomorphism), NOT the flown `K_p e_q` on u3.
+- **THE ARM CHANNEL WAS THE ONLY ONE WITHOUT A CANCELLATION, and that is the whole of
+  mechanism 2.** `f_d` carries `−d̂_t` and `u2` carries `−d̂_r`; `u3`'s only estimate is
+  `F̂_y`, which enters through the inertia-shaping `(Λ_y M_y^-1 − I)` and is a READING of
+  the contact force, not a compensation — and `d̂_ρ` is computed and injected NOWHERE.
+  The L1 decomposition fixes the reading (`F̂_y` → 0 correctly, no contact) and changes
+  nothing about the force: `(J_y^#)^T d` still acts on the task, with UNIT gain at
+  natural inertia. Written into the design note 2026-09-09 as the paragraph "The arm
+  channel needs its own cancellation" + eqs. (ee_dyn_int), (u3_int), (ee_closed_int) in
+  `disturbance observer design/disturbance_observer_draft.tex` (PDF rebuilt, 0 errors).
+- **THE TERM HAS THREE BLOCKS AND THE ARM BLOCK IS THE LEAST OF THEM** (asked 2026-09-09,
+  measured): the addition is ONE term `−J̄_3y^-1 (J_y^#)^T d̂`, three only because
+  `(J_y^#)^T = [J̄_1y J̄_2y J̄_3y]`. The two BASE blocks are NOT a second copy of the
+  `−d̂_t`/`−d̂_r` in `f_d`/`u2` — those are in the COMMAND, `d` is in the PLANT, and `u3`
+  pre-compensates their SUM (the arm is bolted to a base a thrust deficit accelerates).
+  Flown-estimate split at home: `J̄_1y d̂_t` 2.380 N, `J̄_2y d̂_r` 0.498, `J̄_3y d̂_ρ` 0.653,
+  total 2.127 (the arm block OPPOSES the base blocks). So carrying `d̂_ρ` ALONE is WORSE
+  THAN NOTHING — offline 102.7 → 148.3 mm; base blocks alone 36.3; all three 1.3.
+- **TWO FEEDFORWARD SOURCES, both flown.** `wb_u3_internal_ff` feeds the filtered LUMPED
+  `d̂_Σ,f`; `wb_u3_internal_ff_use_w_hat` (added 2026-09-09) switches to the note's
+  INTERNAL `T^-T ŵ` (Step 2), the form eq. (u3_int) states. **In free flight the lumped
+  one is BETTER and exact** (`d_e = 0` ⇒ it IS `d`); the internal one is the only one
+  admissible under CONTACT. Flown 2/2: settled EE 3.1/3.4 mm and peak arm torque
+  1.34/1.28 N·m vs the lumped 1.2 mm / 0.8 N·m, arm dipping to q3 19° vs 38° mid-entry.
+  That cost is `ŵ` being PARTIAL — a stationary arm gives α = 0 in the note's PE
+  condition, only 4 of 10 directions identified — and it works here only because `L_c`
+  books **99.3% of the residual to the collective** (measured `ŵ_z` = −10.73 of −10.81 N).
+- **MISMATCH GRID, 9 flights, all completed** (2026-09-09): thrust {10,15}% x model
+  {5,10}%, compensation on, posture off, K_y 20/D_y 12. Settled EE error 0.7/0.9/1.0/1.2 mm
+  against d̂_z −6.12/−8.65/−8.17/−10.81 N — **linear at ~0.11 mm/N**, i.e. residual observer
+  error, not phantom force; 0% clamp everywhere, arm ends at home in all nine, repeats agree
+  to a decimal. Base transient grows 345 → 919 mm (that is the handover, 7.15.8, untouched).
+  Thrust MUST be allocator-side: plant-side above ~5% never takes off (7.13.3 run C deadlock).
+- **`u3_internal_ff` REQUIRES AN ATTRIBUTING OBSERVER, and nothing enforces it** (found
+  2026-09-09 while checking the law against the note): the red d̂ terms are the INTERNAL
+  disturbance and the blue F̂_y is the CONTACT force, two different objects. On the L1 path
+  with decompose=true they are (attributed F̂_y ≈ 0.06 N measured); on the GMO path, or L1
+  with decompose=false, F̂_y IS the same lumped vector as d̂, so it enters twice and the
+  effective coefficient is 2I − Λ_y M_y^-1 ≈ diag(1.52, 0.68, 1.22, 1.60) instead of I.
+  NOT flown that way, but the key is declared in all three whole-body yamls. A startup
+  refusal was offered and NOT added.
+- **FULL 8-LEG MISSION FLOWN TWICE WITH THE PID AT ZERO, AND THE KEYS THEN DELETED**
+  (2026-09-09): 314 s / 276 s of DIRECT, 9/10 and 10/10 legs, **0.00% clamp both**, peak
+  arm torque 0.79 N.m of 3.0, **q3 NEVER negative** (0.00 s on the elbow-singular branch
+  the term existed to prevent); q2 touched its +50 stop 0.31 s during the first step's
+  entry transient only. Run A's missing leg is a DRIVER RACE, not a control failure: the
+  planner went PENDING->CALCULATING->PLANNED inside one 10 ms sample, the driver's `send`
+  then hit CALCULATING again because the second target restarted the solve, and it waited
+  out its 45 s exec timeout while the vehicle held at 1.5 mm EE error / 0% clamp. Fix
+  belongs in wb_l1_campaign_driver.py, NOT the law.
+  **The five `wb_posture_*` keys are now DELETED from the L1 sim yaml** — they are
+  kOptional/default 0.0, so absence makes the term UNREACHABLE from that file, not merely
+  off, and the green LAW CHECK line proves it per launch. The `alloc_thrust_coeff` block's
+  "THIS AND wb_posture_* ARE COUPLED" warning was rewritten: that coupling is gone.
+  **SCOPE: that one file.** The C++ is untouched and the three GMO whole-body yamls still
+  need the term.
+- **POSTURE-TERM WATCH, printed once a second in DIRECT** (2026-09-09, user request):
+  `WbCommand::t_posture` carries the joint PID's ACTUAL applied contribution to u3 (zero
+  while `hold` owns the arm), and the client prints it — GREEN `posture PID: u3_posture =
+  [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0` while it is zero, YELLOW with the
+  four values, max, %-of-|u3| and the gains the moment it is not. Verified in a live flight,
+  not just built. Complements the startup LAW CHECK: the banner says how it is CONFIGURED,
+  this says what is APPLIED. Parity 9/9 after the change.
+- **ENTRY-TRANSIENT TUNE, NO UDE SEED (2026-09-09): `wb_k_x` 16 -> 32, `wb_k_v` 12 -> 20.**
+  Peak base error at the SAFETY->DIRECT switch **919 -> 411 mm**, under 100 mm in
+  **6.4 vs 12.4 s**, peak tilt 10.0 -> 6.3 deg, EE behaviour unchanged (peak 30.4,
+  settled 1.18 mm), 0% clamp, full 8-leg mission 10/10. Mechanism: the peak error is
+  HORIZONTAL -- the vehicle sags ~220 mm, the unlearned CoM moment tilts it, the tilt
+  converts thrust to sideways drift -- so the position loop AND the rotational observer
+  are both levers. wn 2.07 -> 2.92 rad/s, zeta 0.78 -> 0.91, still far under the 10.03
+  rotor pole.
+  **`wb_l1_omega_c_r` 2.0 ABORTS and that result is load-bearing**: best ENTRY of any
+  candidate (303 mm) then a slow rotational oscillation from t = 8 s to a 36 deg abort at
+  15 s (|e_R| 0.04->0.38, d_hat_r swinging +-2 N.m). 7.15.8's ceiling on that gain STANDS;
+  the compensation did not lift it. 1.0 and 1.5 are stable (545 / 388 mm) but 1.5 is only
+  1.33x below a measured instability, so the POSITION-LOOP lever was shipped instead --
+  same peak, better recovery, observer untouched.
+  **`wb_entry_sim.py`'s delay-margin column is NOT a stability certificate for
+  `omega_c_r`** -- it gave the 2.0 case 32 ms against a 16 ms nominal and the rig failed at
+  nominal. Trust it for ORDERING only, as its own header says.
+  Data + drivers: `posture_ablation_20260909/run_entry_tune{,2}.sh`, `entry_score.py`.
+- **Open:** controller.py (the Python source of truth) does not carry the hooks —
+  the parity fixture locks them OFF only; **NO CONTACT has been simulated on any run,
+  which is the entire reason `ŵ` is preferred over the lumped estimate** (06 applies no
+  EE wrench; that block existed in 02 and was dropped from 03 onward, so `w_e ≡ 0`
+  everywhere and the source distinction is derivation, not measurement); steps/trajectory
+  legs not flown with them; interaction phase must keep the WORLD anchor (planner switch
+  not implemented); GMO variant offline only (34 mm settled); the 0.9 m entry transient
+  itself is the handover (7.15.8), untouched.

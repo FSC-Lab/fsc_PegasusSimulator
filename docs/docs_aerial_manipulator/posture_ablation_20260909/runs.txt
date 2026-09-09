@@ -1,0 +1,28 @@
+delay_A mass=1.0 inertia=1.0 com=0.0,0.0,0.0 kf=1.0 posture=0 alloc=4.041283e-05 rc=0
+delay_B mass=1.0 inertia=1.0 com=0.0,0.0,0.0 kf=1.0 posture=0 alloc=4.041283e-05 rc=0
+delay_C mass=1.0 inertia=1.0 com=0.0,0.0,0.0 kf=1.0 posture=0 alloc=4.041283e-05 rc=0
+model5_A mass=1.05 inertia=1.05 com=0.005,0.005,0.0025 kf=1.0 posture=0 alloc=4.041283e-05 rc=0
+model5_B mass=1.05 inertia=1.05 com=0.005,0.005,0.0025 kf=1.0 posture=0 alloc=4.041283e-05 rc=0
+kf5_A mass=1.0 inertia=1.0 com=0.0,0.0,0.0 kf=0.95 posture=0 alloc=4.041283e-05 rc=0
+kf5_B mass=1.0 inertia=1.0 com=0.0,0.0,0.0 kf=0.95 posture=0 alloc=4.041283e-05 rc=0
+kf10_A mass=1.0 inertia=1.0 com=0.0,0.0,0.0 kf=0.90 posture=0 alloc=4.041283e-05 rc=0
+model5_kf5_A mass=1.05 inertia=1.05 com=0.005,0.005,0.0025 kf=0.95 posture=0 alloc=4.041283e-05 rc=0
+full_A mass=1.10 inertia=1.10 com=0.010,0.010,0.005 kf=0.85 posture=0 alloc=4.041283e-05 rc=0
+fix_ab_A anchor_com=true int_ff=true ky=20.0 dy=12.0 posture=0 full injection: model plant-side, kf allocator-side 4.7544506e-05
+fix_ab_B anchor_com=true int_ff=true ky=20.0 dy=12.0 posture=0 full injection: model plant-side, kf allocator-side 4.7544506e-05
+fix_ab_C anchor_com=true int_ff=true ky=20.0 dy=12.0 posture=0 full injection: model plant-side, kf allocator-side 4.7544506e-05
+fix_a_A anchor_com=true int_ff=false ky=20.0 dy=12.0 posture=0 full injection: model plant-side, kf allocator-side 4.7544506e-05
+fix_b_A anchor_com=false int_ff=true ky=2.0 dy=4.0 posture=0 full injection: model plant-side, kf allocator-side 4.7544506e-05
+fix_ab50_A anchor_com=true int_ff=true ky=50.0 dy=20.0 posture=0 full injection: model plant-side, kf allocator-side 4.7544506e-05
+ffw_A anchor_com=true int_ff=true source=w_hat ky=20 dy=12 posture=0
+ffw_B anchor_com=true int_ff=true source=w_hat ky=20 dy=12 posture=0
+grid_t10m5_A alloc=4.4903144e-05 model=1.05 com=0.005,0.005,0.0025 anchor+intff K_y20 posture=0
+grid_t10m5_B alloc=4.4903144e-05 model=1.05 com=0.005,0.005,0.0025 anchor+intff K_y20 posture=0
+grid_t15m5_A alloc=4.7544506e-05 model=1.05 com=0.005,0.005,0.0025 anchor+intff K_y20 posture=0
+grid_t15m5_B alloc=4.7544506e-05 model=1.05 com=0.005,0.005,0.0025 anchor+intff K_y20 posture=0
+grid_t10m10_A alloc=4.4903144e-05 model=1.10 com=0.010,0.010,0.005 anchor+intff K_y20 posture=0
+grid_t10m10_B alloc=4.4903144e-05 model=1.10 com=0.010,0.010,0.005 anchor+intff K_y20 posture=0
+entry_wr10_A k_x=16.0 k_v=12.0 omega_c_r=1.0 posture=absent anchor+intff K_y20
+entry_wr15_A k_x=16.0 k_v=12.0 omega_c_r=1.5 posture=absent anchor+intff K_y20
+entry_C_A k_x=32.0 k_v=20.0 omega_c_r=0.5 posture=absent anchor+intff K_y20
+entry_C_B k_x=32.0 k_v=20.0 omega_c_r=0.5 posture=absent anchor+intff K_y20

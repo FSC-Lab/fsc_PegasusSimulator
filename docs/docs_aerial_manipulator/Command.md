@@ -4691,3 +4691,53 @@ gain change — untried, and it is a code change, not a parameter.
 Entry peak 854 → 847/844 mm, tail CoM 2.1 → 2.0/3.5 mm, |e_R| 0.325 →
 0.334/0.329, per-leg step and trajectory tracking within run-to-run spread.
 Both fixes are additive wins; neither trades anything measurable.
+
+#### 7.15.9 The joint-posture term — mechanism and two paper-consistent fixes (2026-09-09)
+
+Full write-up: `Removing the Joint-Posture Term.md`. Data: `posture_ablation_20260909/`.
+Offline reproduction: `application/robotic_arm/utils/wb_entry_sim.py`
+(`--validate --ablate --sweep --fixes`, `--case posture=0,ee_ref=relative,int_ff=true,g.ky=20,g.dy=12`).
+
+Two mechanisms, both from the manuscript's `d_e` = contact wrench only: (1) the
+DIRECT-entry base transient (0.8–1.3 m) makes the world-anchored EE reference
+unreachable (workspace ~5 cm), the arm hits its stops and crosses the elbow
+branch; (2) an internal disturbance is rendered as a phantom task force,
+0.22 N per N of vertical deficit at home, and the arm walks off home by
+`F/K_y` (5% model: 214 mm measured, 203 predicted). No gain group fixes either.
+
+Two default-off options in the whole-body fork, parity 9/9 unchanged:
+`wb_ee_anchor_com` (EE reference held about the actual CoM in free flight) and
+`wb_u3_internal_ff` (coupling feedforward carries `u + d_hat`). Flown at the
+full injection with `wb_posture_* = 0`, `K_y` 20 / `D_y` 12:
+
+| run | vehicle | peak e_x | peak e_y | settled e_y | clamp | arm end |
+|---|---|---|---|---|---|---|
+| fix_ab_A/B/C | 3/3 completed | 848–919 mm | 29–31 mm | 1.2 mm | 0% | [0, 40, 41, −1]° |
+| fix_ab50_A (K_y 50/20) | completed | 858 | 15 | 0.5 | 0% | [0, 40, 40, −1]° |
+| fix_a_A (anchor only) | completed | 798 | 114 | 102.7 (predicted 102.7) | 0% | [−5, 18, 37, 1]° |
+| fix_b_A (ff only, K_y 2) | completed, arm lost | 903 | 880 | 221 | 68% | at the stops |
+| 2026-09-06, PID off | abort 7.7 / 8.0 s | 1313 / 1408 | 1.2 m | — | 32 / 47% | negative branch |
+| ffw_A/B (source = `T^-T w_hat`) | 2/2 completed | 855–894 | 30–31 | 3.1 / 3.4 | 0% | [0, 39, 42, 1]° |
+
+The feedforward has two sources. `wb_u3_internal_ff` alone feeds the filtered LUMPED
+estimate, exact in free flight (`d_e = 0`); `wb_u3_internal_ff_use_w_hat` feeds the
+design note's INTERNAL `T^-T w_hat`, the only form admissible under contact. The
+internal source costs 1.2 -> 3.1-3.4 mm settled and 0.8 -> 1.3 N.m peak arm torque,
+because `w_hat` is partial (stationary arm, alpha = 0 in the note's PE condition, 4 of
+10 directions); it works here because `L_c` books 99.3% of the residual to the
+collective (measured `w_hat_z` = -10.73 of -10.81 N). NO CONTACT has been simulated,
+so the source distinction is derivation, not measurement.
+
+```bash
+# reproduce (every run is a clean relaunch; ~5 min each; yaml restored on exit)
+docs/docs_aerial_manipulator/posture_ablation_20260909/run_ablation.sh   # Q1, PID off, plant-side kf
+docs/docs_aerial_manipulator/posture_ablation_20260909/run_fix.sh        # Q3, allocator-side kf
+/usr/bin/python3 docs/docs_aerial_manipulator/posture_ablation_20260909/score.py docs/docs_aerial_manipulator/posture_ablation_20260909/l1_*.npz
+```
+
+Traps: plant-side `PEGASUS_PLANT_KF_SCALE` ≤ 0.90 never takes off (SAFETY
+gravity feedforward short + UDE height gate, the 7.13.3 run C deadlock) — the
+driver still exits 0 with an empty event list, so check `t_direct` is finite
+before trusting a "completed". And `pkill -f` on a campaign script kills the
+shell that names the same script later on its own command line (the 7.15
+bracket-trick caveat) — issue the kill and the edit as separate commands.
