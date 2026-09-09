@@ -185,7 +185,8 @@ for KV in "PEGASUS_PLANT_MASS_SCALE:sim_plant_mass_scale" \
           "PEGASUS_PLANT_INERTIA_SCALE:sim_plant_inertia_scale" \
           "PEGASUS_PLANT_COM_SHIFT_X:sim_plant_com_shift_x" \
           "PEGASUS_PLANT_COM_SHIFT_Y:sim_plant_com_shift_y" \
-          "PEGASUS_PLANT_COM_SHIFT_Z:sim_plant_com_shift_z"; do
+          "PEGASUS_PLANT_COM_SHIFT_Z:sim_plant_com_shift_z" \
+          "PEGASUS_PLANT_KF_SCALE:sim_plant_kf_scale"; do
   VAR="${KV%%:*}"; KEY="${KV##*:}"
   if [[ -z "${!VAR:-}" ]]; then
     V="$(yaml_scalar "$KEY")"
@@ -194,6 +195,11 @@ for KV in "PEGASUS_PLANT_MASS_SCALE:sim_plant_mass_scale" \
 done
 if [[ -n "${PEGASUS_PLANT_MASS_SCALE:-}${PEGASUS_PLANT_INERTIA_SCALE:-}${PEGASUS_PLANT_COM_SHIFT_X:-}${PEGASUS_PLANT_COM_SHIFT_Y:-}${PEGASUS_PLANT_COM_SHIFT_Z:-}" ]]; then
   echo -e "\033[1;31mMODEL-UNCERTAINTY INJECTION ACTIVE: mass x${PEGASUS_PLANT_MASS_SCALE:-1.0}, inertia x${PEGASUS_PLANT_INERTIA_SCALE:-1.0}, CoM shift (${PEGASUS_PLANT_COM_SHIFT_X:-0},${PEGASUS_PLANT_COM_SHIFT_Y:-0},${PEGASUS_PLANT_COM_SHIFT_Z:-0}) m\033[0m"
+fi
+if [[ -n "${PEGASUS_PLANT_KF_SCALE:-}" && "${PEGASUS_PLANT_KF_SCALE}" != "1.0" ]]; then
+  # A PLANT-side k_f error is seen by SAFETY and DIRECT alike, unlike an
+  # alloc_thrust_coeff detune which only DIRECT goes through.
+  echo -e "\033[1;31mTHRUST-LOSS INJECTION ACTIVE (PLANT SIDE, both modes): k_f x${PEGASUS_PLANT_KF_SCALE}\033[0m"
   echo -e "\033[1;33mThe PLANT is perturbed; the controller believes the nominal model.\033[0m"
 fi
 

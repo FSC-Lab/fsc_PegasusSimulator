@@ -107,6 +107,11 @@ PLANT_INERTIA_SCALE="${PEGASUS_PLANT_INERTIA_SCALE:-1.0}"
 PLANT_COM_X="${PEGASUS_PLANT_COM_SHIFT_X:-0.0}"
 PLANT_COM_Y="${PEGASUS_PLANT_COM_SHIFT_Y:-0.0}"
 PLANT_COM_Z="${PEGASUS_PLANT_COM_SHIFT_Z:-0.0}"
+PLANT_KF_SCALE="${PEGASUS_PLANT_KF_SCALE:-1.0}"
+if [[ ! "$PLANT_KF_SCALE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "ERROR: PEGASUS_PLANT_KF_SCALE must be a non-negative decimal (got '$PLANT_KF_SCALE')." >&2
+  exit 2
+fi
 if [[ -n "$ARM_SERVO_B" ]] &&
    [[ ! "$ARM_SERVO_B" =~ ^[0-9]+([.][0-9]+)?(,[0-9]+([.][0-9]+)?){3}$ ]]; then
   echo "ERROR: PEGASUS_ARM_SERVO_B must be four non-negative numbers 'b1,b2,b3,b4' (got '$ARM_SERVO_B')." >&2
@@ -177,6 +182,7 @@ PEGASUS_PLANT_MASS_SCALE=$PLANT_MASS_SCALE \
 PEGASUS_PLANT_INERTIA_SCALE=$PLANT_INERTIA_SCALE \
 PEGASUS_PLANT_COM_SHIFT_X=$PLANT_COM_X PEGASUS_PLANT_COM_SHIFT_Y=$PLANT_COM_Y \
 PEGASUS_PLANT_COM_SHIFT_Z=$PLANT_COM_Z \
+PEGASUS_PLANT_KF_SCALE=$PLANT_KF_SCALE \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

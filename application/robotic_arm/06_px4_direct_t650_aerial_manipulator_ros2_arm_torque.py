@@ -203,6 +203,19 @@ PLANT_COM_SHIFT = np.array([_envf("PEGASUS_PLANT_COM_SHIFT_X", 0.0),
                             _envf("PEGASUS_PLANT_COM_SHIFT_Y", 0.0),
                             _envf("PEGASUS_PLANT_COM_SHIFT_Z", 0.0)], float)
 
+# PLANT-SIDE THRUST-CONSTANT ERROR. 1.0 = the calibrated MN4010 constant.
+#
+# WHY THIS EXISTS RATHER THAN JUST DETUNING alloc_thrust_coeff. Injecting the
+# k_f error on the CONTROLLER's allocator makes it DIRECT-only, because SAFETY
+# does not go through that allocator -- it commands a normalised setpoint
+# through vehicle_thrust_scaling/idle_thrust. The two modes then fly different
+# plants: measured on this rig, SAFETY sees 3.67 N of mismatch and DIRECT sees
+# 10.81 N. That asymmetry is not physical (a real k_f error lives in both
+# models) and it is what makes the SAFETY->DIRECT handover so violent, since
+# nothing SAFETY learned can be handed over. Scaling the PLANT instead makes
+# the error symmetric and representative of hardware.
+PLANT_KF_SCALE = _envf("PEGASUS_PLANT_KF_SCALE", 1.0)
+
 T650_BODY_MASS    = float(t650_params.BODY_MASS)
 # Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
 # store as diagonalInertia + principalAxes (see utils.author_inertia_tensor).
@@ -614,8 +627,9 @@ class AmT650WholeBodyArmSim:
         config = MultirotorConfig()
         config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
         self._px4_backend = config.backends[0]
+        plant_kf = float(t650_params.ROTOR_CONSTANT) * PLANT_KF_SCALE
         config.thrust_curve = LaggedQuadraticThrustCurve(config={
-            "rotor_constant": [float(t650_params.ROTOR_CONSTANT)] * 4,
+            "rotor_constant": [plant_kf] * 4,
             "rolling_moment_coefficient":
                 [float(t650_params.ROLLING_MOMENT_COEFFICIENT)] * 4,
             "min_rotor_velocity": [float(t650_params.MIN_ROTOR_VEL)] * 4,
@@ -639,7 +653,9 @@ class AmT650WholeBodyArmSim:
             usd_prim_path=USD_PRIM_PATH,
         )
         print(f"[AM-T650-WB] spawned PX4-PRIMARY AM at {drone_prim_path}: MN4010 "
-              f"k_f={t650_params.ROTOR_CONSTANT:.4e} "
+              f"k_f={plant_kf:.4e}"
+              + (f" (x{PLANT_KF_SCALE:.4f} PLANT-SIDE INJECTION)" if PLANT_KF_SCALE != 1.0 else "")
+              + f" "
               f"k_m={t650_params.ROLLING_MOMENT_COEFFICIENT:.4e} "
               f"lambda={t650_params.ROTOR_LAMBDA} "
               f"omega=[{t650_params.MIN_ROTOR_VEL}, {t650_params.MAX_ROTOR_VEL}] "
