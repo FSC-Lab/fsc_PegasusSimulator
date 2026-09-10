@@ -22,11 +22,12 @@ WHAT IS MODELLED — deliberately the loop the flight showed to be at fault:
   * the ALLOCATOR with a believable-vs-true kf split (the whole point) and the
     first-order ROTOR LAG, exact zero-order-hold form, lambda = 10.0265 1/s;
   * the joint-torque clamp (tau_max) the law and plant both apply;
-  * the ARM SERVO (2026-09-03): PWM-mode back-EMF droop, tau_app = clip(tau) -
-    Kt^2/R * qd on joints 2 and 3, identified from the 0902/0903 flights. Before
-    this the simulated arm delivered its command exactly, which is the same
-    idealisation that kept Isaac from reproducing the hardware. `--servo ideal`
-    restores it for an A/B.
+  * the ARM SERVO (2026-09-09): the arm controller's 1.5 Hz current loop leaves
+    a zero-mean residual current error, tau_app = clip(tau) + Kt * i_err, 7 mA
+    rms band-limited at 5 Hz (bench-measured on j2/j3). It SUPERSEDES the
+    2026-09-03 back-EMF droop, which the loop removes. `--servo ideal` gives an
+    exact torque source for an A/B; prefer it when reading small delay-margin
+    differences, since the noise is scatter even though it is seeded.
 
 WHAT IS NOT: ground contact, PX4's own loops (DIRECT bypasses them), DDS
 latency, aerodynamics, sensor noise. So this predicts STABILITY and the
@@ -172,7 +173,7 @@ def wrench_from_rotors(omega):
 
 def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
              tilt0_deg=0.5, params=None, verbose=False, delay_ms=0.0,
-             servo="pwm"):
+             servo="current"):
     """Closed-loop hover from a small attitude perturbation.
 
     Returns dict with the pitch history and a growth verdict. The perturbation
@@ -182,9 +183,12 @@ def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
     p = params if params is not None else TP.make_params_t650()
     n = p["n"]
     ctrl = C.MatlabController(p, gains)
+    # SEEDED, so a delay-margin sweep stays reproducible: this tool scores
+    # ORDERING between candidates, and an unseeded plant would move the score
+    # from run to run for reasons that have nothing to do with the gains.
     srv = servo if not isinstance(servo, str) else (
         None if servo == "ideal" else SM.DynamixelPwmServo(
-            tau_cap=np.full(4, gains.tau_max)))
+            tau_cap=np.full(4, gains.tau_max), seed=0))
 
     # ---- initial state: hover at 1.2 m, arm at home, small pitch offset ----
     R0 = C.joint_rotation(np.array([0.0, 1.0, 0.0]), np.deg2rad(tilt0_deg))
@@ -228,9 +232,11 @@ def simulate(gains, kf_believed=KF_SHIPPED, t_end=25.0, dt=1.0 / 250.0,
         tau_joint = np.clip(np.asarray(out["tau_joint"], float),
                             -gains.tau_max, gains.tau_max)
         if srv is not None:
-            # The servo, not the law: the delivered torque is the commanded one
-            # minus Kt^2/R per rad/s of joint speed (servo_model.py).
-            tau_joint = srv.applied(tau_joint, X[18 + n:18 + 2 * n])
+            # The servo, not the law: the delivered torque carries the current
+            # loop's residual current error, Kt * i_err (servo_model.py). It is
+            # zero-MEAN, so it does not bias the delay margin — it only adds
+            # scatter to the pitch history the verdict is read from.
+            tau_joint = srv.applied(tau_joint, dt)
 
         # allocator (believed kf) -> rotor lag -> true wrench
         w_cmd = allocate(u1, tau_body, kf_believed)
@@ -289,7 +295,7 @@ def _fmt(r):
             f"(x{r['growth']:.2f})")
 
 
-def validate(servo="pwm"):
+def validate(servo="current"):
     """Reproduce the flight A/B: shipped +15% kf bounded, matched kf diverges."""
     print(f"=== validation against the flown runs (Command.md 7.14.4), "
           f"servo={servo} ===")
@@ -302,7 +308,7 @@ def validate(servo="pwm"):
     return
 
 
-def sweep(servo="pwm"):
+def sweep(servo="current"):
     """Search for a tune that is stable at the CALIBRATED kf."""
     p = TP.make_params_t650()
     print(f"=== baseline at the calibrated kf, servo={servo} ===")
@@ -332,10 +338,12 @@ def main():
                     help="comma list, e.g. k_R=4,k_w=3")
     ap.add_argument("--kf", default="true", choices=("true", "shipped"))
     ap.add_argument("--t-end", type=float, default=25.0)
-    ap.add_argument("--servo", default="pwm", choices=("pwm", "ideal"),
-                    help="arm actuator: 'pwm' is the real PWM-mode servo "
-                         "(back-EMF droop, servo_model.py); 'ideal' is the "
-                         "pre-2026-09-03 exact torque source")
+    ap.add_argument("--servo", default="current", choices=("current", "ideal"),
+                    help="arm actuator: 'current' is the real servo with its "
+                         "1.5 Hz current loop closed (residual current noise, "
+                         "servo_model.py); 'ideal' is an exact torque source. "
+                         "Use 'ideal' when reading small delay-margin "
+                         "differences — the noise is seeded but still scatter")
     a = ap.parse_args()
     if a.validate:
         validate(a.servo)

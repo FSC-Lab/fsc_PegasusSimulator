@@ -83,23 +83,42 @@ fi
 
 # Arm SERVO MODEL, read by application/robotic_arm/06_*_arm_torque.py only (the
 # whole-body TORQUE plant). This is a PLANT property, not a controller gain --
-# the OM-X servos run in Dynamixel PWM mode, so the torque they deliver falls by
-# Kt^2/R per rad/s of joint speed. See
+# the arm controller closes a 1.5 Hz software CURRENT LOOP around Dynamixel
+# Mode 16, and what it leaves behind is a zero-mean residual current error of
+# 4-7 mA rms. See
 # extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/servo_model.py
-#   pwm       (default) the real servo: back-EMF droop on joints 2 and 3
-#   pwm_0903  as above plus the per-joint duty ceilings AS FLOWN on 2/3 Sep
-#   ideal     the pre-2026-09-03 behaviour, commanded effort applied exactly
+#   current  (default) the arm as it is today: residual current noise
+#   ideal    an exact torque source, for the A/B
 # Baked into the pane command line for the same tmux-server reason as LOCKSTEP.
 ARM_SERVO_MODEL="${PEGASUS_ARM_SERVO_MODEL:-}"
-if [[ -n "$ARM_SERVO_MODEL" ]] &&
-   [[ ! "$ARM_SERVO_MODEL" =~ ^(pwm|pwm_0903|ideal)$ ]]; then
-  echo "ERROR: PEGASUS_ARM_SERVO_MODEL must be pwm, pwm_0903 or ideal (got '$ARM_SERVO_MODEL')." >&2
+case "$ARM_SERVO_MODEL" in
+  ""|current|ideal) ;;
+  pwm|pwm_0903)
+    echo "ERROR: PEGASUS_ARM_SERVO_MODEL='$ARM_SERVO_MODEL' is GONE (2026-09-09)." >&2
+    echo "       Those modelled the back-EMF droop, which the arm controller's" >&2
+    echo "       1.5 Hz current loop removes. Use 'current' (or 'ideal')." >&2
+    exit 2 ;;
+  *)
+    echo "ERROR: PEGASUS_ARM_SERVO_MODEL must be current or ideal (got '$ARM_SERVO_MODEL')." >&2
+    exit 2 ;;
+esac
+
+# The residual current error itself: rms in AMPS, first-order corner in Hz, and
+# an integer seed (or "none" for OS entropy). Empty = servo_model.py's
+# bench-measured defaults, 0.007 A rms at 5 Hz on all four joints.
+ARM_CURRENT_NOISE_A="${PEGASUS_ARM_CURRENT_NOISE_A:-}"
+ARM_CURRENT_NOISE_BW_HZ="${PEGASUS_ARM_CURRENT_NOISE_BW_HZ:-}"
+ARM_CURRENT_NOISE_SEED="${PEGASUS_ARM_CURRENT_NOISE_SEED:-}"
+for _NV in "$ARM_CURRENT_NOISE_A" "$ARM_CURRENT_NOISE_BW_HZ"; do
+  if [[ -n "$_NV" && ! "$_NV" =~ ^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then
+    echo "ERROR: PEGASUS_ARM_CURRENT_NOISE_A / _BW_HZ must be non-negative decimals (got '$_NV')." >&2
+    exit 2
+  fi
+done
+if [[ -n "$ARM_CURRENT_NOISE_SEED" && ! "$ARM_CURRENT_NOISE_SEED" =~ ^([0-9]+|none)$ ]]; then
+  echo "ERROR: PEGASUS_ARM_CURRENT_NOISE_SEED must be an integer or 'none' (got '$ARM_CURRENT_NOISE_SEED')." >&2
   exit 2
 fi
-
-# Optional per-joint back-EMF coefficients, "b1,b2,b3,b4" in N.m per rad/s,
-# overriding servo_model.py's built-in Kt^2/R. Empty = use the built-ins.
-ARM_SERVO_B="${PEGASUS_ARM_SERVO_B:-}"
 # Plant-side model-uncertainty injection (whole-body robustness tests). Baked
 # into the pane command line, NOT exported: the tmux server keeps its own env.
 PLANT_MASS_SCALE="${PEGASUS_PLANT_MASS_SCALE:-1.0}"
@@ -129,12 +148,6 @@ for _CL in "$ARM_COUNTS_NOMINAL" "$ARM_COUNTS_TRUE"; do
     exit 2
   fi
 done
-if [[ -n "$ARM_SERVO_B" ]] &&
-   [[ ! "$ARM_SERVO_B" =~ ^[0-9]+([.][0-9]+)?(,[0-9]+([.][0-9]+)?){3}$ ]]; then
-  echo "ERROR: PEGASUS_ARM_SERVO_B must be four non-negative numbers 'b1,b2,b3,b4' (got '$ARM_SERVO_B')." >&2
-  exit 2
-fi
-
 command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
 command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: missing $PEGASUS_SCRIPT" >&2; exit 1; }
@@ -194,7 +207,9 @@ echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
 PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS PEGASUS_ARM_SERVO_MODEL=$ARM_SERVO_MODEL \
-PEGASUS_ARM_SERVO_B=$ARM_SERVO_B \
+PEGASUS_ARM_CURRENT_NOISE_A=$ARM_CURRENT_NOISE_A \
+PEGASUS_ARM_CURRENT_NOISE_BW_HZ=$ARM_CURRENT_NOISE_BW_HZ \
+PEGASUS_ARM_CURRENT_NOISE_SEED=$ARM_CURRENT_NOISE_SEED \
 PEGASUS_PLANT_MASS_SCALE=$PLANT_MASS_SCALE \
 PEGASUS_PLANT_INERTIA_SCALE=$PLANT_INERTIA_SCALE \
 PEGASUS_PLANT_COM_SHIFT_X=$PLANT_COM_X PEGASUS_PLANT_COM_SHIFT_Y=$PLANT_COM_Y \

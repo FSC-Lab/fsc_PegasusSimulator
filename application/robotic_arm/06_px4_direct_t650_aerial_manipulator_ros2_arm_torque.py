@@ -59,18 +59,26 @@ HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
 EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
-# ARM SERVO MODEL (2026-09-03). "pwm" = the real Dynamixel PWM-mode servo:
-# torque delivered falls by Kt^2/R per rad/s of joint speed (joints 2 and 3,
-# the two the flights identify). "pwm_0903" adds the per-joint duty ceilings
-# AS FLOWN on 2/3 Sep, which reproduces those bags but is NOT today's arm.
-# "ideal" is the old behaviour, the commanded effort applied exactly.
-# `or "pwm"`, not a get() default: the launcher bakes the variable into the
+# ARM SERVO MODEL (2026-09-09, superseding the 2026-09-03 back-EMF droop). The
+# arm controller now closes a 1.5 Hz software CURRENT LOOP around Dynamixel
+# Mode 16, which removes the droop bias — j2's torque delivery 93.3 -> 99.4 %,
+# j3's 87.5 -> 91.8 % — and leaves a zero-mean residual current error of
+# 4-7 mA rms. That residual is the whole of the model now.
+#   current   the arm as it is today: residual current noise, no droop
+#   ideal     an exact torque source, for the A/B
+# `or "current"`, not a get() default: the launcher bakes the variable into the
 # Isaac pane unconditionally, so an unset knob arrives as the EMPTY STRING.
-ARM_SERVO_MODEL = (os.environ.get("PEGASUS_ARM_SERVO_MODEL", "") or "pwm").strip().lower()
-# Per-joint back-EMF coefficients "b1,b2,b3,b4" [N.m per rad/s], normally
-# forwarded by the launcher out of the paired controller yaml's
-# sim_arm_backemf_b_j* keys. Empty = servo_model.py's built-in Kt^2/R.
-ARM_SERVO_B = (os.environ.get("PEGASUS_ARM_SERVO_B", "") or "").strip()
+ARM_SERVO_MODEL = (os.environ.get("PEGASUS_ARM_SERVO_MODEL", "") or "current").strip().lower()
+# Residual current error left by the closed loop, normally forwarded by the
+# launcher out of the paired controller yaml's sim_arm_current_noise_* keys.
+#   _A       rms of I_measured - I_commanded, AMPS (bench: j2 0.0042-0.0046,
+#            j3 0.0067-0.0069; the shipped 0.007 is j3, used on all four)
+#   _BW_HZ   first-order corner of that noise, Hz (the bench figure's own band)
+#   _SEED    integer seed — a run is reproducible; "none" draws from the OS
+# Empty = servo_model.py's built-in defaults.
+ARM_CURRENT_NOISE_A = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_A", "") or "").strip()
+ARM_CURRENT_NOISE_BW = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_BW_HZ", "") or "").strip()
+ARM_CURRENT_NOISE_SEED = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_SEED", "") or "").strip()
 # COUNT <-> TORQUE TRANSFORMATION (2026-09-08). The real command is an int16
 # Goal PWM register, not a torque: the chain converts N.m to counts with the
 # calibration it BELIEVES and the winding makes torque per count according to
@@ -113,7 +121,7 @@ from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_multirotor import (
     MultirotorMod, MultirotorConfig)
 from fsc_aerial_manipulation.robotic_arm.utils_controller import controller as C
 from fsc_aerial_manipulation.robotic_arm.servo_model import (
-    DynamixelPwmServo, TAU_CAP_AS_FLOWN)
+    DynamixelPwmServo, CURRENT_NOISE_A, CURRENT_NOISE_BW_HZ)
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  CONFIG (identical to 04 unless marked ARM-ROS2)                         ║
@@ -239,24 +247,39 @@ ARM_HOLD_KD   = 0.25   # [N·m·s/rad]
 ARM_HOLD_RATE = 0.5    # [rad/s] reference slew — transparent to the position
                        # controller's <= 0.2 rad/s min-jerk moves; caps the step
                        # if something publishes a raw far-away target directly
-TAU_MAX       = 3.0    # [N·m] — one number with the wb yaml and the
-                       # ExternalTorqueController; see servo_model.py for why
-                       # PEGASUS_ARM_SERVO_MODEL=pwm_0903 deliberately differs
+TAU_MAX       = 3.0    # [N·m] — one number with the wb yaml, the
+                       # ExternalTorqueController and servo_model.py's
+                       # TAU_CAP_CURRENT; keep the four together
 ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7
 
 # ── ARM SERVO: the plant between the commanded torque and the applied one ───
-# Isaac applies a commanded effort exactly; the real XM430s in PWM mode do not.
-# See servo_model.py for the derivation and the flight identification. `ideal`
-# keeps the old behaviour for an A/B.
-_B_OVERRIDE = None
-if ARM_SERVO_B:
+# Isaac applies a commanded effort exactly; the real XM430s do not, even with
+# the current loop closed. See servo_model.py for the bench measurement.
+# `ideal` keeps the exact torque source for an A/B.
+def _float_env(raw, name, lo=0.0):
+    if not raw:
+        return None
     try:
-        _B_OVERRIDE = np.array([float(v) for v in ARM_SERVO_B.split(",")], float)
+        v = float(raw)
     except ValueError:
-        _B_OVERRIDE = np.empty(0)
-    if _B_OVERRIDE.shape != (4,) or not np.all(np.isfinite(_B_OVERRIDE)):
-        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_B must be four finite "
-                         f"numbers 'b1,b2,b3,b4' (got {ARM_SERVO_B!r})")
+        v = float("nan")
+    if not np.isfinite(v) or v < lo:
+        raise SystemExit(f"[AM-T650-WB] {name} must be a finite number "
+                         f">= {lo:g} (got {raw!r})")
+    return v
+
+
+_NOISE_A = _float_env(ARM_CURRENT_NOISE_A, "PEGASUS_ARM_CURRENT_NOISE_A")
+_NOISE_BW = _float_env(ARM_CURRENT_NOISE_BW, "PEGASUS_ARM_CURRENT_NOISE_BW_HZ")
+if ARM_CURRENT_NOISE_SEED.lower() in ("", "none"):
+    _NOISE_SEED = None if ARM_CURRENT_NOISE_SEED.lower() == "none" else 0
+else:
+    try:
+        _NOISE_SEED = int(ARM_CURRENT_NOISE_SEED)
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_CURRENT_NOISE_SEED must be "
+                         f"an integer or 'none' (got {ARM_CURRENT_NOISE_SEED!r})")
+
 
 def _counts_env(raw, name):
     """Parse "c1,c2,c3,c4" counts per N.m, or None when unset."""
@@ -281,23 +304,30 @@ _DIGITAL = dict(quantize=ARM_COUNTS_ENABLE,
                 nm_to_counts_true=_COUNTS_TRUE)
 
 if ARM_SERVO_MODEL == "ideal":
-    # `ideal` switches off the BACK-EMF DROOP, nothing else. The count↔torque
+    # `ideal` switches off the CURRENT NOISE, nothing else. The count↔torque
     # register is an independent effect with its own switch, so it still
     # applies here — the two must stay orthogonal or one knob silently
-    # disables the other (measured 2026-09-08: with the yaml's
-    # sim_arm_backemf_enable false, a +10% calibration injection reached the
-    # launcher, was reported ACTIVE, and then did nothing at all).
-    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), backemf_joints=(),
-                                  **_DIGITAL)
-elif ARM_SERVO_MODEL == "pwm":
-    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX), b=_B_OVERRIDE,
-                                  **_DIGITAL)
-elif ARM_SERVO_MODEL == "pwm_0903":
-    ARM_SERVO = DynamixelPwmServo(tau_cap=TAU_CAP_AS_FLOWN, b=_B_OVERRIDE,
-                                  **_DIGITAL)
+    # disables the other (measured 2026-09-08: with the yaml's servo switch
+    # off, a +10% calibration injection reached the launcher, was reported
+    # ACTIVE, and then did nothing at all).
+    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX),
+                                  current_noise_a=0.0, **_DIGITAL)
+elif ARM_SERVO_MODEL == "current":
+    ARM_SERVO = DynamixelPwmServo(
+        tau_cap=np.full(4, TAU_MAX),
+        current_noise_a=CURRENT_NOISE_A if _NOISE_A is None else _NOISE_A,
+        current_noise_bw_hz=(CURRENT_NOISE_BW_HZ if _NOISE_BW is None
+                             else _NOISE_BW),
+        seed=_NOISE_SEED, **_DIGITAL)
+elif ARM_SERVO_MODEL in ("pwm", "pwm_0903"):
+    raise SystemExit(
+        f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL={ARM_SERVO_MODEL!r} is GONE "
+        f"(2026-09-09). Those modelled the back-EMF droop, which the arm "
+        f"controller's 1.5 Hz current loop removes; the plant now models the "
+        f"loop's residual current error instead. Use 'current' (or 'ideal').")
 else:
     raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL must be one of "
-                     f"'pwm', 'pwm_0903', 'ideal' (got {ARM_SERVO_MODEL!r})")
+                     f"'current', 'ideal' (got {ARM_SERVO_MODEL!r})")
 
 R_MODEL = np.array([[0.0, 1.0, 0.0],
                     [-1.0, 0.0, 0.0],
@@ -425,13 +455,20 @@ class AmT650WholeBodyArmSim:
         actrl = self._art.get_articulation_controller()
         for i in self._arm_idx:
             actrl.switch_dof_control_mode(dof_index=i, mode="effort")
+        _from_yaml = (ARM_CURRENT_NOISE_A or ARM_CURRENT_NOISE_BW)
         print(f"[AM-T650-WB] arm servo model '{ARM_SERVO_MODEL}'"
-              f"{' (b from the controller yaml)' if ARM_SERVO_B else ''}: "
-              f"back-EMF droop {np.round(ARM_SERVO.b, 3).tolist()} N·m/(rad/s), "
-              f"ceiling {np.round(ARM_SERVO.tau_cap, 3).tolist()} N·m "
-              f"(b·dt/I = "
-              f"{np.round(ARM_SERVO.explicit_stability_ratio(np.full(4, ARM_ARMATURE), 1.0 / 250.0), 2).tolist()}"
-              f", explicit damping is stable below 2)", flush=True)
+              f"{' (noise from the controller yaml)' if _from_yaml else ''}: "
+              f"current-loop residual "
+              f"{np.round(ARM_SERVO.current_noise_a * 1e3, 2).tolist()} mA rms @ "
+              f"{np.round(ARM_SERVO.current_noise_bw_hz, 2).tolist()} Hz = "
+              f"{np.round(ARM_SERVO.torque_noise_nm() * 1e3, 1).tolist()} mN·m rms, "
+              f"seed {ARM_SERVO.seed}, "
+              f"ceiling {np.round(ARM_SERVO.tau_cap, 3).tolist()} N·m",
+              flush=True)
+        if ARM_SERVO_MODEL == "ideal":
+            print("\033[1;33m[AM-T650-WB] arm is an EXACT torque source — the "
+                  "current-loop residual is OFF. A/B baseline, not the arm.\033[0m",
+                  flush=True)
         # COUNT <-> TORQUE. Always print the verdict: a silent pass and a knob
         # that never reached the plant look identical otherwise (the 0824
         # lesson from the hardware-yaml guard).
@@ -450,23 +487,15 @@ class AmT650WholeBodyArmSim:
                       f"joints deliver {np.round(g * 100.0, 1).tolist()} % of "
                       f"every commanded N·m. The controller is NOT told; this "
                       f"IS the effect under test.\033[0m", flush=True)
-                # b = Kt^2/R moves with the true calibration. `b` is set
-                # independently (only joints 2/3 are identified), so report the
-                # consistent value rather than overriding the yaml silently.
-                print(f"[AM-T650-WB]   NOTE b consistent with the true "
-                      f"calibration would be "
-                      f"{np.round(ARM_SERVO.implied_b_true(), 3).tolist()}; "
-                      f"b in use is {np.round(ARM_SERVO.b, 3).tolist()}",
-                      flush=True)
+                # The current error becomes torque through the TRUE Kt, so the
+                # noise moves with this too — report it rather than leaving the
+                # banner's figure (computed on the same true constant) unexplained.
+                print(f"[AM-T650-WB]   NOTE the current-loop residual is worth "
+                      f"{np.round(ARM_SERVO.torque_noise_nm() * 1e3, 2).tolist()} "
+                      f"mN·m at the TRUE calibration", flush=True)
         else:
             print("[AM-T650-WB] count↔torque path OFF: the arm command stays a "
                   "continuous torque (perfect calibration, no register)",
-                  flush=True)
-        if ARM_SERVO_MODEL == "pwm_0903":
-            print("[AM-T650-WB] WARNING: 'pwm_0903' uses the 2/3 Sep duty "
-                  "ceilings, NOT the uniform 3.0 N·m the arm has carried since "
-                  "2026-09-04 — the plant and the controllers disagree ON "
-                  "PURPOSE. Use 'pwm' for anything but replaying those bags.",
                   flush=True)
         print("[AM-T650-WB] arm dofs in effort mode; EXTERNAL TORQUE "
               f"(clip ±{TAU_MAX} N·m, fresh < {CMD_FRESH_S}s) with PD+gravity "
@@ -997,13 +1026,11 @@ class AmT650WholeBodyArmSim:
             self._hold_ref = self._hold_ref + d_ref
             tau_cmd = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm
 
-        # THE SERVO. Both branches go through it: the droop is a property of
-        # the motor, not of whoever computed the command, and on hardware the
-        # controller's own PD fallback pays it too. qd_ref is left at zero —
-        # the arm controller's back-EMF feedforward tracks the REFERENCE
-        # velocity, which whole-body DIRECT holds near zero (measured peak
-        # 0.009 rad/s on joint 2 while the joint itself reached 2.36).
-        tau = ARM_SERVO.applied(tau_cmd, qdot)
+        # THE SERVO. Both branches go through it: the residual current error is
+        # a property of the motor and its current loop, not of whoever computed
+        # the command, and on hardware the controller's own PD fallback pays it
+        # too. Called exactly once per physics step — it advances the noise.
+        tau = ARM_SERVO.applied(tau_cmd, dt)
         self._art.set_joint_efforts(np.asarray(tau, float),
                                     joint_indices=self._arm_idx)
         self._tau_cmd_applied = np.clip(tau_cmd, -ARM_SERVO.tau_cap, ARM_SERVO.tau_cap)

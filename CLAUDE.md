@@ -1549,7 +1549,13 @@ with the whole-body planner live and planning, so the law/whole-body planner/pla
 Assign→Send→execute cycle has still NOT been flown.
 
 **THE ARM IS NOT AN IDEAL TORQUE SOURCE, AND NOW THE SIM KNOWS (2026-09-03, user
-request off the 0902/0903 applied-torque analysis).** The OM-X servos fly in Dynamixel
+request off the 0902/0903 applied-torque analysis).**
+**SUPERSEDED 2026-09-09 — the back-EMF droop is GONE from the simulator, because
+the arm controller's new software CURRENT LOOP removes it on the real arm. The
+entry below is kept for the identification and for the traps it records, but
+`servo_model.py` no longer contains `b`, `PEGASUS_ARM_SERVO_MODEL` no longer
+accepts `pwm`/`pwm_0903`, and the yaml keys are `sim_arm_current_noise_*`. See
+"THE ARM'S CURRENT LOOP" at the end of this file.** The OM-X servos fly in Dynamixel
 **Operating Mode 16 (PWM)**, so what the arm controller writes is a DUTY, i.e. a VOLTAGE.
 The winding sees `V - Ke*qd` across `R`, so the delivered torque falls by a fixed amount per
 unit of joint speed whatever was asked for:
@@ -2466,3 +2472,114 @@ as the CONTACT wrench only:**
   legs not flown with them; interaction phase must keep the WORLD anchor (planner switch
   not implemented); GMO variant offline only (34 mm settled); the 0.9 m entry transient
   itself is the handover (7.15.8), untouched.
+
+**THE ARM'S CURRENT LOOP — THE DROOP IS GONE, THE RESIDUAL IS THE MODEL
+(2026-09-09, user request).** `fsc_open_manipulator` now closes a **software
+current loop** around Dynamixel Mode 16 (design + bench validation:
+`fsc_open_manipulator/doc/Current Loop Design.md`, figure
+`doc/current_error_all.png`), calibrated on J2/J3. It is deliberately SLOW —
+`wc` = 1.5 Hz, 6.6x below the stability limit — because rejecting the back-EMF
+disturbance IS deleting the machine's own damping `Kt^2/R`, and that damping is
+the scarce resource on an arm whose velocity signal has 48 ms of group delay.
+The simulator's plant model was rebuilt around its OUTCOME:
+- **REMOVED: the back-EMF droop.** `servo_model.py` no longer contains `b`,
+  `B_BACKEMF`, `backemf_joints`, `back_emf_ff_scale`, `implied_b_true` or
+  `explicit_stability_ratio`; `applied()` lost its `qdot`/`qdot_ref` arguments
+  and takes `dt` instead. `PEGASUS_ARM_SERVO_MODEL` is now **`current|ideal`**;
+  `pwm` and `pwm_0903` are REFUSED WITH A MESSAGE rather than reinterpreted
+  (`pwm_0903` existed to replay the 0902/0903 droop-era bags and cannot without
+  `b`). Yaml keys `sim_arm_backemf_*` -> **`sim_arm_current_noise_{enable,a,
+  bw_hz,seed}`** in BOTH whole-body `_sim` yamls; `PEGASUS_ARM_SERVO_B` ->
+  `PEGASUS_ARM_CURRENT_NOISE_{A,BW_HZ,SEED}`, validated and baked into the Isaac
+  pane by `start_single_drone_x650.sh` (the tmux-server-env trap, unchanged).
+- **ADDED: the residual.** `tau_app = clip(tau_cmd, +-tau_cap) + Kt * i_err`,
+  `i_err` **zero-mean, 7 mA rms, first-order band-limited at 5 Hz**, four
+  independent channels, seeded. 7 mA is **J3** — the worse of the two calibrated
+  joints (bench, loop closed: j2 4.2-4.6, j3 6.7-6.9 mA rms) — and per the
+  user's instruction the same magnitude goes on all four; J1/J4 carry commands
+  near the current sensor's floor and are uncharacterised, so that is a
+  documented assumption. Through each `Kt` it is
+  **[16.3, 15.0, 17.7, 16.3] mN.m rms**, ~2% of the arm's 0.7 N.m hold torque.
+  **The SHAPE is the point, not the size**: loop off, j2/j3 sat on a persistent
+  one-sided ~-20 mA offset and never crossed zero (delivery 93.3/87.5%); loop
+  closed, the error is centred (99.4/91.8%). A bias corrupts a torque-controlled
+  flight, scatter does not — and the 2026-09-03 model was all bias.
+- **Generated as an EXACT-DISCRETIZATION AR(1)**, `a = exp(-2*pi*fc*dt)`,
+  `i <- a*i + sqrt(1-a^2)*sigma*randn(4)`, so the stationary rms is `sigma` at
+  ANY step size. An Euler form's variance scales with `dt` and would silently
+  retune the plant if the physics step ever changed — the same lesson
+  `lagged_thrust_curve.py` records for the rotor lag. Self-test measures the rms
+  dt-invariant to 0.4% at 4 and 16 ms and recovers `fc` = 5.0 Hz from the lag-1
+  autocorrelation.
+- **The software loop is NOT run in simulation, on purpose, and there is a real
+  foot-gun here.** The plant models its outcome; the residual is already
+  post-correction. But `IsaacTopicEffortSystem` DOES export an effort state
+  interface (06 republishes the applied torque), so setting
+  `current_loop_bandwidth_hz > 0` in `torque_controller_isaac_aerial.yaml` would
+  close a SECOND loop around a signal that is already post-loop and cancel the
+  disturbance under test. It defaults to 0.0; that file now carries a comment
+  saying why it must stay there.
+- **The controller cannot see it**, which is what makes the test fair: the
+  whole-body node never subscribes to `joint_states.effort` (grep-verified — it
+  only publishes its own commanded torque there). The residual reaches the law
+  only through the physics.
+- **`wb_l1_lc_var_q` 0.0025 was flagged as "must be RAISED once the droop is
+  on". That instruction is now VOID** — a droop is a systematic joint-torque
+  error the observer should be allowed to find; zero-mean noise is one it
+  should NOT chase, so a low prior is right. Noted in the yaml.
+- **FLOWN, 3 missions, 0 aborts, no gain touched.** Plant = the shipped `_sim`
+  config (+15% allocator kf, mass/inertia x1.10, 10/10/5 mm CoM shift, MN4010
+  rotor lag); law = the 2026-09-09 config (posture term absent,
+  `wb_ee_anchor_com` + `wb_u3_internal_ff`, K_y 20/D_y 12, k_x 32/k_v 20).
+  Run B against the matched ideal-arm baseline `l1_mission_kx32.npz`
+  (same mission, same 16 s holds):
+
+  | | noise ON | ideal arm |
+  |---|---|---|
+  | legs completed / aborted | 10/10, no | 10/10, no |
+  | DIRECT | 276.2 s | 276.9 s |
+  | CoM err mean / late | 21.0 / 9.6 mm | 18.8 / 5.0 mm |
+  | EE err mean / max | 3.5 / 33.4 mm | 2.9 / 30.4 mm |
+  | tilt p-p, \|e_R\| max | 3.08 deg, 0.181 | 2.78 deg, 0.170 |
+  | peak arm torque | 0.798 of 3.0 N.m | 0.751 |
+  | joint clamp / rotor sat | **0.00% / 0.00%** | 0.00% / 0.00% |
+  | q2/q3 abs err | 0.81 / 1.21 deg | 0.58 / 0.97 deg |
+  | phantom \|F_hat_y\| | 0.123 N | 0.077 N |
+
+  Run C repeats B to within a few percent on every row (CoM mean 16.9 mm, EE
+  3.2, tilt 2.95 deg, tau 0.785, 0.00% clamp), so this is not one lucky run.
+  Per-leg: every leg completed, peaks within 8% of the baseline, settled errors
+  1.5-6x larger in a range that is 3-8 mm.
+  **THE MECHANISM IS IN THE ARM CHANNELS OF THE OBSERVER, and it reproduces
+  3/3** — std over the quiet soak hold, N.m:
+
+  | | d_hat^c UNFILTERED (deadbeat) q1/q2/q3/q4 | d_hat FILTERED (what the law sees) |
+  |---|---|---|
+  | noise, 3 runs | .0247-.0254 / .0389-.0496 / .0229-.0266 / .0199-.0206 | .0029 / .0031-.0050 / .0039-.0042 / .0038-.0040 |
+  | ideal arm | .0138 / .0330 / .0143 / .0108 | .0003 / .0047 / .0025 / .0006 |
+
+  The unfiltered deadbeat estimate picks the injection up almost exactly — the
+  quadrature excess over the ideal run is **16.7 mN.m on q4 and 17.9 on q3
+  against the 16.3 / 17.7 injected** (q1/q2 read ~21 because the law's own
+  reaction adds there) — and the L1's explicit `C(s) = omega_c/(s+omega_c)`
+  then cuts it ~5x, to 3-5 mN.m against the arm's 700 mN.m hold torque. That
+  bandwidth/accuracy split is exactly what the observer exists for, and it is
+  why 7 mA costs single-digit millimetres.
+  **DO NOT read this off the COLLECTIVE channel.** `dc_z_std` is 0.73 / 0.23 /
+  0.29 N on noise-B / noise-C / the IDEAL run — the arm's joint-space noise is
+  not what dominates it, and its run-to-run spread swamps the effect. Scoring
+  it that way once made the noise look 2.5x worse than ideal on one run and
+  identical on the next.
+- **Measured end-to-end from flight telemetry, not just from the model**: over a
+  33 s quiet hold, `applied - commanded` has mean **0.1-0.8 mN.m** (the bias is
+  really gone) at 21-24 mN.m rms against the 15-18 injected — the excess is the
+  law REACTING, its own commanded torque carrying 13-19 mN.m of ripple at 250 Hz
+  in the same window, plus the asynchronous 50 Hz log sampling of two streams.
+  **The applied-torque log columns are in MODEL order** (verified by
+  cross-correlation), NOT the broadcaster order `LOG_Q_OF_JOINT` applies to the
+  POSITION columns — mixing them up scores joint 2 against joint 1.
+- Tooling: `wb_hover_stability.py`'s `--servo` is now `current|ideal`, seeded;
+  read its delay-margin ORDERING with `ideal`, since the noise is scatter.
+  Campaign: `docs/docs_aerial_manipulator/arm_current_noise_20260909/`
+  (`run_noise.sh`, README). NOT flown on the GMO rig, though the plant change
+  reaches it (its yaml has the same new keys); NOT flown on hardware.

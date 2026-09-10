@@ -4741,3 +4741,116 @@ driver still exits 0 with an empty event list, so check `t_direct` is finite
 before trusting a "completed". And `pkill -f` on a campaign script kills the
 shell that names the same script later on its own command line (the 7.15
 bracket-trick caveat) — issue the kill and the edit as separate commands.
+
+#### 7.15.10 The arm's current loop — the droop is gone, the residual is the model (2026-09-09)
+
+`fsc_open_manipulator` now closes a **software current loop** around Dynamixel
+Mode 16 (`fsc_open_manipulator/doc/Current Loop Design.md`), calibrated on J2
+and J3. It removes the back-EMF droop the simulator had modelled since
+2026-09-03, so the plant model was rebuilt around what the loop leaves behind.
+
+| bench, loop OFF → 1.5 Hz | joint 2 | joint 3 |
+|---|---|---|
+| torque delivered, 20 °/s | 95.0 % → **99.5 %** | 87.5 % → **91.8 %** |
+| current error | 13–15 → **4.2–4.6 mA rms** | 14–16 → **6.7–6.9 mA rms** |
+
+The plant is now `tau_app = clip(tau_cmd, ±tau_cap) + Kt·i_err`, with `i_err`
+**zero-mean, 7 mA rms, first-order band-limited at 5 Hz** (= J3, the worse
+calibrated joint, on all four — J1/J4 are uncharacterised), i.e.
+**[16.3, 15.0, 17.7, 16.3] mN·m rms**. The *shape* is the result: loop off, the
+error was a one-sided ≈ −20 mA bias that never crossed zero; loop closed, it is
+centred scatter. A bias corrupts a torque-controlled flight; scatter does not.
+
+```bash
+# knobs — env > yaml > built-in.   PEGASUS_ARM_SERVO_MODEL is now current|ideal
+#   'pwm' / 'pwm_0903' are REFUSED with a message (they modelled the droop)
+sim_arm_current_noise_enable: true     # in both whole-body _sim yamls
+sim_arm_current_noise_a: 0.007         # A rms
+sim_arm_current_noise_bw_hz: 5.0       # first-order corner
+sim_arm_current_noise_seed: 0
+
+PEGASUS_ARM_SERVO_MODEL=ideal \
+  scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_direct_actuation_sitl.sh shiqi_machine
+
+# the campaign (two matched 16 s-hold missions; ~9 min each, clean relaunch)
+docs/docs_aerial_manipulator/arm_current_noise_20260909/run_noise.sh shiqi_machine
+/usr/bin/python3 application/robotic_arm/utils/wb_l1_metrics.py \
+    docs/docs_aerial_manipulator/arm_current_noise_20260909/*.npz \
+    docs/docs_aerial_manipulator/posture_ablation_20260909/l1_mission_kx32.npz
+
+# the model on its own (no Isaac needed)
+/usr/bin/python3 extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/servo_model.py
+```
+
+**Result — the L1 whole-body law handles it, no gain touched.** Same `_sim`
+plant (+15 % allocator kf, mass/inertia ×1.10, 10/10/5 mm CoM shift, MN4010
+rotor lag), same 2026-09-09 law (posture absent, `wb_ee_anchor_com` +
+`wb_u3_internal_ff`, `K_y` 20 / `D_y` 12, `k_x` 32). Run B vs the matched
+ideal-arm baseline:
+
+| | noise B | noise C | ideal arm |
+|---|---|---|---|
+| legs / aborted | 10 of 10, no | 9 of 10*, no | 10 of 10, no |
+| CoM err mean / late | 21.0 / 9.6 mm | 16.9 / 5.4 mm | 18.8 / 5.0 mm |
+| EE err mean / max | 3.5 / 33.4 mm | 3.2 / 28.5 mm | 2.9 / 30.4 mm |
+| tilt p-p, \|e_R\| max | 3.08°, 0.181 | 2.95°, 0.160 | 2.78°, 0.170 |
+| peak arm torque | 0.798 of 3.0 N·m | 0.785 | 0.751 |
+| joint clamp / rotor sat | **0.00 / 0.00 %** | **0.00 / 0.00 %** | 0.00 / 0.00 % |
+| q2 / q3 abs err | 0.81 / 1.21° | 0.76 / 1.19° | 0.58 / 0.97° |
+| phantom \|F̂_y\| | 0.123 N | 0.120 N | 0.077 N |
+
+\* C lost `traj_both_back` to the §7.15.9 **driver race** — the planner went
+CALCULATING→PLANNED inside one sample, `send` hit CALCULATING, and the driver
+waited out its 45 s exec timeout while the vehicle held. Not a control failure;
+the fix belongs in `wb_l1_campaign_driver.py`.
+
+**THE MECHANISM IS IN THE OBSERVER'S ARM CHANNELS, and it reproduces 3/3** —
+std over the quiet soak hold, N·m:
+
+| | d̂ᶜ UNFILTERED (deadbeat) q1/q2/q3/q4 | d̂ FILTERED (what the law sees) |
+|---|---|---|
+| noise, 3 runs | .0247–.0254 / .0389–.0496 / .0229–.0266 / .0199–.0206 | .0029 / .0031–.0050 / .0039–.0042 / .0038–.0040 |
+| ideal arm | .0138 / .0330 / .0143 / .0108 | .0003 / .0047 / .0025 / .0006 |
+
+The deadbeat estimate picks the injection up almost exactly — quadrature excess
+over the ideal run is **16.7 mN·m on q4 and 17.9 on q3 against the 16.3 / 17.7
+injected** (q1/q2 read ~21 because the law's own reaction adds there) — and
+`C(s) = ω_c/(s+ω_c)` then cuts it ~5×, to 3–5 mN·m against the arm's 700 mN·m
+hold torque. That bandwidth/accuracy split is what the observer exists for, and
+it is why 7 mA costs single-digit millimetres.
+
+**Do NOT read this off the COLLECTIVE channel.** `dc_z_std` is 0.73 / 0.23 /
+0.29 N on noise-B / noise-C / the **ideal** run: the arm's joint-space noise is
+not what dominates it and the run-to-run spread swamps the effect. Scored that
+way it looks 2.5× worse than ideal on one run and identical on the next.
+
+Five things worth knowing before touching this:
+
+- **Do NOT turn on `current_loop_bandwidth_hz` in
+  `torque_controller_isaac_aerial.yaml`.** The plant already models the loop's
+  *outcome*, and `IsaacTopicEffortSystem` does export an effort state interface
+  (06 republishes the applied torque), so a non-zero bandwidth closes a second
+  loop around an already-post-loop signal and cancels the disturbance under
+  test. It defaults to 0.0; that file now says why.
+- **The controller cannot see the noise**, which is what makes the test fair —
+  the whole-body node never subscribes to `joint_states.effort`, it only
+  publishes its own commanded torque there (grep-verified).
+- **`wb_l1_lc_var_q` 0.0025 no longer "must be RAISED".** That instruction was
+  written for the droop: a systematic joint-torque error the observer *should*
+  find. Zero-mean noise is one it should NOT chase, so a low prior is now
+  correct.
+- **The applied-torque log columns are in MODEL order**, unlike the position
+  columns, which need `LOG_Q_OF_JOINT = (2,0,1,3)`. Mixing them up scores
+  joint 2 against joint 1 and invents ~0.7 N·m of error.
+- **Read `wb_hover_stability.py --servo current` for ordering only** — the noise
+  is seeded but it is still scatter; use `--servo ideal` for delay margins.
+
+Measured end-to-end from telemetry over a 33 s quiet hold: `applied − commanded`
+has mean **0.1–0.8 mN·m** (the bias really is gone), at 21–24 mN·m rms against
+15–18 injected. The excess is the law *reacting* — its own 250 Hz commanded
+torque carries 13–19 mN·m of ripple in the same window — plus the asynchronous
+50 Hz log sampling of two streams.
+
+`l1_noise_A.npz` was flown first at the driver's default 6 s holds. It completed
+the whole mission too, but **its settled numbers are not comparable** with the
+16 s baseline (§7.15.7's hold-length trap).

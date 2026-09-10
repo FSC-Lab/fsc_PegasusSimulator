@@ -131,25 +131,25 @@ export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # the paired whole-body controller YAML.
 export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
 
-# -- ARM SERVO MODEL: the on/off switch for the back-EMF droop (2026-09-04) ----
-# THE SWITCH LIVES HERE, not in the controller YAML: the droop is a property of
-# the PLANT (the OM-X servos in Dynamixel PWM mode deliver tau_cmd - Kt^2/R*qd),
-# and the paired fsc_autopilot_ros2 node never sees it -- it is exactly the
-# modelling error the 2/3 Sep flights exposed. Identified in
-# "docs/experimental_data_ros2_bag/0903 - T650-AM whole-body/analysis/";
-# implementation in .../robotic_arm/servo_model.py.
+# -- ARM SERVO MODEL: the current loop's residual, in the plant (2026-09-09) ---
+# THE SWITCH LIVES HERE, not in the controller YAML: this is a property of the
+# PLANT, and the paired fsc_autopilot_ros2 node never sees it -- that mismatch
+# is the effect under test. The arm controller now closes a 1.5 Hz software
+# CURRENT LOOP around Dynamixel Mode 16, which REMOVES the back-EMF droop this
+# block used to carry (j2 torque delivery 93.3 -> 99.4 %, j3 87.5 -> 91.8 %) and
+# leaves a zero-mean residual current error in its place. Design and bench
+# numbers: fsc_open_manipulator/doc/"Current Loop Design.md" and
+# doc/current_error_all.png; implementation in .../robotic_arm/servo_model.py.
 #
-#   pwm       ON  - the real servo, droop b = [0, 0.934, 1.493, 0] N.m/(rad/s)
-#   ideal     OFF - the commanded effort applied exactly (pre-2026-09-03)
-#   pwm_0903  ON  + the per-joint duty ceilings AS FLOWN on 2/3 Sep
-#                   ([0.370, 2.160, 1.535, 0.370] N.m instead of a uniform 3.0),
-#                   for replaying those bags. NOT today's arm.
+#   current  ON  - the arm as it is today: residual current noise, 4-7 mA rms
+#                  band-limited at 5 Hz, made torque through Kt
+#   ideal    OFF - the commanded effort applied exactly, for the A/B
 #
 # Override without editing this file:
 #   PEGASUS_ARM_SERVO_MODEL=ideal <this script> <config>
 # The SOURCE OF TRUTH is the paired controller yaml, so one file describes the
 # whole run (user request, 2026-09-04). The whole-body NODE never declares these
-# keys — rclcpp ignores them — they are here for the plant, which is why they
+# keys -- rclcpp ignores them -- they are here for the plant, which is why they
 # are prefixed sim_ and why this launcher is what reads them.
 # Precedence: environment > yaml > built-in default.
 WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml}"
@@ -158,25 +158,27 @@ yaml_scalar() {  # $1 = key; prints the value, or nothing if absent/commented
   sed -nE "s/^[[:space:]]*$1:[[:space:]]*([^#[:space:]]+).*/\\1/p" "$WB_SIM_YAML" | head -1
 }
 if [[ -z "${PEGASUS_ARM_SERVO_MODEL:-}" ]]; then
-  case "$(yaml_scalar sim_arm_backemf_enable)" in
-    true|True|TRUE|1)    PEGASUS_ARM_SERVO_MODEL=pwm ;;
+  case "$(yaml_scalar sim_arm_current_noise_enable)" in
+    true|True|TRUE|1)    PEGASUS_ARM_SERVO_MODEL=current ;;
     false|False|FALSE|0) PEGASUS_ARM_SERVO_MODEL=ideal ;;
-    "") PEGASUS_ARM_SERVO_MODEL=pwm
-        echo "NOTE: sim_arm_backemf_enable not found in $WB_SIM_YAML — defaulting to 'pwm'." ;;
-    *)  echo "ERROR: sim_arm_backemf_enable must be true or false in $WB_SIM_YAML" >&2; exit 2 ;;
+    "") PEGASUS_ARM_SERVO_MODEL=current
+        echo "NOTE: sim_arm_current_noise_enable not found in $WB_SIM_YAML -- defaulting to 'current'." ;;
+    *)  echo "ERROR: sim_arm_current_noise_enable must be true or false in $WB_SIM_YAML" >&2; exit 2 ;;
   esac
-  ARM_SERVO_B_YAML=""
-  for J in j1 j2 j3 j4; do
-    V="$(yaml_scalar "sim_arm_backemf_b_$J")"
-    [[ -n "$V" ]] || { ARM_SERVO_B_YAML=""; break; }
-    ARM_SERVO_B_YAML="${ARM_SERVO_B_YAML:+$ARM_SERVO_B_YAML,}$V"
-  done
-  if [[ -n "$ARM_SERVO_B_YAML" && "$PEGASUS_ARM_SERVO_MODEL" != "ideal" ]]; then
-    export PEGASUS_ARM_SERVO_B="$ARM_SERVO_B_YAML"
+  if [[ "$PEGASUS_ARM_SERVO_MODEL" != "ideal" ]]; then
+    for KV in "PEGASUS_ARM_CURRENT_NOISE_A:sim_arm_current_noise_a" \
+              "PEGASUS_ARM_CURRENT_NOISE_BW_HZ:sim_arm_current_noise_bw_hz" \
+              "PEGASUS_ARM_CURRENT_NOISE_SEED:sim_arm_current_noise_seed"; do
+      VAR="${KV%%:*}"; KEY="${KV##*:}"
+      if [[ -z "${!VAR:-}" ]]; then
+        V="$(yaml_scalar "$KEY")"
+        [[ -n "$V" ]] && export "$VAR=$V"
+      fi
+    done
   fi
   echo "Arm servo model taken from $(basename "$WB_SIM_YAML")"
 fi
-export PEGASUS_ARM_SERVO_MODEL="${PEGASUS_ARM_SERVO_MODEL:-pwm}"
+export PEGASUS_ARM_SERVO_MODEL="${PEGASUS_ARM_SERVO_MODEL:-current}"
 
 # ── ROBUSTNESS INJECTION: plant-side model uncertainty ──────────────────────
 # Same precedence rule as the servo model: environment > yaml > built-in.
@@ -318,9 +320,8 @@ else
 fi
 
 case "$PEGASUS_ARM_SERVO_MODEL" in
-  ideal) echo -e "\033[1;33mArm servo model: IDEAL - back-EMF droop OFF (commanded effort applied exactly).\033[0m" ;;
-  pwm_0903) echo -e "\033[1;33mArm servo model: PWM + the 2/3 Sep duty ceilings - replay config, NOT today's arm.\033[0m" ;;
-  *) echo "Arm servo model: PWM (back-EMF droop ON, b = [${PEGASUS_ARM_SERVO_B:-built-in default}] N.m/(rad/s))" ;;
+  ideal) echo -e "\033[1;33mArm servo model: IDEAL - current-loop residual OFF (commanded effort applied exactly).\033[0m" ;;
+  *) echo "Arm servo model: CURRENT LOOP CLOSED (residual ${PEGASUS_ARM_CURRENT_NOISE_A:-0.007} A rms @ ${PEGASUS_ARM_CURRENT_NOISE_BW_HZ:-5.0} Hz, seed ${PEGASUS_ARM_CURRENT_NOISE_SEED:-0})" ;;
 esac
 
 echo "Starting AM-T650 WHOLE-BODY + L1 ADAPTIVE direct-actuator SITL with the ROS2 TORQUE-mode arm stack."
