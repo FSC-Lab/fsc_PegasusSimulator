@@ -41,6 +41,21 @@ def _load(name, relpath):
 _aero_mod = _load("vtol_aerodynamics", "dynamics/vtol_aerodynamics.py")
 VTOLAerodynamics = _aero_mod.VTOLAerodynamics
 VTOLAerodynamicsConfig = _aero_mod.VTOLAerodynamicsConfig
+_slosh_mod = _load("slosh", "dynamics/slosh.py")
+
+# ★ TANK AIRCRAFT (branch `slosh`, tank-plan phase 2).  The plant this harness
+# doubles now carries 0.502 kg of water as DEAD MASS at the assembled CG, and so
+# do the controllers (so3.M, FSC['m'], the safe controller). A double at 3.45 kg
+# against a controller at 3.95 is a 14.6% feed-forward mismatch -- which is what
+# test_geometric_hover flagged the moment the controller moved and this did not.
+# Read from the SHIPPED tank definition, not retyped, so the four copies cannot
+# drift (tests/test_tank_model_pairing.py checks the other three).
+# PLANT_TANK=0 doubles the baseline aircraft.
+_TANK = (_slosh_mod.TankConfig()
+         if os.environ.get("PLANT_TANK", "1") not in ("0", "", "none", "false", "False") else None)
+TANK_MASS = _slosh_mod.slosh_parameters(_TANK).fluid_mass if _TANK is not None else 0.0
+TANK_INERTIA = (np.diag(_slosh_mod.slosh_parameters(_TANK).inertia_rigid)
+                if _TANK is not None else np.zeros((3, 3)))
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +121,9 @@ def mass_properties():
     I = parallel_axis(BODY_MASS, BODY_INERTIA, BODY_COM - com)
     for l in LINKS:
         I = I + parallel_axis(LINK_MASS, LINK_INERTIA, np.array(l[1:]) - com)
-    return m_tot, com, I
+    # the tank sits AT the assembled CG: mass and its own inertia, no CG shift
+    # (mirrors vtol_slosh.fold_tank_into_body with tank.position=None)
+    return m_tot + TANK_MASS, com, I + TANK_INERTIA
 
 
 MASS, CG, INERTIA = mass_properties()

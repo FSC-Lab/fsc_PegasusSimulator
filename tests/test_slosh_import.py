@@ -114,18 +114,39 @@ def main():
         bad.append(f"the baseline step order changed: {calls}")
     print(f"  3. VTOLSlosh(tank=None).update -> {calls} + _apply_slosh (no-op)")
 
-    # 4. a configured tank must be refused at CONSTRUCTION
-    try:
-        vs.VTOLSlosh(config=vs.VTOLSloshConfig(tank=slosh.TankConfig()))
-        bad.append("a configured tank was accepted -- phase 1 has no slosh physics to fly")
-    except NotImplementedError:
-        print("  4. a configured tank is refused at construction, not mid-flight")
+    # 4. PHASE 2: a tank flies as DEAD MASS, and the mass properties move with it
+    airframe = vs.VTOLSloshConfig(
+        **{f.name: getattr(copy, f.name) for f in fields(copy) if f.name != "tank"},
+        tank=slosh.TankConfig())
+    m_dry, cg_dry, i_dry = vs.assembled_mass_properties(copy)
+    v_tank = vs.VTOLSlosh(config=airframe)
+    m_wet, cg_wet, i_wet = v_tank._mass_props
+    water = slosh.slosh_parameters(airframe.tank).fluid_mass
+    if abs(m_wet - (m_dry + water)) > 1e-6:
+        bad.append(f"tank aircraft mass {m_wet:.4f} != dry {m_dry:.4f} + water {water:.4f}")
+    if max(abs(cg_wet[k] - cg_dry[k]) for k in range(3)) > 1e-9:
+        bad.append("the default tank moved the CG; mounted at the assembled CG it must not")
+    if not all(i_wet[k] >= i_dry[k] for k in range(3)):
+        bad.append("adding the tank reduced an inertia")
+    if airframe.mass != copy.mass:
+        bad.append("constructing with a tank MUTATED the caller's config")
+    print(f"  4. tank as dead mass: {m_dry:.3f} -> {m_wet:.3f} kg, CG unmoved, "
+          f"caller's config untouched")
 
-    # 5. an explicitly disabled tank is allowed through, with its parameters derived
+    # 5. PHASE 3 is not implemented, and asking for it must refuse at CONSTRUCTION
+    try:
+        vs.VTOLSlosh(config=vs.VTOLSloshConfig(tank=slosh.TankConfig(slosh=True)))
+        bad.append("tank.slosh=True was accepted -- there is no free-surface model yet")
+    except NotImplementedError:
+        print("  5. tank.slosh=True (phase 3) is refused at construction, not mid-flight")
+
+    # 6. a disabled tank is inert: config kept, parameters derived, no mass added
     v2 = vs.VTOLSlosh(config=vs.VTOLSloshConfig(tank=slosh.TankConfig(enabled=False)))
     if v2._tank is None or v2._slosh is None:
         bad.append("a disabled tank lost its config or its derived parameters")
-    print("  5. tank(enabled=False) constructs and keeps its derived parameters")
+    if v2._mass_props is not None:
+        bad.append("a DISABLED tank still added mass")
+    print("  6. tank(enabled=False) adds no mass and keeps its derived parameters")
 
     print()
     if bad:

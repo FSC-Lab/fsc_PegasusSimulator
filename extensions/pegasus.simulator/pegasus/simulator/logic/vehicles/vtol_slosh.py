@@ -48,6 +48,8 @@
 
 import math
 
+import numpy as np
+
 from pegasus.simulator.logic.dynamics.slosh import (        # noqa: F401 (re-exported)
     TankConfig,
     SloshParameters,
@@ -56,7 +58,7 @@ from pegasus.simulator.logic.dynamics.slosh import (        # noqa: F401 (re-exp
 )
 from pegasus.simulator.logic.vehicles.vtol import VTOL, VTOLConfig
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 
 # ============================================================================
@@ -73,6 +75,102 @@ class VTOLSloshConfig(VTOLConfig):
     baseline aircraft."""
 
     tank: TankConfig | None = None
+
+
+# ============================================================================
+#  MASS PROPERTIES
+# ============================================================================
+#
+#  The plant describes the airframe as a BODY LINK plus ten small links (two per
+#  tiltable rotor, one per fixed rotor, one per surface).  `VTOLConfig.mass`,
+#  `.inertia` and `.body_com_offset` are the BODY LINK's; what the controllers
+#  model -- and what flies -- is the ASSEMBLY.
+#
+#  Getting that distinction wrong is this project's most expensive single bug
+#  class: the controllers carried the BODY LINK's inertia (0.20, 0.28, 0.35) as
+#  if it were the vehicle's for a month (Ixx -24%, Izz -29%), and a CG taken from
+#  the rotor centroid instead of the assembly put a 0.6 N.m nose-up moment into
+#  every hover.  So the tank is added THROUGH the assembly, and
+#  `assembled_mass_properties` is checked against the controllers' own constants
+#  in `tests/test_slosh_import.py`: it reproduces M = 3.450 kg, CG_X = 0.1764 m
+#  and I = (0.265, 0.303, 0.490) exactly.
+
+
+def _parallel_axis(m, d):
+    """Diagonal inertia of a point mass `m` at offset `d` about the reference."""
+    d = np.asarray(d, dtype=float)
+    return np.array([m * (d[1] ** 2 + d[2] ** 2),
+                     m * (d[0] ** 2 + d[2] ** 2),
+                     m * (d[0] ** 2 + d[1] ** 2)])
+
+
+def _link_positions(cfg):
+    """Where `_init_prim` puts each small link, in body-link-origin coordinates.
+
+    Mirrors the builder exactly -- nacelle + prop for a tiltable rotor, a single
+    prop link for a fixed one, one link per surface -- because a link counted
+    here and not built there (or the reverse) is a silent mass error."""
+    pts = []
+    for rotor in cfg.rotors:
+        p = np.asarray(rotor.position, dtype=float)
+        pts.append(p)
+        if rotor.tiltable:
+            pts.append(p + np.asarray(rotor.spin_offset, dtype=float))
+    for surface in cfg.surfaces:
+        pts.append(np.asarray(surface.position, dtype=float))
+    return pts
+
+
+def assembled_mass_properties(cfg):
+    """(total mass [kg], CG [m], diagonal inertia about that CG [kg m^2]).
+
+    Body-link-origin coordinates, the same frame as `body_com_offset`."""
+    pts = _link_positions(cfg)
+    m_b = float(cfg.mass)
+    c_b = np.asarray(cfg.body_com_offset, dtype=float)
+    i_b = np.asarray(cfg.inertia, dtype=float)
+    i_l = np.asarray(cfg.link_inertia, dtype=float)
+    m_l = float(cfg.link_mass)
+
+    mass = m_b + m_l * len(pts)
+    cg = (m_b * c_b + m_l * sum(pts)) / mass if pts else c_b
+    inertia = i_b + _parallel_axis(m_b, c_b - cg)
+    for p in pts:
+        inertia = inertia + i_l + _parallel_axis(m_l, p - cg)
+    return mass, cg, inertia
+
+
+def fold_tank_into_body(cfg, tank):
+    """A COPY of `cfg` whose BODY LINK also carries the tank's liquid.
+
+    The liquid has to go onto a LINK, because that is what PhysX integrates -- so
+    the body link's mass, CoM offset and inertia all move together.  Returns the
+    new config and the (before, after) assembly properties for logging.
+
+    A COPY, never a mutation: configs are shared (`fsc_cad_vtol_slosh_config`
+    hands out the same nested rotor/surface objects as the baseline airframe),
+    and quietly rewriting the caller's config is how one vehicle ends up changing
+    another's mass."""
+    m_f, cg0, i0 = assembled_mass_properties(cfg)
+    params = slosh_parameters(tank)
+    m_w = params.fluid_mass
+    # None -> at the assembled CG: adds mass without moving the CG.
+    p_t = np.asarray(tank.position, dtype=float) if tank.position is not None else cg0
+
+    m_b = float(cfg.mass)
+    c_b = np.asarray(cfg.body_com_offset, dtype=float)
+    i_b = np.asarray(cfg.inertia, dtype=float)
+
+    m_b2 = m_b + m_w
+    c_b2 = (m_b * c_b + m_w * p_t) / m_b2
+    i_b2 = (i_b + _parallel_axis(m_b, c_b - c_b2)
+            + np.asarray(params.inertia_rigid, dtype=float) + _parallel_axis(m_w, p_t - c_b2))
+
+    new_cfg = replace(cfg,
+                      mass=float(m_b2),
+                      body_com_offset=tuple(float(v) for v in c_b2),
+                      inertia=tuple(float(v) for v in i_b2))
+    return new_cfg, (m_f, cg0, i0), assembled_mass_properties(new_cfg)
 
 
 # ============================================================================
@@ -99,26 +197,49 @@ class VTOLSlosh(VTOL):
             config = VTOLSloshConfig()
 
         tank = getattr(config, "tank", None)
-
-        if tank is not None and tank.enabled:
-            p = slosh_parameters(tank)
-            raise NotImplementedError(
-                "VTOLSlosh: a tank is configured but the slosh physics is not "
-                "implemented yet (tank plan phase 2 = dead mass, phase 3 = "
-                "pendulum).\n"
-                f"    {describe_tank(tank)}\n"
-                f"    it would add {p.fluid_mass:.3f} kg, taking the stall speed "
-                f"from 14.13 to {14.13 * math.sqrt((3.45 + p.fluid_mass) / 3.45):.2f} m/s "
-                "against a 16.0 m/s cruise.\n"
-                "Refusing to construct rather than flying an aircraft whose "
-                "payload the physics does not know about.  Set tank=None to fly "
-                "the baseline aircraft from this class."
-            )
-
         self._tank: TankConfig | None = tank
         self._slosh: SloshParameters | None = (
             slosh_parameters(tank) if tank is not None else None
         )
+        self._mass_props = None          # (mass, cg, inertia) once a tank is folded in
+
+        if tank is not None and tank.enabled:
+            if tank.slosh:
+                # PHASE 3 IS NOT IMPLEMENTED, and the refusal happens HERE -- at
+                # construction, where the aircraft does not yet exist -- rather
+                # than on the first physics step with it already in the air.
+                raise NotImplementedError(
+                    "VTOLSlosh: tank.slosh=True asks for the free-surface model, "
+                    "which is tank-plan phase 3 and is not implemented.\n"
+                    f"    {describe_tank(tank)}\n"
+                    "Set tank.slosh=False to fly the liquid as DEAD MASS (phase 2, "
+                    "implemented), or tank=None for the baseline aircraft. "
+                    "Refusing rather than flying physics that does not exist."
+                )
+
+            config, before, after = fold_tank_into_body(config, tank)
+            self._mass_props = after
+            m0, c0, i0 = before
+            m1, c1, i1 = after
+            stall = 14.13 * math.sqrt(m1 / m0)
+            msg = (f"[TANK] {describe_tank(tank)}\n"
+                   f"[TANK] dead mass (phase 2): {m0:.3f} -> {m1:.3f} kg "
+                   f"(+{100 * (m1 / m0 - 1):.1f}%), "
+                   f"CG ({c0[0]:.4f},{c0[1]:.4f},{c0[2]:.4f}) -> "
+                   f"({c1[0]:.4f},{c1[1]:.4f},{c1[2]:.4f}) m "
+                   f"[{1000 * float(np.linalg.norm(c1 - c0)):.2f} mm], "
+                   f"I ({i0[0]:.3f},{i0[1]:.3f},{i0[2]:.3f}) -> "
+                   f"({i1[0]:.3f},{i1[1]:.3f},{i1[2]:.3f})\n"
+                   f"[TANK] stall 14.13 -> {stall:.2f} m/s against a 16.0 m/s cruise; "
+                   f"hover needs {m1 * 9.81:.2f} N of 72 N installed. "
+                   f"THE CONTROLLERS MUST CARRY THE SAME MASS (so3.M) or the "
+                   f"reference stops being a trim.")
+            print(msg)
+            try:                                  # Isaac's own log, when we are in it
+                import carb
+                carb.log_warn(msg)
+            except Exception:                     # noqa: BLE001 - headless tests
+                pass
 
         super().__init__(
             vehicle_id=vehicle_id,

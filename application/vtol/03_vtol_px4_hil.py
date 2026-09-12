@@ -42,6 +42,7 @@ from fsc_aerial_manipulation.rotorcraft import (
     fsc_cad_vtol_slosh_config,
 )
 from fsc_aerial_manipulation.utils import add_dome_lighting
+from pegasus.simulator.logic.dynamics.slosh import TankConfig
 
 # PX4 SITL airframe for the CAD quad (2 front tilting + 2 rear static rotors).
 # px4_vehicle_model is informational here (px4_autolaunch=False — the tmux script
@@ -97,15 +98,24 @@ class VTOLPx4HilApp:
             carb.log_warn("VTOL_ROS2_STATE set -> publishing /uav_0/state/* for mocap")
 
         # VTOL_SLOSH=1 flies the SAME airframe on the free-surface-tank model
-        # (VTOLSlosh) instead of the baseline VTOL. In phase 1 of the tank plan
-        # the tank is None, so the two are identical step for step -- which is
-        # the point: fly the mission on the copy and compare it with the
-        # `pre-slosh` baseline before any tank physics exists to blame.
+        # (VTOLSlosh) instead of the baseline VTOL.
+        #   VTOL_TANK=1 (default when VTOL_SLOSH is on) mounts the tank: phase 2
+        #     of the tank plan, the liquid carried as DEAD MASS at the assembled
+        #     CG -- +0.502 kg, CG unmoved, stall 14.13 -> 15.12 m/s.
+        #   VTOL_TANK=0 gives the phase-1 configuration: the copy with NO tank,
+        #     step-for-step identical to the baseline. That is the control case,
+        #     and it is how the copy itself was verified before any mass was added.
+        # The control model must carry the same mass (so3.M); the simulator's
+        # tests/test_tank_model_pairing.py fails if the two ever drift apart.
         use_slosh = os.environ.get("VTOL_SLOSH", "0") not in ("0", "", "false", "False")
-        vtol_config = fsc_cad_vtol_slosh_config() if use_slosh else fsc_cad_vtol_config()
+        use_tank = os.environ.get("VTOL_TANK", "1") not in ("0", "", "none", "false", "False")
         if use_slosh:
-            carb.log_warn("VTOL_SLOSH set -> VTOLSlosh model, tank=None "
-                          "(phase 1: behaviour identical to the baseline VTOL)")
+            tank = TankConfig() if use_tank else None
+            vtol_config = fsc_cad_vtol_slosh_config(tank=tank)
+            carb.log_warn(f"VTOL_SLOSH set -> VTOLSlosh model, "
+                          f"tank={'MOUNTED (phase 2, dead mass)' if use_tank else 'None (phase 1)'}")
+        else:
+            vtol_config = fsc_cad_vtol_config()
 
         self.vtol_path = spawn_vtol_with_mavlink(
             px4_path=self.pg.px4_path,

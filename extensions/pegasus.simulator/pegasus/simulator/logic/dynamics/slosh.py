@@ -104,10 +104,20 @@ class TankConfig:
     fluid_density: float = 1000.0    # [kg/m^3] water
 
     # --- mounting -------------------------------------------------------
-    # Position of the tank's BASE CENTRE in body-link-origin coordinates, the
+    # Position of the tank's CENTRE OF FLUID in body-link-origin coordinates, the
     # same frame `VTOLConfig.body_com_offset` and `aero_center` are written in.
-    # At/near the CG minimises the lever arm the slosh force acts on.
-    position: tuple = (0.0, 0.0, 0.0)
+    #
+    # None (the default) means AT THE ASSEMBLED VEHICLE CG -- not the body-link
+    # origin.  Those differ by 176 mm on this airframe, and defaulting to the
+    # origin would have hung half a kilogram on a 176 mm lever arm silently. That
+    # is precisely the bug the 2026-09-06 audit found in `aero_center`, which used
+    # to default to the body-link origin and thereby invented an aerodynamic
+    # centre at 71% MAC.
+    #
+    # At the CG the tank adds mass WITHOUT moving the CG, so phase 2 changes one
+    # thing rather than three, and the slosh force in phase 3 acts on the shortest
+    # possible lever arm.
+    position: tuple | None = None
     axis: tuple = (0.0, 0.0, 1.0)    # tank axis in body frame (vertical by default)
 
     # --- damping --------------------------------------------------------
@@ -118,6 +128,15 @@ class TankConfig:
     damping_zeta: float | None = None
 
     enabled: bool = True
+
+    # Model the FREE SURFACE (the pendulum analogue) or treat the liquid as rigid?
+    #   False (default) -> DEAD MASS: the liquid is frozen to the airframe. This is
+    #                      tank-plan phase 2, and it is a real aircraft -- a full,
+    #                      baffled-to-death tank behaves this way.
+    #   True            -> phase 3, not implemented. `VTOLSlosh` REFUSES to construct
+    #                      rather than pretend, because a tank that is configured but
+    #                      not modelled is silent wrong physics.
+    slosh: bool = False
 
     def __post_init__(self):
         if self.radius <= 0.0 or self.height <= 0.0:

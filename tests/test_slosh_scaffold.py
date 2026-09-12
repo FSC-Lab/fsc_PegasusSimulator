@@ -205,8 +205,9 @@ def check_copy(bad):
     init = methods.get("__init__")
     if init is None or not any(isinstance(n, ast.Raise) and "NotImplementedError" in ast.unparse(n)
                                for n in ast.walk(init)):
-        bad.append("VTOLSlosh.__init__ does not refuse a configured tank -- a tank that is "
-                   "configured but not modelled is silent wrong physics")
+        bad.append("VTOLSlosh.__init__ does not refuse tank.slosh=True -- the free-surface "
+                   "model is phase 3 and does not exist, and a tank that is configured but "
+                   "not modelled is silent wrong physics")
 
     # the baseline plant must be untouched by the tank work
     base_src = open(VTOL_PY).read().lower()
