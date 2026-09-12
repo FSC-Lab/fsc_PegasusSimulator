@@ -85,6 +85,7 @@ fi
 export BAG_DIR=${BAG_DIR:-$HOME/flight_bags/slosh}
 export BAG=${BAG:-$([ "$WANT_SLOSH" = 1 ] && echo slosh || echo base)_$(date +%Y%m%d_%H%M%S)}
 export VTOL_SLOSH=$WANT_SLOSH
+export VTOL_TANK=${VTOL_TANK:-1}
 # The tank AIRCRAFT flies the tank CASCADE (nmpc_cascade_tank_node: the base node with
 # the back-transition schedule replaced -- rotors upright before the aft tilt, flare
 # capped under the CL peak). Same node name and controller_id, so nothing downstream
@@ -99,7 +100,7 @@ fi
 say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")"
 mkdir -p "$BAG_DIR"
 
-say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo 'VTOLSlosh (tank=None, phase 1)' || echo 'baseline VTOL')"
+say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"
 say "    branch $BRANCH @ $COMMIT$([ "$DIRTY" -gt 0 ] && echo " (+$DIRTY uncommitted)")"
 say "    bags -> $BAG_DIR/$BAG"
 if [ "$DRY" = "1" ]; then
@@ -184,6 +185,11 @@ if [ "$WANT_SLOSH" = "1" ]; then
     exit 1
   fi
   [ -n "$TANK_LINE" ] && say "    $TANK_LINE"
+  # phase 3: asked for the free surface -> the banner must say so
+  if [ "${VTOL_TANK:-1}" = "slosh" ] && ! echo "$PANE" | grep -q "SLOSH (phase 3"; then
+    echo "[slosh_hil] !! VTOL_TANK=slosh but Isaac logged a dead-mass tank, not the pendulum."
+    exit 1
+  fi
 fi
 if [ "$WANT_SLOSH" = "0" ] && [ "$BANNER" -ge 1 ]; then
   echo "[slosh_hil] !! ASKED FOR THE BASELINE AND GOT THE TANK MODEL (banner present)."
