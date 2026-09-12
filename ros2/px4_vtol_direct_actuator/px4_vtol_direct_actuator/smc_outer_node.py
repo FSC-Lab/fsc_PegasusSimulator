@@ -10,6 +10,15 @@ SMC-outer / stable-inner cascade.
 
     GS/target --(in_topic)--> smc_outer --(out_topic)--> inner loop (traj_track)
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import numpy as np
 import rclpy
@@ -17,7 +26,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from fsc_autopilot_ros2_msgs.msg import PositionControllerReference, Mocap
 
-from smc_outer import SMCOuter, _KEYS
+from px4_vtol_direct_actuator.smc_outer import SMCOuter, _KEYS
 
 
 class SMCOuterNode(Node):

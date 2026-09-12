@@ -15,6 +15,15 @@ byte-identical to the sim-matched plant `build_ode` (validated: `--validate`).
 
 Isaac tilt convention: beta=0 rotors UP (hover), beta=90deg FORWARD (cruise/pure-puller).
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import os
 import sys
@@ -22,7 +31,7 @@ import sys
 import numpy as np
 import casadi as ca
 
-import nmpc_so3_transition_node as so3   # shared constants + build_ode (the TRUE plant, for offline test)
+from px4_vtol_direct_actuator import nmpc_so3_transition_node as so3   # shared constants + build_ode (the TRUE plant, for offline test)
 
 # ---- constants: import verbatim from the SO(3) node so the model == the sim-matched plant ----
 M = so3.M; G = so3.G; IYY = so3.IYY
@@ -199,7 +208,7 @@ class Schedule:
     PITCH-BALANCED front/rear split. Gives (beta, theta, Tf, Tr, de) at any V -> the wing-borne
     reference the NMPC tracks. tilt/theta emerge hover@V=0 -> 90deg/+alpha@V=cruise."""
     def __init__(self, V_cruise=16.0, tilt_cap_deg=90.0, alpha_max_deg=8.0):
-        from fsc_transition_ref import FSCTransitionProfile
+        from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
         self.prof = FSCTransitionProfile(V_cruise=V_cruise, tf=20.0,
                                          tilt_cap_deg=tilt_cap_deg, alpha_max_deg=alpha_max_deg)
         self.Vc = V_cruise

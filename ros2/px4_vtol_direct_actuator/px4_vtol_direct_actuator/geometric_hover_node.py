@@ -31,6 +31,15 @@ Output: ActuatorMotors + ActuatorServos + OffboardControlMode(direct_actuator).
 Gated on /<ns>/ground_station/active_controller == controller_id.
 State:  /<ns>/mocap (pose world, twist.linear world vel, twist.angular BODY rate).
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import os
 import sys
@@ -42,7 +51,7 @@ import traceback
 # and it is the one every failure falls back to. Imported rather than copied so it cannot drift.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
-    import nmpc_so3_transition_node as _prop
+    from px4_vtol_direct_actuator import nmpc_so3_transition_node as _prop
     _HAVE_PROP = True
 except Exception:                                  # noqa: BLE001 - never stop the SAFE controller
     _prop = None

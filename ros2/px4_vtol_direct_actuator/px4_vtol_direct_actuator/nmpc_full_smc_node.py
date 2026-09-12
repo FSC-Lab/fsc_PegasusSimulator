@@ -25,6 +25,15 @@ The 5 keys carried over from nmpc6 (all necessary there, kept here):
   (4) SOFT tilt guide (the NMPC self-limits through the corridor, then commits)
   (5) delay compensation (predict the state forward by the loop latency)
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import inspect
 import math
 import os
@@ -33,8 +42,8 @@ import sys
 import numpy as np
 import casadi as ca
 
-import nmpc_so3_transition_node as so3          # sim-exact 19-state plant + constants
-from nmpc6_cruise_node import Schedule, DE_MAX   # validated wing-borne trim schedule
+from px4_vtol_direct_actuator import nmpc_so3_transition_node as so3          # sim-exact 19-state plant + constants
+from px4_vtol_direct_actuator.nmpc6_cruise_node import Schedule, DE_MAX   # validated wing-borne trim schedule
 
 M = so3.M; G = so3.G; MAX_THRUST = so3.MAX_THRUST
 NX = so3.NX; NU = so3.NU                         # 19, 8

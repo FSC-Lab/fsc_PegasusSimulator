@@ -21,12 +21,21 @@ MISSION: on engage it flies a trapezoidal-speed straight line from the engage po
 controller = the velocity feed-forward + PID; precise stop = the decel profile + SE(3) lean).
 Gated on /<ns>/ground_station/active_controller == controller_id (default 'so3_cascade').
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import threading
 import numpy as np
 
-import nmpc_so3_transition_node as so3
-from nmpc_so3_transition_node import (SO3TransitionNMPC, TransitionRef, predict_forward,
+from px4_vtol_direct_actuator import nmpc_so3_transition_node as so3
+from px4_vtol_direct_actuator.nmpc_so3_transition_node import (SO3TransitionNMPC, TransitionRef, predict_forward,
                                       M, G, NX, NU, MAX_THRUST, RPOS, SPIN, CQ, _q2R,
                                       RHO, S_WING, CL0, CLA, CD0, KIND, STALL)
 
@@ -232,7 +241,7 @@ def run_ros():
             self._last_tilt = 0.0
             if bool(self.get_parameter("fixed_wing").value):
                 try:
-                    from fsc_transition_ref import FSCTransitionProfile
+                    from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
                     self.prof = FSCTransitionProfile(V_cruise=self.gp("profile_v_cruise"),
                                                      tf=self.gp("profile_tf"))
                     self.get_logger().info("AVTOL-scaled profile loaded: Vc=%.1f v_wing_borne=%.1f"

@@ -22,6 +22,15 @@ limited attitude/lateral loop so the roll axis can't blow up.
 Output: ActuatorMotors + ActuatorServos + OffboardControlMode(direct_actuator). Gated on
 /<ns>/ground_station/active_controller == controller_id.
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import os
 import numpy as np
@@ -227,7 +236,7 @@ class NMPCCruise(Node):
         self.prof = None
         if self.gp("use_profile") > 0.5:
             try:
-                from fsc_transition_ref import FSCTransitionProfile
+                from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
                 self.prof = FSCTransitionProfile(V_cruise=self.gp("profile_v_cruise"),
                                                  tf=self.gp("profile_tf"))
                 self.get_logger().info(

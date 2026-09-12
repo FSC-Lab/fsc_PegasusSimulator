@@ -24,13 +24,22 @@ Convention note:
   * AVTOL beta : 90 deg = hover (thrust vertical), 0 deg = cruise (thrust forward).
   * Isaac tilt : 0 = up (hover), 90 deg = forward (cruise).   tilt_isaac = 90 deg - beta_avtol.
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import os
 import sys
 
 import numpy as np
 
-from fsc_transition_ref import FSC, avtol_dir
+from px4_vtol_direct_actuator.fsc_transition_ref import FSC, avtol_dir
 
 # ---- FSC geometry / aero (identical to nmpc_so3_transition_node so the reference is a real trim) ----
 M = FSC["m"]; G = FSC["g"]
@@ -66,7 +75,7 @@ def pitch_balanced_split(Ttot, beta_isaac, V, alpha, de, Fz_req=None, gamma=0.0,
     descending leg -- and the two thrusts solved from this airframe's geometry.
     """
     try:
-        import nmpc_so3_transition_node as _so3
+        from px4_vtol_direct_actuator import nmpc_so3_transition_node as _so3
         Tf_pair, Tr_pair = _so3.trim_split(beta_isaac, theta, V, de, Fz_req=Fz_req, gamma=gamma)
         return 0.5 * Tf_pair, 0.5 * Tr_pair
     except Exception:
@@ -303,7 +312,7 @@ class FSCMissionProfile:
         zdd = self._iv(tq, self.zdd)
         afwd = self._iv(tq, self.a_fwd)
         gamma = math.atan2(zd, max(vh, 1e-6))
-        import nmpc_so3_transition_node as _so3
+        from px4_vtol_direct_actuator import nmpc_so3_transition_node as _so3
         Tf_pair, Tr_pair, tilt = _so3.trim_split(
             tilt, theta, V, de, Fz_req=M * (G + zdd), gamma=gamma,
             Fx_req=M * afwd, beta_max=self.tilt_cap)
@@ -343,7 +352,7 @@ if __name__ == "__main__":
     if a.check:
         print("\nVerifying each reference is a TRIM in the FSC dynamics (build_ode); "
               "omega_dot(pitch) should be ~0:")
-        import nmpc_so3_transition_node as node
+        from px4_vtol_direct_actuator import nmpc_so3_transition_node as node
         F = node.build_ode()
         print("   t   vdot(f,l,v)          omdot(r,p,y)")
         for tq in np.arange(0, m.tf + 0.1, 2.0):

@@ -18,6 +18,15 @@ Rotor body thrust = T*[sin(tilt), 0, cos(tilt)] at the rotor position (front til
 Output: ActuatorMotors + ActuatorServos + OffboardControlMode(direct_actuator). Gated on
 /<ns>/ground_station/active_controller == controller_id.
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import numpy as np
 import casadi as ca
@@ -366,7 +375,7 @@ class TransitionRef:
         self.Rlevel = self._R_yaw(yaw)
         self.prof = None
         try:
-            from fsc_transition_ref import FSCTransitionProfile
+            from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
             self.prof = FSCTransitionProfile(V_cruise=Vcruise, tf=max(tf, 12.0),
                                              tilt_cap_deg=math.degrees(self.bc),
                                              alpha_max_deg=SO3_ALPHA_MAX)
@@ -814,7 +823,7 @@ def run_ros():
             self.auto_arm = bool(self.get_parameter("auto_arm").value)
             self.arm_after = int(self.get_parameter("arm_after").value)
             self.rate = float(self.gp("rate_hz"))
-            import nmpc_so3_transition_node as _m
+            from px4_vtol_direct_actuator import nmpc_so3_transition_node as _m
             _m.SO3_ALPHA_MAX = float(self.gp("alpha_max_deg"))
             _m.S_LEASH = float(self.gp("s_leash"))
             if self.gp("mission_mode") > 0.5:        # build the NMPC with the mission-validated weights
@@ -1013,7 +1022,7 @@ def run_ros():
             transition + elevator pitch-hold."""
             dt = 1.0 / self.rate
             if self.mission is None:                 # build the mission at the engage pose (one-time)
-                from fsc_mission_ref import FSCMissionProfile
+                from px4_vtol_direct_actuator.fsc_mission_ref import FSCMissionProfile
                 self.mission = FSCMissionProfile(
                     target=(self.gp("mission_target_x"), self.gp("mission_target_y")),
                     z_ground=max(float(p[2]), 0.5), z_cruise=self.gp("mission_zcruise"),
@@ -1125,7 +1134,7 @@ def selftest():
     settle = argf("--settle", 1.5); v0 = argf("--v0", 1.5)          # geometric-handoff forward speed
     for nm in ("w_att", "w_vel", "w_pos", "w_beta", "w_du", "w_so3", "w_om"):
         setattr(SO3TransitionNMPC, nm, argf("--w" + nm[2:], getattr(SO3TransitionNMPC, nm)))
-    import nmpc_so3_transition_node as _self_mod  # allow --thfade to reach TransitionRef
+    from px4_vtol_direct_actuator import nmpc_so3_transition_node as _self_mod  # allow --thfade to reach TransitionRef
     globals()["THETA_FADE_S"] = argf("--thfade", THETA_FADE_S)
     globals()["SO3_ALPHA_MAX"] = argf("--amax", SO3_ALPHA_MAX)
     globals()["S_LEASH"] = argf("--leash", S_LEASH)
@@ -1191,7 +1200,7 @@ def mission_selftest():
     import sys
     def argf(name, d):
         return float(sys.argv[sys.argv.index(name) + 1]) if name in sys.argv else d
-    from fsc_mission_ref import FSCMissionProfile
+    from px4_vtol_direct_actuator.fsc_mission_ref import FSCMissionProfile
     LAT = argf("--lat", 0.10); COMP = argf("--comp", 1.0)
     tx = argf("--tx", 120.0); ty = argf("--ty", 0.0)
     zc = argf("--zc", 15.0); vc = argf("--vc", 15.0); cap = argf("--cap", 90.0)

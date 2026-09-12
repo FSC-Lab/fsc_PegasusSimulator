@@ -25,6 +25,16 @@ Deps: casadi, numpy, rclpy, px4_msgs, fsc_autopilot_ros2_msgs (self-contained).
 """
 from __future__ import annotations
 
+# ★ Run-as-a-script bootstrap. The sibling import below is absolute, which is
+# correct for an installed package but needs the package PARENT on sys.path.
+# That holds under `ros2 run` and `python3 -m`, not under `python3 this_file.py`,
+# which is how the launchers invoke it. NOTE this block must sit AFTER the
+# __future__ import -- that is required by the language to be the first statement,
+# and ast.parse() does NOT flag a violation, only compile() does.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
 import math
 from dataclasses import dataclass
 
@@ -41,7 +51,7 @@ from px4_msgs.msg import (OffboardControlMode, VehicleAttitudeSetpoint,
                           VehicleCommand, VehicleStatus)
 from fsc_autopilot_ros2_msgs.msg import Mocap, PositionControllerReference
 from std_msgs.msg import String
-from smc_outer import SMCOuter, _KEYS      # outer-loop sliding-mode (shared)
+from px4_vtol_direct_actuator.smc_outer import SMCOuter, _KEYS      # outer-loop sliding-mode (shared)
 
 
 # ======================================================================

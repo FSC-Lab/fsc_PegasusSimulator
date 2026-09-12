@@ -71,6 +71,15 @@ INVARIANTS INHERITED FROM THE CAMPAIGN (do not remove; each cost a flight)
     * A trim is a package -- the outer's (Tf, Tr, beta, de) ship together; the inner adds only
       DIFFERENTIALS that preserve net vertical force.
 """
+# ★ Run-as-a-script bootstrap. The imports below are absolute
+# (`from px4_vtol_direct_actuator...`), which is correct for an installed
+# package but needs the package's PARENT on sys.path. That is true under
+# `ros2 run` and `python3 -m`, and false under `python3 this_file.py` -- which
+# is how every launcher and every offline gate in this project invokes it.
+# Adding the parent here keeps both modes working without a global path shim.
+if __package__ in (None, ""):
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 import math
 import os
 import sys
@@ -80,8 +89,8 @@ import time
 import numpy as np
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-import nmpc6_cruise_node as n6                    # noqa: E402  NMPC6, Schedule, build_ode6
-import nmpc_so3_transition_node as so3            # noqa: E402  geometry, aero, trim_split
+from px4_vtol_direct_actuator import nmpc6_cruise_node as n6                    # noqa: E402  NMPC6, Schedule, build_ode6
+from px4_vtol_direct_actuator import nmpc_so3_transition_node as so3            # noqa: E402  geometry, aero, trim_split
 
 MAX_THRUST = so3.MAX_THRUST
 RPOS, SPIN, CQ = so3.RPOS, so3.SPIN, so3.CQ
