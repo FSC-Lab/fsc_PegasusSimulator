@@ -189,25 +189,27 @@ def check_copy(bad):
         if "self._apply_slosh" not in calls:
             bad.append("VTOLSlosh.update never calls _apply_slosh")
 
-    # phase 1: the hook is a no-op. THIS ASSERTION IS MEANT TO FAIL AT PHASE 3 --
-    # when the pendulum lands, move it to that phase's gate (frequency and mass
-    # against the closed form) rather than deleting it.
+    # phase 3: the hook carries the pendulum, so it is no longer a no-op -- but it
+    # must do NOTHING when there is no pendulum, or the phase-2 (dead-mass) and
+    # phase-1 (no-tank) aircraft stop being what they were. The first real statement
+    # has to be the early return on `self._pend is None`. (The pendulum's own physics
+    # is gated by tests/test_slosh_pendulum.py.)
     hook = methods.get("_apply_slosh")
     if hook is not None:
         body = [n for n in hook.body if not (isinstance(n, ast.Expr)
                                              and isinstance(n.value, ast.Constant))]
-        if len(body) != 1 or not isinstance(body[0], ast.Return) or body[0].value is not None:
-            bad.append("_apply_slosh is no longer a no-op: phase 1 claims the copy is "
-                       "IDENTICAL to the baseline, so either that claim is now false or "
-                       "this check belongs in the phase-3 gate")
+        first = body[0] if body else None
+        guard_ok = (isinstance(first, ast.If)
+                    and "self._pend is None" in ast.unparse(first.test)
+                    and any(isinstance(n, ast.Return) for n in first.body))
+        if not guard_ok:
+            bad.append("_apply_slosh must begin with `if self._pend is None: return` so the "
+                       "no-tank and dead-mass aircraft are untouched by the pendulum")
 
     # a configured tank must be refused at CONSTRUCTION, not flown
     init = methods.get("__init__")
-    if init is None or not any(isinstance(n, ast.Raise) and "NotImplementedError" in ast.unparse(n)
-                               for n in ast.walk(init)):
-        bad.append("VTOLSlosh.__init__ does not refuse tank.slosh=True -- the free-surface "
-                   "model is phase 3 and does not exist, and a tank that is configured but "
-                   "not modelled is silent wrong physics")
+    if init is None or "PendulumSlosh(" not in ast.unparse(init):
+        bad.append("VTOLSlosh.__init__ does not build the pendulum for tank.slosh=True")
 
     # the baseline plant must be untouched by the tank work
     base_src = open(VTOL_PY).read().lower()

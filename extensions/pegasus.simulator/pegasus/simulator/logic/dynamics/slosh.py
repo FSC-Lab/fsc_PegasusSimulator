@@ -272,3 +272,85 @@ def describe(tank: TankConfig) -> str:
             f"(m1 {p.slosh_mass:.3f} + m0 {p.rigid_mass:.3f}), "
             f"f={p.freq_hz:.2f} Hz  L={1000 * p.pendulum_length:.1f} mm  "
             f"zeta={100 * p.zeta:.2f}%")
+
+
+# ============================================================================
+#  THE PENDULUM  -- tank-plan phase 3
+# ============================================================================
+#
+#  The first antisymmetric mode as a 2-DOF pendulum (body x and y) of mass m1 on
+#  length L1, hung in the TANK (body) frame.  What drives it is the vehicle's
+#  SPECIFIC FORCE f = a - g_vec (what an accelerometer reads): in the vehicle
+#  frame the bob feels an apparent field -f, so with the tank axis along body z
+#
+#      x1_ddot = -(f_z / L1) * x1 - 2*zeta*w*x1_dot - f_xy          (per lateral axis)
+#
+#  where f_z / L1 is omega1^2 when f_z = g -- i.e. the restoring "gravity" is the
+#  thrust-driven axial specific force, so a tank in free fall has no slosh mode and
+#  one under 2 g rings sqrt(2) faster.  Both are physical.
+#
+#  ★ WHAT FORCE TO APPLY, AND WHY IT IS NOT k*x1 + c*x1_dot.
+#  Phase 2 folded the ENTIRE liquid mass into the body link as dead mass, so PhysX
+#  already carries m1's inertial reaction.  The force the moving bob exerts on the
+#  vehicle is F = -m1*f_xy - m1*x1_ddot; a FROZEN bob (dead mass) exerts -m1*f_xy.
+#  The slosh adds only the difference:
+#
+#      F_slosh = -m1 * x1_ddot
+#
+#  which is identically zero in every steady state -- hover, a banked turn, a
+#  constant acceleration -- and so cannot double-count the mass.  The unit tests
+#  check exactly that.
+#
+#  Integration is semi-implicit Euler at the physics step: at 3.3 Hz and 4 ms steps
+#  that is 75 steps per cycle, and symplectic, so an undamped tank neither gains
+#  nor loses energy over a long run (also tested).
+
+class PendulumSlosh:
+    """Runtime state of the pendulum analogue for one tank."""
+
+    def __init__(self, params: SloshParameters, g: float = G):
+        self.p = params
+        self.g = g
+        self.x = [0.0, 0.0]          # bob displacement relative to the hinge, body x/y [m]
+        self.v = [0.0, 0.0]          # its rate [m/s]
+        self.a = [0.0, 0.0]          # its last relative acceleration [m/s^2]
+        self.f_last = [0.0, 0.0, 0.0]
+
+    def omega(self, f_axial: float) -> float:
+        """Instantaneous natural frequency [rad/s] for the axial specific force in play."""
+        if self.p.pendulum_length <= 0.0:
+            return 0.0
+        return math.sqrt(max(f_axial, 0.0) / self.p.pendulum_length)
+
+    def step(self, f_body, dt: float):
+        """Advance one physics step.
+
+        f_body: specific force in the BODY (FLU) frame [m/s^2], tank axis = +z.
+                In hover this is (0, 0, +g).
+        Returns the slosh force on the vehicle, body frame [N], lateral only."""
+        fx, fy, fz = float(f_body[0]), float(f_body[1]), float(f_body[2])
+        self.f_last = [fx, fy, fz]
+        if self.p.slosh_mass <= 0.0 or dt <= 0.0:
+            self.a = [0.0, 0.0]
+            return [0.0, 0.0, 0.0]
+        w = self.omega(fz)
+        w2 = w * w
+        zeta = self.p.zeta
+        for i, f_lat in enumerate((fx, fy)):
+            a = -w2 * self.x[i] - 2.0 * zeta * w * self.v[i] - f_lat
+            self.v[i] += a * dt                   # semi-implicit: velocity first,
+            self.x[i] += self.v[i] * dt           # then position with the NEW velocity
+            self.a[i] = a
+        m1 = self.p.slosh_mass
+        return [-m1 * self.a[0], -m1 * self.a[1], 0.0]
+
+    @property
+    def displacement(self) -> float:
+        """Lateral bob displacement magnitude [m] -- how hard the tank is sloshing."""
+        return math.hypot(self.x[0], self.x[1])
+
+    def energy(self, f_axial: float = G) -> float:
+        """Mechanical energy of the free pendulum [J], for the conservation test."""
+        w2 = self.omega(f_axial) ** 2
+        m1 = self.p.slosh_mass
+        return sum(0.5 * m1 * v * v + 0.5 * m1 * w2 * x * x for x, v in zip(self.x, self.v))

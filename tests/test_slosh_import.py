@@ -133,12 +133,46 @@ def main():
     print(f"  4. tank as dead mass: {m_dry:.3f} -> {m_wet:.3f} kg, CG unmoved, "
           f"caller's config untouched")
 
-    # 5. PHASE 3 is not implemented, and asking for it must refuse at CONSTRUCTION
-    try:
-        vs.VTOLSlosh(config=vs.VTOLSloshConfig(tank=slosh.TankConfig(slosh=True)))
-        bad.append("tank.slosh=True was accepted -- there is no free-surface model yet")
-    except NotImplementedError:
-        print("  5. tank.slosh=True (phase 3) is refused at construction, not mid-flight")
+    # 5. PHASE 3: tank.slosh=True builds the pendulum, and the hook pushes on the airframe
+    #    only when the bob moves. Drive it with a fake state: a lateral acceleration step.
+    v3 = vs.VTOLSlosh(config=vs.VTOLSloshConfig(
+        **{f.name: getattr(copy, f.name) for f in fields(copy) if f.name != "tank"},
+        tank=slosh.TankConfig(slosh=True)))
+    if v3._pend is None:
+        bad.append("tank.slosh=True did not build a pendulum")
+    applied = []
+    v3.apply_force = lambda F, pos=None, body_part=None: applied.append((list(F), list(pos)))
+
+    class _St:
+        linear_acceleration = [2.0, 0.0, 0.0]          # world, ENU: a 2 m/s^2 +x push
+        attitude = [0.0, 0.0, 0.0, 1.0]                 # level
+    v3._state = _St()
+    v3._cfg.enable_forces = True
+    for _ in range(3):
+        v3._apply_slosh(0.004)
+    if not applied:
+        bad.append("the pendulum hook applied no force after a lateral acceleration step")
+    else:
+        F, pos = applied[0]
+        # first step: -m1 * x_ddot = +m1 * f_x, at the tank (the assembled CG)
+        if abs(F[0] - 2.0 * v3._slosh.slosh_mass) > 1e-3 or abs(F[1]) > 1e-9 or F[2] != 0.0:
+            bad.append(f"first slosh force {F} != +m1*f = {2.0 * v3._slosh.slosh_mass:.4f} N along x")
+        if abs(pos[0] - 0.1764) > 1e-3:
+            bad.append(f"slosh force applied at {pos}, not at the assembled CG")
+    # and with the bob at rest and no lateral force it must apply NOTHING
+    v3b = vs.VTOLSlosh(config=vs.VTOLSloshConfig(
+        **{f.name: getattr(copy, f.name) for f in fields(copy) if f.name != "tank"},
+        tank=slosh.TankConfig(slosh=True)))
+    quiet = []
+    v3b.apply_force = lambda F, pos=None, body_part=None: quiet.append(F)
+    _St.linear_acceleration = [0.0, 0.0, 0.0]
+    v3b._state = _St(); v3b._cfg.enable_forces = True
+    for _ in range(50):
+        v3b._apply_slosh(0.004)
+    if quiet:
+        bad.append("the pendulum applies force in a steady hover")
+    print(f"  5. tank.slosh=True: pendulum built; a 2 m/s^2 step gives F=({F[0]:+.3f},{F[1]:+.3f}) N "
+          f"at the CG; steady hover gives nothing")
 
     # 6. a disabled tank is inert: config kept, parameters derived, no mass added
     v2 = vs.VTOLSlosh(config=vs.VTOLSloshConfig(tank=slosh.TankConfig(enabled=False)))

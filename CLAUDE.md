@@ -159,6 +159,47 @@ verify -> close the GS -> fly SUPERVISED (PX4 + Isaac alive, mocap changing; dea
 frozen = exit 2) -> score -> teardown, retrying on exit 2. One command; it does not need
 anyone to diagnose why the stack died to get a result.
 
+# ★★★ LATERAL LIMIT CYCLE: FIXED IN FLIGHT BY HEADING-RATE DAMPING ON THE BANK COMMAND
+# (2026-09-12, bag slosh_20260912_194108). k_bank_d, declared since the noise campaign, was
+# INERT -- "a yaw-rate term does not fix it" was measured on a knob the law never read.
+**MEASURED, from the ±29 deg flight (bag ...182643) at 120 Hz:** the guidance loop oscillates at
+**0.9 rad/s (7.1 s period), growing x1.8 per cycle (+0.08/s)** until the 25 deg bank limit bounds
+it; yaw a quarter period behind roll, cross-track a quarter behind yaw, ailerons +-0.05. That is
+exactly the ideal loop's sqrt(g*k_bank*k_ct) = 0.99 rad/s; the DAMPING is not (ideal zeta 0.6,
+flight unstable) -- the real roll->heading path carries ~60 deg more lag at 0.9 rad/s than the
+model, and a P-only command cannot supply phase. **The offline gate does not reproduce the mode
+at all** (worst roll 0.5 deg over 200 s with noise, 1.8 with a 15 m seed): it was designed from
+the bag and validated in flight. The open-loop lateral modes at the trim (CasADi Jacobian of
+`so3.build_ode`): dutch roll 0.78 Hz zeta 0.21, roll subsidence 0.2 s, spiral -0.08/s -- the
+7 s mode is the GUIDANCE loop, not the airframe.
+**THE FIX:** `roll_ref = wing * (k_bank*e_yaw + k_bank_d*psi_dot_est)`, `psi_dot_est =
+r/(cos(phi) cos(theta))` -- NO pitch-rate term, which is what turned the two earlier turn-rate
+rewrites into pitch-into-roll coupling. k_bank_d=1.0 s = 24 deg of lead at 0.9 rad/s.
+**CRUISE-ONLY: off the moment decel starts.** Left on through the back-transition it cost 1-2
+of 6 seeds on the gate; and that gate showed the back-transition's stall crossing (V 15 -> 12)
+on a KNIFE-EDGE: runs identical to 0.1 deg at t=61 diverge to +84 or hold by t=62, ~1 in 6-8
+under noise + a 10 m cross-track history, whichever lateral gains. That margin is the open item.
+k_ct 0.03 tried (lower loop frequency) and cost a seed: left at 0.05.
+
+| flight | maxroll | cruise \|roll\| | cross-track | V |
+|---|---|---|---|---|
+| tank_seq (P-only) | 35 | ±29 growing | ±23 m | 16.6-19.3 |
+| **tank_lat (+k_bank_d)** | **7** | **±5.5 flat (5.1/5.5/4.3 per 20 s)** | **6.3 m** | 15.5-16.7 |
+Both LANDED 0.00 m. One flight each.
+
+# ★★★ PHASE 3 — THE PENDULUM IS IN THE PLANT (2026-09-12). Tests pass; NOT YET FLOWN.
+`dynamics/slosh.py::PendulumSlosh`: 2-DOF pendulum in the body frame driven by the vehicle's
+SPECIFIC FORCE `f = R^T(a - g_vec)`; restoring "gravity" is the AXIAL specific force (`f_z/L1` =
+omega1^2 at 1 g; free fall has no mode, 2 g rings sqrt(2) faster). **The force applied is
+`-m1 * x1_ddot` ONLY** -- the whole liquid stays folded as dead mass (phase 2), and the bob's
+motion adds just what a moving bob does beyond a frozen one, which is identically zero in every
+steady state (hover, banked turn, constant acceleration) -- no double count, tested. Semi-
+implicit Euler at the physics step. `tests/test_slosh_pendulum.py`: 3.325 Hz vs closed form
+3.323; decay 10 -> 1.31 mm in 20 s as the 0.49% zeta predicts; undamped energy bounded 1.7%
+over 200 cycles; steady 2 m/s^2 lateral -> 0 N slosh force, bob at -f/w^2. `_apply_slosh`
+applies it at the tank (the assembled CG); `PEGASUS_SLOSH_DEBUG=1` prints [SLOSH] lines.
+Select with `VTOL_SLOSH=1 VTOL_TANK=slosh`. Phase 4 (pendulum in the offline gate) next.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both

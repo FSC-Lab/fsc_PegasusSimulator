@@ -47,12 +47,14 @@
 """
 
 import math
+import os
 
 import numpy as np
 
 from pegasus.simulator.logic.dynamics.slosh import (        # noqa: F401 (re-exported)
     TankConfig,
     SloshParameters,
+    PendulumSlosh,
     slosh_parameters,
     describe as describe_tank,
 )
@@ -203,26 +205,29 @@ class VTOLSlosh(VTOL):
         )
         self._mass_props = None          # (mass, cg, inertia) once a tank is folded in
 
+        self._pend: PendulumSlosh | None = None
+        self._tank_pos = None
+        self._slosh_dbg_ctr = 0
+
         if tank is not None and tank.enabled:
+            # PHASE 3: the free surface as a pendulum. The whole liquid stays folded
+            # into the body as dead mass (phase 2); the pendulum adds ONLY the force
+            # of the bob's motion relative to the airframe, -m1 * x1_ddot, which is
+            # zero in every steady state -- see slosh.PendulumSlosh for the algebra.
             if tank.slosh:
-                # PHASE 3 IS NOT IMPLEMENTED, and the refusal happens HERE -- at
-                # construction, where the aircraft does not yet exist -- rather
-                # than on the first physics step with it already in the air.
-                raise NotImplementedError(
-                    "VTOLSlosh: tank.slosh=True asks for the free-surface model, "
-                    "which is tank-plan phase 3 and is not implemented.\n"
-                    f"    {describe_tank(tank)}\n"
-                    "Set tank.slosh=False to fly the liquid as DEAD MASS (phase 2, "
-                    "implemented), or tank=None for the baseline aircraft. "
-                    "Refusing rather than flying physics that does not exist."
-                )
+                self._pend = PendulumSlosh(self._slosh)
 
             config, before, after = fold_tank_into_body(config, tank)
+            # where the slosh force acts: the tank (None -> the assembled CG), in the
+            # body-link-origin frame apply_force expects
+            self._tank_pos = [float(v) for v in (tank.position if tank.position is not None
+                                                  else after[1])]
             self._mass_props = after
             m0, c0, i0 = before
             m1, c1, i1 = after
             stall = 14.13 * math.sqrt(m1 / m0)
-            msg = (f"[TANK] {describe_tank(tank)}\n"
+            msg = (f"[TANK] {describe_tank(tank)}  --  "
+                   f"{'SLOSH (phase 3, pendulum)' if tank.slosh else 'DEAD MASS (phase 2)'}\n"
                    f"[TANK] dead mass (phase 2): {m0:.3f} -> {m1:.3f} kg "
                    f"(+{100 * (m1 / m0 - 1):.1f}%), "
                    f"CG ({c0[0]:.4f},{c0[1]:.4f},{c0[2]:.4f}) -> "
@@ -270,21 +275,45 @@ class VTOLSlosh(VTOL):
             self._apply_slosh(dt)
 
     def _apply_slosh(self, dt: float):
-        """STEP 3 -- the tank reaction.  Nothing here yet (phase 1).
+        """STEP 3 -- the tank's free surface, as the pendulum analogue.
 
-        What goes here in phase 3:
+        The excitation is the vehicle's SPECIFIC FORCE in the body frame,
+        f = R^T (a_world - g_vec): what an accelerometer bolted to the tank reads.
+        `State.linear_acceleration` is the plant's finite-difference of its own
+        world velocity (one physics step old, which at 250 Hz is 4 ms against a
+        300 ms slosh period). The bob is integrated in the body frame and the
+        force it adds beyond dead mass, -m1 * x1_ddot, is applied at the tank.
 
-          * integrate a 2-DOF pendulum (x and y) of mass `self._slosh.slosh_mass`
-            on length `self._slosh.pendulum_length`, driven by the body's linear
-            acceleration and rotation, damped at `self._slosh.zeta`;
-          * apply the reaction force at `self._tank.position` via
-            `apply_force(..., body_part="")`, the same call `_apply_propulsion`
-            and `_apply_aerodynamics` use;
-          * the rigid remainder `self._slosh.rigid_mass` needs NO force here --
-            it rides with the airframe and belongs in the mass properties
-            (phase 2), which is why the phases are in that order.
-
-        It is a no-op, not an abstract method, so that the scaffold is provably
-        identical to the baseline today.
+        No pendulum (tank=None, enabled=False, or slosh=False) -> nothing is
+        applied and the aircraft is exactly the phase-2 dead-mass one.
         """
-        return
+        if self._pend is None:
+            return
+        st = self._state
+        try:
+            a_w = np.asarray(st.linear_acceleration, dtype=float)
+            q = np.asarray(st.attitude, dtype=float)              # x, y, z, w  body -> world
+        except Exception:                                          # noqa: BLE001 - first steps
+            return
+        if not np.all(np.isfinite(a_w)) or not np.all(np.isfinite(q)):
+            return
+        f_w = a_w + np.array([0.0, 0.0, 9.81])                    # ENU: g_vec = (0, 0, -g)
+        # R^T f_w without scipy: rotate by the conjugate quaternion
+        x, y, z, w = q
+        R = np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                      [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
+        f_b = R.T @ f_w
+        F = self._pend.step(f_b, float(dt))
+        if abs(F[0]) > 1e-9 or abs(F[1]) > 1e-9:
+            self.apply_force([float(F[0]), float(F[1]), 0.0], pos=self._tank_pos, body_part="/body")
+        # bring-up diagnostic, like [PROP]/[AERO]: PEGASUS_SLOSH_DEBUG=1 prints ~2 Hz
+        self._slosh_dbg_ctr += 1
+        if os.environ.get("PEGASUS_SLOSH_DEBUG") and self._slosh_dbg_ctr % 120 == 0:
+            try:
+                import carb
+                carb.log_warn(f"[SLOSH] f_b=({f_b[0]:+.2f},{f_b[1]:+.2f},{f_b[2]:+.2f}) "
+                              f"bob=({1000 * self._pend.x[0]:+.1f},{1000 * self._pend.x[1]:+.1f}) mm "
+                              f"F=({F[0]:+.2f},{F[1]:+.2f}) N  f1={self._pend.omega(f_b[2]) / (2 * math.pi):.2f} Hz")
+            except Exception:                                      # noqa: BLE001
+                pass

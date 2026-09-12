@@ -105,15 +105,20 @@ class VTOLPx4HilApp:
         #   VTOL_TANK=0 gives the phase-1 configuration: the copy with NO tank,
         #     step-for-step identical to the baseline. That is the control case,
         #     and it is how the copy itself was verified before any mass was added.
+        #   VTOL_TANK=slosh mounts the tank WITH the free surface (phase 3): the
+        #     same dead mass plus the pendulum analogue pushing on the airframe.
         # The control model must carry the same mass (so3.M); the simulator's
         # tests/test_tank_model_pairing.py fails if the two ever drift apart.
         use_slosh = os.environ.get("VTOL_SLOSH", "0") not in ("0", "", "false", "False")
-        use_tank = os.environ.get("VTOL_TANK", "1") not in ("0", "", "none", "false", "False")
+        tank_mode = os.environ.get("VTOL_TANK", "1").strip().lower()
+        use_tank = tank_mode not in ("0", "", "none", "false")
         if use_slosh:
-            tank = TankConfig() if use_tank else None
+            tank = TankConfig(slosh=(tank_mode == "slosh")) if use_tank else None
             vtol_config = fsc_cad_vtol_slosh_config(tank=tank)
-            carb.log_warn(f"VTOL_SLOSH set -> VTOLSlosh model, "
-                          f"tank={'MOUNTED (phase 2, dead mass)' if use_tank else 'None (phase 1)'}")
+            carb.log_warn("VTOL_SLOSH set -> VTOLSlosh model, tank="
+                          + ("None (phase 1)" if not use_tank else
+                             "MOUNTED + SLOSH (phase 3, pendulum)" if tank.slosh else
+                             "MOUNTED (phase 2, dead mass)"))
         else:
             vtol_config = fsc_cad_vtol_config()
 
