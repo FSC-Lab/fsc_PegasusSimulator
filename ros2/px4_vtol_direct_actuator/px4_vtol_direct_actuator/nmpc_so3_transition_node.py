@@ -1310,7 +1310,13 @@ def mission_selftest():
               % (x[0], tx, x[2], float(np.linalg.norm(x[13:16])), wall, maxerrx, maxerrz))
 
 
-if __name__ == "__main__":
+def main(args=None):
+    """console_scripts entry point.
+
+    Delegates to the SAME dispatch as `python3 nmpc_so3_transition_node.py`, so `ros2 run` and a
+    direct invocation cannot drift apart -- including the offline gate flags,
+    which are how this controller is validated before it is ever flown.
+    """
     import sys
     if "--mission" in sys.argv:
         mission_selftest()
@@ -1318,3 +1324,8 @@ if __name__ == "__main__":
         selftest()
     else:
         run_ros()
+
+
+
+if __name__ == "__main__":
+    main()
