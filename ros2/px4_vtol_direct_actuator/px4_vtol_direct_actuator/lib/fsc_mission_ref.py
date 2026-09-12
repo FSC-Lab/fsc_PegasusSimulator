@@ -32,14 +32,14 @@ Convention note:
 # Adding the parent here keeps both modes working without a global path shim.
 if __package__ in (None, ""):
     import os as _os, sys as _sys
-    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))))
 import math
 import os
 import sys
 
 import numpy as np
 
-from px4_vtol_direct_actuator.fsc_transition_ref import FSC, avtol_dir
+from px4_vtol_direct_actuator.lib.fsc_transition_ref import FSC, avtol_dir
 
 # ---- FSC geometry / aero (identical to nmpc_so3_transition_node so the reference is a real trim) ----
 M = FSC["m"]; G = FSC["g"]

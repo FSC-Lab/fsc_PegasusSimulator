@@ -25,7 +25,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from fsc_autopilot_ros2_msgs.msg import PositionControllerReference, Mocap
 
-from px4_vtol_direct_actuator.smc_outer import SMCOuter, _KEYS
+from px4_vtol_direct_actuator.lib.smc_outer import SMCOuter, _KEYS
 
 
 class SMCCruiseNode(Node):

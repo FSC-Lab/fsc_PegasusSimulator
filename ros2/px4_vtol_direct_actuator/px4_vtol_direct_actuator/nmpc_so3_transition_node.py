@@ -375,7 +375,7 @@ class TransitionRef:
         self.Rlevel = self._R_yaw(yaw)
         self.prof = None
         try:
-            from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
+            from px4_vtol_direct_actuator.lib.fsc_transition_ref import FSCTransitionProfile
             self.prof = FSCTransitionProfile(V_cruise=Vcruise, tf=max(tf, 12.0),
                                              tilt_cap_deg=math.degrees(self.bc),
                                              alpha_max_deg=SO3_ALPHA_MAX)
@@ -1022,7 +1022,7 @@ def run_ros():
             transition + elevator pitch-hold."""
             dt = 1.0 / self.rate
             if self.mission is None:                 # build the mission at the engage pose (one-time)
-                from px4_vtol_direct_actuator.fsc_mission_ref import FSCMissionProfile
+                from px4_vtol_direct_actuator.lib.fsc_mission_ref import FSCMissionProfile
                 self.mission = FSCMissionProfile(
                     target=(self.gp("mission_target_x"), self.gp("mission_target_y")),
                     z_ground=max(float(p[2]), 0.5), z_cruise=self.gp("mission_zcruise"),
@@ -1200,7 +1200,7 @@ def mission_selftest():
     import sys
     def argf(name, d):
         return float(sys.argv[sys.argv.index(name) + 1]) if name in sys.argv else d
-    from px4_vtol_direct_actuator.fsc_mission_ref import FSCMissionProfile
+    from px4_vtol_direct_actuator.lib.fsc_mission_ref import FSCMissionProfile
     LAT = argf("--lat", 0.10); COMP = argf("--comp", 1.0)
     tx = argf("--tx", 120.0); ty = argf("--ty", 0.0)
     zc = argf("--zc", 15.0); vc = argf("--vc", 15.0); cap = argf("--cap", 90.0)

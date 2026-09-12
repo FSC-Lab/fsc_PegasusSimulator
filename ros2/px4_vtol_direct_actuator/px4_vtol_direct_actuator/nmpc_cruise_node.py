@@ -236,7 +236,7 @@ class NMPCCruise(Node):
         self.prof = None
         if self.gp("use_profile") > 0.5:
             try:
-                from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
+                from px4_vtol_direct_actuator.lib.fsc_transition_ref import FSCTransitionProfile
                 self.prof = FSCTransitionProfile(V_cruise=self.gp("profile_v_cruise"),
                                                  tf=self.gp("profile_tf"))
                 self.get_logger().info(

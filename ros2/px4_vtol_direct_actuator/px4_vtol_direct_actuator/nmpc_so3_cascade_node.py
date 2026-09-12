@@ -241,7 +241,7 @@ def run_ros():
             self._last_tilt = 0.0
             if bool(self.get_parameter("fixed_wing").value):
                 try:
-                    from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
+                    from px4_vtol_direct_actuator.lib.fsc_transition_ref import FSCTransitionProfile
                     self.prof = FSCTransitionProfile(V_cruise=self.gp("profile_v_cruise"),
                                                      tf=self.gp("profile_tf"))
                     self.get_logger().info("AVTOL-scaled profile loaded: Vc=%.1f v_wing_borne=%.1f"

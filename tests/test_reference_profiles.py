@@ -105,7 +105,7 @@ def test_time_parameterised_profiles():
     reference here commands omega = 0)."""
     print("\n3. time-parameterised mission profile")
     try:
-        from fsc_mission_ref import FSCMissionProfile
+        from px4_vtol_direct_actuator.lib.fsc_mission_ref import FSCMissionProfile
     except Exception as exc:
         print(f"      (unavailable: {exc})")
         return

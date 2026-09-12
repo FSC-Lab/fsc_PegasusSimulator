@@ -51,7 +51,7 @@ from px4_msgs.msg import (OffboardControlMode, VehicleAttitudeSetpoint,
                           VehicleCommand, VehicleStatus)
 from fsc_autopilot_ros2_msgs.msg import Mocap, PositionControllerReference
 from std_msgs.msg import String
-from px4_vtol_direct_actuator.smc_outer import SMCOuter, _KEYS      # outer-loop sliding-mode (shared)
+from px4_vtol_direct_actuator.lib.smc_outer import SMCOuter, _KEYS      # outer-loop sliding-mode (shared)
 
 
 # ======================================================================

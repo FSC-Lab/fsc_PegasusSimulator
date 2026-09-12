@@ -208,7 +208,7 @@ class Schedule:
     PITCH-BALANCED front/rear split. Gives (beta, theta, Tf, Tr, de) at any V -> the wing-borne
     reference the NMPC tracks. tilt/theta emerge hover@V=0 -> 90deg/+alpha@V=cruise."""
     def __init__(self, V_cruise=16.0, tilt_cap_deg=90.0, alpha_max_deg=8.0):
-        from px4_vtol_direct_actuator.fsc_transition_ref import FSCTransitionProfile
+        from px4_vtol_direct_actuator.lib.fsc_transition_ref import FSCTransitionProfile
         self.prof = FSCTransitionProfile(V_cruise=V_cruise, tf=20.0,
                                          tilt_cap_deg=tilt_cap_deg, alpha_max_deg=alpha_max_deg)
         self.Vc = V_cruise
