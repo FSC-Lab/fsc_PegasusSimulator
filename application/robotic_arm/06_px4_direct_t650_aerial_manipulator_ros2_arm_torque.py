@@ -62,8 +62,10 @@ EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
 # ARM SERVO MODEL (2026-09-09, superseding the 2026-09-03 back-EMF droop). The
 # arm controller now closes a 1.5 Hz software CURRENT LOOP around Dynamixel
 # Mode 16, which removes the droop bias — j2's torque delivery 93.3 -> 99.4 %,
-# j3's 87.5 -> 91.8 % — and leaves a zero-mean residual current error of
-# 4-7 mA rms. That residual is the whole of the model now.
+# j3's 87.5 -> 91.8 % — and leaves a zero-mean residual current error. That
+# residual is the whole of the model now, and it is PER JOINT: the loop ships
+# on j2/j3 only (it chases noise on j1/j4), so the two UNTRIMMED joints are the
+# NOISY ones — in-band 11 / 4.4 / 6.8 / 11 mA rms.
 #   current   the arm as it is today: residual current noise, no droop
 #   ideal     an exact torque source, for the A/B
 # `or "current"`, not a get() default: the launcher bakes the variable into the
@@ -71,8 +73,10 @@ EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
 ARM_SERVO_MODEL = (os.environ.get("PEGASUS_ARM_SERVO_MODEL", "") or "current").strip().lower()
 # Residual current error left by the closed loop, normally forwarded by the
 # launcher out of the paired controller yaml's sim_arm_current_noise_* keys.
-#   _A       rms of I_measured - I_commanded, AMPS (bench: j2 0.0042-0.0046,
-#            j3 0.0067-0.0069; the shipped 0.007 is j3, used on all four)
+#   _A       rms of I_measured - I_commanded, AMPS -- one number, or four as
+#            "a1,a2,a3,a4". PER JOINT since 2026-09-11: the current loop runs
+#            on j2/j3 only, so j1/j4 keep the untrimmed residual and are the
+#            NOISIER pair (in-band bench rms 11 / 4.4 / 6.8 / 11 mA)
 #   _BW_HZ   first-order corner of that noise, Hz (the bench figure's own band)
 #   _SEED    integer seed — a run is reproducible; "none" draws from the OS
 # Empty = servo_model.py's built-in defaults.
@@ -257,16 +261,26 @@ ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7
 # the current loop closed. See servo_model.py for the bench measurement.
 # `ideal` keeps the exact torque source for an A/B.
 def _float_env(raw, name, lo=0.0):
+    """One number, or four as "v1,v2,v3,v4" -- per joint. None when unset.
+
+    The four-value form exists because the arm's current loop is per joint
+    (``current_loop_bandwidth_hz_joints`` [0, 1.5, 1.5, 0]), so the residual it
+    leaves behind is per joint too.
+    """
     if not raw:
         return None
+    parts = [x.strip() for x in raw.split(",")]
+    if len(parts) not in (1, 4):
+        raise SystemExit(f"[AM-T650-WB] {name} must be one number or four as "
+                         f"'v1,v2,v3,v4' (got {raw!r})")
     try:
-        v = float(raw)
+        v = np.array([float(x) for x in parts], float)
     except ValueError:
-        v = float("nan")
-    if not np.isfinite(v) or v < lo:
-        raise SystemExit(f"[AM-T650-WB] {name} must be a finite number "
+        v = np.array([float("nan")])
+    if not np.all(np.isfinite(v)) or np.any(v < lo):
+        raise SystemExit(f"[AM-T650-WB] {name} must be finite and "
                          f">= {lo:g} (got {raw!r})")
-    return v
+    return float(v[0]) if v.size == 1 else v
 
 
 _NOISE_A = _float_env(ARM_CURRENT_NOISE_A, "PEGASUS_ARM_CURRENT_NOISE_A")

@@ -34,6 +34,8 @@ common grid rather than assumed sample-aligned.
 
 import argparse
 import os
+import sys
+from pathlib import Path
 
 import numpy as np
 import matplotlib
@@ -47,8 +49,15 @@ C_DHAT_ARM = slice(1 + 31 + 6, 1 + 31 + 10)   # d_e_hat, arm channels
 L_T, L_DIRECT = 0, 17
 L_TAU_APP = slice(18, 22)
 
-# duty counts per N.m -- one count is 1/this, the register's step
-NM_TO_DUTY = np.array([155.536, 168.951, 125.145, 155.536])
+# Duty counts per N.m -- one count is 1/this, the register's step. Taken from
+# the plant model rather than copied, so a re-calibration cannot leave this
+# tool scoring against the previous arm: the 2026-09-11 campaign moved it from
+# [155.54, 168.95, 125.14, 155.54] to [169.47, 149.70, 135.25, 148.51], which
+# changes the count floor this file uses to decide whether a coverage ratio
+# means anything at all. servo_model.py is pure numpy -- no Isaac import.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "extensions" / "fsc_aerial_manipulation"))
+from fsc_aerial_manipulation.robotic_arm.servo_model import NM_TO_DUTY  # noqa: E402
 
 JOINTS = ("joint 1  (arm yaw)", "joint 2  (shoulder)",
           "joint 3  (elbow)", "joint 4  (wrist roll)")

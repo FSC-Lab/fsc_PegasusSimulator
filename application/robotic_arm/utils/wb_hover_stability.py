@@ -23,7 +23,9 @@ WHAT IS MODELLED — deliberately the loop the flight showed to be at fault:
     first-order ROTOR LAG, exact zero-order-hold form, lambda = 10.0265 1/s;
   * the joint-torque clamp (tau_max) the law and plant both apply;
   * the ARM SERVO (2026-09-09): the arm controller's 1.5 Hz current loop leaves
-    a zero-mean residual current error, tau_app = clip(tau) + Kt * i_err, 7 mA
+    a zero-mean residual current error, tau_app = clip(tau) + Kt * i_err,
+    per joint since 2026-09-11 ([15.6, 6.2, 9.6, 15.6] mA total rms -- the
+    loop runs on j2/j3 only), 7 mA
     rms band-limited at 5 Hz (bench-measured on j2/j3). It SUPERSEDES the
     2026-09-03 back-EMF droop, which the loop removes. `--servo ideal` gives an
     exact torque source for an A/B; prefer it when reading small delay-margin

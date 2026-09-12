@@ -1541,8 +1541,11 @@ equal — `transition_planner.Q_MIN/Q_MAX`, the C++ `WbReferenceBuilder::kQMin/
 kQMax`, and `torque_controller_isaac_aerial.yaml`'s `min/max_position` (the GS
 adopts that one LIVE, and the whole-body launcher now also passes matching
 `fallback_*_deg` so the joint row is right before the controller answers).
-The hardware/gazebo arm configs deliberately keep ±90: widening the real arm is
-a cabling/mechanical call, not a sim one. Verified after the change: parity 4/4,
+The hardware/gazebo arm configs kept ±90 until **2026-09-12, when the user made
+the cabling/mechanical call and they were widened to ±120 as well** — see the
+q4-unification entry at the end of this file. There are now SIX definitions, not
+three: add the xacro's `joint4_min/max_deg` (which writes the servo EEPROM) and
+`dxl_servo_ids.py`'s `EXPECTED_LIMITS[14]`. Verified after the change: parity 4/4,
 planner self-test, whole-body planner loopback, and the GS rendering J4 [-120, 120] with
 105° GREEN (it would have been red before). NOT yet flown. The flight itself reached DIRECT
 with the whole-body planner live and planning, so the law/whole-body planner/planner path is sound; a full
@@ -2583,3 +2586,305 @@ The simulator's plant model was rebuilt around its OUTCOME:
   Campaign: `docs/docs_aerial_manipulator/arm_current_noise_20260909/`
   (`run_noise.sh`, README). NOT flown on the GMO rig, though the plant change
   reaches it (its yaml has the same new keys); NOT flown on hardware.
+
+**WHOLE-BODY SAFETY GUARD — every DIRECT exit hovers in place and folds the arm
+home (2026-09-11, user request).** Three small changes across three repos, and
+nothing in any control law:
+- **L1 sim yaml:** `system_wd_max_tilt_deg` 40 → **20**. The watchdog's tilt is
+  `acos(R22)` ≥ max(|roll|, |pitch|), so it trips on either. The GMO twin still
+  has 40.
+- **fsc_open_manipulator `arm_planner`:** new `home_on_safety_revert` (node
+  default false; the Isaac aerial yaml sets it true) plus
+  `home_on_revert_delay_s` 1.0. On the DIRECT → SAFETY edge of the mode topic it
+  holds the measured pose for 1 s, then folds home on its min-jerk profile. Any
+  arm command during the delay cancels the fold.
+  One edge covers all four exits: the watchdog, the feedback-loss failsafe, the
+  drone GS "Return to baseline" (`activate_controller`) and `set_direct_mode
+  false`.
+- **WB client:** `switchMode` publishes `/mode` immediately rather than on the
+  500 ms info tick.
+
+Hover-in-place needed no change — `switchMode(kSafety)` already re-seeds
+`outer_ref_` to the current pose, and the drone GS publishes a setpoint only when
+the operator presses send, never as a stream.
+
+Flown 3× in Isaac with NO reference published after the revert (Command.md
+§7.15.1):
+- Arm home in 2.40 / 2.44 s, final error ≈ 0.4°.
+- Settled within 28–30 mm of the revert point.
+- Nominal DIRECT peaked at 6.9–7.3° of tilt.
+
+**Two excursions, measured apart with a no-fold control flight:**
+- The ~0.45 m VERTICAL climb after the revert is the pre-existing handover
+  surge. It is identical without the fold. In DIRECT the UDE is fed the
+  allocator's believed collective, and this yaml's allocator believes a kf
+  17.6% too high. It is sim-only.
+- The ~0.4 m SIDEWAYS walk IS the fold: 72 → 394 mm, starting on a +6° roll
+  spike. Un-yawing the arm moves the CoM, and PX4's integrator re-learns the
+  trim.
+- Knobs, neither flown: the fold delay and the planner's `max_velocity`.
+
+Loopback test (`test_arm_planner.py`, 12 checks) also covers the fold. Its
+teardown no longer aborts with rc 134. **Trap:** that test drives the REAL
+`/uav_0/.../mode` topic, so a live stack still republishing `SAFETY` makes the
+four DIRECT checks fail — tear the sim down first. NOT flown on the GMO rig or
+on hardware.
+
+**SIDEWAYS-DRIFT TRIP + THE L1 HARDWARE PAIR (2026-09-11, same request).**
+- **New `system_wd_max_drift_m`** (node default 0.0 = off, so the GMO and
+  hardware GMO yamls are untouched), **0.75 m in the L1 sim yaml**. It measures
+  `|x_c − x_cd|_xy`, the law's own HORIZONTAL CoM tracking error against **the
+  reference the law is flying** — not a fixed point, not the raw GS setpoint —
+  which is the only version that survives planned motion: the planner moves the
+  base 0.5 m on a step leg and none of it counts. `driftTripped()` runs in the
+  DIRECT tick after reference selection, shares the tilt/rate watchdog's latch,
+  and is evaluated BEFORE the law step so a tripped tick commands nothing.
+  Measured peaks: 410 mm at the DIRECT entry, 349 mm on the legs, so 0.75 is
+  ~1.8x the worst nominal. Flown: the full 10-leg mission with **no false trip**
+  (170 s DIRECT, 0 saturations), and a forced trip at a temporary 0.15 m limit
+  that fired 1.44 s into DIRECT **at 7.0° tilt** (so tilt cannot explain it),
+  hovered to 21 mm and folded the arm home in 2.40 s.
+- **Arm fold for a stack with NO `arm_planner`** (i.e. hardware): new
+  `system_arm_go_home_service` + `system_arm_go_home_delay_s` (1.0 s) call the
+  arm controller's own `go_home` after the revert; re-entering DIRECT cancels a
+  pending fold. EMPTY in the sim yaml on purpose — `arm_planner` owns that edge
+  there, and two mechanisms would command the arm twice.
+- **NEW L1 HARDWARE PAIR, never flown:**
+  `config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650.yaml`
+  + `scripts/indoor_exp/start_whole_body_l1_direct_actuation_stack_t650_aerial_manipulator.sh`.
+  PLANT/ALLOCATOR/SAFETY map from the GMO **hardware** file; LAW/OBSERVER from
+  the L1 **sim** file; every `sim_plant_*`/`sim_arm_*` key and the kf injection
+  dropped; guard at 20° / 0.75 m. **Trap I hit: the copied launcher must KEEP
+  the shared `fsc_indoor_autopilot_stack` session name** — renaming it per fork
+  would stop it killing the GMO stack, and both publish the same PX4 setpoints.
+  Validated by loading the yaml on the node at `/uav_test` (guard params,
+  identity, L1 banner, green posture-OFF check, mass cross-check).
+- **PRE-EXISTING HARDWARE BLOCKER found while doing this, NOT fixed:** the
+  hardware `wb_arm_reference_topic` is `reference_joint_trajectory`, which only
+  `arm_planner` publishes, and the hardware arm launch
+  (`external_torque_hardware.launch.py`) does not start it — the controller
+  keeps its own generator and publishes `~/smoothed_reference_joint_trajectory`.
+  The DIRECT-entry gate checks that topic, so hardware DIRECT entry should be
+  REFUSED today, on the GMO hardware stack too. Left for a decision: run
+  `arm_planner` alongside the hardware arm stack (set
+  `external_reference_topic`, the sim topology, which also supplies the fold) or
+  repoint the key. Recorded in both new headers.
+
+**ARM CALIBRATION + PER-JOINT CURRENT LOOP ALIGNED INTO THE SIM AND BOTH WB-L1
+LAUNCHERS — AND THIS MACHINE CANNOT VALIDATE THEM (2026-09-11, user request).**
+Pulled `fsc_open_manipulator` (6 commits, `bf80b51..06e598c`: the Mode-16 current
+loop, the motor-constant campaign, the j1/j4 unit swap) and aligned the plant and
+the two whole-body L1 launchers to it. Full write-up + all eight flights:
+`docs/docs_aerial_manipulator/arm_calib_20260911/`.
+- **THE CALIBRATION** (`servo_model.py`): `NM_TO_COUNTS`
+  `[160.0, 173.8, 146.7, 160.0] -> [162.4, 154.0, 150.5, 153.4]` counts/N.m,
+  `RESISTANCE_OHM` `[4.90, 4.90, 4.30, 4.90] -> [5.26, 4.90, 4.53, 4.88]`. The
+  j1/j4 UNITS were calibrated by swapping them into the j2/j3 brackets, where
+  gravity gives them a lever. **Two checks now ASSERT in the self-test and they
+  are what makes the set trustworthy**: the derived `NM_TO_DUTY` comes out
+  `[169.47, 149.70, 135.25, 148.51]`, exactly what the arm controller LOGGED on
+  hardware, and `eta = Kt/Ke` against the measured Ke is `[0.943, 0.943, 0.942,
+  0.943]` — four motors agreeing to 0.1% on a sensible gearbox loss, where the
+  superseded set implied the impossible `eta > 1` on j2. Believed to **+-2%**:
+  the campaign found kappa conditioning-limited, not measurement-limited.
+- **THE RESIDUAL IS PER JOINT, AND THE UNTRIMMED JOINTS ARE THE NOISY ONES.**
+  `current_loop_bandwidth_hz_joints` ships `[0.0, 1.5, 1.5, 0.0]` — the trim
+  helps the loaded joints and HURTS j1/j4, whose commanded current is mostly
+  noise. So `CURRENT_NOISE_A` `0.007` uniform -> `[0.0156, 0.0062, 0.0096,
+  0.0156]` A, i.e. torque noise `[16.3, 15.0, 17.7, 16.3] -> [35.7, 15.0, 23.7,
+  37.8]` mN.m. The 2026-09-09 note that j1/j4 were "uncharacterised, a
+  documented assumption" is superseded.
+- **TWO JUDGEMENTS THE MEASUREMENT DOES NOT SETTLE, both flagged in-file rather
+  than quietly decided.** (a) THE SIGMA CONVENTION: the bench scores the 5 Hz
+  CONTENT, an IN-BAND rms, while the model wants a TOTAL. `total = sqrt(2) x
+  in-band` is right only if the real spectrum keeps falling like the model's
+  above 5 Hz, which `servo_model.py` says is "not characterised" — a 41%
+  inflation either way. The superseded model used `sigma = in-band` directly.
+  Both were flown; neither caused the failures. (b) **IS j1/j4's RESIDUAL EVEN
+  TORQUE?** At the steady hold the COMMANDED current is **0.2 / 108 / 36 / 0.0
+  LSB** (2.69 mA quantum) while the measured residual is 4.1 / 1.6 / 2.5 / 4.1.
+  On j2 it is unambiguously a real torque error; on j1/j4 the command is ZERO
+  and the "error" is ~4 sensor quanta, which is why the arm repo says the trim
+  there chases noise. Real ripple (torque the law must reject) and current-sense
+  noise (no torque at all) are indistinguishable in that data and have OPPOSITE
+  plant consequences. **A bench run at a NON-ZERO j1/j4 load separates them** —
+  a real error scales with command, sensor noise does not.
+- **PLUMBING**: the sim yaml still carried `sim_arm_backemf_*`, deleted from the
+  plant on 2026-09-09, so the launcher fell back to built-ins and printed a NOTE
+  every launch. Now per-joint `sim_arm_current_noise_a_j1..j4`; `06` and
+  `start_single_drone_x650.sh` accept `"a1,a2,a3,a4"`. `wb_arm_torque_plot.py`'s
+  hard-coded `NM_TO_DUTY` now IMPORTS from `servo_model.py` so a re-calibration
+  cannot leave it scoring the previous arm.
+- **HARDWARE LAUNCHER**: `max_effort` is unchanged in COUNTS but its N.m value
+  moved with the calibration, `[0.38, 2.19, 1.36, 0.38] -> [0.34, 2.44, 1.42,
+  0.39]` — j2 gained 13%, j1/j4 lost ~9%, and these STILL BIND below the law's
+  `wb_tau_max` 3.0. New non-fatal ARM-SIDE CONFIG CHECK verifies kappa, the
+  per-joint bandwidth, Ke and R against the arm repo at startup
+  (`FSC_OM_ARM_REPO` to point it). **Two hardware items re-checked, not
+  assumed**: `external_reference_topic` is STILL unset and the bring-up still
+  starts no `arm_planner`, so the DIRECT-entry blocker stands; and
+  `back_emf_velocity_source: observer` means the flight law must supply ALL arm
+  damping — never flown, ramp `back_emf_ff_scale` 0 -> 1.
+**THE VALIDATION DID NOT PASS, AND IT DOES NOT PASS WITH AN IDEAL ARM EITHER.**
+Eight flights, seven aborts. **`ideal` — an exact torque source, the plant
+bit-identical to the 09-09 baseline that flew clean — aborted 2/2**, and the
+ordering is not even monotonic in noise (`ideal` aborted EARLIEST). Same
+signature everywhere: step peaks 290-325 mm (shiqi baseline 182-226), tilt p-p
+18.7-20.1 deg, a growing ~0.6 Hz mode in q2/q3.
+- **CAUSE, MEASURED: this box runs the sim at RTF 0.336 and the feedback is a
+  STAIRCASE.** The plant makes a new state at 85 Hz wall (250 Hz sim x 0.34)
+  while the estimator->controller chain runs on the WALL CLOCK at 235-250 Hz:
+  **65.2% of consecutive odometry samples are byte-identical, each pose
+  republished ~2.87 times = 1/RTF**, so two of every three control ticks act on
+  stale data while the law's observers assume a 4 ms step. **NOTE THE
+  DIRECTION** — the obvious guess is backwards: a slow sim makes transport
+  delays SMALLER in simulated time; the damage is OVERSAMPLING a slow plant.
+- **Headless does NOT fix it** (RTF 0.336 -> 0.351): Isaac is CPU-bound in
+  PHYSICS at ~400%, GPU at 40%. `PEGASUS_HEADLESS` is now baked into the Isaac
+  pane by `start_single_drone_x650.sh` (it never reached it before — the
+  tmux-server-env trap), which is worth having but is not the remedy.
+- Ruled out by measurement, each cheaper than the flight that would have found
+  it: loop stalls (clean 250 Hz, p99 4.9 ms); the `bspline` planner backend (it
+  came in with the L1 observer commit, so the 09-09 baseline had it too); arm
+  pass-through fidelity (applied - commanded mean 0.0-2.0 mN.m); rendering.
+- **The 09-09 baseline ran on `shiqi_machine`; every run here was on
+  `fsc_lab_machine`. CROSS-MACHINE ABSOLUTE NUMBERS ARE NOT COMPARABLE** on this
+  rig and must not be quoted as a baseline — `wb_l1_metrics` output carries no
+  machine field, so record it beside the run. **CHECK RTF FIRST** on any new box
+  before reading a whole-body result: the rig's attitude tune was retuned once
+  already for transport latency (2026-08-22) and `M_r_d` was picked on a ~32 ms
+  delay margin; a 2.87x feedback staircase is far outside all of it.
+- **Re-run this validation on a box holding RTF near 1.** Nothing in the flight
+  set implicates the alignment, and nothing in it validates the alignment either.
+
+**J4 FOLLOW-UP: THE SIM WAS MODELLING j1/j4's CURRENT SENSOR, NOT THEIR MOTORS
+(2026-09-11 evening, user request).** Pulled `fsc_open_manipulator` `612775a`
+"joint4: friction_ff belongs to the unit, and its peaks are the sensor floor".
+- **NEITHER CHANGED PARAMETER REACHES THE WHOLE-BODY FLIGHT PATH**, verified in
+  code, not assumed: `friction_ff[3]` 21.2203 -> 7.7776 sits behind
+  `auxiliary_terms_enabled() {return !passthrough_;}`, so it is identically zero
+  while the law streams and acts only in the local PD+ hold; and
+  `current_loop_bandwidth_hz_joints` is UNCHANGED at `[0.0, 1.5, 1.5, 0.0]` (the
+  commit only records the measurement behind it: j4 trim ON halves the bias,
+  mean 8.1 -> 3.4 mA, but more than doubles the variance, sd 7.8 -> 16.9, total
+  rms 17.2 vs 11.2 OFF). The sim models no gearbox friction and its arm config
+  carries no motor model, so nothing in the sim consumes either.
+- **BUT THE FINDING THAT CAME WITH THEM INVALIDATED A NUMBER I HAD SHIPPED.**
+  j1/j4's 11 mA is NOT a torque: at stalled samples, where `I = V/R` must hold
+  exactly, **j4's measured current correlates 0.58 with its applied duty against
+  0.97 on j2** (7.6 counts of residual against a signal of similar size; j4 runs
+  at a few current counts, j2 at 100+). The arm repo's own verdict is "stop
+  quoting a metric below its own noise floor" — and it explains three failed
+  fixes there: the trim made j4 WORSE, the dither did nothing, and only ~20% of
+  the "reversal excess" was ever friction. **This is exactly the ambiguity the
+  morning's entry flagged as needing "a bench run at a NON-ZERO j1/j4 load", and
+  it is now settled in the direction that says do not model it as torque.**
+  `CURRENT_NOISE_A` `[0.0156, 0.0062, 0.0096, 0.0156] -> [0.0096, 0.0062,
+  0.0096, 0.0096]` A: j1/j4 take j3's figure, the worse of the two joints whose
+  residual IS real — restoring, for a better reason, what this model did before
+  that morning. Conservative on purpose: a duty/R error scales with duty and
+  j1/j4 command ~500x less of it. Torque noise is now `[22.0, 15.0, 23.7, 23.3]`
+  mN.m, verified in the live Isaac banner.
+- **KNOWN AND DELIBERATELY NOT MODELLED**: j4's remaining error is a
+  VELOCITY-DEPENDENT BIAS (-2.6 mA at rest, +6..+11 moving, ~8 mA mean) that the
+  arm repo attributes to a `back_emf_ke` ~20% high — slot 4's Ke was never
+  measured in that slot, it is the j3 unit's value from another slot and day.
+  That IS a real torque error on the flight path (the pass-through compensates
+  back-EMF with it) and it is structurally a DROOP, not noise, so it would not
+  be captured by raising any sigma. Left out because the 20% is an inference
+  from an unmeasured constant; fixing it needs J4STEEP + the 80 mm bracket.
+- **None of this changes the 8-flight campaign's conclusion**, which was never
+  sensitive to the arm residual: `ideal`, zero noise on all four joints, aborted
+  2/2. Re-measured this evening on an otherwise idle box: **RTF 0.347, odom
+  stale-repeat 65.2%, each pose republished 2.88x** — identical to the morning,
+  so the machine limit is reproducible and `fsc_lab_machine` still cannot
+  validate this rig.
+- Two traps hit again while doing it, both already in this file and both worth
+  the reminder: `scripts/kill_stale_sim_processes.sh -y` KILLS ITS OWN INVOKING
+  SHELL (exit 144), so anything launched in the same Bash call never starts —
+  run it in a call of its own; and `pgrep -f "<node name>"` matched MY OWN SHELL
+  and reported a controller that was not running.
+
+**q4 UNIFIED AT ±120° ACROSS SIM AND HARDWARE (2026-09-12, user's call).** The
+2026-08-23 widening stopped at the sim: planner / C++ / Isaac ran ±120 while every
+HARDWARE arm config stayed ±90, and the shared planner is expected to use 90-120°
+(that range is why q4 was widened — in-region feasibility 60% -> 98%). So a target
+the planner accepted would drive q4 past the hardware controller's guard, where
+`external_torque_controller` REPLACES the whole-body law's streamed torque with its
+kp/kd pull-back — on the joint carrying EE heading — and the law is never told. The
+C++ header's own comment already required these to be equal.
+- **SIX definitions now, and they must stay equal** (was three): the three sim ones
+  (`transition_planner.Q_MIN/Q_MAX`, `WbReferenceBuilder::kQMin/kQMax`,
+  `torque_controller_isaac_aerial.yaml`) plus the xacro's `joint4_min/max_deg`
+  (writes servo EEPROM) and `dxl_servo_ids.py`'s `EXPECTED_LIMITS[14]`. The sim
+  three were ALREADY ±120 and were not touched; only the hardware side moved.
+- **Changed**: 9 aerial arm configs (the flight one is
+  `external_torque_controller_hardware_aerial_pwm.yaml`) ±1.570796 -> ±2.0943951
+  rad; xacro `joint4_min/max_deg` -90/90 -> -120/120; `EXPECTED_LIMITS[14]`
+  `(1024, 3072, -90, 90)` -> **`(683, 3413, -120, 120)`**. The counts follow the
+  xacro's own ceil/floor conversion, and a regenerated URDF writes exactly
+  683/3413 with joints 1-3 unchanged — that round-trip is the check.
+- **NOT changed, on purpose**: the four NON-aerial configs (`position_controller_
+  hardware.yaml`, `position_controller_gazebo.yaml`, `computed_torque_controller_
+  gazebo.yaml`, `computed_torque_controller_hardware.yaml`). Those are the UPRIGHT
+  ground rig, whose cabling is a different question; their software guard still
+  clamps ±90 even though the EEPROM is now ±120, which is the safe direction.
+- **THE EEPROM IS STALE UNTIL A POSITION-MODE BRING-UP RUNS.** The limits live in
+  the servo, not the config, so joint4 still holds 1024/3072 until one bring-up
+  writes them. `doc/Joint Limits.md`'s table is a record of a past hardware read
+  and was deliberately left alone; `check_servo_limits.py` will read 683/3413 only
+  after the rewrite. In torque mode this changes nothing (Mode 16 ignores EEPROM
+  limits — the yaml's `min/max_position` is the only guard and it moved), but a
+  position-mode session would still stop at 90°.
+- Verified: all 10 aerial yamls parse and read ±120.0°; the URDF round-trip above;
+  `dxl_servo_ids.py` parses and agrees with the xacro; the planner self-test passes
+  (IK round-trip 3.2e-13 rad, defect 5.5e-08 m). The C++ `kQMin/kQMax` were
+  untouched, so the parity fixtures cannot be affected. NOT flown.
+
+**HARDWARE ADOPTS THE SIM ARM TOPOLOGY — WHOLE-BODY DIRECT ENTRY UNBLOCKED
+(2026-09-12, user's call).** The DIRECT-entry gate requires `wb_arm_reference_topic`
+fresh, and **it is evaluated while still in SAFETY, where `whole_body_planner` is
+silent by design** (`_stream_tick` returns unless `_mode_direct`; its only arm-reference
+publish is reached from inside that tick). So the SAFETY owner, `arm_planner`, must be
+running for the gate to open — and the hardware bring-up never launched it. The builder
+is explicit that nothing else counts: `seed()` "deliberately does NOT count as an
+external reference". **In DIRECT the arm does track the whole-body planner's compatible
+trajectory only** — that half was always right; the gap was purely the SAFETY-side
+bootstrap.
+- `external_torque_hardware.launch.py` now starts `arm_planner`, mirroring
+  `torque_control_isaac.launch.py`; `external_torque_controller_hardware_aerial_pwm.yaml`
+  gains `external_reference_topic`/`_timeout` and a `/**/arm_planner:` section.
+  **THE PAIR IS THE TOPOLOGY — never set the key without launching the node**: the key
+  is what puts the controller into pure tracking and un-advertises
+  `~/target_joint_setpoint`, `~/sine_reference_trajectory`, `~/go_home`; `arm_planner`
+  re-advertises all three AT THE SAME NAMES, so the GS and the flight node's
+  `system_arm_go_home_service` are unaffected. Alone, the key leaves the arm with no
+  reference at all (a stale stream FREEZES, it does not fall back).
+- **The move profile is HARDWARE'S OWN, not the sim's**: 10 deg/s (`0.17453`, the
+  2026-09-08 operational bound) against Isaac's 0.2 rad/s — the controller's former
+  values verbatim, so the tuned motion is preserved.
+- **`home_on_safety_revert: false` on hardware, and that is not a gap.** The flight yaml
+  already points `system_arm_go_home_service` at this node's `go_home`, so the flight
+  node commands the fold 1.0 s after a revert. Sim does the opposite (key true, service
+  empty). **EXACTLY ONE of the two may be active** — both would command the arm twice on
+  every revert.
+- **`mode_topic` is ABSOLUTE and hard-codes `uav_0`** (the flight node is a flight-stack
+  node at the vehicle namespace, this one lives under the arm package's). That matches
+  both defaults. FLYING UNDER A DIFFERENT PREFIX MEANS EDITING THAT LINE — otherwise the
+  node never sees DIRECT, keeps streaming its SAFETY reference, and fights the
+  whole-body planner for the arm.
+- **Stale refusal text fixed**: the gate said "controller smoothed arm reference never
+  received", naming the pre-2026-09-05 topic. It now names the actual
+  `wb_arm_reference_topic` and asks "is arm_planner running?" — the old wording sent an
+  operator to `~/smoothed_reference_joint_trajectory`, which is telemetry and publishes
+  happily either way.
+- **Validated** (`test_arm_planner.py`, 12 checks, no Isaac/PX4): SIM config **12/12 ALL
+  PASS**; the NEW HARDWARE config **11/12**, the single failure being exactly
+  `folds HOME after a SAFETY revert` — the key deliberately false there. Same node, same
+  binary, difference is only the configured fold owner. Also: launch file evaluates
+  (`--show-args` rc=0), `arm_planner_node` is an installed executable, both yamls parse,
+  `fsc_autopilot_ros2` rebuilds. **q4 re-verified ±120° across all six definitions after
+  these edits.** NOT flown on hardware.
+- Trap worth keeping: `kill` on the `ros2 run` WRAPPER leaves the node child alive. Two
+  planners then publish the same topic and the loopback test fails on "reference is
+  smooth" for reasons that have nothing to do with the config under test.

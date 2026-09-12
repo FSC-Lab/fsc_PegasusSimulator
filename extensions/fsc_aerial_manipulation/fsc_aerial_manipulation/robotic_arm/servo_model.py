@@ -9,13 +9,26 @@ the trajectory lives in. Design, bring-up and bench validation:
 ``fsc_open_manipulator/doc/Current Loop Design.md``.
 
 **With the loop closed the arm is a torque source again, to within a residual
-scatter, and that residual is the whole of this model.** Bench-measured on the
-two calibrated joints (that doc, §9.6, and ``doc/current_error_all.png``):
+scatter, and that residual is the whole of this model.** Bench-measured (that
+doc, §9.6, ``doc/current_error_all.png``, and the 2026-09-11 sine session
+recorded in ``external_torque_controller_hardware_aerial_pwm.yaml``):
 
-| joint | current error, loop OFF | **loop 1.5 Hz** | torque delivered |
-|-------|-------------------------|-----------------|------------------|
-| j2    | 13-15 mA rms            | **4.2-4.6 mA**  | 93.3 % -> 99.4 % |
-| j3    | 14-16 mA rms            | **6.7-6.9 mA**  | 87.5 % -> 91.8 % |
+| joint | trim   | current error, loop OFF | **as shipped** | torque delivered |
+|-------|--------|-------------------------|----------------|------------------|
+| j1    | OFF    | 11 mA rms *             | **11 mA** *    | (carries ~none)  |
+| j2    | 1.5 Hz | 13-15 mA rms            | **4.2-4.6 mA** | 93.3 % -> 99.4 % |
+| j3    | 1.5 Hz | 14-16 mA rms            | **6.7-6.9 mA** | 87.5 % -> 91.8 % |
+| j4    | OFF    | 11 mA rms *             | **11 mA** *    | (carries ~none)  |
+
+**The trim is per joint, ``[0.0, 1.5, 1.5, 0.0]`` Hz**: on j1/j4 the commanded
+current is mostly noise, so the integral chases it and makes them WORSE
+(11 -> 14 and 11 -> 17 mA), and the shipped config leaves them open-loop.
+
+``*`` **j1/j4's own numbers are NOT used by this model, and must not be.** They
+sit below their own current-sensor noise floor -- at stalled samples j4's
+measured current correlates 0.58 with its applied duty against 0.97 on j2 -- so
+they measure the SENSOR, not the motor. They take j3's figure instead; see
+``CURRENT_NOISE_A``.
 
 The **shape** is the result, not the magnitude: with the loop off both joints sat
 on a persistent one-sided offset of about -20 mA and never crossed zero -- the
@@ -38,13 +51,18 @@ scaled so the stationary rms is ``current_noise_a`` at ANY step size:
     a        = exp(-2*pi*fc*dt)
     i_err   <- a*i_err + sqrt(1 - a^2) * sigma * randn(4)
 
-At the shipped ``fc`` = 5 Hz that puts 1/2 the variance (0.71 of the rms) below
-5 Hz, so a total ``sigma`` of 7 mA shows ~4.9 mA in the measured band -- between
-j2's 4-5 and j3's 7. **7 mA is j3, the worse of the two calibrated joints**, and
-per the user's instruction the same magnitude is used on all four: j1 and j4
-carry commands near the current sensor's floor and have never been characterised
-either way, so the choice is a documented assumption, not a measurement. The
-four channels are drawn independently -- four motors, four sensors.
+At the shipped ``fc`` = 5 Hz that puts exactly 1/2 the variance (0.71 of the
+rms) below 5 Hz, so the measured in-band figures are converted to the total
+``sigma`` this model wants by multiplying by sqrt(2): the two joints whose
+residual is REAL, ``[4.4, 6.8] mA`` on j2/j3, become ``[6.2, 9.6] mA``, and
+j1/j4 take j3's. The four channels are drawn independently -- four motors, four
+sensors.
+
+Until 2026-09-11 this was a single 7 mA on all four joints, because j1 and j4
+had never been characterised. They have been now, and the answer was that the
+measurement is below its own noise floor there -- so the treatment is unchanged
+in substance and only j2 moves. **The choice that remains a judgement is the
+SPEED**: these are the 10 deg/s numbers, which is the band the arm flies in.
 
 THE DIGITAL COMMAND PATH is unchanged and still orthogonal to the above. The
 number that reaches the servo is an **int16 Goal PWM register**, so between the
@@ -53,10 +71,10 @@ law and the winding sit:
 1. **quantization**, which TRUNCATES TOWARD ZERO rather than rounding
    (``dynamixel_info.hpp``'s ``ConvertUnitToValue`` ends in
    ``static_cast<T>(adjusted_value / unit)``). The loss is systematic, up to a
-   full count (6.4 / 5.9 / 8.0 / 6.4 mN.m per joint), never a gain, and any
+   full count (5.9 / 6.7 / 7.4 / 6.7 mN.m per joint), never a gain, and any
    command under one count delivers exactly zero -- a real dead zone;
 2. **the +-885 rail**, which the torque term alone cannot reach at a 3.0 N.m cap
-   (466 / 507 / 375 / 466 counts);
+   (508 / 449 / 406 / 446 counts);
 3. **calibration error**, the arm's analogue of the allocator's ``kf`` mismatch.
    The chain converts N.m to counts with what it BELIEVES
    (``nm_to_counts_nominal``); the winding then makes torque per count according
@@ -99,35 +117,94 @@ from __future__ import annotations
 import numpy as np
 
 # ── servo constants ─────────────────────────────────────────────────────────
-# Calibrated counts per N.m (arm repo utils_calibration, 2026-08-17). The
-# datasheet's 205-208.5 is 20-42 % off per joint -- do not substitute it.
-NM_TO_COUNTS = np.array([160.0, 173.8, 146.7, 160.0])
-# The arm controller's configured motor_resistance_ohm. Still here because the
-# duty scale RHO carries it; nothing else uses it now that the droop is gone.
-RESISTANCE_OHM = np.array([4.90, 4.90, 4.30, 4.90])
+# Counts per N.m, the arm repo's ``nm_to_effort_joints``. CALIBRATED 2026-09-11
+# by the lever/RLS campaign (doc/"Motor Constant Calibration.md"), superseding
+# the 2026-08-17 set [160.0, 173.8, 146.7, 160.0] in which j2 was fragile
+# (+-15 %) and j1/j4 had never been measured at all. The j1 and j4 UNITS were
+# calibrated by swapping them into the j2/j3 brackets, where gravity gives them
+# a lever. The datasheet's 205-208.5 is 20-42 % off per joint -- do not
+# substitute it. Believed to +-2 %: the campaign found kappa CONDITIONING-
+# limited, not measurement-limited, and its own formal +-0.5 % is not achieved.
+NM_TO_COUNTS = np.array([162.4, 154.0, 150.5, 153.4])
+# The arm controller's configured motor_resistance_ohm, MEASURED per unit
+# 2026-09-11 (was [4.90, 4.90, 4.30, 4.90]). Still here because the duty scale
+# RHO carries it; nothing else uses it now that the droop is gone. R rises
+# ~0.4 %/degC and does not repeat between sessions -- a tuning knob, not a
+# constant.
+RESISTANCE_OHM = np.array([5.26, 4.90, 4.53, 4.88])
 SUPPLY_V = 12.0            # supply_voltage_v
 PWM_FULL_SCALE = 885.0     # pwm_full_scale
 CURRENT_LSB_A = 0.00269    # current_lsb_a, the XM430 Present Current unit
 
-# Torque constant implied by the calibration, N.m/A: [2.3234, 2.1389, 2.5341, 2.3234]
+# Torque constant implied by the calibration, N.m/A: [2.2891, 2.4139, 2.4701,
+# 2.4234]. CROSS-CHECK, and the reason to trust this set: against the same
+# session's MEASURED back-EMF constants Ke = [2.427, 2.559, 2.623, 2.570] V per
+# rad/s these give an efficiency eta = Kt/Ke of [0.943, 0.943, 0.942, 0.943] --
+# four independent motors agreeing to 0.1 % on a sensible gearbox loss. The
+# superseded set implied eta > 1 on j2, which is physically impossible and is
+# what opened the campaign. ``_selftest`` asserts this.
 KT = 1.0 / (NM_TO_COUNTS * CURRENT_LSB_A)
+KE_MEASURED = np.array([2.427, 2.559, 2.623, 2.570])   # V/(rad/s), 2026-09-11
 
-# Duty counts per N.m.
+# Duty counts per N.m. THE CONTROLLER LOGS THIS EXACT VECTOR at configure, and
+# on hardware 2026-09-11 it logged 169.5 / 149.7 / 135.3 / 148.5 -- which is
+# what ties this file's constants to the arm actually flying.
 RHO = PWM_FULL_SCALE * RESISTANCE_OHM * CURRENT_LSB_A / SUPPLY_V
-NM_TO_DUTY = NM_TO_COUNTS * RHO             # [155.54, 168.95, 125.14, 155.54]
+NM_TO_DUTY = NM_TO_COUNTS * RHO             # [169.47, 149.70, 135.25, 148.51]
 
-# ── the current loop's residual, as bench-measured 2026-09-09 ───────────────
-# rms of I_measured - I_commanded with the 1.5 Hz loop closed: 4.2-4.6 mA on
-# joint 2 and 6.7-6.9 mA on joint 3. 7 mA is joint 3, the worse of the two, and
-# the same value is used on all four joints (joints 1 and 4 are uncharacterised).
-CURRENT_NOISE_A = 0.007        # [A rms], total across the modelled band
+# ── the current loop's residual, PER JOINT ─────────────────────────────────
+# THE LOOP IS NOT ON EVERY JOINT. ``current_loop_bandwidth_hz_joints`` ships as
+# [0.0, 1.5, 1.5, 0.0]: the trim helps the two loaded joints and HURTS j1/j4,
+# whose commanded current is mostly noise, so the integral chases it (bench
+# 2026-09-11: j1 rms 11 -> 14 mA, j4 11 -> 17). The plant therefore carries the
+# LOOP-CLOSED residual on j2/j3 and the LOOP-OPEN one on j1/j4.
+#
+#   joint    trim      measured rms of I_meas - I_cmd, 5 Hz band, at 10 deg/s
+#   j1       off       11 mA        -- BELOW ITS OWN SENSOR NOISE FLOOR, see below
+#   j2       1.5 Hz    4.2-4.6 mA   (doc/"Current Loop Design.md" 9.6)
+#   j3       1.5 Hz    6.7-6.9 mA   (same; the 09-11 sine session read 5)
+#   j4       off       11 mA        -- BELOW ITS OWN SENSOR NOISE FLOOR
+#
+# 10 deg/s is the column that matters -- the arm flies below it, and the
+# campaign found its own friction model inadequate there, which is one more
+# reason not to model this band from theory. Where two sessions disagree the
+# WORSE number is taken.
+#
+# These are rms of an already-5-Hz-low-passed signal, while the constant below
+# is the noise's TOTAL rms. A first-order low pass puts exactly half its
+# variance below its own corner, so total = sqrt(2) x in-band.
+#
+# ** j1 AND j4 DO NOT TAKE THEIR OWN MEASUREMENT, AND THAT IS THE WHOLE POINT **
+# (arm repo 612775a, 2026-09-11). Their 11 mA is NOT a torque: at stalled
+# samples, where I = V/R must hold exactly, j4's measured current correlates
+# only **0.58** with its applied duty at any filter time constant, against
+# **0.97 on j2** -- the residual is 7.6 counts against a signal of similar
+# size, because j4 runs at a few current counts where j2 runs at 100+. The arm
+# repo's conclusion is "stop quoting a metric below its own noise floor", and
+# it is what explains three failed fixes there (the trim made j4 WORSE, the
+# dither did nothing, only ~20 % of the reversal excess was ever friction).
+# Injecting 11 mA of APPLIED TORQUE on those two joints would be modelling the
+# CURRENT SENSOR, not the motor.
+#
+# So j1/j4 take j3's figure -- the worse of the two joints whose residual IS
+# real -- exactly as this model did before 2026-09-11, when the reason was
+# "uncharacterised" rather than "characterised and found to be below the noise
+# floor". It is deliberately CONSERVATIVE: a duty/R error scales with duty, and
+# j1/j4 command ~500x less of it than j2 (0.2 vs 108 LSB at the steady hold),
+# so their real torque error is probably far SMALLER than this.
+#   2026-09-11 morning, WRONG and shipped for one campaign: [15.6, 6.2, 9.6,
+#   15.6], which took j1/j4's own 11 mA at face value and made the two
+#   untrimmed joints the noisiest in the model.
+CURRENT_NOISE_A = np.array([0.0096, 0.0062, 0.0096, 0.0096])
 CURRENT_NOISE_BW_HZ = 5.0      # [Hz] first-order corner; the figure's own band
-# Torque noise this implies, N.m rms: [0.0163, 0.0150, 0.0177, 0.0163]
+# Torque noise this implies, N.m rms: [0.0220, 0.0150, 0.0237, 0.0233]
 TORQUE_NOISE_NM = KT * CURRENT_NOISE_A
 
 # ``max_effort`` in duty counts, and the same ceiling in N.m, as flown 2/3 Sep.
+# The COUNTS are unchanged; their N.m equivalent moved with the calibration
+# (it was [0.370, 2.160, 1.535, 0.370] under the superseded constants).
 DUTY_CAP_AS_FLOWN = np.array([57.6117, 364.8743, 192.0391, 57.6117])
-TAU_CAP_AS_FLOWN = DUTY_CAP_AS_FLOWN / NM_TO_DUTY   # [0.370, 2.160, 1.535, 0.370]
+TAU_CAP_AS_FLOWN = DUTY_CAP_AS_FLOWN / NM_TO_DUTY   # [0.340, 2.437, 1.420, 0.388]
 # The caps were raised to a uniform 3.0 N.m on 2026-09-04, with the servos' own
 # PWM Limit re-sized to match, so this is the arm as it is TODAY.
 TAU_CAP_CURRENT = np.full(4, 3.0)
@@ -336,6 +413,21 @@ def _self_test():
     print("tau cap     =", np.round(TAU_CAP_AS_FLOWN, 4), "N.m as flown,",
           np.round(TAU_CAP_CURRENT, 1), "N.m today")
 
+    # (0) THE CALIBRATION'S OWN CONSISTENCY CHECK, and the cheapest guard this
+    # file has against a mistyped constant: eta = Kt/Ke is a gearbox
+    # efficiency, so it must be <= 1, and the 2026-09-11 campaign measured the
+    # four motors agreeing on it to 0.1 %. The superseded constants gave j2
+    # eta = 1.13, which is what opened the campaign -- this assert would have
+    # caught it.
+    eta = KT / KE_MEASURED
+    print("eta = Kt/Ke =", np.round(eta, 4), "(gearbox efficiency, must be <= 1)")
+    assert np.all(eta <= 1.0), f"eta > 1 is physically impossible: {eta}"
+    assert np.ptp(eta) < 0.01, f"eta must agree across units, got {eta}"
+    # The controller logs NM_TO_DUTY at configure; hardware read this on
+    # 2026-09-11. If this fires, this file and the flying arm disagree.
+    assert np.allclose(NM_TO_DUTY, [169.5, 149.7, 135.3, 148.5], atol=0.05), \
+        f"NM_TO_DUTY {NM_TO_DUTY} != the arm controller's logged constants"
+
     s = DynamixelPwmServo()
     print("\n", s, sep="")
 
@@ -373,7 +465,7 @@ def _self_test():
     print(f"torque noise = {np.round(x.std(axis=0)*KT*1e3, 2).tolist()} mN.m rms, "
           f"of which below {CURRENT_NOISE_BW_HZ:g} Hz "
           f"~{np.round(0.7071*x.std(axis=0)*1e3, 2).tolist()} mA "
-          f"(bench: j2 4.2-4.6, j3 6.7-6.9)")
+          f"(bench, in-band, j2/j3 only: 4.2-4.6 / 6.7-6.9 mA)")
 
     # (c) sigma = 0 is an EXACT torque source -- the `ideal` A/B must be exact,
     # not merely quiet.

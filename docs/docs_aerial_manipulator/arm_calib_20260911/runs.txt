@@ -1,0 +1,9 @@
+calib_A servo=current per-joint[15.6,6.2,9.6,15.6]mA@5Hz kappa=calib-0911 driver='--hold-between 16'
+calib_B servo=current per-joint[15.6,6.2,9.6,15.6]mA@5Hz kappa=calib-0911 driver='--hold-between 16'
+conva_A servo=current per-joint[11,4.4,6.8,11]mA@5Hz kappa=calib-0911 driver='--hold-between 16'
+conva_B servo=current per-joint[11,4.4,6.8,11]mA@5Hz kappa=calib-0911 driver='--hold-between 16'
+ideal servo=ideal (no residual) kappa=calib-0911
+unif7 servo=current uniform 7mA@5Hz kappa=calib-0911
+ideal_B servo=ideal (no residual) kappa=calib-0911
+ideal_hl servo=ideal HEADLESS=1
+calib_hl servo=current per-joint[15.6,6.2,9.6,15.6]mA HEADLESS=1

@@ -84,8 +84,9 @@ fi
 # Arm SERVO MODEL, read by application/robotic_arm/06_*_arm_torque.py only (the
 # whole-body TORQUE plant). This is a PLANT property, not a controller gain --
 # the arm controller closes a 1.5 Hz software CURRENT LOOP around Dynamixel
-# Mode 16, and what it leaves behind is a zero-mean residual current error of
-# 4-7 mA rms. See
+# Mode 16, and what it leaves behind is a zero-mean residual current error --
+# PER JOINT since 2026-09-11, because the loop runs on j2/j3 only, so the two
+# untrimmed joints are the noisy ones (in-band 11 / 4.4 / 6.8 / 11 mA rms). See
 # extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/servo_model.py
 #   current  (default) the arm as it is today: residual current noise
 #   ideal    an exact torque source, for the A/B
@@ -105,13 +106,21 @@ esac
 
 # The residual current error itself: rms in AMPS, first-order corner in Hz, and
 # an integer seed (or "none" for OS entropy). Empty = servo_model.py's
-# bench-measured defaults, 0.007 A rms at 5 Hz on all four joints.
+# bench-measured defaults. EITHER FORM IS ACCEPTED: one number applies to all
+# four joints, or "a1,a2,a3,a4" gives each its own -- which is what the arm
+# needs since 2026-09-11, because the current loop runs on j2/j3 only
+# (current_loop_bandwidth_hz_joints [0, 1.5, 1.5, 0]) and the untrimmed joints
+# are the noisy ones.
 ARM_CURRENT_NOISE_A="${PEGASUS_ARM_CURRENT_NOISE_A:-}"
 ARM_CURRENT_NOISE_BW_HZ="${PEGASUS_ARM_CURRENT_NOISE_BW_HZ:-}"
 ARM_CURRENT_NOISE_SEED="${PEGASUS_ARM_CURRENT_NOISE_SEED:-}"
+_NUM_RE='[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?'
 for _NV in "$ARM_CURRENT_NOISE_A" "$ARM_CURRENT_NOISE_BW_HZ"; do
-  if [[ -n "$_NV" && ! "$_NV" =~ ^[0-9]+([.][0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then
-    echo "ERROR: PEGASUS_ARM_CURRENT_NOISE_A / _BW_HZ must be non-negative decimals (got '$_NV')." >&2
+  if [[ -n "$_NV" \
+        && ! "$_NV" =~ ^${_NUM_RE}$ \
+        && ! "$_NV" =~ ^${_NUM_RE},${_NUM_RE},${_NUM_RE},${_NUM_RE}$ ]]; then
+    echo "ERROR: PEGASUS_ARM_CURRENT_NOISE_A / _BW_HZ must be a non-negative decimal" >&2
+    echo "       or four of them as 'a1,a2,a3,a4' (got '$_NV')." >&2
     exit 2
   fi
 done
@@ -119,6 +128,27 @@ if [[ -n "$ARM_CURRENT_NOISE_SEED" && ! "$ARM_CURRENT_NOISE_SEED" =~ ^([0-9]+|no
   echo "ERROR: PEGASUS_ARM_CURRENT_NOISE_SEED must be an integer or 'none' (got '$ARM_CURRENT_NOISE_SEED')." >&2
   exit 2
 fi
+# RENDERING. Baked into the pane command line for the same tmux-server reason as
+# everything else here -- an `export` from a wrapper does NOT reach an Isaac pane
+# on an already-running tmux server, which is how this knob silently did nothing.
+#
+# THIS IS A CONTROL-FIDELITY SETTING ON A SLOW MACHINE, not just a convenience.
+# The whole-body direct-actuation rigs run PEGASUS_PX4_LOCKSTEP=0, so the external
+# controller runs on the WALL CLOCK while the plant advances at whatever real-time
+# factor the box can manage. At RTF f, every millisecond of real transport delay is
+# 1/f milliseconds of SIMULATED delay -- and these rigs are delay-margin limited
+# (wb_hover_stability.py scores candidates on a ~32 ms margin against a 10.03 1/s
+# rotor pole). Measured on fsc-jupiter 2026-09-11: RTF 0.336 WITH rendering, i.e.
+# a 3x inflation of every delay, which alone makes the whole-body L1 rig marginal.
+# 06 already does world.step(render=not HEADLESS), so this actually removes the
+# render pass rather than just hiding the window.
+# Check it during any run with docs/.../tools or a sensor_combined timestamp probe.
+PEGASUS_HEADLESS_ARG="${PEGASUS_HEADLESS:-0}"
+if [[ ! "$PEGASUS_HEADLESS_ARG" =~ ^[01]$ ]]; then
+  echo "ERROR: PEGASUS_HEADLESS must be 0 or 1 (got '$PEGASUS_HEADLESS_ARG')." >&2
+  exit 2
+fi
+
 # Plant-side model-uncertainty injection (whole-body robustness tests). Baked
 # into the pane command line, NOT exported: the tmux server keeps its own env.
 PLANT_MASS_SCALE="${PEGASUS_PLANT_MASS_SCALE:-1.0}"
@@ -206,6 +236,7 @@ sleep $DELAY
 echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
+PEGASUS_HEADLESS=$PEGASUS_HEADLESS_ARG \
 PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS PEGASUS_ARM_SERVO_MODEL=$ARM_SERVO_MODEL \
 PEGASUS_ARM_CURRENT_NOISE_A=$ARM_CURRENT_NOISE_A \
 PEGASUS_ARM_CURRENT_NOISE_BW_HZ=$ARM_CURRENT_NOISE_BW_HZ \

@@ -141,9 +141,17 @@ export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
 # numbers: fsc_open_manipulator/doc/"Current Loop Design.md" and
 # doc/current_error_all.png; implementation in .../robotic_arm/servo_model.py.
 #
-#   current  ON  - the arm as it is today: residual current noise, 4-7 mA rms
-#                  band-limited at 5 Hz, made torque through Kt
+#   current  ON  - the arm as it is today: residual current noise, band-limited
+#                  at 5 Hz, made torque through Kt
 #   ideal    OFF - the commanded effort applied exactly, for the A/B
+#
+# THE RESIDUAL IS PER JOINT (2026-09-11), and the asymmetry is the plant: the
+# arm ships current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.0], because the
+# trim helps the two loaded joints and HURTS j1/j4, whose commanded current is
+# mostly noise. So the two joints with NO trim are the two NOISIEST -- in-band
+# bench rms 11 / 4.4 / 6.8 / 11 mA, which this file's yaml carries as the total
+# rms [15.6, 6.2, 9.6, 15.6] mA (a first-order low pass puts half its variance
+# below its own corner, so total = sqrt(2) x in-band).
 #
 # Override without editing this file:
 #   PEGASUS_ARM_SERVO_MODEL=ideal <this script> <config>
@@ -166,8 +174,7 @@ if [[ -z "${PEGASUS_ARM_SERVO_MODEL:-}" ]]; then
     *)  echo "ERROR: sim_arm_current_noise_enable must be true or false in $WB_SIM_YAML" >&2; exit 2 ;;
   esac
   if [[ "$PEGASUS_ARM_SERVO_MODEL" != "ideal" ]]; then
-    for KV in "PEGASUS_ARM_CURRENT_NOISE_A:sim_arm_current_noise_a" \
-              "PEGASUS_ARM_CURRENT_NOISE_BW_HZ:sim_arm_current_noise_bw_hz" \
+    for KV in "PEGASUS_ARM_CURRENT_NOISE_BW_HZ:sim_arm_current_noise_bw_hz" \
               "PEGASUS_ARM_CURRENT_NOISE_SEED:sim_arm_current_noise_seed"; do
       VAR="${KV%%:*}"; KEY="${KV##*:}"
       if [[ -z "${!VAR:-}" ]]; then
@@ -175,6 +182,21 @@ if [[ -z "${PEGASUS_ARM_SERVO_MODEL:-}" ]]; then
         [[ -n "$V" ]] && export "$VAR=$V"
       fi
     done
+    # The amplitude is PER JOINT: sim_arm_current_noise_a_j1..j4, joined into
+    # the "a1,a2,a3,a4" form 06 parses. ALL FOUR OR NONE -- a partial list
+    # would silently model three joints, the same rule the counts block uses.
+    # The pre-2026-09-11 scalar sim_arm_current_noise_a still works as a
+    # fallback, so an older yaml keeps its meaning.
+    if [[ -z "${PEGASUS_ARM_CURRENT_NOISE_A:-}" ]]; then
+      NOISE_LIST=""
+      for J in j1 j2 j3 j4; do
+        V="$(yaml_scalar "sim_arm_current_noise_a_$J")"
+        [[ -n "$V" ]] || { NOISE_LIST=""; break; }
+        NOISE_LIST="${NOISE_LIST:+$NOISE_LIST,}$V"
+      done
+      [[ -z "$NOISE_LIST" ]] && NOISE_LIST="$(yaml_scalar sim_arm_current_noise_a)"
+      [[ -n "$NOISE_LIST" ]] && export PEGASUS_ARM_CURRENT_NOISE_A="$NOISE_LIST"
+    fi
   fi
   echo "Arm servo model taken from $(basename "$WB_SIM_YAML")"
 fi
@@ -237,7 +259,7 @@ done
 # way is worth nothing.
 ARM_COUNTS_MISMATCH=0
 if [[ -n "${PEGASUS_ARM_COUNTS_TRUE:-}" ]]; then
-  ARM_COUNTS_MISMATCH=$(awk -v a="${PEGASUS_ARM_COUNTS_NOMINAL:-160.0,173.8,146.7,160.0}" \
+  ARM_COUNTS_MISMATCH=$(awk -v a="${PEGASUS_ARM_COUNTS_NOMINAL:-162.4,154.0,150.5,153.4}" \
                             -v b="$PEGASUS_ARM_COUNTS_TRUE" '
     BEGIN { n=split(a,A,","); split(b,B,",");
             for (i=1;i<=n;i++) if ((A[i]-B[i])^2 > 1e-18) { print 1; exit } print 0 }')
@@ -321,7 +343,8 @@ fi
 
 case "$PEGASUS_ARM_SERVO_MODEL" in
   ideal) echo -e "\033[1;33mArm servo model: IDEAL - current-loop residual OFF (commanded effort applied exactly).\033[0m" ;;
-  *) echo "Arm servo model: CURRENT LOOP CLOSED (residual ${PEGASUS_ARM_CURRENT_NOISE_A:-0.007} A rms @ ${PEGASUS_ARM_CURRENT_NOISE_BW_HZ:-5.0} Hz, seed ${PEGASUS_ARM_CURRENT_NOISE_SEED:-0})" ;;
+  *) echo "Arm servo model: CURRENT LOOP on j2/j3 only (residual ${PEGASUS_ARM_CURRENT_NOISE_A:-servo_model default} A rms per joint @ ${PEGASUS_ARM_CURRENT_NOISE_BW_HZ:-5.0} Hz, seed ${PEGASUS_ARM_CURRENT_NOISE_SEED:-0})"
+     echo "  counts/N.m: calibrated 2026-09-11 [162.4, 154.0, 150.5, 153.4] (was [160.0, 173.8, 146.7, 160.0])" ;;
 esac
 
 echo "Starting AM-T650 WHOLE-BODY + L1 ADAPTIVE direct-actuator SITL with the ROS2 TORQUE-mode arm stack."

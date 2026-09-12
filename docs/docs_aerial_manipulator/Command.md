@@ -3968,6 +3968,8 @@ to detach.
 
 # 1. build after every pull (any terminal — the cd IS part of the command)
 cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF
+#    ...and the arm stack (arm_planner carries the SAFETY guard's arm fold)
+cd ~/Source/Shiqi/fsc_om_ws && colcon build --packages-select open_manipulator_x_custom_controller
 
 # 2. ROS 2 stack            (terminal 1 — must start FIRST, owns the agent)
 ~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh fsc_lab_machine uav_0
@@ -3985,7 +3987,9 @@ ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 #    SAME service as §7.14 — the mode namespace is shared on purpose.
 ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"
 
-# ABORT back to SAFETY — have this line ready BEFORE entering DIRECT
+# ABORT back to SAFETY — have this line ready BEFORE entering DIRECT.
+# Same effect as the drone GS's "Return to baseline" and the automatic
+# 20 deg tilt watchdog: hover where it is, fold the arm home (SAFETY GUARD below)
 ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
 
 # 6. PX4 refuses an in-air disarm: land by reference first, then
@@ -4012,9 +4016,181 @@ ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
 ```
 
 Add `cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2
---cmake-args -DBUILD_TESTING=OFF` as step 1 after a pull. Steps 5-6 (DIRECT
-entry, the abort line, disarm) are pure service calls with no paths in them —
-use the fsc_lab_machine block above verbatim.
+--cmake-args -DBUILD_TESTING=OFF` and `cd ~/colcon_ws && colcon build
+--packages-select open_manipulator_x_custom_controller` as step 1 after a pull.
+Steps 5-6 (DIRECT entry, the abort line, disarm) are pure service calls with no
+paths in them — use the fsc_lab_machine block above verbatim.
+
+**SAFETY GUARD — every way out of whole-body DIRECT hovers in place and folds
+the arm home (2026-09-11).** Four things revert DIRECT → SAFETY, and all four now
+end in the same state:
+
+| trigger | how |
+|---|---|
+| **tilt watchdog** — automatic | body tilt > **20°** (`system_wd_max_tilt_deg`, was 40) |
+| body-rate watchdog — automatic | \|ω\| > 360 °/s (`system_wd_max_rate_dps`, unchanged) |
+| **sideways-drift watchdog** — automatic | horizontal CoM tracking error > **0.75 m** (`system_wd_max_drift_m`, new) |
+| feedback-loss failsafe — automatic | odometry / EV fusion lost > 1 s (then it also LANDS) |
+| drone GS **"Return to baseline"** / Controller tab | `activate_controller("Baseline (Safety)")` |
+| the ABORT line above | `set_direct_mode false` |
+
+The tilt is `acos(R22)`, the angle of the body z axis off vertical, and that is
+never less than `max(|roll|, |pitch|)`: it trips when **roll OR pitch** passes
+20°, and a little earlier when both are large together. Nominal flights on this
+rig peak at 6–10° (the DIRECT entry); every divergence recorded here went past
+20° on its way out.
+
+**The drift it measures is `|x_c − x_cd|_xy`** — the law's own horizontal CoM
+tracking error, against **the reference the law is actually flying** (the
+whole-body planner's `x_cd`, or the anchored builder reference), NOT against a
+fixed point and NOT against the raw ground-station setpoint. That distinction is
+what makes the limit usable: the planner moves the base by half a metre on a
+normal step leg, and none of that counts as drift — only the law failing to
+follow does. Measured peaks on this rig: **410 mm** at the DIRECT entry (the
+handover transient, §7.15.8) and **349 mm** through the step and trajectory
+legs, so 0.75 m is ~1.8× the worst nominal excursion. It shares the tilt/rate
+watchdog's latch, so one trip is one revert.
+
+What happens, in order:
+
+1. **The flight node** switches to SAFETY, i.e. PX4 attitude + rate + mixer, and
+   re-seeds the position reference to **where the vehicle is at that instant**,
+   with the yaw it has then. The vehicle hovers there. No ground-station click is
+   needed, and none is re-sent: the drone GS publishes a setpoint only when you
+   press send, so it cannot drag the vehicle back to an old target.
+2. **The node publishes the new mode immediately** (it used to wait for its
+   500 ms info tick), so the whole-body planner goes silent at once.
+3. **`arm_planner`** takes the arm reference back, holds the **measured** pose for
+   `home_on_revert_delay_s` = 1.0 s so PX4 has regained attitude before the arm's
+   reaction torque joins in, then folds the arm to home `[0, 40, 40, 0]°` on its
+   ordinary min-jerk profile (≤ 0.2 rad/s per joint, ≥ 1.5 s). Any arm command
+   sent in that 1 s (arm GS joint target, `go_home`) cancels the automatic fold.
+
+What you see:
+
+```
+autopilot pane:  DIRECT WATCHDOG TRIPPED: excess tilt (tilt 20.3/20.0 deg, rate …). Reverting to SAFETY.
+   (or)          DIRECT WATCHDOG TRIPPED: excess drift (horizontal CoM error 0.78/0.75 m, [+0.12 -0.77]). Reverting to SAFETY.
+                 Reference re-seeded to current pose: [x y z] m, yaw … deg
+arm stack pane:  SAFETY revert: folding the arm HOME in 1.0 s (home_on_safety_revert). …
+                 Folding the arm HOME over 2.6 s.
+```
+
+The first line appears only for a watchdog trip. The other three show for every
+revert. A watchdog trip **latches**: the vehicle stays in SAFETY until you
+deliberately call `set_direct_mode true` again, and that call still has to pass
+the DIRECT-entry gates.
+
+Where the settings live, so you can check them rather than take them on trust:
+
+- `system_wd_max_tilt_deg: 20.0` and `system_wd_max_drift_m: 0.75` —
+  `params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml`.
+  The node reads them only at startup, so restart the autopilot pane after
+  editing. **The GMO twin (§7.14) has neither** (40°, and the drift check
+  defaults to 0 = off) — deliberately: this work is L1-only.
+- `system_arm_go_home_service` / `system_arm_go_home_delay_s` — the node's own
+  way to fold the arm, for a stack with **no `arm_planner`** (i.e. hardware).
+  Empty in the sim yaml, because `arm_planner` owns that edge there, so the arm
+  is never commanded twice.
+- `home_on_safety_revert: true`, `home_on_revert_delay_s: 1.0` —
+  `open_manipulator_x_isaac_bridge/config/torque_controller_isaac_aerial.yaml`,
+  the `arm_planner` block. That yaml is shared by the §7.14 and §7.15 rigs, so
+  the fold applies to both. It is **off by default** in the node, so bench and
+  hardware configs are unchanged.
+
+**Validated 2026-09-11, 3 Isaac flights on this rig** (full §7.15 `_sim` plant,
+fsc_lab_machine). Before DIRECT the arm was moved to `[15, 26, 32, 23]°`, off
+home, so the fold would show. **After the revert the driver published NO
+reference**, so every metre of hover-in-place below is the node's own
+re-seed:
+
+| flight | revert | vertical, peak | horizontal, peak → last 5 s | tilt after | arm within 2° of home |
+|---|---|---|---|---|---|
+| A — GS `activate_controller("Baseline (Safety)")` | 20 ms after the call | +454 mm | 394 → **28 mm** | 6.97° | **2.40 s** (final err 0.41°) |
+| control — A with `home_on_safety_revert: false` | 20 ms | +468 mm | 72 → **8 mm** | 2.36° | never (stays at the pre-revert pose, as designed) |
+| B — tilt watchdog, temporarily set to 3° | **at 3.13°**, 1.44 s into DIRECT | +146 mm | 632 → **30 mm** | 11.2° | **2.44 s** (final err 0.43°) |
+
+What the three flights separate:
+
+- **The vertical climb is not the guard.** It is the same with and without the
+  fold (454 vs 468 mm). This is the DIRECT→SAFETY handover surge that §7.13 (c)
+  and the AM-L1 retune already document. The yaml's allocator believes kf is
+  +17.6% (`alloc_thrust_coeff` vs the plant). In DIRECT the SAFETY UDE is fed the
+  allocator's *believed* collective, so it books that gap as a ~7 N
+  disturbance, and SAFETY then acts on it. This is **sim-only**: on hardware a
+  real kf error lives in the SAFETY model too. It is smaller in flight B only
+  because B spent 1.4 s in DIRECT, which gave the UDE less time to wind up.
+- **The fold does add a sideways drift, and that part is real physics.**
+  Horizontal peak goes 72 → 394 mm, along world −y. It starts with a +6° roll
+  spike exactly inside the fold window, 1.0–3.4 s. Swinging the arm-yaw and
+  wrist joints back to 0 moves the CoM sideways; PX4's integrator re-learns
+  the new trim and the vehicle walks back. It is back inside 50 mm by 15 s,
+  without any reference from anyone.
+  In flight B the larger +x motion (597 mm) is mostly the DIRECT-entry
+  transient's own momentum: it was already pitched 8° when the watchdog
+  fired.
+- Nominal DIRECT stayed at **6.9–7.3° peak tilt**, so 20° leaves ~3× margin.
+  Set the limit below ~8° and the normal DIRECT entry will trip it, which is
+  what flight B did on purpose.
+
+Knobs, if the sideways walk matters more than getting the arm in fast:
+`home_on_revert_delay_s` (fold later, after SAFETY has settled) and the
+`arm_planner` `max_velocity` (fold slower, so PX4's integrator keeps up).
+Neither has been flown yet. The loopback test
+(`open_manipulator_x_custom_controller/test/test_arm_planner.py`, no Isaac)
+checks the fold, its 1 s delay, its smoothness, and that an operator target
+cancels it.
+
+**The drift guard, validated 2026-09-11, 2 more flights:**
+
+| flight | result |
+|---|---|
+| the FULL 10-leg standard mission on the shipped guard (20°, 0.75 m) | **no false trip**: all 10 legs flew in DIRECT and it left only when asked, 170 s of DIRECT, peak CoM error **410 mm** (entry) / 349 mm (legs) / 207 mm late, tilt 6.0° p-p, 0 saturations |
+| drift limit temporarily **0.15 m** to force a trip | tripped **1.44 s into DIRECT at only 7.0° tilt** — so tilt cannot explain it — then hovered (settled 21 mm) and the arm folded home in **2.40 s**, final error 0.46° |
+
+That pair is the point of the 0.75 m number: the mission's own worst excursion
+is 410 mm, and a deliberately tight limit proves the path fires, reverts, hovers
+and folds. A trip prints `excess drift` with both components, so a log says
+which way it went.
+
+**§7.15.1's HARDWARE twin (created 2026-09-11, NEVER FLOWN).** The guard also
+ships on the experiment side, as a new pair beside the GMO hardware stack:
+
+```bash
+# hardware (companion computer) — the L1 whole-body stack, guard included
+~/Workspaces/fsc_autopilot_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_direct_actuation_stack_t650_aerial_manipulator.sh uav_0
+```
+
+- yaml `params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650.yaml`
+  takes its **plant, allocator and SAFETY map from the GMO hardware file**
+  (bench kf 4.540431e-05, bench km, the re-derived thrust pair, the measured
+  `wb_base_com_y`, the arm sign map, `straight_line`) and its **law + observer
+  from the L1 sim file** (k_x 32/k_v 20, K_y 20/D_y 12, psi 0.3, no posture PID
+  but `wb_ee_anchor_com` + `wb_u3_internal_ff`, the whole `wb_l1_*` block), plus
+  the guard at 20° / 0.75 m. Every `sim_plant_*`/`sim_arm_*` key and the kf
+  injection are dropped.
+- The launcher greps for the **L1 sim file's** values (its own kf injection, the
+  sim plant keys, `ude_height_threshold 0.35`, all three vehicle_name variants)
+  and refuses to start on a hit; it then prints positive confirmation of the
+  bench kf, the thrust pair, the observer type, the two compensation keys and
+  both guard limits. It keeps the shared hardware tmux session name on purpose,
+  so starting it kills any other hardware stack.
+- Verified by loading that yaml on the node under `/uav_test`: all four guard
+  params read back, `AM-T650-WB-L1-HW`, the magenta L1-observer banner, a green
+  `joint-posture PID is OFF`, `wb_posture_kp` "Parameter not set", and the
+  model-vs-`vehicle_mass` cross-check passed.
+- **The arm fold on hardware goes through the node, not `arm_planner`**:
+  `system_arm_go_home_service` calls the arm controller's own `go_home` one
+  second after the revert. **BLOCKER, pre-existing and not introduced here:**
+  `wb_arm_reference_topic` expects `reference_joint_trajectory`, which on
+  hardware nobody publishes in SAFETY (the 2026-09-05 split moved generation
+  into `arm_planner`, and the hardware arm launch does not start it — the
+  controller publishes `~/smoothed_reference_joint_trajectory` instead). The
+  DIRECT-entry gate checks that topic, so entry should be refused until either
+  `arm_planner` runs with the hardware arm stack (set `external_reference_topic`
+  in `external_torque_controller_hardware_aerial_pwm.yaml` — the sim topology,
+  which also gives the fold) or the key is repointed. Both the yaml header and
+  the launcher header say so.
 
 **CONFIRM THE OBSERVER BEFORE YOU FLY.** The autopilot pane prints a magenta
 banner at startup; **if it is absent you are flying the GMO**, because the
