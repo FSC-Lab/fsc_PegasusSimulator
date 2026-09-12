@@ -1,0 +1,133 @@
+#!/bin/sh
+#
+# @name FSC Quad Tiltrotor (2 front tilt + 2 rear lift)
+#
+# @type VTOL Tiltrotor
+#
+# @maintainer Keilan Pieper
+#
+# ============================================================================
+#  FSC CAD airframe: 2 FRONT tilting rotors + 2 REAR static (lift) rotors.
+#  PX4 counterpart of vtol.quad_tiltrotor_config() / fsc_cad_vtol_config().
+#
+#      4 motors : motor_front_L, motor_front_R, motor_rear_L, motor_rear_R
+#      2 tilts  : tilt_left, tilt_right     (front rotors only)
+#      (no control surfaces)
+#
+#  Intended control path: direct_actuator offboard (uXRCE-DDS / ROS 2) — the
+#  ros2/px4_vtol_direct_actuator node streams ActuatorMotors + ActuatorServos;
+#  PX4 passes them to the outputs, which the Pegasus HIL bridge forwards as
+#  HIL_ACTUATOR_CONTROLS. See docs/direct_actuator_offboard.md.
+#
+#  OUTPUT MAPPING (must line up with default_quad_tiltrotor_channel_map() and the
+#  ROS2 node's MOTOR/SERVO order — VERIFY with PEGASUS_HIL_DEBUG=1):
+#    ActuatorMotors[0..3] -> Motor1..4 (101..104) -> FUNC1..4 -> controls[0..3]
+#        motor_front_L, motor_front_R, motor_rear_L, motor_rear_R
+#    ActuatorServos[0..1] -> Servo1..2 (201..202) -> FUNC5..6 -> controls[4..5]
+#        tilt_left, tilt_right
+# ============================================================================
+
+. ${R}etc/init.d/rc.vtol_defaults
+
+param set-default MAV_TYPE 21          # MAV_TYPE_VTOL_TILTROTOR
+param set-default VT_TYPE 1            # 1 = tiltrotor
+
+# ---------------------------------------------------------------------------
+#  Control allocation geometry (FRD: x-fwd, y-right, z-down), from the CAD hub
+#  positions (FLU -> FRD). BYPASSED by direct_actuator; here for a coherent
+#  airframe / possible normal-mode use later.
+# ---------------------------------------------------------------------------
+param set-default CA_AIRFRAME 3        # Tiltrotor VTOL
+param set-default CA_ROTOR_COUNT 4
+
+# Rotor 0 = FRONT-LEFT  (FLU 0.459, 0.285 -> FRD PX 0.459, PY -0.285), tilts via servo 1
+param set-default CA_ROTOR0_PX 0.285    # CG-relative (CG at rotor centroid x=0.174)
+param set-default CA_ROTOR0_PZ 0.025
+param set-default CA_ROTOR0_PY -0.285
+param set-default CA_ROTOR0_KM 0.12
+param set-default CA_ROTOR0_TILT 1
+# Rotor 1 = FRONT-RIGHT (FLU 0.459,-0.284 -> FRD PX 0.459, PY 0.284), tilts via servo 2
+param set-default CA_ROTOR1_PX 0.285
+param set-default CA_ROTOR1_PZ 0.023
+param set-default CA_ROTOR1_PY 0.284
+param set-default CA_ROTOR1_KM -0.12
+param set-default CA_ROTOR1_TILT 2
+# Rotor 2 = REAR-LEFT   (FLU -0.112, 0.284 -> FRD PX -0.112, PY -0.284), fixed lift
+param set-default CA_ROTOR2_PX -0.286
+param set-default CA_ROTOR2_PZ -0.024
+param set-default CA_ROTOR2_PY -0.284
+param set-default CA_ROTOR2_KM -0.12
+# Rotor 3 = REAR-RIGHT  (FLU -0.112,-0.284 -> FRD PX -0.112, PY 0.284), fixed lift
+param set-default CA_ROTOR3_PX -0.286
+param set-default CA_ROTOR3_PZ -0.026
+param set-default CA_ROTOR3_PY 0.284
+param set-default CA_ROTOR3_KM 0.12
+
+param set-default CA_SV_TL_COUNT 2     # two INDEPENDENT tilt servos (front rotors)
+
+# Control surfaces: aileron (roll), elevator (pitch), rudder (yaw).
+param set-default CA_SV_CS_COUNT 3
+param set-default CA_SV_CS0_TYPE 1     # aileron  (roll)
+param set-default CA_SV_CS0_TRQ_R 0.5
+param set-default CA_SV_CS1_TYPE 3     # elevator (pitch)
+param set-default CA_SV_CS1_TRQ_P 1.0
+param set-default CA_SV_CS2_TYPE 4     # rudder   (yaw)
+param set-default CA_SV_CS2_TRQ_Y 1.0
+
+# ---------------------------------------------------------------------------
+#  OUTPUT ASSIGNMENT — the mapping that MUST match the Pegasus channel_map.
+#  Slot n (PWM_MAIN_FUNCn) -> HIL controls[n-1]. 101..=Motors, 201..=Servos.
+# ---------------------------------------------------------------------------
+param set-default PWM_MAIN_FUNC1 101   # controls[0] motor_front_L (Motor 1)
+param set-default PWM_MAIN_FUNC2 102   # controls[1] motor_front_R (Motor 2)
+param set-default PWM_MAIN_FUNC3 103   # controls[2] motor_rear_L  (Motor 3)
+param set-default PWM_MAIN_FUNC4 104   # controls[3] motor_rear_R  (Motor 4)
+param set-default PWM_MAIN_FUNC5 201   # controls[4] tilt_left     (Servo 1)
+param set-default PWM_MAIN_FUNC6 202   # controls[5] tilt_right    (Servo 2)
+param set-default PWM_MAIN_FUNC7 203   # controls[6] aileron       (Servo 3)
+param set-default PWM_MAIN_FUNC8 204   # controls[7] elevator      (Servo 4)
+param set-default PWM_MAIN_FUNC9 205   # controls[8] rudder        (Servo 5)
+
+# ---------------------------------------------------------------------------
+#  direct_actuator / ground-test convenience (see docs/direct_actuator_offboard.md).
+# ---------------------------------------------------------------------------
+param set-default UXRCE_DDS_SYNCT 0    # don't re-stamp incoming DDS timestamps
+param set-default COM_DISARM_LAND 0    # don't auto-disarm ~2 s after "landed"
+param set-default COM_DISARM_PRFLT 0   # don't auto-disarm ~10 s after arm w/o takeoff
+param set-default FD_ACT_EN 0          # ESCs report 0 A in SITL -> disable act failure det.
+
+# ---------------------------------------------------------------------------
+#  Indoor / HIL EKF: fuse the estimator's external-vision (mocap) odometry for
+#  POSITION + YAW so PX4 has a trusted heading. Arming + OFFBOARD require
+#  heading_good_for_control, which needs a yaw source; the mocap yaw provides it.
+#  Disable GNSS/mag/baro so they do not fight the vision solution.
+#  Feed: fsc_drone_state_estimator -> /uav_0/fmu/in/vehicle_visual_odometry (120 Hz).
+# ---------------------------------------------------------------------------
+param set-default EKF2_EV_CTRL 8       # vision YAW only (bit3); GPS/baro do position+height
+param set-default EKF2_HGT_REF 1        # height reference = GPS (stable in HIL)
+param set-default EKF2_GPS_CTRL 7       # GNSS aiding ON (lat/lon + alt + vel)
+param set-default EKF2_BARO_CTRL 1      # baro height ON
+param set-default EKF2_MAG_TYPE 5      # magnetometer = None (yaw comes from vision)
+param set-default SYS_HAS_NUM_ASPD 1   # 1 airspeed sensor: synthesized from sim/mocap velocity (vtol_mavlink_backend). Set 0 to disable the check instead.
+
+# ---------------------------------------------------------------------------
+#  Baseline gains (irrelevant to direct_actuator; keep a valid VTOL).
+# ---------------------------------------------------------------------------
+param set-default MC_AIRMODE 1
+param set-default VT_FWD_THRUST_EN 4
+param set-default VT_TILT_TRANS 0.6
+param set-default MIS_TAKEOFF_ALT 10
+
+# --- Yaw authority: differential-tilt yaw + matched rotor KM + stronger yaw PID ---
+param set-default CA_SV_TL0_CT 1        # tilt servo 0 -> YAW control
+param set-default CA_SV_TL1_CT 1        # tilt servo 1 -> YAW control
+param set-default CA_SV_TL0_TD 0        # tilts towards front (+X)
+param set-default CA_SV_TL1_TD 0
+param set-default CA_SV_TL0_MINA 0      # hover=0deg (upright) ... 
+param set-default CA_SV_TL0_MAXA 90     # ... to 90deg (forward)
+param set-default CA_SV_TL1_MINA 0
+param set-default CA_SV_TL1_MAXA 90
+param set-default MC_YAWRATE_P 0.25     # moderate (was 0.35)
+param set-default MC_YAWRATE_K 1.0      # default (was 1.5)
+param set-default MC_YAW_P 2.8          # gentle yaw angle P (was 4.0)
+param set-default MC_YAWRATE_I 0.2       # yaw integral -> kills steady-state yaw error

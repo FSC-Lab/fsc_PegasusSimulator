@@ -40,6 +40,10 @@ PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 # Validate this specific entrypoint exists
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Pegasus script not found: $PEGASUS_SCRIPT" >&2; exit 1; }
 
+ISAAC_ROOT="$(cd -- "$(dirname -- "$ISAAC_PY")" && pwd)"
+ISAAC_BUNDLED_PY="${ISAAC_ROOT}/kit/python/bin/python3"
+[[ -x "$ISAAC_BUNDLED_PY" ]] || { echo "ERROR: Isaac bundled Python not found/executable: $ISAAC_BUNDLED_PY" >&2; exit 1; }
+
 # ================================
 # Hard-coded PX4 / tmux config
 # ================================
@@ -67,7 +71,8 @@ tmux split-window -h -t "$SESSION":0 "
 echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
 echo 'Launching Isaac Sim...'
-\"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL
+PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 exec bash
 "

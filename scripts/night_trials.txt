@@ -1,0 +1,11 @@
+# REPEATABILITY TEST of the AoA-constraint + surface-slew build.
+# The overnight campaign showed the mission WORKS but only about half the time: identical
+# defaults gave WINGBORNE (roll 0) on one attempt and a 14.8 m/s ground impact on another.
+# So the question is not "does it fly" but "how often", and the only way to answer it is to
+# fly the SAME configuration repeatedly. One success proves nothing here.
+rep1
+rep2
+rep3
+rep4
+rep5
+rep6

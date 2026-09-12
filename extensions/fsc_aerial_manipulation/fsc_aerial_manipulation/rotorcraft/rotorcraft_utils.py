@@ -11,8 +11,12 @@ from scipy.spatial.transform import Rotation
 
 from pegasus.simulator.params import ROBOTS
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
-from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorConfig
+
+# NOTE: ROS2Backend (rclpy) is imported lazily inside spawn_rotorcraft_with_mavlink
+# below, NOT at module top-level. Otherwise simply importing this package (e.g. to
+# get `spawn_vtol`, which needs no ROS2) would pull in rclpy and crash in any
+# environment where ROS2 isn't available / is the wrong Python ABI.
 
 
 def spawn_rotorcraft_with_mavlink(
@@ -50,6 +54,9 @@ def spawn_rotorcraft_with_mavlink(
     })
 
     # ----- ROS 2 backend -----
+    # Lazy import: only required for this PX4+ROS2 spawn path (see module note).
+    from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
+
     ros2_backend = ROS2Backend(
         vehicle_id=vehicle_id,
         config={

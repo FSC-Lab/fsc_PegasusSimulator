@@ -44,3 +44,7 @@ log/
 
 # scripts
 ./config/**
+# CasADi JIT build droppings -- regenerable, ~614 MB, and they land wherever the
+# solver happened to be built from (repo root AND the controller package dir).
+jit_tmp*.c
+tmp_casadi_compiler_shell*.o

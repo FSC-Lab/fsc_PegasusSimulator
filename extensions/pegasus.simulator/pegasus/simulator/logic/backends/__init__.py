@@ -5,6 +5,12 @@
 
 from .backend import Backend, BackendConfig
 from .px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
+from .vtol_mavlink_backend import (
+    PX4VTOLMavlinkBackend,
+    PX4VTOLMavlinkBackendConfig,
+    default_tiltrotor_channel_map,
+    default_dual_tiltrotor_channel_map,
+)
 from .ardupilot_mavlink_backend import ArduPilotMavlinkBackend, ArduPilotMavlinkBackendConfig
 
 # Check if the ROS2 package is installed

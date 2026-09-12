@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""One TSV verdict line per trial, computed from the ROSBAG.
+
+Deliberately reads the BAG rather than the flight driver's own summary. This project has been
+flattered by its own harness four separate times -- a dive, a post-dropout glide, a frozen
+simulator and the zero-crossings of a phugoid all produced headline numbers that were true of
+the samples and false of the flight. The bag carries who was actually flying.
+
+Usage: night_metrics.py <bagdir|-> <trial> <params>
+"""
+import math
+import sys
+import glob
+import sqlite3
+
+TRIAL = sys.argv[2] if len(sys.argv) > 2 else "?"
+PARAMS = sys.argv[3] if len(sys.argv) > 3 else ""
+LAND_ERR = sys.argv[4] if len(sys.argv) > 4 else ""   # metres from the commanded point
+
+
+def out(verdict, **kw):
+    cols = [TRIAL, PARAMS, verdict, kw.get("wb_s", ""),
+            kw.get("peakV", ""), kw.get("maxtilt", ""), kw.get("maxroll", ""),
+            kw.get("maxyaw", ""), kw.get("zmin", ""), kw.get("zmax", ""),
+            kw.get("fails", ""), LAND_ERR, kw.get("bag", "-")]
+    print("\t".join(str(c) for c in cols))
+    sys.exit(0)
+
+
+bagdir = sys.argv[1] if len(sys.argv) > 1 else "-"
+if bagdir == "-":
+    out("NO_BAG")
+
+try:
+    from rosidl_runtime_py.utilities import get_message
+    from rclpy.serialization import deserialize_message
+    db = sorted(glob.glob(bagdir.rstrip("/") + "/*.db3"))[0]
+    con = sqlite3.connect(db)
+    tp = {r[0]: (r[1], r[2]) for r in con.execute("select id,name,type from topics")}
+    ids = [k for k, v in tp.items() if v[0] == "/rosout"]
+    if not ids:
+        out("NO_ROSOUT", bag=bagdir)
+    T = get_message(tp[ids[0]][1])
+    msgs = [deserialize_message(d, T) for (d,) in
+            con.execute(f"select data from messages where topic_id={ids[0]} order by timestamp")]
+except Exception as e:
+    out("BAG_UNREADABLE:%s" % type(e).__name__, bag=bagdir)
+
+# ★ SCORE ONLY THE ENGAGED FLIGHT.
+# The bag starts before takeoff, so the whole-bag minimum altitude is the vehicle sitting on the
+# ground at z=0.1 -- which scored a 74 s TRUE FIXED-WING cruise as CRASHED. Everything before
+# "FULL-NMPC ENGAGED" is the safe controller climbing, and everything the NMPC did afterwards is
+# what the trial is actually testing.
+eng = next((i for i, m in enumerate(msgs) if "FULL-NMPC ENGAGED" in m.msg), None)
+if eng is None:
+    out("NEVER_ENGAGED", bag=bagdir)
+full = [m.msg for m in msgs[eng:] if m.msg.startswith("FULL ")]
+if not full:
+    out("NEVER_ENGAGED", bag=bagdir)
+
+
+def g(s, key, sep="="):
+    """Pull a numeric field out of a status line; tilt/pitch are 'applied/reference'."""
+    i = s.find(key + sep)
+    if i < 0:
+        return None
+    tok = s[i + len(key) + 1:].split()[0].split("/")[0].rstrip("|")
+    try:
+        return float(tok)
+    except ValueError:
+        return None
+
+
+V = [g(s, "V") for s in full]
+tilt = [g(s, "tilt") for s in full]
+roll = [g(s, "roll") for s in full]
+yaw = [g(s, "yaw") for s in full]
+z = [g(s, "z") for s in full]
+ok = [g(s, "ok") for s in full]
+f = lambda a: [x for x in a if x is not None]
+if not f(V):
+    out("NO_SAMPLES", bag=bagdir)
+
+peakV, maxtilt = max(f(V)), max(f(tilt) or [0])
+maxroll = max(abs(x) for x in f(roll) or [0])
+maxyaw = max(abs(x) for x in f(yaw) or [0])
+zmin, zmax = min(f(z) or [0]), max(f(z) or [0])
+fails = sum(1 for x in f(ok) if x == 0)
+
+# Verdict, most severe first. "Reached 90 deg" alone is not success -- bag full_tr15 reported a
+# textbook wing-borne headline while gliding on the hover fallback, so a departure or a ground
+# impact overrides everything.
+# ★ DISTINGUISH A CRASH FROM A LANDING BY *HOW* IT ARRIVED.
+# Altitude alone cannot: the mission now ENDS on the ground on purpose, so "was up, then down"
+# describes both a successful landing and an impact. bt_flare25 arrived at z=0.1 doing 10.6 m/s
+# with AoA +48 and tumbled to roll 139 -- and near enough to the target that a naive check called
+# it a 0.00 m landing. What separates them is the state at touchdown: slow and level, or not.
+# ORDER MATTERS. A departure is unambiguous, so decide it BEFORE any altitude reasoning:
+# bt_flare25 rolled to 139 deg and tumbled on impact, yet at the single lowest-altitude sample it
+# happened to be slow and near level, so an altitude-first rule scored it LANDED. Whether the
+# aircraft ever lost control is not a question the touchdown sample can answer.
+if maxroll > 60 or maxyaw > 90:
+    v = "DEPARTED" if zmin >= 2.0 else "CRASHED"
+elif zmax > 10.0 and zmin < 2.0:
+    # came down under control: slow and level at the bottom = a landing, not an impact
+    i_low = min(range(len(full)), key=lambda i: (z[i] if z[i] is not None else 9e9))
+    v = "LANDED" if (V[i_low] or 0) < 5.0 else "CRASHED"
+elif maxtilt >= 88 and peakV >= 14.13:      # stall speed
+    v = "WINGBORNE"
+elif maxtilt >= 60:
+    v = "PARTIAL_TILT"
+else:
+    v = "NO_TRANSITION"
+
+# ★ WING-BORNE SECONDS: the longest UNBROKEN run at 90 deg tilt above stall speed.
+# A trial can cross the corridor beautifully and still end in a crash during the back-transition
+# (baseline did exactly that: 74 s of wing-borne cruise, then on its side at z=0.1). A single
+# CRASHED verdict cannot distinguish that from never getting airborne, so rank on this.
+run = best = 0
+for i in range(len(full)):
+    if (tilt[i] or 0) >= 88 and (V[i] or 0) >= 14.13:
+        run += 1; best = max(best, run)
+    else:
+        run = 0
+rate = 2.0    # the node's status lines during cruise
+wb_s = round(best / rate, 1)
+
+out(v, wb_s=wb_s, peakV=round(peakV, 1), maxtilt=round(maxtilt), maxroll=round(maxroll),
+    maxyaw=round(maxyaw), zmin=round(zmin, 1), zmax=round(zmax, 1),
+    fails=f"{fails}/{len(full)}", bag=bagdir)

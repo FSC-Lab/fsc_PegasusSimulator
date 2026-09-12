@@ -1,0 +1,55 @@
+# fsc_autopilot_ros2 parameters for the CAD VTOL flown as a MULTICOPTER.
+#
+# Derived from fsc_autopilot_ros2/config/params_single_vehicle_baseline.yaml
+# (the F450 baseline). Only the vehicle description is changed; the controller
+# is the stock multicopter position+attitude+UDE stack. Because it is a pure
+# multicopter controller it NEVER commands a VTOL fixed-wing transition, so the
+# tiltrotor stays in multicopter mode with its front tilt servos held vertical
+# (0) — i.e. "non-tilting" by construction. See scripts/start_vtol_fsc_hil.sh.
+#
+# '/**' matches the node under ANY namespace AND any node name — the baseline
+# node's default name is `fsc_autopilot_ros2` (not `autopilot_sv_baseline_node`),
+# so keying to the node name would silently NOT apply (mass=1, no att ctrl / UDE).
+/**:
+  ros__parameters:
+    system_posctl_type: robust_controller
+    system_posctl_rate: 100.0
+    system_attctl_type: "apm"
+    system_attctl_rate: 250.0
+    system_ude_type: velocity_based
+
+    # --- vehicle (CAD tilt-quadplane flown as a quad) ---
+    vehicle_name: "fsc_cad_vtol"
+    vehicle_thrust_scaling: 0.04     # TUNE: hover ~0.5 normalized w/ 4x18N rotors @ 2.95kg (was 0.1036=saturated)
+    vehicle_idle_thrust: 0.225       # TUNE: normalized thrust at ~zero real thrust
+    vehicle_num_rotors: 4            # 4 lift rotors (2 front tilting held vertical + 2 rear)
+    vehicle_mass: 3.4                # [kg] measured hover throttle ~0.46 -> ~3.4kg
+
+    posctl_pid_form: "nested"
+    posctl_apply_pos_err_saturation: true
+    posctl_apply_vel_err_saturation: true
+    posctl_k_pos_x: 1.0
+    posctl_k_pos_y: 1.0
+    posctl_k_pos_z: 1.0
+    posctl_k_vel_x: 6.0
+    posctl_k_vel_y: 6.0
+    posctl_k_vel_z: 6.0
+
+    ude_gain: 2.0
+    ude_height_threshold: 0.2
+    ude_disturbance_lbx: -10.0
+    ude_disturbance_lby: -10.0
+    ude_disturbance_lbz: -10.0
+    ude_disturbance_ubx: 10.0
+    ude_disturbance_uby: 10.0
+    ude_disturbance_ubz: 10.0
+
+    attctl_rate_bf_ff_enabled: false
+    attctl_input_tc: 1.0
+    attctl_kp_angle_x: 4.0
+    attctl_kp_angle_y: 4.0
+    attctl_kp_angle_z: 6.0
+    attctl_kp_rate_z: 0.5
+    attctl_yawrate_max: 360.0
+    safety_min_thrust_setpoint: 0.0
+    safety_max_thrust_setpoint: 150.0

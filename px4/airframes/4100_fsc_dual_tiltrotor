@@ -1,0 +1,128 @@
+#!/bin/sh
+#
+# @name FSC Dual Independent Tiltrotor
+#
+# @type VTOL Tiltrotor
+#
+# @maintainer Keilan Pieper
+#
+# ============================================================================
+#  FSC dual INDEPENDENT-tiltrotor — PX4 SITL airframe for Isaac Sim / Pegasus HIL
+# ============================================================================
+#
+#  This airframe is the PX4 counterpart of the Isaac-side VTOL built by
+#  pegasus.simulator ... vtol.dual_tiltrotor_config():
+#
+#      2 motors          : motor_left, motor_right          (Motor 1, 2)
+#      2 tilt servos      : tilt_left,  tilt_right           (Servo 1, 2)  -- independent
+#      3 control surfaces : aileron, elevator, rudder        (Servo 3, 4, 5)
+#
+#  >>> INTENDED CONTROL PATH:  direct_actuator offboard (uXRCE-DDS / ROS 2) <<<
+#  The ros2/px4_vtol_direct_actuator node streams ActuatorMotors + ActuatorServos.
+#  PX4 passes them straight through to the outputs (the control allocator below is
+#  BYPASSED in direct_actuator mode), and the Pegasus HIL bridge forwards the
+#  result as HIL_ACTUATOR_CONTROLS.  See docs/direct_actuator_offboard.md.
+#
+#  ---------------------------------------------------------------------------
+#   OUTPUT MAPPING  (this is the part that must line up with the Pegasus
+#   channel_map — default_dual_tiltrotor_channel_map() — and the ROS 2 node)
+#  ---------------------------------------------------------------------------
+#   ROS2 msg / index        PX4 function (PWM_MAIN_FUNCn)   HIL controls[]  channel
+#   ActuatorMotors[0]       Motor1 (101)  -> FUNC1          controls[0]     motor_left
+#   ActuatorMotors[1]       Motor2 (102)  -> FUNC2          controls[1]     motor_right
+#   ActuatorServos[0]       Servo1 (201)  -> FUNC3          controls[2]     tilt_left
+#   ActuatorServos[1]       Servo2 (202)  -> FUNC4          controls[3]     tilt_right
+#   ActuatorServos[2]       Servo3 (203)  -> FUNC5          controls[4]     aileron
+#   ActuatorServos[3]       Servo4 (204)  -> FUNC6          controls[5]     elevator
+#   ActuatorServos[4]       Servo5 (205)  -> FUNC7          controls[6]     rudder
+#
+#   HIL controls[i] index == the physical output slot (PWM_MAIN_FUNC(i+1)).
+#   VERIFY the whole chain at first bring-up with PEGASUS_HIL_DEBUG=1.
+# ============================================================================
+
+. ${R}etc/init.d/rc.vtol_defaults
+
+param set-default MAV_TYPE 21          # MAV_TYPE_VTOL_TILTROTOR
+param set-default VT_TYPE 1            # 1 = tiltrotor
+
+# ---------------------------------------------------------------------------
+#  Control allocation geometry (FRD: x-fwd, y-right, z-down).
+#  NOTE: direct_actuator BYPASSES the allocator, so these values do not affect
+#  the HIL test — they exist so the airframe boots as a coherent VTOL and so
+#  PX4's normal modes *could* be brought up later.  A 2-rotor tiltrotor is
+#  under-actuated for standard hover allocation; expect to relax preflight /
+#  tune this if you ever fly it in stabilized modes.
+# ---------------------------------------------------------------------------
+param set-default CA_AIRFRAME 3        # 3 = Tiltrotor VTOL
+
+param set-default CA_ROTOR_COUNT 2
+# Rotor 0 = LEFT  (Isaac body FLU y=+0.50  ->  FRD y=-0.50), tilts via servo 1
+param set-default CA_ROTOR0_PX 0.10
+param set-default CA_ROTOR0_PY -0.50
+param set-default CA_ROTOR0_KM 0.05    # +KM = CCW
+param set-default CA_ROTOR0_TILT 1
+# Rotor 1 = RIGHT (Isaac body FLU y=-0.50  ->  FRD y=+0.50), tilts via servo 2
+param set-default CA_ROTOR1_PX 0.10
+param set-default CA_ROTOR1_PY 0.50
+param set-default CA_ROTOR1_KM -0.05   # -KM = CW
+param set-default CA_ROTOR1_TILT 2
+
+# Two INDEPENDENT tilt servos (one per rotor) -> Servo 1, Servo 2.
+param set-default CA_SV_TL_COUNT 2
+
+# Three control surfaces -> Servo 3, 4, 5.
+param set-default CA_SV_CS_COUNT 3
+param set-default CA_SV_CS0_TYPE 1     # aileron  (roll)
+param set-default CA_SV_CS0_TRQ_R 0.5
+param set-default CA_SV_CS1_TYPE 3     # elevator (pitch)
+param set-default CA_SV_CS1_TRQ_P 1.0
+param set-default CA_SV_CS2_TYPE 4     # rudder   (yaw)
+param set-default CA_SV_CS2_TRQ_Y 1.0
+
+# ---------------------------------------------------------------------------
+#  OUTPUT ASSIGNMENT  (the mapping that MUST match the Pegasus channel_map).
+#  Physical output slot n (PWM_MAIN_FUNCn) -> HIL_ACTUATOR_CONTROLS.controls[n-1].
+#  101..112 = Motor 1..12 ; 201..208 = Servo 1..8.
+# ---------------------------------------------------------------------------
+param set-default PWM_MAIN_FUNC1 101   # controls[0] motor_left   (Motor 1)
+param set-default PWM_MAIN_FUNC2 102   # controls[1] motor_right  (Motor 2)
+param set-default PWM_MAIN_FUNC3 201   # controls[2] tilt_left    (Servo 1)
+param set-default PWM_MAIN_FUNC4 202   # controls[3] tilt_right   (Servo 2)
+param set-default PWM_MAIN_FUNC5 203   # controls[4] aileron      (Servo 3)
+param set-default PWM_MAIN_FUNC6 204   # controls[5] elevator     (Servo 4)
+param set-default PWM_MAIN_FUNC7 205   # controls[6] rudder       (Servo 5)
+
+# ---------------------------------------------------------------------------
+#  direct_actuator / ground-test convenience (see docs/direct_actuator_offboard.md).
+#  These stop PX4 auto-disarming a vehicle that never "takes off", and keep the
+#  offboard recency check from rejecting DDS setpoints under HIL sim-time.
+# ---------------------------------------------------------------------------
+param set-default UXRCE_DDS_SYNCT 0    # don't re-stamp incoming DDS timestamps
+param set-default COM_DISARM_LAND 0    # don't auto-disarm ~2 s after "landed"
+param set-default COM_DISARM_PRFLT 0   # don't auto-disarm ~10 s after arm w/o takeoff
+
+# Motor failure detection reports 0 A for all ESCs in SITL -> disable (as stock VTOLs do).
+param set-default FD_ACT_EN 0
+
+# ---------------------------------------------------------------------------
+#  Baseline MC / FW / transition gains (irrelevant to direct_actuator, but keep
+#  the airframe a valid VTOL; copied from the stock tiltrotor defaults).
+# ---------------------------------------------------------------------------
+param set-default MC_AIRMODE 1
+param set-default MC_YAWRATE_P 0.3
+param set-default MC_YAWRATE_I 0.3
+
+param set-default FW_PR_FF 0.2
+param set-default FW_PR_P 0.9
+param set-default FW_RR_FF 0.1
+param set-default FW_RR_P 0.3
+param set-default FW_THR_TRIM 0.38
+param set-default FW_THR_MAX 0.6
+param set-default FW_THR_MIN 0.05
+param set-default FW_P_LIM_MIN -15
+
+param set-default VT_FWD_THRUST_EN 4
+param set-default VT_FWD_THRUST_SC 0.6
+param set-default VT_TILT_TRANS 0.6
+
+param set-default MIS_TAKEOFF_ALT 10

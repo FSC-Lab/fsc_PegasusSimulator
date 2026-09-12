@@ -5,3 +5,4 @@
 
 from .drag import Drag
 from .linear_drag import LinearDrag
+from .vtol_aerodynamics import VTOLAerodynamics, VTOLAerodynamicsConfig, VTOLAeroState

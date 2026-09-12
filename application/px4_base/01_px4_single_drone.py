@@ -9,6 +9,8 @@
 
 # Imports to start Isaac Sim from this script
 import carb
+import os
+import time
 from isaacsim import SimulationApp
 
 # Start Isaac Sim's simulation environment
@@ -22,6 +24,7 @@ simulation_app = SimulationApp({"headless": False})
 import omni.timeline
 from omni.isaac.core.world import World
 import omni.usd
+from isaacsim.core.utils.prims import is_prim_path_valid
 
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
@@ -65,6 +68,7 @@ class FscDroneSim:
 
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
+        simulation_app.update()
 
         # Create the vehicle
         self.drone_path = spawn_rotorcraft_with_mavlink(
@@ -74,9 +78,16 @@ class FscDroneSim:
             spawn_pos=(0.0, 0.0, 0.07),
             spawn_euler=(0.0, 0.0, 0.0),
         )
+        simulation_app.update()
+
+        if is_prim_path_valid(self.drone_path):
+            carb.log_warn(f"Spawned drone at {self.drone_path}")
+        else:
+            carb.log_error(f"Drone prim was not created at {self.drone_path}")
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
         self.world.reset()
+        self.pg.set_viewport_camera([4.0, -4.0, 2.5], [0.0, 0.0, 0.2])
 
         # Auxiliar variable for the timeline callback example
         self.stop_sim = False
@@ -88,12 +99,28 @@ class FscDroneSim:
 
         # Start the simulation
         self.timeline.play()
+        carb.log_warn(
+            "FscDroneSim entering render loop "
+            f"(DISPLAY={os.environ.get('DISPLAY')}, "
+            f"initial is_running={simulation_app.is_running()})"
+        )
 
         # The "infinite" loop
-        while simulation_app.is_running() and not self.stop_sim:
+        loop_count = 0
+        while not self.stop_sim:
+            if not simulation_app.is_running():
+                carb.log_warn(
+                    "SimulationApp reports not running; keeping process alive for debugging. "
+                    "Close this terminal or press Ctrl+C to stop."
+                )
+                time.sleep(1.0)
+                continue
 
             # Update the UI of the app and perform the physics step
             self.world.step(render=True)
+            loop_count += 1
+            if loop_count == 1:
+                carb.log_warn("FscDroneSim rendered first frame")
         
         # Cleanup and stop
         carb.log_warn("FscDroneSim Simulation App is closing.")

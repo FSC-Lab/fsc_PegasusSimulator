@@ -5,3 +5,11 @@
 
 from .vehicle import Vehicle
 from .multirotor import Multirotor, MultirotorConfig
+from .vtol import (
+    VTOL,
+    VTOLConfig,
+    RotorConfig,
+    SurfaceConfig,
+    dual_tiltrotor_config,
+    quad_tiltrotor_config,
+)
