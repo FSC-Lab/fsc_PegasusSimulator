@@ -55,6 +55,19 @@ case "$VS" in
        [ "${FORCE_UNFIT:-0}" = "1" ] || exit 1 ;;
 esac
 
+# --- 0.7 ONE DRIVER PER FLIGHT ------------------------------------------------
+# The ground station re-publishes its last-selected controller every second, forever
+# (trajectory_player.py: "so a node that starts later still picks it up"). A selection
+# made there while this script is climbing on `geometric` becomes a 1 Hz fight over
+# active_controller -- the cascade re-engaged every second at 20 m and the climb
+# stalled (bag slosh_20260912_181628). The scripted flight therefore closes the GS
+# window; the next launch brings it back. GS_OFF=0 keeps it.
+if [ "${GS_OFF:-1}" = "1" ] && tmux list-windows -t "$SESSION" 2>/dev/null | grep -q '9-groundstn'; then
+  tmux kill-window -t "$SESSION:9-groundstn" 2>/dev/null
+  for pid in $(pgrep -f single_drone_ground_control 2>/dev/null); do kill -9 "$pid" 2>/dev/null; done
+  say "ground station closed for the scripted flight (GS_OFF=0 keeps it)"
+fi
+
 # --- 1. mocap, then the EKF -------------------------------------------------
 say "waiting for mocap"
 for _ in $(seq 1 20); do
@@ -88,7 +101,30 @@ say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition +
 timeout 900 "$NODE_PY" "$ROOT/scripts/fly_transition.py" \
     --alt "$ALT" --dist "$DIST" --controller "$CTRL" --climb-time "$CLIMB_T" \
     --cruise-time "$CRUISE_T" --back-transition --land --land-x "$DIST" --land-y 0 \
-    > "$OUT" 2>&1
+    > "$OUT" 2>&1 &
+FPID=$!
+# ★ SUPERVISE. The stack has died mid-flight twice today and the driver flew the last
+# mocap sample for minutes each time -- the freeze detector in fly_transition only
+# runs in cruise. Here: every 10 s, is PX4 up, is Isaac up, and has the mocap sample
+# changed? Three identical reads (30 s) or a dead process ends the flight with exit 2,
+# which run_slosh_flight.sh treats as "tear down and go again".
+STACK_DEAD=0; SAME=0; PREV=""
+while kill -0 "$FPID" 2>/dev/null; do
+  sleep 10
+  if ! pgrep -x px4 >/dev/null 2>&1 || ! pgrep -f "03_vtol_px4_hil" >/dev/null 2>&1; then
+    say "!! PX4 or Isaac is GONE mid-flight"; STACK_DEAD=1; break
+  fi
+  CUR=$(timeout 8 ros2 topic echo /uav_0/mocap --once 2>/dev/null | grep -A3 "position:" | tr -d ' \n')
+  if [ -n "$CUR" ] && [ "$CUR" = "$PREV" ]; then SAME=$((SAME+1)); else SAME=0; fi
+  PREV="$CUR"
+  if [ "$SAME" -ge 3 ]; then say "!! SIMULATOR FROZEN (mocap unchanged for 30 s)"; STACK_DEAD=1; break; fi
+done
+if [ "$STACK_DEAD" = "1" ]; then
+  kill -INT "$FPID" 2>/dev/null; sleep 2; kill -9 "$FPID" 2>/dev/null
+  say "flight INVALID -- the stack died or froze. Exit 2 (re-run)."
+  exit 2
+fi
+wait "$FPID"
 say "flight driver exited; summary:"
 tail -20 "$OUT"
 
