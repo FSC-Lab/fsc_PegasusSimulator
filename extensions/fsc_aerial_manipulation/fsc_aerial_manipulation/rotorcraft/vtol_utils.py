@@ -7,10 +7,13 @@ Helpers for spawning VTOL vehicles.
 """
 
 import os
+from dataclasses import fields
 
 from scipy.spatial.transform import Rotation
 
 from pegasus.simulator.logic.vehicles.vtol import VTOL, VTOLConfig
+from pegasus.simulator.logic.vehicles.vtol_slosh import VTOLSlosh, VTOLSloshConfig
+from pegasus.simulator.logic.dynamics.slosh import TankConfig
 
 
 # Default location of the converted CAD part USDs (see application/vtol/
@@ -42,6 +45,35 @@ def fsc_cad_vtol_config(usd_dir: str | None = None):
     )
 
 
+def fsc_cad_vtol_slosh_config(usd_dir: str | None = None, tank: TankConfig | None = None):
+    """The SAME FSC airframe, as a `VTOLSloshConfig` so it can carry a tank.
+
+    Built by copying `fsc_cad_vtol_config()` FIELD BY FIELD rather than by
+    repeating its numbers: the two airframes are one airframe, and a geometry
+    change made in one place must not need a second edit here.  `fields()`
+    carries any field added to `VTOLConfig` in future along with it.
+
+    `tank=None` (the default) gives a config describing exactly the baseline
+    aircraft -- useful for proving the copy changed nothing.  Phase 1 of the
+    tank plan REFUSES to construct a vehicle with a tank set, because the slosh
+    physics is not implemented yet.
+    """
+    base = fsc_cad_vtol_config(usd_dir)
+    return VTOLSloshConfig(
+        **{f.name: getattr(base, f.name) for f in fields(base)},
+        tank=tank,
+    )
+
+
+def _vehicle_class_for(config) -> type:
+    """Which vehicle class a config asks for.
+
+    ONE selector: the config type decides, so a caller cannot pick a slosh
+    config and a baseline class (or the reverse) and get a silently wrong
+    aircraft.  `vehicle_cls=` on the spawners overrides it explicitly."""
+    return VTOLSlosh if isinstance(config, VTOLSloshConfig) else VTOL
+
+
 def _required_channels(config: VTOLConfig) -> set:
     """The set of command channel names an airframe config actually consumes."""
     channels = set()
@@ -61,6 +93,7 @@ def spawn_vtol(
     spawn_pos=(0.0, 0.0, 0.08),
     spawn_quat=(0.0, 0.0, 0.0, 1.0),
     config=None,
+    vehicle_cls=None,
 ):
     """Spawn a VTOL vehicle and return its stage path.
 
@@ -69,7 +102,7 @@ def spawn_vtol(
     if config is None:
         config = VTOLConfig()
 
-    vehicle = VTOL(
+    vehicle = (vehicle_cls or _vehicle_class_for(config))(
         vehicle_id=vehicle_id,
         init_pos=spawn_pos,
         init_orientation=spawn_quat,
@@ -91,6 +124,7 @@ def spawn_vtol_with_mavlink(
     config=None,
     publish_state_ros2=False,
     ros2_namespace="uav_",
+    vehicle_cls=None,
 ):
     """Spawn a VTOL wired to PX4 over the MAVLink HIL link (no PX4 autolaunch).
 
@@ -186,7 +220,8 @@ def spawn_vtol_with_mavlink(
 
     config.backends = backends
 
-    vehicle = VTOL(
+    # Baseline config -> VTOL, slosh config -> VTOLSlosh (see _vehicle_class_for).
+    vehicle = (vehicle_cls or _vehicle_class_for(config))(
         vehicle_id=vehicle_id,
         init_pos=spawn_pos,
         init_orientation=quat_xyzw,

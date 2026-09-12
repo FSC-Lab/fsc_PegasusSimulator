@@ -36,7 +36,11 @@ from isaacsim.core.utils.prims import is_prim_path_valid
 from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
 from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
 
-from fsc_aerial_manipulation.rotorcraft import spawn_vtol_with_mavlink, fsc_cad_vtol_config
+from fsc_aerial_manipulation.rotorcraft import (
+    spawn_vtol_with_mavlink,
+    fsc_cad_vtol_config,
+    fsc_cad_vtol_slosh_config,
+)
 from fsc_aerial_manipulation.utils import add_dome_lighting
 
 # PX4 SITL airframe for the CAD quad (2 front tilting + 2 rear static rotors).
@@ -92,13 +96,24 @@ class VTOLPx4HilApp:
         if publish_state:
             carb.log_warn("VTOL_ROS2_STATE set -> publishing /uav_0/state/* for mocap")
 
+        # VTOL_SLOSH=1 flies the SAME airframe on the free-surface-tank model
+        # (VTOLSlosh) instead of the baseline VTOL. In phase 1 of the tank plan
+        # the tank is None, so the two are identical step for step -- which is
+        # the point: fly the mission on the copy and compare it with the
+        # `pre-slosh` baseline before any tank physics exists to blame.
+        use_slosh = os.environ.get("VTOL_SLOSH", "0") not in ("0", "", "false", "False")
+        vtol_config = fsc_cad_vtol_slosh_config() if use_slosh else fsc_cad_vtol_config()
+        if use_slosh:
+            carb.log_warn("VTOL_SLOSH set -> VTOLSlosh model, tank=None "
+                          "(phase 1: behaviour identical to the baseline VTOL)")
+
         self.vtol_path = spawn_vtol_with_mavlink(
             px4_path=self.pg.px4_path,
             px4_vehicle_model=PX4_VTOL_AIRFRAME,
             vehicle_id=0,
             spawn_pos=(0.0, 0.0, 0.3),
             spawn_euler=(0.0, 0.0, 0.0),
-            config=fsc_cad_vtol_config(),        # CAD quad; channel_map auto-selected
+            config=vtol_config,                  # CAD quad; channel_map auto-selected
             publish_state_ros2=publish_state,
         )
         simulation_app.update()

@@ -1,3 +1,49 @@
+# ★★★ BRANCH `slosh` — FREE-SURFACE TANK, PHASE 1 DONE (2026-09-12)
+# Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
+# This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
+
+**THE BASELINE IS A TAG IN FOUR REPOSITORIES, NOT ONE.** `pre-slosh` is cut in
+fsc_PegasusSimulator (ea74406), fsc_autopilot_ros2-master (88127e2),
+fsc_autopilot_ros2_msgs-master (ebeded8) and ros2_ground_station_gui (971fba6);
+each tag message pins the other three. Checking out one of them alone does NOT
+restore the flying stack. Bags live in `~/flight_bags` (db3 only, no
+metadata.yaml -- read them directly, `ros2 bag` will not open them).
+
+**THE MODEL COPY IS A SUBCLASS, DELIBERATELY.** `logic/vehicles/vtol_slosh.py`
+(`VTOLSlosh` / `VTOLSloshConfig`) adds the tank to `vtol.py` and nothing else;
+the baseline plant keeps ONE definition. A fork would inherit every plant bug
+the day it is fixed in vtol.py and not here -- which is this project's most
+expensive recurring failure (the FLU/FRD frame, the body-link inertia, CQ at
+half value). Freeze a plant by checking out the tag, not by copying the file.
+
+**THE SLOSH MATHS IS ISAAC-FREE ON PURPOSE:** `logic/dynamics/slosh.py`
+(`TankConfig`, `slosh_parameters`). `vtol.py` cannot be imported outside Isaac,
+so every headless test of it so far RE-DERIVED the maths (see
+`test_actuator_models.py`) -- the same drift trap again. The slosh tests import
+the shipped module by file path and check the real code. Do not add
+`from __future__ import annotations` to it: with a by-path load, @dataclass then
+resolves annotations through an unregistered `sys.modules` entry and the import
+dies with a bare AttributeError.
+
+**A CONFIGURED TANK REFUSES TO CONSTRUCT** (phase 1 has no slosh physics). It
+raises at construction, not on the first physics step, so it can never be
+airborne when it is discovered. `tests/test_slosh_scaffold.py` (AST + the
+plan's numbers) and `tests/test_slosh_import.py` (real import, Isaac stubbed)
+both PASS; the scaffold test is MEANT to fail at phase 3 and says so.
+
+**SELECT IT WITH `VTOL_SLOSH=1`** on scene 03 -- same airframe, `tank=None`, so
+it is step-for-step the baseline. Fly the mission that way and compare against
+`pre-slosh` BEFORE any tank physics exists to blame. The spawners resolve the
+vehicle class from the CONFIG TYPE (`_vehicle_class_for`), one selector, so a
+slosh config cannot be flown on the baseline class or the reverse.
+
+**THE NUMBERS THAT DECIDE THE DESIGN** (recomputed by the test, not assumed):
+water is capped near **0.5 kg** by cruise margin (+1.0 kg puts stall at 16.05
+against a 16.0 m/s cruise -- one litre does not fly); the default 41 mm tank
+rings at **3.32 Hz, 2.34x the 1.42 Hz short period**; and it is **0.49% damped**
+-- 23 cycles to halve, below the elevator servo corner, i.e. inside the loop's
+reach. `TankConfig.baffled()` exists from day one for that reason.
+
 # PegasusSimulator — Developer Checklist
 
 ## Checklist for adding a new vehicle model

@@ -13,3 +13,7 @@ from .vtol import (
     dual_tiltrotor_config,
     quad_tiltrotor_config,
 )
+
+# The free-surface tank variant (tank plan).  A separate model, selected
+# explicitly -- importing it does not change the baseline VTOL in any way.
+from .vtol_slosh import VTOLSlosh, VTOLSloshConfig
