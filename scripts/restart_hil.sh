@@ -174,7 +174,12 @@ echo "    nmpc node tracebacks (want 0): $TB"
 # measures the true loop latency above ~150 ms, soften kR further rather than raising latency_s --
 # the ceiling is the attitude loop's, not the solver's.
 #
-# latency_s is 0.04 because it was MEASURED at 30 ms: cross-correlating the elevator command
+# latency_s is 0.049 = the MEASURED loop transport. The outer now ADDS its own solve time at
+# runtime, so the total compensation tracks 49 ms + whatever IPOPT just took (10-24 ms nominal).
+# It used to be 0.04, which was correct only by accident: predict6 quantised to whole outer
+# periods, so 0.04 snapped UP to 50 ms. With sub-period compensation 0.04 means 40 ms and
+# under-compensates. Do not put it back without also reverting predict6.
+# (historical note) the old value came from cross-correlating the elevator command
 # against the resulting pitch ACCELERATION over 20 s of steady HIL cruise (bag casc1) peaks
 # at lag 30 ms. It was 0.12, inherited from the 19-state node, which over-compensates 4x --
 # the outer then plans for a state the aircraft never reaches. Re-measure with
@@ -188,7 +193,7 @@ tmux send-keys -t "$SESSION:6h-cascade" \
  "source $ROOT/scripts/rosenv.sh; \"\$HOME/envs/isaac_env/bin/python3\" \
 ${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_node.py \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade -p active_at_start:=false \
--p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=20.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.04 \
+-p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=20.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 \
 -r /uav_0/fsc_autopilot_ros2/position_controller/reference:=/uav_0/fsc_autopilot_ros2/position_controller/reference_smc" Enter
 sleep 35
 TC=$(tmux capture-pane -p -S -40 -t "$SESSION:6h-cascade" 2>/dev/null | grep -ci traceback)

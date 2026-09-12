@@ -406,7 +406,7 @@ echo '[6h-cascade] CASCADE NMPC + geometric (STANDBY; activate: active_controlle
 $AVTOL_ENV\"$NODE_PY\" \"$CASC_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade -p active_at_start:=false \
     -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-20.0} \
-    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.04} \
+    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} \
     -r ${REF_TOPIC}:=${REF_TOPIC}_smc
 echo '[6h-cascade] exited.'; exec bash
 "
