@@ -37,6 +37,23 @@ it is step-for-step the baseline. Fly the mission that way and compare against
 vehicle class from the CONFIG TYPE (`_vehicle_class_for`), one selector, so a
 slosh config cannot be flown on the baseline class or the reverse.
 
+**OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
+delegates to `restart_hil.sh` (one real launcher) and adds what a bare
+`VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
+gates first, and then **VERIFIES that Isaac logged the model banner** -- the env
+var travels INLINE on a tmux send-keys line, a pane does NOT inherit the calling
+shell, so a missing forward would fly the BASELINE while the operator believes
+the tank is in. `--baseline` flies the baseline down the same path (the A/B is
+one flag), `--dry-run` checks everything that does not need a stack.
+Bags go to `~/flight_bags/slosh`, NOT `/tmp/bags` -- which is still the default
+everywhere else and is how the post-extraction verification bag was lost.
+The kill script wraps `kill_hil.sh` (the pattern list has ONE home) and adds two
+things: it **SIGINTs the recorder first** -- `kill_hil.sh` -9s it, and a
+SIGKILLed bag has no metadata.yaml, which is why every bag in `~/flight_bags` is
+db3-only -- and it **exits non-zero if anything survived**, since kill_hil.sh
+prints survivors and exits 0 either way. It refuses to run from inside tmux
+(`kill_hil.sh` ends in `tmux kill-server`, which would kill the checking shell).
+
 **THE NUMBERS THAT DECIDE THE DESIGN** (recomputed by the test, not assumed):
 water is capped near **0.5 kg** by cruise margin (+1.0 kg puts stall at 16.05
 against a 16.0 m/s cruise -- one litre does not fly); the default 41 mm tank

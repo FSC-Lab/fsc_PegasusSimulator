@@ -58,6 +58,12 @@ DISABLE_GEOFENCE="${DISABLE_GEOFENCE:-1}"  # 1 = turn off PX4 geofence (GF_*) so
 CTRL_METHOD="${CTRL_METHOD:-se3}"          # se3 (geometric PID+FF); loop uses SE(3) attitude
 PEGASUS_HIL_DEBUG="${PEGASUS_HIL_DEBUG:-1}"
 VTOL_ROS2_STATE=1
+# 1 = spawn the FREE-SURFACE TANK model (VTOLSlosh) instead of the baseline VTOL.
+# Default 0, so this launcher is byte-identical to before unless it is asked for.
+# Set it through scripts/start_slosh_hil.sh, which also VERIFIES that the model
+# actually came up -- a stack that silently flies the baseline while you believe
+# you are flying the tank is the failure this whole gate exists to prevent.
+VTOL_SLOSH="${VTOL_SLOSH:-0}"
 # The controller needs rclpy/px4_msgs -> the isaac_env venv python.
 NODE_PY="${NODE_PY:-$HOME/envs/isaac_env/bin/python3}"
 GS_DIR="${GS_DIR:-$ROS2_WS/src/ros2_ground_station_gui}"
@@ -215,7 +221,7 @@ echo '[2-isaac] waiting $D_ISAAC s...'; sleep $D_ISAAC
 unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL
 export ROS_DOMAIN_ID=\${ROS_DOMAIN_ID:-0} RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$BRIDGE_LIB\"
-PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG PEGASUS_PROP_DEBUG=\${PEGASUS_PROP_DEBUG:-} VTOL_ROS2_STATE=$VTOL_ROS2_STATE PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG PEGASUS_PROP_DEBUG=\${PEGASUS_PROP_DEBUG:-} VTOL_ROS2_STATE=$VTOL_ROS2_STATE VTOL_SLOSH=$VTOL_SLOSH PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo '[2-isaac] exited.'; exec bash
 "
 # ---- 3: mocap emulator -----------------------------------------------------
