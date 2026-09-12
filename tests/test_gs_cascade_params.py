@@ -17,7 +17,15 @@ import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-NODE = os.path.join(HERE, "..", "ros2", "px4_vtol_direct_actuator",
+# The flight controller lives in fsc_autopilot_ros2 now, not in this repo.
+# controller_path resolves it (workspace symlink, or $FSC_CONTROLLER_DIR), so a
+# future move of that repository needs no change here.
+sys.path.insert(0, os.path.join(HERE, ".."))
+from controller_path import controller_dir, inner_dir   # noqa: E402
+_CTRL = controller_dir()
+_CTRL_INNER = inner_dir()
+
+NODE = os.path.join(_CTRL,
                     "px4_vtol_direct_actuator", "nmpc_cascade_node.py")
 GS = os.path.expanduser("~/ros2_ws/src/ros2_ground_station_gui/src/ROS_Node/trajectory_player.py")
 

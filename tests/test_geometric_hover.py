@@ -18,12 +18,20 @@ import importlib.util
 import numpy as np
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+# The flight controller lives in fsc_autopilot_ros2 now, not in this repo.
+# controller_path resolves it (workspace symlink, or $FSC_CONTROLLER_DIR), so a
+# future move of that repository needs no change here.
+sys.path.insert(0, os.path.join(_HERE, ".."))
+from controller_path import controller_dir, inner_dir   # noqa: E402
+_CTRL = controller_dir()
+_CTRL_INNER = inner_dir()
+
 sys.path.insert(0, _HERE)
 from plant_double import VTOLPlant, MASS, G                       # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(
     "geometric_hover_node",
-    os.path.join(_HERE, "..", "ros2", "px4_vtol_direct_actuator", "px4_vtol_direct_actuator",
+    os.path.join(_CTRL_INNER,
                  "geometric_hover_node.py"))
 _gh = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_gh)
@@ -227,7 +235,7 @@ def test_latency_margin():
 
 def test_envelope_is_a_hover_controller():
     print("\n9. it is structurally a multicopter")
-    src = open(os.path.join(_HERE, "..", "ros2", "px4_vtol_direct_actuator",
+    src = open(os.path.join(_CTRL,
                             "px4_vtol_direct_actuator", "geometric_hover_node.py")).read()
     check("no tilt parameter exists", "tilt_max_deg" not in src and "tilt_for_v" not in src)
     check("servo output is hard-coded to zero", "sc[i] = 0.0" in src)

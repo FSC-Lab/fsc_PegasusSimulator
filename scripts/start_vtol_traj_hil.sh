@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# The flight controller moved to fsc_autopilot_ros2. Resolve it through the
+# workspace symlink so a future move of that repo needs no change here.
+: "${FSC_CONTROLLER_DIR:=$HOME/ros2_ws/src/px4_vtol_direct_actuator}"
 #
 # start_vtol_traj_hil.sh — the SMALL HIL stack: PX4 + Isaac + mocap + estimator + the SAFE
 # hover controller + the ground station. No NMPC, no outer sliding-mode loop.
@@ -55,7 +59,7 @@ load_machine_config "$0" "$CFG_NAME"   # -> PX4_DIR, ISAAC_PY, FSC_PEGASUS_ROOT
 
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Pegasus script not found: $PEGASUS_SCRIPT" >&2; exit 1; }
-DA_DIR="${FSC_PEGASUS_ROOT}/ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator"
+DA_DIR="${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator"
 TRAJ_NODE="${DA_DIR}/geometric_hover_node.py"
 [[ -f "$TRAJ_NODE" ]] || { echo "ERROR: node not found: $TRAJ_NODE" >&2; exit 1; }
 

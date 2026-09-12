@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# The flight controller moved to fsc_autopilot_ros2. Resolve it through the
+# workspace symlink so a future move of that repo needs no change here.
+: "${FSC_CONTROLLER_DIR:=$HOME/ros2_ws/src/px4_vtol_direct_actuator}"
 #
 # start_vtol_inner_hil.sh — VTOL HIL with TWO switchable PX4-INNER-LOOP controllers
 # (both actually hover here, unlike the direct_actuator pair in start_vtol_dual_hil.sh).
@@ -67,7 +71,7 @@ load_machine_config "$0" "$CFG_NAME"   # -> PX4_DIR, ISAAC_PY, FSC_PEGASUS_ROOT
 
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Pegasus script not found: $PEGASUS_SCRIPT" >&2; exit 1; }
-DA_DIR="${FSC_PEGASUS_ROOT}/ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator"
+DA_DIR="${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator"
 NMPC_NODE="${DA_DIR}/nmpc_attitude_node.py"
 MUX_NODE="${DA_DIR}/attitude_setpoint_mux.py"
 for f in "$NMPC_NODE" "$MUX_NODE"; do [[ -f "$f" ]] || { echo "ERROR: node not found: $f" >&2; exit 1; }; done

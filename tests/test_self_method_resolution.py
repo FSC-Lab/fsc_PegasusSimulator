@@ -21,12 +21,17 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TARGETS = [
-    "ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_full_smc_node.py",
-    "ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc6_cruise_node.py",
-    "ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_so3_transition_node.py",
-    "ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_node.py",
-]
+# The controllers live in fsc_autopilot_ros2 now; resolve them through
+# controller_path rather than by a path relative to this repository.
+sys.path.insert(0, ROOT)
+from controller_path import inner_dir   # noqa: E402
+
+TARGETS = [os.path.join(inner_dir(), f) for f in (
+    "nmpc_full_smc_node.py",
+    "nmpc6_cruise_node.py",
+    "nmpc_so3_transition_node.py",
+    "nmpc_cascade_node.py",
+)]
 
 
 def check(path):
@@ -58,7 +63,7 @@ def check(path):
 def main():
     bad = 0
     for rel in TARGETS:
-        path = os.path.join(ROOT, rel)
+        path = rel        # TARGETS are absolute (resolved via controller_path)
         if not os.path.exists(path):
             print(f"  skip (missing): {rel}")
             continue

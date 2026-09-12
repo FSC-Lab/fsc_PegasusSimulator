@@ -20,7 +20,15 @@ import numpy as np
 import casadi as ca
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_DA = os.path.join(_HERE, "..", "ros2", "px4_vtol_direct_actuator")
+# The flight controller lives in fsc_autopilot_ros2 now, not in this repo.
+# controller_path resolves it (workspace symlink, or $FSC_CONTROLLER_DIR), so a
+# future move of that repository needs no change here.
+sys.path.insert(0, os.path.join(_HERE, ".."))
+from controller_path import controller_dir, inner_dir   # noqa: E402
+_CTRL = controller_dir()
+_CTRL_INNER = inner_dir()
+
+_DA = _CTRL
 sys.path.insert(0, _DA)
 
 _spec = importlib.util.spec_from_file_location(

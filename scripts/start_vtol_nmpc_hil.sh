@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# The flight controller moved to fsc_autopilot_ros2. Resolve it through the
+# workspace symlink so a future move of that repo needs no change here.
+: "${FSC_CONTROLLER_DIR:=$HOME/ros2_ws/src/px4_vtol_direct_actuator}"
 #
 # start_vtol_nmpc_hil.sh — ONE-COMMAND VTOL HIL driven by the self-contained
 # CasADi NMPC (ros2/px4_vtol_direct_actuator/.../nmpc_quad_node.py).
@@ -91,10 +95,10 @@ PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Pegasus script not found: $PEGASUS_SCRIPT" >&2; exit 1; }
 
 if [[ "$NMPC_MODE" == "direct" ]]; then
-  NMPC_NODE="${FSC_PEGASUS_ROOT}/ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_quad_node.py"
+  NMPC_NODE="${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_quad_node.py"
 else
   NMPC_MODE="attitude"
-  NMPC_NODE="${FSC_PEGASUS_ROOT}/ros2/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_attitude_node.py"
+  NMPC_NODE="${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_attitude_node.py"
 fi
 [[ -f "$NMPC_NODE" ]] || { echo "ERROR: NMPC node not found: $NMPC_NODE" >&2; exit 1; }
 

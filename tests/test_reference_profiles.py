@@ -26,7 +26,15 @@ import sys
 import numpy as np
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(_HERE, "..", "ros2", "px4_vtol_direct_actuator",
+# The flight controller lives in fsc_autopilot_ros2 now, not in this repo.
+# controller_path resolves it (workspace symlink, or $FSC_CONTROLLER_DIR), so a
+# future move of that repository needs no change here.
+sys.path.insert(0, os.path.join(_HERE, ".."))
+from controller_path import controller_dir, inner_dir   # noqa: E402
+_CTRL = controller_dir()
+_CTRL_INNER = inner_dir()
+
+sys.path.insert(0, os.path.join(_CTRL,
                                 "px4_vtol_direct_actuator"))
 import nmpc_so3_transition_node as so3            # noqa: E402
 
