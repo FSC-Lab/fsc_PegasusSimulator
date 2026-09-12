@@ -107,7 +107,18 @@ def classify(Z, VV, TILT_M, RPY, peakV, maxtilt, maxroll, maxyaw, zmin, zmax):
             return "CRASHED"
         return "DEPARTED_OK"          # survived a departure -- NOT a pass
     if maxyaw > 90:
-        return "DEPARTED_OK" if zmin >= 2.0 else "CRASHED"
+        # ★ A HEADING EXCURSION IS NOT A CRASH IF THE AIRCRAFT THEN LANDS.
+        # tank_seq_a1_182717 yawed 99 deg chasing a 26 m cross-track offset at 7 m/s in
+        # the back-transition, then hovered, descended at 1 m/s and touched down at
+        # (800.00, 0.00) level and stopped -- and this rule called it CRASHED because it
+        # "reached the ground". Judge the ground contact the way the LANDED branch does:
+        # slow and upright at minimum altitude is a landing, whatever the heading did.
+        if zmin < 2.0:
+            i_low = min(range(len(Z)), key=lambda i: Z[i])
+            if VV[i_low] < 5.0 and abs(RPY[i_low][0]) < 20:
+                return "LANDED"
+            return "CRASHED"
+        return "DEPARTED_OK"
     if zmax > 10.0 and zmin < 2.0:
         i_low = min(range(len(Z)), key=lambda i: Z[i])
         return "LANDED" if VV[i_low] < 5.0 else "CRASHED"

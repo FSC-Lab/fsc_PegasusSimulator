@@ -113,6 +113,52 @@ implied -8.68 m/s^2" observation already recorded above, made unavoidable by 0.5
 leaves headroom at 17-18); or fix the back-transition to keep the wing above ITS stall until
 the aft tilt is braking -- the underlying defect, and the durable fix.
 
+# ★★★★ THE TANK AIRCRAFT FLIES THE FULL MISSION -- WITH A RE-SEQUENCED BACK-TRANSITION
+# (2026-09-12, bag slosh_20260912_182643, `nmpc_cascade_tank_node.py`). LANDED 0.00 m.
+**THE FIX IS SEQUENCING, NOT GAINS.** From the crash bag at full rate: at decel onset the
+aircraft pitched +7 -> +18.5 in 0.4 s against a reference rate-limited to ~3 deg, then a
+~2.5 Hz pitch oscillation that GREW. Offline at 5 Hz with 0.1 deg noise the outer solver's
+own planned pitch HUNTS +7..+22 (finding C9's flat-optimum hunting, on pitch), seeded by a
+flare that asks trim+15 = 22 deg of a wing that peaks at 10. **Capping the flare alone made it
+WORSE and reproduced the crash exactly**: the base schedule sends the front pair AFT from the
+first tick, while the wing is what carries the weight; the tank aircraft's wing quits at
+15.12 m/s with the tilt still at 60-70 deg, the outer has no feasible way to hold altitude,
+its solves fail, the fallback freezes the tilt, the nose ratchets to +88.
+**Schedule now: rotors UPRIGHT first (60 deg/s); aft tilt only below 60% wing share (the
+trim split then gives the rotors only the wing's deficit -- no balloon); pitch capped at
+12 deg + (1 - wing share) x flare.** Offline with noise, seeds 1-3, noise 0.3/2, latency
+0.05/comp 0.049: peak pitch +13..+18, altitude >= 29.3, stops every time, <= 10 fails/1701.
+**BOUNDARY: decel_rate 2.5 crashes it** (1.5 flown). Flown: 17.4 -> 3.3 m/s over 9 s,
+altitude 28.8-30.1, pitch <= +13, rotors upright at V=13, aft tilt at V<7, 0 solve fails
+after the onset, hover, 1 m/s descent, **touchdown (800.00, 0.00) level**.
+
+| flight | aircraft | cascade | verdict | wb_s | peakV | maxroll | maxyaw |
+|---|---|---|---|---|---|---|---|
+| slosh_p1b | copy, no tank | base | LANDED 0.00 m | 47.3 | 16.7 | 13 | 15 |
+| base_p1 | baseline | base | CRASHED (roll, in cruise) | 47.1 | 16.7 | 180 | 180 |
+| tank_p2 | tank 3.95 kg | base | CRASHED (back-transition stall) | 48.2 | 16.7 | 180 | 180 |
+| **tank_seq** | **tank 3.95 kg** | **tank** | **LANDED 0.00 m** | 48.4 | 19.3 | 35 | 99 |
+
+**CAVEATS, stated plainly.** (1) ONE flight. (2) The cruise carried the documented P-only
+bank-to-turn limit cycle at +-29 deg roll / +-23 m cross-track / V 16.6-19.3 (banking raises
+speed; 19.3 is where the 12x6 prop saturates). Run-to-run scatter of the marginal lateral
+mode -- the previous tank flight cruised at +-1 deg on the same config -- NOT the tank or the
+schedule, but it is the open defect and the tank plan's phase-7 note stands. (3) The 99 deg
+yaw was the low-speed cross-track chase; `night_metrics.py` scored it CRASHED via
+"maxyaw>90 and reached the ground" until that rule learned to look at HOW the ground was
+reached (slow, upright = landing). Every earlier verdict re-scored unchanged.
+**L1 ADAPTIVE IS NOT NEEDED FOR THE DEAD-MASS CASE**: mass paired into the model + the
+schedule re-sequenced covers it. Where it may matter is phase 3, when the slosh moves the
+effective CG dynamically. Deliberately not started.
+
+**THE STACK DIED MID-FLIGHT TWICE TODAY (16:48, 18:20), every pane in the same second = the
+tmux server, cause unknown; and a GS selection made during a scripted climb fought the
+driver at 1 Hz over active_controller** (the GS re-publishes its last selection forever,
+`trajectory_player.py:1894`). Ops answer: `run_slosh_flight.sh` = teardown -> launch ->
+verify -> close the GS -> fly SUPERVISED (PX4 + Isaac alive, mocap changing; dead or
+frozen = exit 2) -> score -> teardown, retrying on exit 2. One command; it does not need
+anyone to diagnose why the stack died to get a result.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
