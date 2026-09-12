@@ -161,6 +161,18 @@ if [ "$WANT_SLOSH" = "1" ] && [ "$BANNER" -lt 1 ]; then
   echo "[slosh_hil]    DO NOT FLY THIS AND CALL IT A TANK RESULT."
   exit 1
 fi
+# Phase 2: with the tank mounted the vehicle logs its mass fold at construction.
+# Verify THAT too -- "VTOLSlosh with no tank" and "VTOLSlosh with the tank" are
+# different aircraft, and the launcher must say which one it verified.
+TANK_LINE=$(echo "$PANE" | grep -o "\[TANK\] dead mass.*" | tail -1 | cut -c1-90)
+if [ "$WANT_SLOSH" = "1" ]; then
+  if [ "${VTOL_TANK:-1}" != "0" ] && [ -z "$TANK_LINE" ]; then
+    echo "[slosh_hil] !! the tank model came up but never logged '[TANK] dead mass' --"
+    echo "[slosh_hil]    the tank was NOT mounted. Check VTOL_TANK and the scene."
+    exit 1
+  fi
+  [ -n "$TANK_LINE" ] && say "    $TANK_LINE"
+fi
 if [ "$WANT_SLOSH" = "0" ] && [ "$BANNER" -ge 1 ]; then
   echo "[slosh_hil] !! ASKED FOR THE BASELINE AND GOT THE TANK MODEL (banner present)."
   echo "[slosh_hil]    Re-run without --if-needed to force a fresh Isaac."
@@ -182,6 +194,6 @@ printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
   "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG" >> "$LAUNCH_LOG"
 
-say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo 'TANK MODEL (VTOLSlosh)' || echo 'baseline VTOL') confirmed in Isaac."
+say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"
 say "        tear down with: bash $ROOT/scripts/kill_slosh_hil.sh"

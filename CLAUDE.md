@@ -63,6 +63,56 @@ already knew this ("the vehicle must be fit, not just the stack"); the new drive
 now refuses unless `vehicle_state.py` says the aircraft is at the origin, upright,
 grounded and stopped. **The bag is what told the truth, for the fifth time.**
 
+# ★★★ PHASE 2 FLOWN (2026-09-12): TANK AS DEAD MASS. CRUISES; THE BACK-TRANSITION DEPARTS.
+**THE MASS, FROM THE CONFIG'S OWN LINKS** (`vtol_slosh.assembled_mass_properties`): the
+baseline assembles to M=3.450 CG=(0.1764,0,-0.0353) I=(0.265,0.303,0.490) -- reproducing the
+controllers' hardcoded constants EXACTLY, which is what makes it credible for the tank:
+**M=3.9516 kg, CG unmoved (0.00 mm), I +0.2%**. Mounted at the assembled CG the tank changes
+ONE thing. `TankConfig.position=None` now means the assembled CG, NOT the body-link origin
+(176 mm apart -- the `aero_center` bug in a new coat). Stall 14.13 -> **15.12 m/s**.
+
+**THE VEHICLE MASS HAS FOUR COPIES IN THE CONTROLLER PACKAGE** -- `so3.M`, `FSC["m"]` (the
+trim generator), `geometric_hover_node.mass` (the SAFE controller), `vtol_nmpc.M` + its BAKED
+TRIM table -- plus `tests/plant_double.py` on this side. Moving only `so3.M` left a **1.245
+m/s^2 vertical residual in every baked reference: 0.502 kg x g, the water exactly**.
+`tests/test_tank_model_pairing.py` reads all of them and fails on drift; the trim table was
+REGENERATED from `nmpc6.Schedule` (hover row 33.84 -> 38.76 N). All at 3.9516 on the
+controller's `slosh` branch (paired with this one; baseline = `pre-slosh` in BOTH repos).
+
+**`i_max` 8 -> 12 N ON THE SAFE CONTROLLER -- SAFETY-RELEVANT, REVIEW BEFORE HARDWARE.** Measured
+on the plant double: a 6 m/s crosswind needs **9.38 N** of integral force at 3.95 kg; at the 8 N
+clamp it PINS and the aircraft parks 0.46 m downwind forever (0.004 m at 12). The 8 N value was
+this same finding one payload ago. Anti-windup is clamp + back-calc + freeze, not bare.
+
+**GATES AT 3.9516 kg:** reference audit all pass; cascade audit |qdot| 0.051, az 0.000; 26/26
+geometric-hover; offline cascade gate 89.7 deg / 16.00 m/s / **0/1801 fails**, cruise AoA
+**+7.1 (was +5.7)**, rotors 10.0 N (was 8.1). **Corridor peak AoA 12.4 deg vs the CL peak at
+10.0** (baseline 10.7): ~10 s past the peak at t=20-32 s. Held altitude offline; that is the
+back side of the curve where flights 12/13/15 were lost. A quicker `ttr` lowers it (CLAUDE.md:
+ttr 6 -> 6.7 deg) at the cost of the lateral clean window. Not retuned -- a mission-design call.
+
+**HIL (bag slosh_20260912_173754, results.tsv row tank_p2_173901): CRUISE EXCELLENT, BACK-TRANSITION
+CRASHED.** ~50 s of 90 deg cruise at V 16.3-16.6, z 30.0-30.1 FLAT, AoA +5.6..+7.2, wing
+105-119%, roll +-1, **fails 0 throughout**. Then, from the cascade's own log:
+```
+V=16.41 vcmd=16.00 tilt=90.0 th= +6.0   fails=0      cruise
+V=15.55 vcmd=15.13 tilt=64.6 th=+11.7   fails=0      back-transition begins
+V=14.60 vcmd=13.63 tilt=35.6 th=+19.2   fails=0      BELOW the 15.12 m/s stall, nose +19
+V= 7.75 vcmd=12.13 tilt= 8.3 th=+56.0   fails=18     lost 7 m/s in ONE second; solver failing
+V= 3.49                     th=+36.3   fails=36  -> th -57, +83, roll +177: tumble, ground
+```
+The SAME schedule on the no-tank copy 40 min earlier (row slosh_p1b): V 16.3 -> 3.95 over 8 s
+= the commanded 1.5 m/s^2, AoA never above +18, tilt walked to -6.8 aft, **landed 0.00 m**.
+**MECHANISM: the flare pitches up at V~15 either way; the no-tank aircraft has 0.9 m/s of stall
+margin there and the tank aircraft has -0.5.** A stalled wing drops its lift, the schedule holds
+altitude by pitching MORE, and it runs to +56 in a second. The plan's +0.88 m/s cruise margin
+is exactly what the back-transition's first second consumes. This is the "decel_rate 1.5 vs
+implied -8.68 m/s^2" observation already recorded above, made unavoidable by 0.5 kg.
+**PHASE-2 GATE IS THEREFORE NOT MET AS SPECIFIED.** Options, none taken yet: less water
+(0.25-0.3 kg -> stall 14.6, +1.4 m/s); raise `vcruise` (check the momentum thrust model
+leaves headroom at 17-18); or fix the back-transition to keep the wing above ITS stall until
+the aft tilt is braking -- the underlying defect, and the durable fix.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
