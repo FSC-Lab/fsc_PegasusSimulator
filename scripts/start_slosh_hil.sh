@@ -85,6 +85,18 @@ fi
 export BAG_DIR=${BAG_DIR:-$HOME/flight_bags/slosh}
 export BAG=${BAG:-$([ "$WANT_SLOSH" = 1 ] && echo slosh || echo base)_$(date +%Y%m%d_%H%M%S)}
 export VTOL_SLOSH=$WANT_SLOSH
+# The tank AIRCRAFT flies the tank CASCADE (nmpc_cascade_tank_node: the base node with
+# the back-transition schedule replaced -- rotors upright before the aft tilt, flare
+# capped under the CL peak). Same node name and controller_id, so nothing downstream
+# changes. CASC_NODE_PY=<path> overrides; CASC_NODE_PY=base forces the base node.
+CTRL_DIR=${FSC_CONTROLLER_DIR:-$HOME/ros2_ws/src/px4_vtol_direct_actuator}
+if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
+  case "${CASC_NODE_PY:-}" in
+    "")   export CASC_NODE_PY="$CTRL_DIR/px4_vtol_direct_actuator/nmpc_cascade_tank_node.py" ;;
+    base) unset CASC_NODE_PY ;;
+  esac
+fi
+say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")"
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo 'VTOLSlosh (tank=None, phase 1)' || echo 'baseline VTOL')"
@@ -188,11 +200,27 @@ for w in 2-isaac 1-px4 6h-cascade; do
 done
 say "    pane logs -> $BAG_DIR/pane_*.log"
 
+# and VERIFY which cascade came up: the variant prints its schedule banner on start.
+CPANE=$(tmux capture-pane -p -S -400 -t "$SESSION:6h-cascade" 2>/dev/null)
+CBANNER=$(echo "$CPANE" | grep -o "\[cascade_tank\] schedule:.*" | tail -1 | cut -c1-110)
+case "${CASC_NODE_PY:-}" in
+  *tank*)
+    if [ -z "$CBANNER" ]; then
+      echo "[slosh_hil] !! asked for the TANK cascade and its banner never appeared in 6h-cascade."
+      echo "[slosh_hil]    The base cascade (or nothing) is running. Not READY."
+      exit 1
+    fi
+    say "    $CBANNER" ;;
+  *)
+    [ -n "$CBANNER" ] && { echo "[slosh_hil] !! the TANK cascade is running but was not asked for."; exit 1; }
+    say "    cascade: base node confirmed" ;;
+esac
+
 # provenance, next to the bags, because the tmux pane is gone by the time anyone asks
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

@@ -105,7 +105,11 @@ CASCADE_NODE="${DA_DIR}/nmpc_so3_cascade_node.py" # SO(3) NMPC (async tilt-FF) +
 SO3_NODE="${DA_DIR}/nmpc_so3_transition_node.py"  # the AVTOL SO(3) NMPC IN-LOOP (JIT'd, 25 Hz) -> 90-deg cruise
 NMPC6_NODE="${DA_DIR}/nmpc6_cruise_node.py"       # 6-STATE pitch-moment longitudinal NMPC -> genuine 90-deg WING-BORNE
 FULL_NODE="${DA_DIR}/nmpc_full_smc_node.py"       # FULL-STATE (19) 6-DOF NMPC + outer positional SMC -> 90-deg wing-borne, lateral IN the solve
-CASC_NODE="${DA_DIR}/nmpc_cascade_node.py"        # CASCADE: 6-state longitudinal NMPC outer (bg thread) + geometric inner -> roll/yaw at mocap rate
+# CASCADE: 6-state longitudinal NMPC outer (bg thread) + geometric inner -> roll/yaw at
+# mocap rate. CASC_NODE_PY selects a VARIANT of it (nmpc_cascade_tank_node.py: same
+# node name and controller_id, one schedule function replaced) -- the tank stack
+# sets it; unset means the base node, unchanged.
+CASC_NODE="${CASC_NODE_PY:-${DA_DIR}/nmpc_cascade_node.py}"
 REF_TOPIC="/${PX4_UXRCE_DDS_NS}/fsc_autopilot_ros2/position_controller/reference"
 # ---- WHICH CONTROLLERS TO RUN ----------------------------------------------------------
 # Every standby controller still SOLVES at its full rate; seven of them were competing with
