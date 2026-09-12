@@ -98,11 +98,50 @@ if [ "$DRY" = "1" ]; then
   exit 0
 fi
 
-say "3/4 restarting the stack (this is restart_hil.sh; ~4 min cold)"
-bash "$ROOT/scripts/restart_hil.sh" ${ARGS[@]+"${ARGS[@]}"} || {
-  echo "[slosh_hil] !! restart_hil.sh failed -- see above. Nothing was verified."
+# ★ DETACHED, THEN POLL -- do not run restart_hil.sh as a plain child.
+# On a COLD machine it hands off to start_vtol_smc_hil.sh, whose last line is
+# `tmux attach-session`, and whose teardown kills processes in this process
+# group: run as a child it takes THIS script down with it, so the verification
+# below would never execute and the run would look like it simply vanished
+# (night_campaign.sh hit exactly this at 22:59 and solved it the same way).
+# setsid puts it in its own session; we then wait for its own READY line.
+RESTART_LOG=${RESTART_LOG:-$BAG_DIR/restart_$(date +%H%M%S).log}
+WAIT_S=${WAIT_S:-1200}
+say "3/4 restarting the stack, detached (~4 min cold) -> $RESTART_LOG"
+setsid nohup timeout "$WAIT_S" bash "$ROOT/scripts/restart_hil.sh" \
+  ${ARGS[@]+"${ARGS[@]}"} > "$RESTART_LOG" 2>&1 < /dev/null &
+RPID=$!
+
+# WAIT ON HEALTH, NOT ON THE PROCESS, and accept either signal:
+#   * warm path: restart_hil.sh prints "READY." after its own gates (link up, zero
+#     poll timeouts, controller nodes alive, no traceback);
+#   * COLD path: it hands off to start_vtol_smc_hil.sh, whose last line is
+#     `tmux attach-session` -- which cannot succeed without a terminal, so the
+#     launcher exits NON-ZERO and never prints READY even when the stack is
+#     perfectly up. Waiting on the exit status there would fail every cold start.
+# hil_health.sh is the authority in both cases: it checks the stack (link, poll
+# timeouts, both controllers, no traceback) AND the vehicle (upright, low,
+# stopped, near origin).
+OK=0
+for _ in $(seq 1 $((WAIT_S / 15))); do
+  sleep 15
+  if grep -q "READY\." "$RESTART_LOG" 2>/dev/null; then
+    OK=1; say "    restart_hil.sh reported READY"; break
+  fi
+  if H=$(timeout 90 bash "$ROOT/scripts/hil_health.sh" 2>/dev/null); then
+    OK=1; say "    healthy: $H"; break
+  fi
+  if grep -q "HIL LINK NOT HEALTHY\|threw on startup" "$RESTART_LOG" 2>/dev/null; then
+    echo "[slosh_hil] !! the restart reported a fault:"
+    grep -n "!!" "$RESTART_LOG" | tail -5
+    exit 1
+  fi
+done
+if [ "$OK" != "1" ]; then
+  echo "[slosh_hil] !! timed out after ${WAIT_S}s with no healthy stack. Last health: ${H:-<none>}"
+  echo "[slosh_hil]    restart log tail:"; tail -20 "$RESTART_LOG"
   exit 1
-}
+fi
 
 # --- 4. VERIFY the model that actually came up ------------------------------
 # 03_vtol_px4_hil.py logs this banner when, and only when, it spawns the tank model.
@@ -127,6 +166,15 @@ if [ "$WANT_SLOSH" = "0" ] && [ "$BANNER" -ge 1 ]; then
   echo "[slosh_hil]    Re-run without --if-needed to force a fresh Isaac."
   exit 1
 fi
+
+# ★ PIPE THE PANES TO FILES.  When the stack died on 2026-09-12 there was nothing
+# to look at: tmux was gone and with it every pane's scrollback, so the cause is
+# still unknown. A pane log costs nothing and is the only forensic trail a dead
+# stack leaves.
+for w in 2-isaac 1-px4 6h-cascade; do
+  tmux pipe-pane -o -t "$SESSION:$w" "cat >> $BAG_DIR/pane_${w}_$(date +%H%M%S).log" 2>/dev/null
+done
+say "    pane logs -> $BAG_DIR/pane_*.log"
 
 # provenance, next to the bags, because the tmux pane is gone by the time anyone asks
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \

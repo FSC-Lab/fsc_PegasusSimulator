@@ -58,7 +58,24 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   say "no '$SESSION' tmux session — cold-starting via start_vtol_smc_hil.sh"
   CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" \
     bash "$ROOT/scripts/start_vtol_smc_hil.sh" --here "${CFG:-pieper_machine}"
-  exit $?
+  RC=$?
+  # ★ THE COLD PATH USED TO SKIP STEP 5 ENTIRELY.
+  # Everything below this branch -- including the PX4 params that do not survive a
+  # restart -- belongs to the WARM path, so a cold start came up with the sim
+  # BATTERY live and COM_LOW_BAT_ACT at its default. That failsafe has already
+  # cost this project a flight: the controller commands correct thrust while PX4
+  # walks the aircraft down, and the only symptom is "battery warning (fast)"
+  # scrolling in a pane nobody is reading. The launcher's own 8-relax window sets
+  # the arming and geofence params but NOT these.
+  # NOTE the launcher exits non-zero on a cold start (its last line is
+  # `tmux attach-session`, which cannot succeed without a terminal), so this must
+  # not be gated on RC.
+  say "cold start: applying the PX4 params the launcher does not set"
+  for p in "SIM_BAT_MIN_PCT 100" "COM_LOW_BAT_ACT 0" "BAT_LOW_THR 0.05" \
+           "COM_DISARM_LAND 0" "COM_DISARM_PRFLT 0"; do
+    tmux send-keys -t "$SESSION:1-px4" "param set $p" Enter 2>/dev/null; sleep 0.4
+  done
+  exit $RC
 fi
 
 say "1/6 killing controller nodes"

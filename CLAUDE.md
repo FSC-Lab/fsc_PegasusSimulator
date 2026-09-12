@@ -37,6 +37,32 @@ it is step-for-step the baseline. Fly the mission that way and compare against
 vehicle class from the CONFIG TYPE (`_vehicle_class_for`), one selector, so a
 slosh config cannot be flown on the baseline class or the reverse.
 
+**★★ FLOWN, 2026-09-12. THE COPY FLIES THE FULL MISSION.** `VTOLSlosh` spawned in
+Isaac and flew climb -> transition -> 90 deg wing-borne cruise -> back-transition ->
+**landing 0.00 m from the commanded point at 800 m**, scored from the bag by
+`night_metrics.py` (bags + `results.tsv` in `~/flight_bags/slosh`):
+
+| trial | model | verdict | wb_s | peakV | tilt | maxroll | maxyaw | fails |
+|---|---|---|---|---|---|---|---|---|
+| slosh_p1b_165344 | **VTOLSlosh** | **LANDED** | 47.3 | 16.7 | 90 | 13 | 15 | 0/0 |
+| base_p1_170214 | baseline VTOL | **CRASHED** | 47.1 | 16.7 | 90 | 180 | 180 | 0/0 |
+
+Same driver, same 30 m / 800 m / 70 s mission, ONE FLAG APART. Wing-borne seconds,
+peak speed and tilt match to within noise (47.3 vs 47.1 s; 16.66 vs 16.64 m/s); the
+BASELINE is the one that departed. That is the documented P-only bank-to-turn
+scatter, not a difference between the models -- the force path is provably
+identical -- but it is worth stating plainly: **one flight each proves the copy is
+not worse, and nothing more.** A lateral claim from this stack needs repeats.
+
+**AND THE FIRST ATTEMPT WAS A NULL FLIGHT THAT LOOKED LIKE A CONTROLLER FAILURE.**
+A full auto mission ran during stack BOOT (climb, engage cascade, 90 deg cruise,
+then a roll departure at -124 deg and the ground at x=351 m). The driver then flew
+the WRECK for three minutes, reporting 0.00 m/s and "climb did not settle" -- and
+Isaac resurrects a crashed vehicle, so nothing downstream noticed. `night_campaign`
+already knew this ("the vehicle must be fit, not just the stack"); the new driver
+now refuses unless `vehicle_state.py` says the aircraft is at the origin, upright,
+grounded and stopped. **The bag is what told the truth, for the fifth time.**
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
