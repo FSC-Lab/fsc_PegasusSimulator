@@ -163,7 +163,7 @@ fi
 # --- 4. VERIFY the model that actually came up ------------------------------
 # 03_vtol_px4_hil.py logs this banner when, and only when, it spawns the tank model.
 say "4/4 verifying which model Isaac spawned"
-PANE=$(tmux capture-pane -p -S -3000 -t "$SESSION:2-isaac" 2>/dev/null)
+PANE=$(tmux capture-pane -p -J -S -3000 -t "$SESSION:2-isaac" 2>/dev/null)   # -J: join wrapped lines
 BANNER=$(echo "$PANE" | grep -c "VTOL_SLOSH set")
 if [ "$WANT_SLOSH" = "1" ] && [ "$BANNER" -lt 1 ]; then
   echo "[slosh_hil] !! ASKED FOR THE TANK MODEL AND DID NOT GET IT."
@@ -227,7 +227,9 @@ done
 say "    pane logs -> $BAG_DIR/pane_*.log"
 
 # and VERIFY which cascade came up: the variant prints its schedule banner on start.
-CPANE=$(tmux capture-pane -p -S -400 -t "$SESSION:6h-cascade" 2>/dev/null)
+# -J joins the lines tmux wrapped at the pane width: the tank banner is 128 characters and its
+# "M=<kg>" tail sat on the next captured line, so the mass check saw nothing (2026-09-13 17:12).
+CPANE=$(tmux capture-pane -p -J -S -400 -t "$SESSION:6h-cascade" 2>/dev/null)
 CBANNER=$(echo "$CPANE" | grep -o "\[cascade_tank\] schedule:.*" | tail -1 | cut -c1-160)
 case "${CASC_NODE_PY:-}" in
   *tank*)

@@ -620,6 +620,49 @@ process -- it fails on the flown line and passes on the fix. The offline gate ne
 parameter/subscription code (class defaults), so this is the second bug of that class it could not
 see (the `descent_budget` declaration of 2026-09-07 was the first); the boot test is the gate for it.
 
+# ★★★ TWO WATER MASSES (2026-09-13 evening): `VTOL_TANK_KG` = 0.1 / 0.502 (default) / 0.7, ONE VARIABLE
+# FOR THE PLANT AND EVERY CONTROLLER -- AND THE OUTER SOLVER HAD BEEN FLYING WITH M = 3.45 BAKED IN.
+**THE SWITCH.** `TankConfig.water_kg` sets the depth in the 41 mm tank (the tank grows to 0.93 L to hold
+0.7 kg at 75%); `slosh.default_tank()` reads `VTOL_TANK_KG` and is what the HIL scene, the plant
+double, the pairing test and the gate's `--slosh` construct. On the controller side every copy of the
+mass is `3.449572 + float(os.environ.get("VTOL_TANK_KG", "0.502") or 0.502)` -- so3.M, the trim
+generator, the safe controller, vtol_nmpc (a baked trim table PER MODE; an unlisted mass raises at
+import) -- and `tests/test_tank_model_pairing.py` pins that exact text in each and assembles all three
+modes. Both launchers write the variable INLINE on the Isaac pane AND all three controller panes (a pane
+does not inherit the shell); `start_slosh_hil.sh` refuses READY unless Isaac's `water=<kg>` banner
+and the tank cascade's `M=<kg>` banner both match the request, and the mass goes into the launch log
+and the results row (`water=0.7kg`). `VTOL_TANK=slosh VTOL_TANK_KG=0.7 bash scripts/run_slosh_flight.sh`.
+**THE MODES ARE NOT THE SAME TANK AT TWO FILLS IN THEIR SLOSH.** 0.1 kg is a 15% fill: 18.6 mm deep,
+**69% of it moves (0.069 kg) at 2.74 Hz**. 0.7 kg is the deep tank grown: the same 0.10 kg moves at
+3.32 Hz as in the plan's 0.502 -- the heavy mode changes ONLY the dead mass (M 4.1496, stall 15.50 m/s
+against the 16 m/s cruise: 0.5 m/s of margin; a 25 deg bank at 16 m/s needs 16.27, so the rear pair
+carries the deficit in every turn).
+**GATE, all three modes, ttr 10, lat 0.03 / comp 0.049, noise 0.1/1, pendulum, 16 seeds each,
+full mission with the back-transition: 16/16, 16/16, 16/16.**
+| VTOL_TANK_KG | M | stall | corridor peak pitch | cruise V / pitch / front / rear | front max in the corridor | BT peak pitch | fails (16 BTs) |
+|---|---|---|---|---|---|---|---|
+| 0.1 | 3.5496 | 14.33 | +9.2 | 16.02 / +6.0 / 0.76 / 0.30 | 0.88 | 14.1 | 2 |
+| 0.502 | 3.9516 | 15.12 | +10.3 | 16.05 / +7.0 / 0.78 / 0.33 | 0.91 | 14.1 | 3 |
+| 0.7 | 4.1496 | 15.50 | **+11.0** | 16.07 / +7.6 / 0.80 / 0.35 | **0.93** | 13.5 | 4 |
+The heavy mode's two thin numbers: the corridor crosses the 10 deg CL peak by a degree (held altitude,
+29.9-30.0), and the front pair reaches 93% throttle in the corridor -- 7% for the inner loop. The
+harness's `--ttr` DEFAULT IS 40 (the node's is 10): at 40 the corridor peaks at 12.3-13.2 in every
+mode; pass `--ttr 10` to gate the flown configuration. Reference audit 0.05 rad/s^2, cascade audit
+passed, safe controller 22/22 with the 6 m/s crosswind nulled to 4 mm, in both modes.
+**★ THE OUTER SOLVER'S CACHE KEY DID NOT HASH THE MASS.** nmpc6's JIT key hashed the weights and the
+aero coefficients only, and `M = so3.M` is a module constant baked into the compiled ODE: the
+cascade's outer loaded `nmpc6_cruise_N14_DT60_852b5135d1.casadi`, compiled 2026-09-10 15:18 at
+M = 3.45, for EVERY tank flight (13% light in vsdot/vzdot). The reference trims were right (the
+Schedule is Python, not compiled) and the closed loop absorbed it: the solver rebuilt at 3.9516
+cruises at the same 16.05 / +7.1 / 0.78 and passes the same 16 seeds. No flown result changes; the
+statement "the cache key hashes the model source" was true of nmpc_full and NOT of nmpc6/cascade.
+Now hashed: M, G, IYY, MAX_THRUST, CQ, RPOS, `build_ode6` and `so3.aero_body` source -- each mode
+compiles its own solver (~2 min, once). The lesson is the one from 2026-09-06 (C6) repeated on the
+node that was written after it: a cache key must cover everything the artefact bakes in.
+**SWEEP HYGIENE:** 16 parallel casadi processes loading one cache file core-dumped two of them at
+start (no output at all, `timeout: the monitored command dumped core`) -- a process crash, not a
+flight; re-run those seeds serially before reading a "14/16".
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
