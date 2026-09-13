@@ -434,6 +434,36 @@ thrashing (quiet < 0.02, the thrash 0.4-0.8). Then the probe in Isaac. The gate 
 reproduce what its plant contains; when a flight disagrees with it, measure the plant, do not
 retune the controller.
 
+# ★★★ ON THE FIXED PLANT: kR_hover REVERTED TO 0 (kR 3), L1's PREDICTOR CARRIES THE ACTUATOR
+# LAGS, AND HOVER WITH A CG ERROR IS A SOLVED, GATE-PREDICTED THING (2026-09-13 12:46-13:02).
+**THE -69 deg HOVER DIVERGENCE WAS THE PROP ARTEFACT.** Same experiment as 2026-09-12 (2.6 cm
+airframe CG error the controller is not told about, 30 s engage hover, pendulum tank), on the
+plant with the prop-spin cap lifted:
+| config | gate (momentum, lat 0.03 / comp 0.049) | HIL | 2026-09-12 (artefact plant) |
+|---|---|---|---|
+| kR 3, no L1 | -6.4 deg bounded | **-5.5 steady, LANDED 0.00 m** | -0.5 -> -69, CRASHED |
+| kR 3 + L1 (lag-aware) | -0.74 | **-0.80, tilt -1.5, LANDED 0.00 m** | (-46, CRASHED) |
+| kR_hover 4.5, no L1 | -5.6 | -4.9, LANDED | -5.1, LANDED |
+Rows k3_hov30 / k3_l1_hov30 / fixprop_hov30. The gate now predicts the flight to a tenth of a
+degree, which is what a gate is for.
+**`kR_hover` DEFAULT 4.5 -> 0.0.** Its reason is gone and it costs transport margin (faithful
+gate: 4.5 crashes the mission at 50 ms, kR 3 at 80). Kept as a knob.
+**L1's PREDICTOR NOW MODELS THE ACTUATOR LAGS** (`L1Aug.applied_moment`: rotor thrusts through
+the 0.12 s spin lag, surfaces through the 0.03 s servo; params `l1_tau_spin`, `l1_tau_surf`).
+Fed the fresh command it attributed the lag to sigma and hunted (+-20 deg at 30 ms on the
+faithful gate, a crash at 50); fed what the plant applies it holds -0.74 at 30 ms and the
+mission flies with it at 50. `l1_on` still defaults OFF -- flown proven, the operator's call.
+**AND THE LATERAL LIMIT CYCLE WAS THE SAME ARTEFACT.** The P-only bank-to-turn law
+(`k_bank_d` 0) flown on the fixed plant (row kbd0_130338): cruise max |roll| 1.0 deg, mean 0.04,
+cross-track within 1.6 m, LANDED 0.00 m -- the identical law on the artefact plant went to
++-29 deg / +-23 m (row tank_seq). The "~60 deg of extra lag in the roll->heading path" was the
+front pair's spurious roll torque. `k_bank_d` 1.0 stays on (0.0 deg with it, and heading-rate
+damping on a bank command is sound), but nothing depends on it any more.
+**THE MARGIN, HONESTLY:** at HIL's ~30 ms of transport everything above is comfortable; the
+faithful gate loses the mission at 80 ms (kR 3) and the L1 CG hover at 50. Hardware with more
+than ~50 ms of command-to-force delay needs a softer inner loop than this, and the flat gate's
+"150 ms" is not a number to quote anywhere.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
