@@ -114,7 +114,13 @@ class VTOLPx4HilApp:
         use_tank = tank_mode not in ("0", "", "none", "false")
         if use_slosh:
             tank = TankConfig(slosh=(tank_mode == "slosh")) if use_tank else None
-            vtol_config = fsc_cad_vtol_slosh_config(tank=tank)
+            # VTOL_TANK_DX: mount the tank this far FORWARD of the CG without telling the
+            # controller -- the L1 augmentation's test bed. 0 = at the CG.
+            tank_dx = float(os.environ.get("VTOL_TANK_DX", "0") or 0.0)
+            vtol_config = fsc_cad_vtol_slosh_config(tank=tank, tank_dx=tank_dx)
+            if use_tank and tank_dx != 0.0:
+                carb.log_warn(f"VTOL_TANK_DX={tank_dx:+.3f} m -> tank mounted OFF the CG "
+                              f"(the controller is not told)")
             carb.log_warn("VTOL_SLOSH set -> VTOLSlosh model, tank="
                           + ("None (phase 1)" if not use_tank else
                              "MOUNTED + SLOSH (phase 3, pendulum)" if tank.slosh else

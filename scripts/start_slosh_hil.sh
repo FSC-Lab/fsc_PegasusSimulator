@@ -86,6 +86,8 @@ export BAG_DIR=${BAG_DIR:-$HOME/flight_bags/slosh}
 export BAG=${BAG:-$([ "$WANT_SLOSH" = 1 ] && echo slosh || echo base)_$(date +%Y%m%d_%H%M%S)}
 export VTOL_SLOSH=$WANT_SLOSH
 export VTOL_TANK=${VTOL_TANK:-1}
+export VTOL_TANK_DX=${VTOL_TANK_DX:-0}
+export CASC_L1=${CASC_L1:-false}
 # The tank AIRCRAFT flies the tank CASCADE (nmpc_cascade_tank_node: the base node with
 # the back-transition schedule replaced -- rotors upright before the aft tilt, flare
 # capped under the CL peak). Same node name and controller_id, so nothing downstream
@@ -97,7 +99,7 @@ if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
     base) unset CASC_NODE_PY ;;
   esac
 fi
-say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")"
+say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  l1_on=$CASC_L1  tank_dx=$VTOL_TANK_DX"
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"

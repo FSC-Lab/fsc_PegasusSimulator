@@ -226,7 +226,7 @@ echo '[2-isaac] waiting $D_ISAAC s...'; sleep $D_ISAAC
 unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL
 export ROS_DOMAIN_ID=\${ROS_DOMAIN_ID:-0} RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$BRIDGE_LIB\"
-PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG PEGASUS_PROP_DEBUG=\${PEGASUS_PROP_DEBUG:-} VTOL_ROS2_STATE=$VTOL_ROS2_STATE VTOL_SLOSH=$VTOL_SLOSH VTOL_TANK=$VTOL_TANK PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG PEGASUS_PROP_DEBUG=\${PEGASUS_PROP_DEBUG:-} VTOL_ROS2_STATE=$VTOL_ROS2_STATE VTOL_SLOSH=$VTOL_SLOSH VTOL_TANK=$VTOL_TANK VTOL_TANK_DX=${VTOL_TANK_DX:-0} PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo '[2-isaac] exited.'; exec bash
 "
 # ---- 3: mocap emulator -----------------------------------------------------
@@ -417,7 +417,7 @@ echo '[6h-cascade] CASCADE NMPC + geometric (STANDBY; activate: active_controlle
 $AVTOL_ENV\"$NODE_PY\" \"$CASC_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade -p active_at_start:=false \
     -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-20.0} \
-    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} \
+    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=${CASC_L1:-false} \
     -r ${REF_TOPIC}:=${REF_TOPIC}_smc
 echo '[6h-cascade] exited.'; exec bash
 "

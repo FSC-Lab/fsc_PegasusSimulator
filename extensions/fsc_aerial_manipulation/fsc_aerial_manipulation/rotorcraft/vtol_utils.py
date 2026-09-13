@@ -45,7 +45,8 @@ def fsc_cad_vtol_config(usd_dir: str | None = None):
     )
 
 
-def fsc_cad_vtol_slosh_config(usd_dir: str | None = None, tank: TankConfig | None = None):
+def fsc_cad_vtol_slosh_config(usd_dir: str | None = None, tank: TankConfig | None = None,
+                              tank_dx: float = 0.0):
     """The SAME FSC airframe, as a `VTOLSloshConfig` so it can carry a tank.
 
     Built by copying `fsc_cad_vtol_config()` FIELD BY FIELD rather than by
@@ -59,6 +60,17 @@ def fsc_cad_vtol_slosh_config(usd_dir: str | None = None, tank: TankConfig | Non
     physics is not implemented yet.
     """
     base = fsc_cad_vtol_config(usd_dir)
+    if tank is not None and tank_dx != 0.0:
+        # ★ THE L1 TEST BED: mount the tank `tank_dx` metres FORWARD of the assembled CG
+        # -- a payload the controller is NOT told about (its CG_X stays nominal). The
+        # plant's CG moves by m_water/M * dx and the trim the controller flies is wrong
+        # by that lever arm times the vertical thrust: 38.8 N x 3 cm = 1.2 N.m of
+        # standing pitch moment in hover. That is what the adaptive augmentation exists
+        # to absorb, and this is how it is proven rather than argued.
+        from dataclasses import replace as _replace
+        from pegasus.simulator.logic.vehicles.vtol_slosh import assembled_mass_properties
+        _, cg, _ = assembled_mass_properties(base)
+        tank = _replace(tank, position=(float(cg[0]) + float(tank_dx), float(cg[1]), float(cg[2])))
     return VTOLSloshConfig(
         **{f.name: getattr(base, f.name) for f in fields(base)},
         tank=tank,
