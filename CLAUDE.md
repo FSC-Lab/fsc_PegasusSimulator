@@ -539,6 +539,75 @@ manoeuvring -- turn entries and exits put lateral specific force into a fore/aft
 y-slosh at a 0.3 m arm is a YAW moment -- which is what the banked-turn guidance (next) is for.
 Fly the offset 80-100 mm tank on the turning missions, not the straight one.
 
+# ★★★ GUIDANCE: BANKED TURNS, LOITER, RETURN-TO-HOME -- FLOWN (2026-09-13, bag slosh_20260913_151254,
+# row turns_loiter_rth_a1_151327). `Guidance` in `nmpc_cascade_node.py`, one text protocol.
+**THE PROTOCOL** (`std_msgs/String` on `/<ns>/cascade/cmd`, ignored until engaged; `home` is latched
+at engage): `wp X Y [X Y ...]` legs; `loiter X Y R [dir]` orbit (dir +1 CCW default, -1 CW);
+`rth` fly to home, brake, hover over it; `hold` = the straight-line mission as before. The driver
+takes `--guide "T:cmd;T:cmd"` (seconds after cruise start) and `fly_slosh_mission.sh` forwards
+`GUIDE=...`; a plan that ends in rth lands at home. The node logs every ack (`GUIDE '...' -> ...`).
+**THE LAWS, and the numbers that set them.** All of it feeds the EXISTING bank-to-turn law (heading
+error -> roll, k_bank_d damping) -- the guidance only decides the heading, plus one feed-forward:
+  * Legs: heading = leg bearing + `k_ct` x cross-track (0.03 rad/m; 0.05 rang the capture after a
+    90 deg turn, 23 m vs 15). A leg ends at the FLY-BY point `R_turn tan(dpsi/2) + 1.5 V` before the
+    corner, R_turn = V^2/(g tan bank_max) = 56 m at 16 m/s / 25 deg, and the next leg's heading is
+    issued the SAME tick (returning the old one for a tick cost 5 m on the gate). The 1.5 V is the
+    roll-in: ~1.5 s from wings level to the bank limit.
+  * Loiter: the last leg hands over to the orbit at `R_turn + sqrt(R^2 - R_turn^2) + 1.5 V` from the
+    centre (139 + 24 m at R 100); switching at the centre gave a 270 deg wheel, at one radius it
+    ended inside, and at R/R_turn = 80/56 there is no tangential join at all -- default R 100.
+    The orbit is a vector field `psi_d = angle(r) + dir (pi/2 + atan(k_orbit (rho - R)/R))`,
+    k_orbit 3, with the coordinated bank `-dir atan(V^2/(g R))` FED FORWARD into roll_ref: a P bank
+    law alone held its 18 deg bank only with 15 deg of standing heading error and sat 8 m outside.
+  * RTH: heading to home + cross-track; `want_decel` (the back-transition) fires at
+    `V^2/(2 decel_rate) + rth_brake_margin` = 84 + 15 m from home; below ~3 m/s the nose stays put
+    (no 180 deg swing past home).
+  * The outer's speed frame is the measured COURSE, not the latched heading -- in a bank the old
+    frame read the turn as a 10% speed loss and the outer chased it.
+  Gate (noise 0.1/1, lat 0.03/comp 0.049, pendulum, momentum 12x8): square legs at 25 deg, loiter
+  rho 103.3 +- 0.3 at R 100, RTH stop 13 m from home, 2/4601 solve failures; same at 50 ms transport
+  and with offset slosh tanks (5.8 N.m of tank yaw in the turns, absorbed).
+**FLOWN, ONE FLIGHT, LANDED (0.00, 0.00):** engage -> 90 deg cruise east at 15.9 -> `wp 500 0 500
+400 100 400` -> two 90 deg fly-by turns -> loiter at (100,400) R 100 for 65 s (1.7 laps) -> `rth` ->
+brake -> hover -> land at home. **0/3675 outer solve failures over the whole 200 s; z 29.9-30.0 through
+every turn; V 15.90-15.94 in every bank** (the 12x8 headroom). Per phase, from the bag:
+| phase | flown | gate |
+|---|---|---|
+| 90 deg fly-by turns (x2) | bank 24.8 / 24.7 (limit 25), heading overshoot 16-17 deg, cross-track overshoot +14.4 / +14.2 m, on the new leg within ~12 s | same shape, +-15 m |
+| loiter entry | initial RIGHT bank (the field asks for 152 deg where the leg points 180), cut 13 m INSIDE (rho min 87), converged in ~1/4 lap | converges, sign identical |
+| **loiter steady (last 40 s)** | **rho 103.3 +- 0.5 m** (101.3-104.3), roll -16.9 +- 2.9, ct +3.4 m constant | **rho 103.3 +- 0.3** |
+| rth turn + capture | 166 -> -102 deg at the bank limit, 70 m off the home line at the turn's exit, on it (0.2 m) by 110 m out | 15 m |
+| rth stop | braking armed 100 m out, 15.9 -> 0.6 m/s in 9.6 s, z 29.5-30.0, pitch <= +13.4, aft tilt -7.6, **stopped 24 m from home** | 13 m |
+| landing | geometric handover, 0.00 m from home, level | -- |
+**TWO THINGS THE FLIGHT SAYS THAT THE GATE ONLY HINTED:** (1) the steady orbit needs 17 deg of bank
+for a 103 m circle where the coordinated value is 14 -- true on the gate too (the "18 deg bank"
+above) -- so the vector field carries a standing 3.4 m radius error to supply the difference; the
+plant needs more bank than a coordinated turn says (no rudder coordination -> sideslip), and an
+integral on rho or an adapted bank feed-forward would close it. Not done. (2) the RTH stop is 24 m
+short of home vs the gate's 13: 9.6 s from 15.9 m/s is 1.6 m/s^2 -- the flown back-transition
+takes ~1 s longer than the schedule at the onset (the same "onset" gap the knife-edge flight saw);
+`rth_brake_margin` is the knob if the hover must be over home (the LANDING was at home anyway:
+the driver's geometric leg covers the last 24 m).
+**THE DRIVER'S VERDICT LINE IS WRONG FOR THIS MISSION AND SAYS SO:** "INCONCLUSIVE -- too little
+CONTROLLED level flight" -- its metric is the straight-line run of controlled+level samples, and a
+turning mission never accumulates one. `night_metrics.py` scored the bag LANDED, wb_s 177, land_err
+0.00; maxroll 25 and maxyaw 180 there ARE the turns. Read the bag (`scripts/ana_guided.py`; the cascade
+pane log has the GUIDE acks and the fails counter).
+**AND THE FIRST ATTEMPT WAS A DEAD NODE THAT PASSED READY** (row turns_loiter_rth_a1_145847, flown by
+the geometric controller at 1 m/s and reported "cruise"). The new command subscription built its
+topic name with `self.gp('px4_ns')` -- gp() casts to float -- and the node died in its constructor
+TWO LINES after printing the schedule banner the launcher gates on. Nothing in the chain looked
+past the banner: `hil_health.sh` counted geometric + nmpc_full as "2/2" and read tracebacks only
+from 6g-full; the slosh launcher accepted a banner from a process that no longer existed; the
+pane pipe starts AFTER the banner check so the forensic log had 0 lines. Now: the health check
+requires `nmpc_cascade_control` alive whenever a 6h-cascade window exists and reads both wing-borne
+panes; the slosh launcher refuses on a post-banner traceback or a missing node process; and
+`tests/test_cascade_node_boots.py` runs BOTH cascade nodes exactly as the launcher does (rosenv,
+isaac_env python, `--ros-args`), publishes one guidance command and requires the ack and a live
+process -- it fails on the flown line and passes on the fix. The offline gate never runs the
+parameter/subscription code (class defaults), so this is the second bug of that class it could not
+see (the `descent_budget` declaration of 2026-09-07 was the first); the boot test is the gate for it.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
