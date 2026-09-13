@@ -277,6 +277,15 @@ survives at 90, crashes at 45). The outer is delay-compensated and the inner is 
 strong outer pitch weight keeps pitch on the compensated loop through the latency. The
 outer's aggressiveness supplies the margin. Weights stay 90/60/8; `CASC_WTH/WZ/WVS` exist
 to repeat the experiment in one env var.
+**LATENCY CEILING RESTORED (2026-09-13): `kR_hover` IS SCHEDULED ON `latency_s`** -- full 4.5 at
+<= 60 ms (HIL 49), fading to the validated 3.0 by 120 ms. Five seeds: fixed 4.5 was 4/5 at
+150 ms and 3/5 at 180; scheduled, 5/5 at both; the 5 cm offset hover at the HIL-equivalent
+50 ms is still -0.82 deg with L1. **An inner-loop delay predictor (`InnerPredictor`, the
+outer's predict6 idea) was built and MEASURED NON-MONOTONE**: clean to ~60 ms of horizon (past
+that the 8.9 rad/s short period outruns a constant-moment extrapolation), and as margin 60 ms
+of it gives 0/5 at 150 ms and 5/5 at 180 -- a phase interaction. Off (`inner_comp_s` 0); do not
+enable expecting margin. On the gate the schedule reads `--lat`, so test the offset hover at
+`--lat 0.05`, not the pessimistic 0.10.
 `CASC_SETTLE_S` holds the engage hover for this experiment (force a DOUBLE: `ros2 param set`
 exits 0 on a rejected int -- that cost one flight tonight).
 
