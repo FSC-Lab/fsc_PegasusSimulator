@@ -289,6 +289,19 @@ assert _guide_msgs()[-1] == "loiter 100.0 400.0 100 -1", _guide_msgs()[-1]
 assert tab.spin_lo_r.minimum() >= 60.0, "an orbit tighter than the bank-limited turn must not be offered"
 tab.btn_ghold.click()
 assert _guide_msgs()[-1] == "hold"
+# "loiter here": centre one radius abeam of the COURSE on the turn side -> the aircraft is on the
+# circle's tangent and orbits at once. Heading east at (300, 400), CCW, R 100 -> centre (300, 500).
+tab._mocap_pos = np.array([300.0, 400.0, 30.0]); tab._mocap_yaw = 0.0
+tab._mocap_vel = np.array([16.0, 0.0, 0.0])
+tab.cmb_lo_dir.setCurrentIndex(0); tab.spin_lo_r.setValue(100.0)
+tab._on_guide_loiter_here()
+assert _guide_msgs()[-1] == "loiter 300.0 500.0 100 1", _guide_msgs()[-1]
+tab.cmb_lo_dir.setCurrentIndex(1); tab._on_guide_loiter_here()
+assert _guide_msgs()[-1] == "loiter 300.0 300.0 100 -1", _guide_msgs()[-1]
+# in a bank the nose is not the course: the centre follows the velocity vector
+tab._mocap_yaw = 0.5; tab._on_guide_loiter_here()
+assert _guide_msgs()[-1] == "loiter 300.0 300.0 100 -1", _guide_msgs()[-1]
+print("loiter HERE -> centre one radius abeam of the course, turn side OK")
 print("waypoints / loiter / straight -> protocol strings OK")
 
 # RTH inside the auto mission: the cruise phase becomes RTH, the mission lands AT HOME once the
