@@ -2,6 +2,52 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ WHERE THE BRANCH STANDS (2026-09-13 17:45, wrap-up) -- READ THIS FIRST, THEN THE DATED SECTIONS.
+**WHAT FLIES.** The tank aircraft (0.502 kg default, 0.1 / 0.7 kg selectable) flies the full mission
+on the fixed plant: climb -> 90 deg cruise -> banked waypoint turns -> loiter -> return-to-home ->
+landing at the take-off point, from a script OR from the ground station's buttons. Twelve landings
+on 2026-09-13 (bags in `~/flight_bags/slosh`, rows in `results.tsv`, provenance in
+`~/flight_bags/LAUNCH_LOG.txt`). The offline gate predicts flight to a tenth of a degree / a metre.
+**ONE COMMAND:** `VTOL_TANK=slosh VTOL_TANK_KG=0.502 bash scripts/start_slosh_hil.sh` (stack + GS;
+READY only after both mass banners match), then the GS Trajectory tab: TAKEOFF -> Auto Mission
+(ctrl = Cascade, alt 30) -> the Guidance row (↱ waypoints / ◯ loiter / ◯ here / 🏠 / →).
+Scripted: `VTOL_TANK=slosh VTOL_TANK_KG=0.7 NAME=x GUIDE="15:wp 500 0 500 400 100 400;150:rth"
+bash scripts/run_slosh_flight.sh`. Score a turning flight with `scripts/ana_guided.py <bag>`;
+gate a change with `scripts/ke_sweep.sh <tag> 1 16 --ttr 10 --lat 0.03 --comp 0.049 --slosh` +
+`scripts/ke_metrics.py`. Tear down with `scripts/kill_slosh_hil.sh` (from outside tmux).
+**REPOS:** sim `slosh`, controller `slosh` (fsc_autopilot_ros2-master), GS `vtol-cascade-work`
+(ros2_ground_station_gui) -- paired; baseline = tag `pre-slosh` in all four repos.
+**OPEN ITEMS, in the order I would take them:**
+1. **Heavy mode's back-transition margin.** 0.7 kg crosses its 15.50 m/s stall at +16.6 deg with
+   3 solve failures when the decel starts in a bank (flown); the gate only ever starts it
+   wings-level. Gate `--decel_at` with `--roll0`/a turn in progress; the RTH could also refuse
+   to arm the decel until |roll| < 3 deg (one line in `Guidance.update`'s rth branch).
+2. **The orbit needs 17 deg of bank where 14 is coordinated** (both masses, gate and flight): a
+   standing 3.4 m radius error carries the difference. An integral on rho, or an adapted bank
+   feed-forward, closes it; the cause is no rudder coordination (sideslip in the turn).
+3. **RTH stops 24-28 m from home** (gate 13): the flown decel is ~1 s longer than the schedule at
+   the onset. `rth_brake_margin` is the knob; the geometric leg covers the rest today.
+4. **0.1 kg was gated (16/16) but not flown**; 0.7 kg has ONE flight. Repeat before any claim.
+5. **Slosh has never been made to bite in HIL**: every flight was the 41 mm tank AT the CG (the
+   plan's benign case; 0.26 N, no moment). The scene has no radius knob (the gate has
+   `--slosh_radius`); add `VTOL_TANK_R` and fly the 60-100 mm tank at `VTOL_TANK_DX=0.3` on the
+   turning mission, L1 off, to see the largest moment this model can make (gate: absorbed).
+6. **The model cannot make impacts**: the equivalent pendulum with an inelastic wall is the linear
+   first mode; breaking-wave / impact loads of a half-full wide tank are outside it (plan phase 5,
+   a particle fluid, deliberately not built). Say so in any claim about "sloshing".
+7. **Hardware:** transport margin is ~50 ms at kR 3 (faithful gate: mission lost at 80 ms, L1 CG
+   hover at 50); `i_max` 12 N on the safe controller is a safety-relevant widening; the GS still
+   quotes the 14.13 m/s baseline stall in its speed checks (tank: 15.12 / 15.50).
+8. **The GS ↱ Fly waypoints button has not been pressed in flight** (the same protocol string was
+   flown from the driver; ◯ Loiter and 🏠 were pressed and flew).
+**THINGS THAT BIT TODAY, so they do not bite again:** a node that prints its banner and dies passes
+every check that stops at the banner (now: node alive + status-topic ack required); `gp()`
+float-casts, never read a string parameter through it; the harness `--ttr` default is 40, not the
+node's 10; `pgrep -f <pattern>` in a waiter loop matches the waiter itself; tmux wraps long banner
+lines (`capture-pane -J`); a JIT cache key must hash everything the artefact bakes in (nmpc6's did
+not hash the mass for three days of tank flights); a scripted flight closes the GS, and a GS
+selection during a scripted climb fights the driver.
+
 **THE BASELINE IS A TAG IN FOUR REPOSITORIES, NOT ONE.** `pre-slosh` is cut in
 fsc_PegasusSimulator (ea74406), fsc_autopilot_ros2-master (88127e2),
 fsc_autopilot_ros2_msgs-master (ebeded8) and ros2_ground_station_gui (971fba6);
@@ -659,6 +705,20 @@ statement "the cache key hashes the model source" was true of nmpc_full and NOT 
 Now hashed: M, G, IYY, MAX_THRUST, CQ, RPOS, `build_ode6` and `so3.aero_body` source -- each mode
 compiles its own solver (~2 min, once). The lesson is the one from 2026-09-06 (C6) repeated on the
 node that was written after it: a cache key must cover everything the artefact bakes in.
+**FLOWN, 0.7 kg (bag slosh_20260913_172434, row kg07_turns_a1_172507): LANDED 0.01 m FROM HOME, the
+full guided mission** -- two 90 deg fly-by turns at the 25 deg limit (z 30.0-30.1, V 15.95-16.02,
+overshoot +13.6 / +12.7 m), loiter steady rho 103.4 +- 0.6 at R 100 (roll -17.5), RTH, stop 27.9 m
+from home, corridor peak +10.2, 3/3866 outer solve failures. **Where the 0.5 m/s of stall margin
+shows: the back-transition.** The decel armed while still 6 deg banked from the RTH capture and the
+crossing of the 15.50 m/s stall pitched to **+16.6 deg** (V 13.3) with the 3 failures in that one
+second, then +12.7, +10.3, ... and a clean stop (z min 29.7). Flight 10 at 0.502 kg crossed at
++13.4 with 0 failures. The gate's 16 seeds at 0.7 peak at 13.5 wings-level; a decel onset IN A BANK
+is the case to gate next (`--roll0` at `--decel_at`). The launcher's new mass checks passed
+(`water: 0.700 kg confirmed`, `cascade mass: 4.1496 kg`) -- after first failing on their own
+capture: tmux WRAPS a 128-character banner at the pane width and `capture-pane` without `-J`
+returned the "M=<kg>" tail as a separate line (17:12, two attempts). `-J` now.
+**0.1 kg: gate 16/16 (corridor +9.2, cruise +6.0 / 0.76, BT 14.1); the flight was launched (both
+banners confirmed 0.100 kg / M 3.5496) and stopped two minutes in at wrap-up. NOT FLOWN.**
 **SWEEP HYGIENE:** 16 parallel casadi processes loading one cache file core-dumped two of them at
 start (no output at all, `timeout: the monitored command dumped core`) -- a process crash, not a
 flight; re-run those seeds serially before reading a "14/16".
