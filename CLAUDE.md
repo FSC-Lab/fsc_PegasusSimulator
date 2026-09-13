@@ -198,7 +198,19 @@ implicit Euler at the physics step. `tests/test_slosh_pendulum.py`: 3.325 Hz vs 
 3.323; decay 10 -> 1.31 mm in 20 s as the 0.49% zeta predicts; undamped energy bounded 1.7%
 over 200 cycles; steady 2 m/s^2 lateral -> 0 N slosh force, bob at -f/w^2. `_apply_slosh`
 applies it at the tank (the assembled CG); `PEGASUS_SLOSH_DEBUG=1` prints [SLOSH] lines.
-Select with `VTOL_SLOSH=1 VTOL_TANK=slosh`. Phase 4 (pendulum in the offline gate) next.
+Select with `VTOL_SLOSH=1 VTOL_TANK=slosh`.
+**PHASE 4 DONE:** `nmpc_cascade_node.py --test --slosh [--slosh_zeta Z] [--slosh_fill F]` imports
+the simulator's pendulum BY PATH (one pendulum, not two) and adds its reaction to the plant
+like the gust. Full mission, pitch kick, 3 m/s^2 gust, roll15+yaw-25 upset: IDENTICAL to dead
+mass in every metric; peak surface excursion 6.8-10.8 mm in a 41 mm tank.
+**FLOWN (bag slosh_20260912_195718, row tank_slosh_a1_195751): LANDED 0.00 m, the cleanest
+mission of the day** -- cruise roll 0.3 deg, cross-track span 0.3 m, z 30.0-30.1, back-
+transition 15.5 -> 3 m/s in 8.2 s with z min 29.6 and roll 0.1, 0 solve failures. The 0.1 kg
+mode at 3.3 Hz is below this controller's notice, as the plan expected. ONE flight; the
+launcher's phase-3 banner gate passed (it exits 1 otherwise) but the banner line itself was
+not captured -- it is printed explicitly from now on. **L1 ADAPTIVE: NOT NEEDED** at this
+tank size. Open: the back-transition stall-crossing knife-edge (~1 in 7 under noise + a
+cross-track history, any lateral gains) -- widen that margin before more water.
 
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare

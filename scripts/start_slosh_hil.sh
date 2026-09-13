@@ -186,9 +186,13 @@ if [ "$WANT_SLOSH" = "1" ]; then
   fi
   [ -n "$TANK_LINE" ] && say "    $TANK_LINE"
   # phase 3: asked for the free surface -> the banner must say so
-  if [ "${VTOL_TANK:-1}" = "slosh" ] && ! echo "$PANE" | grep -q "SLOSH (phase 3"; then
-    echo "[slosh_hil] !! VTOL_TANK=slosh but Isaac logged a dead-mass tank, not the pendulum."
-    exit 1
+  if [ "${VTOL_TANK:-1}" = "slosh" ]; then
+    P3=$(echo "$PANE" | grep -o "SLOSH (phase 3, pendulum)" | tail -1)
+    if [ -z "$P3" ]; then
+      echo "[slosh_hil] !! VTOL_TANK=slosh but Isaac logged a dead-mass tank, not the pendulum."
+      exit 1
+    fi
+    say "    free surface: $P3 confirmed in Isaac's log"
   fi
 fi
 if [ "$WANT_SLOSH" = "0" ] && [ "$BANNER" -ge 1 ]; then
