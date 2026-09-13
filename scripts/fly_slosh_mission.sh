@@ -24,6 +24,11 @@ SESSION=${SESSION:-vtol_smc_hil}
 NAME=${NAME:-flight_$(date +%H%M%S)}
 BAG_DIR=${BAG_DIR:-$HOME/flight_bags/slosh}
 ALT=${ALT:-30}; DIST=${DIST:-800}; CRUISE_T=${CRUISE_T:-70}
+# GUIDE="T:cmd;T:cmd" flies the cascade's guidance protocol during the cruise (turns, loiter,
+# rth); with an rth the aircraft stops itself over home, so land there: LAND_X/LAND_Y default
+# to the target for the straight mission and to home (0, 0) when GUIDE has an rth.
+GUIDE=${GUIDE:-}
+case "$GUIDE" in *rth*) LAND_X=${LAND_X:-0}; LAND_Y=${LAND_Y:-0} ;; *) LAND_X=${LAND_X:-$DIST}; LAND_Y=${LAND_Y:-0} ;; esac
 CLIMB_T=${CLIMB_T:-150}; CTRL=${CTRL:-cascade}
 OUT=${OUT:-$BAG_DIR/$NAME.flight}
 NODE_PY=${NODE_PY:-$HOME/envs/isaac_env/bin/python3}
@@ -113,10 +118,11 @@ fi
 say "ARMED"
 
 # --- 3. fly -----------------------------------------------------------------
-say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition + land"
+say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition + land at ($LAND_X, $LAND_Y)${GUIDE:+; guide: $GUIDE}"
 timeout 900 "$NODE_PY" "$ROOT/scripts/fly_transition.py" \
     --alt "$ALT" --dist "$DIST" --controller "$CTRL" --climb-time "$CLIMB_T" \
-    --cruise-time "$CRUISE_T" --back-transition --land --land-x "$DIST" --land-y 0 \
+    --cruise-time "$CRUISE_T" --back-transition --land --land-x "$LAND_X" --land-y "$LAND_Y" \
+    ${GUIDE:+--guide "$GUIDE"} \
     > "$OUT" 2>&1 &
 FPID=$!
 # ★ SUPERVISE. The stack has died mid-flight twice today and the driver flew the last

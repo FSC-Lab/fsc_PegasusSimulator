@@ -223,7 +223,18 @@ case "${CASC_NODE_PY:-}" in
       echo "[slosh_hil]    The base cascade (or nothing) is running. Not READY."
       exit 1
     fi
-    say "    $CBANNER" ;;
+    say "    $CBANNER"
+    # The banner proves which node STARTED, not that it is still running: the 2026-09-13
+    # guidance wiring died in the constructor two lines after the banner (a float() on the
+    # namespace string), the launcher reported READY on the banner alone, and the mission was
+    # flown by the geometric controller. A pane traceback or a missing node process is a fault.
+    if echo "$CPANE" | grep -qi traceback; then
+      echo "[slosh_hil] !! the TANK cascade printed its banner and then THREW:"
+      echo "$CPANE" | grep -i -A3 traceback | tail -8; exit 1
+    fi
+    if ! pgrep -f "nmpc_cascade_tank_node" >/dev/null 2>&1; then
+      echo "[slosh_hil] !! the TANK cascade printed its banner but no nmpc_cascade_tank_node process is alive. Not READY."; exit 1
+    fi ;;
   *)
     [ -n "$CBANNER" ] && { echo "[slosh_hil] !! the TANK cascade is running but was not asked for."; exit 1; }
     say "    cascade: base node confirmed" ;;

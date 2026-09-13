@@ -17,14 +17,25 @@ set -u
 
 LK=$(tmux capture-pane -p -S -200 -t "$SESSION:2-isaac" 2>/dev/null | grep -cE "VTOL_HIL vid=|Received first hearbeat")
 PT=$(tmux capture-pane -p -S -20  -t "$SESSION:1-px4"   2>/dev/null | grep -c  "poll timeout")
-TB=$(tmux capture-pane -p -S -60  -t "$SESSION:6g-full" 2>/dev/null | grep -ci traceback)
-ND=$(ros2 node list 2>/dev/null | grep -cE "geometric_hover_control|nmpc_full_smc_control")
+# Tracebacks in EITHER wing-borne pane, and the cascade node must be ALIVE, not merely have
+# printed its banner: on 2026-09-13 (flight turns_loiter_rth_a1) the tank cascade printed its
+# schedule banner and then died in its constructor; this check counted geometric+nmpc_full as
+# "2/2", the launcher saw the banner, and the mission was flown by the geometric controller
+# reporting "cruise" at 1 m/s. If a 6h-cascade window exists the node is required.
+TB=$(for w in 6g-full 6h-cascade; do tmux capture-pane -p -S -60 -t "$SESSION:$w" 2>/dev/null; done | grep -ci traceback)
+NL=$(ros2 node list 2>/dev/null)
+ND=$(echo "$NL" | grep -cE "geometric_hover_control|nmpc_full_smc_control")
+if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6h-cascade; then
+  NDW=3; ND=$((ND + $(echo "$NL" | grep -c nmpc_cascade_control)))
+else
+  NDW=2
+fi
 IS=$(pgrep -cf "03_vtol_px4_hil" 2>/dev/null | head -1); IS=${IS:-0}
 PX=$(pgrep -cx px4 2>/dev/null | head -1); PX=${PX:-0}
 
 VS=$(/usr/bin/python3 "$ROOT/scripts/vehicle_state.py" 2>/dev/null | tail -1)
 [ -z "$VS" ] && VS="nostate"
 
-echo "health: link=$LK poll_timeouts=$PT nodes=$ND/2 isaac=$IS px4=$PX traceback=$TB vehicle=$VS"
-[ "$LK" -ge 1 ] && [ "$PT" -eq 0 ] && [ "$ND" -ge 2 ] && [ "$IS" -ge 1 ] \
+echo "health: link=$LK poll_timeouts=$PT nodes=$ND/$NDW isaac=$IS px4=$PX traceback=$TB vehicle=$VS"
+[ "$LK" -ge 1 ] && [ "$PT" -eq 0 ] && [ "$ND" -ge "$NDW" ] && [ "$IS" -ge 1 ] \
   && [ "$PX" -ge 1 ] && [ "$TB" -eq 0 ] && [ "$VS" = "ok" ]

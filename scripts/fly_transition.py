@@ -67,6 +67,8 @@ class Flight(Node):
             PositionControllerReference,
             f"/{ns}/fsc_autopilot_ros2/position_controller/reference", 10)
         self.ctl = self.create_publisher(String, f"/{ns}/ground_station/active_controller", 10)
+        # the cascade's guidance protocol: "wp X Y ...", "loiter X Y R [dir]", "rth", "hold"
+        self.cmd = self.create_publisher(String, f"/{ns}/cascade/cmd", 10)
         self.create_subscription(Mocap, f"/{ns}/mocap", self.on_mocap, qos_profile_sensor_data)
         self.create_subscription(ActuatorMotors, f"/{ns}/fmu/in/actuator_motors", self.on_mot, qos)
         self.create_subscription(ActuatorServos, f"/{ns}/fmu/in/actuator_servos", self.on_srv, qos)
@@ -175,6 +177,11 @@ def main():
     ap.add_argument("--land-x", type=float, default=None)
     ap.add_argument("--land-y", type=float, default=None)
     ap.add_argument("--land-time", type=float, default=90.0)
+    ap.add_argument("--guide", default="",
+                    help='guidance plan "T:cmd;T:cmd" (T seconds after the cruise starts), e.g. '
+                         '"10:wp 400 0 400 300 0 300;90:rth". With an rth the node brakes itself: '
+                         'the cruise ends when it has stopped and the driver skips its own '
+                         'back-transition; land at --land-x/y (home).')
     a = ap.parse_args()
 
     rclpy.init()
@@ -204,9 +211,28 @@ def main():
     print(f"\n== 3 CRUISE: target {a.dist:.0f} m ahead ==")
     tgt = [base[0] + a.dist, base[1], a.alt]
     peak = {"V": 0.0, "tilt": 0.0, "wing": -1e9}
+    plan = []
+    for part in a.guide.split(";"):
+        if ":" in part:
+            tt, cmd = part.split(":", 1); plan.append((float(tt), cmd.strip()))
+    plan.sort()
+    guided = {"t0": time.time(), "rth": False, "stopped": False}
+    if plan:
+        print("  guidance plan: " + "; ".join(f"t+{tt:.0f}: {c}" for tt, c in plan))
     def cruise():
         n.send(tgt); n.set_ctrl(a.controller)
         d = n.telem()
+        now = time.time() - guided["t0"]
+        while plan and now >= plan[0][0]:
+            tt, cmd = plan.pop(0)
+            n.cmd.publish(String(data=cmd))
+            print(f"  >> GUIDE t+{now:.0f}: '{cmd}'")
+            if cmd.split()[0].lower() == "rth":
+                guided["rth"] = True
+        if guided["rth"] and d["V"] < 3.0 and d["tilt"] < 15.0:
+            guided["stopped"] = True
+            print(f"  RTH complete: stopped at ({d['p'][0]:.1f}, {d['p'][1]:.1f}), V={d['V']:.2f}")
+            return True
         peak["V"] = max(peak["V"], d["V"]); peak["tilt"] = max(peak["tilt"], d["tilt"])
         peak["wing"] = max(peak["wing"], d["wing"])
         n.line("cruise")
@@ -222,7 +248,9 @@ def main():
     # multicopter controller, which writes tilt to literal ZERO. Lift doubles, it balloons 10 m,
     # stalls at AoA +78 deg and departs into a dive -- a 65.7 m excursion. The vehicle has to be
     # SLOWED DOWN first, nose-up, on the same trim schedule that took it out.
-    if a.back_transition:
+    if a.back_transition and guided["stopped"]:
+        print("\n== 3b BACK-TRANSITION: done by the guidance (rth) -- skipped ==")
+    elif a.back_transition:
         print("\n== 3b BACK-TRANSITION (decelerate on the schedule, nose-up flare) ==")
         import subprocess
         subprocess.run(["ros2","param","set",ctrl_node(a.controller),"decel_now","1.0"],
