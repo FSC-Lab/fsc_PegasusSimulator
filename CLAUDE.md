@@ -212,6 +212,50 @@ not captured -- it is printed explicitly from now on. **L1 ADAPTIVE: NOT NEEDED*
 tank size. Open: the back-transition stall-crossing knife-edge (~1 in 7 under noise + a
 cross-track history, any lateral gains) -- widen that margin before more water.
 
+# ★★★ L1 ADAPTIVE AUGMENTATION (insurance) — BUILT, PROVEN OFFLINE, AND IT EXPOSED A HOVER
+# FRAGILITY THE GATE CANNOT SEE (2026-09-12 late). `L1Aug` in the cascade node, `l1_on` OFF.
+**WHAT IT IS.** Predictor on body rates, piecewise-constant adaptation each inner tick,
+`u_ad = -C(s) sigma_hat`, C = w_c/(s+w_c), added to M_des BEFORE allocation so the outer's trim
+package is untouched. It adapts to the RESIDUAL of the controller's own moment model (rotors
+via B_rot at the actual tilt, aero via aero_body, gyroscopics) -- not to the plant -- so it
+cannot cancel the aero stiffness the outer plans with. w_c = 2 rad/s (above the 0.9 rad/s
+guidance loop, below the 8.9 rad/s short period and 21 rad/s slosh). HOLDS through decel
+(adapting on the stall crossing tipped it: +82 deg vs +19).
+**TWO THINGS THE FIRST VERSION GOT WRONG, both found on the gate:** the predictor must be
+driven by the command the plant is APPLYING (delay-aware; a fresh-command predictor
+cancelled moments that had not arrived -- a growing 0.8 rad/s front/rear oscillation with
+the outer's package steady), and the discrete PWC law estimates e^{-k_s T_s} sigma (86% at
+k_s 30 / 200 Hz -- the residual seen); k_s 6 -> 95-97%.
+**THE TEST BED:** `so3.build_ode(rpos=)` lets the gate's PLANT disagree with the controller
+about the CG (`--plant_cg_dx`), and `VTOL_CG_DX` does the same in Isaac. Note a 3 cm TANK
+offset moves the assembled CG only 3.8 mm (0.15 N.m, ~1.5 deg): the tank's mount is NOT a
+driver at this mass. The AIRFRAME CG error is the real case (it has been wrong by 2 cm twice
+in this project's history) -- and hardware's.
+**OFFLINE (gate): PROVEN.** 5 cm forward, hover: -16.3 deg standing -> -1.1 (k_s 4..8);
+learned moment -1.90 N.m in hover (true 38.8 N x 0.05 = 1.94), falling to -0.28 at 90 deg
+tilt = the rear pair's 5 N on that arm -- it tracks the physics through the transition.
+Full mission at 0/2/5 cm x 3 seeds all complete; upsets/gust unchanged; knife-edge gate
+13/16 vs 14/16 = neutral.
+**HIL: PARTIAL, THEN THE REAL FINDING.** Airframe CG +2.6 cm, controller told nothing:
+  2 s engage hover (default settle_s): L1 off -6.7 deg standing; L1 on -5.1 -> -2.3 still
+  converging when the transition took over. Both LANDED 0.00/0.01 m. ~half the gate's effect.
+  **30 s engage hover: DIVERGES IN ~4 s WITH OR WITHOUT L1** -- pitch -0.5 -> -10 -> -69 deg,
+  solves failing, ground by t+8 (off); -0.8 -> -4.5 -> -46 -> -65 (on). The gate holds the same
+  error at a bounded -16 deg. L1 at w_c 2 converges in 2-3 s; the divergence starts inside 2.
+**WHY THE HOVER IS THAT FRAGILE (structural, not a gain):** the inner's pitch error is
+against the outer's PLANNED pitch, which starts from the measured state every tick. With a
+wrong model the plan drifts with the aircraft and the inner tracks the drift: the pitch
+attitude loop is effectively OPEN at low frequency in hover. The offset moment scales with
+thrust, the outer answers the sinking altitude with more thrust, and that is positive
+feedback. The safe controller (attitude error against a FIXED reference, 12 N integral)
+climbed through the identical error without trouble in every one of these flights.
+**OPTIONS, none taken:** (a) L1 faster (w_c 5, k_s 15) -- must first prove neutral on the
+gate; (b) give the inner a pitch-attitude term against the SCHEDULE's pitch in hover
+(wing share 0), fading as the wing takes over, so the loop is closed where the outer's model
+error bites -- structural, cheap, and the thing L1 would then only have to trim; (c) both.
+`CASC_SETTLE_S` holds the engage hover for this experiment (force a DOUBLE: `ros2 param set`
+exits 0 on a rejected int -- that cost one flight tonight).
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
