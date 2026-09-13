@@ -535,6 +535,15 @@ def quad_tiltrotor_config(
         #   surface   -- a representative small digital servo. tau alone is only half a servo
         #                (it would still permit unbounded slew), so the rate limit goes with it.
         thrust_model="momentum",
+        # ★ 749 rad/s (7150 rpm), NOT the VTOLConfig default of 1000. CT0 is derived so static
+        # thrust is 18 N either way, but the ADVANCE RATIO at a given throttle is not: at 1000
+        # the prop at 0.80 throttle and 16.5 m/s makes 3.5 N where the controllers, the plant
+        # double, the offline gate and tests/test_actuator_models.py -- all written for 749 --
+        # expect 0.7. Flown (2026-09-13 10:36 bag, row ke_cap8b): the aircraft cruised 0.45 m/s above its
+        # command on less throttle than the gate needs, and the back-transition onset braked
+        # from behind its reference (+21 deg pitch, gate 11-13). The default had never been set
+        # for this airframe; tests/test_prop_pairing.py now holds sim and controller together.
+        rotor_omega_max=749.0,
         surface_tau=0.03,                # [s] small digital servo
         surface_rate_deg_s=400.0,        # [deg/s] its no-load slew rate
         stage_prefix="quad_tiltrotor",
@@ -735,6 +744,7 @@ class VTOL(Vehicle):
                 path=prop_path, size=prop_size, mass=cfg.link_mass,
                 inertia=cfg.link_inertia, color=(0.90, 0.90, 0.90), **prop_mesh_kwargs,
             )
+            self._unclamp_prop_spin(prop_path)
             # 4) Spin joint: nacelle -> prop, at the prop shaft, velocity-driven.
             self._add_revolute_joint(
                 name=rotor.spin_joint,
@@ -748,12 +758,35 @@ class VTOL(Vehicle):
                 path=prop_path, size=prop_size, mass=cfg.link_mass,
                 inertia=cfg.link_inertia, color=(0.90, 0.90, 0.90), **prop_mesh_kwargs,
             )
+            self._unclamp_prop_spin(prop_path)
             self._add_revolute_joint(
                 name=rotor.spin_joint,
                 parent=f"{prefix}/body", child=prop_path,
                 anchor_in_parent=rotor.position, axis="Z",
                 drive="velocity", damping=cfg.spin_drive_damping,
             )
+
+    def _unclamp_prop_spin(self, prop_path: str):
+        """Let the prop link spin as fast as the rotor model says it does.
+
+        ★ PhysX caps every rigid body's angular velocity at 100 rad/s by default
+        (physxRigidBody:maxAngularVelocity = 5729.58 deg/s). The props are driven to
+        400-750 rad/s, so the velocity drive pushed against that cap FOREVER with
+        torque D*(omega_cmd - 100) per prop, reacted onto the airframe about the spin
+        axis. Equal throttles cancel; any DIFFERENTIAL does not: measured in
+        application/vtol/09_vtol_inertia_probe.py, a +-0.20 yaw-diagonal step at hover
+        with the modelled reaction torque OFF still yawed the aircraft at 17 rad/s^2 --
+        8.3 N.m of torque no controller knows about, 3.3x the modelled reaction. In HIL
+        that is the hover yaw limit cycle (rail-to-rail diagonal at 2.7 Hz, the 2026-09-12 23:55 hover bag,
+        fitted as an effective Izz of 0.11 against the true
+        0.49) and, through the tilted front pair, a spurious ROLL torque in cruise.
+        The offline gate never had it. The cap is raised to 1.5x omega_max; nothing
+        else changes -- the modelled reaction torque (rotor_moment_ratio) stays."""
+        stage = self._current_stage
+        prim = stage.GetPrimAtPath(prop_path)
+        api = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
+        cap = 1.5 * max(float(self._cfg.rotor_omega_max), 100.0)
+        api.CreateMaxAngularVelocityAttr().Set(float(math.degrees(cap)))
 
     def _build_surface(self, surface: SurfaceConfig):
         """Build a hinged control-surface link off the body."""

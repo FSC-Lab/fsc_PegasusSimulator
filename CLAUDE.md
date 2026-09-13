@@ -358,6 +358,82 @@ millimetre (the hover holds to ~6 mm; settle_s=30 flights let the target arrive 
 latched heading stands, no cross-track error.** The offline gate never saw it because its
 target is always far away from the first tick. Lesson, again: the bag, not the verdict.
 
+# ★★★★ THE GATE'S BLIND SPOTS (2026-09-13): THREE PLANT FACTS THE OFFLINE GATE COULD NOT SEE.
+# Found by fitting the plant's response to the controller's OWN commanded moments in the bags
+# (`scripts/bag_axis_fit.py`), then asking PhysX directly (`application/vtol/09_vtol_inertia_probe.py`).
+**1. THE PROP LINKS WERE PINNED AT 100 rad/s AND THE DRIVE'S FIGHT WAS REACTED ON THE AIRFRAME.**
+PhysX caps every rigid body's angular velocity at 100 rad/s unless told otherwise; the props are
+velocity-driven to 400-750. The drive therefore pushed against the cap forever with torque
+D*(omega_cmd - 100) per prop (D = spin_drive_damping 0.01), reacted about each prop's spin axis.
+Equal throttles cancel; ANY DIFFERENTIAL does not. Probe, hover throttle, modelled reaction torque
+switched OFF: a +-0.20 yaw-diagonal step yawed the aircraft at a CONSTANT 17 rad/s^2 = **8.3 N.m
+no controller knew about, 3.3x the modelled reaction torque**. With the cap lifted the same step
+gives a -5 deg/s impulse and stops (the physical spin-up reaction; implied prop inertia 7.5e-5 vs the
+configured 1e-4). Every flight of this airframe carried it. In hover it is the **rail-to-rail yaw
+diagonal at 2.7 Hz** in 5 of 7 cascade hovers (the geometric hover on the same rig: 0.000) --
+the bag fits as an effective Izz of **0.11 against the true 0.49** (R^2 0.96) even in the hovers
+that happened not to thrash. In cruise the tilted front pair turns the same artefact into a
+spurious **ROLL** torque whenever the inner uses front differential for yaw: the lateral limit
+cycle's "60 deg of unexplained lag" and the k_bank_d fix were tuned against it. FIXED in
+`vtol.py::_unclamp_prop_spin` (cap = 1.5 x rotor_omega_max on every prop link;
+`tests/test_prop_spin_cap.py` guards the source, the probe is the ground truth).
+PhysX's rigid-body inertia, by contrast, is EXACTLY the assembled 0.265/0.303/0.490 (probe ratio
+1.00 on all three axes) -- the earlier suspicion of a mass-property bug is closed.
+**2. THE AIRFRAME FLEW rotor_omega_max = 1000 rad/s; EVERY MODEL OF IT SAYS 749.** The VTOLConfig
+default was never set for the FSC quad. CT0 is derived so static thrust is 18 N either way -- hover
+is identical, which is why it hid -- but the advance ratio is not: at 0.80 throttle and 16.5 m/s the
+sim made 3.5 N per front rotor where the controller expected 0.7. That is the 0.45 m/s cruise
+overspeed on less throttle than the gate needs, and the harder back-transition onset (+21 deg vs
+11-13). Fixed at the airframe (749); `tests/test_prop_pairing.py` holds sim and controller to
+the same propeller, including thrust at 16 m/s computed by both sides' own formulas.
+**3. THE GATE'S PLANT WAS THE FLAT PROP UNLESS `--momentum` WAS PASSED -- and it printed a
+warning nobody read.** Every knife-edge sweep, the L1 campaign and the latency ceilings of
+2026-09-12/13 ran on the flat prop (which also has NO rotor spin lag: that branch only ran with
+momentum). Default flipped: momentum (with the 0.12 s spin lag) unless `--flat`. On the faithful
+plant the schedule finding stands (old flare release: 6/16 lost at the crossing; gated: 0), but the
+**hover is different**: kR_hover 4.5 + 50 ms transport + 0.12 s spin lag thrashes at 1 Hz in pitch
+and crashes in ~15 s, with or without a CG error, with or without noise, halved kW or not; kR 3
+stays bounded; tau <= 0.06 or transport <= 30 ms is bounded. HIL hovered 30 s at kR_hover 4.5 --
+but on the un-capped-prop plant, i.e. a different aircraft. Resolved below (item 4): at the
+rotor path's true transport delay the gate and the fixed HIL plant agree.
+**FLOWN ON THE FIXED PLANT (2026-09-13 11:43 and 11:53, rows fixprop / fixprop_hov30, pendulum
+tank): both LANDED (0.01 m).** Cruise now sits at V 16.00 / pitch +7.0 / front throttle 0.88 /
+rear 0.31 -- the momentum gate's trim to the second decimal (before: 16.3-16.6 / +6.0 / 0.80).
+Back-transition onset +14 deg (was +21; gate 11-13). The 30 s CG-error hover at kR_hover 4.5:
+pitch -4.9 steady, yaw diagonal sd 0.05 (was 0.73), yaw fits as Izz 0.71-0.80 -- the physical
+spin-up reaction, within 1.5x of 0.49.
+**4. THE GATE'S `--lat` DOUBLE-COUNTED THE SERVO.** The 49 ms was measured on the ELEVATOR path,
+which includes the 30 ms surface servo; the gate applies `--lat` as pure transport AND adds the
+servo lag in the plant. The rotor path's transport, fitted from the bags, is ~30 ms. At `--lat
+0.03 --comp 0.049` (transport as fitted, compensation as flown) the momentum gate reproduces
+HIL: kR_hover 4.5 with the CG error holds at -5.6 deg (HIL -4.9), kR 3 at -6.4, the full mission
+0/2001 solve failures. **THE TRANSPORT-DELAY MARGIN, faithful plant, noise 0.1/1, full mission:**
+| transport | 30 ms | 40 ms | 50 ms | 80 ms | 100 ms |
+|---|---|---|---|---|---|
+| kR_hover 4.5 (flown) | OK | OK (2 seeds) | **CRASH** | -- | -- |
+| kR 3 (kR_hover 0) | OK | -- | OK (2 seeds) | crash (post-stop hover) | crash |
+HIL is at ~30 ms. **The "150 ms ceiling" of 2026-09-12/13 was a flat-plant number with no rotor
+lag and a double-counted servo; it never existed.** kR_hover 4.5 buys ~1 deg of hover bias on the
+fixed plant (its reason -- the -69 deg divergence -- was the prop artefact) and costs ~20 ms of
+transport margin: RECOMMEND reverting to kR 3 before hardware; left at 4.5 pending that decision.
+**L1 on the faithful plant hunts** (max 21-25 deg in the CG hover at 30 ms; crashes at 50): its
+predictor models the transport delay but not the 0.12 s spin lag. Do not fly `l1_on` until the
+predictor carries the rotor lag. The momentum gate's own hover thrash at kR_hover 4.5 / 50 ms
+(above) is therefore a real property of the plant at 50 ms, not a gate defect.
+**Real-time factor, measured: Isaac runs at 0.86-0.93 sim-s per wall-s in HIL** (PX4 time vs bag
+wall time), so the controller's 49 ms is ~43 ms of sim time and its loops run ~10% faster than
+the plant. Small, but it is one more way HIL is kinder than the gate.
+**PROBE HYGIENE, learned the hard way:** an open-loop "hover" is not a hover. Equal throttles
+carry -0.08 N.m about the assembled CG; with nothing holding attitude the probe tipped 30 deg
+in 3 s and measured the WING's static stability at 11-14 m/s as a "3x torque deficit" -- three
+times, with three different confounds (climbing into the prop's inflow, residual attitude from
+earlier pulses, drift). Balance the split, keep it short, and print v_body at the step.
+**HOW TO LOOK NEXT TIME:** `scripts/bag_axis_fit.py <bag>` first -- an I_eff far from the assembled
+value with a good R^2 is unmodelled plant torque, and the yaw-diagonal sd tells you if a hover is
+thrashing (quiet < 0.02, the thrash 0.4-0.8). Then the probe in Isaac. The gate can only ever
+reproduce what its plant contains; when a flight disagrees with it, measure the plant, do not
+retune the controller.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
