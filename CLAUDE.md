@@ -546,6 +546,18 @@ at engage): `wp X Y [X Y ...]` legs; `loiter X Y R [dir]` orbit (dir +1 CCW defa
 `rth` fly to home, brake, hover over it; `hold` = the straight-line mission as before. The driver
 takes `--guide "T:cmd;T:cmd"` (seconds after cruise start) and `fly_slosh_mission.sh` forwards
 `GUIDE=...`; a plan that ends in rth lands at home. The node logs every ack (`GUIDE '...' -> ...`).
+**GS BUTTONS (GS commit 5d28537, `trajectory_player.py` "Guidance" row): ↱ Fly waypoints (text
+box, world metres), ◯ Loiter (X, Y, R >= 65, CCW/CW), 🏠 Return to home, → Straight.** One String
+each on `/uav_0/cascade/cmd`; the node acks and streams `mode=... | status` at 5 Hz on
+`/uav_0/cascade/status` (controller commit 0d156a7), shown in the row's label via HudSource (a
+subscription on the GS node from the GUI thread never fires -- see flight_hud.py). Refused with
+the reason unless the cascade is the ACTIVE controller: the node resets its guidance at engage,
+so a command sent before the auto mission reaches CRUISE would be lost without a trace. In the
+auto mission a wp/loiter marks the cruise "guided" (no far-target arrival, auto-RTH after 10 min);
+🏠 moves it to an RTH phase that lets the cascade brake itself and then settles + LANDS AT HOME
+on Safe Hover; an RTH that never stops gets the schedule's back-transition forced (never a hover
+handover at 16 m/s). `tests/test_gs_trajectory_tab.py` covers the refusal, the wire format and
+both RTH outcomes; `tests/test_cascade_node_boots.py` now requires the ack on the status topic.
 **THE LAWS, and the numbers that set them.** All of it feeds the EXISTING bank-to-turn law (heading
 error -> roll, k_bank_d damping) -- the guidance only decides the heading, plus one feed-forward:
   * Legs: heading = leg bearing + `k_ct` x cross-track (0.03 rad/m; 0.05 rang the capture after a

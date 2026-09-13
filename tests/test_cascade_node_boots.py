@@ -51,6 +51,11 @@ def run(node, wait_s=60.0):
             return False, f"{node}: never reached standby (exit {proc.poll()})\n" + txt[-1500:]
         # the protocol, end to end: topic -> on_cmd -> Guidance -> logged ack (state is None, so
         # the node must say so rather than throw -- that is the branch a dead subscription hides)
+        # listen for the ack on the status topic FIRST (the ground station's Guidance row reads it)
+        echo = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 topic echo --once /{NS}/cascade/status "
+                f"std_msgs/msg/String")
+        ep = subprocess.Popen(["bash", "-c", echo], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        time.sleep(2.0)
         pub = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/cascade/cmd "
                f"std_msgs/msg/String \"{{data: 'wp 100 0'}}\"")
         subprocess.run(["bash", "-c", pub], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
@@ -62,6 +67,10 @@ def run(node, wait_s=60.0):
                 acked = True; break
         alive = proc.poll() is None
         txt = open(log, errors="replace").read()      # BEFORE the kill: SIGTERM itself logs an rclpy shutdown traceback
+        try:
+            status_out, _ = ep.communicate(timeout=15)
+        except subprocess.TimeoutExpired:
+            ep.kill(); status_out = ""
         os.killpg(proc.pid, 15); proc.wait(10)
         if "Traceback" in txt:
             return False, f"{node}: traceback in the node log\n" + txt[txt.find("Traceback"):][:1500]
@@ -69,7 +78,11 @@ def run(node, wait_s=60.0):
             return False, f"{node}: process died after standby (exit {proc.returncode})"
         if not acked:
             return False, f"{node}: no reaction to /{NS}/cascade/cmd within 10 s (subscription dead?)"
-        return True, f"{node}: booted, answered the command topic, alive"
+        # the ack must ALSO reach /<ns>/cascade/status -- that is what the ground station's
+        # Guidance row displays (before engage the answer is "ignored: no state yet")
+        if "ack" not in status_out or "wp 100 0" not in status_out.replace("''", "'"):
+            return False, f"{node}: no ack on /{NS}/cascade/status (got {status_out.strip()[:120]!r})"
+        return True, f"{node}: booted, acked the command on the status topic, alive"
 
 
 def main():

@@ -261,4 +261,65 @@ tab._wb_choice = "nmpc_full"
 assert tab._controller == before, "changing the mission target must not switch the active controller"
 print("mission-controller selector does not disturb the active controller OK")
 
+# ---- GUIDANCE ROW (cascade): separate buttons for waypoints / loiter / RTH / straight --------
+# Each button is ONE String on /uav_0/cascade/cmd in the node's protocol; refused unless the
+# cascade is the ACTIVE controller (the node resets its guidance at engage, so an early command
+# is silently lost). The Ros stub hands every publisher the same Pub, so the guidance messages
+# land in ros.ctrl alongside the controller switches: filter by content.
+def _guide_msgs():
+    return [m.data for m in ros.ctrl.msgs if isinstance(m, tp.String)
+            and m.data.split()[0] in ("wp", "loiter", "rth", "hold")]
+tab._fm = None
+tab._controller = "geometric"
+n0 = len(_guide_msgs())
+tab._on_guide_wps()
+assert len(_guide_msgs()) == n0 and "refused" in tab.lbl_guide.text(), tab.lbl_guide.text()
+print("guidance on a non-cascade controller -> refused, nothing published OK")
+tab._controller = "cascade"
+tab.edit_wps.setText("500 0, 500 400, 100 400")
+tab._on_guide_wps()
+assert _guide_msgs()[-1] == "wp 500.0 0.0 500.0 400.0 100.0 400.0", _guide_msgs()[-1]
+tab.edit_wps.setText("500 0 500")
+tab._on_guide_wps()
+assert _guide_msgs()[-1].startswith("wp 500.0 0.0 500.0 400.0") and "even" in tab.lbl_guide.text()
+tab.spin_lo_x.setValue(100.0); tab.spin_lo_y.setValue(400.0); tab.spin_lo_r.setValue(100.0)
+tab.cmb_lo_dir.setCurrentIndex(1)
+tab._on_guide_loiter()
+assert _guide_msgs()[-1] == "loiter 100.0 400.0 100 -1", _guide_msgs()[-1]
+assert tab.spin_lo_r.minimum() >= 60.0, "an orbit tighter than the bank-limited turn must not be offered"
+tab.btn_ghold.click()
+assert _guide_msgs()[-1] == "hold"
+print("waypoints / loiter / straight -> protocol strings OK")
+
+# RTH inside the auto mission: the cruise phase becomes RTH, the mission lands AT HOME once the
+# cascade has stopped itself; if it never stops, the schedule's back-transition is forced rather
+# than handing a 16 m/s aircraft to the hover controller.
+tab._set_node_params = lambda target, params: (len(params), [])
+tab._wb_choice = "cascade"          # the mission's cruise tick re-asserts its target controller
+tab._fm = dict(phase="cruise", t0=tab._now(), start=(0.0, 0.0), yaw=0.0, alt=30.0, dist=1000.0,
+               params=None, tgt=(1000.0, 0.0), stop=None, tprev=None, frozen=0, last=None)
+tab._mocap_pos = np.array([300.0, 400.0, 30.0]); tab._mocap_yaw = math.pi
+tab._mocap_vel = np.array([-16.0, 0.0, 0.0])
+tab._on_guide_loiter()
+assert tab._fm["guided"] is True
+tab._fm_tick()
+assert tab._fm["phase"] == "cruise" and "guided" in tab.lbl_fm.text(), tab.lbl_fm.text()
+tab._on_guide_rth()
+assert _guide_msgs()[-1] == "rth" and tab._fm["phase"] == "rth" and tab._fm["land_xy"] == (0.0, 0.0)
+tab._fm_tick()
+assert tab._fm["phase"] == "rth" and "to home" in tab.lbl_fm.text(), tab.lbl_fm.text()
+tab._mocap_pos = np.array([5.0, 24.0, 30.0]); tab._mocap_vel = np.array([0.0, 0.5, 0.0])   # the flown stop
+tab._fm_tick()
+assert tab._fm["phase"] == "settle" and tab._fm["land_xy"] == (0.0, 0.0) and tab._controller == "geometric"
+print("RTH in the auto mission -> rth phase -> stopped near home -> settle over HOME on geometric OK")
+tab._fm = dict(phase="rth", t0=tab._now() - 1e4, start=(0.0, 0.0), yaw=0.0, alt=30.0, dist=1000.0,
+               params=None, tgt=(1000.0, 0.0), stop=None, tprev=None, frozen=0, last=None,
+               land_xy=(0.0, 0.0), rth_d0=500.0)
+tab._controller = "cascade"
+tab._mocap_pos = np.array([300.0, 400.0, 30.0]); tab._mocap_vel = np.array([-16.0, 0.0, 0.0])
+tab._fm_tick()
+assert tab._fm["phase"] == "backtrans", tab._fm["phase"]
+print("RTH that never stops -> forced back-transition, not a hover handover at 16 m/s OK")
+tab._fm = None
+
 print("\nALL GUI SMOKE CHECKS PASSED")
