@@ -289,6 +289,75 @@ enable expecting margin. On the gate the schedule reads `--lat`, so test the off
 `CASC_SETTLE_S` holds the engage hover for this experiment (force a DOUBLE: `ros2 param set`
 exits 0 on a rejected int -- that cost one flight tonight).
 
+# ★★★ THE BACK-TRANSITION KNIFE-EDGE, CLOSED (2026-09-13): THE FLARE WAS RELEASED WHILE THE
+# WING STILL CARRIED THE AIRCRAFT. `nmpc_cascade_tank_node.py` aoa_cap 12 -> 8, flare gated on
+# rotor load (W_FLARE = W_AFT = 0.6). `tests/test_tank_schedule.py` pins it.
+**REPRODUCED FIRST, 16 SEEDS:** the flown schedule at 0.1 deg / 1 deg/s noise + a 10 m cross-track
+history loses seeds 6 and 14 (14/16), 12/16 at 0.3 deg, 9/16 at 150 ms latency -- every loss at
+V 15 -> 12 with the crash bag's signature: pitch 7 -> 14 -> 7 -> 20 -> 49 in 0.6 s, elevator
+-0.5 -> +0.8 -> -1.00, solve fails at AoA 22, the fallback holds the elevator hard nose-up.
+**THE MECHANISM IS THE REFERENCE, NOT THE LOOP.** The cap released the flare as `(1 - wing)`, so
+at 14 m/s (wing share 0.86) the commanded pitch was already 14 deg and at 12 m/s 17.6 -- past the
+10 deg CL peak while the wing carried 60-90% of the weight. The outer's model has that lift curve;
+past the peak its pitch-vs-lift gradient flips and the solution alternates between following the
+pitch reference and holding altitude: a +-7 deg ring at ~1.2 Hz, wing share bouncing 88 -> 8 -> 73%
+in 0.5 s. **Zero latency does not cure it** (pitch error rms 7.3 deg at lat 0 vs 8.2 at 0.10) --
+so it was never a latency or gain problem, and no lateral gain could touch it. Evidence that the
+NMPC never wanted the flare: at decel_rate 1.0 it ignores an 18 deg reference and flies the
+crossing at 6-8 deg, smoothly, with the drag doing the braking; with the reference ramped at
+2 deg/s it settles at 9-10 and never follows it higher.
+**FIX:** the flare is released where it works -- once the rotors carry 40% of the weight, on the
+aft-tilt gate ("the flare and the aft tilt are two halves of one manoeuvre", full_tr35) -- and the
+wing-borne cap is the trim schedule's own 8 deg. Stop time unchanged (8.8 s: at 1.5 m/s^2 the
+braking at the crossing was drag + T sin(theta) at the trim pitch all along).
+
+| 16 seeds, y0 10 m | noise 0.1/1 | noise 0.3/2 | lat 0.05 (HIL) | lat 0.15 |
+|---|---|---|---|---|
+| flown: cap 12, release (1-wing) | 14/16, revs 6.3, fails 113 | 12/16 | 16/16, revs 5.6, fails 65 | 9/16 (6 at the crossing) |
+| gate only (cap 12, W_FLARE .6) | 15/16 | 12/16 | 16/16, revs 1.1 | 11/16 (3 at the crossing) |
+| cap 10, old release | 16/16, revs 3.9, fails 92 | 16/16, revs 4.8 | -- | -- |
+| **gate + cap 8** | **16/16, revs 0, fails 0** | **16/16, revs 0, fails 0** | **16/16, revs 0, fails 0** | **14/16, 0 at the crossing** |
+(caps 9 and 10 with the gate: the same to within a seed.) "revs" = pitch reversals > 3 deg through
+the crossing, "fails" = outer solve failures summed over the 16 back-transitions. **Both halves are
+needed**: the gate alone still hunts at 12 deg, the cap alone survives but rings. The two losses
+that remain at 150 ms are the post-stop HOVER at 3x the HIL latency (elevator bang-bang at
+V = 0.6 m/s, t = 82 s) -- the documented latency ceiling, not the crossing.
+**REGRESSION on the final config:** full mission 0/2001 solve failures, BT peak pitch 11.2, stop
+8.8 s, z 29.7-29.9; identical with L1 on and with the pendulum; lands with a 5 cm CG error
+(2/2001); hover-with-offset -0.82 deg, upsets/gust/latency rows unchanged (the forward schedule
+IS base.build_refs, by construction and by test).
+**METHOD NOTE:** the argf-style flag parser takes the FIRST occurrence, so a sweep script that
+appends stress flags after its own defaults silently runs the defaults. Put the variable flags
+first. Also `--lat` defaults to 0.10 on the gate, which schedules kR_hover to a third of its HIL
+value -- run the HIL-faithful rows at `--lat 0.05 --comp 0.049` explicitly.
+
+**FLOWN (bag slosh_20260913_103526, row ke_cap8b, pendulum tank): LANDED 0.00 m.** 0/1434 solve
+failures over the whole flight, cruise roll <= 0.3 deg, cross-track <= 0.4 m, back-transition
+16.5 -> 2.9 m/s in ~9 s at z 29.4-30.1 with roll 0.0, then the 8-10 deg pitch walk the gate
+predicted (V 13.8 -> 3: +13, +7, +9, +10, +9, +8, +7, +6). **ONE THING THE GATE DID NOT PREDICT:
+the decel ONSET.** At the first decel tick (V=15.6, tilt 44 deg) the elevator stepped -0.28 ->
+-0.98 and the pitch rang ONE 1.2 Hz cycle to +21 deg (AoA 23, past the peak for ~0.3 s), z dipped
+to 29.4, then it settled; the gate's onset peaks at 11-13. The difference is the cruise the decel
+starts from: HIL holds 16.3-16.6 m/s against a 16.0 command with the FRONT PAIR COMMANDED 0.00
+(the gate: 16.00 at 0.14), so at the onset there is no thrust to cut and the outer brakes with
+pitch. Why the HIL cruise sits on the reverse-thrust limit is not resolved here -- it is the
+kind of gate-vs-HIL gap the next item (the gate's blind spots) is for.
+
+**★ THE FIRST RE-FLIGHT NEVER REACHED THE BACK-TRANSITION -- IT FOUND A LATENT ENGAGE BUG
+(bag slosh_20260913_102448, row ke_cap8_a1).** At the first cascade tick the rudder went to
+-1.00 with the rotors in a full yaw differential; yaw 0 -> -66 -> -132 -> -160 deg in 1.5 s, the
+aircraft accelerated BACKWARDS to 3.7 m/s at 32 deg of tilt, and rolled over at t+3 s. The bag
+explains it: the driver engages the cascade and publishes the 800 m target **3 s later**
+(t=204.3 vs 207.4); in between the reference is still the climb's hover point (0.02, 0.01),
+**4 mm** from the latched p0 (0.024, 0.008), and `track_heading` guarded only a 1 mm baseline.
+It computed the bearing of a hover offset (158 deg -- `tests/test_cascade_track_heading.py`
+reproduces the number) and the yaw loop flew it, while the 2 s settle gate had already
+started the acceleration. Every previous flight passed the same race on the luck of the
+millimetre (the hover holds to ~6 mm; settle_s=30 flights let the target arrive in hover).
+**FIX in the base node: a track shorter than `min_track` (5 m) is a hover point -- the
+latched heading stands, no cross-track error.** The offline gate never saw it because its
+target is always far away from the first tick. Lesson, again: the bag, not the verdict.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both
