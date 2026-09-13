@@ -82,6 +82,13 @@ tmux send-keys -t "$SESSION:1-px4" "ekf2 start" Enter 2>/dev/null; sleep 25
 for kv in "radius_max 8000.0" "radius_local 2000.0" "z_max 130.0" "auto_arm true"; do
   timeout 20 ros2 param set /geometric_hover_control ${kv} >/dev/null 2>&1
 done
+# CASC_SETTLE_S: how long the cascade holds its engage hover before transitioning
+# (node default 2 s). 30 s turns the engage hover into the L1 experiment the offline
+# gate runs with --hover_only: a standing pitch that has time to converge.
+if [ -n "${CASC_SETTLE_S:-}" ]; then
+  timeout 20 ros2 param set /nmpc_cascade_control settle_s "$CASC_SETTLE_S" >/dev/null 2>&1 \
+    && say "cascade settle_s = $CASC_SETTLE_S s (engage hover held that long)"
+fi
 say "envelope widened; waiting for PX4 to report ARMED"
 ARMED=0
 for _ in $(seq 1 16); do
