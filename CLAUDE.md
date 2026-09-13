@@ -249,10 +249,27 @@ attitude loop is effectively OPEN at low frequency in hover. The offset moment s
 thrust, the outer answers the sinking altitude with more thrust, and that is positive
 feedback. The safe controller (attitude error against a FIXED reference, 12 N integral)
 climbed through the identical error without trouble in every one of these flights.
-**OPTIONS, none taken:** (a) L1 faster (w_c 5, k_s 15) -- must first prove neutral on the
-gate; (b) give the inner a pitch-attitude term against the SCHEDULE's pitch in hover
-(wing share 0), fading as the wing takes over, so the loop is closed where the outer's model
-error bites -- structural, cheap, and the thing L1 would then only have to trim; (c) both.
+**RESOLVED (2026-09-13 00:00): STIFFEN THE HOVER PITCH LOOP, THEN LET L1 TRIM.** The inner's
+pitch reference IS the schedule's (the plan-tracking dead end was found before) -- the loop
+was not open, it was SOFT: kR_pitch 3.0 leaves 1 N.m as ~19 deg of static error and the
+outer's tilt-and-thrust answer to the drift is positive feedback. `kR_hover` (4.5, weighted
+by 1 - wing share, so the validated 3.0 returns by cruise) is the structural half; 9 (the
+safe controller's) oscillates the cascade's inner at the gate latency. The SAME 30 s hover,
+2.6 cm error, four configurations:
+| kR_pitch in hover | L1 | hover pitch | outcome |
+|---|---|---|---|
+| 3.0 | off | -0.5 -> -10 -> -69 in 4 s | CRASHED |
+| 3.0 | on | -0.8 -> -4.5 -> -46 in 4 s | CRASHED |
+| 4.5 | off | **-5.1 steady** (tilt parked at -9 as a crutch) | LANDED 0.00 m |
+| 4.5 | on | **-1.0 mean**, tilt +-3, 0/521 solve failures | LANDED 0.00 m |
+Gate predicted -0.85 for the last; HIL -1.0. Structure buys stability, adaptation buys the
+bias -- the division of labour the design was written for. **COST, recorded: the latency
+ceiling.** kR_hover 0 flies lat 0.15 and 0.18 clean; 4.5 and 6 crash at 0.15 (4.5 survives
+0.18 with 42 fails -- chaotic in that band). HIL measures 49 ms compensated, 2.5x margin.
+The rule "soften kR if HIL measures more than ~150 ms" is now ~120 ms. Knife-edge seeds
+8/8 with kR_hover 4.5 (was 7/8); upsets unchanged. `l1_on` still defaults OFF; `CASC_L1=true`
+flies it. L1 is the insurance policy it was meant to be -- proven on a mismatch the
+controller could not see, offline and in flight.
 `CASC_SETTLE_S` holds the engage hover for this experiment (force a DOUBLE: `ros2 param set`
 exits 0 on a rejected int -- that cost one flight tonight).
 
