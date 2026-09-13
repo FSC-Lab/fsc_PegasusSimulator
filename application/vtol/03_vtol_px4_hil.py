@@ -112,12 +112,26 @@ class VTOLPx4HilApp:
         use_slosh = os.environ.get("VTOL_SLOSH", "0") not in ("0", "", "false", "False")
         tank_mode = os.environ.get("VTOL_TANK", "1").strip().lower()
         use_tank = tank_mode not in ("0", "", "none", "false")
+        # VTOL_CG_DX: move the AIRFRAME's CG this far forward without telling the
+        # controller -- the L1 augmentation's test bed. This is the mismatch that has
+        # actually happened here (the assembled CG was wrong by 2 cm twice in this
+        # project's history) and the one hardware will have. Rotors stay where they
+        # are in the body, so the thrust arms change: 38.8 N x 3 cm = 1.2 N.m of
+        # standing pitch moment the trim does not know about. (A 3 cm TANK offset,
+        # by contrast, moves the assembled CG by 3.8 mm and is not a driver.)
+        cg_dx = float(os.environ.get("VTOL_CG_DX", "0") or 0.0)
         if use_slosh:
             tank = TankConfig(slosh=(tank_mode == "slosh")) if use_tank else None
             # VTOL_TANK_DX: mount the tank this far FORWARD of the CG without telling the
             # controller -- the L1 augmentation's test bed. 0 = at the CG.
             tank_dx = float(os.environ.get("VTOL_TANK_DX", "0") or 0.0)
             vtol_config = fsc_cad_vtol_slosh_config(tank=tank, tank_dx=tank_dx)
+            if cg_dx != 0.0:
+                from dataclasses import replace as _replace
+                c = vtol_config.body_com_offset
+                vtol_config = _replace(vtol_config, body_com_offset=(c[0] + cg_dx, c[1], c[2]))
+                carb.log_warn(f"VTOL_CG_DX={cg_dx:+.3f} m -> airframe CG moved forward "
+                              f"(the controller is not told)")
             if use_tank and tank_dx != 0.0:
                 carb.log_warn(f"VTOL_TANK_DX={tank_dx:+.3f} m -> tank mounted OFF the CG "
                               f"(the controller is not told)")
