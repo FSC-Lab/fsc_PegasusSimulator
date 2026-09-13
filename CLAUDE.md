@@ -507,6 +507,38 @@ transient of the 12x6 flights is gone with the headroom; hover yaw diagonal 0.00
 flight of the day, eighth landing on the fixed plant.
 **STACK DEATHS:** none in 17 launches today. Not chased.
 
+# ★★ "AND THE SLOSHING?" -- WHERE IT CAN AND CANNOT MATTER (2026-09-13, faithful gate).
+Every result above said "the slosh mode is inert" -- about the PLAN'S tank, whose 41 mm radius
+moves 0.10 kg at 3.3 Hz (peak force ~0.35 N against a 39 N aircraft) AT THE CG. Two things make
+that the most benign case possible: geometry and lever arm.
+**GEOMETRY, same 0.502 kg** (the gate's `--slosh_radius R` re-shapes the tank at fixed water):
+| R mm | h mm | f1 Hz | m1 kg (moving) | vs short period 1.42 Hz |
+|---|---|---|---|---|
+| 41 (plan) | 93 | 3.32 | 0.10 (20%) | x2.3, clear |
+| 60 | 44 | 2.59 | 0.27 (54%) | x1.8 |
+| 80 | 25 | 1.72 | 0.38 (76%) | x1.2 |
+| 100 | 16 | 1.14 | 0.41 (81%) | x0.8 -- below it |
+**LEVER ARM.** A tank at the CG makes NO moment however it sloshes: an 0.4 kg bob swinging to the
+wall at 0.8 Hz changed nothing in the aircraft to two decimals. The gate now applies the reaction at
+the tank (`--slosh_dx/--slosh_dz`, moment = r x F, as `VTOLSlosh._apply_slosh` does at
+`_tank_pos`), and an OFFSET tank feels the rotation (`PendulumSlosh.step(omega, omega_dot,
+r_tank)`: f_tank = f_cg + omega_dot x r + omega x (omega x r), in the sim by finite difference
+of the body rates -- 5 rad/s^2 at 0.3 m is 1.5 m/s^2, the corridor's own acceleration).
+**THE MODEL NEEDED A WALL.** The equivalent pendulum is linear and unbounded: an 80 mm nose tank
+on a straight mission first "departed" the aircraft (roll 168) with the bob at 6e12 mm -- the bob
+had swung metres in a 80 mm tank and the reaction force was fiction. `SloshParameters.wall` = R/2
+(where the linear model's validity ends) is an inelastic stop: the bob parks, its energy is lost
+(breaking), and the reaction is the arrest. `tests/test_slosh_pendulum.py` pins the wall and the
+rotation terms.
+**WITH A VALID MODEL: 0.5 kg of water cannot upset this controller through any tank geometry
+41-100 mm, at the CG or 0.3 m fore/aft or 0.15 m above it, on the straight mission with a
+30 deg/s pitch kick** -- every case identical (0/2001, corridor +9.5, BT +12.7-12.8, roll 0.5),
+worst slosh moment 0.40 N.m (100 mm tank 15 cm above the CG, bob on the wall through the corridor;
+the CG-error moment that gives -5 deg is 1.0 N.m). Where it can still bite is LATERAL
+manoeuvring -- turn entries and exits put lateral specific force into a fore/aft tank and the
+y-slosh at a 0.3 m arm is a YAW moment -- which is what the banked-turn guidance (next) is for.
+Fly the offset 80-100 mm tank on the turning missions, not the straight one.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both

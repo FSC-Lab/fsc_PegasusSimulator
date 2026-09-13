@@ -191,6 +191,7 @@ class SloshParameters:
     zeta: float              # [-]   damping ratio actually in force
     fluid_cg_height: float   # [m]   liquid centroid above the tank base
     inertia_rigid: tuple     # [kg m^2] (Ixx, Iyy, Izz) of the liquid column
+    wall: float = 0.0        # [m]   bob travel limit: the liquid hits the wall (0 = none)
                              #          about its own centroid, treated as solid
 
     @property
@@ -261,6 +262,13 @@ def slosh_parameters(tank: TankConfig) -> SloshParameters:
         zeta=zeta,
         fluid_cg_height=0.5 * h,
         inertia_rigid=(ixx, iyy, izz),
+        # ★ THE LIQUID HITS THE WALL. The equivalent pendulum is a LINEAR, small-amplitude
+        # model; past a few tenths of the radius the wave breaks and the real force saturates
+        # -- and an unlimited pendulum on a tumbling airframe integrates to 10^12 mm (gate,
+        # 2026-09-13, an 80 mm nose tank). Half the radius is where the model's validity ends
+        # and is used as an inelastic stop: the bob stops there, its kinetic energy is lost
+        # (breaking), and the reaction force is what that arrest actually applies.
+        wall=0.5 * R,
     )
 
 
@@ -322,13 +330,33 @@ class PendulumSlosh:
             return 0.0
         return math.sqrt(max(f_axial, 0.0) / self.p.pendulum_length)
 
-    def step(self, f_body, dt: float):
+    def step(self, f_body, dt: float, omega=None, omega_dot=None, r_tank=None):
         """Advance one physics step.
 
-        f_body: specific force in the BODY (FLU) frame [m/s^2], tank axis = +z.
-                In hover this is (0, 0, +g).
+        f_body: specific force of the vehicle's CG in the BODY (FLU) frame [m/s^2], tank
+                axis = +z. In hover this is (0, 0, +g).
+        omega, omega_dot, r_tank: body rates [rad/s], their derivative [rad/s^2] and the
+                tank position relative to the CG [m]. ★ A TANK OFF THE CG feels the rotation:
+                the specific force AT THE TANK is f_cg + omega_dot x r + omega x (omega x r),
+                and the terms are not small -- 5 rad/s^2 of pitch at 0.3 m is 1.5 m/s^2,
+                the size of the corridor's own acceleration. Omit them only for a tank at
+                the CG (the plan's default), where they vanish.
         Returns the slosh force on the vehicle, body frame [N], lateral only."""
-        fx, fy, fz = float(f_body[0]), float(f_body[1]), float(f_body[2])
+        f = [float(f_body[0]), float(f_body[1]), float(f_body[2])]
+        if r_tank is not None and omega is not None:
+            wx, wy, wz = (float(v) for v in omega)
+            rx, ry, rz = (float(v) for v in r_tank)
+            # omega x (omega x r)
+            c1 = (wy * rz - wz * ry, wz * rx - wx * rz, wx * ry - wy * rx)
+            f[0] += wy * c1[2] - wz * c1[1]
+            f[1] += wz * c1[0] - wx * c1[2]
+            f[2] += wx * c1[1] - wy * c1[0]
+            if omega_dot is not None:
+                ax, ay, az = (float(v) for v in omega_dot)
+                f[0] += ay * rz - az * ry
+                f[1] += az * rx - ax * rz
+                f[2] += ax * ry - ay * rx
+        fx, fy, fz = f
         self.f_last = [fx, fy, fz]
         if self.p.slosh_mass <= 0.0 or dt <= 0.0:
             self.a = [0.0, 0.0]
@@ -336,10 +364,18 @@ class PendulumSlosh:
         w = self.omega(fz)
         w2 = w * w
         zeta = self.p.zeta
+        wall = float(getattr(self.p, "wall", 0.0))
         for i, f_lat in enumerate((fx, fy)):
+            v0 = self.v[i]
             a = -w2 * self.x[i] - 2.0 * zeta * w * self.v[i] - f_lat
             self.v[i] += a * dt                   # semi-implicit: velocity first,
             self.x[i] += self.v[i] * dt           # then position with the NEW velocity
+            if wall > 0.0 and abs(self.x[i]) > wall:
+                # the wall: an inelastic stop. The reaction is the acceleration that actually
+                # happened, i.e. the arrest, not the free pendulum's.
+                self.x[i] = math.copysign(wall, self.x[i])
+                self.v[i] = 0.0
+                a = (self.v[i] - v0) / dt
             self.a[i] = a
         m1 = self.p.slosh_mass
         return [-m1 * self.a[0], -m1 * self.a[1], 0.0]

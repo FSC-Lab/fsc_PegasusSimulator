@@ -304,7 +304,17 @@ class VTOLSlosh(VTOL):
                       [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
                       [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
         f_b = R.T @ f_w
-        F = self._pend.step(f_b, float(dt))
+        # the tank's own motion: body rates from the state, their derivative by finite
+        # difference, and the arm from the ASSEMBLED CG (the fold's), not the link origin
+        try:
+            w_b = np.asarray(st.angular_velocity, dtype=float)
+        except Exception:                                          # noqa: BLE001
+            w_b = np.zeros(3)
+        w_prev = getattr(self, "_slosh_w_prev", None)
+        w_dot = (w_b - w_prev) / float(dt) if (w_prev is not None and dt > 0.0) else np.zeros(3)
+        self._slosh_w_prev = w_b.copy()
+        r_tank = np.asarray(self._tank_pos, dtype=float) - np.asarray(self._mass_props[1], dtype=float)
+        F = self._pend.step(f_b, float(dt), omega=w_b, omega_dot=w_dot, r_tank=r_tank)
         if abs(F[0]) > 1e-9 or abs(F[1]) > 1e-9:
             self.apply_force([float(F[0]), float(F[1]), 0.0], pos=self._tank_pos, body_part="/body")
         # bring-up diagnostic, like [PROP]/[AERO]: PEGASUS_SLOSH_DEBUG=1 prints ~2 Hz

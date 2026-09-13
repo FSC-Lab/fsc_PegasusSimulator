@@ -96,6 +96,26 @@ def main():
     if abs(F1[0] - p.slosh_mass) > 1e-3:
         bad.append("first-step slosh force is not m1 * f")
 
+    # E. the wall: a lateral push far beyond what the linear model can carry parks the bob at
+    #    R/2 with zero velocity, and the reaction is the arrest, not an unbounded pendulum
+    #    (an 80 mm nose tank on the gate integrated to 1e12 mm before this existed)
+    pw = slosh.PendulumSlosh(p)
+    for _ in range(2000):
+        pw.step([20.0, 0.0, 9.81], 1e-3)          # 2 g sideways, 2 s
+    print(f"  wall: bob at {1000 * pw.x[0]:+.1f} mm after 2 s at 2 g sideways (wall {1000 * p.wall:.1f} mm), v {pw.v[0]:+.3f} m/s")
+    if abs(abs(pw.x[0]) - p.wall) > 1e-9 or abs(pw.v[0]) > 1e-9:
+        bad.append("the bob is not parked on the wall")
+    if p.wall <= 0.0 or p.wall > 0.5 * 0.0414 + 1e-9:
+        bad.append(f"wall {p.wall} is not half the radius")
+    # F. rotation terms: a pure yaw rate about a tank 0.3 m ahead is a centripetal specific
+    #    force toward the CG (-x), i.e. the bob is thrown forward
+    pr = slosh.PendulumSlosh(p)
+    for _ in range(200):
+        pr.step([0.0, 0.0, 9.81], 1e-3, omega=[0.0, 0.0, 2.0], omega_dot=[0.0, 0.0, 0.0], r_tank=[0.3, 0.0, 0.0])
+    print(f"  rotation: 2 rad/s of yaw with the tank 0.3 m ahead -> f_x seen by the tank {pr.f_last[0]:+.2f} m/s^2 (expect -1.20), bob x {1000 * pr.x[0]:+.2f} mm")
+    if abs(pr.f_last[0] + 1.2) > 1e-6 or pr.x[0] <= 0.0:
+        bad.append("omega x (omega x r) is not reaching the tank")
+
     print()
     if bad:
         print(f"FAIL ({len(bad)}):")
