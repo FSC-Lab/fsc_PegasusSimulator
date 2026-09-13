@@ -86,8 +86,17 @@ done
 # (node default 2 s). 30 s turns the engage hover into the L1 experiment the offline
 # gate runs with --hover_only: a standing pitch that has time to converge.
 if [ -n "${CASC_SETTLE_S:-}" ]; then
-  timeout 20 ros2 param set /nmpc_cascade_control settle_s "$CASC_SETTLE_S" >/dev/null 2>&1 \
-    && say "cascade settle_s = $CASC_SETTLE_S s (engage hover held that long)"
+  # ★ FORCE A DOUBLE AND READ THE REPLY. `ros2 param set` exits 0 even when the node
+  # REJECTS the value -- and rclpy rejects an integer for a double parameter -- so
+  # `settle_s 30` printed "Setting parameter failed", returned success, and the
+  # cascade transitioned after its default 2 s (flight l1off_hov30). CLAUDE.md has
+  # this trap on record for the launchers; it applies to every param set.
+  V=$(printf '%s' "$CASC_SETTLE_S" | grep -q '\.' && echo "$CASC_SETTLE_S" || echo "$CASC_SETTLE_S.0")
+  R=$(timeout 20 ros2 param set /nmpc_cascade_control settle_s "$V" 2>&1)
+  case "$R" in
+    *successful*) say "cascade settle_s = $V s (engage hover held that long)" ;;
+    *) echo "[fly_slosh] !! settle_s not applied: $R"; exit 1 ;;
+  esac
 fi
 say "envelope widened; waiting for PX4 to report ARMED"
 ARMED=0
