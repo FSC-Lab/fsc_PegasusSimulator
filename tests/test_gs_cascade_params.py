@@ -73,10 +73,17 @@ def main():
     # (merged on top). The propeller model lives in the overrides, so WB_PARAMS alone is no
     # longer the whole source -- checking against it would call the prop keys dead.
     ov_keys = set(re.findall(r'"([A-Za-z_0-9]+)":', m3.group(1))) if m3 else set()
-    dead = sorted(casc_keys - wb_keys - ov_keys)
+    # ... or from the mocap-noise checkbox (NOISE_ON / NOISE_OFF), the third source, which
+    # the cascade path merges after the filter. Those keys are sent on every cascade mission.
+    noise_keys = set()
+    for nm in ("NOISE_ON", "NOISE_OFF"):
+        mm = re.search(nm + r"\s*=\s*\{(.*?)\}", gs, re.S)
+        if mm:
+            noise_keys |= set(re.findall(r'"([A-Za-z_0-9]+)":', mm.group(1)))
+    dead = sorted(casc_keys - wb_keys - ov_keys - noise_keys)
     if dead:
-        bad.append(f"CASC_KEYS lists {dead}, which appear in neither WB_PARAMS nor "
-                   f"CASC_OVERRIDES -> filtering them is a no-op and they are never sent")
+        bad.append(f"CASC_KEYS lists {dead}, which appear in neither WB_PARAMS, CASC_OVERRIDES "
+                   f"nor NOISE_ON/OFF -> filtering them is a no-op and they are never sent")
 
     # ★ THE CASCADE OVERRIDE MUST NOT REACH nmpc_full. WB_PARAMS is shared, and `ttr`=40 there is
     # flight-validated for nmpc_full (18 s is documented to ring its phugoid). The cascade's faster

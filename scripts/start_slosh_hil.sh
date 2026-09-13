@@ -88,7 +88,7 @@ export VTOL_SLOSH=$WANT_SLOSH
 export VTOL_TANK=${VTOL_TANK:-1}
 export VTOL_TANK_DX=${VTOL_TANK_DX:-0}
 export VTOL_CG_DX=${VTOL_CG_DX:-0}
-export CASC_L1=${CASC_L1:-false}
+export CASC_L1=${CASC_L1:-true}
 # The tank AIRCRAFT flies the tank CASCADE (nmpc_cascade_tank_node: the base node with
 # the back-transition schedule replaced -- rotors upright before the aft tilt, flare
 # capped under the CL peak). Same node name and controller_id, so nothing downstream

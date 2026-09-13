@@ -12,6 +12,11 @@ the first second after engage, sitting in hover with nothing disturbing them: th
 alternating on the DIAGONAL -- FL/RR against FR/RL, which is the spin-reaction YAW pair -- at the
 sample rate, with yaw swinging +-5 deg. Every later departure grew out of that. No offline gate
 caught it because none of them stayed in hover long enough to look.
+RESOLVED 2026-09-13: it was the PLANT, not the gains -- the prop links were pinned at PhysX's
+default 100 rad/s and the velocity drive's reaction was a yaw torque 3x the modelled one on
+any throttle differential (vtol.py::_unclamp_prop_spin). This test's plant never had it, which
+is why no gain pair here ever reproduced the thrash; the verdict is now the diagonal's
+AMPLITUDE (the thrash: sd 0.4-0.8; a clean hover under noise: ~0.01).
 
     usage: test_hover_hold.py [--kR_yaw K] [--kW_yaw K] [--dur S] [--yaw0 DEG] [--verbose]
 """
@@ -128,9 +133,17 @@ def main():
         y, d, worst = fly(kr, kw, dur, yaw0)
         ysd, dsd, flips = metrics(y, d)
         frac = flips / max(1, len(d) - 1)
-        ok = (frac < 0.30) and (dsd < 0.02) and (ysd < 1.0)
+        # ★ AMPLITUDE, NOT SIGN CHANGES (2026-09-13). The thrash this test was written for
+        # (bags vtol_20260911_*) was the diagonal rail to rail -- sd 0.4-0.8, yaw +-5 deg -- and
+        # it was the PLANT: the prop links sat on PhysX's 100 rad/s cap and the drive's reaction
+        # was a 3x spurious yaw torque (see vtol.py::_unclamp_prop_spin, the 09 probe, and
+        # scripts/bag_axis_fit.py). This plant (so3.build_ode) never had the artefact, so the
+        # test could not reproduce the thrash and its bar sank to "the command changes sign a
+        # lot" -- which a rate feedback on 1 deg/s of white rate noise does 50-66% of the time by
+        # construction, at a diagonal sd of 0.01. That is noise following, not oscillation.
+        ok = (dsd < 0.05) and (ysd < 1.0)
         rows.append((kr, kw, ysd, dsd, frac, ok))
-        v = "OK" if ok else ("OSCILLATING" if frac > 0.5 else "marginal")
+        v = "OK" if ok else ("OSCILLATING" if dsd > 0.2 or ysd > 3.0 else "marginal")
         print(f"   {kr:6.1f}  {kw:6.1f} | {ysd:7.3f}  {dsd:8.4f}   {frac*100:5.0f}%        {v}")
         if ok and best is None:
             best = (kr, kw)

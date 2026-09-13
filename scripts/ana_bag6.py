@@ -3,7 +3,7 @@
 Reads /uav_0/mocap + commanded actuators; prints pos/vel, body-pitch, AoA (sim-exact v_body=R^T v),
 roll/yaw, motors, tilt servo, elevator/aileron/rudder + a summary. (anabag.py chokes on the px4
 out-topics recorded by recbag_nmpc6.sh -- use THIS one.) Lives in the repo: /tmp gets wiped."""
-import sys, math
+import os, sys, math
 import numpy as np
 from rosbag2_py import SequentialReader, StorageOptions, ConverterOptions
 from rclpy.serialization import deserialize_message
@@ -11,7 +11,7 @@ from fsc_autopilot_ros2_msgs.msg import Mocap
 from px4_msgs.msg import ActuatorMotors, ActuatorServos
 from std_msgs.msg import String
 name = sys.argv[1]; stride = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
-path = name if "/" in name else f"/tmp/bags/{name}"
+path = name if "/" in name else os.path.expanduser(f"~/flight_bags/{name}")
 r = SequentialReader(); r.open(StorageOptions(uri=path, storage_id="sqlite3"), ConverterOptions("", ""))
 CLS = {}
 for t in r.get_all_topics_and_types():

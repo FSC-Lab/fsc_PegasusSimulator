@@ -56,7 +56,7 @@ fi
 # check that it is still here.)
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   say "no '$SESSION' tmux session — cold-starting via start_vtol_smc_hil.sh"
-  CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" VTOL_TANK="${VTOL_TANK:-1}" VTOL_TANK_DX="${VTOL_TANK_DX:-0}" VTOL_CG_DX="${VTOL_CG_DX:-0}" CASC_L1="${CASC_L1:-false}" \
+  CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" VTOL_TANK="${VTOL_TANK:-1}" VTOL_TANK_DX="${VTOL_TANK_DX:-0}" VTOL_CG_DX="${VTOL_CG_DX:-0}" CASC_L1="${CASC_L1:-true}" \
   CASC_NODE_PY="${CASC_NODE_PY:-}" \
     bash "$ROOT/scripts/start_vtol_smc_hil.sh" --here "${CFG:-pieper_machine}"
   RC=$?
@@ -211,7 +211,7 @@ tmux send-keys -t "$SESSION:6h-cascade" \
  "source $ROOT/scripts/rosenv.sh; \"\$HOME/envs/isaac_env/bin/python3\" \
 ${CASC_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_node.py} \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade -p active_at_start:=false \
--p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=20.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-false} \
+-p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-true} \
 -r /uav_0/fsc_autopilot_ros2/position_controller/reference:=/uav_0/fsc_autopilot_ros2/position_controller/reference_smc" Enter
 sleep 35
 TC=$(tmux capture-pane -p -S -40 -t "$SESSION:6h-cascade" 2>/dev/null | grep -ci traceback)
@@ -230,7 +230,7 @@ echo "    cascade node tracebacks (want 0): $TC"
 # include the recorder.
 #
 # SIGINT, NEVER kill -9: a SIGKILLed bag has no metadata.yaml and is UNREADABLE.
-BAG_DIR=${BAG_DIR:-/tmp/bags}
+BAG_DIR=${BAG_DIR:-$HOME/flight_bags}   # not /tmp: it is wiped on reboot (twice, with every bag in it)
 BAGNAME=${BAG:-casc_$(date +%H%M%S)}
 say "8c/8 restarting the bag recorder -> $BAG_DIR/$BAGNAME"
 if tmux list-windows -t "$SESSION" 2>/dev/null | grep -q '10-bag'; then

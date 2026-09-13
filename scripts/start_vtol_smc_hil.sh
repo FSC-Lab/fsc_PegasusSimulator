@@ -416,8 +416,8 @@ $ROS_PRELUDE
 echo '[6h-cascade] CASCADE NMPC + geometric (STANDBY; activate: active_controller=cascade)...'
 $AVTOL_ENV\"$NODE_PY\" \"$CASC_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade -p active_at_start:=false \
-    -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-20.0} \
-    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=${CASC_L1:-false} \
+    -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
+    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=${CASC_L1:-true} \
     -r ${REF_TOPIC}:=${REF_TOPIC}_smc
 echo '[6h-cascade] exited.'; exec bash
 "
@@ -479,14 +479,14 @@ echo '[9-groundstn] exited.'; exec bash
 # opt-in: every launch gets one.
 # The name is TIMESTAMPED so runs never collide -- with a fixed name `ros2 bag record` refuses
 # ("Output folder already exists") and you silently get NO recording, which has happened here.
-#   BAG_DIR  where bags go        (default /tmp/bags)
+#   BAG_DIR  where bags go        (default ~/flight_bags; /tmp is wiped on reboot)
 #   BAG      this run's name      (default vtol_<date>_<time>)
 #   BAG_ALL  0 = flight-critical topics only instead of everything
 # STOP IT WITH Ctrl-C, NEVER kill -9: a SIGKILLed bag has no metadata.yaml and is UNREADABLE.
 tmux new-window -t "$SESSION" -n "10-bag" "
 echo '[10-bag] waiting $D_GS s...'; sleep $D_GS
 $ROS_PRELUDE
-mkdir -p \"${BAG_DIR:-/tmp/bags}\" && cd \"${BAG_DIR:-/tmp/bags}\" || { echo '[10-bag] bag dir failed'; exec bash; }
+mkdir -p \"${BAG_DIR:-$HOME/flight_bags}\" && cd \"${BAG_DIR:-$HOME/flight_bags}\" || { echo '[10-bag] bag dir failed'; exec bash; }
 BAGNAME=\"${BAG:-vtol_\$(date +%Y%m%d_%H%M%S)}\"
 echo \"[10-bag] recording -> ${BAG_DIR:-/tmp/bags}/\$BAGNAME\"
 echo '[10-bag] Ctrl-C stops it cleanly; a kill -9 leaves an UNREADABLE bag.'

@@ -12,6 +12,19 @@ PATS=(
   "mocap_to_px4_ev" "isaacsim_optitrack" "single_drone_ground_control" "fly_trajectory"
   "autopilot_sv_baseline" "ros2 bag record" "pubraw" "pubref.py"
 )
+# ★ THE BAG FIRST, WITH SIGINT. A SIGKILLed rosbag has no metadata.yaml and `ros2 bag` will
+# not open it -- every bag in ~/flight_bags before 2026-09-12 is db3-only for exactly this
+# reason. The recorder gets Ctrl-C and up to 10 s to finalise; only then does the -9 sweep
+# below run (it still lists "ros2 bag record", as the fallback for a recorder that hangs).
+for pid in $(pgrep -f -- "ros2 bag record" 2>/dev/null); do
+  [ "$pid" = "$$" ] && continue
+  kill -INT "$pid" 2>/dev/null && echo "  SIGINT -> bag recorder $pid"
+done
+for _ in $(seq 1 10); do
+  pgrep -f -- "ros2 bag record" >/dev/null 2>&1 || break
+  sleep 1
+done
+pgrep -f -- "ros2 bag record" >/dev/null 2>&1 && echo "  !! recorder did not stop in 10 s -- that bag will have no metadata.yaml"
 echo "[kill_hil] gathering..."
 PIDS=""
 for p in "${PATS[@]}"; do

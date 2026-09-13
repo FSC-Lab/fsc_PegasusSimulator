@@ -10,9 +10,10 @@ source /opt/ros/humble/setup.bash
 source "$HOME/ros2_ws/install/setup.bash"
 NAME="${1:-nmpc6}"
 NS="${PX4_NS:-uav_0}"
-rm -rf "/tmp/bags/$NAME"; mkdir -p /tmp/bags
-echo "[recbag_nmpc6] recording -> /tmp/bags/$NAME   (Ctrl-C to stop)"
-exec ros2 bag record -o "/tmp/bags/$NAME" \
+BAG_DIR=${BAG_DIR:-$HOME/flight_bags}     # not /tmp: wiped on reboot
+rm -rf "$BAG_DIR/$NAME"; mkdir -p "$BAG_DIR"
+echo "[recbag_nmpc6] recording -> $BAG_DIR/$NAME   (Ctrl-C to stop)"
+exec ros2 bag record -o "$BAG_DIR/$NAME" \
   "/$NS/mocap" \
   "/$NS/fmu/in/actuator_motors" \
   "/$NS/fmu/in/actuator_servos" \

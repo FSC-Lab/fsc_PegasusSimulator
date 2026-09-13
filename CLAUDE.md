@@ -464,6 +464,49 @@ faithful gate loses the mission at 80 ms (kR 3) and the L1 CG hover at 50. Hardw
 than ~50 ms of command-to-force delay needs a softer inner loop than this, and the flat gate's
 "150 ms" is not a number to quote anywhere.
 
+# ★★ THE REST OF THE LIST (2026-09-13 afternoon): ttr 10, l1_on, 12x8, phase-4 sweeps, tests, scripts.
+**CORRIDOR PEAK AoA -> `ttr` 20 -> 10.** On the faithful plant (momentum, lat 0.03 / comp 0.049,
+noise, L1) the forward transition's peak AoA is +11.4 at ttr 20 (the flat gate said 12.4), +10.9
+at 16, +10.2 at 12, **+9.4 at 10 -- under the 10 deg CL peak**, +8.4 at 8, +8.1 at 6; altitude
+29.7-30.0 and 0/2001 solve failures at every one. 20 had been chosen to clear a ~90 s cruise before
+the lateral "clean window" closed -- that mode was the prop artefact. Node default, both
+launchers and the GS's CASC_OVERRIDES all carry 10 (`tests/test_gs_cascade_params.py`).
+**`l1_on` DEFAULTS TRUE** (node + `CASC_L1` in all three launchers). Flown-proven insurance.
+**12x8 PROPELLER** (J0 0.72; was the RotorConfig default 12x6, J0 0.60). At the corrected 749 rad/s
+a 12x6 makes 4.8 N per front rotor at 16 m/s against a 2.3 N cruise need and at 19 m/s its
+maximum EQUALS the need -- nothing for the inner loop's differential in a bank. The 12x8 leaves
+5 N there and takes the cruise throttle 0.88 -> 0.78 with every other gate number unchanged
+(trim, corridor, back-transition, upsets, latency, CG hover, knife-edge seed 14). Airframe
+(`prop="12x8"` on all four rotors), `so3.PROP_J0`, the cascade's `PROP_J0` + `prop_zero_thrust_J`,
+the plant double and the GS override all moved together; `test_prop_pairing.py` holds them.
+**FOUND ON THE WAY: the gate's `--prop_J0`/`--omega_max` flags re-propped only the PLANT** (locals
+in main() while thrust_to_throttle read the module's constants). A "12x8 run" was therefore a
+plant/controller mismatch -- 0.45 m/s of cruise overspeed on less throttle, the same signature the
+omega_max bug had in HIL. The flags now set the module constants too.
+**PHASE-4 SWEEPS (the plan's), faithful plant:** fill 25/50/75/100 %, zeta 0 / 0.5 / 5 %, and a
+1 rad/s pitch kick with the pendulum in the plant: every mission identical -- 0/2001, corridor
++9.5, back-transition +12.8, roll 0.5, bob excursion 7.6-8.9 mm in a 41 mm tank. The 0.1 kg /
+3.3 Hz mode is below this controller's notice at any fill or damping; plan phase 7 (controller
+awareness) is not needed, and phase 5 (a PhysX particle fluid for visualisation) is deliberately
+not built -- it would never be in the control path, and the pendulum's displacement is already
+printed (`PEGASUS_SLOSH_DEBUG`, the gate's slosh_peak).
+**TESTS:** `test_hover_hold.py` failed on a verdict that counted sign changes of a 0.01-amplitude
+noise response as "oscillating" -- it had been written for the diagonal thrash, which was the
+plant artefact its own plant never had; the verdict is now the diagonal's amplitude, and the
+shipped yaw gains pass. `test_gs_cascade_params.py` did not know the GS's third parameter
+source (NOISE_ON/OFF) -- fixed. `test_gs_live_flight.py` needs a live stack by design and aborts
+cleanly without one (the core dump after it is Qt's teardown). Every other test passes.
+**SCRIPTS:** `kill_hil.sh` SIGINTs the bag recorder and waits up to 10 s before its -9 sweep (a
+-9'd bag has no metadata.yaml); every bag default is now `~/flight_bags`, not `/tmp/bags`
+(`restart_hil.sh`, `start_vtol_smc_hil.sh`, `recbag_nmpc6.sh`, `ana_bag6.py`). The disk guard
+checks `/`, which is the same partition.
+**FLOWN AT THE NEW DEFAULTS (row defaults_a1_141525, pendulum tank): LANDED 0.00 m.** Corridor
+peak pitch +9.5 (gate +9.4), 90 deg in 14 s; cruise V 15.90 / +7.0 / front throttle 0.78 (the 12x8
+gate number) / roll 0.0; back-transition peak pitch +10.0 at z 29.8-30.0 -- the +14..+21 onset
+transient of the 12x6 flights is gone with the headroom; hover yaw diagonal 0.000. Eighth
+flight of the day, eighth landing on the fixed plant.
+**STACK DEATHS:** none in 17 launches today. Not chased.
+
 **OPS — `scripts/start_slosh_hil.sh` / `scripts/kill_slosh_hil.sh`.** The launcher
 delegates to `restart_hil.sh` (one real launcher) and adds what a bare
 `VTOL_SLOSH=1` cannot: it refuses on a branch with no `vtol_slosh.py`, runs both

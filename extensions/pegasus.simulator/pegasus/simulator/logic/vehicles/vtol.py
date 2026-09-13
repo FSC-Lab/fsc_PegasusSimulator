@@ -477,7 +477,14 @@ def quad_tiltrotor_config(
     rotors = [
         RotorConfig(
             name="front_L", position=(0.459, 0.285, -0.068), spin_offset=(-0.002, 0.0, 0.090),
-            spin_dir=+1, max_thrust=18.0,
+            # ★ 12x8, not the RotorConfig default 12x6 (2026-09-13). At the corrected 749 rad/s
+            # a 12x6 makes 4.8 N per front rotor at 16 m/s against a 2.3 N cruise need, and at
+            # 19 m/s (a bank) its maximum EQUALS the need -- nothing left for the inner loop's
+            # differential. The 12x8 (J0 0.72) leaves 5 N there and takes the cruise throttle
+            # 0.88 -> 0.78; every gate number (trim, corridor, back-transition, upsets, CG
+            # hover, latency) is unchanged. The controllers, plant double and GS override carry
+            # J0 = 0.72 with it; tests/test_prop_pairing.py holds them together.
+            spin_dir=+1, max_thrust=18.0, prop="12x8",
             # tilt_min -20: the front pair may lean BACKWARDS.  With beta >= 0 the only way to
             # decelerate is to pitch nose-up, which converts speed into HEIGHT (bag full_tr31
             # ballooned 18.9 m, of which 12.8 m is unavoidable kinetic->potential conversion).
@@ -489,18 +496,18 @@ def quad_tiltrotor_config(
         ),
         RotorConfig(
             name="front_R", position=(0.459, -0.284, -0.066), spin_offset=(-0.002, -0.001, 0.088),
-            spin_dir=-1, max_thrust=18.0,
+            spin_dir=-1, max_thrust=18.0, prop="12x8",
             tiltable=True, tilt_axis="Y", tilt_min_deg=-20.0, tilt_max_deg=90.0,
             throttle_channel="motor_front_R", tilt_channel="tilt_right",
             mesh=front_right_mesh, nacelle_mesh=front_right_arm_mesh, **r,
         ),
         RotorConfig(
-            name="rear_L", position=(-0.112, 0.284, -0.019), spin_dir=-1, max_thrust=18.0,
+            name="rear_L", position=(-0.112, 0.284, -0.019), spin_dir=-1, max_thrust=18.0, prop="12x8",
             tiltable=False, throttle_channel="motor_rear_L",
             mesh=rear_left_mesh, **r,
         ),
         RotorConfig(
-            name="rear_R", position=(-0.112, -0.284, -0.017), spin_dir=+1, max_thrust=18.0,
+            name="rear_R", position=(-0.112, -0.284, -0.017), spin_dir=+1, max_thrust=18.0, prop="12x8",
             tiltable=False, throttle_channel="motor_rear_R",
             mesh=rear_right_mesh, **r,
         ),

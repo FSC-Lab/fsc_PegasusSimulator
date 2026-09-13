@@ -89,7 +89,7 @@ MAX_THRUST = 18.0
 # happened: the safe controller was fixed for the momentum sim and promptly failed 9 checks here.
 THRUST_MODEL = "momentum"        # "instant" (legacy flat) | "momentum"
 PROP_D = 0.3048                  # m, 12 in
-PROP_J0 = 0.6                    # advance ratio at zero thrust
+PROP_J0 = 0.72                   # advance ratio at zero thrust (12x8, as the airframe)
 PROP_OMEGA_MAX = 749.0           # rad/s at throttle 1
 _N_MAX = PROP_OMEGA_MAX / (2.0 * math.pi)
 _CT0 = MAX_THRUST / (1.225 * _N_MAX ** 2 * PROP_D ** 4)
