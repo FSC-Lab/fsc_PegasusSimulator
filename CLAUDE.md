@@ -270,6 +270,13 @@ The rule "soften kR if HIL measures more than ~150 ms" is now ~120 ms. Knife-edg
 8/8 with kR_hover 4.5 (was 7/8); upsets unchanged. `l1_on` still defaults OFF; `CASC_L1=true`
 flies it. L1 is the insurance policy it was meant to be -- proven on a mismatch the
 controller could not see, offline and in flight.
+**RELAXING THE OUTER WAS TRIED AND MEASURED (CASC_WTH=45): DO NOT.** Hover with the offset:
+no gain (L1 does the job either way; without L1 the gentler outer leans on tilt as a crutch,
+-22.7 vs -9 deg); corridor peak AoA +14.2 vs +12.4; and it COSTS latency margin (0.18 s:
+survives at 90, crashes at 45). The outer is delay-compensated and the inner is not, so a
+strong outer pitch weight keeps pitch on the compensated loop through the latency. The
+outer's aggressiveness supplies the margin. Weights stay 90/60/8; `CASC_WTH/WZ/WVS` exist
+to repeat the experiment in one env var.
 `CASC_SETTLE_S` holds the engage hover for this experiment (force a DOUBLE: `ros2 param set`
 exits 0 on a rejected int -- that cost one flight tonight).
 
