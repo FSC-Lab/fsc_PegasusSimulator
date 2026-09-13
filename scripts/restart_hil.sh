@@ -56,7 +56,7 @@ fi
 # check that it is still here.)
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   say "no '$SESSION' tmux session — cold-starting via start_vtol_smc_hil.sh"
-  CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" VTOL_TANK="${VTOL_TANK:-1}" VTOL_TANK_DX="${VTOL_TANK_DX:-0}" VTOL_CG_DX="${VTOL_CG_DX:-0}" CASC_L1="${CASC_L1:-true}" \
+  CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" VTOL_TANK="${VTOL_TANK:-1}" VTOL_TANK_KG="${VTOL_TANK_KG:-0.502}" VTOL_TANK_DX="${VTOL_TANK_DX:-0}" VTOL_CG_DX="${VTOL_CG_DX:-0}" CASC_L1="${CASC_L1:-true}" \
   CASC_NODE_PY="${CASC_NODE_PY:-}" \
     bash "$ROOT/scripts/start_vtol_smc_hil.sh" --here "${CFG:-pieper_machine}"
   RC=$?
@@ -99,7 +99,7 @@ tmux send-keys -t "$SESSION:2-isaac" \
  "unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL; \
 export ROS_DOMAIN_ID=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp; \
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$ISAAC_ROOT/exts/isaacsim.ros2.bridge/humble/lib\"; \
-VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
+VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
 # POLL, do not sleep a flat 100 s: Isaac usually prints its banner well before that and the
 # fixed wait was pure dead time on every single test.
 say "    waiting for Isaac to load (polling, <=140 s)"
@@ -149,7 +149,7 @@ fi
 say "7/8 restarting the SAFE controller (this script killed it)"
 tmux send-keys -t "$SESSION:6-geometric" C-c 2>/dev/null; sleep 1
 tmux send-keys -t "$SESSION:6-geometric" \
- "source $ROOT/scripts/rosenv.sh; \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/geometric_hover_node.py \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=geometric -p active_at_start:=true" Enter
 sleep 20
@@ -169,7 +169,7 @@ say "8/8 restarting the NMPC node"
 tmux kill-window -t "$SESSION:6g-full" 2>/dev/null
 tmux new-window -d -t "$SESSION:" -n 6g-full; sleep 1
 tmux send-keys -t "$SESSION:6g-full" \
- "source $ROOT/scripts/rosenv.sh; \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_full_smc_node.py \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=nmpc_full -p active_at_start:=false \
 -p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=18.0 -p cruise_alt:=20.0 -p rate_hz:=10.0 -p latency_s:=0.12 \
@@ -208,7 +208,7 @@ say "8b/8 starting the CASCADE node (standby)"
 tmux kill-window -t "$SESSION:6h-cascade" 2>/dev/null
 tmux new-window -d -t "$SESSION:" -n 6h-cascade; sleep 1
 tmux send-keys -t "$SESSION:6h-cascade" \
- "source $ROOT/scripts/rosenv.sh; \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${CASC_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_node.py} \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade -p active_at_start:=false \
 -p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-true} \

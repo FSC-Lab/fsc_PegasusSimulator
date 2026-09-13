@@ -51,7 +51,7 @@ _slosh_mod = _load("slosh", "dynamics/slosh.py")
 # Read from the SHIPPED tank definition, not retyped, so the four copies cannot
 # drift (tests/test_tank_model_pairing.py checks the other three).
 # PLANT_TANK=0 doubles the baseline aircraft.
-_TANK = (_slosh_mod.TankConfig()
+_TANK = (_slosh_mod.default_tank()          # water mass from VTOL_TANK_KG, like the plant
          if os.environ.get("PLANT_TANK", "1") not in ("0", "", "none", "false", "False") else None)
 TANK_MASS = _slosh_mod.slosh_parameters(_TANK).fluid_mass if _TANK is not None else 0.0
 TANK_INERTIA = (np.diag(_slosh_mod.slosh_parameters(_TANK).inertia_rigid)

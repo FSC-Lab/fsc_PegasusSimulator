@@ -42,7 +42,7 @@ from fsc_aerial_manipulation.rotorcraft import (
     fsc_cad_vtol_slosh_config,
 )
 from fsc_aerial_manipulation.utils import add_dome_lighting
-from pegasus.simulator.logic.dynamics.slosh import TankConfig
+from pegasus.simulator.logic.dynamics.slosh import TankConfig, default_tank, describe as describe_tank
 
 # PX4 SITL airframe for the CAD quad (2 front tilting + 2 rear static rotors).
 # px4_vehicle_model is informational here (px4_autolaunch=False — the tmux script
@@ -121,7 +121,10 @@ class VTOLPx4HilApp:
         # by contrast, moves the assembled CG by 3.8 mm and is not a driver.)
         cg_dx = float(os.environ.get("VTOL_CG_DX", "0") or 0.0)
         if use_slosh:
-            tank = TankConfig(slosh=(tank_mode == "slosh")) if use_tank else None
+            # VTOL_TANK_KG selects the water mass (0.1 / 0.502 / 0.7 flown); the controllers read
+            # the SAME variable, so a value forwarded to this pane and not to theirs is a
+            # plant/model mismatch -- the launcher checks both banners against it.
+            tank = default_tank(slosh=(tank_mode == "slosh")) if use_tank else None
             # VTOL_TANK_DX: mount the tank this far FORWARD of the CG without telling the
             # controller -- the L1 augmentation's test bed. 0 = at the CG.
             tank_dx = float(os.environ.get("VTOL_TANK_DX", "0") or 0.0)
@@ -138,7 +141,8 @@ class VTOLPx4HilApp:
             carb.log_warn("VTOL_SLOSH set -> VTOLSlosh model, tank="
                           + ("None (phase 1)" if not use_tank else
                              "MOUNTED + SLOSH (phase 3, pendulum)" if tank.slosh else
-                             "MOUNTED (phase 2, dead mass)"))
+                             "MOUNTED (phase 2, dead mass)")
+                          + (f"  water={tank.fluid_mass:.3f} kg  [{describe_tank(tank)}]" if use_tank else ""))
         else:
             vtol_config = fsc_cad_vtol_config()
 

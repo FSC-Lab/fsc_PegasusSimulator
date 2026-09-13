@@ -74,6 +74,7 @@
 # with a bare AttributeError.  Keeping it out means the simplest possible
 # loader works, exactly as it does for the aero model.
 import math
+import os
 from dataclasses import dataclass, replace
 
 # First root of J1'(x) -- the first antisymmetric mode of a circular tank.
@@ -138,9 +139,22 @@ class TankConfig:
     #                      not modelled is silent wrong physics.
     slosh: bool = False
 
+    # WATER BY MASS instead of by fill fraction (the operator's number). Given, it sets the
+    # depth in this radius of tank; if that is deeper than the tank, the tank grows to hold it
+    # at the plan's 75% (a 0.7 kg fill needs a 0.93 L tank, the 0.67 L one holds 0.67 kg full).
+    # None (default) keeps height x fill_frac = the plan's 0.502 kg, byte-identical to before.
+    water_kg: float | None = None
+
     def __post_init__(self):
         if self.radius <= 0.0 or self.height <= 0.0:
             raise ValueError(f"tank '{self.name}': radius and height must be > 0")
+        if self.water_kg is not None:
+            if self.water_kg < 0.0:
+                raise ValueError(f"tank '{self.name}': water_kg must be >= 0")
+            depth = self.water_kg / (self.fluid_density * math.pi * self.radius ** 2)
+            if depth > self.height:
+                self.height = depth / 0.75
+            self.fill_frac = depth / self.height
         if not 0.0 <= self.fill_frac <= 1.0:
             raise ValueError(f"tank '{self.name}': fill_frac must be in [0, 1]")
         if self.fluid_density <= 0.0:
@@ -270,6 +284,30 @@ def slosh_parameters(tank: TankConfig) -> SloshParameters:
         # (breaking), and the reaction force is what that arrest actually applies.
         wall=0.5 * R,
     )
+
+
+# ONE environment variable selects the water mass on BOTH sides of the HIL boundary: the
+# plant reads it here, the controllers read the same name (nmpc_so3_transition_node,
+# lib/fsc_transition_ref, geometric_hover_node, vtol_nmpc: M = 3.449572 + VTOL_TANK_KG) and
+# tests/test_tank_model_pairing.py holds them together for every mode. Two names would be a
+# trap -- the launchers pass env INLINE on tmux send-keys lines, and a name forwarded to one
+# pane and not the other flies a plant the controller does not model.
+TANK_KG_ENV = "VTOL_TANK_KG"
+DEFAULT_WATER_KG = 0.502          # the plan's tank: 75% of a 0.67 L, 41 mm cylinder
+TANK_MODES = (0.1, 0.502, 0.7)    # the flown/gated masses; anything else is untested
+
+
+def tank_kg_from_env() -> float:
+    """The water mass asked for by VTOL_TANK_KG (default the plan's 0.502)."""
+    v = os.environ.get(TANK_KG_ENV, "").strip()
+    return float(v) if v else DEFAULT_WATER_KG
+
+
+def default_tank(**kw) -> TankConfig:
+    """The tank every entry point should construct: the plan's geometry with the water mass
+    from VTOL_TANK_KG. kwargs pass through (slosh=True, damping_zeta=..)."""
+    kw.setdefault("water_kg", tank_kg_from_env())
+    return TankConfig(**kw)
 
 
 def describe(tank: TankConfig) -> str:

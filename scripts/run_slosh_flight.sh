@@ -6,6 +6,7 @@
 #   bash scripts/run_slosh_flight.sh              # tank aircraft, tank cascade
 #   bash scripts/run_slosh_flight.sh --baseline   # baseline aircraft, base cascade
 #   NAME=x ATTEMPTS=3 DIST=800 CRUISE_T=70 bash scripts/run_slosh_flight.sh
+#   VTOL_TANK=slosh VTOL_TANK_KG=0.7 NAME=heavy bash scripts/run_slosh_flight.sh   # water mass (0.1 / 0.502 / 0.7)
 #
 # Why a wrapper rather than one long script: each stage already verifies itself
 # (launch refuses READY on the wrong model or controller; the flight refuses an unfit

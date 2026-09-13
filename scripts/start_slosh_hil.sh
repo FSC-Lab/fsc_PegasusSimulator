@@ -86,6 +86,7 @@ export BAG_DIR=${BAG_DIR:-$HOME/flight_bags/slosh}
 export BAG=${BAG:-$([ "$WANT_SLOSH" = 1 ] && echo slosh || echo base)_$(date +%Y%m%d_%H%M%S)}
 export VTOL_SLOSH=$WANT_SLOSH
 export VTOL_TANK=${VTOL_TANK:-1}
+export VTOL_TANK_KG=${VTOL_TANK_KG:-0.502}    # water mass: 0.1 / 0.502 / 0.7 flown; plant AND controllers
 export VTOL_TANK_DX=${VTOL_TANK_DX:-0}
 export VTOL_CG_DX=${VTOL_CG_DX:-0}
 export CASC_L1=${CASC_L1:-true}
@@ -100,7 +101,7 @@ if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
     base) unset CASC_NODE_PY ;;
   esac
 fi
-say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  l1_on=$CASC_L1  tank_dx=$VTOL_TANK_DX  cg_dx=$VTOL_CG_DX"
+say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  l1_on=$CASC_L1  water=$VTOL_TANK_KG kg  tank_dx=$VTOL_TANK_DX  cg_dx=$VTOL_CG_DX"
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"
@@ -188,6 +189,18 @@ if [ "$WANT_SLOSH" = "1" ]; then
     exit 1
   fi
   [ -n "$TANK_LINE" ] && say "    $TANK_LINE"
+  # THE MASS: the scene prints "water=<kg> kg" from the tank it built; it must be the one asked
+  # for (VTOL_TANK_KG travels inline on the Isaac line -- a stale launcher would drop it and
+  # Isaac would fly the default 0.502 under a controller told 0.7).
+  if [ "${VTOL_TANK:-1}" != "0" ]; then
+    WKG=$(echo "$PANE" | grep -o "water=[0-9.]* kg" | tail -1 | grep -o "[0-9.]*")
+    if [ -z "$WKG" ] || ! awk -v a="$WKG" -v b="$VTOL_TANK_KG" 'BEGIN{exit (a-b<0.002 && b-a<0.002)?0:1}'; then
+      echo "[slosh_hil] !! asked for VTOL_TANK_KG=$VTOL_TANK_KG but Isaac's tank banner says water=${WKG:-<none>} kg."
+      echo "[slosh_hil]    The plant is not the aircraft the controllers model. Not READY."
+      exit 1
+    fi
+    say "    water: $WKG kg confirmed in Isaac's log"
+  fi
   # phase 3: asked for the free surface -> the banner must say so
   if [ "${VTOL_TANK:-1}" = "slosh" ]; then
     P3=$(echo "$PANE" | grep -o "SLOSH (phase 3, pendulum)" | tail -1)
@@ -215,7 +228,7 @@ say "    pane logs -> $BAG_DIR/pane_*.log"
 
 # and VERIFY which cascade came up: the variant prints its schedule banner on start.
 CPANE=$(tmux capture-pane -p -S -400 -t "$SESSION:6h-cascade" 2>/dev/null)
-CBANNER=$(echo "$CPANE" | grep -o "\[cascade_tank\] schedule:.*" | tail -1 | cut -c1-110)
+CBANNER=$(echo "$CPANE" | grep -o "\[cascade_tank\] schedule:.*" | tail -1 | cut -c1-160)
 case "${CASC_NODE_PY:-}" in
   *tank*)
     if [ -z "$CBANNER" ]; then
@@ -234,7 +247,15 @@ case "${CASC_NODE_PY:-}" in
     fi
     if ! pgrep -f "nmpc_cascade_tank_node" >/dev/null 2>&1; then
       echo "[slosh_hil] !! the TANK cascade printed its banner but no nmpc_cascade_tank_node process is alive. Not READY."; exit 1
-    fi ;;
+    fi
+    # and its MASS: the banner's M must be the airframe (3.4496) plus the water asked for
+    CM=$(echo "$CBANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
+    if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
+      echo "[slosh_hil] !! the cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}')."
+      echo "[slosh_hil]    The env var did not reach the 6h-cascade pane. Not READY."
+      exit 1
+    fi
+    say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water" ;;
   *)
     [ -n "$CBANNER" ] && { echo "[slosh_hil] !! the TANK cascade is running but was not asked for."; exit 1; }
     say "    cascade: base node confirmed" ;;
@@ -244,7 +265,7 @@ esac
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

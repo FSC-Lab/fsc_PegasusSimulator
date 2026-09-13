@@ -44,10 +44,16 @@ CTRL_HUB = os.path.join(controller_dir(), "px4_vtol_direct_actuator",
 # model hub, but the trim generator and the SAFE controller each carry their own,
 # and the 2026-09-12 audit found the generator's still at 3.45 after so3.M moved:
 # a 1.245 m/s^2 vertical residual in every baked reference -- the water, exactly.
+# Since 2026-09-13 the water is SELECTABLE (VTOL_TANK_KG: 0.1 / 0.502 / 0.7 flown), so every
+# copy is "airframe + the env var" with the SAME airframe constant, the SAME variable name and
+# the SAME default -- that exact text is what is pinned, because a copy that reads a different
+# name (or none) flies the wrong aircraft the moment the operator sets the variable.
+AIRFRAME_M = 3.449572
+ENV_PAT = r'3\.449572\s*\+\s*float\(os\.environ\.get\("VTOL_TANK_KG",\s*"0\.502"\)\s*or\s*0\.502\)'
 OTHER_MASS_SITES = {
-    "lib/fsc_transition_ref.py":  r"\bm=([0-9.]+)",            # FSC = dict(m=..., ...)
-    "geometric_hover_node.py":    r"self\.mass = ([0-9.]+)",   # safe controller default
-    "vtol_nmpc.py":               r"^M = ([0-9.]+)",           # standalone node
+    "lib/fsc_transition_ref.py":  r"\bm=" + ENV_PAT,             # FSC = dict(m=..., ...)
+    "geometric_hover_node.py":    r"self\.mass = " + ENV_PAT,    # safe controller default
+    "vtol_nmpc.py":               r"^M = " + ENV_PAT,            # standalone node
 }
 TOL_M = 1e-3        # kg
 TOL_CG = 1e-3       # m
@@ -103,7 +109,7 @@ def main():
                        f"value is {want} -- the assembly maths or the config changed")
 
     # --- 2. the tank aircraft ------------------------------------------------
-    tank = slosh.TankConfig()
+    tank = slosh.default_tank()
     folded, before, after = vs.fold_tank_into_body(cfg, tank)
     m1, c1, i1 = after
     print(f"  plant, WITH the tank     : M={m1:.3f} kg  CG=({c1[0]:.4f},{c1[1]:.4f},{c1[2]:.4f})  "
@@ -125,12 +131,23 @@ def main():
 
     # --- 3. THE PAIRING ------------------------------------------------------
     k = controller_constants()
-    cm, ccg = k.get("M"), k.get("CG_X")
+    import re
+    hub_src = open(CTRL_HUB).read()
+    ca_m = k.get("AIRFRAME_M"); ccg = k.get("CG_X")
     ci = (k.get("IXX"), k.get("IYY"), k.get("IZZ"))
-    print(f"  control model            : M={cm} kg  CG_X={ccg}  I={ci}")
-    if cm is None or ccg is None or None in ci:
-        bad.append(f"could not read M/CG_X/I* from {CTRL_HUB}")
+    env_ok = re.search(r'^TANK_KG = float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\)\s*$'
+                       r'\n^M = AIRFRAME_M \+ TANK_KG', hub_src, re.M) is not None
+    cm = (ca_m + slosh.tank_kg_from_env()) if ca_m is not None else None
+    print(f"  control model            : M={cm} kg (AIRFRAME_M {ca_m} + VTOL_TANK_KG)  CG_X={ccg}  I={ci}")
+    if ca_m is None or ccg is None or None in ci:
+        bad.append(f"could not read AIRFRAME_M/CG_X/I* from {CTRL_HUB}")
+    elif not env_ok:
+        bad.append(f"{os.path.basename(CTRL_HUB)} does not build M as AIRFRAME_M + TANK_KG from "
+                   f"VTOL_TANK_KG (default 0.502) -- the plant reads that variable, the model must too")
     else:
+        if abs(ca_m - m0) > TOL_M:
+            bad.append(f"AIRFRAME MISMATCH: the plant's airframe assembles to {m0:.4f} kg, the control "
+                       f"model's AIRFRAME_M is {ca_m}")
         if abs(cm - m1) > TOL_M:
             bad.append(f"MASS MISMATCH: the plant flies {m1:.3f} kg with the tank, the control "
                        f"model carries {cm} kg. Update M in {os.path.basename(CTRL_HUB)} "
@@ -142,21 +159,32 @@ def main():
             if abs(got - want) > TOL_I:
                 bad.append(f"{nm} MISMATCH: plant {want:.4f}, control model {got}")
 
-    # --- 4. the other copies of the mass must agree with the hub -----------
-    import re
+    # --- 4. the other copies of the mass must read the SAME variable the same way ---------
     for rel, pat in OTHER_MASS_SITES.items():
         path = os.path.join(controller_dir(), "px4_vtol_direct_actuator", rel)
         src = open(path).read()
         hit = re.search(pat, src, re.M)
+        tag = "ok" if hit else "MISMATCH"
+        print(f"  {rel:28s} mass = 3.449572 + VTOL_TANK_KG   {tag}")
         if not hit:
-            bad.append(f"could not find the mass in {rel} with /{pat}/")
-            continue
-        val = float(hit.group(1))
-        tag = "ok" if abs(val - m1) <= TOL_M else "MISMATCH"
-        print(f"  {rel:28s} mass={val:<10} {tag}")
-        if tag != "ok":
-            bad.append(f"{rel} carries mass {val}; the aircraft is {m1:.4f} kg -- a stale copy "
-                       f"(the trim generator's copy left a 1.245 m/s^2 residual once)")
+            bad.append(f"{rel} does not carry the mass as 3.449572 + VTOL_TANK_KG (default 0.502) -- "
+                       f"a stale or differently-wired copy (the trim generator's copy left a "
+                       f"1.245 m/s^2 residual once)")
+
+    # --- 5. every flown mode assembles to airframe + water, and vtol_nmpc has its trim ------
+    vn = open(os.path.join(controller_dir(), "px4_vtol_direct_actuator", "vtol_nmpc.py")).read()
+    for kg in slosh.TANK_MODES:
+        t = slosh.default_tank(water_kg=kg)
+        _, _, (mk, _, _) = vs.fold_tank_into_body(cfg, t)
+        want = AIRFRAME_M + kg
+        ok = abs(mk - want) <= TOL_M
+        has_trim = re.search(r"^\s+%s: np\.array\(\[" % re.escape(repr(kg)), vn, re.M) is not None
+        print(f"  mode VTOL_TANK_KG={kg:<5}: plant {mk:.4f} kg, model {want:.4f}  {'ok' if ok else 'MISMATCH'};"
+              f"  vtol_nmpc trim table {'baked' if has_trim else 'MISSING'};  {slosh.describe(t)}")
+        if not ok:
+            bad.append(f"mode {kg}: plant assembles to {mk:.4f}, model {want:.4f}")
+        if not has_trim:
+            bad.append(f"mode {kg}: vtol_nmpc.py has no baked trim table for it")
 
     print()
     if bad:
