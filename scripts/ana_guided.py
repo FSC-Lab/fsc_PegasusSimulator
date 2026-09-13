@@ -22,6 +22,8 @@ from px4_msgs.msg import ActuatorServos
 from std_msgs.msg import String
 
 bagdir = sys.argv[1]
+if "--center" in sys.argv:            # the GS lets the operator pick any orbit point
+    i = sys.argv.index("--center"); LOITER_C = np.array([float(sys.argv[i + 1]), float(sys.argv[i + 2])])
 bag = glob.glob(os.path.join(bagdir, "*.db3"))[0]
 con = sqlite3.connect(bag); cur = con.cursor()
 topics = {tid: name for tid, name, typ in cur.execute("select id, name, type from topics")}
@@ -67,25 +69,36 @@ st = np.where((np.arange(len(T)) > last_wb) & (V < 1.0))[0]
 if len(st): i = st[0]; print(f"stopped at t={T[i]:.0f} pos=({P[i,0]:.1f},{P[i,1]:.1f}) z={P[i,2]:.1f}  {np.linalg.norm(P[i,:2]):.1f} m from home; back-transition {T[i]-T[last_wb]:.1f} s from V=12, z min {P[last_wb:i,2].min():.1f}")
 print(f"final pos ({P[-1,0]:.2f},{P[-1,1]:.2f},{P[-1,2]:.2f}) roll {E[-1,0]:+.1f} pitch {E[-1,1]:+.1f}")
 
-# --- guided-mission specifics: steady loiter (after the entry, before rth), turn overshoots, rth track
+# --- guided-mission specifics ---------------------------------------------------------------
 t_rth = next((t for t, c in cmds if c.strip() == "rth"), None)
-t_lo = next((t for t, c in cmds if c.startswith("wp")), None)
-if t_rth:
-    for a, b, name in ((t_rth - 65, t_rth, "loiter steady (last 65 s before rth)"), (t_rth - 90, t_rth - 65, "loiter entry (25 s)")):
+t_wp = next((t for t, c in cmds if c.startswith("wp")), None)
+t_lo = next((t for t, c in cmds if c.startswith("loiter")), None)
+t_end = t_rth if t_rth else T[-1]
+# loiter: entry = first 25 s after the orbit was reached (leg hand-over or the loiter command),
+# steady = the rest until rth. Plan-agnostic: the centre is LOITER_C (--center).
+t_orb = t_lo if t_lo else (T[np.argmax(sel & (d < 130))] if (sel & (d < 130)).any() else None)
+if t_orb is not None and t_end - t_orb > 30.0:
+    for a, b, name in ((t_orb, t_orb + 25.0, "loiter entry (25 s)"), (t_orb + 25.0, t_end, "loiter steady")):
         w = (T > a) & (T < b)
-        print(f"{name}: rho mean {d[w].mean():.1f} sd {d[w].std():.2f} min {d[w].min():.1f} max {d[w].max():.1f}; roll mean {E[w,0].mean():+.1f} sd {E[w,0].std():.2f}; z {P[w,2].min():.1f}-{P[w,2].max():.1f}; V {V[w].min():.2f}-{V[w].max():.2f}")
-    # turn 1: leg (0,0)->(500,0) then (500,0)->(500,400): overshoot = max x beyond 500 while y in (0,300)
-    w = sel & (P[:,1] > 20) & (P[:,1] < 300) & (T < t_rth); print(f"turn 1 overshoot: max x - 500 = {P[w,0].max()-500:+.1f} m, settles |x-500|<2 at y={P[w][np.abs(P[w,0]-500)<2][0,1]:.0f} m" if w.sum() else "")
-    w = sel & (P[:,0] < 480) & (P[:,0] > 150) & (T < t_rth) & (T < t_rth-70); print(f"turn 2 overshoot: max y - 400 = {P[w,1].max()-400:+.1f} m")
-    # bank in the turns and the heading overshoot
-    for t0, t1, name in ((t_lo + 18, t_lo + 40, "turn 1"), (t_lo + 45, t_lo + 70, "turn 2")):
-        w = (T > t0) & (T < t1); print(f"{name}: |roll| max {np.abs(E[w,0]).max():.1f} deg, z {P[w,2].min():.1f}-{P[w,2].max():.1f}, V {V[w].min():.2f}-{V[w].max():.2f}")
-    # rth: cross-track to the home line from the point where the rth turn finished
-    w = (T > t_rth) & (V > 12); Pw = P[w, :2]; p0 = Pw[0]; u = -p0 / np.linalg.norm(p0)
-    ct = Pw[:, 0] * (-u[1]) + Pw[:, 1] * u[0]
-    print(f"rth: from ({p0[0]:.0f},{p0[1]:.0f}) home bearing {math.degrees(math.atan2(-p0[1], -p0[0])):.0f} deg; |roll| max {np.abs(E[w,0]).max():.1f}; cross-track to the home line max {np.abs(ct).max():.1f} m, last 5 s {np.abs(ct[-600:]).max():.1f} m")
+        if w.sum() > 10:
+            print(f"{name}: rho mean {d[w].mean():.1f} sd {d[w].std():.2f} min {d[w].min():.1f} max {d[w].max():.1f}; "
+                  f"roll mean {E[w,0].mean():+.1f} sd {E[w,0].std():.2f}; z {P[w,2].min():.1f}-{P[w,2].max():.1f}")
+elif t_lo is not None:
+    print(f"loiter commanded at t={t_lo:.0f} but rth at t={t_rth:.0f}: {t_end - t_lo:.0f} s later -- no orbit to score")
+# the default plan's two 90 deg fly-by turns (wp 500 0 500 400 100 400): overshoot past each new leg
+if t_wp is not None and "500" in next(c for t, c in cmds if c.startswith("wp")):
+    w = sel & (P[:, 1] > 20) & (P[:, 1] < 300) & (T < t_end)
+    if w.sum(): print(f"turn 1 overshoot: max x - 500 = {P[w,0].max()-500:+.1f} m")
+    w = sel & (P[:, 0] < 480) & (P[:, 0] > 150) & (T < t_end - 70)
+    if w.sum(): print(f"turn 2 overshoot: max y - 400 = {P[w,1].max()-400:+.1f} m")
+    for t0, t1, name in ((t_wp + 18, t_wp + 40, "turn 1"), (t_wp + 45, t_wp + 70, "turn 2")):
+        w = (T > t0) & (T < t1)
+        if w.sum(): print(f"{name}: |roll| max {np.abs(E[w,0]).max():.1f} deg, z {P[w,2].min():.1f}-{P[w,2].max():.1f}, V {V[w].min():.2f}-{V[w].max():.2f}")
+# rth: the turn, then cross-track to the home line from where the turn ended
 if t_rth:
-    for a, b, name in ((t_rth - 40, t_rth, "loiter steady (last 40 s)"), (t_rth - 65, t_rth - 40, "loiter entry (first 25 s)")):
-        w = (T > a) & (T < b)
-        print(f"{name}: rho mean {d[w].mean():.1f} sd {d[w].std():.2f} min {d[w].min():.1f} max {d[w].max():.1f}; roll mean {E[w,0].mean():+.1f} sd {E[w,0].std():.2f}")
-    w = sel & (T > t_lo + 40) & (T < t_lo + 70); i = np.argmax(P[w,1]) ; 
+    w = (T > t_rth) & (V > 12)
+    if w.sum() > 10:
+        Pw = P[w, :2]; p0 = Pw[0]; u = -p0 / max(np.linalg.norm(p0), 1e-6)
+        ct = Pw[:, 0] * (-u[1]) + Pw[:, 1] * u[0]
+        print(f"rth: from ({p0[0]:.0f},{p0[1]:.0f}) home bearing {math.degrees(math.atan2(-p0[1], -p0[0])):.0f} deg; "
+              f"|roll| max {np.abs(E[w,0]).max():.1f}; cross-track to the home line max {np.abs(ct).max():.1f} m, last 5 s {np.abs(ct[-600:]).max():.1f} m")
