@@ -48,11 +48,16 @@ def rows(sub, cls):
 # --- the estimate, from the status feed -----------------------------------------------------
 est = []
 pat = re.compile(r"slosh F=\(([+-][\d.]+),([+-][\d.]+),([+-][\d.]+)\) N M=\(([+-][\d.]+),([+-][\d.]+),([+-][\d.]+)\) Mres=\(([+-][\d.]+),([+-][\d.]+),([+-][\d.]+)\)")
+# the predictor's own reading (2026-09-14 pm, "| pred bob=(..)mm f1=.. F=(x,y) M=(..) bF=(x,y) bM=(..)")
+ppat = re.compile(r"pred bob=\(([+-]?[\d.]+),([+-]?[\d.]+)\)mm.*? F=\(([+-][\d.]+),([+-][\d.]+)\) M=.*? bF=\(([+-][\d.]+),([+-][\d.]+)\)")
+pred = []
 for t, m in rows("cascade/status", String):
     g = pat.search(m.data)
     if g:
         est.append((t, *[float(v) for v in g.groups()]))
-est = np.array(est)
+        gp = ppat.search(m.data)
+        pred.append((float(gp.group(3)), float(gp.group(4)), float(gp.group(5)), float(gp.group(6)), float(gp.group(1)), float(gp.group(2))) if gp else (np.nan,) * 6)
+est = np.array(est); pred = np.array(pred)
 if len(est) == 0:
     sys.exit("no slosh estimate on the status feed (was the STESO cascade flying, STESO_LF > 0?)")
 te = est[:, 0]
@@ -125,6 +130,9 @@ if F_rtf is not None:
     Frt = np.array([F_rtf(t) for t in tt_s]); Fx_r, Fy_r = Fx_t + Frt[:, 0], Fy_t + Frt[:, 1]
 else:
     Fx_r, Fy_r = Fx_t, Fy_t
+HAVE_PRED = pred.size and np.isfinite(pred[:, 0]).any()
+if HAVE_PRED:
+    Px_e = np.interp(tt_s, te, pred[:, 0]); Py_e = np.interp(tt_s, te, pred[:, 1])
 
 
 def stats(w, tag):
@@ -137,6 +145,10 @@ def stats(w, tag):
         cr = np.corrcoef(e[w], tr[w])[0, 1] if tr[w].std() > 1e-3 else float("nan")
         out.append(f"{lab}: bob rms {np.sqrt((t[w] ** 2).mean()):4.2f} | est rms {np.sqrt((e[w] ** 2).mean()):4.2f} err {np.sqrt((err ** 2).mean()):4.2f} corr {c:+.2f}"
                    f" | vs bob+RTF: err {np.sqrt((err_r ** 2).mean()):4.2f} corr {cr:+.2f}")
+        if HAVE_PRED:
+            pe = (Px_e if lab == "x" else Py_e)
+            cp = np.corrcoef(pe[w], t[w])[0, 1] if t[w].std() > 1e-3 else float("nan")
+            out.append(f"PREDICTOR vs bob: err {np.sqrt(((pe[w] - t[w]) ** 2).mean()):4.2f} corr {cp:+.2f}")
     print(" | ".join(out))
 
 

@@ -2,6 +2,57 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-14 (evening): THE STESO BECOMES A PREDICTOR -- THE TANK'S MODE AS THE INTERNAL MODEL OF
+# A KALMAN LAYER; FORCE AND MOMENT UNCERTAINTY (bias) SPLIT FROM THE DISTURBANCE (the bob); THE
+# PREDICTED TANK MOMENT CANCELLED AT THE INNER. GATED, FLOWN (flight 10, LANDED 0.00 m).
+**WHY.** The STESOs estimate a LUMPED residual with one assumed property (|sigma_dot| <= L): observers,
+never predictors -- they report what the plant felt ~1/L seconds ago. But the tank is structured: one
+bob at sqrt(f_z/L1) with known damping and a wall, and its force and moment are ONE state seen
+through m1 and r_tank. `slosh_predictor.SloshPredictor` (controller package) is an EKF whose model
+IS the plant's `PendulumSlosh`: state [x, y, xdot, ydot, bF(2), bM(3)], driven by the controller's
+own specific force at the tank (the applied model force in the body frame + the bob's reaction + the
+rotation terms with the moment STESO's own omega_dot), corrected by the two STESOs' residuals; the
+bias states are the UNCERTAINTY (CG, aero, the real-time-factor term in HIL), the bob is the
+DISTURBANCE, `predict(tau)` integrates it ahead, `impact_eta()` says when it reaches the wall.
+Optional `meas_lag` states model the STESO's own reading lag (10-20 ms at L_F 3, measured on the
+gate) so the filter de-lags it: unmodelled, a 0.1 s lag caps tracking at corr 0.85; modelled, 0.98.
+**`tests/test_slosh_predictor.py`** (against the sim's pendulum by path, the flown 100 mm tank): bob
+converges to 0.4 mm on 13 mm; prediction at +0.05/+0.25/+0.5 s errs 0.001 N where hold-last errs
+0.10/0.43/0.54; a 1 N force bias and 0.5 N.m moment bias resolve to 1.01 / 0.50 through 0.3 N of
+noise with the bob still tracked at corr 0.97; a wall impact is announced 0.2 s ahead to 0.01 s with
+the contact force to 2% (7.42 vs 7.59 N). Tuning from a sweep: q_bob 0.35, r_F 0.3, r_M 0.1.
+**IN THE CASCADE (`nmpc_cascade_steso_node.py`):** `--slosh_pred on` (default; the tank from the
+gate's own tank or the sim's `default_tank()` by path -- one pendulum), `--pred_lag 0.015`,
+**`--pred_cancel on` (default): the inner's L1 law cancels the PREDICTED slosh moment at t + delay
+UNFILTERED (model-based, so C(s)'s noise argument does not apply; clamped by `--pred_umax` 1.0 N.m)
+and the bias through C(s) as before**; `--pred_outer` carries the predicted force/moment through
+predict6 (`base.OUTER_DIST` seam -- a measured NO-OP, the force is 1% of weight; off). The status
+feed gains `| pred bob=(..)mm f1=.. F=(..) M=(..) bF=(..) bM=(..) [wall in X s]`; `--pred_score`
+scores a gate run against the truth (`base.SLOSH_TRUTH`), `--log` carries the truth and the
+predictions; `ana_slosh_est.py` prints `PREDICTOR vs bob`.
+**GATE, offset 100 mm tank, turning mission (legs, orbit, RTH), noise 0.1/1, L1:** the STESO reading
+correlates 0.90/0.92 with the bob and lags it 10-20 ms; the predictor now 0.94/0.91; at +0.25 s the
+prediction errs 0.15/0.36 N where hold-last errs 0.48/0.89. **CANCEL ON: the plant's own tank force
+0.52 -> 0.06 N rms in the turns (its 3.6 N wall impact gone), 0.61 -> 0.01 in the orbit; the
+aircraft's roll sd 0.32 -> 0.16 (orbit), 0.45 -> 0.24 (stop); RTH stop 6.7 -> 3.5 m from home** --
+the bob -> yaw moment -> yaw acceleration -> bob loop at the 0.26 m arm is broken. At RTF 0.86 the
+raw lateral reading falls to corr 0.46 (the clock artefact) and the bias state absorbs it
+(bF_y +0.76 N), the bob estimate holds at 0.87, cancel still 0.50 -> 0.03 / 0.69 -> 0.02, stop
+6.8 -> 5.5 m. Regression 16 seeds: 0.502 kg 16/16 pk 14.1 (identical -- a tank at the CG has no arm),
+0.7 kg 16/16 pk 13.7, offset tank at RTF 0.86 16/16 pk 14.6.
+**FLIGHT 10 (row R100_dx3_pred_a1_162058, bag slosh_20260914_162025; predictor + cancel on, RTF 0.84):
+LANDED 0.00 m.** Crossing +14.2 (the gate's 14; flight 9: 15.3), 0 fails, z 29.9-30.0, stop 10.4 s,
+orbit 99.9 +- 0.40 / roll -18.3 +- 1.26 (flight 9: 0.32 / 1.02 -- one-flight scatter; HIL's lateral
+numbers are 3-4x the gate's for reasons that are not the tank). **The plant's own bob: F_y rms 0.16 ->
+0.08 N, in the orbit 0.25 -> 0.08, |F| max 1.56 -> 1.15.** The predictor reads the fore-aft bob at
+corr 0.85 (the raw STESO 0.6-0.7, err 0.12-0.15 -> 0.05-0.08); the lateral raw reading is 1.7 N of
+RTF artefact, the bias takes it (bob+RTF corr 0.94), and the bob estimate is left at the noise floor
+(0.28 N) because the bob it is estimating is now 0.08 N -- the cancellation's own success.
+**WHAT IT IS NOT:** it cannot anticipate an impact from nothing (it needs the braking to be in its
+input first -- then 0.2 s of warning); the outer feed buys nothing measurable; the aircraft-level
+gain in HIL is inside one-flight scatter and needs repeats; a mis-specified tank cancels a moment
+that is not there, bounded by pred_umax. `vtol_nmpc.py` and the base cascade are untouched.
+
 # ★★★★★ 2026-09-14 (afternoon): THE TWO "MODEL GAPS" WERE THE CLOCK; THREE REAL ONES FOUND BY THE
 # FORCE/MOMENT BALANCE AND FIXED; THE OFFSET-TANK STOP FLOWN CLEAN (flight 9, LANDED 0.00 m).
 **READ THIS BEFORE QUOTING THE MORNING BLOCK BELOW IT.** Its "two model gaps the observer exposed"
