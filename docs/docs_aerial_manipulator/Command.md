@@ -5030,3 +5030,184 @@ torque carries 13–19 mN·m of ripple in the same window — plus the asynchron
 `l1_noise_A.npz` was flown first at the driver's default 6 s holds. It completed
 the whole mission too, but **its settled numbers are not comparable** with the
 16 s baseline (§7.15.7's hold-length trap).
+
+### 7.16 AM-T650 WHOLE-BODY + L1 GROUND TEST — inert props, added 2026-09-12
+
+The parallel of §7.15's rig with the **props producing nothing**. Same Isaac
+entrypoint, same `AM_xfwd` asset, same T650 motor map and mass gate, same arm
+servo model, same plant-uncertainty injection, same PX4 profile, same L1
+controller stack and yaml, same TORQUE-mode arm stack, same two ground
+stations. One plant change and one extra pane.
+
+```bash
+# terminal 1 — the controller stack, UNCHANGED
+$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh <config>
+# terminal 2 — the GROUND plant
+scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_ground_test_sitl.sh <config>
+```
+
+**What it answers.** What the whole-body law does if you engage DIRECT while
+the vehicle is seated and then move the arm — the base reaction, the joint
+torques, and how the attitude loop behaves when the thrust channel is
+answering to the floor instead of to the air.
+
+#### The plant change
+
+`PEGASUS_PLANT_KF_SCALE = PEGASUS_PLANT_KM_SCALE = 0`. The rotors still turn at
+whatever speed the allocator commands — the lag model, the ω map and the
+allocator are untouched — but produce no force and no yaw moment.
+
+**Both coefficients, not just `k_f`.** `Multirotor.update()` applies
+`k_f·ω²` as a force on each rotor body and `k_m·ω²·rot_dir` as one summed yaw
+moment on `/body`; they are two different call sites. Measured on the shipped
+T650 constants at a deliberately yaw-differential command `[600, 600, 400, 400]`
+rad/s:
+
+| | thrust | yaw moment |
+|---|---|---|
+| nominal | 42.029 N | −0.98966 N·m |
+| `k_f = 0` only | 0.000 N | **−0.98966 N·m** |
+| `k_f = k_m = 0` | 0.000 N | 0.00000 N·m |
+
+so zeroing `k_f` alone leaves props that torque the airframe in yaw while
+lifting nothing. `PEGASUS_PLANT_KM_SCALE` (new, default 1.0 → every existing
+rig bit-identical) is the yaw-channel twin, and `06` warns if only one is zero.
+
+#### The one handshake that cannot be the same
+
+`directEntryAllowed()` refuses DIRECT unless the vehicle is within
+`wb_gate_pos_m = 0.15 m` of `outer_ref_`. The flying rig satisfies that by
+taking off to z = 1.2 and settling. Here there is no takeoff, and `outer_ref_`
+is still its default (0, 0, 0) against a seated vehicle — so DIRECT would be
+refused for a reason that has nothing to do with the test.
+
+`application/robotic_arm/utils/wb_ground_reference_hold.py` supplies the
+missing half and nothing else: while the node reports SAFETY it republishes a
+reference **at the vehicle's own measured pose** (so the gate reads ~0, in
+whatever frame the estimator is using — it is datum-agnostic by construction),
+and it **goes silent in DIRECT**, because a full-rate
+`position_controller/reference` stream drags the whole-body planner out of HOLD
+on every tick (§7.14's re-plan oscillation). On a DIRECT → SAFETY edge it
+re-captures, since `switchMode(kSafety)` has just re-seeded `outer_ref_` itself.
+
+It runs in its own tmux window, `ground`. It needs `rclpy` AND
+`fsc_autopilot_ros2_msgs`, so the pane sources the autopilot workspace and
+probes for an interpreter that imports both — on `fsc_lab_machine` bare
+`python3` is Isaac's 3.11 and fails, `/usr/bin/python3` works. Override with
+`FSC_GROUND_HOLD_PYTHON`.
+
+**Do NOT send a takeoff setpoint on this rig.** It opens a ~0.9 m position
+error the gate then refuses, and with no thrust the vehicle can never close it.
+
+#### Procedure
+
+1. Wait for `hold captured at (...)` in the tmux window `ground`.
+2. Arm + OFFBOARD from the drone ground station. No takeoff setpoint.
+3. Confirm the magenta `DISTURBANCE OBSERVER: L1 ADAPTIVE` banner.
+4. `ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"`
+5. Move the arm from the arm ground station's **EE Whole-Body** tab. The
+   reachable directions at the folded home are the §7.14 ones — **DOWN has
+   room**, out and in do not.
+6. Abort with `{data: false}`.
+
+#### What is expected, so a normal result is not read as a fault
+
+- **The props render stationary.** `handle_propeller_visual()` animates from
+  the applied force, which is now exactly 0.0. That is the visual confirmation
+  the injection is live.
+- **`u1` starts at ~m·g and then GROWS.** The observer sees a commanded thrust
+  that produces no acceleration and books all of it as a disturbance, so
+  `d_hat_z` walks out to its bound. `wb_control_debug[88]` railing is the
+  expected outcome here.
+- **The drift watchdog (0.75 m) will not fire** — the floor supplies whatever
+  the props do not, so the CoM tracking error stays small. The **tilt watchdog
+  (20°) is the interesting one**: it is what catches the vehicle being levered
+  over by its own arm.
+- **SAFETY does not wind up on the ground.** `ude_height_threshold = 0.35 m`
+  and the vehicle rests at ~0.305 m, so the SAFETY UDE stays gated off. Only
+  the DIRECT-side observer integrates.
+
+**This is not a flight rig.** The controller believes it is flying, so nothing
+it reports about thrust, disturbance or altitude means what it means in the
+air. Read the ARM and the ATTITUDE; treat the thrust channel as diagnostic.
+
+#### 7.16.1 FLOWN 2026-09-12 — nothing happens, and the reason is exact
+
+Two runs, **neither aborted**, driver
+`application/robotic_arm/utils/wb_ground_test_driver.py`, scorer + data
+`docs/docs_aerial_manipulator/ground_test_20260912/`:
+
+| | run A | run B |
+|---|---|---|
+| DIRECT on the ground | 76.7 s | 358.9 s |
+| arm legs (out + back) | 2/2 | 2/2 |
+| body z | 0.3055 m, p-p **0.5 µm** | same |
+| tilt | max 0.00°, p-p **138 µdeg** | same |
+| horizontal slide | **0.0 mm** | 0.0 mm |
+| `u1` | 36.77 → 37.53 N | 36.78 → 37.65 N |
+| `d_hat_z` | −0.00 → −0.77 N | −0.00 → −0.90 N |
+| motors | mean 0.567, max 0.613 | mean 0.568, max 0.640 |
+| rotor sat / on-a-bound / joint clamp | 0.00 % / 0.00 % / 0.00 % | same |
+| peak arm torque | 0.797 of 3.0 N·m | 0.818 |
+| EE settled, per leg | 5.8 / 2.0 mm | **0.9 / 2.1 mm** |
+
+**THE LAW SITS IN A SELF-CONSISTENT HOVER EQUILIBRIUM AND NEVER FINDS OUT.**
+The one number that explains the whole run:
+
+    u1 + d_hat_z = 36.755 N, constant to 9 mN (run A) / 12 mN (run B)
+    the controller's own m*g = 3.746170 x 9.80665 = 36.737 N
+    corr(u1, -d_hat_z) = 0.9992
+
+The momentum observer measures `dp/dt`. Seated, `dp/dt = 0` and the commanded
+`h + u` is already ~0, so **there is no residual to find** — the floor is
+supplying the reaction and nothing in the loop can distinguish that from
+flight. The observer is not fighting anything; it is content.
+
+**THE PREDICTION IN §7.16's "what is expected" WAS WRONG and is corrected
+here.** It said `u1` would grow and `d_hat_z` would walk to its bound. It does
+not: `|d_hat_z|` reached 0.90 N of its 20 N bound (`wb_l1_max_force_n`) in six
+minutes, 0.00 % of samples on a bound.
+
+**BOTH INJECTIONS GO UNDETECTED, which is the sharpest way to state it.** The
+plant is 4.120787 kg (**40.41 N**) and the allocator believes a kf 15 % high;
+the law commands **36.75 N**, the believed weight, and never learns otherwise.
+In FLIGHT the same configuration has the observer at `d_hat_z = −10.81 N`
+within seconds (§7.15). On the ground it finds 0.9 N in 359 s.
+
+**THE ARM IS UNAFFECTED.** Both compatible-trajectory legs planned in 1.7–2.1 s
+and executed (T = 6.8 / 6.9 s), EE settled to 0.9–2.1 mm, peak torque 0.82 of
+3.0 N·m, 0 % clamp, joints returned to home (q2/q3 40.2/40.4°, q1/q4 ~0). The
+base does not react visibly because the reaction is small against a vehicle
+resting on its legs — but the contact is compliant, not rigid: tilt has a
+measurable 138 µdeg peak-to-peak.
+
+**THE SLOW DRIFT IS REAL BUT NOT CHARACTERISED — do not quote a time to the
+bound.** `d_hat_z` walks at **−9 mN/s in run A and −2.7 mN/s in run B**, a 3×
+spread on the same configuration, so the rate is not reproducible. An
+exponential fit to run B settles at −2.24 N with tau = 660 s and beats a
+straight line (SSE 181 vs 241), but **tau exceeds the 359 s window**, so
+"converging" is an extrapolation, not a measurement. What is measured: 0.90 N
+in six minutes, no bound, no saturation.
+
+**SAFETY-RELEVANT, and the reason not to do this with props on.** From the
+instant DIRECT is entered on the ground the law commands **~57 % on all four
+motors and ~hover collective**, continuously, with no error signal telling it
+to stop. On this plant that is 9 % under the true weight so it would not lift
+— but that margin is an accident of the mass injection, not a property of the
+law.
+
+**PX4 STAYS ARMED, so one launch is one run.** After run A `arming_state = 2`
+even though the vehicle never left the ground: the land detector needs low
+thrust and the law is commanding 57 %. Full clean + relaunch between runs —
+the driver refuses to start against an armed vehicle.
+
+**A DEFECT IN THE HOLD NODE, FOUND ON THE FIRST RUN AND FIXED.** It latched the
+hold after N odometry samples, and the estimator publishes **(0, 0, 0) before
+it has a fix** — so the count was satisfied instantly and the hold was taken at
+the origin while the vehicle sat at z = 0.305. The gate then read 0.305 m
+against its own 0.15 m limit, i.e. exactly the refusal the node exists to
+prevent (its own log line said so: `vehicle is 0.305 m from it`). It now
+**TRACKS the measured pose in SAFETY** instead of latching one: no startup
+ordering to get wrong, nothing to chase on a seated vehicle, and the
+SAFETY-revert re-seed becomes automatic. Verified on the relaunch — it starts
+on the zeros and follows to 0.305 as soon as the pose is real.

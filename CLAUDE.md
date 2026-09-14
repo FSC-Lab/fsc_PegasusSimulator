@@ -2888,3 +2888,121 @@ bootstrap.
 - Trap worth keeping: `kill` on the `ros2 run` WRAPPER leaves the node child alive. Two
   planners then publish the same topic and the loopback test fails on "reference is
   smooth" for reasons that have nothing to do with the config under test.
+
+**GROUND TEST: THE WHOLE-BODY + L1 RIG WITH INERT PROPS (2026-09-12, user
+request — "what happens if I switch to whole-body DIRECT on the ground and move
+the arm").** A parallel of
+`start_t650_aerial_manipulator_whole_body_L1_adaptive_direct_actuation_sitl.sh`
+that is byte-identical in every respect except the rotor wrench. New launcher
+`scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_ground_test_sitl.sh`;
+the fsc_autopilot_ros2 side is **completely unchanged** — same stack script,
+same node, same yaml, same gains — so this is purely a PLANT variant and the two
+rigs cannot drift apart on the controller side.
+- **`PEGASUS_PLANT_KM_SCALE` is NEW** (06 + `start_single_drone_x650.sh`,
+  default 1.0 → every existing rig bit-identical), the yaw-channel twin of
+  `PEGASUS_PLANT_KF_SCALE`. **BOTH are needed and this is easy to get wrong**:
+  `Multirotor.update()` applies `k_f*w^2` as a per-rotor force and
+  `k_m*w^2*rot_dir` as one summed yaw moment on `/body` — two different call
+  sites. Measured at a yaw-differential command [600,600,400,400] rad/s on the
+  shipped T650 constants: nominal 42.029 N / −0.98966 N·m; **`k_f=0` alone
+  0.000 N but still −0.98966 N·m** (props that torque the airframe while
+  lifting nothing — not an airframe); both zero 0.000 / 0.00000. The rotors
+  still reach the commanded speed in every case, so the allocator, the ω map
+  and the lag model are untouched; only the physics changes. 06 WARNS if only
+  one is zero.
+- **THE DIRECT GATE IS WHY THIS NEEDED MORE THAN AN ENV VAR.**
+  `directEntryAllowed()` refuses unless `|state − outer_ref_| <= wb_gate_pos_m`
+  (0.15 m). The flying rig satisfies that by taking off to 1.2 m and settling;
+  on the ground `outer_ref_` is still its DEFAULT (0,0,0) against a vehicle
+  seated at ~0.305 m, so DIRECT is refused for a reason unrelated to the test.
+  New `application/robotic_arm/utils/wb_ground_reference_hold.py` supplies that
+  one handshake: it republishes a reference AT THE VEHICLE'S OWN MEASURED POSE
+  while the node reports SAFETY (datum-agnostic by construction — it never
+  hard-codes 0.305), and **GOES SILENT IN DIRECT**, because a full-rate
+  `position_controller/reference` stream drags the whole-body planner out of
+  HOLD every tick (the 2026-08-23 re-plan oscillation). On a DIRECT→SAFETY edge
+  it RE-CAPTURES, since `switchMode(kSafety)` has just re-seeded `outer_ref_`
+  itself and republishing the stale pre-DIRECT pose would fight it. Runs in its
+  own tmux window `ground`; the pane PROBES for an interpreter that imports
+  both `rclpy` and `fsc_autopilot_ros2_msgs` (`FSC_GROUND_HOLD_PYTHON`
+  overrides) — the bare-`python3`-is-Isaac's-3.11 trap, confirmed live here.
+  **NEVER send a takeoff setpoint on this rig**: it opens a ~0.9 m error the
+  gate then refuses and no thrust can close.
+- **NOT a flight rig.** The controller believes it is flying, so nothing it
+  reports about thrust, disturbance or altitude means what it means in the air.
+  Read the ARM and the ATTITUDE.
+**FLOWN 2026-09-12, 2 runs, NEITHER ABORTED (77 s and 359 s of DIRECT, two arm
+legs each). NOTHING HAPPENS, and the reason is exact.** Driver
+`utils/wb_ground_test_driver.py`, scorer + data
+`docs/docs_aerial_manipulator/ground_test_20260912/`. Tables: Command.md 7.16.1.
+- **THE LAW SITS IN A SELF-CONSISTENT HOVER EQUILIBRIUM AND NEVER FINDS OUT.**
+  One number carries the whole result: **`u1 + d_hat_z` = 36.755 N, constant to
+  9-12 mN across both runs**, against the controller's own
+  `m*g = 3.746170*9.80665 = 36.737 N`; `corr(u1, -d_hat_z) = 0.9992`. The
+  momentum observer measures `dp/dt`; seated, `dp/dt = 0` and the commanded
+  `h + u` is already ~0, so THERE IS NO RESIDUAL TO FIND. The floor supplies
+  the reaction and nothing in the loop can distinguish that from flight.
+- **MY PREDICTION IN THIS ENTRY WAS WRONG AND IS CORRECTED.** It said `u1`
+  would grow and `d_hat_z` would walk to its bound with `debug[88]` railing. It
+  does not: `|d_hat_z|` reached **0.90 N of its 20 N bound** in six minutes and
+  **0.00%** of samples were on a bound, 0.00% rotor saturation, 0.00% joint
+  clamp.
+- **BOTH INJECTIONS GO UNDETECTED.** The plant is 4.120787 kg (**40.41 N**) and
+  the allocator believes a kf 15% high; the law commands **36.75 N** — the
+  BELIEVED weight — and never learns otherwise. In FLIGHT the same config has
+  `d_hat_z = -10.81 N` within seconds (7.15). That contrast is the cleanest
+  statement of what a ground engagement is.
+- **The vehicle is immobile to the MICRON**: x/y/z p-p **0.5-0.7 um**, tilt p-p
+  **138 udeg**, slide 0.0 mm, over both runs. Compliant, not rigid — the tilt
+  is non-zero — but the arm's 0.8 N.m cannot lever a 40 N vehicle off its legs.
+  So the 20 deg TILT watchdog, which I expected to be the interesting one,
+  never came close.
+- **THE ARM IS UNAFFECTED and works normally.** Both compatible-trajectory legs
+  planned (1.7-2.1 s) and executed (T = 6.8/6.9 s); EE settled **0.9-2.1 mm**,
+  peak torque 0.82 of 3.0 N.m, 0% clamp, joints back at home. Motors ran
+  mean 0.567 with the per-motor split [0.592, 0.544, 0.597, 0.535] — the
+  standing PITCH trim of the forward arm CoM, front pair high, exactly as on
+  the flying rigs.
+- **THE SLOW DRIFT IS REAL BUT NOT CHARACTERISED — do not quote a time to the
+  bound.** `d_hat_z` walks at **-9 mN/s (run A) vs -2.7 mN/s (run B)**, a 3x
+  spread on one configuration, so the RATE is not reproducible. An exponential
+  fit to run B settles at -2.24 N with tau = 660 s and beats a line (SSE 181 vs
+  241), but **tau exceeds the 359 s window**, so "converging" is an
+  extrapolation. Measured: 0.90 N in six minutes.
+- **SAFETY-RELEVANT, and the reason not to do this with props on.** From the
+  instant DIRECT is entered on the ground the law commands **~57% on all four
+  motors and ~hover collective**, continuously, with no error signal telling it
+  to stop. Here that is 9% under the true weight so it would not lift — but
+  that margin is an accident of the mass injection, not a property of the law.
+- **PX4 STAYS ARMED, so ONE LAUNCH IS ONE RUN.** After run A `arming_state = 2`
+  though the vehicle never left the ground: the land detector needs low thrust
+  and the law commands 57%. Full clean + relaunch between runs; the driver
+  refuses to start against an armed vehicle.
+- **A DEFECT IN THE HOLD NODE, FOUND ON THE FIRST RUN AND FIXED.** It latched
+  the hold after N odometry samples, and **the estimator publishes (0, 0, 0)
+  before it has a fix** — the count was satisfied instantly, the hold was taken
+  at the origin, and the gate then read 0.305 m against its own 0.15 m limit,
+  i.e. exactly the refusal the node exists to prevent. Its own log line is what
+  caught it. It now **TRACKS the measured pose in SAFETY** rather than latching
+  one: no startup ordering to get wrong, nothing to chase on a seated vehicle,
+  and the SAFETY-revert re-seed becomes automatic. Re-verified on the relaunch.
+- **NOT covered:** one configuration only (the shipped `_sim` plant); no
+  attempt to move the BASE while seated (only EE legs); the drift beyond 6 min;
+  and nothing about what a REAL vehicle does, since the whole point of the rig
+  is that the props are inert. Commands: Command.md 7.16.
+- **CONFIRMED ON HARDWARE the same day (user's report, qualitative).** Run on
+  the real AM with the MOTORS TURNING AND NO PROPS FITTED, the end-effector
+  "basically holds in a fixed setpoint" — the sim's result and, per the user,
+  for the sim's reason: the drone does not move. The KINEMATIC half of 7.16.1
+  therefore transfers: an arm-only compatible trajectory at the folded home
+  asks for ~7 mm of system-CoM motion, the arm's own mass redistribution
+  supplies all of it, and the base is never required to translate. **What does
+  NOT transfer is the thrust channel.** The sim's tidy hover equilibrium
+  (`u1 + d_hat_z` = the believed `m*g`, observer finding nothing) is a
+  statement about a plant whose props produce zero; on hardware the same law
+  commands **~57% on all four motors** from the instant DIRECT is entered, and
+  that is live thrust the moment props are fitted. **Never enter whole-body
+  DIRECT on a grounded vehicle with props on**, and treat "it held nicely on
+  the bench" as evidence about the ARM only.
+  NOT established by this: any hardware number (the report is qualitative), the
+  heading channel (sim lags 21 deg mid-move), or a base-translating leg.

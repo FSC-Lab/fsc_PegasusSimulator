@@ -240,6 +240,26 @@ PLANT_COM_SHIFT = np.array([_envf("PEGASUS_PLANT_COM_SHIFT_X", 0.0),
 # the error symmetric and representative of hardware.
 PLANT_KF_SCALE = _envf("PEGASUS_PLANT_KF_SCALE", 1.0)
 
+# PLANT-SIDE ROTOR DRAG-TORQUE ERROR, the yaw-channel twin of PLANT_KF_SCALE.
+# 1.0 = the calibrated MN4010 coefficient (which already carries t650_params'
+# YAW_TORQUE_FIT_FACTOR). It is SEPARATE from k_f because the two are applied
+# in different places -- Multirotor.update() puts k_f*w^2 on each rotor body
+# and k_m*w^2*rot_dir on /body as one summed yaw moment -- so zeroing k_f
+# alone leaves the props producing yaw torque while producing no lift, which
+# is not a physical airframe. Set BOTH to 0.0 for a "props removed" plant:
+# that is what the ground-test rig does.
+PLANT_KM_SCALE = _envf("PEGASUS_PLANT_KM_SCALE", 1.0)
+
+if PLANT_KF_SCALE == 0.0 and PLANT_KM_SCALE == 0.0:
+    print("\033[1;31m[AM-T650-WB] ROTORS INERT: k_f = k_m = 0. The props turn "
+          "the commanded speed and produce NO force and NO yaw moment. The "
+          "vehicle cannot leave the ground; every wrench on the body comes "
+          "from the arm, gravity and the floor contact.\033[0m", flush=True)
+elif PLANT_KF_SCALE == 0.0:
+    print("\033[1;33m[AM-T650-WB] WARNING: k_f = 0 but k_m != 0 -- the props "
+          "produce yaw torque and no lift, which is not a physical airframe. "
+          "Set PEGASUS_PLANT_KM_SCALE=0 too.\033[0m", flush=True)
+
 T650_BODY_MASS    = float(t650_params.BODY_MASS)
 # Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
 # store as diagonalInertia + principalAxes (see utils.author_inertia_tensor).
@@ -744,10 +764,10 @@ class AmT650WholeBodyArmSim:
         config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
         self._px4_backend = config.backends[0]
         plant_kf = float(t650_params.ROTOR_CONSTANT) * PLANT_KF_SCALE
+        plant_km = float(t650_params.ROLLING_MOMENT_COEFFICIENT) * PLANT_KM_SCALE
         config.thrust_curve = LaggedQuadraticThrustCurve(config={
             "rotor_constant": [plant_kf] * 4,
-            "rolling_moment_coefficient":
-                [float(t650_params.ROLLING_MOMENT_COEFFICIENT)] * 4,
+            "rolling_moment_coefficient": [plant_km] * 4,
             "min_rotor_velocity": [float(t650_params.MIN_ROTOR_VEL)] * 4,
             "max_rotor_velocity": [float(t650_params.MAX_ROTOR_VEL)] * 4,
             "rot_dir": [int(d) for d in t650_params.ROT_DIR],
@@ -772,7 +792,9 @@ class AmT650WholeBodyArmSim:
               f"k_f={plant_kf:.4e}"
               + (f" (x{PLANT_KF_SCALE:.4f} PLANT-SIDE INJECTION)" if PLANT_KF_SCALE != 1.0 else "")
               + f" "
-              f"k_m={t650_params.ROLLING_MOMENT_COEFFICIENT:.4e} "
+              f"k_m={plant_km:.4e}"
+              + (f" (x{PLANT_KM_SCALE:.4f} PLANT-SIDE INJECTION)" if PLANT_KM_SCALE != 1.0 else "")
+              + f" "
               f"lambda={t650_params.ROTOR_LAMBDA} "
               f"omega=[{t650_params.MIN_ROTOR_VEL}, {t650_params.MAX_ROTOR_VEL}] "
               f"map u->omega: x{input_scaling:.4f} "

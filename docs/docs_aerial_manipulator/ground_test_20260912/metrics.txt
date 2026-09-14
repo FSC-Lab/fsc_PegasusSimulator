@@ -1,0 +1,77 @@
+Whole-body + L1 GROUND TEST (props inert) -- 2026-09-12
+Scored with ground_score.py; raw .npz are gitignored (see .gitignore:60).
+Machine: fsc_lab_machine (RTF ~0.34 -- see CLAUDE.md; do not compare
+absolute numbers against shiqi_machine runs).
+
+== ground_A.npz ==
+aborted      : False  
+leg_fail     : none
+observer     : L1
+DIRECT       : 76.7 s (entered t=14.9 s)
+legs         : arm_out, arm_back
+
+-- did it stay seated --
+body z       : 0.3055 .. 0.3055 m (seated resting height 0.305)
+tilt         : max 0.00 deg (watchdog 20, |e_R| max 0.0017)
+horiz slide  : max 0.0 mm
+final        : z 0.3055 m  tilt 0.00 deg  slide 0.0 mm
+
+-- the thrust channel, answering to the floor --
+u1 (collective): entry   36.77 N -> end   37.53 N   max   37.56 N
+                 (a hover for this plant is ~40.4 N; the props delivered 0.00 N throughout)
+d_hat_z        : entry   -0.00 N -> end   -0.77 N   min   -0.78 N
+rotor cmd      : max 0.6129 of 1.0, mean 0.5670
+outputs on a bound : 0.00 % of DIRECT samples
+rotor saturated    : 0.00 %
+streamed ref fresh : 99.98 %
+
+-- the arm --
+peak |tau|   : 0.797 of 3.0 N.m
+on the clamp : 0.00 % of joint-samples
+EE error     : mean 15.4 mm, max 61.3 mm
+joints (broadcaster order q2,q3,q1,q4), DIRECT span [deg]:
+   q2:   31.21 ..   40.69   final   40.12
+   q3:   30.77 ..   41.40   final   39.92
+   q1:   -0.09 ..   17.35   final   -0.52
+   q4:   -2.02 ..   48.03   final    0.45
+
+-- per leg (EE error, tilt, slide) --
+   arm_out    EE peak   59.8 mm  settled   5.8 mm  tilt max  0.00 deg  slide   0.0 mm  |tau| 0.77
+   arm_back   EE peak   61.3 mm  settled   2.0 mm  tilt max  0.00 deg  slide   0.0 mm  |tau| 0.80
+
+== ground_B_soak.npz ==
+aborted      : False  
+leg_fail     : none
+observer     : L1
+DIRECT       : 358.9 s (entered t=17.1 s)
+legs         : arm_out, arm_back
+
+-- did it stay seated --
+body z       : 0.3055 .. 0.3055 m (seated resting height 0.305)
+tilt         : max 0.00 deg (watchdog 20, |e_R| max 0.0032)
+horiz slide  : max 0.0 mm
+final        : z 0.3055 m  tilt 0.00 deg  slide 0.0 mm
+
+-- the thrust channel, answering to the floor --
+u1 (collective): entry   36.78 N -> end   37.65 N   max   37.78 N
+                 (a hover for this plant is ~40.4 N; the props delivered 0.00 N throughout)
+d_hat_z        : entry   -0.00 N -> end   -0.90 N   min   -0.99 N
+rotor cmd      : max 0.6399 of 1.0, mean 0.5675
+outputs on a bound : 0.00 % of DIRECT samples
+rotor saturated    : 0.00 %
+streamed ref fresh : 100.00 %
+
+-- the arm --
+peak |tau|   : 0.818 of 3.0 N.m
+on the clamp : 0.00 % of joint-samples
+EE error     : mean 2.3 mm, max 25.3 mm
+joints (broadcaster order q2,q3,q1,q4), DIRECT span [deg]:
+   q2:   30.86 ..   43.03   final   40.19
+   q3:   24.53 ..   42.90   final   40.41
+   q1:   -1.16 ..   17.70   final    0.21
+   q4:   -3.30 ..   63.20   final   -0.07
+
+-- per leg (EE error, tilt, slide) --
+   arm_out    EE peak   24.6 mm  settled   0.9 mm  tilt max  0.00 deg  slide   0.0 mm  |tau| 0.82
+   arm_back   EE peak   25.3 mm  settled   2.1 mm  tilt max  0.00 deg  slide   0.0 mm  |tau| 0.80
+
