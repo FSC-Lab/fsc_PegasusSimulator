@@ -5105,6 +5105,46 @@ y 328-389 / 79-89 mm, yaw 77-167 / 46-53 mm, compatible EE trajectory 46 / 21 mm
 the first flight within this rig's run-to-run scatter. Data
 `l1_cpp_planner_wblaw.npz`, score `l1_cpp_planner_wblaw_metrics.txt`.
 
+#### 7.15.12 END-EFFECTOR TRAJECTORY mode — two circle flights, 2026-09-15
+
+`fsc_trajectory_planner`'s second mode (see its CLAUDE.md, "End-effector
+trajectory mode"): a periodic circle / figure-8 EE trajectory with yaw along
+the tangent, planned as ONE compatible whole-body run (min-snap ramp-in, laps,
+ramp-out, rest at both ends) — the MATLAB task-space planner's redundant
+recovery adapted to the z-x-x-z arm (q1 = 0, q2 an assigned sinusoid, drone
+yaw the first z angle), the thrust feasibility residual solved as a relaxed
+Picard fixed point on B-spline flat outputs, every bound of the constraint set
+checked over the run, the largest feasible time scale found by bisection.
+Commanded from the arm GS's new **EE trajectory** tab (Sine Test / Demos tabs
+removed) or, as here, from `fsc_trajectory_planner/test/ee_trajectory_sim_driver.py`
+through the same topics/services:
+`ee_trajectory_sim_cycle.sh <tag> fsc_lab_machine circle <fraction of s_max>`.
+
+Two flights on this rig (L1 stack, `_sim` yaml), both complete: SAFETY to 1 m
+→ DIRECT → select circle (0.5 m, 2 laps, s_max 1.13 limited by the 0.30 rad/s
+yaw rate) → time scale → Go-to-start (compatible transition, executed) → at
+start → Start → run → HOLD at the start → SAFETY → land → disarm. The planner's
+own FK round trip of the reference was 0.0-0.1 mm / 0.0° on both.
+
+| flight | s | lap | EE speed | raw EE err mean / max | lag | residual after lag | circle radius flown |
+|---|---|---|---|---|---|---|---|
+| `ee_circle_eecircle` | 0.90 | 26.5 s | 0.118 m/s | 214 / 267 mm | 1.90 s | 102 mm | 0.398 m of 0.508 |
+| `ee_circle_eecircle_slow` | 0.45 | 53.0 s | 0.059 m/s | 138 / 166 mm | 2.35 s | 56 mm | 0.447 m of 0.502 |
+
+(EE error = the planner's `current_ee`, i.e. measured joints on measured
+odometry, against its `reference_pose`; z error 1-2 mm throughout.)
+
+**The error is the whole-body law's tracking bandwidth, not the reference.**
+It is a first-order lag of ~2 s with a gain below one (the flown circle is
+78 % / 89 % of the commanded radius at the two speeds), and it halves when the
+speed halves. That is the same structural P/D position-loop behaviour §7.15.5
+measured on the step legs (55-90 mm settled offsets, 200-390 mm peaks) now seen
+on a continuously moving reference; the reference itself is dynamically
+consistent to 0.1 mm. Raising the loop's bandwidth (or adding the missing
+velocity/acceleration feedforward path in the law) is the lever; slowing the
+time scale is the operator's. Data and logs under
+`trajectory_planner_cpp_20260914/` (`ee_circle_*.npz`).
+
 Operational note for cleanup on this machine: `stop_isaacsim_stack.sh` now
 `pkill -f`s `whole_body_trajectory_planner`, so — as the cycle script already
 warns for the controller names — never type that string on the command line

@@ -1371,6 +1371,16 @@ ADDITIVE — no original file's behaviour changed:
   (`generate_wb_truth.py`, `generate_wb_l1_truth.py`, `dump_flat_reference.py`)
   import it, and no flight-stack process does. The bullet below describes
   the Python node as it was.
+- **2026-09-15: END-EFFECTOR TRAJECTORY MODE in fsc_trajectory_planner.** Circle /
+  figure-8 EE trajectories (yaw along the tangent) planned as compatible whole-body
+  runs following `~/Downloads/Task-space Planner`'s `main_redundant_zyxx.m` adapted
+  to the z-x-x-z OM-X (q1 fixed at 0, q2 an assigned sinusoid, drone yaw = the first
+  z angle; the fmincon feasibility residual solved as a relaxed Picard fixed point).
+  Note the MATLAB script's `Ref_TrajGen.m` sweeps ALL THREE EE Euler angles linearly
+  and does not align yaw to the tangent — tangent yaw with zero extra roll/pitch is
+  the user's specification, and a literally level EE is this arm's wrist singularity
+  (refused). Flown from the arm GS's new "EE trajectory" tab (Sine Test and Demos
+  tabs removed). Sim record: Command.md §7.15.12.
 - **fsc_autopilot_ros2 (dev_CCM): the whole-body planner**
   (`.../single_aerial_manipulator_whole_body_direct_actuation/planner/
   whole_body_planner.py`, plain rclpy script, no build; own tmux WINDOW
