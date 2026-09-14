@@ -26,7 +26,18 @@ topics = {tid: name for tid, name, typ in cur.execute("select id, name, type fro
 t0 = cur.execute("select min(timestamp) from messages").fetchone()[0]
 
 
+def _cascade_topic(sub):
+    """'cascade/status' or 'cascade/cmd' -> the cascade topic that actually carried the flight:
+    the base cascade's /uav_0/cascade/<kind> or the adaptive one's /uav_0/cascade_adaptive/<kind>
+    (2026-09-14: two cascades stand by, each on its own pair; the flown one has the messages)."""
+    kind = sub.split("/")[-1]
+    cands = [(cur.execute("select count(*) from messages where topic_id=?", (k,)).fetchone()[0], v)
+             for k, v in topics.items() if v.endswith("/" + kind) and "cascade" in v]
+    return max(cands)[1] if cands else sub
+
 def rows(sub, cls):
+    if sub.startswith("cascade/"):
+        sub = _cascade_topic(sub)
     tid = [k for k, v in topics.items() if v.endswith(sub)]
     if not tid:
         return []

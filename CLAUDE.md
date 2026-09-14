@@ -25,8 +25,28 @@ the 6i window exists; `start_slosh_hil.sh` refuses READY on its banner / traceba
 **COMMITS:** controller e137f5e, GS 4fed4b1, sim 60397ff (+ this line).
 **GATES:** `tests/test_cascade_node_boots.py` boots base / tank / adaptive as the launcher does and
 requires the ack on the OWN status topic + the OWN node name (PASS x3); `test_gs_trajectory_tab.py`
-"adaptive cascade" block; `test_gs_cascade_params.py` unchanged and passing. Not yet flown from the
-GS button (flight 10 flew the same node as `cascade` via the launcher's `CASC_NODE_PY`).
+"adaptive cascade" block; `test_gs_cascade_params.py` unchanged and passing.
+**FLIGHT 11 (row R100_dx3_ADAPT_a1_192020, bag slosh_20260914_191928; `CTRL=cascade_adaptive`, the
+base tank cascade standing by in 6h, 100 mm tank at dx 0.3, bob logged): LANDED 0.00 m.** The
+first full-stack boot with both cascades passed every READY check; the driver engaged
+`/nmpc_cascade_control_adaptive` (its log carries the mission, the 6h pane has no ENGAGED), 0/3551
+solve failures, 90 deg in ~15 s, orbit **100.0 +- 0.31 / roll -18.4 +- 1.03** (flight 9: 0.32/1.02,
+flight 10: 0.40/1.26), turns +14.4/+14.7 m, crossing +14.1, **stop 14.9 m from home in 10.1 s, aft
+tilt peak -8.0, z 30.0 throughout** (never dipped). Predictor + cancel: the plant's LATERAL bob
+in the orbit F_y rms 0.05 N (flight 10: 0.08; flight 9 uncancelled: 0.32) -- the cancellation's
+result repeated on a second flight. The FORE-AFT bob (no arm -> no moment -> outside the
+cancellation by construction) ran at 0.42-0.48 N rms with ONE 9.2 N wall touch at the orbit
+entry (bob -54 mm): inside the campaign's run-to-run band (f6 0.74 / f7 0.45 / f8 0.35 / f9 0.34 /
+f10 0.23 in the orbit; f6 hit 7-17 N) and unnoticed by the aircraft; its stop-phase bob was the
+smallest of the seven offset-tank flights (15.5 mm rms, max 34 mm, 0.33 N). Noted, not chased:
+EVERY offset-tank flight (f5-f11, all three controller variants) carries a ~1.05-1.07 Hz pitch ring
+of 0.35-0.43 deg sd in the orbit (the CG-tank flight 0.38 at 0.93 Hz), 6-8% below the tank's
+1.14 Hz mode -- the Q~100 fore-aft bob is what it resonates, which is why the x-bob sits at
+25-30 mm rms in all of them. Scorers now follow the flown id (`ana_guided.py`, `ana_rth_onset.py`,
+`ana_slosh_est.py`, `ana_force_model.py` pick the cascade topic that carried the flight);
+`fly_slosh_mission.sh`'s `CASC_SETTLE_S` targets the flown node. The GS BUTTON itself is still
+unpressed in flight (the scripted path closes the GS); `tests/test_gs_guidance_live.py` with the
+adaptive ctrl is the way to press it.
 
 # ★★★★ 2026-09-14 (evening): THE STESO BECOMES A PREDICTOR -- THE TANK'S MODE AS THE INTERNAL MODEL OF
 # A KALMAN LAYER; FORCE AND MOMENT UNCERTAINTY (bias) SPLIT FROM THE DISTURBANCE (the bob); THE

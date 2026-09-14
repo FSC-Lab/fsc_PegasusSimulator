@@ -97,7 +97,9 @@ if [ -n "${CASC_SETTLE_S:-}" ]; then
   # cascade transitioned after its default 2 s (flight l1off_hov30). CLAUDE.md has
   # this trap on record for the launchers; it applies to every param set.
   V=$(printf '%s' "$CASC_SETTLE_S" | grep -q '\.' && echo "$CASC_SETTLE_S" || echo "$CASC_SETTLE_S.0")
-  R=$(timeout 20 ros2 param set /nmpc_cascade_control settle_s "$V" 2>&1)
+  # the node that flies: cascade -> /nmpc_cascade_control, cascade_adaptive -> ..._adaptive
+  CNODE=/nmpc_cascade_control; [ "$CTRL" != cascade ] && CNODE="/nmpc_cascade_control_${CTRL#cascade_}"
+  R=$(timeout 20 ros2 param set "$CNODE" settle_s "$V" 2>&1)
   case "$R" in
     *successful*) say "cascade settle_s = $V s (engage hover held that long)" ;;
     *) echo "[fly_slosh] !! settle_s not applied: $R"; exit 1 ;;

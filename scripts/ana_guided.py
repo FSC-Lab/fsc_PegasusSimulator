@@ -32,7 +32,10 @@ def rows(sub, cls):
     tid = [k for k, v in topics.items() if v.endswith(sub)][0]
     return [((ts - t0) / 1e9, deserialize_message(d, cls)) for ts, d in cur.execute("select timestamp, data from messages where topic_id=? order by timestamp", (tid,))]
 ac = rows("active_controller", String)
-eng = next((t for t, m in ac if m.data == "cascade"), None)
+# the cascade FAMILY: "cascade" (base/tank node) or "cascade_adaptive" (STESO + predictor, 2026-09-14);
+# the guidance topics carry the id, so read the one that flew
+cid = next((m.data for t, m in ac if m.data.startswith("cascade")), "cascade")
+eng = next((t for t, m in ac if m.data == cid), None)
 mc = rows("/mocap", Mocap)
 T = np.array([t for t, _ in mc]); P = np.array([[m.pose.position.x, m.pose.position.y, m.pose.position.z] for _, m in mc])
 Vv = np.array([[m.twist.linear.x, m.twist.linear.y, m.twist.linear.z] for _, m in mc])
@@ -44,8 +47,8 @@ def rpy(q):
 E = np.degrees(np.array([rpy(q) for q in Q]))
 V = np.linalg.norm(Vv[:, :2], axis=1)
 srv = rows("/actuator_servos", ActuatorServos); Ts = np.array([t for t, _ in srv]); tilt = np.array([m.control[0] for _, m in srv]) * 90
-print(f"cascade engaged at {eng} s; bag {T[-1]:.0f} s; {len(T)} mocap")
-cmds = [(t, m.data) for t, m in rows("cascade/cmd", String)] if any(v.endswith("cascade/cmd") for v in topics.values()) else []
+print(f"{cid} engaged at {eng} s; bag {T[-1]:.0f} s; {len(T)} mocap")
+cmds = [(t, m.data) for t, m in rows(f"{cid}/cmd", String)] if any(v.endswith(f"{cid}/cmd") for v in topics.values()) else []
 for t, c in cmds: print(f"  cmd t={t:.1f}: {c}")
 # the node's 5 Hz status feed (2026-09-13+): the rth arm line says the roll it armed at and how
 # long the wings-level guard held it off (2026-09-13 evening)
