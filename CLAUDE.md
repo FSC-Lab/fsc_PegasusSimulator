@@ -48,6 +48,25 @@ numbers are 3-4x the gate's for reasons that are not the tank). **The plant's ow
 corr 0.85 (the raw STESO 0.6-0.7, err 0.12-0.15 -> 0.05-0.08); the lateral raw reading is 1.7 N of
 RTF artefact, the bias takes it (bob+RTF corr 0.94), and the bob estimate is left at the noise floor
 (0.28 N) because the bob it is estimating is now 0.08 N -- the cancellation's own success.
+**THE STABILITY NOTE (the paper's proof pattern, extended to the three layers):**
+https://claude.ai/code/artifact/a015c7a9-294b-4871-a443-0833f4603323 . Theorem 1: STESO finite-time
+convergence -- Seeber-Horn 2017 for the shipped (1.5 sqrt L, 1.1 L); a quadratic Moreno-Osorio
+certificate exists at those gains only for |sigma_dot| <= 0.68 L (searched numerically), and the tank
+asks 0.19 L on yaw / 0.64 L_F on force (a wall impact is 7 L_F: bounded, not exact). Theorem 2:
+the EKF is observable (det = m1^2 w1^6 > 0 -- the measurement is the bob's ACCELERATION, so a bias
+and an oscillator separate even at zeta 0), error eigenvalues 0.91/0.98 at the tick, 1-sigma
+10.6 mm / 0.22 N; the prediction error is a bounded rotation of the state error plus the
+input-hold term m1 |df|. ★ Theorem 3 (linearised lateral model with the aero derivatives from
+the controller's own aero_body, Pade delay, the cruise laws incl. the BANK-TO-TURN path): the
+coupled tank mode is UNSTABLE uncancelled for the flown 100 mm tank on the 0.26 m arm (zeta
+-0.0019 at 49 ms), slightly worse under the base L1 (-0.0056: a lagged partial cancellation adds
+energy), STABLE with the predicted moment cancelled (+0.0089) and still with a 50% mis-prediction
+(+0.0035); 60/80 mm tanks and arms >= 0.35 m are stable either way -- a resonance of 1.14 Hz with the
+lateral modes, not a gain, and not k_bank_d. Forced-response peak 238 -> 25. A yaw-only or
+yaw+sideslip model does NOT show it (5% coupling; the bank-to-turn path is the loop). Theorem 4:
+ISS of the interconnection driven by the bounded prediction error (the separation argument), the
+clamp bounding it by construction. The gate's 20x and the flight's 2x are the nonlinear plant's
+numbers; the eigenvalues certify the mechanism, not the amplitude.
 **WHAT IT IS NOT:** it cannot anticipate an impact from nothing (it needs the braking to be in its
 input first -- then 0.2 s of warning); the outer feed buys nothing measurable; the aircraft-level
 gain in HIL is inside one-flight scatter and needs repeats; a mis-specified tank cancels a moment
