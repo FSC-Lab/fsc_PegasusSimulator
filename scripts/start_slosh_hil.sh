@@ -279,6 +279,25 @@ case "${CASC_NODE_PY:-}" in
       exit 1
     fi
     say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water" ;;
+  *steso*)
+    # the STESO variant: the tank schedule inside, its own banner, its own process name
+    SBANNER=$(echo "$CPANE" | grep -o "\[cascade+steso\] estimator=.*" | tail -1 | cut -c1-160)
+    if [ -z "$SBANNER" ]; then
+      echo "[slosh_hil] !! asked for the STESO cascade and its banner never appeared in 6h-cascade. Not READY."; exit 1
+    fi
+    say "    $SBANNER"
+    if echo "$CPANE" | grep -qi traceback; then
+      echo "[slosh_hil] !! the STESO cascade printed its banner and then THREW:"
+      echo "$CPANE" | grep -i -A3 traceback | tail -8; exit 1
+    fi
+    if ! pgrep -f "nmpc_cascade_steso_node" >/dev/null 2>&1; then
+      echo "[slosh_hil] !! the STESO cascade printed its banner but no nmpc_cascade_steso_node process is alive. Not READY."; exit 1
+    fi
+    CM=$(echo "$SBANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
+    if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
+      echo "[slosh_hil] !! the STESO cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}'). Not READY."; exit 1
+    fi
+    say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water (STESO estimator, tank schedule)" ;;
   *)
     [ -n "$CBANNER" ] && { echo "[slosh_hil] !! the TANK cascade is running but was not asked for."; exit 1; }
     say "    cascade: base node confirmed" ;;

@@ -208,7 +208,7 @@ say "8b/8 starting the CASCADE node (standby)"
 tmux kill-window -t "$SESSION:6h-cascade" 2>/dev/null
 tmux new-window -d -t "$SESSION:" -n 6h-cascade; sleep 1
 tmux send-keys -t "$SESSION:6h-cascade" \
- "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-20} STESO_LF=${STESO_LF:-3} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${CASC_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_node.py} \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade -p active_at_start:=false \
 -p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-true} \

@@ -2,6 +2,57 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-14 (day): THE COMPLIANT WALL, THE STESO FLOWN, AND A SLOSH FORCE/MOMENT ESTIMATOR.
+# Committed at the start of the day (sim 7f915c2, controller 7dc67c8, GS 5cd1644) and again at the end.
+**THE WALL IS COMPLIANT** (`SloshParameters.wall_omega` 35 rad/s, `wall_zeta` 0.7; `PendulumSlosh`
+meets a repulsive Kelvin-Voigt contact past R/2 instead of the one-step arrest): a 0.17 m/s impact
+is 3.8 N over 46 ms (was 16.7 N in 1/240 s), 0.5 m/s is 10.9 N over 71 ms and 4.5 mm; pinned in
+`tests/test_slosh_pendulum.py`. Gate: the offset 100 mm tank's peak moment 4.19 -> 1.19 N.m, the
+41 mm sweeps byte-identical (16/16, 14.1 / 13.7). **FLOWN (R100_dx3_wall_a1_130241, L1 off): landed
+0.00 m, the bob log's peak 17 -> 8 N, and the hover-end ring was STILL THERE** (+-10..14 deg at
+~1 Hz, aft tilt pinned at -25, stop 19 s). So the impulse size was not the loop's driver. The
+cascade's own log says what is: below ~7 m/s the aircraft LAGS v_cmd by 0.8-1.8 m/s (the CG-tank
+flight tracks it within 0.5), the aft tilt saturates and the outer flips to a nose-DOWN branch
+(-10.8) instead of the flare -- the C9 flat-optimum hunt at the tilt bound, with the 0.41 kg bob's
+fore-aft push (0.2 m/s^2) and its 1.14 Hz mode feeding it.
+**THE STESO CASCADE FLEW (first flight, R100_dx3_steso_a1_132228, `nmpc_cascade_steso_node.py`, L1 on
+with the SO(3) STESO as its estimator, L=20 rate mode): landed 0.00 m, 2 solve failures in the
+mission, the TIGHTEST orbit of the campaign (rho 100.0 +- 0.24, roll sd 0.94 -- L1 damping the
+offset tank's yaw moment), and the hover-end ring HALVED (+-5..11 deg) but not gone: the aft tilt
+still walks to -25 and the stop still takes 16 s. L1 on/off was a confound in flights 4/6/7
+(item 5's recipe had it off); with it on the tank is milder, and the structural cause is the
+low-speed brake saturation above. The launcher accepts `CASC_NODE_PY=.../nmpc_cascade_steso_node.py`
+(banner `[cascade+steso]`, process, mass check) and forwards VTOL_TANK_DX/DZ, CASC_EST, STESO_L,
+STESO_LF to the cascade pane; results rows carry `node=`.
+**THE SLOSH FORCE AND MOMENT ESTIMATOR** (`L1Steso`, same file): a second STESO, translational, on
+the mocap's WORLD velocity with the controller's own force model fed forward (rotor thrusts along
+their tilted axes through the spin lag, the aero force, gravity), `F_hat_b = R^T m sigma_F`;
+`F_slosh` = its lateral part, `M_slosh = r_tank x F_slosh`, `M_resid = sigma_M - M_slosh` (a CG
+error makes a moment with no force; a slosh makes both -- that is how the two are told apart).
+Knobs STESO_LF (3 m/s^3: the 1.1 Hz slosh needs ~1.5; 30 was noise), VTOL_TANK_DX/DZ for the arm.
+The first version observed the BODY velocity and read 0.1 deg of attitude noise at 16 m/s as
+27 mm/s of lateral velocity per tick -> newtons (y anti-correlated -0.76 with the truth); the
+world frame fixed it. GATE (100 mm tank at dx 0.3, 0.1 deg / 1 deg/s noise): orbit x corr 0.94 /
+y 0.98, err 0.14-0.16 N on 0.4-0.6 N rms signals; the CG tank reads a 0.1 N floor. The gate trace
+prints the true reaction (`Fs=`) and the node's status feed carries `slosh F=(..) M=(..) Mres=(..)`
+(the `STATUS_EXTRA` seam in the base); `scripts/ana_slosh_est.py <bag> <isaac pane log>` scores a
+flight against the bob log. **FLOWN: fore-aft corr 0.83 (turns) / 0.91 (orbit), err 0.12-0.17 N.
+TWO MODEL GAPS THE OBSERVER EXPOSED, both invisible to the gate (same aero on both sides there):**
+  * a LATERAL force proportional to the bank, -0.08 N/deg (-2.0 N at -24 deg, +1.5 at +17, zero
+    wings-level) that the Isaac plant makes in a sideslipping turn and the controller's aero copy
+    does not -- through the lever arm it reads as a spurious 0.45 N.m "slosh yaw" in every turn;
+  * +2 N of FORE-AFT force through the decel: the braking the model expects from the aft-tilted
+    front pair (negative axial inflow on the momentum prop) that the plant does not deliver --
+    the same place the outer's v_cmd runs ahead and the tilt saturates.
+  Both are the next `bag_axis_fit`-style measurements (lateral force vs bank in the orbit bags;
+  thrust vs throttle at aft tilt in the stop), not tuning. Until then quote the estimator for the
+  fore-aft channel and for the lateral one only wings-level or after that force is modelled.
+The estimate is published and logged, not yet fed back: feeding F_slosh to the outer NMPC as an
+acceleration disturbance (predict6) is the step after the two gaps.
+**STANDING ITEMS AFTER TODAY:** (1) the two lateral/aft-tilt force gaps above; (2) the low-speed
+brake saturation with an offset wide tank -- clock the HIL decel ramp on sim time or lower
+`decel_rate` for the last 5 m/s, then re-fly R100_dx3 with L1 on; (3) feed F_slosh forward.
+
 # ★★★★★ WHERE THE BRANCH STANDS (2026-09-13 23:56) -- READ THIS FIRST. THE 2026-09-13 17:45 BLOCK
 # BELOW IT IS STILL THE OPERATING MANUAL; THIS ONE IS WHAT CHANGED SINCE AND WHAT WAS FLOWN TONIGHT.
 **SEVEN FLIGHTS TONIGHT, SEVEN LANDINGS AT HOME** (six scripted + the GS-button one; the first scripted attempt was cut short by a driver default, below, and still landed) (bags in `~/flight_bags/slosh`, rows in `results.tsv`;

@@ -206,6 +206,22 @@ class SloshParameters:
     fluid_cg_height: float   # [m]   liquid centroid above the tank base
     inertia_rigid: tuple     # [kg m^2] (Ixx, Iyy, Izz) of the liquid column
     wall: float = 0.0        # [m]   bob travel limit: the liquid hits the wall (0 = none)
+    # The wall's COMPLIANCE (2026-09-14). The first wall was a one-step inelastic arrest:
+    # x := wall, v := 0, and the reaction was m1 * v / dt -- 17 N in a 1/240 s step when the
+    # 100 mm tank's 0.41 kg bob met its wall at 0.17 m/s during the RTH stop (flight R100_dx3_dbg,
+    # bag ..234537). The aircraft's pitch loop answered every such jolt and the stop rang at
+    # ~1 Hz for 10 s. A liquid slamming a wall is impulsive, but not infinitely so: past the
+    # wall the bob now meets a repulsive spring-damper (Kelvin-Voigt, contact force never
+    # attractive), so an impact lasts ~pi / wall_omega and penetrates a few mm: at 35 rad/s,
+    # measured at 1/240 s, 0.17 m/s -> 3.8 N peak over 46 ms, 1.1 mm (was 16.7 N in one step);
+    # 0.5 m/s -> 10.9 N over 71 ms, 4.5 mm (was 49 N). wall_zeta 0.7 keeps the contact itself
+    # near-inelastic (the wave breaks, the energy is lost) -- the arrest's one physical property,
+    # kept; the bob still leaves the wall because the pendulum's own restoring force acts
+    # during the contact. Still a bound on the model, not a model of the impact; see CLAUDE.md
+    # "what the slosh model can claim". A steady lateral f presses the bob f / wall_omega^2
+    # into the wall (1.6 mm at the RTH braking's 2 m/s^2).
+    wall_omega: float = 35.0   # [rad/s] contact stiffness as a frequency (~5.6 Hz; 0 = the old hard stop)
+    wall_zeta: float = 0.7     # [-]     contact damping ratio
                              #          about its own centroid, treated as solid
 
     @property
@@ -280,8 +296,9 @@ def slosh_parameters(tank: TankConfig) -> SloshParameters:
         # model; past a few tenths of the radius the wave breaks and the real force saturates
         # -- and an unlimited pendulum on a tumbling airframe integrates to 10^12 mm (gate,
         # 2026-09-13, an 80 mm nose tank). Half the radius is where the model's validity ends
-        # and is used as an inelastic stop: the bob stops there, its kinetic energy is lost
-        # (breaking), and the reaction force is what that arrest actually applies.
+        # and is used as a stop: the bob meets a stiff, near-inelastic contact there (see
+        # SloshParameters.wall_omega / wall_zeta), its kinetic energy is lost (breaking), and
+        # the reaction force is the contact force -- finite, a few tens of ms long.
         wall=0.5 * R,
     )
 
@@ -422,12 +439,24 @@ class PendulumSlosh:
         w2 = w * w
         zeta = self.p.zeta
         wall = float(getattr(self.p, "wall", 0.0))
+        ww = float(getattr(self.p, "wall_omega", 0.0)); zw = float(getattr(self.p, "wall_zeta", 0.7))
         for i, f_lat in enumerate((fx, fy)):
             v0 = self.v[i]
             a = -w2 * self.x[i] - 2.0 * zeta * w * self.v[i] - f_lat
+            if wall > 0.0 and ww > 0.0:
+                # the compliant wall: past |x| = wall a repulsive spring-damper on the
+                # penetration; never attractive, so separation is free and the bob cannot be
+                # pulled back into the wall by the damper
+                pen = abs(self.x[i]) - wall
+                if pen > 0.0:
+                    sgn = 1.0 if self.x[i] > 0.0 else -1.0
+                    a_c = -(ww * ww * pen + 2.0 * zw * ww * (self.v[i] * sgn)) * sgn
+                    if a_c * sgn > 0.0:            # would pull toward the wall: contact force is repulsive only
+                        a_c = 0.0
+                    a += a_c
             self.v[i] += a * dt                   # semi-implicit: velocity first,
             self.x[i] += self.v[i] * dt           # then position with the NEW velocity
-            if wall > 0.0 and abs(self.x[i]) > wall:
+            if wall > 0.0 and ww <= 0.0 and abs(self.x[i]) > wall:
                 # the wall: an inelastic stop. The reaction is the acceleration that actually
                 # happened, i.e. the arrest, not the free pendulum's.
                 self.x[i] = math.copysign(wall, self.x[i])

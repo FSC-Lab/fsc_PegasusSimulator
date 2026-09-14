@@ -97,16 +97,39 @@ def main():
         bad.append("first-step slosh force is not m1 * f")
 
     # E. the wall: a lateral push far beyond what the linear model can carry parks the bob at
-    #    R/2 with zero velocity, and the reaction is the arrest, not an unbounded pendulum
-    #    (an 80 mm nose tank on the gate integrated to 1e12 mm before this existed)
+    #    R/2 (plus the contact's static compression), at rest, and the reaction is finite --
+    #    not an unbounded pendulum (an 80 mm nose tank on the gate integrated to 1e12 mm
+    #    before the wall existed)
     pw = slosh.PendulumSlosh(p)
     for _ in range(2000):
         pw.step([20.0, 0.0, 9.81], 1e-3)          # 2 g sideways, 2 s
-    print(f"  wall: bob at {1000 * pw.x[0]:+.1f} mm after 2 s at 2 g sideways (wall {1000 * p.wall:.1f} mm), v {pw.v[0]:+.3f} m/s")
-    if abs(abs(pw.x[0]) - p.wall) > 1e-9 or abs(pw.v[0]) > 1e-9:
-        bad.append("the bob is not parked on the wall")
+    print(f"  wall: bob at {1000 * pw.x[0]:+.1f} mm after 2 s at 2 g sideways (wall {1000 * p.wall:.1f} mm, "
+          f"static compression {1000 * 20.0 / p.wall_omega ** 2:.1f} mm), v {pw.v[0]:+.4f} m/s")
+    if not (p.wall <= abs(pw.x[0]) <= p.wall + 20.0 / p.wall_omega ** 2 + 1e-6) or abs(pw.v[0]) > 1e-3:
+        bad.append("the bob is not resting on the wall")
     if p.wall <= 0.0 or p.wall > 0.5 * 0.0414 + 1e-9:
         bad.append(f"wall {p.wall} is not half the radius")
+    # E2. the wall is COMPLIANT (2026-09-14): an impact is a finite force over tens of ms, not
+    #     m1 v / dt in one step (17 N at 1/240 s from the 100 mm tank's 0.41 kg bob at 0.17 m/s,
+    #     bag ..234537 -- the hover stop rang at ~1 Hz on those jolts). Drive the bob into the
+    #     wall at 0.5 m/s at the sim's physics step and require: peak reaction under half the
+    #     one-step arrest, contact longer than 5 steps, penetration under 10 mm, and the bob
+    #     leaves the wall (repulsive-only contact, the pendulum's restoring force acts throughout).
+    dt = 1.0 / 240.0; v0 = 0.5
+    pi_ = slosh.PendulumSlosh(p); pi_.x[0] = p.wall - 0.002; pi_.v[0] = v0
+    pk = pen = 0.0; n_c = 0; left = False; was_in = False
+    for _ in range(int(0.4 / dt)):
+        F = pi_.step([0.0, 0.0, 9.81], dt)
+        inside = pi_.x[0] > p.wall
+        n_c += inside; left = left or (was_in and not inside); was_in = inside
+        pk = max(pk, abs(F[0])); pen = max(pen, pi_.x[0] - p.wall)
+    arrest = p.slosh_mass * v0 / dt
+    print(f"  impact at {v0} m/s: peak reaction {pk:.2f} N (one-step arrest {arrest:.1f}), contact {n_c} steps = {1000 * n_c * dt:.0f} ms, "
+          f"penetration {1000 * pen:.2f} mm, bob left the wall: {left}")
+    if not (pk < 0.5 * arrest and n_c >= 5 and pen < 0.010 and left):
+        bad.append("the wall is not a compliant, finite contact")
+    if p.wall_omega <= 0.0:
+        bad.append("wall_omega must be > 0 (the one-step arrest is the model this replaced)")
     # F. rotation terms: a pure yaw rate about a tank 0.3 m ahead is a centripetal specific
     #    force toward the CG (-x), i.e. the bob is thrown forward
     pr = slosh.PendulumSlosh(p)
