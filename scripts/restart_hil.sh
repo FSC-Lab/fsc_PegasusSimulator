@@ -219,6 +219,31 @@ echo "    cascade node tracebacks (want 0): $TC"
 [ "$TC" -gt 0 ] && { echo "    !! cascade node threw on startup"; exit 1; }
 
 # ---------------------------------------------------------------------------------------------
+# 8c/8 THE ADAPTIVE CASCADE (2026-09-14): the STESO + slosh-predictor variant as its OWN
+# controller, controller_id `cascade_adaptive`, node `nmpc_cascade_control_adaptive`, guidance on
+# /uav_0/cascade_adaptive/{cmd,status}. Standby beside the base cascade: a standby cascade runs
+# no inner step and no outer solve until active_controller names it, so two cost nothing. The
+# GS's "Adaptive NMPC + Geo" button / ctrl choice select it. ADAPTIVE_NODE_PY overrides the file;
+# ADAPTIVE=0 skips the window (or drop cascade_adaptive from CONTROLLERS).
+# ---------------------------------------------------------------------------------------------
+ADAPTIVE_NODE="${ADAPTIVE_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_steso_node.py}"
+if [ "${ADAPTIVE:-1}" != "0" ] && [ -f "$ADAPTIVE_NODE" ]; then
+say "8c/8 starting the ADAPTIVE cascade (STESO + slosh predictor, standby)"
+tmux kill-window -t "$SESSION:6i-adaptive" 2>/dev/null
+tmux new-window -d -t "$SESSION:" -n 6i-adaptive; sleep 1
+tmux send-keys -t "$SESSION:6i-adaptive" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-20} STESO_LF=${STESO_LF:-3} SLOSH_PRED=${SLOSH_PRED:-on} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-0.015} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-on} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-off} \"\$HOME/envs/isaac_env/bin/python3\" \
+$ADAPTIVE_NODE \
+--ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade_adaptive -p active_at_start:=false \
+-p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=true \
+-r /uav_0/fsc_autopilot_ros2/position_controller/reference:=/uav_0/fsc_autopilot_ros2/position_controller/reference_smc" Enter
+sleep 20
+TC=$(tmux capture-pane -p -S -40 -t "$SESSION:6i-adaptive" 2>/dev/null | grep -ci traceback)
+echo "    adaptive cascade tracebacks (want 0): $TC"
+[ "$TC" -gt 0 ] && { echo "    !! adaptive cascade threw on startup"; exit 1; }
+fi
+
+# ---------------------------------------------------------------------------------------------
 # RESTART THE BAG RECORDER, with a FRESH name.
 #
 # WHY: this script restarts nodes, PX4 and Isaac -- everything except the one thing that RECORDS

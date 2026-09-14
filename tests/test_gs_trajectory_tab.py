@@ -324,6 +324,30 @@ assert _guide_msgs()[-1] == "loiter 300.0 300.0 100 -1", _guide_msgs()[-1]
 print("loiter HERE -> centre one radius abeam of the course, turn side OK")
 print("waypoints / loiter / straight -> protocol strings OK")
 
+# ---- THE ADAPTIVE CASCADE (2026-09-14): a second selectable controller, "Adaptive NMPC + Geo" --
+# id cascade_adaptive, node /nmpc_cascade_control_adaptive, guidance on /uav_0/cascade_adaptive/*.
+# The GS must treat it as a cascade everywhere: the button, the mission ctrl choice with the
+# cascade's parameter filter, the guidance row (refused on neither, sent on its OWN topic), the
+# stop-from-cruise rule. The stub hands every publisher one Pub, so the topic is checked by which
+# publisher object the guidance used.
+assert "cascade_adaptive" in tab.CASCADE_IDS and tab.WB_CONTROLLERS["cascade_adaptive"] == "/nmpc_cascade_control_adaptive"
+assert hasattr(tab, "btn_adapt") and "Adaptive" in tab.btn_adapt.text()
+tab.btn_adapt.click()
+assert tab._controller == "cascade_adaptive" and ros.ctrl.msgs[-1].data == "cascade_adaptive", ros.ctrl.msgs[-1].data
+assert "Adaptive" in tab.lbl_ctrl.text()
+i = tab.cmb_wb.findData("cascade_adaptive"); assert i >= 0, "the mission ctrl choice lacks the adaptive cascade"
+tab.cmb_wb.setCurrentIndex(i); tab._wb_choice = "cascade_adaptive"
+assert tab._wb_id() == "cascade_adaptive" and tab._wb_node() == "/nmpc_cascade_control_adaptive"
+pa = tab._wb_params(); pc_ = (tab._wb_choice, tab._wb_choice)
+tab._wb_choice = "cascade"; pc2 = tab._wb_params(); tab._wb_choice = "cascade_adaptive"
+assert pa == pc2, "the adaptive cascade must get exactly the cascade's parameter set"
+assert set(pa) <= tab.CASC_KEYS
+n1 = len(_guide_msgs()); tab.edit_wps.setText("500 0 500 400"); tab._on_guide_wps()
+assert len(_guide_msgs()) == n1 + 1 and _guide_msgs()[-1].startswith("wp 500.0 0.0"), "guidance must be accepted on the adaptive cascade"
+assert tab._guide_pubs["cascade_adaptive"] is not None and tab._guide_pubs["cascade"] is not None
+print("adaptive cascade: button, ctrl choice, cascade parameter set, guidance accepted OK")
+tab._controller = "cascade"; tab._wb_choice = "cascade"
+
 # RTH inside the auto mission: the cruise phase becomes RTH, the mission lands AT HOME once the
 # cascade has stopped itself; if it never stops, the schedule's back-transition is forced rather
 # than handing a 16 m/s aircraft to the hover controller.

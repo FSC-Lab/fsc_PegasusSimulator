@@ -103,6 +103,11 @@ if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
   esac
 fi
 say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  l1_on=$CASC_L1  water=$VTOL_TANK_KG kg  tank_R=${VTOL_TANK_R:-0.0414} m  tank_dx=$VTOL_TANK_DX  cg_dx=$VTOL_CG_DX"
+if [ "${ADAPTIVE:-1}" != "0" ]; then
+  say "    adaptive: $(basename "${ADAPTIVE_NODE_PY:-nmpc_cascade_steso_node.py}") as cascade_adaptive (window 6i-adaptive; GS 'Adaptive NMPC + Geo'; driver CTRL=cascade_adaptive)"
+else
+  say "    adaptive: OFF (ADAPTIVE=0)"
+fi
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"
@@ -242,7 +247,7 @@ fi
 # to look at: tmux was gone and with it every pane's scrollback, so the cause is
 # still unknown. A pane log costs nothing and is the only forensic trail a dead
 # stack leaves.
-for w in 2-isaac 1-px4 6h-cascade; do
+for w in 2-isaac 1-px4 6h-cascade 6i-adaptive; do
   tmux pipe-pane -o -t "$SESSION:$w" "cat >> $BAG_DIR/pane_${w}_$(date +%H%M%S).log" 2>/dev/null
 done
 say "    pane logs -> $BAG_DIR/pane_*.log"
@@ -316,6 +321,33 @@ case "${CASC_NODE_PY:-}" in
     [ -n "$CBANNER" ] && { echo "[slosh_hil] !! the TANK cascade is running but was not asked for."; exit 1; }
     say "    cascade: base node confirmed" ;;
 esac
+
+# THE ADAPTIVE CASCADE (window 6i-adaptive, id cascade_adaptive; 2026-09-14): the same checks --
+# banner, no traceback, process alive, mass and CG paired -- when the launcher started it.
+if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; then
+  APANE=$(tmux capture-pane -p -J -S -400 -t "$SESSION:6i-adaptive" 2>/dev/null)
+  ABANNER=$(echo "$APANE" | grep -o "\[cascade+steso\] estimator=.*" | tail -1 | cut -c1-260)
+  if [ -z "$ABANNER" ]; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade window exists but its [cascade+steso] banner never appeared. Not READY."; exit 1
+  fi
+  say "    $ABANNER"
+  if echo "$APANE" | grep -qi traceback; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade printed its banner and then THREW:"; echo "$APANE" | grep -i -A3 traceback | tail -8; exit 1
+  fi
+  if ! ros2 node list 2>/dev/null | grep -qx "/nmpc_cascade_control_adaptive"; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade printed its banner but /nmpc_cascade_control_adaptive is not a live node. Not READY."; exit 1
+  fi
+  AM=$(echo "$ABANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
+  if [ -z "$AM" ] || ! awk -v a="$AM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade models M=${AM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}'). Not READY."; exit 1
+  fi
+  ACG=$(echo "$ABANNER" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
+  WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 0.176 + dx*b/(3.449572+b)}')
+  if [ -z "$ACG" ] || ! awk -v a="$ACG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade models CG_X=${ACG:-<none>} but the tank puts it at $WANT_CG. Not READY."; exit 1
+  fi
+  say "    adaptive cascade: M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
+fi
 
 # provenance, next to the bags, because the tmux pane is gone by the time anyone asks
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \

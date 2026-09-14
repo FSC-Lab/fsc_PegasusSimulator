@@ -2,6 +2,31 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-14 (night): "ADAPTIVE NMPC + GEO" IS A SEPARATE CONTROLLER IN THE GROUND STATION.
+**WHAT IT IS.** The STESO + slosh-predictor cascade (`nmpc_cascade_steso_node.py`, the evening block
+below) no longer REPLACES the flown cascade: it stands by BESIDE it as its own controller.
+Identity: `controller_id cascade_adaptive` -> ROS node `/nmpc_cascade_control_adaptive`, guidance on
+`/uav_0/cascade_adaptive/{cmd,status}`, launcher window `6i-adaptive` (both `restart_hil.sh` and
+`start_vtol_smc_hil.sh`; `ADAPTIVE=0` skips it, `ADAPTIVE_NODE_PY` overrides the file; it starts
+15 s after 6h because both load one nmpc6 JIT cache). The base node derives its node name and its
+guidance topics from the id (`node_name_for`: `cascade` keeps `nmpc_cascade_control` and
+`/uav_0/cascade/*`, every other id is suffixed) -- read from the ROS args before construction,
+since a node's name is fixed there. Two cascades cost nothing: a standby cascade publishes no
+actuator, runs no inner step and no outer solve (`pub()` returns unless `_active`).
+**GS (`vtol-cascade-work`):** button "⇄ Adaptive NMPC + Geo" (teal), mission ctrl choice
+"Adaptive NMPC + Geo" (same CASC_KEYS/CASC_OVERRIDES parameter set -- `CASCADE_IDS` is the cascade
+FAMILY), the Guidance row publishes to whichever cascade is ACTIVE and shows THAT node's status
+feed (`HudSource.casc_feeds[id]`), arm/disarm/land param sweeps and STOP's back-transition include
+the adaptive node. Driver: `CTRL=cascade_adaptive` (`fly_transition.py --controller`); the results
+row carries `ctrl=`. Health: `hil_health.sh` requires `/nmpc_cascade_control_adaptive` alive when
+the 6i window exists; `start_slosh_hil.sh` refuses READY on its banner / traceback / node / `M=` /
+`CG_X=` like the base cascade. **Switch between the two in HOVER only**: engage resets the schedule
+(`_v_cmd` 0, tilt 0) -- the same rule as any switch into a cascade.
+**GATES:** `tests/test_cascade_node_boots.py` boots base / tank / adaptive as the launcher does and
+requires the ack on the OWN status topic + the OWN node name (PASS x3); `test_gs_trajectory_tab.py`
+"adaptive cascade" block; `test_gs_cascade_params.py` unchanged and passing. Not yet flown from the
+GS button (flight 10 flew the same node as `cascade` via the launcher's `CASC_NODE_PY`).
+
 # ★★★★ 2026-09-14 (evening): THE STESO BECOMES A PREDICTOR -- THE TANK'S MODE AS THE INTERNAL MODEL OF
 # A KALMAN LAYER; FORCE AND MOMENT UNCERTAINTY (bias) SPLIT FROM THE DISTURBANCE (the bob); THE
 # PREDICTED TANK MOMENT CANCELLED AT THE INNER. GATED, FLOWN (flight 10, LANDED 0.00 m).

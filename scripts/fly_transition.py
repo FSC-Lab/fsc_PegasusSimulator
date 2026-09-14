@@ -58,7 +58,7 @@ def quat_R(q):
 
 
 class Flight(Node):
-    def __init__(self, ns):
+    def __init__(self, ns, cid="cascade"):
         super().__init__("fly_transition")
         qos = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT,
                          durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
@@ -67,8 +67,10 @@ class Flight(Node):
             PositionControllerReference,
             f"/{ns}/fsc_autopilot_ros2/position_controller/reference", 10)
         self.ctl = self.create_publisher(String, f"/{ns}/ground_station/active_controller", 10)
-        # the cascade's guidance protocol: "wp X Y ...", "loiter X Y R [dir]", "rth", "hold"
-        self.cmd = self.create_publisher(String, f"/{ns}/cascade/cmd", 10)
+        # the cascade's guidance protocol: "wp X Y ...", "loiter X Y R [dir]", "rth", "hold" --
+        # on the ACTIVE cascade's own topic (the adaptive cascade listens on cascade_adaptive/cmd)
+        gtop = cid if str(cid).startswith("cascade") else "cascade"
+        self.cmd = self.create_publisher(String, f"/{ns}/{gtop}/cmd", 10)
         self.create_subscription(Mocap, f"/{ns}/mocap", self.on_mocap, qos_profile_sensor_data)
         self.create_subscription(ActuatorMotors, f"/{ns}/fmu/in/actuator_motors", self.on_mot, qos)
         self.create_subscription(ActuatorServos, f"/{ns}/fmu/in/actuator_servos", self.on_srv, qos)
@@ -152,6 +154,7 @@ def spin(n, secs, fn=None, hz=5.0):
 CTRL_NODE = {
     "nmpc_full": "/nmpc_full_smc_control",
     "cascade": "/nmpc_cascade_control",
+    "cascade_adaptive": "/nmpc_cascade_control_adaptive",   # STESO + slosh predictor (2026-09-14)
     "nmpc6_cruise": "/nmpc6_cruise_control",
 }
 
@@ -185,7 +188,7 @@ def main():
     a = ap.parse_args()
 
     rclpy.init()
-    n = Flight(a.ns)
+    n = Flight(a.ns, a.controller)
     n.t0 = time.time()
     spin(n, 3.0)
     if n.p is None:

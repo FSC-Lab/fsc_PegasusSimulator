@@ -427,6 +427,26 @@ VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_D
 echo '[6h-cascade] exited.'; exec bash
 "
 fi
+# ---- 6i: ADAPTIVE CASCADE -- the same cascade with the SO(3) STESO + the slosh predictor inside
+#      its L1 (nmpc_cascade_steso_node.py), as its OWN controller (id cascade_adaptive, node
+#      nmpc_cascade_control_adaptive, guidance on /uav_0/cascade_adaptive/*). STANDBY beside 6h:
+#      the GS's "Adaptive NMPC + Geo" button / ctrl choice selects it. ADAPTIVE=0 skips it.
+#      Starts 15 s after 6h: both load the same nmpc6 JIT cache file, and parallel loads of one
+#      cache have core-dumped casadi before (the 16-seed sweep note).
+ADAPTIVE_NODE="${ADAPTIVE_NODE_PY:-${DA_DIR}/nmpc_cascade_steso_node.py}"
+if want cascade && [ "${ADAPTIVE:-1}" != "0" ] && [ -f "$ADAPTIVE_NODE" ]; then
+tmux new-window -t "$SESSION" -n "6i-adaptive" "
+echo '[6i-adaptive] waiting $((D_CTRL + 15)) s...'; sleep $((D_CTRL + 15))
+$ROS_PRELUDE
+echo '[6i-adaptive] ADAPTIVE cascade: NMPC + geometric with STESO + slosh predictor (STANDBY; activate: active_controller=cascade_adaptive)...'
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-20} STESO_LF=${STESO_LF:-3} SLOSH_PRED=${SLOSH_PRED:-on} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-0.015} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-on} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-off} $AVTOL_ENV\"$NODE_PY\" \"$ADAPTIVE_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+    -p controller_id:=cascade_adaptive -p active_at_start:=false \
+    -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
+    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=true \
+    -r ${REF_TOPIC}:=${REF_TOPIC}_smc
+echo '[6i-adaptive] exited.'; exec bash
+"
+fi
 # ---- 7: inner loop B -- attitude-NMPC + embedded SMC (STANDBY at start) -----
 #         hover_throttle=0.50 (0.70 over-scaled -> climb-away, see diagnosis).
 if want attnmpc; then
