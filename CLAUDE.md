@@ -84,7 +84,7 @@ flown) still carries CG_X 0.176 and its own RPOS -- pair it if it ever flies wit
 `ana_force_model.py --aero_arm 0.0186` reproduces the old arm prediction for bags before 15:00.
 
 # ★★★★★ 2026-09-14 (day): THE COMPLIANT WALL, THE STESO FLOWN, AND A SLOSH FORCE/MOMENT ESTIMATOR.
-# Committed at the start of the day (sim 7f915c2, controller 7dc67c8, GS 5cd1644) and again at the end.
+# Committed at the start of the day (sim 7f915c2, controller 7dc67c8, GS 5cd1644), at 13:40 (42700c2 / 715a900) and after the afternoon block (a685e67 / b83f03f; GS unchanged).
 **THE WALL IS COMPLIANT** (`SloshParameters.wall_omega` 35 rad/s, `wall_zeta` 0.7; `PendulumSlosh`
 meets a repulsive Kelvin-Voigt contact past R/2 instead of the one-step arrest): a 0.17 m/s impact
 is 3.8 N over 46 ms (was 16.7 N in 1/240 s), 0.5 m/s is 10.9 N over 71 ms and 4.5 mm; pinned in
