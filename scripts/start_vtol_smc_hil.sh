@@ -278,7 +278,7 @@ tmux new-window -t "$SESSION" -n "6-geometric" "
 echo '[6-geometric] waiting $D_CTRL s...'; sleep $D_CTRL
 $ROS_PRELUDE
 echo '[6-geometric] SAFE hover controller (raw reference, ACTIVE at start)...'
-VTOL_TANK_KG=$TANK_KG \"$NODE_PY\" \"$GEO_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} \"$NODE_PY\" \"$GEO_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=geometric -p active_at_start:=true \
     -p v_max:=${GEO_VMAX:-4.0} -p vz_up:=${GEO_VZ_UP:-2.0} -p vz_down:=${GEO_VZ_DN:-1.0}
 echo '[6-geometric] exited.'; exec bash
@@ -401,7 +401,7 @@ tmux new-window -t "$SESSION" -n "6g-full" "
 echo '[6g-full] waiting $D_CTRL s...'; sleep $D_CTRL
 $ROS_PRELUDE
 echo '[6g-full] FULL-STATE NMPC + SMC (STANDBY; activate: active_controller=nmpc_full)...'
-VTOL_TANK_KG=$TANK_KG $AVTOL_ENV\"$NODE_PY\" \"$FULL_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} $AVTOL_ENV\"$NODE_PY\" \"$FULL_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=nmpc_full -p active_at_start:=false \
     -p vcruise:=$FULL_VC -p cap_deg:=$FULL_CAP -p ttr:=$FULL_TTR -p cruise_alt:=$FULL_ALT \
     -p rate_hz:=$FULL_RATE -p latency_s:=$FULL_LAT \
@@ -419,7 +419,7 @@ tmux new-window -t "$SESSION" -n "6h-cascade" "
 echo '[6h-cascade] waiting $D_CTRL s...'; sleep $D_CTRL
 $ROS_PRELUDE
 echo '[6h-cascade] CASCADE NMPC + geometric (STANDBY; activate: active_controller=cascade)...'
-VTOL_TANK_KG=$TANK_KG $AVTOL_ENV\"$NODE_PY\" \"$CASC_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} $AVTOL_ENV\"$NODE_PY\" \"$CASC_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade -p active_at_start:=false \
     -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
     -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=${CASC_L1:-true} \

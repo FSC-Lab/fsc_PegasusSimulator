@@ -580,6 +580,66 @@ def quad_tiltrotor_config(
 #  VEHICLE
 # ============================================================================
 
+# ============================================================================
+#  The ASSEMBLY: body link + ten small links = what flies and what the controllers model
+# ============================================================================
+#  `VTOLConfig.mass`, `.inertia` and `.body_com_offset` describe the BODY LINK only; PhysX
+#  assembles the vehicle from that plus the nacelle / prop / surface links. The controllers
+#  carried the body link's inertia for a month (Ixx -24%, Izz -29%) before this was written
+#  (in the model copy's module, 2026-09-12); it lives here since 2026-09-14 because the base class needs
+#  the assembled CG too: the lumped aero force defaulted to `body_com_offset`, the body link's
+#  CoM, which sits 18.6 mm AHEAD of the assembled CG on the FSC quad -- 38 N of cruise lift on
+#  that arm is a 0.45 N.m nose-up pitch moment the controllers' Cm has no term for, measured
+#  on every bag by scripts/ana_force_model.py (the moment balance closes on roll and yaw and
+#  leaves exactly a lift-proportional pitch residual). The 2026-09-06 aero_center fix meant
+#  "the centre of mass -> zero accidental moment arm"; for an articulated vehicle that is the
+#  assembly's, and it is now the default.
+
+
+def _parallel_axis(m, d):
+    """Diagonal inertia of a point mass `m` at offset `d` about the reference."""
+    d = np.asarray(d, dtype=float)
+    return np.array([m * (d[1] ** 2 + d[2] ** 2),
+                     m * (d[0] ** 2 + d[2] ** 2),
+                     m * (d[0] ** 2 + d[1] ** 2)])
+
+
+def _link_positions(cfg):
+    """Where `_init_prim` puts each small link, in body-link-origin coordinates.
+
+    Mirrors the builder exactly -- nacelle + prop for a tiltable rotor, a single
+    prop link for a fixed one, one link per surface -- because a link counted
+    here and not built there (or the reverse) is a silent mass error."""
+    pts = []
+    for rotor in cfg.rotors:
+        p = np.asarray(rotor.position, dtype=float)
+        pts.append(p)
+        if rotor.tiltable:
+            pts.append(p + np.asarray(rotor.spin_offset, dtype=float))
+    for surface in cfg.surfaces:
+        pts.append(np.asarray(surface.position, dtype=float))
+    return pts
+
+
+def assembled_mass_properties(cfg):
+    """(total mass [kg], CG [m], diagonal inertia about that CG [kg m^2]).
+
+    Body-link-origin coordinates, the same frame as `body_com_offset`."""
+    pts = _link_positions(cfg)
+    m_b = float(cfg.mass)
+    c_b = np.asarray(cfg.body_com_offset, dtype=float)
+    i_b = np.asarray(cfg.inertia, dtype=float)
+    i_l = np.asarray(cfg.link_inertia, dtype=float)
+    m_l = float(cfg.link_mass)
+
+    mass = m_b + m_l * len(pts)
+    cg = (m_b * c_b + m_l * sum(pts)) / mass if pts else c_b
+    inertia = i_b + _parallel_axis(m_b, c_b - cg)
+    for p in pts:
+        inertia = inertia + i_l + _parallel_axis(m_l, p - cg)
+    return mass, cg, inertia
+
+
 class VTOL(Vehicle):
     """A generic articulated VTOL.
 
@@ -616,7 +676,7 @@ class VTOL(Vehicle):
         # Defaults to the centre of mass -> zero accidental moment arm.
         self._aero_center = [
             float(v) for v in (config.aero_center if config.aero_center is not None
-                               else config.body_com_offset)
+                               else assembled_mass_properties(config)[1])
         ]
 
         # Per-tilt-rotor servo state (current rate-limited angle in radians),

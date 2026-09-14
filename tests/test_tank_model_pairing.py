@@ -26,6 +26,7 @@ controller that believes in 0.5 kg of water that is not there. For a true baseli
 run, check out the controller's `pre-slosh` tag.
 """
 import ast
+import numpy as np
 import importlib.util
 import os
 import sys
@@ -133,8 +134,10 @@ def main():
     k = controller_constants()
     import re
     hub_src = open(CTRL_HUB).read()
-    ca_m = k.get("AIRFRAME_M"); ccg = k.get("CG_X")
-    ci = (k.get("IXX"), k.get("IYY"), k.get("IZZ"))
+    # since 2026-09-14 the hub's CG_X / IXX.. are DERIVED from the tank position (VTOL_TANK_DX/DZ);
+    # the nominal constants are CG_X0 / IXX0.. and section 6 below checks the derivation
+    ca_m = k.get("AIRFRAME_M"); ccg = k.get("CG_X0", k.get("CG_X"))
+    ci = (k.get("IXX0", k.get("IXX")), k.get("IYY0", k.get("IYY")), k.get("IZZ0", k.get("IZZ")))
     env_ok = re.search(r'^TANK_KG = float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\)\s*$'
                        r'\n^M = AIRFRAME_M \+ TANK_KG', hub_src, re.M) is not None
     cm = (ca_m + slosh.tank_kg_from_env()) if ca_m is not None else None
@@ -199,6 +202,60 @@ def main():
             bad.append(f"mode {kg}: plant assembles to {mk:.4f}, model {want:.4f}")
         if not has_trim:
             bad.append(f"mode {kg}: vtol_nmpc.py has no baked trim table for it")
+
+    # --- 6. THE TANK'S POSITION IS PAIRED TOO (2026-09-14) -------------------------------
+    # VTOL_TANK_DX mounts the tank off the CG in the plant (vtol_utils.fsc_cad_vtol_slosh_config)
+    # and the fold moves the plant's CG and inertia. The model hub folds the same variable the same
+    # way (so3.CG_SHIFT), the safe controller's cg_x follows, the STESO's tank arm is about the
+    # moved CG. Every offset-tank flight before this carried a 38 mm CG error the controller was
+    # not told about (flight 8's hover: +1.5 N.m of pitch residual = M g x 38 mm).
+    import subprocess
+    py = os.path.expanduser("~/envs/isaac_env/bin/python3")
+    if os.path.exists(py):
+        for dx, dz in ((0.3, 0.0), (0.0, 0.15), (0.3, 0.15)):
+            from dataclasses import replace as _replace
+            t = slosh.default_tank()
+            t = _replace(t, position=(float(c0[0]) + dx, float(c0[1]), float(c0[2]) + dz))
+            _, _, (mk, ck, ik) = vs.fold_tank_into_body(cfg, t)
+            env = dict(os.environ, VTOL_TANK_KG=str(slosh.tank_kg_from_env()), VTOL_TANK_DX=str(dx), VTOL_TANK_DZ=str(dz))
+            r = subprocess.run([py, "-c", "import nmpc_so3_transition_node as s; print(s.CG_X, s.IXX, s.IYY, s.IZZ, s.CG_SHIFT[2])"],
+                               cwd=os.path.dirname(CTRL_HUB), env=env, capture_output=True, text=True, timeout=120)
+            line = [l for l in r.stdout.splitlines() if l.strip() and not l.startswith("[")]
+            if not line:
+                bad.append(f"could not import the hub with VTOL_TANK_DX={dx}: {r.stderr[-300:]}"); continue
+            cgx, ixx, iyy, izz, sh_z = (float(v) for v in line[-1].split())
+            # the plant's CG moved by (ck - c0); the hub's by CG_SHIFT
+            ok = (abs((c0[0] + (cgx - 0.176)) - ck[0]) <= 1.5e-3 and abs(ixx - ik[0]) <= 3e-3
+                  and abs(iyy - ik[1]) <= 3e-3 and abs(izz - ik[2]) <= 3e-3 and abs((c0[2] + sh_z) - ck[2]) <= 1.5e-3)
+            print(f"  tank at (+{dx:.2f}, 0, +{dz:.2f}) m: plant CG ({ck[0]:.4f},{ck[2]:.4f}) I=({ik[0]:.3f},{ik[1]:.3f},{ik[2]:.3f}) | "
+                  f"model CG_X {cgx:.4f} (dz shift {sh_z:+.4f}) I=({ixx:.3f},{iyy:.3f},{izz:.3f})  {'ok' if ok else 'MISMATCH'}")
+            if not ok:
+                bad.append(f"tank at ({dx}, 0, {dz}): plant CG/I ({ck[0]:.4f}, {ik}) vs model ({cgx:.4f}, ({ixx:.3f},{iyy:.3f},{izz:.3f}))")
+        # the SAFE controller's cg_x must read the same variables (text pinned, like its mass)
+        geo = open(os.path.join(controller_dir(), "px4_vtol_direct_actuator", "geometric_hover_node.py")).read()
+        n = len(re.findall(r'0\.176 \+ float\(os\.environ\.get\("VTOL_TANK_DX", "0"\) or 0\.0\) \* float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\) /', geo))
+        print(f"  {'geometric_hover_node.py':28s} cg_x = 0.176 + VTOL_TANK_DX * VTOL_TANK_KG / M   {'ok (x%d)' % n if n >= 2 else 'MISMATCH'}")
+        if n < 2:
+            bad.append("geometric_hover_node.py: cg_x does not follow VTOL_TANK_DX (both the attribute and the parameter default must)")
+    else:
+        print(f"  {py} not found: the tank-position pairing (section 6) skipped")
+
+    # --- 7. THE PLANT'S AERO FORCE ACTS AT THE ASSEMBLED CG (2026-09-14) ---------------------
+    # The controllers' aero model has no lever arm: lift and drag act through the CG and the
+    # moment is Cm alone. vtol.py's default aero centre was `body_com_offset` -- the BODY LINK's
+    # CoM, 18.6 mm ahead of the assembled CG -- so 38 N of cruise lift made 0.45 N.m of nose-up
+    # moment the controllers never modelled (scripts/ana_force_model.py, every bag). The default
+    # is now the assembled CG of whatever config is built (the folded one for the tank aircraft).
+    vsrc = open(os.path.join(HERE, "..", "extensions", "pegasus.simulator", "pegasus", "simulator",
+                             "logic", "vehicles", "vtol.py")).read()
+    ac_ok = re.search(r"config\.aero_center if config\.aero_center is not None\s*\n\s*else assembled_mass_properties\(config\)\[1\]", vsrc) is not None
+    arm = np.asarray(cfg.body_com_offset, float) - np.asarray(c0, float)
+    print(f"  vtol.py aero centre default = assembled CG ({'ok' if ac_ok else 'MISMATCH'}); "
+          f"the body-link CoM it replaces sits ({1000 * arm[0]:+.1f}, {1000 * arm[2]:+.1f}) mm from it")
+    if not ac_ok:
+        bad.append("vtol.py: the aero force does not default to the assembled CG (the controllers' aero acts through the CG)")
+    if cfg.aero_center is not None:
+        bad.append(f"the airframe pins aero_center={cfg.aero_center}; the controllers model no lever arm")
 
     print()
     if bad:

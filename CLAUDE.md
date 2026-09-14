@@ -2,6 +2,87 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-14 (afternoon): THE TWO "MODEL GAPS" WERE THE CLOCK; THREE REAL ONES FOUND BY THE
+# FORCE/MOMENT BALANCE AND FIXED; THE OFFSET-TANK STOP FLOWN CLEAN (flight 9, LANDED 0.00 m).
+**READ THIS BEFORE QUOTING THE MORNING BLOCK BELOW IT.** Its "two model gaps the observer exposed"
+(a lateral force ~ bank, +2 N fore-aft in the decel) do not exist. Both are the REAL-TIME FACTOR:
+every clock the node has is wall time (mocap stamps, perf_counter, the outer's DT, the ramp, the
+delay compensation) and Isaac ran flight 8 at RTF 0.861 (PX4 stamps vs bag clock), so an observer
+that integrates the model's SIM-time forces against a WALL-clock velocity reads -(1-RTF) m a as a
+disturbance: -1.33 N in the R 100 orbit (= +4.3 sin(roll) N, the "bank-proportional lateral force"),
++0.9 N fore-aft through the 1.74 m/s^2 decel. Redone on the plant's own acceleration
+(`/uav_0/state/accel`, sim time) the controller's force model -- momentum props on their tilted
+axes through the spin lag, `so3.aero_body`, the servo-lagged surfaces, the bob's reaction from the
+Isaac log -- closes the plant's balance to **0.03-0.06 N rms on all three axes** through legs,
+turns, orbit and RTH capture, every regression slope zero. **`scripts/ana_force_model.py <bag>
+[isaac log] [--wall]`** is that reconstruction, force AND moment, per phase; run it before ever
+calling anything a plant gap again (it also caught its own author's servo-order slip: unpacking
+(de,da,dr) for a message that is [aileron, elevator, rudder] makes a 4 N "lift gap").
+`ana_slosh_est.py` now judges the estimate against bob + RTF term: flight 8's lateral corr
+-0.02 -> +0.92 in the turns, 0.32 -> 0.73 in the orbit. The observer was right all along.
+**WHAT THE MOMENT BALANCE DID FIND, three things, all now fixed and pinned:**
+1. **The sim's aero centre was the BODY LINK's CoM, 18.6 mm ahead of the assembled CG** (vtol.py
+   `aero_center` default = `body_com_offset`; the 2026-09-06 fix meant "the CoM -> zero accidental
+   arm", and for an articulated vehicle that is the assembly's). 38 N of cruise lift on that arm:
+   a steady **-0.45 N.m nose-up pitch residual in every cruise, turn and orbit of every bag**, 0 in
+   hover (it lives on the lift), the STESO's `Mres` -0.5, 1.2 deg of elevator trim the schedule
+   never asked for. Default is now `assembled_mass_properties(config)[1]` (the assembly maths moved
+   from vtol_slosh.py into vtol.py; re-exported). Flight 9 reads **+0.11 N.m**. It may be part of
+   the HIL onset's 2-4 deg over the gate: flight 9's crossing peaked +15.3 (flights 4-8: 16-18.5).
+2. **`VTOL_TANK_DX` moved the plant's CG 38 mm (0.502 kg at 0.3 m) and Iyy/Izz +13/+8% without
+   telling the controller** ("the L1 test bed" -- but `VTOL_CG_DX` is the untold-CG knob, and a real
+   tank's mount is measured). Every offset-tank flight was ALSO a 38 mm CG-error flight: flight 8's
+   hover shows **+1.51 N.m** of pitch residual = M g x 38 mm; the gate with `--plant_cg_dx 0.038`
+   tumbles in the corridor (HIL's corridor was a knife-edge: pitch -11.4 at V 6.7, z 29.2). NOW
+   PAIRED like the mass: so3 folds VTOL_TANK_DX/DZ into `CG_SHIFT`, `CG_X`, `RPOS` and the inertia
+   exactly as `fold_tank_into_body` does (0.2141 vs the plant's 0.2145; I to 0.001), the safe
+   controller's `cg_x` follows, the STESO's tank arm is about the moved CG (0.262 m), the gate's
+   `--slosh_dx` defaults to the env and its plant/controller agree, `tests/plant_double.py` folds
+   it too, the launchers forward it to every controller pane and `start_slosh_hil.sh` refuses READY
+   unless the cascade banner's `CG_X=` matches. `tests/test_tank_model_pairing.py` section 6 pins
+   three tank positions; section 7 pins the aero centre. Flight 9's hover residual: **+0.04 N.m**.
+3. **The outer planned -25 deg of aft tilt on a servo that stops at -20** (`BETA_AFT_MAX` 25 vs
+   `tilt_min_deg` -20 on the FSC quad; the gate's `so3.build_ode` chases any tilt it is handed, so it
+   never saw it). 24 N x (sin 25 - sin 20) = **1.9 N of braking that never arrived**, at the low-speed
+   end where the aft tilt is all the authority left: flight 8's force table shows the +1.4..+1.95 N
+   forward residual switching on exactly as the command passes -20. `BETA_AFT_MAX` = 20 (the
+   airframe's), the node's applied-tilt estimate is clipped to it, the gate's plant has its own
+   `--plant_tilt_min` (default 20), `tests/test_tilt_limit_pairing.py` holds sim and controller to
+   one range. Regression, 16 seeds, faithful line + `--l1`: 0.502 kg 16/16 pk 14.3, 0.7 kg 16/16
+   pk 13.7.
+**THE GATE NOW MODELS THE CLOCK: `--rtf R`** advances the PLANT (ODE, actuator lags, pendulum) DT/R
+per controller tick and leaves every controller quantity on its own clock -- the 1.5 m/s^2 ramp is
+1.74 in the plant, the outer's plan under-delivers 14%, as HIL. 16/16 at 0.86 for both masses
+(pk 14.5 / 13.9): the RTF is NOT the flown onset excess either. On the sim-time ramp decision: the
+node stays clock-agnostic (hardware has RTF 1; the only sim-time source is PX4's stamp, which the
+node should not read); the gate carries the RTF instead.
+**THE HOVER-END RING, FINALLY:** flights 4/6/7/8's ~1 Hz pitch ring at the stop was the 1.5 N.m
+untold CG moment (2) fought by an outer whose braking plan was short 1.9 N (3) on a ramp 16% too
+steep for the plant (RTF), with the 100 mm tank's bob pumped to the wall by the pitch it caused
+(flight 8 log: 6.5 N impacts; the wall's stiffness, item 5's "cause", was never the driver). The
+gate could reproduce none of it because it had none of the three.
+**FLIGHT 9 (row R100_dx3_paired_a1_152101, bag slosh_20260914_152028; STESO node, L1 on, 100 mm
+tank at dx 0.3 PAIRED, bob logged): LANDED 0.00 m.** Corridor peak +11.5 gate / z 29.8-30.0 flown
+(flight 8: z dip to 29.2); orbit 100.0 +- 0.32, roll -18.4 +- 1.0; RTH stop: pitch 13.5 -> 10 ->
+8.6 -> 7.7 -> 6.8 -> 5.7 -> 4.8 (the gate's shape), **aft tilt peak -8.6 (was -25 pinned), stopped
+in 10.2 s (was 16-20), z 29.9-30.0, roll <= 0.7, no ring; bob peak force 1.56 N (was 6.46)**, 16.5 m
+from home (RTF; gate 4-7). Force balance 0.02-0.07 N rms wing-borne, 0.28 through the stop; moment
+residual pitch +0.11 cruise / +0.04 hover. Estimator vs bob+RTF: y corr 0.95 turns / 0.86 orbit,
+x 0.86 orbit. The +-12 deg cycle at t_stop+1..+3.5 is the SAFE controller's handover (switch to
+`geometric` at V ~1 m/s with the bob at 45 mm), decaying to +-2 in 7 s -- its business, noted.
+**F_SLOSH FEED-FORWARD (the listed step 3): NOT BUILT, deliberately.** In HIL the observer's output
+carries -(1-RTF) m a: +0.85 N forward through every decel, -1.3 N in every orbit -- fed to the
+outer it would brake harder for a push that does not exist, opposite in sign to the bob's real
+effect, and absent on hardware; a HIL flight could not tell the feed-forward's value from its
+artefact. On the gate (RTF 1, estimate clean, corr 0.98) the offset tank's slosh is already
+absorbed (0/4001 at every geometry), so there is nothing measurable to buy. Build it (a disturbance
+parameter in the 6-state NMPC + predict6, one JIT rebuild per mode) only for a hardware campaign.
+**STANDING ITEMS AFTER THIS:** the HIL onset (+15.3 now vs the gate's 14) is a one-flight number;
+re-score it on the next CG-tank flight to see how much of the old +2-4 was the aero arm. The safe
+controller's handover kick with a wide offset tank (+-12 deg, one cycle). `vtol_nmpc.py` (not
+flown) still carries CG_X 0.176 and its own RPOS -- pair it if it ever flies with a tank offset.
+`ana_force_model.py --aero_arm 0.0186` reproduces the old arm prediction for bags before 15:00.
+
 # ★★★★★ 2026-09-14 (day): THE COMPLIANT WALL, THE STESO FLOWN, AND A SLOSH FORCE/MOMENT ESTIMATOR.
 # Committed at the start of the day (sim 7f915c2, controller 7dc67c8, GS 5cd1644) and again at the end.
 **THE WALL IS COMPLIANT** (`SloshParameters.wall_omega` 35 rad/s, `wall_zeta` 0.7; `PendulumSlosh`
@@ -37,7 +118,7 @@ y 0.98, err 0.14-0.16 N on 0.4-0.6 N rms signals; the CG tank reads a 0.1 N floo
 prints the true reaction (`Fs=`) and the node's status feed carries `slosh F=(..) M=(..) Mres=(..)`
 (the `STATUS_EXTRA` seam in the base); `scripts/ana_slosh_est.py <bag> <isaac pane log>` scores a
 flight against the bob log. **FLOWN: fore-aft corr 0.83 (turns) / 0.91 (orbit), err 0.12-0.17 N.
-TWO MODEL GAPS THE OBSERVER EXPOSED, both invisible to the gate (same aero on both sides there):**
+TWO MODEL GAPS THE OBSERVER EXPOSED** -- SUPERSEDED THE SAME AFTERNOON: both were the real-time factor, see the block above; kept as written for the record --** :
   * a LATERAL force proportional to the bank, -0.08 N/deg (-2.0 N at -24 deg, +1.5 at +17, zero
     wings-level) that the Isaac plant makes in a sideslipping turn and the controller's aero copy
     does not -- through the lever arm it reads as a spurious 0.45 N.m "slosh yaw" in every turn;
@@ -49,7 +130,7 @@ TWO MODEL GAPS THE OBSERVER EXPOSED, both invisible to the gate (same aero on bo
   fore-aft channel and for the lateral one only wings-level or after that force is modelled.
 The estimate is published and logged, not yet fed back: feeding F_slosh to the outer NMPC as an
 acceleration disturbance (predict6) is the step after the two gaps.
-**STANDING ITEMS AFTER TODAY:** (1) the two lateral/aft-tilt force gaps above; (2) the low-speed
+**STANDING ITEMS AFTER THE MORNING (all three closed by the afternoon block above):** (1) the two lateral/aft-tilt force gaps above; (2) the low-speed
 brake saturation with an offset wide tank -- clock the HIL decel ramp on sim time or lower
 `decel_rate` for the last 5 m/s, then re-fly R100_dx3 with L1 on; (3) feed F_slosh forward.
 

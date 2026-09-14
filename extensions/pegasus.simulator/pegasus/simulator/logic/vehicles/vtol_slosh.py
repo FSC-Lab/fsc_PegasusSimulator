@@ -98,48 +98,10 @@ class VTOLSloshConfig(VTOLConfig):
 #  and I = (0.265, 0.303, 0.490) exactly.
 
 
-def _parallel_axis(m, d):
-    """Diagonal inertia of a point mass `m` at offset `d` about the reference."""
-    d = np.asarray(d, dtype=float)
-    return np.array([m * (d[1] ** 2 + d[2] ** 2),
-                     m * (d[0] ** 2 + d[2] ** 2),
-                     m * (d[0] ** 2 + d[1] ** 2)])
-
-
-def _link_positions(cfg):
-    """Where `_init_prim` puts each small link, in body-link-origin coordinates.
-
-    Mirrors the builder exactly -- nacelle + prop for a tiltable rotor, a single
-    prop link for a fixed one, one link per surface -- because a link counted
-    here and not built there (or the reverse) is a silent mass error."""
-    pts = []
-    for rotor in cfg.rotors:
-        p = np.asarray(rotor.position, dtype=float)
-        pts.append(p)
-        if rotor.tiltable:
-            pts.append(p + np.asarray(rotor.spin_offset, dtype=float))
-    for surface in cfg.surfaces:
-        pts.append(np.asarray(surface.position, dtype=float))
-    return pts
-
-
-def assembled_mass_properties(cfg):
-    """(total mass [kg], CG [m], diagonal inertia about that CG [kg m^2]).
-
-    Body-link-origin coordinates, the same frame as `body_com_offset`."""
-    pts = _link_positions(cfg)
-    m_b = float(cfg.mass)
-    c_b = np.asarray(cfg.body_com_offset, dtype=float)
-    i_b = np.asarray(cfg.inertia, dtype=float)
-    i_l = np.asarray(cfg.link_inertia, dtype=float)
-    m_l = float(cfg.link_mass)
-
-    mass = m_b + m_l * len(pts)
-    cg = (m_b * c_b + m_l * sum(pts)) / mass if pts else c_b
-    inertia = i_b + _parallel_axis(m_b, c_b - cg)
-    for p in pts:
-        inertia = inertia + i_l + _parallel_axis(m_l, p - cg)
-    return mass, cg, inertia
+# `_parallel_axis`, `_link_positions` and `assembled_mass_properties` moved to vtol.py on
+# 2026-09-14 (the base class needs the assembled CG for its aero centre); re-exported here.
+from pegasus.simulator.logic.vehicles.vtol import (          # noqa: E402,F401
+    _parallel_axis, _link_positions, assembled_mass_properties)
 
 
 def fold_tank_into_body(cfg, tank):

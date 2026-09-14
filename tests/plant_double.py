@@ -121,9 +121,16 @@ def mass_properties():
     I = parallel_axis(BODY_MASS, BODY_INERTIA, BODY_COM - com)
     for l in LINKS:
         I = I + parallel_axis(LINK_MASS, LINK_INERTIA, np.array(l[1:]) - com)
-    # the tank sits AT the assembled CG: mass and its own inertia, no CG shift
-    # (mirrors vtol_slosh.fold_tank_into_body with tank.position=None)
-    return m_tot + TANK_MASS, com, I + TANK_INERTIA
+    # the tank sits at the assembled CG unless VTOL_TANK_DX / VTOL_TANK_DZ mount it off it, in
+    # which case the water moves the CG and adds its parallel-axis terms -- the same fold as
+    # vtol_slosh.fold_tank_into_body with tank.position set, and as so3.CG_SHIFT on the
+    # controller side (2026-09-14: the two are paired, and this double must be the plant)
+    r_w = com + np.array([float(os.environ.get("VTOL_TANK_DX", "0") or 0.0), 0.0,
+                          float(os.environ.get("VTOL_TANK_DZ", "0") or 0.0)])
+    m_all = m_tot + TANK_MASS
+    com2 = (m_tot * com + TANK_MASS * r_w) / m_all
+    I2 = parallel_axis(m_tot, I, com - com2) + parallel_axis(TANK_MASS, TANK_INERTIA, r_w - com2)
+    return m_all, com2, I2
 
 
 MASS, CG, INERTIA = mass_properties()

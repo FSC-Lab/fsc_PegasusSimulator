@@ -251,7 +251,7 @@ say "    pane logs -> $BAG_DIR/pane_*.log"
 # -J joins the lines tmux wrapped at the pane width: the tank banner is 128 characters and its
 # "M=<kg>" tail sat on the next captured line, so the mass check saw nothing (2026-09-13 17:12).
 CPANE=$(tmux capture-pane -p -J -S -400 -t "$SESSION:6h-cascade" 2>/dev/null)
-CBANNER=$(echo "$CPANE" | grep -o "\[cascade_tank\] schedule:.*" | tail -1 | cut -c1-160)
+CBANNER=$(echo "$CPANE" | grep -o "\[cascade_tank\] schedule:.*" | tail -1 | cut -c1-240)
 case "${CASC_NODE_PY:-}" in
   *tank*)
     if [ -z "$CBANNER" ]; then
@@ -278,10 +278,17 @@ case "${CASC_NODE_PY:-}" in
       echo "[slosh_hil]    The env var did not reach the 6h-cascade pane. Not READY."
       exit 1
     fi
-    say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water" ;;
+    # and its CG: a tank mounted off the CG (VTOL_TANK_DX) moves it, in the plant's fold and
+    # (since 2026-09-14) in so3.CG_X alike -- the banner's CG_X must be 0.176 + dx * water / M
+    CCG=$(echo "$CBANNER" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
+    WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 0.176 + dx*b/(3.449572+b)}')
+    if [ -z "$CCG" ] || ! awk -v a="$CCG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
+      echo "[slosh_hil] !! the cascade models CG_X=${CCG:-<none>} but VTOL_TANK_DX=${VTOL_TANK_DX:-0} with $VTOL_TANK_KG kg puts it at $WANT_CG. Not READY."; exit 1
+    fi
+    say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water; CG_X $CCG (tank_dx ${VTOL_TANK_DX:-0})" ;;
   *steso*)
     # the STESO variant: the tank schedule inside, its own banner, its own process name
-    SBANNER=$(echo "$CPANE" | grep -o "\[cascade+steso\] estimator=.*" | tail -1 | cut -c1-160)
+    SBANNER=$(echo "$CPANE" | grep -o "\[cascade+steso\] estimator=.*" | tail -1 | cut -c1-240)
     if [ -z "$SBANNER" ]; then
       echo "[slosh_hil] !! asked for the STESO cascade and its banner never appeared in 6h-cascade. Not READY."; exit 1
     fi
@@ -297,7 +304,14 @@ case "${CASC_NODE_PY:-}" in
     if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
       echo "[slosh_hil] !! the STESO cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}'). Not READY."; exit 1
     fi
-    say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water (STESO estimator, tank schedule)" ;;
+    # and its CG: a tank mounted off the CG (VTOL_TANK_DX) moves it, in the plant's fold and
+    # (since 2026-09-14) in so3.CG_X alike -- the banner's CG_X must be 0.176 + dx * water / M
+    CCG=$(echo "$SBANNER" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
+    WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 0.176 + dx*b/(3.449572+b)}')
+    if [ -z "$CCG" ] || ! awk -v a="$CCG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
+      echo "[slosh_hil] !! the cascade models CG_X=${CCG:-<none>} but VTOL_TANK_DX=${VTOL_TANK_DX:-0} with $VTOL_TANK_KG kg puts it at $WANT_CG. Not READY."; exit 1
+    fi
+    say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water; CG_X $CCG (tank_dx ${VTOL_TANK_DX:-0}) (STESO estimator, tank schedule)" ;;
   *)
     [ -n "$CBANNER" ] && { echo "[slosh_hil] !! the TANK cascade is running but was not asked for."; exit 1; }
     say "    cascade: base node confirmed" ;;

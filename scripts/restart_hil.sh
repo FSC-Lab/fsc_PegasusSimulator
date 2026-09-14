@@ -149,7 +149,7 @@ fi
 say "7/8 restarting the SAFE controller (this script killed it)"
 tmux send-keys -t "$SESSION:6-geometric" C-c 2>/dev/null; sleep 1
 tmux send-keys -t "$SESSION:6-geometric" \
- "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/geometric_hover_node.py \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=geometric -p active_at_start:=true" Enter
 sleep 20
@@ -169,7 +169,7 @@ say "8/8 restarting the NMPC node"
 tmux kill-window -t "$SESSION:6g-full" 2>/dev/null
 tmux new-window -d -t "$SESSION:" -n 6g-full; sleep 1
 tmux send-keys -t "$SESSION:6g-full" \
- "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_full_smc_node.py \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=nmpc_full -p active_at_start:=false \
 -p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=18.0 -p cruise_alt:=20.0 -p rate_hz:=10.0 -p latency_s:=0.12 \
