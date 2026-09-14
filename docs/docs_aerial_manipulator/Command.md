@@ -5094,6 +5094,17 @@ One capture warning, as with the Python planner: `arm is NOT at rest at
 capture: max |qdot| = 0.057 rad/s (> 0.05)` — the servo jitter of the
 current-loop residual, harmless.
 
+**Second flight the same evening, after the package was re-based on the flight
+stack's exported `wb_law` library** (the model and flat planner are now linked
+from `fsc_autopilot_ros2`, not copied; only the IK and the straight-line Picard
+planner are the package's own code). Same rig, same mission, tag
+`cpp_planner_wblaw`: 10/10 legs, no refusal, no abort, stream fresh 100 %,
+`u1` 47.60 N, zero clamping. Per-leg peak / settled: x 318-356 / 79-84 mm,
+y 328-389 / 79-89 mm, yaw 77-167 / 46-53 mm, compatible EE trajectory 46 / 21 mm
+(back 35 / 15 mm), whole-system move 209-220 / 71-76 mm — the same profile as
+the first flight within this rig's run-to-run scatter. Data
+`l1_cpp_planner_wblaw.npz`, score `l1_cpp_planner_wblaw_metrics.txt`.
+
 Operational note for cleanup on this machine: `stop_isaacsim_stack.sh` now
 `pkill -f`s `whole_body_trajectory_planner`, so — as the cycle script already
 warns for the controller names — never type that string on the command line

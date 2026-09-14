@@ -1347,9 +1347,10 @@ ADDITIVE — no original file's behaviour changed:
 - **2026-09-14: the whole-body planner is now a C++ (rclcpp) node in its OWN
   ROS 2 package, `fsc_trajectory_planner`** (`~/Workspaces/fsc_autopilot_ws/src/
   fsc_trajectory_planner`, node `whole_body_trajectory_planner`, namespaced per
-  vehicle by the launch file's `uav_prefix`). It carries its OWN copies of the
-  whole-body model, IK, the straight-line Picard transition planner and the
-  flat B-spline planner — **it does not import this repo's `utils_planner`**,
+  vehicle by the launch file's `uav_prefix`). It links the flight stack's
+  exported `fsc_autopilot_ros2::wb_law` for the whole-body model and the flat
+  B-spline planner, and carries its own C++ IK and straight-line Picard
+  transition planner — **it does not import this repo's `utils_planner`**,
   so the `pegasus_root` / `FSC_PEGASUS_ROOT` coupling described in the next
   bullet is gone from every stack script. Interface unchanged (same
   `whole_body_planner/*` topics/services, same states), so the arm GS tab, the
