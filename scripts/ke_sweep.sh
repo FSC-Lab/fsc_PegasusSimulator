@@ -7,7 +7,9 @@
 #   e.g.  bash scripts/ke_sweep.sh kg07 1 16 --ttr 10 --lat 0.03 --comp 0.049 --slosh
 #
 # Extra args go FIRST on the harness line (argf takes the first occurrence, so they override the
-# sweep's own --ttr 20 / noise / --decel_at 60 / --y0 10 defaults). Traces + summary.txt land in
+# sweep's own --ttr 20 / noise / --decel_at 60 / --y0 10 / --outer_lag 0.03 defaults -- the last
+# is the outer thread's solve->publish delay, which the node compensates and the gate, since
+# 2026-09-13 evening, models and compensates the same way). Traces + summary.txt land in
 # $KE_DIR (default ~/flight_bags/ke_sweeps/<tag>). Score with scripts/ke_metrics.py <dir>.
 # 16 parallel casadi processes loading one JIT cache have core-dumped a seed at START (no
 # output at all) -- re-run such seeds serially before reading the count.
@@ -19,7 +21,7 @@ cd /home/pieper/envs/fsc_autopilot_ros2-master
 N=px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_tank_node.py
 PY=~/envs/isaac_env/bin/python3
 for sd in $(seq $LO $HI); do
-  ( timeout 1500 $PY $N --test "$@" --ttr 20 --noise_att 0.1 --noise_rate 1.0 --dur 85 --decel_at 60 --y0 10 --every 0.1 --seed $sd > $D/s$sd.txt 2>&1 ) &
+  ( timeout 1500 $PY $N --test "$@" --ttr 20 --noise_att 0.1 --noise_rate 1.0 --dur 85 --decel_at 60 --y0 10 --outer_lag 0.03 --every 0.1 --seed $sd > $D/s$sd.txt 2>&1 ) &
 done
 wait
 ok=0; line=""

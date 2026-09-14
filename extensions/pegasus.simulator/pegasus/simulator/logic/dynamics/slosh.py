@@ -295,6 +295,11 @@ def slosh_parameters(tank: TankConfig) -> SloshParameters:
 TANK_KG_ENV = "VTOL_TANK_KG"
 DEFAULT_WATER_KG = 0.502          # the plan's tank: 75% of a 0.67 L, 41 mm cylinder
 TANK_MODES = (0.1, 0.502, 0.7)    # the flown/gated masses; anything else is untested
+# VTOL_TANK_R [m]: re-shape the tank at the SAME water mass -- the gate's --slosh_radius, for
+# the scene. The plan's 41 mm tank moves 0.10 kg at 3.3 Hz (inert to this controller); 80 mm
+# moves 0.38 kg at 1.7 Hz, 100 mm 0.41 kg at 1.1 Hz, below the 1.4 Hz short period. Unset or
+# empty = the plan's 41 mm. Mount it off the CG with VTOL_TANK_DX to give the reaction a lever.
+TANK_R_ENV = "VTOL_TANK_R"
 
 
 def tank_kg_from_env() -> float:
@@ -303,10 +308,24 @@ def tank_kg_from_env() -> float:
     return float(v) if v else DEFAULT_WATER_KG
 
 
+def tank_radius_from_env() -> float | None:
+    """The tank radius asked for by VTOL_TANK_R [m], None = the plan's."""
+    v = os.environ.get(TANK_R_ENV, "").strip()
+    return float(v) if v else None
+
+
 def default_tank(**kw) -> TankConfig:
     """The tank every entry point should construct: the plan's geometry with the water mass
-    from VTOL_TANK_KG. kwargs pass through (slosh=True, damping_zeta=..)."""
+    from VTOL_TANK_KG, re-shaped to VTOL_TANK_R if that is set (same water, 75% fill, the
+    tank grown or shrunk to hold it -- what the gate's --slosh_radius builds). kwargs pass
+    through (slosh=True, damping_zeta=..)."""
     kw.setdefault("water_kg", tank_kg_from_env())
+    R = tank_radius_from_env()
+    if R is not None and "radius" not in kw:
+        if R <= 0.0:
+            raise ValueError(f"{TANK_R_ENV}={R} must be > 0 m")
+        depth = kw["water_kg"] / (1000.0 * math.pi * R * R)
+        kw.update(radius=R, height=depth / 0.75)
     return TankConfig(**kw)
 
 

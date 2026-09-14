@@ -317,9 +317,16 @@ class VTOLSlosh(VTOL):
         F = self._pend.step(f_b, float(dt), omega=w_b, omega_dot=w_dot, r_tank=r_tank)
         if abs(F[0]) > 1e-9 or abs(F[1]) > 1e-9:
             self.apply_force([float(F[0]), float(F[1]), 0.0], pos=self._tank_pos, body_part="/body")
-        # bring-up diagnostic, like [PROP]/[AERO]: PEGASUS_SLOSH_DEBUG=1 prints ~2 Hz
+        # bring-up diagnostic, like [PROP]/[AERO]: PEGASUS_SLOSH_DEBUG=1 prints ~2 Hz (every
+        # 120 physics steps); a larger integer N prints every N steps (=24 for ~10 Hz, enough
+        # to resolve a ~1 Hz pitch ring against the bob -- flight R100_dx3, 2026-09-13)
         self._slosh_dbg_ctr += 1
-        if os.environ.get("PEGASUS_SLOSH_DEBUG") and self._slosh_dbg_ctr % 120 == 0:
+        _dbg = os.environ.get("PEGASUS_SLOSH_DEBUG", "")
+        try:
+            _every = int(_dbg) if _dbg and int(_dbg) > 1 else 120
+        except ValueError:
+            _every = 120
+        if _dbg and self._slosh_dbg_ctr % _every == 0:
             try:
                 import carb
                 carb.log_warn(f"[SLOSH] f_b=({f_b[0]:+.2f},{f_b[1]:+.2f},{f_b[2]:+.2f}) "

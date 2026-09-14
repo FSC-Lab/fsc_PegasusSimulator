@@ -166,5 +166,5 @@ echo
 RES=${RES:-$BAG_DIR/results.tsv}
 [ -f "$RES" ] || printf 'trial\tparams\tverdict\twb_s\tpeakV\tmaxtilt\tmaxroll\tmaxyaw\tzmin\tzmax\tfails\tland_err\tbag\n' > "$RES"
 printf 'trial\tparams\tverdict\twb_s\tpeakV\tmaxtilt\tmaxroll\tmaxyaw\tzmin\tzmax\tfails\tland_err\tbag\n'
-/usr/bin/python3 "$ROOT/scripts/night_metrics.py" "${BAG%/}" "$NAME" "model=$MODEL water=${VTOL_TANK_KG:-0.502}kg" "${LERR:-}" | tee -a "$RES"
+/usr/bin/python3 "$ROOT/scripts/night_metrics.py" "${BAG%/}" "$NAME" "model=$MODEL water=${VTOL_TANK_KG:-0.502}kg${VTOL_TANK_R:+ R=${VTOL_TANK_R}m}${VTOL_TANK_DX:+ dx=${VTOL_TANK_DX}m}${GUIDE:+ guided}" "${LERR:-}" | tee -a "$RES"
 say "results -> $RES"

@@ -47,6 +47,11 @@ srv = rows("/actuator_servos", ActuatorServos); Ts = np.array([t for t, _ in srv
 print(f"cascade engaged at {eng} s; bag {T[-1]:.0f} s; {len(T)} mocap")
 cmds = [(t, m.data) for t, m in rows("cascade/cmd", String)] if any(v.endswith("cascade/cmd") for v in topics.values()) else []
 for t, c in cmds: print(f"  cmd t={t:.1f}: {c}")
+# the node's 5 Hz status feed (2026-09-13+): the rth arm line says the roll it armed at and how
+# long the wings-level guard held it off (2026-09-13 evening)
+stat = [(t, m.data) for t, m in rows("cascade/status", String)] if any(v.endswith("cascade/status") for v in topics.values()) else []
+arm = next(((t, x) for t, x in stat if "braking" in x), None)
+if arm: print(f"  rth arm t={arm[0]:.1f}: {arm[1].split('|')[-1].strip()}")
 sel = T > (eng or 0)
 # 2 s summary through the mission
 print(" t     x      y     z    V   roll  pitch  yaw  tilt")

@@ -2,6 +2,9 @@
 """Offscreen smoke test of the REAL ground-station Trajectory tab.\n\nRuns the actual widget with QT_QPA_PLATFORM=offscreen and a stubbed ROS object, so the\ncontroller-routing rules can be checked without a running stack:\n  * a typed X/Y/Z and a fly-to-point mission must hand the vehicle to `geometric`\n  * STOP must hand it to `geometric`\n  * playing a trajectory on `geometric` must be refused (it tracks points, not paths)\n  * the playback geofence must be live\n\nRun with the SYSTEM python (the ground station's own): /usr/bin/python3 tests/test_gs_trajectory_tab.py\n"""
 import os, sys, math, types
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+# the GS judges speeds against the TANK aircraft (M = 3.449572 + VTOL_TANK_KG, the controllers'
+# own expression); pin the mode so the numbers below are the ones asserted
+os.environ["VTOL_TANK_KG"] = os.environ.get("VTOL_TANK_KG", "0.502") or "0.502"
 sys.path.insert(0, os.path.expanduser("~/ros2_ws/src/ros2_ground_station_gui/src"))
 from PyQt5 import QtWidgets
 import numpy as np
@@ -92,23 +95,37 @@ assert tab._mode == "hover", tab._mode
 print("playback geofence -> tripped to hover OK")
 # 6. MISSION REFERENCE BUILD (velocity field + computed profile + progress -> ready)
 # The cruise-speed field is bounded by the AERODYNAMICS, not by taste: CL peaks at AoA 10 deg
-# (CL_max 0.791) so Vstall = 14.13 m/s, and trimmed the wing cannot carry the weight below
-# ~15 m/s. The ceiling is 16 m/s -- the fastest speed actually flown.
+# (CL_max 0.791) so Vstall = 14.13 m/s at the 3.45 kg airframe, scaling with sqrt(W) -- and the
+# weight is the TANK aircraft's (VTOL_TANK_KG: 15.12 m/s at 0.502 kg, the controllers' mass).
+# Trimmed, the wing cannot carry the weight alone below ~15 x sqrt(W/33.84) m/s -- a WARNING
+# (the rear pair carries the deficit; 0.7 kg is flown at 16.0 against a 16.4 trimmed minimum).
+# The ceiling is 16 m/s -- the fastest speed actually flown.
 assert hasattr(tab, "spin_fm_vel"), "cruise velocity field missing"
 assert tab.spin_fm_vel.maximum() == 16.0, f"max should be 16 m/s, got {tab.spin_fm_vel.maximum()}"
 print(f"cruise velocity field {tab.spin_fm_vel.minimum():.0f}-{tab.spin_fm_vel.maximum():.0f} m/s OK")
+water = float(os.environ["VTOL_TANK_KG"])
+assert abs(tab.M_KG - (3.449572 + water)) < 1e-9, tab.M_KG
+assert abs(tab.V_STALL - 14.13 * math.sqrt(tab.M_KG / 3.449572)) < 1e-9, tab.V_STALL
+assert abs(tab.V_WING_MIN - 15.0 * math.sqrt(tab.M_KG / 3.449572)) < 1e-9, tab.V_WING_MIN
+if abs(water - 0.502) < 1e-9:
+    assert abs(tab.V_STALL - 15.12) < 0.01, f"0.502 kg must stall at 15.12 m/s, got {tab.V_STALL:.2f}"
+print(f"speed checks judge the {tab.M_KG:.3f} kg aircraft: stall {tab.V_STALL:.2f}, trimmed wing minimum {tab.V_WING_MIN:.2f} m/s OK")
 
 _, errs, _ = tab._plan_reference(1000.0, 13.0, 30.0)
 assert errs and "stall" in errs[0].lower(), errs
-_, errs, _ = tab._plan_reference(1000.0, 14.5, 30.0)
-assert errs, "14.5 m/s is below the trimmed wing minimum and must be refused"
+_, errs, _ = tab._plan_reference(1000.0, tab.V_STALL - 0.3, 30.0)
+assert errs and "stall" in errs[0].lower(), "0.3 m/s under the tank aircraft's stall must be refused"
+if tab.V_STALL < 16.0 < tab.V_WING_MIN:
+    _, errs, warns = tab._plan_reference(1000.0, 16.0, 30.0)
+    assert not errs and any("rear" in w for w in warns), \
+        f"between stall and the trimmed minimum must fly with a warning, got {errs} / {warns}"
 _, errs, _ = tab._plan_reference(300.0, 16.0, 30.0)
 assert errs and "short" in " ".join(errs), errs
 plan, errs, warns = tab._plan_reference(1000.0, 16.0, 30.0)
 assert not errs, errs
 assert abs(plan["d_acc"] - 320.0) < 1.0, plan["d_acc"]
 assert abs(plan["d_acc"] + plan["d_cru"] + plan["d_dec"] - 1000.0) < 1.0, plan
-assert warns and "stall" in warns[0], "16 m/s is 1.13x stall and must warn"
+assert warns and any("stall" in w for w in warns), "16 m/s is 1.06x stall and must warn"
 print(f"profile: accel {plan['d_acc']:.0f} m + cruise {plan['d_cru']:.0f} m + stop "
       f"{plan['d_dec']:.0f} m = {plan['dist']:.0f} m, AoA {plan['aoa']:.1f} deg OK")
 print(f"refuses below-stall / below-wing-minimum / too-short requests OK")
@@ -247,13 +264,16 @@ assert not errs_ok, f"16 m/s should be feasible, got {errs_ok}"
 # every speed and would have refused everything under 14.5 for a second, wrong reason.
 for v in (15.0, 16.0):
     _, e_v, _ = tab._plan_reference(1000.0, v, 30.0)
-    assert not e_v, f"{v} m/s must be flyable, got {e_v}"
+    if v >= tab.V_STALL:
+        assert not e_v, f"{v} m/s must be flyable, got {e_v}"
+    else:
+        assert e_v and "stall" in e_v[0].lower(), f"{v} m/s is under the tank aircraft's stall: {e_v}"
 for v in (10.0, 12.0, 14.0):
     _, e_v, _ = tab._plan_reference(1000.0, v, 30.0)
-    assert e_v, f"{v} m/s is below the trimmed wing-borne minimum and should be refused"
-    assert any(("stall" in x.lower() or "carry the weight" in x.lower()) for x in e_v), \
-        f"{v} m/s must be refused by the WING checks, not by the thrust check: {e_v}"
-print("feasibility: 15-16 flyable; below that refused by the WING gates (stall / trimmed\n            wing-borne minimum), and the thrust check adds no second refusal OK")
+    assert e_v, f"{v} m/s is below stall and should be refused"
+    assert any("stall" in x.lower() for x in e_v), \
+        f"{v} m/s must be refused by the STALL check, not by the thrust check: {e_v}"
+print(f"feasibility: >= {tab.V_STALL:.2f} flyable; below that refused by the stall gate, and the\n            thrust check adds no second refusal OK")
 
 # selecting the mission controller must NOT switch the active one (safe to change in flight)
 before = tab._controller

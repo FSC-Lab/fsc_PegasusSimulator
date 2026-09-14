@@ -473,8 +473,8 @@ echo '[9-groundstn] waiting $D_GS s...'; sleep $D_GS
 export PATH=\"/usr/bin:\$PATH\"
 $ROS_PRELUDE
 cd \"$GS_DIR\" || { echo 'GS_DIR not found: $GS_DIR'; exec bash; }
-echo '[9-groundstn] GS: Trajectory tab -> A/B inner-loop switch + Fly+Land mission...'
-/usr/bin/python3 src/single_drone_ground_control.py
+echo '[9-groundstn] GS: Trajectory tab -> A/B inner-loop switch + Fly+Land mission (VTOL_TANK_KG=${VTOL_TANK_KG:-0.502})...'
+VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} /usr/bin/python3 src/single_drone_ground_control.py
 echo '[9-groundstn] exited.'; exec bash
 "
 

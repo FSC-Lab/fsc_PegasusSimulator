@@ -2,7 +2,109 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
-# ★★★★★ WHERE THE BRANCH STANDS (2026-09-13 17:45, wrap-up) -- READ THIS FIRST, THEN THE DATED SECTIONS.
+# ★★★★★ WHERE THE BRANCH STANDS (2026-09-13 23:56) -- READ THIS FIRST. THE 2026-09-13 17:45 BLOCK
+# BELOW IT IS STILL THE OPERATING MANUAL; THIS ONE IS WHAT CHANGED SINCE AND WHAT WAS FLOWN TONIGHT.
+**SEVEN FLIGHTS TONIGHT, SEVEN LANDINGS AT HOME** (six scripted + the GS-button one; the first scripted attempt was cut short by a driver default, below, and still landed) (bags in `~/flight_bags/slosh`, rows in `results.tsv`;
+scored with `scripts/ana_guided.py` + the new `scripts/ana_rth_onset.py`). The rig had lost its
+NVIDIA driver at 17:47 (595-open installed then removed via PackageKit; nouveau took the GA102;
+`sudo dpkg --configure -a && apt-get install nvidia-driver-575` + reboot restored it at 22:47);
+`start_slosh_hil.sh` now refuses in one second without `/dev/nvidia0`.
+**THE EIGHT OPEN ITEMS OF 17:45, CLOSED OR MEASURED:**
+1. **RTH roll guard** (`rth_roll_arm_deg` 3, `rth_roll_wait_m` 10, home bearing latched once armed):
+   flown, the arm came at +0.0 / +0.7 / +0.1 / +0.1 / +0.4 deg in the five guided flights. **And the
+   bank was not the driver of the heavy crossing**: 0.7 kg wings-level still peaked +17.2 (was +16.6
+   at 6.6 deg of bank), with 0 solve failures this time (was 3). A decel FORCED at 24 deg of bank at
+   0.502 kg (the first attempt's driver bug, below) crossed at +13.9, z >= 29.7 -- the gate's 13.7.
+   The heavy mode's crossing peak in HIL is ~3 deg above the gate (17 vs 14); a one-more-flight fact.
+2. **Orbit: turn-rate feed-forward + ADAPTED bank feed-forward + radius INTEGRAL** (all default on):
+   **rho 103.3 -> 99.7-100.0 +- 0.3-0.6 m in every flight**, kappa learned 0.79-0.81 in the fly-by
+   turns before the orbit (gate 0.790 / 0.807 / 0.811 at 0.1 / 0.502 / 0.7 kg -- to the hundredth),
+   the integral idling at -0.05..+0.5 deg. The 3.4 m was mostly the `k_bank_d` damping term opposing
+   the orbit's own turn rate (8.9 deg of bank), not sideslip; kappa 0.80 is the plant's true turn
+   rate per bank. Scheme, laws, equilibrium, gate table:
+   https://claude.ai/code/artifact/795b1179-6d55-49ff-907c-a03a548589bb
+3. **`rth_brake_margin` 15 -> 5 m**: stop 24-28 -> **12.6-22.1 m** from home (gate 4-7; the rest
+   is the sim's real-time factor on the wall-clock decel ramp, 1.43 m/s^2 wall = 1.66 sim in every
+   bag; hardware has none). Landing at home is the safe controller's leg either way.
+4. **0.1 kg FLOWN (first time) and 0.7 kg re-flown**: both the full guided mission, landed 0.00 m.
+   The light mode RINGS at the crossing as the gate said it would (revs 4): +10.9 -> +3.6 -> +17.3
+   -> +10.1 -> +6.1 -> +13.7 at ~1.2 Hz, z min 29.5, 1 solve failure. Not a margin problem at
+   14.33 m/s of stall; the number to carry for 0.1 kg.
+5. **`VTOL_TANK_R` flown: the 100 mm tank 0.3 m ahead of the CG, L1 off, full guided mission,
+   landed 0.00 m** -- and it is the FIRST HIL FLIGHT WHERE THE SLOSH DID SOMETHING: orbit rho sd
+   0.64 / roll sd 2.4 (twice the CG-tank flights), turn overshoots +17.6 (vs 13-16), and at the
+   hover end of the RTH stop (V < 6 m/s, aft tilt pinned at its limit) a **~1 Hz pitch ring of
+   -3 -> -10 -> -4 -> +11 -> -3 -> -14 -> +1 -> -5 -> -9 -> -17 deg** that took the stop from 10.5
+   to 20 s; z 29.8-30.1 throughout. The 100 mm tank's mode is 1.14 Hz. **The gate does not show it**
+   (its stop: pitch 7 -> 6 -> 5 -> 3 -> 0, 1/5201). Two hypotheses, separated by flight 6 (below,
+   `PEGASUS_SLOSH_DEBUG=24` logs the bob at ~10 Hz): a real bob/pitch coupling once the rotors
+   carry the weight, or the sim's finite-difference omega_dot on the offset tank's rotation terms.
+   **FLIGHT 6 (row R100_dx3_dbg_a1_234611, same config, bob logged; landed 0.00 m, the ring
+   repeated) ANSWERED IT: THE WALL.** In cruise the bob parks at -47 mm (the +1.0-1.4 m/s^2 cruise
+   f_x holds it aft, 3 mm off the R/2 = 50 mm wall). The braking's -2 m/s^2 (aft tilt PINNED at
+   -25 deg at the low-speed end, where the gate needs -7: the wall-clock ramp asks a 0.9x-RTF
+   plant for more braking) throws the 0.41 kg bob across to the +50 mm wall at t+7 s (V 6):
+   **F_x = +17.3 N in one physics step** (the inelastic one-step arrest), the outer answers the
+   fore-aft jolt with pitch, the bob lifts off the wall and slams again -- the ~1 Hz ring, pitch
+   -3 -> -12 -> +12 -> -15 -> -20, the bob parked/bouncing at +30..+50 mm until V < 1; then a free
+   +-31 mm oscillation at 1.14 Hz (0.49% damping) with +-0.75 N of fore-aft force the hover
+   absorbs at +-2 deg of pitch. Qualitatively a wave slamming the wall; quantitatively the crudest
+   possible impact (10-17 N in 1/240 s), which is the model limit written under item 6. A tank
+   at the CG never reaches its wall in this manoeuvre (the 41 mm bob peaks 8-11 mm). If this case
+   matters: a COMPLIANT wall (stiff spring-damper over a few mm -> finite, physical impact
+   forces) in `PendulumSlosh`, and clock the decel ramp on sim time in HIL so the plant is not
+   asked for a 1.7 m/s^2 stop it was gated at 1.5 for. Not a controller change.
+6. Written down ("WHAT THE SLOSH MODEL CAN CLAIM", below).
+7. GS speed checks on the tank mass (15.12 / 15.50 / 14.33; `i_max` 12 N + the ~50 ms transport
+   margin stay as recorded).
+8. **The ↱ Fly waypoints button was PRESSED IN FLIGHT** (`tests/test_gs_guidance_live.py`: the real
+   tab offscreen against the live stack, ▲ TAKEOFF -> 🚀 Auto Mission (Cascade) -> ↱ -> 🏠): the
+   node acked `mode=leg`, the legs and the orbit flew (100.0 +- 0.2 m, kappa 0.81 at the entry),
+   🏠 brought it home and the mission LANDED 0.08 m from the take-off point and disarmed. All
+   checks pass (one race in the test's disarm read, fixed).
+**THE GATE GAINED ITS MISSING TERM.** `--outer_lag 0.03` (the outer thread's solve->publish delay)
+existed, defaulted to 0 and was never compensated: uncompensated it reproduces the flown +16-19 deg
+onset; compensated as `Outer._run` does it is +14. The gate now adds it to `--comp`; `ke_sweep.sh`
+carries it; the faithful line is `--ttr 10 --lat 0.03 --comp 0.049 --outer_lag 0.03 --slosh`
+(16/16 at all three masses). HIL onsets tonight: +16.1 / +17.2 / +18.5 / +17.4 / +16.9 -- the
+gate's 14 plus 2-4 deg, every mass; not the bank, not the RTF (both gated).
+| flight (row) | water / tank | orbit rho | kappa | RTH arm roll | stop | crossing pk | fails | landing |
+|---|---|---|---|---|---|---|---|---|
+| g2_int_a1_225908 | 0.502 / 41 mm at CG | 99.9 +- 0.33 | 0.80 | +0.0 | 15.2 m | +16.1 | 0 | 0.00 m |
+| kg07_g2_a1_230837 | 0.7 / 41 mm | 99.9 +- 0.57 | 0.80 | +0.7 | 22.1 m | +17.2 | 0 | 0.00 m |
+| kg01_g2_a1_231813 | 0.1 / 41 mm | 99.7 +- 0.41 | 0.79 | +0.1 | 17.4 m | +18.5 (rings) | 1 | 0.00 m |
+| R100_dx3_a1_232748 | 0.502 / 100 mm, dx 0.3, L1 off | 99.8 +- 0.64 | -- | +0.1 | 12.6 m | +17.4, hover ring | 2 | 0.00 m |
+| GS buttons (bag ..233645) | 0.502 / 41 mm | 100.0 +- 0.29 | 0.81 | +0.4 | (GS leg) | +16.9 | -- | 0.08 m |
+| R100_dx3_dbg_a1_234611 | 0.502 / 100 mm, dx 0.3, L1 off, bob logged | 99.8 +- 0.61 | -- | -0.0 | 14.3 m | +15.8, hover ring (wall) | -- | 0.00 m |
+**DID THE FLIGHTS SETTLE THE LIST? (asked and answered, 2026-09-14 00:10)**
+  * SETTLED OUTRIGHT: 2 (orbit 103.3 -> 99.7-100.0 at every mass and from the GS, kappa 0.79-0.81
+    learned before the orbit, integral idle), 8 (↱ pressed in flight, landed at home), 4 (0.1 kg
+    flown; its +-7 deg crossing ring is now a known number), 6 and 7 (written and wired).
+  * SETTLED AS A MEASUREMENT, NOT A FIX: 1 -- the guard works (armed at 0-0.7 deg every time) and
+    the flights showed the bank was never the driver: the 0.7 kg crossing peaks ~+17 wings-level.
+    The HIL onset sits 2-4 deg above the gate at EVERY mass (+16..+18.5 vs 14) with 0-2 failures and
+    no altitude loss: thin, acceptable, and now measured on five flights instead of one.
+    3 -- 24-28 -> 12-22 m; the rest is the sim's real-time factor, deliberately not tuned away.
+  * REOPENED, AT THE MODEL: 5 -- the 100 mm tank 0.3 m ahead flew and landed twice, but its bob is
+    thrown onto the R/2 wall by the braking and the inelastic one-step arrest delivers 10-17 N
+    impulses that ring the hover end of the stop at ~1 Hz. Not a controller fault: before any claim
+    about wide offset tanks, (a) a COMPLIANT wall in `PendulumSlosh` (stiff spring-damper over a
+    few mm -> finite impact forces), (b) a decision on clocking the decel ramp on sim time in HIL
+    (the wall-clock ramp pinned the aft tilt at -25 deg and threw the bob; the gate at RTF 1 needs
+    -7). Six of eight closed, one closed as a number, one moved from the controller to the model.
+**THINGS THAT BIT TONIGHT:** the driver's `--cruise-time` (default 70 s) expired 55 s into a plan
+whose rth was at t+150 and the driver forced `decel_now` itself, in a 26 deg bank in the second
+fly-by turn (bag ..224823, scored CRASHED by night_metrics' yaw-180 rule; it stopped cleanly and
+landed at home) -- `fly_transition.py` now sizes the window to the plan's last command + 150 s;
+the 17:45 command lines omitted `CRUISE_T` and the previous session had passed it by hand. `/tmp`
+was wiped by the reboot and took the scratch analysers with it -- `scripts/ana_rth_onset.py` is
+now in the repo. `PEGASUS_SLOSH_DEBUG` was not forwarded to the Isaac pane (it is now, and an
+integer value N prints every N physics steps). 28 CasADi JIT temporaries are still TRACKED in the
+controller repo (ignored for new ones; `git rm --cached` when convenient).
+**NOTHING IS COMMITTED:** sim, controller and GS repos are dirty and paired. Review, then commit
+the three together.
+
+# ★★★★★ WHERE THE BRANCH STOOD (2026-09-13 17:45, wrap-up) -- THE OPERATING MANUAL.
 **WHAT FLIES.** The tank aircraft (0.502 kg default, 0.1 / 0.7 kg selectable) flies the full mission
 on the fixed plant: climb -> 90 deg cruise -> banked waypoint turns -> loiter -> return-to-home ->
 landing at the take-off point, from a script OR from the ground station's buttons. Twelve landings
@@ -47,6 +149,215 @@ node's 10; `pgrep -f <pattern>` in a waiter loop matches the waiter itself; tmux
 lines (`capture-pane -J`); a JIT cache key must hash everything the artefact bakes in (nmpc6's did
 not hash the mass for three days of tank flights); a scripted flight closes the GS, and a GS
 selection during a scripted climb fights the driver.
+
+# ★★★ 2026-09-13 EVENING: THE ORBIT EQUILIBRIUM, THE OUTER LAG, THE RTF, AND WHAT SLOSH CAN CLAIM.
+**THE LOITER'S STANDING ERROR, TERM BY TERM** (bank law: roll_ref = wing (k_bank e + k_bank_d
+psi_dot_est + bank_ff), k_bank 2, k_bank_d 1, bank_ff = -atan(V^2/gR) = -14.6 deg at R 100 / 16 m/s).
+In the steady orbit the aircraft flies its circle's tangent, so the heading error IS the field's
+inward offset atan(k_orbit (rho-R)/R); the orbit's own rate V/rho = 0.155 rad/s enters the damping
+term as +8.9 deg AGAINST the turn. Flown roll -17.8 = -11.7 (P) + 8.9 (damping) - 14.6 (ff), i.e.
+the P term carried 12 deg: 8.9 fighting the damping + ~3.5 the plant genuinely needs beyond the
+coordinated bank (no rudder coordination: sideslip, the fin takes part of the lift's horizontal
+component). An integral on rho alone therefore pinned at its 6 deg clamp and left 1.7 m
+(101.7 at every gain) -- the first thing I saw. `Guidance.turn_rate_ff = dir V/R` now feeds the
+damping term (it damps deviations from the orbit's rate; a constant offset, loop dynamics
+unchanged): P-only then leaves 0.8 m, and the integral (k_i 0.002, band 10 m so the 14 m entry cut
+does not wind it, clamp 6 deg) closes it: 100.0 +- 0.3 in the last 40 s, bank 18.1, entry unchanged.
+The status feed prints `Ibank=` so the GS shows the integral's share. Both masses and the offset
+100 mm tank give the same 100.0-100.2. THEN THE ADAPTED FEED-FORWARD (asked for next): the plant's
+turn-rate-per-bank gain kappa is measurable in any quasi-steady bank, `Guidance.adapt_bank`
+low-passes psi_dot_est / (-g tan(phi)/V) (tau 4 s; only |phi| >= 8 deg, |p| <= 5 deg/s, wing >=
+0.9; clamped [0.6, 1.3]) in EVERY mode, and the orbit's ff is atan(V^2/(g R kappa)). Sign check
+(empirical, as the project's rule demands): FLU roll > 0 = right wing down = right turn = psi_dot
+< 0, so the coordinated rate is -g tan(phi)/V and the ratio is sign-free; the gate learned +0.80,
+not a clamped 0.6, in both orbit senses (`test_cascade_guidance.py`). Learned 0.809 in the two
+fly-by turns before the orbit (t=76), flat at 0.798-0.802 through it; with k_i 0 the orbit sits at
+99.9 +- 0.3 -- the estimator alone closes it -- and with both on 100.1 +- 0.3. kappa 0.807 (0.502),
+0.811 (0.7), 0.790 (0.1). Default: BOTH on (the integral idles near zero and covers a gated-out
+estimator). The scheme, drawn: https://claude.ai/code/artifact/795b1179-6d55-49ff-907c-a03a548589bb
+**THE RTH STOP IS THE REAL-TIME FACTOR.** `slow()` is a wall-clock timer; `_v_cmd` ramps down
+`dt * decel_rate` per tick; Isaac advances 0.86-0.93 sim-s per wall-s (2026-09-13 measurement), so
+the aircraft is asked to lose 1.5 m/s per WALL second = 1.66-1.74 m/s^2 of sim time. Bag ..151254:
+mean 1.66 (V 15.94 -> stop in 74 m; V^2/2a = 84.7 at 1.5). The gate (RTF 1) brakes in 82-87 m and
+stops 4-7 m short at margin 5. On hardware the ramp and the world share a clock. The mocap topic
+is NO help: its header stamps advance 1.0000 s per wall second at 120 samples per wall second
+(measured on bag ..151254) -- the emulator publishes on the wall clock and the only sim-time source
+in the stack is PX4's own timestamp on /fmu/out/*, which the guidance does not (and should not)
+read. Accept the ~10 m in HIL; do not lower the margin for it.
+**THE ROLL GUARD'S BUDGET.** At 16 m/s a 5 m margin is 0.3 s; the roll-out from a 22 deg RTH capture
+takes ~1 s. `rth_roll_wait_m` 10 lets the arm slip to 10 m PAST the no-margin distance (a stop
+<= ~10 m past home, V < 1); the home bearing is latched at the arm so overflying home cannot flip
+the live bearing 180 deg (it would have: `hd = atan2(d)` while dist > 3). `rth_roll_arm_deg` 0 turns
+the guard off (pre-2026-09-13 evening behaviour). Gate: guard on/off identical at 0.7 kg, 0 failures.
+**`--outer_lag` WAS THE GATE'S MISSING ONSET TERM.** 0.7 kg, decel 1.7 (the RTF-scaled rate),
+straight: lag 0 -> +13.2 / 0 revs; lag 0.03 uncompensated -> +19.2 / 5 revs (the flown +16.6);
+lag 0.03 compensated as `Outer._run` does (latency + solve_ms) -> +14.0 / 0. The node was right all
+along; the gate applied `--comp` alone. Now `COMP += outer_lag`. Faithful sweeps (ttr 10, lat 0.03,
+comp 0.049, outer_lag 0.03, noise 0.1/1, slosh, 16 seeds): 0.1 kg 16/16 pk 14.4 (revs 4, fails 1),
+0.502 kg 16/16 pk 14.1 (revs 2, fails 3), 0.7 kg 16/16 pk 13.7 (revs 1, fails 3).
+**WHAT THE SLOSH MODEL CAN CLAIM, AND CANNOT.** The tank is the linear first antisymmetric mode as an
+equivalent pendulum (m1, L1 from the Abramson/Ibrahim closed forms), driven by the tank's specific
+force including the rotation terms, with an INELASTIC WALL at R/2 where the linear model's validity
+ends (the bob parks, its energy is lost, the arrest is the reaction). It can say: how much of the
+water moves, at what frequency, the quasi-static lateral force in a turn entry and the moment that
+makes on an offset tank, and that at any geometry 41-100 mm / 0.1-0.7 kg / fore-aft 0.3 m this
+controller does not notice (0-1 solve failures in 5201, corridor +9.5, BT +12.7-14, rho 100.0).
+It CANNOT say anything about breaking waves, roof impacts or hydraulic jumps in a wide half-full
+tank: those are non-linear, impulsive, and outside a modal model by construction; the wall is a
+bound on the model, not a model of the impact. A particle fluid (plan phase 5) was deliberately not
+built -- it would never be in the control path. Any claim that "sloshing is handled" must be
+phrased as "the first-mode slosh of a cylindrical tank up to 100 mm at 0.7 kg is below this
+controller's notice; impact loads were not modelled." A baffled tank (`TankConfig.baffled()`)
+is the hardware answer if either matters.
+**GATE TOOLING:** `--decel_roll D` (bank step at the onset), `--rth_margin`, `--roll_arm`,
+`--roll_wait`, `--k_i_orbit`, `--i_orbit_max`, `--i_orbit_band`, `--no_bank_adapt`,
+`--bank_adapt_tau`; the gate prints the RTH STOP distance, the arm roll, the integral's bank and
+the learned kappa (also `kappa=` on every trace line once it has learned).
+
+# ★★★ SO(3) STESO — SUPER-TWISTING EXTENDED STATE OBSERVER AS THE UNCERTAINTY/DISTURBANCE
+# ESTIMATOR INSIDE THE CASCADE'S L1 AUGMENTATION (2026-09-13/14). GATED OFFLINE. NOT FLOWN.
+# Side-session notes; CLAUDE.md was in use by the slosh session and is untouched. NEW FILES ONLY,
+# nothing that flies today was edited, nothing is committed (both trees dirty from that session).
+
+**FILES.** Controller package (fsc_autopilot_ros2-master/px4_vtol_direct_actuator/px4_vtol_direct_actuator/):
+`so3_steso.py` (the estimator, numpy only, imports under any python) and `nmpc_cascade_steso_node.py`
+(the cascade with it inside L1). Sim repo: `tests/test_so3_steso.py` (gate, ~20 s, PASS),
+`docs/so3_steso.md` (full tables). Pages: the estimator alone was not given one; the closed loop:
+https://claude.ai/code/artifact/bb0006e0-75aa-4248-8454-332766f86bdf (diagram, laws, gate figures).
+Paper: Xie et al., arXiv 2111.02046 (STESO + ARSMC for a tiltrotor). Only the observer half is built;
+the ARSMC controller is not — the estimate feeds the inner loop this project already has.
+
+**WHAT IT IS.** The paper's observer (Levant's 2nd-order robust exact differentiator driven by the
+attitude error, with the known dynamics fed forward, third state = the LUMPED residual d) rewritten
+on SO(3): innovation `Log(R_hat^T R)`, R_hat on the group, the rate fed to the kinematics transported
+by `R_e = R_hat^T R` so the error rotation obeys exactly `R_e_dot = R_e [w - w_hat - k1 sig^{2/3}(e)]_x`
+(no small-angle assumption, works inverted / tumbling / at 90 deg tilt). Two modes: **"attitude"**
+(order 3, R only — the paper's structure; gains 2 L^{1/3} / 2.12 L^{2/3} / 1.1 L) and **"rate"**
+(order 2, R + w — what this rig has; 1.5 L^{1/2} / 1.1 L). Plant as it sees it: `J w_dot = M_model +
+J sigma`, M_model = the CALLER's own moment model (the cascade's `model_moment`, gyroscopics included),
+sigma [rad/s^2] = the residual — CG error, unmodelled aero, actuator mismatch, tank. It is the
+residual that is estimated, not the plant, for the same reason L1Aug's docstring gives. ONE knob:
+`L` [rad/s^3] per axis = bound on |sigma_dot|. `eps="auto"` = a boundary layer sized to the
+discretisation chatter (1.5 k3 dt^3 / 1.0 k2 dt^2), `tau_out`, `tau_bias` (splits sigma into the
+quasi-static "uncertainty" and the "disturbance"), `delay`, `hold`, `sigma_max`. Outputs `sigma`,
+`torque = J sigma` [N.m], `R_hat`, `omega_hat`, `e`.
+**THE PAPER'S EQ. 12 HAS THE CORRECTION SIGN FLIPPED** relative to its own error dynamics (eq. 13);
+eq. 13 is what converges. Checked empirically (the project's rule): +1 N.m the model does not contain
+reads +0.9999 N.m on the right axis, other axes ~1e-5, both modes.
+
+**WHAT THE ESTIMATOR ALONE MEASURED (tests/test_so3_steso.py).** Noiseless 1 kHz, assembled inertia:
+exact to the chatter 1.1 L dt, a 1 N.m step re-acquired in 0.2 s, 120 deg initial error on a body
+tumbling at 1.1 rad/s converged in 2.2 s, and the SAME estimate from a level body at rest and an
+inverted one tumbling. Plant double, hover, 5 cm CG error the controller is not told about: reads
++1.938 N.m (true 1.938) both modes, within 1% with 30 ms delay + real-mocap noise; fed forward it
+takes a P-D hover's standing error (12 deg of pitch, or 1.08 m of position under a position hold —
+the position loop tilts R_d to fight the drift and the two standing errors cancel in pitch) to 0.00.
+**★ BUT AT 120 Hz UNDER REAL-MOCAP NOISE IT IS AT PARITY WITH A LINEAR ESO TUNED TO THE SAME NOISE
+FLOOR** (1 Hz moment tracked within 0.97-1.11x at any amplitude inside L) **AND SLOWER ON A STEP**
+(its third channel slews at most 1.1 L per second: 0.12-0.15 s vs 0.06-0.12). The finite-time
+exactness is a noiseless, high-rate property. Do not quote it for the rig. L below the disturbance's
+slope is a hard failure (2.25 rad/s^2 of lag at L 5 against a 16.6 rad/s^3 slope) where the linear
+one merely lags. Noise floor at 120 Hz, pitch, L 20: attitude mode 0.16 (0 noise) / 0.42 (0.1 deg);
+rate mode 0.04 / 0.27 (1 deg/s). HIL's 0.0004 deg jitter is invisible under the chatter. The
+Taylor-consistent attitude increment (Hanan/Jbara/Levant) changes nothing — the chatter is the sign.
+
+# ★★ THE CASCADE VARIANT: `nmpc_cascade_steso_node.py` — controller_id `cascade` (a REPLACEMENT,
+# never alongside the base node: two publishers on one actuator topic).
+**A VARIANT, NOT A COPY** (the tank node's argument: a 2650-line copy is a second plant model, a
+second allocation and a second gate that stop receiving fixes the day they are made). It imports the
+base node AND the tank node (so it is the tank cascade), subclasses `L1Aug` as `L1Steso` — same
+C(s) = w_c/(s+w_c) at 2 rad/s, same clamps 2.5/2.5/1.5 N.m, same freeze while saturated, same HOLD
+through the back-transition, same lag-aware `applied_moment` (spin 0.12 s / servo 0.03 s) and the
+same transport-delay buffer; ONLY the predictor + piecewise-constant law are replaced by the STESO
+stepped on (R, w, M_applied in force now) — and re-points the base's two module-level seams
+`base.L1Aug` and `base.inner_step` (the ROS node and the offline gate both look them up by name).
+`--est pwc` / `CASC_EST=pwc` is **bit-identical to the tank node** (verified trace-for-trace; only
+the wall-clock solve-ms column differs). Knobs: `--est steso|pwc`, `--steso_L 20` (or `r,p,y`),
+`--steso_mode rate|attitude`, `--steso_eps auto`, `--log FILE` (per-tick CSV of roll, pitch, sigma,
+u_ad, innovation, hold); env `CASC_EST STESO_L STESO_MODE STESO_EPS` for the node. Gate exactly as
+the tank node: `python3 nmpc_cascade_steso_node.py --test --l1 ...` from the controller repo root.
+The launchers STILL START `nmpc_cascade_tank_node` — flying this is a one-line launcher change
+(those files were open in the slosh session).
+
+**GATE, faithful plant (--ttr 10 --lat 0.03 --comp 0.049 --outer_lag 0.03 --slosh --noise_att 0.1
+--noise_rate 1.0, momentum + spin lag, pendulum tank), same seed per pair:**
+| case | base L1 law (as flown) | STESO |
+|---|---|---|
+| hover, 5 cm CG error: pitch / sigma_y read (true 1.938 N.m) | -0.59 deg / 1.881 (97%) | **-0.27 deg / 1.938 (100.0%)** |
+| same, raw sigma sd under the gate's sensor noise | 1.53 N.m | **0.06 N.m** |
+| no augmentation, for scale | -12.0 deg, tilt parked at -19 as a crutch | — |
+| full mission, flown 2.6 cm CG error (climb, corridor, cruise, decel at 60 s) | stops at z 30.0, 0/1701 | stops, 0/1701, SAME trajectory (cruise pitch 7.03 vs 7.03) |
+| turning mission, 100 mm tank 0.3 m ahead of the CG (3.6-4.3 N.m at its wall) | 0/4001, RTH stop 5.7 m | 0/4001, RTH stop 5.6 m; sigma shows the 1.14 Hz tank yaw at +-0.5 N.m |
+| full mission, 5 cm, cold start into the corridor (ttr 10 AND 20) | CRASH t 10-14 s | CRASH t 10-14 s |
+**Same u_ad, same flight, every case.** The PWC law reads 3% low by construction (its discrete factor
+e^{-k_s T} at k_s 6) and its RAW sigma is +-1.5 N.m of amplified gyro noise (k_s 6 on 1 deg/s = ~190x)
+that C(s) then removes; the STESO's is exact and 25x quieter. THAT is the only headroom: a faster
+C(s) (w_c above 2) is affordable with the STESO where the base law would feed +-1.5 N.m of noise to
+the actuators. UNTESTED — it is the gate to run before claiming a fast unmodelled moment (an offset
+tank in a turn entry) can be cancelled. As shipped, the tank is below the augmentation's notice with
+either estimator (u_ad < 0.1 N.m in the turns), consistent with the branch's "absorbed" finding.
+**★ BASE-CASCADE ENVELOPE FINDING (not the estimator):** a 5 cm CG error with the mission started
+COLD into the corridor crashes under BOTH laws at ttr 10 and 20 — at t=1 s the aircraft is already at
+-28 deg pitch with elevator and rudder saturated, the tilt at -25, while the 2 rad/s augmentation is
+still ramping toward -1.9 N.m. In flight the engage hover (settle_s) precedes the transition; the gate
+has no such phase. 2.6 cm (the flown error) flies. The earlier "5 cm x 3 seeds all complete" was the
+flat plant at ttr 20 (2026-09-12); on the faithful plant it does not hold from a cold start.
+
+# ★★ WHERE THE AUGMENTATION IS APPLIED, AND WHY — the allocation level, not the outer NMPC.
+```
+M_des  = inner geometric law (roll/yaw attitude, pitch damping on the outer's planned theta)
+M_des += u_ad,   u_ad = -C(s) J sigma_hat          <- the STESO's reading
+[dT, delta] = B_rot(beta)^-1 M_des                  allocation: rotors vs surfaces by authority at this tilt
+```
+The outer never sees sigma_hat; its package (Tf, Tr, beta, de, theta_ref) is untouched.
+**WHY THIS IS THE RIGHT DEFAULT HERE.** (1) Bandwidth: the inner runs at 200 Hz on every mocap
+sample; the outer at 20 Hz behind 30 ms + its solve time through predict6 — a residual cancelled at
+the inner is cancelled at the inner's bandwidth, through the outer it gains a 50 ms sample and the
+lag; the tank's 1.14 Hz yaw is exactly what the outer cannot touch. (2) The NMPC's problem stays
+stationary: every gate certificate (0/2001, corridor peaks, the knife-edge) was earned on a fixed
+model; a model that moves with the estimate every tick is what re-triggers the flat tilt-vs-pitch
+optimum (finding C9) — this is the L1-MPC architecture in the literature precisely because the
+augmentation PRESERVES the MPC's guarantees instead of making it adaptive MPC. (3) Bounded: u_ad has
+clamps, a freeze on saturation and a hold; a model parameter has no fence on its consequences.
+(4) Noise: C(s) removes the raw estimate's noise before the actuators; inside the model it re-plans
+the trim on every sample.
+**WHERE THE OUTER WOULD BE BETTER.** (1) The steady state is not clean at the inner level: with the
+5 cm error the gate still shows -0.27 deg of pitch AND the outer parking the tilt at -0.4 deg as a
+crutch — structural: the package still assumes a balanced airframe, the outer sees a pitch it did
+not plan and answers with tilt, the inner cancels the moment the tilt caused; at cruise correcting
+pitch with tilted rotors also makes forward force (`fx_budget` exists because that is real). If the
+outer knew sigma_bias the package itself would balance: no crutch, no residual angle. "The reference
+must be a trim of the ACTUAL aircraft" says the outer owns the quasi-static part. (2) Constraints:
+the outer knows thrust limits and the corridor (0.7 kg reaches 93% front throttle there); a standing
+residual that eats differential authority is better planned around than reacted to after the
+allocation saturates. (3) Force residuals: the STESO estimates MOMENTS only; a mass/lift mismatch
+(the 1.245 m/s^2 the wrong water mass left in every reference) can only be absorbed by the outer's
+vs/vz channel — the inner has nowhere to put it.
+**THE HONEST DESIGN IS THE SPLIT, NOT A CHOICE:** the slow part (`sigma_bias`, tau 2-5 s) into the
+outer as a clamped PARAMETER (`qdot = (My + Iyy sigma_y)/Iyy` in build_ode6 AND in predict6's model;
+a parameter is not baked, but the ODE change forces one JIT rebuild per mass — hash it, the 3-day
+mass bug), the fast remainder at the inner under C(s). Expected payoff, to be measured: hover -0.27
+-> ~0 and the tilt crutch gone; cruise unchanged; tank case unchanged (never reaches the outer).
+Gate it for hunting (C9) before believing it. Alternative without a rebuild: re-balance the package
+after the solve with `trim_split` including sigma_bias — same steady state, the trim's distribution
+instead of the allocation's authority split. NOT BUILT: it lands inside `OuterNMPC`/`build_ode6` in
+the base node (in use), or becomes a second seam in the variant.
+
+**THINGS THAT BIT, so they do not bite again:** the paper's sign typo (trust the error dynamics, then
+the plant); a test harness comparing the estimate (valid at t+dt) against the truth at t — a 2e-3 rad
+"floor" and an `inf` convergence time that were the harness, not the observer; `plant_double.CG` is
+read at call time by `forces()`, so a CG monkeypatch must stay in force through the run (the first
+open-loop "CG moment" of 0.113 N.m was the nominal front/rear arm asymmetry); the mini controller's
+`vee(R.T - R)` sign slip tumbled the plant double — same slip as the six pitch inversions; a
+super-twisting third channel is slew-limited at 1.1 L (a step takes |step|/(1.1 L) just to ramp);
+a "what super-twisting buys" claim written before it was measured had to be rewritten — at the rig's
+rate and noise it buys a cleaner reading and one physical knob, not accuracy. Measure, then write.
+
+**TO FLY IT (in order):** point `start_slosh_hil.sh` / `restart_hil.sh` at `nmpc_cascade_steso_node.py`
+(same args as the tank node); the 30 s engage hover with `VTOL_CG_DX=0.026` (`CASC_SETTLE_S` as a
+DOUBLE), expect -0.8 deg like L1 (parity says not better) with a quieter `sigma=` in the pane log;
+then the full guided mission at 0.502 kg; then, only if the w_c headroom is gated first, the 100 mm
+tank at `VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3` with `l1_wc` raised. Score with `scripts/ana_guided.py`.
 
 **THE BASELINE IS A TAG IN FOUR REPOSITORIES, NOT ONE.** `pre-slosh` is cut in
 fsc_PegasusSimulator (ea74406), fsc_autopilot_ros2-master (88127e2),

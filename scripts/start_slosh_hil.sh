@@ -87,6 +87,7 @@ export BAG=${BAG:-$([ "$WANT_SLOSH" = 1 ] && echo slosh || echo base)_$(date +%Y
 export VTOL_SLOSH=$WANT_SLOSH
 export VTOL_TANK=${VTOL_TANK:-1}
 export VTOL_TANK_KG=${VTOL_TANK_KG:-0.502}    # water mass: 0.1 / 0.502 / 0.7 flown; plant AND controllers
+export VTOL_TANK_R=${VTOL_TANK_R:-}           # tank radius [m], empty = the plan's 41 mm (0.08 / 0.10 gated)
 export VTOL_TANK_DX=${VTOL_TANK_DX:-0}
 export VTOL_CG_DX=${VTOL_CG_DX:-0}
 export CASC_L1=${CASC_L1:-true}
@@ -101,7 +102,7 @@ if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
     base) unset CASC_NODE_PY ;;
   esac
 fi
-say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  l1_on=$CASC_L1  water=$VTOL_TANK_KG kg  tank_dx=$VTOL_TANK_DX  cg_dx=$VTOL_CG_DX"
+say "    cascade: $(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  l1_on=$CASC_L1  water=$VTOL_TANK_KG kg  tank_R=${VTOL_TANK_R:-0.0414} m  tank_dx=$VTOL_TANK_DX  cg_dx=$VTOL_CG_DX"
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"
@@ -124,6 +125,16 @@ fi
 # setsid puts it in its own session; we then wait for its own READY line.
 RESTART_LOG=${RESTART_LOG:-$BAG_DIR/restart_$(date +%H%M%S).log}
 WAIT_S=${WAIT_S:-1200}
+# ★ NO GPU, NO ISAAC. 2026-09-13 21:45: the NVIDIA driver had been swapped (595-open installed
+# 17:43, removed 17:47 via PackageKit) and nouveau had the GA102; Isaac's renderer and PhysX GPU
+# both fail at boot ("nvidia kernel module is not loaded"), the pane exits, and this launcher
+# then polled for a banner for 12 minutes across three attempts. Refuse in one second instead.
+if [ ! -e /dev/nvidia0 ]; then
+  echo "[slosh_hil] !! /dev/nvidia0 does not exist: the NVIDIA kernel module is not loaded, so Isaac"
+  echo "[slosh_hil]    cannot render or run PhysX on the GPU. Check 'lsmod | grep nvidia', the apt"
+  echo "[slosh_hil]    history (/var/log/apt/history.log) for a driver change, reinstall and reboot."
+  exit 1
+fi
 say "3/4 restarting the stack, detached (~4 min cold) -> $RESTART_LOG"
 setsid nohup timeout "$WAIT_S" bash "$ROOT/scripts/restart_hil.sh" \
   ${ARGS[@]+"${ARGS[@]}"} > "$RESTART_LOG" 2>&1 < /dev/null &
@@ -200,6 +211,16 @@ if [ "$WANT_SLOSH" = "1" ]; then
       exit 1
     fi
     say "    water: $WKG kg confirmed in Isaac's log"
+    # THE SHAPE: the same banner prints "R=<mm> mm" from the tank it built (VTOL_TANK_R
+    # travels inline on the Isaac line like the mass; a dropped forward flies the 41 mm tank
+    # under a campaign that believes it flew the 80 mm one)
+    RMM=$(echo "$PANE" | grep -o "R=[0-9]* mm" | tail -1 | grep -o "[0-9]*")
+    WANT_MM=$(awk -v r="${VTOL_TANK_R:-0.0414}" 'BEGIN{printf "%d", r*1000+0.5}')
+    if [ -z "$RMM" ] || [ "$RMM" != "$WANT_MM" ]; then
+      echo "[slosh_hil] !! asked for a ${WANT_MM} mm tank (VTOL_TANK_R=${VTOL_TANK_R:-unset}) but Isaac's banner says R=${RMM:-<none>} mm. Not READY."
+      exit 1
+    fi
+    say "    tank radius: $RMM mm confirmed in Isaac's log"
   fi
   # phase 3: asked for the free surface -> the banner must say so
   if [ "${VTOL_TANK:-1}" = "slosh" ]; then
@@ -267,7 +288,7 @@ esac
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

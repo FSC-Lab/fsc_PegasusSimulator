@@ -56,7 +56,7 @@ fi
 # check that it is still here.)
 if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   say "no '$SESSION' tmux session — cold-starting via start_vtol_smc_hil.sh"
-  CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" VTOL_TANK="${VTOL_TANK:-1}" VTOL_TANK_KG="${VTOL_TANK_KG:-0.502}" VTOL_TANK_DX="${VTOL_TANK_DX:-0}" VTOL_CG_DX="${VTOL_CG_DX:-0}" CASC_L1="${CASC_L1:-true}" \
+  CONTROLLERS="${CONTROLLERS:-geometric nmpc_full cascade}" VTOL_SLOSH="${VTOL_SLOSH:-0}" VTOL_TANK="${VTOL_TANK:-1}" VTOL_TANK_KG="${VTOL_TANK_KG:-0.502}" VTOL_TANK_R="${VTOL_TANK_R:-}" VTOL_TANK_DX="${VTOL_TANK_DX:-0}" VTOL_CG_DX="${VTOL_CG_DX:-0}" CASC_L1="${CASC_L1:-true}" \
   CASC_NODE_PY="${CASC_NODE_PY:-}" \
     bash "$ROOT/scripts/start_vtol_smc_hil.sh" --here "${CFG:-pieper_machine}"
   RC=$?
@@ -99,7 +99,7 @@ tmux send-keys -t "$SESSION:2-isaac" \
  "unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL; \
 export ROS_DOMAIN_ID=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp; \
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$ISAAC_ROOT/exts/isaacsim.ros2.bridge/humble/lib\"; \
-VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
+VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_R=${VTOL_TANK_R:-} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} PEGASUS_SLOSH_DEBUG=${PEGASUS_SLOSH_DEBUG:-} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
 # POLL, do not sleep a flat 100 s: Isaac usually prints its banner well before that and the
 # fixed wait was pure dead time on every single test.
 say "    waiting for Isaac to load (polling, <=140 s)"

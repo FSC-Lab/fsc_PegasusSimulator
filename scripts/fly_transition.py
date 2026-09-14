@@ -219,6 +219,16 @@ def main():
     guided = {"t0": time.time(), "rth": False, "stopped": False}
     if plan:
         print("  guidance plan: " + "; ".join(f"t+{tt:.0f}: {c}" for tt, c in plan))
+        # ★ THE CRUISE WINDOW MUST OUTLAST THE PLAN. --cruise-time defaults to 70 s, and when it
+        # expires before the guidance has stopped the aircraft this driver forces decel_now
+        # itself -- bag slosh_20260913_224823: a plan with rth at t+150 was cut off at t+55, in
+        # a 26 deg bank in the second fly-by turn (it survived; the flight was lost). A plan that
+        # ends in rth gets its own window: the last command's time plus 150 s for the leg home,
+        # the braking and the stop (the loop returns early the moment the rth stop is seen).
+        need = plan[-1][0] + 150.0
+        if a.cruise_time < need:
+            print(f"  cruise window {a.cruise_time:.0f} s is shorter than the plan: raised to {need:.0f} s")
+            a.cruise_time = need
     def cruise():
         n.send(tgt); n.set_ctrl(a.controller)
         d = n.telem()

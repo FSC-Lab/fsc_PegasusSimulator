@@ -171,6 +171,20 @@ def main():
                        f"a stale or differently-wired copy (the trim generator's copy left a "
                        f"1.245 m/s^2 residual once)")
 
+    # --- 4b. and so must the GROUND STATION's speed checks (stall 15.12 / 15.50, not 14.13) ---
+    gs = os.path.expanduser("~/ros2_ws/src/ros2_ground_station_gui/src/ROS_Node/trajectory_player.py")
+    if os.path.exists(gs):
+        src = open(gs).read()
+        hit = re.search(r"M_KG = 3\.449572 \+ WATER_KG", src) and re.search(
+            r'WATER_KG = float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\)', src)
+        print(f"  {'GS trajectory_player.py':28s} mass = 3.449572 + VTOL_TANK_KG   {'ok' if hit else 'MISMATCH'}")
+        if not hit:
+            bad.append("the ground station's speed checks do not carry the mass as 3.449572 + "
+                       "VTOL_TANK_KG (default 0.502): it would quote the baseline 14.13 m/s stall "
+                       "for an aircraft that stalls at 15.12 / 15.50")
+    else:
+        print(f"  GS not found at {gs}: skipped")
+
     # --- 5. every flown mode assembles to airframe + water, and vtol_nmpc has its trim ------
     vn = open(os.path.join(controller_dir(), "px4_vtol_direct_actuator", "vtol_nmpc.py")).read()
     for kg in slosh.TANK_MODES:
