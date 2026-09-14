@@ -3488,6 +3488,16 @@ the MATCHED kf only; the mismatch case is a flight question.
 
 #### 7.14.3 The whole-body WHOLE-BODY PLANNER — paper-faithful DIRECT commanding (2026-08-23)
 
+> **2026-09-14: the planner window now runs the C++ rclcpp node
+> `whole_body_trajectory_planner` from the `fsc_trajectory_planner` package**
+> (`~/Workspaces/fsc_autopilot_ws/src/fsc_trajectory_planner`; build it with
+> `colcon build --packages-select fsc_trajectory_planner`). Same topics,
+> services, states and operator flow as described below — only the process
+> behind them changed. It needs no Pegasus checkout and plans in ~3-4 ms.
+> `planner/whole_body_planner.py` no longer exists in the autopilot repo.
+> See §7.15.11 for the flight that validated it on this rig.
+
+
 In DIRECT the law now always receives the paper's FULL compatible reference
 set — system-CoM chain through snap, base heading, EE position+heading chains,
 consistent q_d — streamed as `fsc_autopilot_ros2_msgs/WholeBodyReference` on
@@ -3952,6 +3962,13 @@ L1 Augmented Disturbance Observer.md`**, Python reference
 parity-locked to 1e-8 by `WbL1ParityTest`.
 
 #### 7.15.1 Run sequence — copy-paste, per machine
+
+> **Since 2026-09-14 step 1 must also build `fsc_trajectory_planner`** (the
+> C++ whole-body planner the step-2 stack launches in its `planner` window):
+> `cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select
+> fsc_trajectory_planner fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF`.
+> Nothing else in this sequence changes.
+
 
 Identical to §7.14.1 except the two launcher names. Every trap in §7.14.1
 applies verbatim: never chain step 0's lines with a launcher, use bracketed
@@ -5030,6 +5047,57 @@ torque carries 13–19 mN·m of ripple in the same window — plus the asynchron
 `l1_noise_A.npz` was flown first at the driver's default 6 s holds. It completed
 the whole mission too, but **its settled numbers are not comparable** with the
 16 s baseline (§7.15.7's hold-length trap).
+
+
+#### 7.15.11 The C++ whole-body trajectory planner — full §7.15.1 flight, 2026-09-14
+
+The planner behind the `planner` window is no longer `whole_body_planner.py`
+importing this repo's `utils_planner`; it is the rclcpp node
+`whole_body_trajectory_planner` of the new, self-contained package
+`fsc_trajectory_planner` (`~/Workspaces/fsc_autopilot_ws/src/fsc_trajectory_planner`,
+see its CLAUDE.md). Same topics, services and states. Its maths is locked to
+this repo's Python by gtests (kinematics 1e-12, straight-line plan samples
+≤3.5e-9, flat B-spline 1e-9) and it plans in ~3-4 ms.
+
+**One full §7.15.1 mission on this rig, standard test via
+`wb_l1_tune_cycle.sh l1 cpp_planner fsc_lab_machine`** (L1 stack, `_sim`
+yaml, backend `bspline`, plant as configured on 2026-09-11 incl. the per-joint
+current-loop residual). The steps went through the drone-GS reference topic and
+the compatible-trajectory legs through the arm-GS `whole_body_planner/ee_target`
+path — the ground stations' own ROS interface, driven by the campaign driver.
+**Ten legs, ten PLANNED verdicts within 10-20 ms of the target, no refusal, no
+abort, no watchdog**; SAFETY revert, landing and disarm normal. Data:
+`trajectory_planner_cpp_20260914/l1_cpp_planner.npz`, score in
+`l1_cpp_planner_metrics.txt`, logs in `logs/`.
+
+| leg | peak CoM err | settled | max tilt |
+|---|---|---|---|
+| step x +0.5 / −0.5 m | 352 / 386 mm | 61 / 50 mm | 4.6 / 5.5° |
+| step y +0.5 / −0.5 m | 356 / 389 mm | 94 / 73 mm | 4.7 / 5.7° |
+| step yaw +30 / −30° | 166 / 70 mm | 45 / 40 mm | 4.3 / 2.3° |
+| **compatible trajectory, EE (down 6 cm, +8 cm y, +60° heading)** | **34 mm** | **11 mm** | 1.2° |
+| compatible trajectory, back | 15 mm | 5 mm | 0.8° |
+| whole-system move (base + arm at once) / back | 211 / 199 mm | 69 / 71 mm | 2.5 / 2.6° |
+
+`u1` 47.59 N soak mean (run E: 47.57 N — same injections), `w_hat_thrust` −10.65 N, `d_hat_z` −10.81 N, zero joint clamping, debug[56]
+(streamed reference fresh) = 1 throughout DIRECT at 100.0 Hz. The ordering of
+§7.15.5 holds — the compatible-trajectory legs are the best-tracked motions
+by an order of magnitude over the translations. The absolute numbers are NOT
+comparable with the 2026-09-06 run E table (the ARM-side plant moved after it:
+the count↔torque register path and the per-joint current-loop residual of
+§7.15.10 were not in run E), and no
+same-day Python-planner A/B was flown; the reference streams of the two
+planners are identical to 1e-9 by the gtests, so a flight A/B would measure
+run-to-run scatter, not the port.
+
+One capture warning, as with the Python planner: `arm is NOT at rest at
+capture: max |qdot| = 0.057 rad/s (> 0.05)` — the servo jitter of the
+current-loop residual, harmless.
+
+Operational note for cleanup on this machine: `stop_isaacsim_stack.sh` now
+`pkill -f`s `whole_body_trajectory_planner`, so — as the cycle script already
+warns for the controller names — never type that string on the command line
+that runs it; run the stop scripts from a script file.
 
 ### 7.16 AM-T650 WHOLE-BODY + L1 GROUND TEST — inert props, added 2026-09-12
 

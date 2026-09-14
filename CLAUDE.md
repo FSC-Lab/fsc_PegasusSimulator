@@ -1344,6 +1344,32 @@ ADDITIVE — no original file's behaviour changed:
   python3, run the file): defect 4.4e-8 m, hold handover 0.028 mm / ~1e-5 m/s, FD-consistency
   5e-11, IK round-trip 1e-14 rad, σ_nd ≥ 0.51 on the test transit, wrist-singular and
   out-of-range goals refused with operator-readable reasons.
+- **2026-09-14: the whole-body planner is now a C++ (rclcpp) node in its OWN
+  ROS 2 package, `fsc_trajectory_planner`** (`~/Workspaces/fsc_autopilot_ws/src/
+  fsc_trajectory_planner`, node `whole_body_trajectory_planner`, namespaced per
+  vehicle by the launch file's `uav_prefix`). It carries its OWN copies of the
+  whole-body model, IK, the straight-line Picard transition planner and the
+  flat B-spline planner — **it does not import this repo's `utils_planner`**,
+  so the `pegasus_root` / `FSC_PEGASUS_ROOT` coupling described in the next
+  bullet is gone from every stack script. Interface unchanged (same
+  `whole_body_planner/*` topics/services, same states), so the arm GS tab, the
+  Isaac `viz_path`/`viz_pose` drawing in 06 and `wb_l1_campaign_driver.py` work
+  as before. Plans in ~3-4 ms (was 45-260 ms). Parity against
+  `transition_planner.py` / `flat_bspline_planner.py` is locked by gtests with
+  fixtures generated from THIS repo's Python (`scripts/dump_python_fixtures.py`
+  there; `dump_flat_reference.py` here), which is now the only remaining
+  relation between the two: a change to `utils_planner`'s maths must be
+  mirrored there or the fixtures diverge. The vehicle model and the trajectory
+  backends sit behind registries (`vehicleFactories()`, `plannerFactories()`)
+  so a second airframe or a figure-8/circle shape is one factory each. Full
+  §7.15.1 sim flight with it: Command.md §7.15.11. The Python
+  `whole_body_planner.py` and its `planner/` directory were DELETED from the
+  autopilot repo the same day (its rig tests moved to the new package). This
+  repo's `utils_planner` stays: the 02/03 demos, comparison/plot tools,
+  `l1_observer.py`'s self-test and the C++ truth generators
+  (`generate_wb_truth.py`, `generate_wb_l1_truth.py`, `dump_flat_reference.py`)
+  import it, and no flight-stack process does. The bullet below describes
+  the Python node as it was.
 - **fsc_autopilot_ros2 (dev_CCM): the whole-body planner**
   (`.../single_aerial_manipulator_whole_body_direct_actuation/planner/
   whole_body_planner.py`, plain rclpy script, no build; own tmux WINDOW
