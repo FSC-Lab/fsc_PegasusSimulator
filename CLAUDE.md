@@ -22,6 +22,7 @@ row carries `ctrl=`. Health: `hil_health.sh` requires `/nmpc_cascade_control_ada
 the 6i window exists; `start_slosh_hil.sh` refuses READY on its banner / traceback / node / `M=` /
 `CG_X=` like the base cascade. **Switch between the two in HOVER only**: engage resets the schedule
 (`_v_cmd` 0, tilt 0) -- the same rule as any switch into a cascade.
+**COMMITS:** controller e137f5e, GS 4fed4b1, sim 60397ff (+ this line).
 **GATES:** `tests/test_cascade_node_boots.py` boots base / tank / adaptive as the launcher does and
 requires the ack on the OWN status topic + the OWN node name (PASS x3); `test_gs_trajectory_tab.py`
 "adaptive cascade" block; `test_gs_cascade_params.py` unchanged and passing. Not yet flown from the
