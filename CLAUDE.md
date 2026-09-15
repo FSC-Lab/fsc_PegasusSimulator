@@ -90,7 +90,33 @@ aircraft level). Caveats on the page: the absolute aircraft-level differences ar
 roll and 0.014 N.m of u_ad -- a flight sees them only against the HIL band (orbit roll sd 1.0-1.26
 across flights 9-11); the STESO's separating floor is a 200 Hz discretisation property; the STESO
 keeps the finite-time proof (Theorem 1). `ke_sweep.sh` takes `KE_NODE=nmpc_cascade_steso_node.py`.
-**NEXT:** one flight each of mdob and leso on R100_dx3 as `CASC_EST=mdob CTRL=cascade_adaptive`.
+**A SLOW POSITION SOURCE (2026-09-15, the user's GPS question; gate `--pos_hz H --vel_hz H --pv_lag S`
+= sample-and-hold of the controller's VIEW of position / velocity, attitude and rates untouched; sweeps
+`~/flight_bags/est_sweeps/posA_*` (position only) and `posB_*` (position + velocity), 2 seeds):**
+  * POSITION ALONE is benign to 5 Hz (orbit roll sd 0.14 -> 0.24 linear / 0.21 -> 0.29 steso, stop
+    within 1 m); at 2 Hz the guidance hunts on an 8 m-stale position (roll sd 1.1-1.2, stop 3-4 m
+    +-1.5, 1-2 fails) but flies. The observers/predictor never read position: unchanged.
+  * POSITION + VELOCITY (a GPS-only source): the loop itself needs velocity >= 5 Hz -- at 2 Hz even
+    `pwc` (no force observer) crashes (51 fails, tumble: the delay-compensated outer on a 0.5 s-old
+    velocity). The FORCE TWIN is the casualty: the linear twins at their parity bandwidth (99 / 66
+    rad/s, tuned for 200 Hz) turn velocity steps into phantom forces the EKF believes and the L1
+    cancels -- u_ad 0.45-0.55 N.m, 6-12 fails, stop 9-16 m at 20 Hz; leso orbit roll sd 2.9 at 10 Hz,
+    12 deg at 5 Hz. The STESO's slew bound (L_F 3) degrades gracefully (0.59 / 1.17 at 10 / 5 Hz)
+    but its cancellation is gone at 20 Hz already (bob back to the predictor-off 0.81 N). Predictor
+    OFF at 5-10 Hz: steso 0.55 / 0.77, pwc 0.49 / 0.99 -- the base loop tolerates it.
+  * RULE: with a GPS-class source the force channel must NOT be a differentiated velocity: source it
+    from the IMU's specific force (algebraic, 250 Hz; also removes the RTF term), or gate the
+    predictor off below ~50 Hz of velocity and tie the force twins' bandwidth to the source rate.
+    The moment observers (body rates) are untouched, so the estimator RANKING stands.
+  * WHAT PX4 GIVES TODAY (flight-11 bag): `vehicle_attitude/odometry/local_position` at 87 Hz on
+    DDS, but EKF2 is fed the MOCAP as external vision (`4b-ev`, `EKF2_EV_CTRL 11`, `EKF2_GPS_CTRL 0`):
+    a mocap-derived estimate ~35 ms late (0.55 m horizontal at 16 m/s), `vehicle_global_position`
+    NOT published (no GPS aiding -> no origin); raw `vehicle_gps_position` at 87 Hz (Pegasus GPS
+    default 250 Hz + random walk -- unrealistic); IMU `sensor_combined` 87 Hz. GPS+IMU dead
+    reckoning = `EV_BRIDGE=0`, drop the EV override (the airframe's own defaults are GPS+baro+vision
+    yaw), realistic GPS rate/noise in the sim config; then a `state_source: px4` path in the node.
+**NEXT:** the IMU-based force residual (algebraic, the fourth twin) and re-run case B; the PX4
+state-source path; one flight each of mdob and leso on R100_dx3 as `CASC_EST=mdob CTRL=cascade_adaptive`.
 
 # ★★★★ 2026-09-14 (night): "ADAPTIVE NMPC + GEO" IS A SEPARATE CONTROLLER IN THE GROUND STATION.
 **WHAT IT IS.** The STESO + slosh-predictor cascade (`nmpc_cascade_steso_node.py`, the evening block
