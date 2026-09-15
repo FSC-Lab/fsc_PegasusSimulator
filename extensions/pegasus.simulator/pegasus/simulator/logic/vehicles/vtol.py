@@ -282,6 +282,14 @@ def _gps_config_from_env():
     if vsig:
         cfg["gps_vxy_noise_density"] = float(vsig) * math.sqrt(hz)
         cfg["gps_vz_noise_density"] = 2.0 * float(vsig) * math.sqrt(hz)
+    # VTOL_GPS_WALK: the slow position wander's random-walk magnitude [(m/s)/sqrt(Hz)] (Pegasus's 2.0
+    # is Gazebo's; at 10 Hz it is 6 cm per sample and EKF2's GPS drift check rejects the receiver --
+    # 2026-09-15). A real receiver: per-sample jitter of centimetres (VTOL_GPS_SIGMA 0.05) and a
+    # wander of tens of centimetres over a minute (VTOL_GPS_WALK 0.05, tau 60 s).
+    walk = os.environ.get("VTOL_GPS_WALK")
+    if walk:
+        cfg["gps_xy_random_walk"] = float(walk)
+        cfg["gps_z_random_walk"] = 2.0 * float(walk)
     return cfg
 
 @dataclass
