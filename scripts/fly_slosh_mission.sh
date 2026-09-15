@@ -158,8 +158,14 @@ say "closing the bag"
 tmux send-keys -t "$SESSION:10-bag" C-c 2>/dev/null
 for _ in $(seq 1 10); do sleep 1; pgrep -f "ros2 bag record" >/dev/null || break; done
 
-BAG=$(ls -dt "$BAG_DIR"/*/ 2>/dev/null | head -1)
-if [ -z "$BAG" ]; then say "!! no bag found in $BAG_DIR -- the flight is unscored"; exit 1; fi
+# THIS launch's bag, from the launcher's provenance line (2026-09-15: a launch whose recorder never
+# started scored its landing against the previous flight's bag, the newest one on disk)
+BAG=$(grep -o 'bag=[^ ]*' "$HOME/flight_bags/LAUNCH_LOG.txt" 2>/dev/null | tail -1 | cut -d= -f2)
+if [ -z "$BAG" ] || [ ! -d "$BAG" ] || ! ls "$BAG"/*.db3 >/dev/null 2>&1; then
+  say "!! the bag this launch announced (${BAG:-<none>}) was never recorded -- the flight is UNSCORED; log: $OUT"
+  echo -e "${NAME}\tmodel=$MODEL NO BAG\tUNSCORED\t\t\t\t\t\t\t\t\t${LERR:-}\t-" | tee -a "$RES"
+  exit 3
+fi
 say "scoring $BAG"
 LERR=$(grep -oE "LANDING ERROR +[0-9.]+" "$OUT" 2>/dev/null | tail -1 | tr -dc '0-9.')
 echo

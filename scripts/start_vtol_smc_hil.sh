@@ -484,7 +484,7 @@ if [ \"$EV_BRIDGE\" = 1 ] && [ \"${EKF_SOURCE:-ev}\" = ev ]; then
   tmux send-keys -t \"$SESSION:1-px4\" 'ekf2 start' Enter; sleep 0.5
   echo '[8-relax] EV on. Verify: /$PX4_UXRCE_DDS_NS/fmu/out/vehicle_attitude yaw should track mocap.'
 elif [ \"$EV_BRIDGE\" = 1 ]; then
-  echo '[8-relax] EKF_SOURCE=$EKF_SOURCE: EKF2 left on the airframe defaults (GPS position/velocity, baro, vision YAW from the mocap bridge) -- the INS the state_source=px4 cascade flies on'
+  echo '[8-relax] EKF_SOURCE=${EKF_SOURCE:-ev}: EKF2 left on the airframe defaults (GPS position/velocity, baro, vision YAW from the mocap bridge) -- the INS the state_source=px4 cascade flies on'
 fi
 echo '[8-relax] arming checks relaxed. (commander arm -f here if a controller wont arm)'
 exec bash

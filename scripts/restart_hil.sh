@@ -267,8 +267,12 @@ tmux new-window -d -t "$SESSION:" -n 10-bag; sleep 1
 tmux send-keys -t "$SESSION:10-bag" \
  "source $ROOT/scripts/rosenv.sh; mkdir -p $BAG_DIR; cd $BAG_DIR; ros2 bag record -a -o $BAGNAME" Enter
 sleep 4
-if tmux capture-pane -p -S -20 -t "$SESSION:10-bag" 2>/dev/null | grep -qi 'error\|Failed'; then
-  echo "    !! bag recorder did not start -- the flight will NOT be recorded"
+# ★ the recorder must be RECORDING, not merely launched: 2026-09-15 a launcher abort upstream left
+# no 10-bag window, READY was declared, the flight landed, and there was no bag to score it with
+# (the results row then pointed at the PREVIOUS flight's bag). ros2 bag creates the directory at
+# start; its absence after 4 s is a dead recorder.
+if tmux capture-pane -p -S -20 -t "$SESSION:10-bag" 2>/dev/null | grep -qi 'error\|Failed' || [ ! -d "$BAG_DIR/$BAGNAME" ]; then
+  echo "    !! bag recorder did not start ($BAG_DIR/$BAGNAME absent) -- the flight would NOT be recorded"; exit 1
 else
   echo "    recording to $BAG_DIR/$BAGNAME"
 fi

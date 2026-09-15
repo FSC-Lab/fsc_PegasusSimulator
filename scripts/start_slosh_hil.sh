@@ -401,6 +401,19 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
   say "    state source: px4 (EKF2 vehicle_odometry at $OHZ Hz, EKF_SOURCE=${EKF_SOURCE:-ev})"
 fi
 
+# THE BAG MUST EXIST (2026-09-15): the cold-start launcher runs under `set -u` and an unbound variable
+# aborts it half-way -- Isaac, PX4 and the controllers were up (started before the abort), every
+# check above passed, the flight landed, and there was NO bag: the 10-bag window is started near the
+# end of that script. ros2 bag creates its directory at start; the results row falls back to the
+# NEWEST bag, i.e. the previous flight's. Refuse READY without it, and require the recorder window.
+if ! tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 10-bag; then
+  echo "[slosh_hil] !! no 10-bag recorder window (the launcher aborted before starting it?). Not READY."; exit 1
+fi
+if [ ! -d "$BAG_DIR/$BAG" ]; then
+  echo "[slosh_hil] !! the bag directory $BAG_DIR/$BAG does not exist -- the recorder is not recording. Not READY."; exit 1
+fi
+say "    recording: $BAG_DIR/$BAG"
+
 # provenance, next to the bags, because the tmux pane is gone by the time anyone asks
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
