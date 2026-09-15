@@ -172,6 +172,29 @@ bias, no scale, no vibration, no timestamp offset) -- the real `sensor_combined`
 EKF's bF can carry a slow one) and its own delay in the buffer before any of this is flown; 2 seeds per
 cell; the outer NMPC / guidance still read the held velocity (the 5 Hz floor) -- the dead reckoning is
 only the force twin's model input, a `state_source: px4` (EKF2's INS) is the real answer for the loop.
+**HOW IT DEGRADES (imu-mdob, 2 seeds each; `imuB_{full,50hz,20hz,10hz,5hz,2hz}`, `imuDR_*`, `*_na05`):**
+| pos+vel rate | y-bob orbit | x-bob orbit | orbit roll sd | u_ad | stop m | fails | pred corr / err +0.25 s (DR) |
+|---|---|---|---|---|---|---|---|
+| 200 Hz | 0.015 | 0.038 | 0.147 | 0.006 | 6.1 | 0 | 0.81 / 0.080 |
+| 50 Hz | 0.018 | 0.048 | 0.151 | 0.017 | 5.7 | 0 | 0.82 / 0.081 |
+| 20 Hz | 0.030 | 0.036 | 0.185 | 0.049 | 5.0 | 0 | 0.80 / 0.084 (0.81 / 0.080) |
+| 10 Hz | 0.022 | 0.143 | 0.36 | 0.10 | 3.9 | 0.5 | 0.76 / 0.102 (0.81 / 0.079) |
+| 5 Hz | 0.021 | 0.30 | 1.00 | 0.20 | 4.4 | 0.5 | 0.48 / 0.274 (0.79 / 0.088) |
+| 2 Hz | CRASH (51 fails, tumble -- the outer on a 0.5 s-old velocity; pwc and every velocity twin crash identically) |
+The estimator's own number (the lateral bob it cancels) is FLAT from 200 to 5 Hz (0.015-0.030 N); every
+other column is the LOOP degrading on a held velocity, and every one of them equals the pwc / predictor-off
+value at the same rate (u_ad 0.10 / 0.20, roll sd 0.49 / 0.99 at 10 / 5 Hz). Knee at 10 Hz (roll sd
+x2.4, x-bob x4), cliff at 2 Hz. The velocity twin (mdob) for comparison: cancellation gone at 20 Hz
+already (y-bob 0.67 = uncancelled, u_ad 0.55, 12 fails, stop 8.6), 0.74 / u_ad 0.83 / stop 16 m at
+10 Hz, roll sd 9 deg at 5 Hz. Without DR the IMU reading's raw corr falls 0.84 -> 0.79 -> 0.51 -> 0.28
+-> 0.14 (the held-velocity sawtooth in the model force) and the EKF absorbs it down to 10 Hz (pred corr
+0.80 / 0.76) but not at 5 Hz (0.48, err 0.274); with DR the prediction is flat (0.79-0.82 / 0.079-0.088
+at every rate). **Accelerometer noise** (imu-mdob; 0 / 0.02 = the sim IMU / 0.05 m/s^2 per sample): raw
+corr 0.88 / 0.84 / 0.71 at 200 Hz and the same 0.85 -> 0.73 at 10 and 5 Hz with DR; prediction err 0.080
+-> 0.090 (-> 0.097 at 5 Hz); the aircraft-level columns do not move (y-bob 0.018-0.024, roll sd, u_ad,
+stop identical) -- 2.5x the sim's noise, integrated between 5 Hz fixes, costs 0.01 N of prediction and
+nothing the aircraft feels. The design trade has moved from "which observer" to "what velocity does the
+OUTER get": the force channel is rate-free, the loop needs >= 5 Hz and is clean only from ~20 Hz up.
 
 # ★★★★ 2026-09-14 (night): "ADAPTIVE NMPC + GEO" IS A SEPARATE CONTROLLER IN THE GROUND STATION.
 **WHAT IT IS.** The STESO + slosh-predictor cascade (`nmpc_cascade_steso_node.py`, the evening block
