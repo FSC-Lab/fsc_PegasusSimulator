@@ -19,7 +19,7 @@ EST_ROOT=${EST_DIR:-$HOME/flight_bags/est_sweeps}
 D=$EST_ROOT/$TAG; mkdir -p "$D"
 KINDS=${KINDS:-"steso leso mdob mdob22"}; PREDS=${PREDS:-"off on"}; JOBS=${JOBS:-12}
 cd /home/pieper/envs/fsc_autopilot_ros2-master
-if ! git diff --quiet -- px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_steso_node.py px4_vtol_direct_actuator/px4_vtol_direct_actuator/so3_steso.py; then
+if ! git diff --quiet -- px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_steso_node.py px4_vtol_direct_actuator/px4_vtol_direct_actuator/so3_steso.py px4_vtol_direct_actuator/px4_vtol_direct_actuator/slosh_predictor.py; then
   echo "!! the controller tree is DIRTY (an audit agent once wrote into it) -- refusing to sweep on it"; git status --short; exit 1
 fi
 N=px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_steso_node.py
@@ -35,10 +35,12 @@ esac
 git -C "$ROOT" rev-parse --short HEAD > "$D/sim_commit"; git rev-parse --short HEAD > "$D/ctrl_commit"
 echo "$CASE kinds=[$KINDS] preds=[$PREDS] seeds $LO-$HI extra=[$*] tank_kg=$VTOL_TANK_KG R=${VTOL_TANK_R:-} dx=${VTOL_TANK_DX:-}" > "$D/config"
 run_one() {  # kind pred seed
-  local kind=$1 pred=$2 sd=$3 est=$1 extra=""; shift 3          # the rest of "$@" = the extra harness args
+  local kind=$1 pred=$2 sd=$3 est=$1 extra="" node=$N; shift 3   # the rest of "$@" = the extra harness args
   [ "$kind" = mdob22 ] && { est=mdob; extra="--mdob_k 22"; }
+  # imu-<moment kind>: the IMU-force-residual copy (nmpc_cascade_imu_node) with that moment observer
+  case "$kind" in imu-*) est=${kind#imu-}; node=px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_imu_node.py ;; esac
   local name="${kind}_p${pred}_s${sd}"
-  timeout 1800 $PY $N --test "$@" $extra --est "$est" --slosh_pred "$pred" $FAITHFUL $MISSION ${GUIDE:+--guide "$GUIDE"} --seed "$sd" \
+  timeout 1800 $PY $node --test "$@" $extra --est "$est" --slosh_pred "$pred" $FAITHFUL $MISSION ${GUIDE:+--guide "$GUIDE"} --seed "$sd" \
       --log "$D/$name.csv" > "$D/$name.txt" 2>&1
   echo "  done $name: $(grep -o 'solve fails [0-9/]*' "$D/$name.txt" | tail -1)"
 }

@@ -117,6 +117,61 @@ keeps the finite-time proof (Theorem 1). `ke_sweep.sh` takes `KE_NODE=nmpc_casca
     yaw), realistic GPS rate/noise in the sim config; then a `state_source: px4` path in the node.
 **NEXT:** the IMU-based force residual (algebraic, the fourth twin) and re-run case B; the PX4
 state-source path; one flight each of mdob and leso on R100_dx3 as `CASC_EST=mdob CTRL=cascade_adaptive`.
+**THE IMU-BASED FORCE TWIN (2026-09-15 evening; controller 7a860d2 + 79c5abe, sim this commit) -- A SEPARATE
+COPY, NOT A FOURTH KIND:** `imu_force.ImuForceResidual` (F_hat_b = m a_b - F_model_b, both without
+gravity, one low-pass at wc 66 rad/s = the other twins' 15 ms parity lag) inside
+`nmpc_cascade_imu_node.py` = `L1Steso` with ONLY the force branch replaced (`L1Imu`: the moment observer
+stays `--est steso|leso|mdob`, the L1 law, delay buffer, actuator-lag model, EKF and cancellation are
+inherited; the predictor's tank input is the low-passed accelerometer instead of model force + bob
+reaction). The audited variant is byte-for-byte untouched -- that was the point: if the reading is
+better, the new code is what did it. Gate seam: `base.IMU_ACCEL` = the plant's specific force in its
+TRUE body frame incl. the bob's reaction, one tick old, + `--noise_acc` (0.02 m/s^2 = the sim IMU's
+0.004 m/s^2/sqrt(Hz) at 250 Hz); the ROS accelerometer (`sensor_combined`, FRD->FLU) is NOT wired and
+the node refuses to fly without `--test`. Sweep it with `KINDS="imu-steso imu-leso imu-mdob"`
+(`est_sweep.sh` maps `imu-<kind>` to the copy); `scripts/est_merge.sh <out> <tags..>` prints several
+sweeps as one table (`~/flight_bags/est_sweeps/all_{full,10hz,5hz}`).
+**THE 5-10 Hz RANKING (position AND velocity held; the user's GPS-class case), offset 100 mm tank,
+turning mission, 2 seeds; the LATERAL bob (the one with the arm = what the cancellation is for) in the
+orbit, wall hits, orbit roll sd, u_ad, RTH stop:**
+| rate | channel + moment obs | y-bob orbit [N] | hits | roll sd | u_ad | stop m | fails |
+|---|---|---|---|---|---|---|---|
+| 200 Hz | velocity twin + EKF (steso / leso / mdob) | 0.018 / 0.015 / 0.017 | 0 | 0.21 / 0.14 / 0.14 | 0.02 / 0.007 / 0.006 | 5.7-5.8 | 0.3-1 |
+| 200 Hz | IMU twin + EKF (imu-steso / -leso / -mdob) | 0.023 / 0.013 / 0.015 | 0 | 0.19 / 0.15 / 0.15 | 0.02 / 0.007 / 0.006 | 5.7-6.1 | 0-0.5 |
+| 10 Hz | predictor OFF (steso / pwc) | 0.63 / 0.62 | 228 / 196 | 0.55 / 0.49 | 0.11 | 4.4 / 4.8 | 1.5 / 0.5 |
+| 10 Hz | velocity twin + EKF steso | 0.66 | 296 | 0.59 | 0.12 | 4.7 | 0 |
+| 10 Hz | velocity twin + EKF leso / mdob / mdob22 | 0.71 / 0.74 / 0.73 | 180-230 | 2.9 / 0.34 / 0.47 | **0.83-1.04** | **13 / 16 / 10** | 7 / 3.5 / 1.5 |
+| 10 Hz | **IMU twin + EKF** imu-steso / -leso / -mdob | **0.026 / 0.020 / 0.022** | 1.5 / 0 / 0 | 0.32 / 0.35 / 0.36 | 0.10 | 4.4 / 3.9 / 3.9 | 0.5 |
+| 5 Hz | predictor OFF (steso / pwc) | 0.58 / 0.58 | 161 / 146 | 0.77 / 0.99 | 0.21 | 4.3 / 4.4 | 0.5 / 1 |
+| 5 Hz | velocity twin + EKF steso | 0.53 | 49 | 1.17 | 0.22 | 3.8 | 1 |
+| 5 Hz | velocity twin + EKF leso / mdob / mdob22 | 0.29 / 0.42 / 0.38 | 47-136 | **12 / 9 / 10.7 deg** | 0.84-1.0 | 12 / 5 / 5.8 | 6 / 4.5 / 3.5 |
+| 5 Hz | **IMU twin + EKF** imu-steso / -leso / -mdob | **0.028 / 0.019 / 0.021** | 4 / 3 / 4.5 | 1.33 / 1.0 / 1.0 | 0.20 | 4.3 / 5.5 / 4.5 | 0.5 / 0 / 0.5 |
+**READING.** (1) The IMU twin is the ONLY force channel whose cancellation survives a slow source: the
+lateral bob stays at 0.02-0.03 N at 10 AND 5 Hz (200 Hz: 0.013-0.023; uncancelled 0.6-0.7), no phantom
+forces into the L1 (u_ad = the predictor-off value at every rate, where the linear velocity twins push
+0.8-1.0 N.m, stop 10-16 m out and fail 3-7 solves). The |F| the old table quotes (0.14 / 0.29 N at 10 /
+5 Hz vs 0.04) is the FORE-AFT bob (no arm, outside the cancellation by construction) excited by the outer
+hunting on a held velocity; likewise the 1.0 deg orbit roll sd at 5 Hz is the loop (pwc 0.99), not the
+estimator -- the base loop's own floor. (2) Moment observer with the IMU twin: **mdob ~ leso > steso**
+(imu-mdob the best predictor at every rate: corr 0.82 / 0.76 / 0.49, err at +0.25 s 0.080 / 0.102 /
+0.274; imu-steso 0.72 / 0.66 / 0.45 and the wall hits at 10 Hz) -- the full-rate ranking stands, so the
+recommendation is now **mdob K11 + EKF on the IMU force channel** (`imu-mdob`). (3) At 200 Hz with the
+sim's accelerometer noise the IMU twin is at aircraft-level parity with the velocity twins although its
+RAW reading is noisier (corr 0.85 vs 0.96): the EKF's bob state absorbs white noise above 1.14 Hz.
+(4) **"Algebraic = rate-free" was half right:** the raw reading's corr fell 0.85 -> 0.27 -> 0.14 at 10 /
+5 Hz, and the error is a 0.45 / 0.95 N sawtooth at EXACTLY the hold rate (98-99% of its power above
+3 Hz): the aero MODEL force uses the held velocity, and a 0.1 s-old velocity in a 16 m/s turn is ~0.9 deg
+of sideslip = ~0.9 N of side force. The EKF rejected most of it (which is why the aircraft-level numbers
+held), and `--imu_dr 1` closes it outright: the model's velocity dead-reckoned between samples with the
+same accelerometer (v += (R a_b + g) dt, reset on each new sample) puts the reading at its 200 Hz floor at
+both rates -- raw corr 0.84-0.86, pred corr 0.79-0.82, error 0.053 N (`imuDR_*` sweeps). Default off so the
+`imuB_*` rows reproduce; ON is the design for a GPS-class source (an INS in one line). Aircraft-level it
+changes nothing at 10 / 5 Hz because the residual floor there is the outer loop's held velocity, not the
+estimator.
+**WHAT THIS DOES NOT SAY:** the accelerometer here is the plant's true specific force + white noise (no
+bias, no scale, no vibration, no timestamp offset) -- the real `sensor_combined` needs a bias state (the
+EKF's bF can carry a slow one) and its own delay in the buffer before any of this is flown; 2 seeds per
+cell; the outer NMPC / guidance still read the held velocity (the 5 Hz floor) -- the dead reckoning is
+only the force twin's model input, a `state_source: px4` (EKF2's INS) is the real answer for the loop.
 
 # ★★★★ 2026-09-14 (night): "ADAPTIVE NMPC + GEO" IS A SEPARATE CONTROLLER IN THE GROUND STATION.
 **WHAT IT IS.** The STESO + slosh-predictor cascade (`nmpc_cascade_steso_node.py`, the evening block

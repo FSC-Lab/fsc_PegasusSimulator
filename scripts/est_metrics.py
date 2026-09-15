@@ -103,7 +103,7 @@ def ms(vals):
 
 def main():
     d = sys.argv[1]; runs = load_dir(d)
-    order = ["steso", "leso", "mdob", "mdob22", "pwc"]
+    order = ["steso", "leso", "mdob", "mdob22", "pwc", "imu-steso", "imu-leso", "imu-mdob"]
     keys = sorted(runs, key=lambda k: (order.index(k[0]) if k[0] in order else 9, k[1]))
     cfg = open(os.path.join(d, "config")).read().strip() if os.path.exists(os.path.join(d, "config")) else ""
     print(f"sweep {d}\n  {cfg}\n  controller {open(os.path.join(d, 'ctrl_commit')).read().strip() if os.path.exists(os.path.join(d, 'ctrl_commit')) else '?'}")
