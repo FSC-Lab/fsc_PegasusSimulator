@@ -484,7 +484,15 @@ if [ \"$EV_BRIDGE\" = 1 ] && [ \"${EKF_SOURCE:-ev}\" = ev ]; then
   tmux send-keys -t \"$SESSION:1-px4\" 'ekf2 start' Enter; sleep 0.5
   echo '[8-relax] EV on. Verify: /$PX4_UXRCE_DDS_NS/fmu/out/vehicle_attitude yaw should track mocap.'
 elif [ \"$EV_BRIDGE\" = 1 ]; then
-  echo '[8-relax] EKF_SOURCE=${EKF_SOURCE:-ev}: EKF2 left on the airframe defaults (GPS position/velocity, baro, vision YAW from the mocap bridge) -- the INS the state_source=px4 cascade flies on'
+  # EKF_SOURCE=gps: GPS position/velocity + baro, vision YAW only from the mocap bridge. Set EXPLICITLY
+  # (PX4 SITL persists parameters in build/.../parameters.bson, so a previous run's EV override
+  # would otherwise survive the restart -- it did, 2026-09-15 19:45), then ekf2 restart.
+  echo '[8-relax] EKF_SOURCE=${EKF_SOURCE:-ev}: EKF2 on GPS position/velocity + baro, vision yaw from the bridge -- the INS the state_source=px4 cascade flies on'
+  for p in 'EKF2_GPS_CTRL 7' 'EKF2_EV_CTRL 8' 'EKF2_HGT_REF 1' 'EKF2_BARO_CTRL 1' 'EKF2_EV_DELAY 50'; do
+    tmux send-keys -t \"$SESSION:1-px4\" \"param set \$p\" Enter; sleep 0.3
+  done
+  tmux send-keys -t \"$SESSION:1-px4\" 'ekf2 stop'  Enter; sleep 0.8
+  tmux send-keys -t \"$SESSION:1-px4\" 'ekf2 start' Enter; sleep 0.5
 fi
 echo '[8-relax] arming checks relaxed. (commander arm -f here if a controller wont arm)'
 exec bash
