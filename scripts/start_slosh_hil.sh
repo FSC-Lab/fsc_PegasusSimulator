@@ -353,6 +353,19 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
   if [ -z "$ACG" ] || ! awk -v a="$ACG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
     echo "[slosh_hil] !! the ADAPTIVE cascade models CG_X=${ACG:-<none>} but the tank puts it at $WANT_CG. Not READY."; exit 1
   fi
+  # the IMU-force-twin copy (ADAPTIVE_NODE_PY=.../nmpc_cascade_imu_node.py, 2026-09-15): its own banner
+  # must precede the variant's, and the accelerometer subscription line must have been logged --
+  # without it the node flies with NO force channel and no cancellation, silently
+  if [ "$(basename "${ADAPTIVE_NODE_PY:-x}")" = nmpc_cascade_imu_node.py ]; then
+    IBANNER=$(echo "$APANE" | grep -o "\[cascade+imu\] force residual.*" | tail -1 | cut -c1-200)
+    if [ -z "$IBANNER" ]; then
+      echo "[slosh_hil] !! ADAPTIVE_NODE_PY names the IMU node but its [cascade+imu] banner never appeared. Not READY."; exit 1
+    fi
+    if ! echo "$APANE" | grep -q "\[cascade+imu\] accelerometer: /"; then
+      echo "[slosh_hil] !! the IMU node never attached its sensor_combined subscription. Not READY."; exit 1
+    fi
+    say "    $IBANNER"
+  fi
   say "    adaptive cascade: estimator=$AEST, M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
 fi
 

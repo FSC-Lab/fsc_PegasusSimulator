@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The cascade node must CONSTRUCT and STAY ALIVE on the ROS path, and answer its command topic.
 
-    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|both]
+    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|both]
 
 The offline gate (`--test`) uses the class defaults and never runs the constructor's
 parameter/subscription code, so a bug there is invisible to every gate that ran before flight
@@ -29,8 +29,11 @@ PKG = os.path.join(controller_dir(), "px4_vtol_direct_actuator")
 # controller_id cascade_adaptive -> node /nmpc_cascade_control_adaptive, guidance on
 # /uav_0/cascade_adaptive/{cmd,status}. It is what the launchers' 6i-adaptive window and the
 # ground station's "Adaptive NMPC + Geo" run; the check is the same protocol on the OWN topics.
+# "imu" = the IMU-force-twin copy (2026-09-15) booted the same way; it must ALSO subscribe to
+# PX4's sensor_combined and log the first sample converted FRD -> FLU (the wiring the gate cannot see).
 NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tank_node.py", "cascade"),
-         "adaptive": ("nmpc_cascade_steso_node.py", "cascade_adaptive")}
+         "adaptive": ("nmpc_cascade_steso_node.py", "cascade_adaptive"),
+         "imu": ("nmpc_cascade_imu_node.py", "cascade_adaptive")}
 NS = "uav_0"
 
 
@@ -71,6 +74,19 @@ def run(node, wait_s=60.0):
             txt = open(log, errors="replace").read()
             if f"{cid}/cmd 'wp 100 0' ignored: no state yet" in txt or "GUIDE 'wp 100 0'" in txt:
                 acked = True; break
+        imu_ok = True
+        if node == "imu":
+            # one accelerometer message (FRD: 0.5 forward, 0.2 right, -9.81 down) must be logged as its
+            # FLU conversion (+0.50, -0.20, +9.81) -- the subscription, the QoS and the frame in one line
+            pubi = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/fmu/out/sensor_combined "
+                    f"px4_msgs/msg/SensorCombined \"{{accelerometer_m_s2: [0.5, 0.2, -9.81]}}\"")
+            subprocess.run(["bash", "-c", pubi], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            t2 = time.time(); imu_ok = False
+            while time.time() - t2 < 10.0:
+                time.sleep(0.5)
+                txt = open(log, errors="replace").read()
+                if "first accelerometer sample: FLU (+0.50, -0.20, +9.81)" in txt:
+                    imu_ok = True; break
         alive = proc.poll() is None
         nl = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 node list"],
                             capture_output=True, text=True).stdout.split()
@@ -93,7 +109,12 @@ def run(node, wait_s=60.0):
         # Guidance row displays (before engage the answer is "ignored: no state yet")
         if "ack" not in status_out or "wp 100 0" not in status_out.replace("''", "'"):
             return False, f"{node}: no ack on /{NS}/{cid}/status (got {status_out.strip()[:120]!r})"
-        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive"
+        if node == "imu":
+            if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
+                return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
+            if not imu_ok:
+                return False, f"{node}: a SensorCombined message on /{NS}/fmu/out/sensor_combined was not logged as FLU (+0.50, -0.20, +9.81) within 10 s"
+        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "")
 
 
 def main():
