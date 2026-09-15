@@ -2,6 +2,75 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-15 (evening): THE ESTIMATORS FLOWN (mdob, leso, and the IMU force channel), THE
+# ACCELEROMETER WIRED, `state_source: px4` BUILT. Controller 5b4601c / 7f416a3 / (+IMU_FCG), sim
+# a07b01e / 350026d / 9bc37e0 / this commit. Flights in `~/flight_bags/slosh` (rows R100_dx3_mdob_a1_165700,
+# R100_dx3_leso_a1_171722, R100_dx3_imumdob_a1_174329; bags ..165608 / ..171631 / ..174239).
+**THREE FLIGHTS, THREE LANDINGS AT 0.00 m**, 100 mm tank 0.3 m ahead, the turning mission, `CTRL=cascade_adaptive
+CASC_EST=<kind>` (the IMU channel via `ADAPTIVE_NODE_PY=.../nmpc_cascade_imu_node.py`), predictor + cancel on, 0 solve
+failures, z 29.7-30.3, scored with `ana_guided.py` + `ana_slosh_est.py` + the status feed, against flights 10/11 (STESO):
+| flight | force / moment | RTF | orbit rho / roll sd | lat. bob legs/orbit [N] | fore-aft bob | raw lateral reading rms | spurious wall impacts predicted | fore-aft pred corr / err |
+|---|---|---|---|---|---|---|---|---|
+| f10 | velocity / steso | 0.84 | 99.9 +- 0.40 / 1.26 | 0.07 / 0.08 | 0.10 / 0.16 | 1.3-1.7 N (the clock artefact) | 0 | 0.85 / 0.05-0.08 |
+| f11 | velocity / steso | 0.87 | 100.0 +- 0.31 / 1.03 | 0.07 / 0.05 | 0.49 / 0.43 | 1.2-1.4 | 0 | 0.21-0.95 / 0.15-0.53 |
+| mdob | velocity / mdob K11 | **0.76** (a gate run overlapped it; orbit 51 s, not comparable) | 99.7 +- 0.87 / -- | 0.05 / 0.06 | 0.10 / 0.12 | **2.4-3.0** | **12** (bob est. to 63 mm) | 0.95 / 0.05-0.06 |
+| leso | velocity / leso | 0.84 | 99.9 +- 0.39 / 1.31 | 0.09 / 0.05 | 0.23 / 0.33 | **2.1-2.8** | **13** (to 75 mm) | 0.99 / 0.09 |
+| imu-mdob | **IMU / mdob K11** | 0.83 | 99.9 +- 0.40 / 1.14 | 0.04 / 0.06 | 0.25 / 0.55 | **0.10-0.11** | **0** (<= 22 mm) | 0.36-0.61 / 0.28-0.56 |
+**READING.** (1) At the aircraft level the three estimators fly the mission identically (orbit 99.9 +- 0.4, roll sd
+1.0-1.3 = the campaign band, lateral bob cancelled to 0.04-0.09 N, stop 6-19 m on the wall-clock ramp): the gate's
+0.07 deg of orbit roll is invisible in HIL, as the page said. (2) **The linear velocity twins expose a HIL-only
+defect the STESO hid:** their full-bandwidth reading carries the clock artefact -(1-RTF) m a at 2-3 N in the orbit
+(the STESO twin's slew bound L_F 3 = 12 N/s rate-limits it to ~1.5 N), the RTF wanders 0.80-0.89 WITHIN a flight so
+the slow bias state cannot follow, the EKF pushes its bob estimate THROUGH the 50 mm wall (63-75 mm) and predicts
+5-16 N impacts that do not exist: 12-13 clipped 1 N.m yaw pulses per flight (0.5% of the status samples). No
+measurable harm; a defect nonetheless, and absent on hardware (RTF 1) -- the gate at a CONSTANT RTF 0.86 never
+showed it (bF absorbed a constant artefact). (3) **The IMU channel flew and removed it:** raw lateral reading 0.10 N
+(25x less), nothing for the bias state (bF_y +0.01 +- 0.04 N), zero wall spikes, the sensor tracks the plant's own
+sim-time acceleration to 0.03-0.06 m/s^2 (x/y/z) -- `sensor_combined` at 87 Hz on DDS, FLU hover reads (+0.07,
+-0.01, +9.83). **OPEN: its FORE-AFT prediction is worse in flight** (corr 0.36-0.61, err 0.28-0.56 vs the velocity
+twins' 0.9-0.99 / 0.05-0.09; the fore-aft bob has no arm, so the cancellation does not use it). Not the predictor's
+input: `--imu_fcg model|accel` (the pendulum driven by the parent's model force + estimated reaction instead of the
+low-passed accelerometer) is within 0.05 of corr on the gate at the flight's noise (0.06 m/s^2: 0.80 vs 0.74 at RTF
+1, 0.89 vs 0.84 at RTF 0.83, sweeps `imuB_{full,rtf}_na06_{accel,model}`), and the gate at a constant RTF 0.83
+predicts fore-aft at 0.89. HIL-specific and unresolved; the lateral channel is clean.
+**PIECE B -- THE ACCELEROMETER WIRED (controller 5b4601c, sim a07b01e).** `nmpc_cascade_imu_node.py` subscribes to
+`/<ns>/fmu/out/sensor_combined` by wrapping `rclpy.spin` (the node class is local to `base.run_ros`; the subscription
+is attached to the constructed node before it spins) and writes the FRD->FLU sample `(ax, -ay, -az)` into the SAME
+`base.IMU_ACCEL` seam the gate uses, with its receive time; a sample older than 0.2 s is no reading -- the force
+branch is skipped and the model-based cancellation zeroed (one warning, one "back"). `IMU_DELAY` (5 ms: the IMU
+arrives within +-10 ms of the mocap on flight 11's bag, `scripts/ana_imu_latency.py`, corr 0.95-0.99 per axis) is
+added to the force branch's delay buffer. The bias state IS the EKF's bF: the sim IMU has NO bias (its bias terms are
+commented out in `sensors/imu.py`, its random walk uses `rand()`), so a real turn-on bias was gated with `--bias_acc
+0.2,0.2,0.2` (0.79 N per axis): bF took exactly 0.79 N, cancellation / roll / prediction unchanged -- no extra state
+is observable from F_hat alone. Tests: `tests/test_imu_node.py` (frame, staleness guard, zeroed cancellation, `--est
+pwc` refused; 7/7), `tests/test_cascade_node_boots.py --node imu` (boots as the launcher does; a SensorCombined
+message on the topic must be logged as `FLU (+0.50, -0.20, +9.81)`). Launchers forward `IMU_WC/IMU_DR/IMU_DELAY`;
+`start_slosh_hil.sh` refuses READY without the `[cascade+imu]` banner and the subscription line when
+`ADAPTIVE_NODE_PY` names the IMU node; results rows carry `anode=`.
+**PIECE C -- `state_source: px4` BUILT, BOOT-TESTED, NOT FLOWN (controller 7f416a3, sim 350026d).** The base node's
+new string parameter (`mocap` default -- byte-identical; NEVER read it through `gp()`) subscribes to EKF2's
+`/<ns>/fmu/out/vehicle_odometry` instead of the mocap and feeds `odom_to_state()` (NED/FRD, PX4's [w,x,y,z]
+quaternion -> ENU/FLU: R = T_en R_ned_frd T_fb, p/v through T_en, rates through T_fb; NaNs before EKF2 initialises are
+skipped) into the mocap's own `_on_state` path. `tests/test_state_source.py` pins the converter synthetically and
+against flight 11's bag (EV-fed EKF2 vs mocap: position 0.70 m rms = its ~35 ms of latency at 16 m/s, velocity
+0.10 m/s, attitude 0.32 deg mean / 5 deg max in the turns, rates 0.008 rad/s; 13/13); boot test `--node px4src`
+(subscribes to the odometry and NOT the mocap). Launchers: `CASC_STATE=px4` on both cascade panes, `EKF_SOURCE=gps`
+(keeps the mocap->EV bridge for YAW -- the airframe has `EKF2_MAG_TYPE 5`, no mag, so vision yaw is the only heading
+source -- and skips the relax window's full-EV override so EKF2 stays on the airframe's GPS+baro position/velocity),
+`VTOL_GPS_HZ` (the sim GPS's rate: Pegasus's default 250 Hz; `vtol.py` reads it into the config's `GPS()`); READY
+verifies the GPS rate on `vehicle_gps_position`, the odometry rate, `state source: px4` in each cascade pane and
+`vehicle_global_position` on GPS; provenance `state= ekf= gps_hz=` in the launch log and results row. TO FLY IT:
+first `CASC_STATE=px4` alone (EV-fed EKF2 ~ mocap quality: the state path), then `EKF_SOURCE=gps VTOL_GPS_HZ=10` with
+the IMU node (the target configuration); re-measure `latency_s` with `casc_timing.py` on that bag (EKF2 adds its own
+lag to the 49 ms measured on the mocap) before trusting the delay compensation.
+**★ THE LAUNCHER BUG THAT COST A FLIGHT (sim 9bc37e0):** my `EKF_SOURCE` echo in `start_vtol_smc_hil.sh` was an unbound
+variable under `set -u`; the cold start aborted half-way with Isaac, PX4 and the controllers already up but no
+`10-bag` recorder and no relax window; every READY check passed, the first IMU flight landed 0.00 m, and
+`fly_slosh_mission.sh` scored it against the NEWEST bag on disk -- the leso flight's (row R100_dx3_imumdob_a1_173101,
+annotated UNSCORED). Now: READY requires the 10-bag window AND the bag directory; the mission scores only the bag the
+launch announced (LAUNCH_LOG's `bag=`), else `UNSCORED`, exit 3. Also: do not run gate sweeps during a flight -- the
+mdob flight ran at RTF 0.76 because one overlapped it, which is a different experiment.
+
 # ★★★★ 2026-09-15: THE RESIDUAL-ESTIMATOR COMPARISON, PIECES 1-3 (built one at a time, each audited
 # for channel mixing before the next): THREE OBSERVERS BEHIND ONE INTERFACE, SWAPPABLE IN THE
 # CASCADE VARIANT, AT TUNING PARITY. Piece 4 (the closed-loop gates) and the flights are next.
