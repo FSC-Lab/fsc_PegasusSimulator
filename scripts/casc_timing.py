@@ -52,9 +52,11 @@ def main():
     # --- window: while the cascade was the active controller ---
     t0 = t1 = None
     for t, m in rows("/uav_0/ground_station/active_controller"):
-        if getattr(m, "data", "") == "cascade" and t0 is None:
+        # any member of the cascade FAMILY (cascade, cascade_adaptive, ...; 2026-09-15)
+        d = str(getattr(m, "data", ""))
+        if d.startswith("cascade") and t0 is None:
             t0 = t
-        elif t0 is not None and getattr(m, "data", "") != "cascade" and t1 is None:
+        elif t0 is not None and not d.startswith("cascade") and t1 is None:
             t1 = t
     if t0 is None:
         print("  cascade was never active in this bag")
@@ -108,6 +110,45 @@ def main():
                     best, bl = c, lag_ms
         print(f"  TILT->ACCEL latency  ~{bl} ms   (peak correlation)")
         print(f"  -> latency_s should be >= this; UNDER-compensating is fatal, over is safe")
+    # --- ELEVATOR -> PITCH-RATE-DERIVATIVE latency (2026-09-15): the direct moment actuator, so the
+    # lag that maximises the NORMALISED cross-correlation of the elevator command against the pitch
+    # angular acceleration is the command->effect delay of the chain. Measured against the mocap's
+    # rates (the physical chain) and, when the bag has it, against EKF2's odometry rates (what a
+    # state_source=px4 node sees -- the number latency_s has to cover on that source).
+    try:
+        import numpy as np
+        ele = [(t, m.control[3]) for t, m in rows("/uav_0/fmu/in/actuator_servos") if t0 <= t <= t1]
+        srcs = {"mocap": [(t, m.twist.angular.y) for t, m in rows("/uav_0/mocap") if t0 <= t <= t1]}
+        try:
+            srcs["odometry"] = [(t, -m.angular_velocity[1]) for t, m in rows("/uav_0/fmu/out/vehicle_odometry") if t0 <= t <= t1]   # FRD -> FLU
+        except Exception:      # noqa: BLE001
+            pass
+        if len(ele) > 200:
+            te = np.array([t for t, _ in ele]) / 1e9; ue = np.array([u for _, u in ele])
+            # the FIRST STRAIGHT LEG only (engage + 12..37 s): in the turns the elevator follows the
+            # bank and the pitch acceleration is everyone's; and band-pass 0.5-8 Hz (a 1 s moving mean
+            # removed, a 25 ms one kept) so the correlation is the servo's transient, not the trim
+            fs = 200.0; ta = te[0] + 12.0; tb = min(te[-1] - 1.0, te[0] + 37.0)
+            tg = np.arange(ta, tb, 1.0 / fs)
+            def bp(x):
+                k1 = int(fs * 1.0); k2 = max(1, int(fs * 0.025))
+                lo = np.convolve(x, np.ones(k1) / k1, mode="same"); hi = np.convolve(x - lo, np.ones(k2) / k2, mode="same")
+                return hi - hi.mean()
+            e = bp(np.interp(tg, te, ue))
+            for name, qs in srcs.items():
+                if len(qs) < 200:
+                    continue
+                tq = np.array([t for t, _ in qs]) / 1e9; q = np.array([v for _, v in qs])
+                qd = bp(np.gradient(np.interp(tg, tq, q), 1.0 / fs))
+                lags = np.arange(0, 61); cc = []
+                for k in lags:
+                    a = e[:len(e) - k] if k else e; b = qd[k:]
+                    cc.append(float(np.corrcoef(a, b)[0, 1]) if a.std() > 0 and b.std() > 0 else 0.0)
+                k = int(lags[int(np.argmax(np.abs(cc)))])
+                verdict = "" if abs(cc[k]) >= 0.5 else "  -- |corr| < 0.5: NOT a measurement (closed-loop cross-correlation; inject an elevator doublet in a straight leg to measure it)"
+                print(f"  ELEVATOR->PITCH-ACCEL latency ~{1e3 * k / fs:.0f} ms vs the {name} (|corr| {abs(cc[k]):.2f}; first straight leg, 0.5-8 Hz, 5 ms steps){verdict}")
+    except Exception as ex:     # noqa: BLE001
+        print(f"  (elevator latency not computed: {ex})")
     return 0
 
 

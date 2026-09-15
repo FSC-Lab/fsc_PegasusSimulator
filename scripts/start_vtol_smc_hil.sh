@@ -231,7 +231,7 @@ echo '[2-isaac] waiting $D_ISAAC s...'; sleep $D_ISAAC
 unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL
 export ROS_DOMAIN_ID=\${ROS_DOMAIN_ID:-0} RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$BRIDGE_LIB\"
-PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG PEGASUS_PROP_DEBUG=\${PEGASUS_PROP_DEBUG:-} VTOL_ROS2_STATE=$VTOL_ROS2_STATE VTOL_SLOSH=$VTOL_SLOSH VTOL_TANK=$VTOL_TANK VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} VTOL_GPS_HZ=\${VTOL_GPS_HZ:-} PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG PEGASUS_PROP_DEBUG=\${PEGASUS_PROP_DEBUG:-} VTOL_ROS2_STATE=$VTOL_ROS2_STATE VTOL_SLOSH=$VTOL_SLOSH VTOL_TANK=$VTOL_TANK VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} VTOL_GPS_HZ=\${VTOL_GPS_HZ:-} VTOL_GPS_SIGMA=\${VTOL_GPS_SIGMA:-} VTOL_GPS_VSIGMA=\${VTOL_GPS_VSIGMA:-} PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo '[2-isaac] exited.'; exec bash
 "
 # ---- 3: mocap emulator -----------------------------------------------------
@@ -280,7 +280,7 @@ $ROS_PRELUDE
 echo '[6-geometric] SAFE hover controller (raw reference, ACTIVE at start)...'
 VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} \"$NODE_PY\" \"$GEO_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=geometric -p active_at_start:=true \
-    -p v_max:=${GEO_VMAX:-4.0} -p vz_up:=${GEO_VZ_UP:-2.0} -p vz_down:=${GEO_VZ_DN:-1.0}
+    -p v_max:=${GEO_VMAX:-4.0} -p vz_up:=${GEO_VZ_UP:-2.0} -p vz_down:=${GEO_VZ_DN:-1.0} -p state_source:=${GEO_STATE:-mocap}
 echo '[6-geometric] exited.'; exec bash
 "
 # ---- 6b: AERO-AWARE TILT TRANSITION (hover<->cruise), STANDBY at start. Activate with

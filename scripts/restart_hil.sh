@@ -99,7 +99,7 @@ tmux send-keys -t "$SESSION:2-isaac" \
  "unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL; \
 export ROS_DOMAIN_ID=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp; \
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$ISAAC_ROOT/exts/isaacsim.ros2.bridge/humble/lib\"; \
-VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_R=${VTOL_TANK_R:-} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} VTOL_GPS_HZ=${VTOL_GPS_HZ:-} PEGASUS_SLOSH_DEBUG=${PEGASUS_SLOSH_DEBUG:-} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
+VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_R=${VTOL_TANK_R:-} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} VTOL_GPS_HZ=${VTOL_GPS_HZ:-} VTOL_GPS_SIGMA=${VTOL_GPS_SIGMA:-} VTOL_GPS_VSIGMA=${VTOL_GPS_VSIGMA:-} PEGASUS_SLOSH_DEBUG=${PEGASUS_SLOSH_DEBUG:-} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
 # POLL, do not sleep a flat 100 s: Isaac usually prints its banner well before that and the
 # fixed wait was pure dead time on every single test.
 say "    waiting for Isaac to load (polling, <=140 s)"
@@ -151,7 +151,7 @@ tmux send-keys -t "$SESSION:6-geometric" C-c 2>/dev/null; sleep 1
 tmux send-keys -t "$SESSION:6-geometric" \
  "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/geometric_hover_node.py \
---ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=geometric -p active_at_start:=true" Enter
+--ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=geometric -p active_at_start:=true -p state_source:=${GEO_STATE:-mocap}" Enter
 sleep 20
 
 # NB: everything from the opening quote below to the final `Enter` is ONE QUOTED STRING sent

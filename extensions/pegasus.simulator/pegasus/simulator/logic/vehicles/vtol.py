@@ -269,6 +269,22 @@ def _default_tiltrotor_surfaces() -> list[SurfaceConfig]:
 
 
 @dataclass
+
+def _gps_config_from_env():
+    """The sim GPS's rate and noise from VTOL_GPS_HZ / VTOL_GPS_SIGMA / VTOL_GPS_VSIGMA (2026-09-15;
+    unset = Pegasus defaults). Pegasus draws noise as density * sqrt(dt) * randn per sample."""
+    hz = float(os.environ.get("VTOL_GPS_HZ") or 250.0)
+    cfg = {"update_rate": hz}
+    sig = os.environ.get("VTOL_GPS_SIGMA")
+    if sig:
+        cfg["gps_xy_noise_density"] = float(sig) * math.sqrt(hz)
+        cfg["gps_z_noise_density"] = 2.0 * float(sig) * math.sqrt(hz)
+    vsig = os.environ.get("VTOL_GPS_VSIGMA")
+    if vsig:
+        cfg["gps_vxy_noise_density"] = float(vsig) * math.sqrt(hz)
+        cfg["gps_vz_noise_density"] = 2.0 * float(vsig) * math.sqrt(hz)
+    return cfg
+
 class VTOLConfig:
     """Everything needed to spawn and run a VTOL.  Pure data (CLAUDE.md rule:
     no live resources / backends instantiated here)."""
@@ -379,9 +395,11 @@ class VTOLConfig:
 
     # --- plumbing (kept empty per CLAUDE.md; backends created by caller) --
     # VTOL_GPS_HZ (2026-09-15): the sim GPS's update rate -- Pegasus's default is 250 Hz, which no
-    # receiver does; 5-10 Hz is a GPS. Empty/unset keeps the default so every earlier flight repeats.
-    sensors: list = field(default_factory=lambda: [Barometer(), IMU(), Magnetometer(),
-                                                    GPS({"update_rate": float(os.environ.get("VTOL_GPS_HZ") or 250.0)})])
+    # receiver does; 5-10 Hz is a GPS. VTOL_GPS_SIGMA / VTOL_GPS_VSIGMA: a per-SAMPLE 1-sigma position
+    # [m] and velocity [m/s] white noise (Pegasus scales its densities by sqrt(dt), so the density is
+    # sigma * sqrt(rate)); its slow random-walk bias stays at the Pegasus default. Empty/unset keeps
+    # every default so every earlier flight repeats.
+    sensors: list = field(default_factory=lambda: [Barometer(), IMU(), Magnetometer(), GPS(_gps_config_from_env())])
     graphical_sensors: list = field(default_factory=list)
     graphs: list = field(default_factory=list)
     backends: list = field(default_factory=list)
