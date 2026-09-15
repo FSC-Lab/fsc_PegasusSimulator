@@ -5134,6 +5134,34 @@ own FK round trip of the reference was 0.0-0.1 mm / 0.0° on both.
 (EE error = the planner's `current_ee`, i.e. measured joints on measured
 odometry, against its `reference_pose`; z error 1-2 mm throughout.)
 
+**Third flight, 2026-09-15, after the circle was re-centred on the WORLD
+ORIGIN** (`ee_traj_center_origin`, the default; the two above were anchored on
+the held EE point). Same rig, same 0.5 m radius, 2 laps, s = 0.905 of the 1.131
+maximum — `ee_circle_origin_circle.npz`:
+
+| | reference | flown |
+|---|---|---|
+| distance from the world origin | 0.500 m, sd **0 mm** | 0.387 m, sd 14 mm |
+| path centre (x, y) | — | (+0.047, +0.005) m |
+| raw EE error mean / max | — | 215 / 262 mm |
+| lag / residual after it | — | 1.90 s / 104 mm |
+
+The reference is exactly the commanded circle about the origin; the flown one
+is concentric with it to ~5 cm and 77 % of its radius, which is the same
+first-order lag with gain below one as the two flights above, at the same
+speed. Re-centring changed where the run is, not how well it is tracked.
+
+**What this flight tested that the first two could not: Go-to-start as a real
+transition.** With the circle anchored on the held EE point the start rest was
+where the vehicle already was, so the button was a null move. Centred on the
+origin it is a **0.56 m translation with a 90° yaw change** — planned by the
+transition planner, executed without a Send, complete in 15 s, and it settled
+inside the Start gate's 5 cm / 5° / 3° tolerance on the first try. That gate
+was the open question when the circle moved: §7.15.5 measures 50-90 mm of
+settled CoM error after a 0.5 m step leg, which is the same order as the
+tolerance. It passed here; on a vehicle that settles worse, the gate is the
+thing that will refuse, and its three numbers are `ee_traj_start_*_tol`.
+
 **The error is the whole-body law's tracking bandwidth, not the reference.**
 It is a first-order lag of ~2 s with a gain below one (the flown circle is
 78 % / 89 % of the commanded radius at the two speeds), and it halves when the
