@@ -268,7 +268,6 @@ def _default_tiltrotor_surfaces() -> list[SurfaceConfig]:
     ]
 
 
-@dataclass
 
 def _gps_config_from_env():
     """The sim GPS's rate and noise from VTOL_GPS_HZ / VTOL_GPS_SIGMA / VTOL_GPS_VSIGMA (2026-09-15;
@@ -285,6 +284,7 @@ def _gps_config_from_env():
         cfg["gps_vz_noise_density"] = 2.0 * float(vsig) * math.sqrt(hz)
     return cfg
 
+@dataclass
 class VTOLConfig:
     """Everything needed to spawn and run a VTOL.  Pure data (CLAUDE.md rule:
     no live resources / backends instantiated here)."""
