@@ -2,6 +2,66 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-15: THE RESIDUAL-ESTIMATOR COMPARISON, PIECES 1-3 (built one at a time, each audited
+# for channel mixing before the next): THREE OBSERVERS BEHIND ONE INTERFACE, SWAPPABLE IN THE
+# CASCADE VARIANT, AT TUNING PARITY. Piece 4 (the closed-loop gates) and the flights are next.
+**THE QUESTION:** which residual estimator serves the cascade's L1 augmentation best under the SAME
+NMPC + geometric + L1 scaffolding (C(s) 2 rad/s, clamps, hold, delay buffer, actuator-lag model, the
+EKF slosh predictor) -- the flown SO(3) STESO, a linear (high-gain) ESO, or a momentum-based
+disturbance observer -- and what the EKF adds on top of each.
+**PIECE 1 -- the estimators (`so3_steso.py`, controller a5d5679 + 15dd6f7):** `MomentumDOB` (new:
+tau_hat = K (p - int(M_applied + gyro + tau_hat) dt), no rate derivative, bit-exact hold, bumpless
+set_K, innovation e = J^-1 dtau_hat/K), `LinearESO` completed to the STESO's caller interface
+(omega_dot_hat, hold, per-axis wo, validated mode, exports as copies), `make_estimator(kind, J, add_gyro,
+**knobs)` with ONE knob vocabulary filtered per kind. SO3STESO untouched -- three trace hashes (rate,
+attitude, every option) pinned as exact bytes in `tests/test_residual_estimators.py` (64 checks:
+per-axis isolation against each estimator's OWN floor, twins share no state, omega_dot_hat also
+during hold, hold bit-exact and bumpless on an inexact-round-trip inertia, per-axis knobs ACT per
+axis, add_gyro on a spinning body, first sample on the measurement, reset(), live retune). Two audit
+rounds (five reviewer lenses + mutation testing of the test itself) found and fixed: the MDOB's hold
+rewrote sigma through J^-1 J, its set_K rescaled the live estimate, its first innovation was zero by
+algebra, the exports aliased the state, the LESO's knob was scalar-only with an unvalidated mode.
+**PIECE 2 -- the swap (`nmpc_cascade_steso_node.py --est steso|leso|mdob|pwc`, controller 1c62688):**
+the moment observer and its force twin are built at ONE call site each through the factory; the
+kind is consulted only in the knob block, those two calls, the per-kind meas_lag table, the guard
+and the banner (`tests/test_est_swap.py` pins that statically and dynamically; `--gate` runs all four
+kinds: 0 solve failures each, log header identical, traces identical until u_ad first differs).
+`--est steso` / `--est pwc` logs BIT-IDENTICAL to the pre-edit node. Launcher: `CASC_EST=leso` (or
+mdob) on the adaptive pane; every knob forwarded as `VAR=${VAR:-}` (empty = the node's default: one
+home per default, and a pane can never inherit a stale value from the tmux server's environment --
+the audit found that hole); `start_slosh_hil.sh` refuses READY unless the banner's `estimator=` is
+CASC_EST; the LAUNCH_LOG line carries the adaptive banner and the results row `est=<kind>`.
+**★ AN AUDIT AGENT WROTE A MUTATION INTO THE LIVE CONTROLLER TREE** (`meas_lag=PRED_LAG * (2.0 if
+hasattr(self.est_f, "wo") ...)` -- a kind-dependent predictor lag, the exact mixing the audit hunts);
+caught by `git status`, restored. Check `git diff --quiet` in the controller repo before any gate run
+that follows an audit.
+**PIECE 3 -- parity (`scripts/est_parity.py --solve`, `tests/test_est_parity.py`, controller fdecc8f):**
+"the same number" is NOT like-for-like (at L = wo = K = 20 a 1 rad/s^2 step's 63% rise is STESO 29 /
+MDOB 50 / LESO 106 ms). Two rules, one per channel, both measured on an estimator-alone harness at
+the gate's rate (200 Hz) and noise, then confirmed on the closed loop:
+  * MOMENT observers: EQUAL RAW-NOISE FLOOR (what C(s) must strip before the actuators): the STESO
+    at L 20 reads 0.068 N.m on pitch = 0.185 rad/s^2 on every axis (rate-driven) -> **leso wo 42,
+    mdob K 11**. Closed loop (CG tank, cruise): 0.0615 / 0.0615 / 0.0607 N.m -- equal to 1%. At that
+    floor the LESO matches the STESO at the tank's 1.14 Hz (lag 42 vs 44 ms, gain 0.97 vs 1.00: two
+    second-order observers) while the first-order MDOB lags 81 ms at gain 0.84 -- structural, so the
+    comparison carries **MDOB_K=22 as a second row: equal lag (44 ms) at 1.96x the floor**.
+  * FORCE twins: EQUAL READING LAG at 1.14 Hz. The STESO force twin's 0.059 N floor is entirely its
+    chatter (1.1 L_F dt m = 0.065 N); the linear twins sit at 0.002-0.03 N at any sensible bandwidth,
+    so floor parity would be absurd. Set to the STESO's closed-loop reading lag (15 ms): **leso wo_F
+    99, mdob K_F 66**, floors 0.030 / 0.031 N -- 2x quieter than the STESO's, on the record. Closed
+    loop: the raw force twins read the fore-aft bob at corr 0.97 (STESO 0.71, its chatter), lag 5 ms
+    (STESO 0); the predictor then errs 0.017-0.018 N on all three.
+  * `PRED_LAG_BY_KIND` = the measured reading lag per kind (steso 0 / leso 5 / mdob 5 ms -> 0.005 s
+    each; the twins were tuned to one lag, so the predictor's measurement model is de facto
+    kind-independent). Flights 10/11 flew 0.015; the predictor is insensitive across 0-15 ms (corr
+    0.947 -> 0.957, err 0.018 -> 0.017 N at 0.005; worse only past 25 ms). `--pred_lag 0.015` still
+    reproduces the flown STESO log bit-for-bit.
+**SCORERS:** `scripts/est_loop_metrics.py LOG.csv` (raw floors, u_ad noise, force-twin reading lag
+vs the plant's bob, predictor lag/corr/err from a gate `--log`).
+**NEXT (piece 4):** hover with a 5 cm CG error; the offset 100 mm tank turning mission x 3 seeds x
+{steso, leso, mdob K11, mdob K22} x predictor off/on; the same at `--rtf 0.86`; 16-seed regression
+for the flight candidates; then the page and one flight each of the best as `CASC_EST=... CTRL=cascade_adaptive`.
+
 # ★★★★ 2026-09-14 (night): "ADAPTIVE NMPC + GEO" IS A SEPARATE CONTROLLER IN THE GROUND STATION.
 **WHAT IT IS.** The STESO + slosh-predictor cascade (`nmpc_cascade_steso_node.py`, the evening block
 below) no longer REPLACES the flown cascade: it stands by BESIDE it as its own controller.

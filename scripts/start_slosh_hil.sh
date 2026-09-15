@@ -337,6 +337,13 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
   if ! ros2 node list 2>/dev/null | grep -qx "/nmpc_cascade_control_adaptive"; then
     echo "[slosh_hil] !! the ADAPTIVE cascade printed its banner but /nmpc_cascade_control_adaptive is not a live node. Not READY."; exit 1
   fi
+  # the ESTIMATOR the banner names must be the one asked for (CASC_EST; 2026-09-15: steso | leso |
+  # mdob | pwc) -- the piece-2 audit found this check missing: a stack running the wrong kind
+  # would have been reported READY and the comparison flights would carry no proof of their kind
+  AEST=$(echo "$ABANNER" | grep -o "estimator=[a-z]*" | cut -d= -f2)
+  if [ "$AEST" != "${CASC_EST:-steso}" ]; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade runs estimator=${AEST:-<none>} but CASC_EST=${CASC_EST:-steso} was asked for. Not READY."; exit 1
+  fi
   AM=$(echo "$ABANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
   if [ -z "$AM" ] || ! awk -v a="$AM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
     echo "[slosh_hil] !! the ADAPTIVE cascade models M=${AM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}'). Not READY."; exit 1
@@ -346,14 +353,14 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
   if [ -z "$ACG" ] || ! awk -v a="$ACG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
     echo "[slosh_hil] !! the ADAPTIVE cascade models CG_X=${ACG:-<none>} but the tank puts it at $WANT_CG. Not READY."; exit 1
   fi
-  say "    adaptive cascade: M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
+  say "    adaptive cascade: estimator=$AEST, M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
 fi
 
 # provenance, next to the bags, because the tmux pane is gone by the time anyone asks
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1}${ABANNER:+  adaptive: $ABANNER}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

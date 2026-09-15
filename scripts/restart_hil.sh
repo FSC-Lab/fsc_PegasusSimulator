@@ -208,7 +208,7 @@ say "8b/8 starting the CASCADE node (standby)"
 tmux kill-window -t "$SESSION:6h-cascade" 2>/dev/null
 tmux new-window -d -t "$SESSION:" -n 6h-cascade; sleep 1
 tmux send-keys -t "$SESSION:6h-cascade" \
- "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-20} STESO_LF=${STESO_LF:-3} ${LESO_WO:+LESO_WO=$LESO_WO} ${LESO_WOF:+LESO_WOF=$LESO_WOF} ${MDOB_K:+MDOB_K=$MDOB_K} ${MDOB_KF:+MDOB_KF=$MDOB_KF} SLOSH_PRED=${SLOSH_PRED:-on} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-0.015} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-on} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-off} \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${CASC_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_node.py} \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade -p active_at_start:=false \
 -p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-true} \
@@ -232,7 +232,7 @@ say "8c/8 starting the ADAPTIVE cascade (STESO + slosh predictor, standby)"
 tmux kill-window -t "$SESSION:6i-adaptive" 2>/dev/null
 tmux new-window -d -t "$SESSION:" -n 6i-adaptive; sleep 1
 tmux send-keys -t "$SESSION:6i-adaptive" \
- "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-20} STESO_LF=${STESO_LF:-3} ${LESO_WO:+LESO_WO=$LESO_WO} ${LESO_WOF:+LESO_WOF=$LESO_WOF} ${MDOB_K:+MDOB_K=$MDOB_K} ${MDOB_KF:+MDOB_KF=$MDOB_KF} SLOSH_PRED=${SLOSH_PRED:-on} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-0.015} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-on} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-off} \"\$HOME/envs/isaac_env/bin/python3\" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} \"\$HOME/envs/isaac_env/bin/python3\" \
 $ADAPTIVE_NODE \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade_adaptive -p active_at_start:=false \
 -p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=true \

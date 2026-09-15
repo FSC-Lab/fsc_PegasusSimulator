@@ -7,7 +7,8 @@ changes ONE thing -- which class the moment observer and its force twin are -- a
 
   1. STATIC, the node's source: the estimator kind (EST) is consulted only where it is allowed
      to be -- the knob block, the two make_estimator calls in L1Steso.reset, the force-knob map,
-     the base.L1Aug guard and the banner. It must NOT appear in adapt() / propagate() /
+     the predictor's per-kind meas_lag default (the reading's lag is a property of the reading;
+     piece 3 measures it per kind), the base.L1Aug guard and the banner. It must NOT appear in adapt() / propagate() /
      _outer_dist() / inner_step / the logging / the scorer: no `if EST == ...` inside the control
      law, so no kind gets a different C(s), clamp, hold, delay buffer or predictor path.
      No estimator class is constructed directly (only through make_estimator), and the node does
@@ -57,7 +58,7 @@ def main():
     print("== 1. static: where the estimator kind is allowed to matter")
     # every line that mentions EST as a name (not as part of another identifier)
     uses = [(i + 1, l) for i, l in enumerate(lines) if re.search(r"(?<![A-Za-z_])EST(?![A-Za-z_])", l) and not l.strip().startswith("#")]
-    allowed = re.compile(r"^(EST = |EST_FORCE_KNOB = |if EST in \(|elif EST != |\s*raise SystemExit\(f\"CASC_EST|\s*self\.est(_f)? = \(?make_estimator\(EST|\s*print\(f\"\[cascade\+steso\] estimator=\{EST\}|\s+knobs\.get\(EST|\s+L=|\s+wo=)")
+    allowed = re.compile(r"^(EST = |EST_FORCE_KNOB = |PRED_LAG = |if EST in \(|elif EST != |\s*raise SystemExit\(f\"CASC_EST|\s*self\.est(_f)? = \(?make_estimator\(EST|\s*print\(f\"\[cascade\+steso\] estimator=\{EST\}|\s+knobs\.get\(EST|\s+L=|\s+wo=)")
     bad = [(n, l) for n, l in uses if not allowed.match(l) and "make_estimator(EST" not in l and "knobs.get(EST" not in l and "estimator={EST}" not in l]
     check(not bad, f"EST is consulted only in the knob block, the two make_estimator calls, the guard and the banner ({len(uses)} uses)" + (f"; unexpected: {bad}" if bad else ""))
     # the control law must not branch on the kind
@@ -83,7 +84,7 @@ def main():
         f"sys.path.insert(0, {os.path.dirname(os.path.dirname(NODE))!r})\n"
         "import importlib.util\n"
         f"spec = importlib.util.spec_from_file_location('node', {NODE!r}); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
-        "out = {'L1Aug': m.base.L1Aug.__name__, 'EST': m.EST, 'pred': [m.SLOSH_PRED, m.PRED_LAG, m.PRED_CANCEL, m.PRED_UMAX, m.PRED_OUTER]}\n"
+        "out = {'L1Aug': m.base.L1Aug.__name__, 'EST': m.EST, 'pred': [m.SLOSH_PRED, m.PRED_CANCEL, m.PRED_UMAX, m.PRED_OUTER], 'lag': m.PRED_LAG, 'lag_table': m.PRED_LAG_BY_KIND}\n"
         "if m.base.L1Aug is m.L1Steso:\n"
         "    l1 = m.L1Steso(); l1.reset()\n"
         "    e, f = l1.est, l1.est_f\n"
@@ -117,14 +118,37 @@ def main():
         check(results["pwc"]["L1Aug"] == "L1Aug", "pwc: base.L1Aug is the base class (the base L1 law, untouched)")
     inv = {k: (results[k]["l1"], results[k]["pred"]) for k in KINDS if k in results}
     check(len(set(json.dumps(v) for v in inv.values())) == 1, f"L1 constants and predictor knobs identical across kinds: {list(inv.values())[0] if inv else '?'}")
+    # the one predictor knob that legitimately follows the kind: the measurement lag of the
+    # reading it is given, from the per-kind table (measured on the closed loop), never elsewhere
+    for kind in KINDS:
+        o = results.get(kind)
+        if o:
+            check(abs(o["lag"] - o["lag_table"][kind]) < 1e-12 and 0.005 <= o["lag"] <= 0.05,
+                  f"{kind}: predictor meas_lag {o['lag']:.3f} s = PRED_LAG_BY_KIND[{kind}] (a measured reading lag, 5-50 ms)")
     r = subprocess.run([PY, "-c", probe], capture_output=True, text=True, timeout=300, env=dict(env, CASC_EST="nope"))
     check(r.returncode != 0 and "steso, leso, mdob or pwc" in (r.stderr + r.stdout), "an unknown kind is refused at import, naming the four choices")
 
-    print("== 3. launchers forward the new knobs only when set")
+    print("== 3. launchers forward every estimator/predictor knob as VAR=${VAR:-}; the node treats empty as unset")
+    KNOBS = ("STESO_L", "STESO_LF", "STESO_MODE", "STESO_EPS", "LESO_WO", "LESO_WOF", "MDOB_K", "MDOB_KF",
+             "SLOSH_PRED", "SLOSH_PRED_LAG", "SLOSH_PRED_CANCEL", "SLOSH_PRED_OUTER", "SLOSH_PRED_UMAX", "SLOSH_PRED_Q", "SLOSH_PRED_RF", "SLOSH_PRED_RM")
     for f in ("scripts/restart_hil.sh", "scripts/start_vtol_smc_hil.sh"):
         s = open(os.path.join(ROOT, f)).read()
-        check("${LESO_WO:+LESO_WO=$LESO_WO}" in s and "${MDOB_KF:+MDOB_KF=$MDOB_KF}" in s and "LESO_WO=${LESO_WO" not in s,
-              f"{f}: LESO_WO/LESO_WOF/MDOB_K/MDOB_KF forwarded with ${{VAR:+...}} (never as an empty string)")
+        missing = [k for k in KNOBS if f"{k}=${{{k}:-}}" not in s]
+        two_homes = [k for k in KNOBS if re.search(rf"{k}=\$\{{{k}:-[^}}]+\}}", s)]
+        check(not missing and not two_homes, f"{f}: {len(KNOBS)} knobs forwarded as VAR=${{VAR:-}} (one home for every default: the node)"
+              + (f"; missing {missing}" if missing else "") + (f"; launcher-side defaults {two_homes}" if two_homes else ""))
+    # the node's side of that contract: an EMPTY env value is the default, never a parse error
+    r = subprocess.run([PY, "-c", probe], capture_output=True, text=True, timeout=300,
+                       env=dict(env, CASC_EST="mdob", MDOB_K="", MDOB_KF="", SLOSH_PRED_LAG="", STESO_EPS=""))
+    line = next((l for l in r.stdout.splitlines() if l.startswith("JSON")), None)
+    o = json.loads(line[4:]) if line else None
+    check(o is not None and o["knob"] == results["mdob"]["knob"] and o["knob_f"] == results["mdob"]["knob_f"] and o["lag"] == results["mdob"]["lag"],
+          "node: empty MDOB_K / MDOB_KF / SLOSH_PRED_LAG / STESO_EPS give the defaults (a pane can never inherit a stale tmux-server value)")
+    # the READY gate verifies the banner's estimator against CASC_EST; the results row records it
+    s = open(os.path.join(ROOT, "scripts/start_slosh_hil.sh")).read()
+    check('estimator=[a-z]*' in s and '"${CASC_EST:-steso}"' in s, "start_slosh_hil.sh: READY refuses a banner whose estimator= is not CASC_EST")
+    s = open(os.path.join(ROOT, "scripts/fly_slosh_mission.sh")).read()
+    check("est=$CASC_EST" in s, "fly_slosh_mission.sh: the results row carries est=<kind> when CASC_EST is set")
 
     if "--gate" in sys.argv:
         print("== 4. gate: the offline mission with --log for every kind")

@@ -439,7 +439,7 @@ tmux new-window -t "$SESSION" -n "6i-adaptive" "
 echo '[6i-adaptive] waiting $((D_CTRL + 15)) s...'; sleep $((D_CTRL + 15))
 $ROS_PRELUDE
 echo '[6i-adaptive] ADAPTIVE cascade: NMPC + geometric with STESO + slosh predictor (STANDBY; activate: active_controller=cascade_adaptive)...'
-VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-20} STESO_LF=${STESO_LF:-3} ${LESO_WO:+LESO_WO=$LESO_WO} ${LESO_WOF:+LESO_WOF=$LESO_WOF} ${MDOB_K:+MDOB_K=$MDOB_K} ${MDOB_KF:+MDOB_KF=$MDOB_KF} SLOSH_PRED=${SLOSH_PRED:-on} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-0.015} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-on} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-off} $AVTOL_ENV\"$NODE_PY\" \"$ADAPTIVE_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} $AVTOL_ENV\"$NODE_PY\" \"$ADAPTIVE_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade_adaptive -p active_at_start:=false \
     -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
     -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=true \
