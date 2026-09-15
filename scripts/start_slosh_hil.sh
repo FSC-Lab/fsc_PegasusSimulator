@@ -369,11 +369,43 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
   say "    adaptive cascade: estimator=$AEST, M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
 fi
 
+# THE STATE SOURCE (2026-09-15): CASC_STATE=px4 flies the cascades on EKF2's odometry; EKF_SOURCE=gps
+# leaves EKF2 on GPS position/velocity (the airframe defaults) instead of the mocap bridge's full EV;
+# VTOL_GPS_HZ sets the sim GPS's rate. Each is verified on the live stack, not assumed from the env:
+if [ -n "${VTOL_GPS_HZ:-}" ]; then
+  GHZ=$(timeout 12 ros2 topic hz /uav_0/fmu/out/vehicle_gps_position -w 40 2>/dev/null | grep -o "average rate: [0-9.]*" | tail -1 | grep -o "[0-9.]*")
+  if [ -z "$GHZ" ] || ! awk -v a="$GHZ" -v b="$VTOL_GPS_HZ" 'BEGIN{exit (a > 0.6*b && a < 1.6*b) ? 0 : 1}'; then
+    echo "[slosh_hil] !! VTOL_GPS_HZ=$VTOL_GPS_HZ asked for but PX4's vehicle_gps_position runs at ${GHZ:-<none>} Hz. Not READY."; exit 1
+  fi
+  say "    sim GPS: $GHZ Hz on PX4's vehicle_gps_position (asked $VTOL_GPS_HZ)"
+fi
+if [ "${CASC_STATE:-mocap}" = px4 ]; then
+  OHZ=$(timeout 12 ros2 topic hz /uav_0/fmu/out/vehicle_odometry -w 40 2>/dev/null | grep -o "average rate: [0-9.]*" | tail -1 | grep -o "[0-9.]*")
+  if [ -z "$OHZ" ] || ! awk -v a="$OHZ" 'BEGIN{exit (a > 30) ? 0 : 1}'; then
+    echo "[slosh_hil] !! CASC_STATE=px4 but EKF2's vehicle_odometry runs at ${OHZ:-<none>} Hz. Not READY."; exit 1
+  fi
+  for W in 6h-cascade 6i-adaptive; do
+    if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W"; then
+      if ! tmux capture-pane -p -J -S -400 -t "$SESSION:$W" 2>/dev/null | grep -q "state source: px4"; then
+        echo "[slosh_hil] !! CASC_STATE=px4 but the $W node did not report 'state source: px4'. Not READY."; exit 1
+      fi
+    fi
+  done
+  if [ "${EKF_SOURCE:-ev}" = gps ]; then
+    GPHZ=$(timeout 12 ros2 topic hz /uav_0/fmu/out/vehicle_global_position -w 40 2>/dev/null | grep -o "average rate: [0-9.]*" | tail -1 | grep -o "[0-9.]*")
+    if [ -z "$GPHZ" ]; then
+      echo "[slosh_hil] !! EKF_SOURCE=gps but EKF2 publishes no vehicle_global_position (no GPS aiding). Not READY."; exit 1
+    fi
+    say "    EKF2 on GPS: vehicle_global_position at $GPHZ Hz"
+  fi
+  say "    state source: px4 (EKF2 vehicle_odometry at $OHZ Hz, EKF_SOURCE=${EKF_SOURCE:-ev})"
+fi
+
 # provenance, next to the bags, because the tmux pane is gone by the time anyone asks
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1}${ABANNER:+  adaptive: $ABANNER}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap} ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

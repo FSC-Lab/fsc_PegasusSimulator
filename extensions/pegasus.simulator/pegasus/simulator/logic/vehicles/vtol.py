@@ -378,7 +378,10 @@ class VTOLConfig:
     tilt_tau: float = 0.06                      # [s] tilt-servo time constant
 
     # --- plumbing (kept empty per CLAUDE.md; backends created by caller) --
-    sensors: list = field(default_factory=lambda: [Barometer(), IMU(), Magnetometer(), GPS()])
+    # VTOL_GPS_HZ (2026-09-15): the sim GPS's update rate -- Pegasus's default is 250 Hz, which no
+    # receiver does; 5-10 Hz is a GPS. Empty/unset keeps the default so every earlier flight repeats.
+    sensors: list = field(default_factory=lambda: [Barometer(), IMU(), Magnetometer(),
+                                                    GPS({"update_rate": float(os.environ.get("VTOL_GPS_HZ") or 250.0)})])
     graphical_sensors: list = field(default_factory=list)
     graphs: list = field(default_factory=list)
     backends: list = field(default_factory=list)

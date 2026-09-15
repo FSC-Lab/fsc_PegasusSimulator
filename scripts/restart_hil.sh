@@ -99,7 +99,7 @@ tmux send-keys -t "$SESSION:2-isaac" \
  "unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL; \
 export ROS_DOMAIN_ID=0 RMW_IMPLEMENTATION=rmw_fastrtps_cpp; \
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$ISAAC_ROOT/exts/isaacsim.ros2.bridge/humble/lib\"; \
-VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_R=${VTOL_TANK_R:-} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} PEGASUS_SLOSH_DEBUG=${PEGASUS_SLOSH_DEBUG:-} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
+VTOL_ROS2_STATE=1 VTOL_SLOSH=${VTOL_SLOSH:-0} VTOL_TANK=${VTOL_TANK:-1} VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_R=${VTOL_TANK_R:-} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_CG_DX=${VTOL_CG_DX:-0} VTOL_GPS_HZ=${VTOL_GPS_HZ:-} PEGASUS_SLOSH_DEBUG=${PEGASUS_SLOSH_DEBUG:-} PYTHONEXE=\"$ISAAC_ROOT/kit/python/bin/python3\" $ISAAC_PY $ROOT/application/vtol/03_vtol_px4_hil.py" Enter
 # POLL, do not sleep a flat 100 s: Isaac usually prints its banner well before that and the
 # fixed wait was pure dead time on every single test.
 say "    waiting for Isaac to load (polling, <=140 s)"
@@ -211,7 +211,7 @@ tmux send-keys -t "$SESSION:6h-cascade" \
  "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} IMU_WC=${IMU_WC:-} IMU_DR=${IMU_DR:-} IMU_DELAY=${IMU_DELAY:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} \"\$HOME/envs/isaac_env/bin/python3\" \
 ${CASC_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_node.py} \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade -p active_at_start:=false \
--p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-true} \
+-p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=${CASC_L1:-true} -p state_source:=${CASC_STATE:-mocap} \
 -r /uav_0/fsc_autopilot_ros2/position_controller/reference:=/uav_0/fsc_autopilot_ros2/position_controller/reference_smc" Enter
 sleep 35
 TC=$(tmux capture-pane -p -S -40 -t "$SESSION:6h-cascade" 2>/dev/null | grep -ci traceback)
@@ -235,7 +235,7 @@ tmux send-keys -t "$SESSION:6i-adaptive" \
  "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} IMU_WC=${IMU_WC:-} IMU_DR=${IMU_DR:-} IMU_DELAY=${IMU_DELAY:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} \"\$HOME/envs/isaac_env/bin/python3\" \
 $ADAPTIVE_NODE \
 --ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade_adaptive -p active_at_start:=false \
--p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=true \
+-p vcruise:=16.0 -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=true -p state_source:=${CASC_STATE:-mocap} \
 -r /uav_0/fsc_autopilot_ros2/position_controller/reference:=/uav_0/fsc_autopilot_ros2/position_controller/reference_smc" Enter
 sleep 20
 TC=$(tmux capture-pane -p -S -40 -t "$SESSION:6i-adaptive" 2>/dev/null | grep -ci traceback)

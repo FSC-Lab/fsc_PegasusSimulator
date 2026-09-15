@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The cascade node must CONSTRUCT and STAY ALIVE on the ROS path, and answer its command topic.
 
-    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|both]
+    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|px4src|both]
 
 The offline gate (`--test`) uses the class defaults and never runs the constructor's
 parameter/subscription code, so a bug there is invisible to every gate that ran before flight
@@ -31,19 +31,22 @@ PKG = os.path.join(controller_dir(), "px4_vtol_direct_actuator")
 # ground station's "Adaptive NMPC + Geo" run; the check is the same protocol on the OWN topics.
 # "imu" = the IMU-force-twin copy (2026-09-15) booted the same way; it must ALSO subscribe to
 # PX4's sensor_combined and log the first sample converted FRD -> FLU (the wiring the gate cannot see).
+# "px4src" = the base node with `state_source: px4` (2026-09-15): it must subscribe to EKF2's
+# vehicle_odometry instead of the mocap, say so, and still answer the command topic.
 NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tank_node.py", "cascade"),
          "adaptive": ("nmpc_cascade_steso_node.py", "cascade_adaptive"),
-         "imu": ("nmpc_cascade_imu_node.py", "cascade_adaptive")}
+         "imu": ("nmpc_cascade_imu_node.py", "cascade_adaptive"),
+         "px4src": ("nmpc_cascade_node.py", "cascade", "-p state_source:=px4")}
 NS = "uav_0"
 
 
 def run(node, wait_s=60.0):
-    fname, cid = NODES[node]
+    fname, cid = NODES[node][:2]; extra = NODES[node][2] if len(NODES[node]) > 2 else ""
     path = os.path.join(PKG, fname)
     log = os.path.join(os.environ.get("TMPDIR", "/tmp"), f"casc_boot_{node}.log")
     cmd = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; exec {PY} {path} --ros-args "
            f"-p px4_ns:={NS} -p auto_arm:=false -p controller_id:={cid} -p active_at_start:=false "
-           f"-p vcruise:=16.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p latency_s:=0.049 -p l1_on:=true")
+           f"-p vcruise:=16.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p latency_s:=0.049 -p l1_on:=true {extra}")
     with open(log, "w") as lf:
         proc = subprocess.Popen(["bash", "-c", cmd], stdout=lf, stderr=subprocess.STDOUT, start_new_session=True)
         t0 = time.time(); ready = False
@@ -91,6 +94,10 @@ def run(node, wait_s=60.0):
         nl = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 node list"],
                             capture_output=True, text=True).stdout.split()
         want_node = "/nmpc_cascade_control" + ("" if cid == "cascade" else "_" + cid.replace("cascade_", "", 1))
+        info = ""
+        if node == "px4src":      # BEFORE the kill: the graph forgets a dead node
+            info = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 20 ros2 node info {want_node}"],
+                                  capture_output=True, text=True).stdout
         txt = open(log, errors="replace").read()      # BEFORE the kill: SIGTERM itself logs an rclpy shutdown traceback
         try:
             status_out, _ = ep.communicate(timeout=15)
@@ -109,6 +116,13 @@ def run(node, wait_s=60.0):
         # Guidance row displays (before engage the answer is "ignored: no state yet")
         if "ack" not in status_out or "wp 100 0" not in status_out.replace("''", "'"):
             return False, f"{node}: no ack on /{NS}/{cid}/status (got {status_out.strip()[:120]!r})"
+        if node == "px4src":
+            if "state source: px4" not in txt:
+                return False, f"{node}: the node did not report 'state source: px4'"
+            if f"/{NS}/fmu/out/vehicle_odometry: px4_msgs/msg/VehicleOdometry" not in info:
+                return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/vehicle_odometry"
+            if f"/{NS}/mocap:" in info:
+                return False, f"{node}: state_source px4 must NOT also subscribe to the mocap (two state sources)"
         if node == "imu":
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
