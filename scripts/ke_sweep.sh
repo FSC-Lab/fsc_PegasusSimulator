@@ -11,6 +11,7 @@
 # is the outer thread's solve->publish delay, which the node compensates and the gate, since
 # 2026-09-13 evening, models and compensates the same way). Traces + summary.txt land in
 # $KE_DIR (default ~/flight_bags/ke_sweeps/<tag>). Score with scripts/ke_metrics.py <dir>.
+# KE_NODE=nmpc_cascade_steso_node.py + `--est leso|mdob --l1` sweeps the estimator variant.
 # 16 parallel casadi processes loading one JIT cache have core-dumped a seed at START (no
 # output at all) -- re-run such seeds serially before reading the count.
 TAG=$1; LO=$2; HI=$3; shift 3
@@ -18,7 +19,9 @@ KE_ROOT=${KE_DIR:-$HOME/flight_bags/ke_sweeps}
 D=$KE_ROOT/$TAG
 mkdir -p "$D"
 cd /home/pieper/envs/fsc_autopilot_ros2-master
-N=px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_tank_node.py
+# KE_NODE=nmpc_cascade_steso_node.py runs the estimator variant instead (its extra flags -- --est,
+# --slosh_pred, the knobs -- go in the extra args; 2026-09-15, the estimator comparison's regression)
+N=px4_vtol_direct_actuator/px4_vtol_direct_actuator/${KE_NODE:-nmpc_cascade_tank_node.py}
 PY=~/envs/isaac_env/bin/python3
 for sd in $(seq $LO $HI); do
   ( timeout 1500 $PY $N --test "$@" --ttr 20 --noise_att 0.1 --noise_rate 1.0 --dur 85 --decel_at 60 --y0 10 --outer_lag 0.03 --every 0.1 --seed $sd > $D/s$sd.txt 2>&1 ) &

@@ -58,9 +58,39 @@ the gate's rate (200 Hz) and noise, then confirmed on the closed loop:
     reproduces the flown STESO log bit-for-bit.
 **SCORERS:** `scripts/est_loop_metrics.py LOG.csv` (raw floors, u_ad noise, force-twin reading lag
 vs the plant's bob, predictor lag/corr/err from a gate `--log`).
-**NEXT (piece 4):** hover with a 5 cm CG error; the offset 100 mm tank turning mission x 3 seeds x
-{steso, leso, mdob K11, mdob K22} x predictor off/on; the same at `--rtf 0.86`; 16-seed regression
-for the flight candidates; then the page and one flight each of the best as `CASC_EST=... CTRL=cascade_adaptive`.
+**PIECE 4 -- THE CLOSED-LOOP GATES (sim cae4dcc+; `scripts/est_sweep.sh <tag> turns|hover ..`,
+`scripts/est_metrics.py <dir>`; sweeps in `~/flight_bags/est_sweeps/`). THE PAGE:
+https://claude.ai/artifact/WpNwTasTBsr8SCp3TqJGJr**
+Offset 100 mm tank, turning mission (legs -> orbit -> RTH stop), 3 seeds x {steso, leso, mdob K11,
+mdob K22} x predictor off/on, at RTF 1 and at RTF 0.86:
+| kind | pred | bob|F| turns/orbit/stop [N] | wall hits | orbit roll sd | u_ad orbit | pred err +0.25 s |
+|---|---|---|---|---|---|---|
+| steso | off | 0.43/0.78/0.63 | 284 | 0.40 | 0.046 | -- |
+| leso / mdob / mdob22 | off | 0.41/0.77/0.6 | ~270 | 0.35-0.36 | 0.035-0.041 | -- |
+| steso | ON | 0.065/0.047/0.31 | 0 | **0.21 +- 0.02** | 0.020 | 0.131 |
+| leso | ON | 0.064/0.056/0.28 | 0 | **0.137 +- 0.002** | 0.007 | 0.102 |
+| mdob K11 | ON | 0.066/0.060/0.29 | 0 | **0.137** | **0.006** | **0.085** |
+| mdob K22 | ON | 0.064/0.056/0.28 | 0 | 0.137 | 0.007 | 0.105 |
+(RTF 0.86 the same picture: orbit roll sd 0.19 steso vs 0.13 linear with the predictor; pred err
+0.141 / 0.116 / 0.101 / 0.116.) **READING:** WITHOUT the EKF the structure does not matter to the
+aircraft (same mission, same stop 5.9-6.0 m / 7.8-8.2 at the HIL clock, 0-1 fails; the STESO's chatter
+= 12-15% more orbit roll noise; the MDOB's 2x moment lag shows in ONE place -- the stop at RTF 0.86
+where the residual ramps: 0.43 vs 0.29-0.34 deg). WITH the EKF everyone gets the 6-16x bob reduction
+and zero wall hits, BUT the structure still shows: the linear observers' quieter readings give a
+35% quieter steady orbit (0.137 vs 0.21 deg, far outside the seed sd), 3x less augmentation noise
+into the actuators, 20-35% better prediction; the MDOB's stop penalty vanishes (0.11, the best) --
+the bias states carry the ramp. The MDOB at K 11 is the BEST predictor despite its lag because the
+EKF's bob is driven by the force twin (K_F 66, 15 ms), not the moment channel; the K 22 row buys
+nothing and costs noise. HOVER with a 5 cm CG error (tank at the CG, 30 s, 2 seeds): every kind reads
+1.936-1.938 N.m (true 1.938), pitch -1.16, u_ad 1.937; predictor on/off byte-identical (no arm) --
+on a constant residual nothing separates them. REGRESSION (16 seeds, faithful line): leso 16/16 and
+mdob 16/16, worst crossing 14.3, z 29.9-30.0, stop 8.8 s, fails-sum 1 / 3 (STESO 16/16, 14.1-14.3, 3).
+**RECOMMENDATION: mdob K 11 + EKF** (simplest observer, best predictor; leso its equal at the
+aircraft level). Caveats on the page: the absolute aircraft-level differences are 0.07 deg of orbit
+roll and 0.014 N.m of u_ad -- a flight sees them only against the HIL band (orbit roll sd 1.0-1.26
+across flights 9-11); the STESO's separating floor is a 200 Hz discretisation property; the STESO
+keeps the finite-time proof (Theorem 1). `ke_sweep.sh` takes `KE_NODE=nmpc_cascade_steso_node.py`.
+**NEXT:** one flight each of mdob and leso on R100_dx3 as `CASC_EST=mdob CTRL=cascade_adaptive`.
 
 # ★★★★ 2026-09-14 (night): "ADAPTIVE NMPC + GEO" IS A SEPARATE CONTROLLER IN THE GROUND STATION.
 **WHAT IT IS.** The STESO + slosh-predictor cascade (`nmpc_cascade_steso_node.py`, the evening block
