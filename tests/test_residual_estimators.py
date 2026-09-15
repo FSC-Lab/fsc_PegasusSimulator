@@ -27,7 +27,7 @@ cascade changes one thing:
   7. The STESO's own numerics are untouched: its trace on the mixed disturbance is byte-identical
      (exact bytes, no rounding: a one-ULP edit fails it) to a hash pinned here (change the hash
      only with a deliberate change to SO3STESO).
-  8. The things the first audit round (2026-09-14, five reviewer lenses + mutation testing of this
+  8. The things the two audit rounds (2026-09-14, five reviewer lenses + mutation testing of this
      file) found missing: .torque == J @ sigma is checked, not only sigma; make_estimator builds
      the class the kind names with the knobs it was given (non-default values, per-axis knobs,
      one vocabulary filtered per kind, unknown knobs refused); the mode branch is pinned (an
@@ -176,8 +176,14 @@ def main():
               f"{kind}: omega_dot_hat equals J^-1 M + sigma (pre- or post-update) to {worst:.1e}; with the frozen sigma during hold ({worst_hold:.1e})")
 
     print("== 6. hold freezes sigma exactly, keeps tracking, releases bumpless")
+    # an inertia whose J^-1 (J x) round trip is NOT a floating-point fixed point, so a hold path
+    # that re-derives sigma through J would be caught (the assembled 0.265/0.303/0.490 happens to
+    # round-trip exactly for the values this run reaches -- the first audit's blind spot)
+    Jh = np.array([0.1, 0.3, 0.7]); xs = np.random.default_rng(3).normal(size=(50, 3))
+    rt = max(np.abs(np.linalg.inv(np.diag(Jh)) @ (np.diag(Jh) @ x) - x).max() for x in xs)
+    check(rt > 0.0, f"hold check uses J={Jh.tolist()} whose round trip is inexact ({rt:.1e})")
     for kind in KINDS:
-        e = build(kind, J); Jm = np.diag(J)
+        e = build(kind, Jh); Jm = np.diag(Jh)
         R = np.eye(3); w = np.zeros(3); dt = 1e-3
         sig_hold = None; innov = []; jump = 0.0; err_rel = 0.0; e_before = None; e_after = None
         for k in range(4000):
@@ -188,7 +194,7 @@ def main():
             e.hold = 1500 <= k < 2500
             s_before = e.sigma.copy()
             if k == 2500:
-                err_rel = abs(d[1] / J[1] - s_before[1])     # the error the observer faces at release
+                err_rel = abs(d[1] / Jh[1] - s_before[1])    # the error the observer faces at release
                 e_before = np.array(e.e, float).copy()
             e.step(R, M_model, dt, omega=w)
             if 1501 <= k < 2500:
@@ -211,12 +217,19 @@ def main():
               f"{kind}: sigma frozen over the hold, innovation max {max(innov):.3g} bounded, release step {jump:.2e} "
               f"<= its own catch-up {rate * dt:.2e}/tick for a {err_rel:.2f} rad/s^2 error, innovation continuous ({e_jump:.1e})")
 
-    print("== 7. the STESO's numerics are untouched (trace hash)")
-    e = st.SO3STESO(J=J, L=20.0, mode="rate", eps="auto", add_gyro=False)
-    out, _ = run_step(e, J, 1, 1.0)
-    h = hashlib.sha1(out.tobytes()).hexdigest()[:16]          # exact bytes: one ULP anywhere changes it
-    PIN = "42d640a766f8389b"          # pinned on controller e137f5e (before MomentumDOB/LinearESO edits)
-    check(h == PIN, f"steso rate-mode trace hash {h} == pinned {PIN}")
+    print("== 7. the STESO's numerics are untouched (trace hashes, exact bytes)")
+    # three traces cover the branches the cascade can select or set: rate mode as flown; attitude
+    # mode (STESO_MODE); and the option paths (delay buffer, tau_out, tau_bias, sigma_max, add_gyro)
+    def steso_trace(**kw):
+        e = st.SO3STESO(J=J, add_gyro=kw.pop("add_gyro", False), **kw)
+        out, _ = run_step(e, J, 1, 1.0)
+        return hashlib.sha1(out.tobytes()).hexdigest()[:16]
+    PINS = {"rate": ("42d640a766f8389b", dict(L=20.0, mode="rate", eps="auto")),
+            "attitude": ("f27ff8815fa3aaa1", dict(L=20.0, mode="attitude", eps="auto")),
+            "options": ("a5b5ea9682a86bac", dict(L=20.0, mode="rate", eps=0.0, delay=0.03, tau_out=0.05, tau_bias=1.0, sigma_max=5.0, add_gyro=True))}
+    for name, (pin, kw) in PINS.items():
+        h = steso_trace(**kw)
+        check(h == pin, f"steso {name} trace hash {h} == pinned {pin} (pinned on controller e137f5e)")
 
     print("== 8. factory, knobs, mode, gyro path, first sample, reset, live retune")
     e = st.make_estimator("mdob", J, K=(7.0, 8.0, 9.0), L=99.0, wo=5.0, mode="rate", eps=0.0)
@@ -304,6 +317,25 @@ def main():
         tick(e, R, w, 3.0); tick(e2, R, w, 3.0)
         jump = np.abs(e2.torque - e.torque).max()
         check(jump < (0.05 if kind == "steso" else 1e-6), f"{kind}: retune 20 -> 40 at a settled 1.9 N.m: next-tick estimate differs by {jump:.1e} N.m from no retune")
+
+    # the exports are copies, never an alias of the integrator state
+    for kind in KINDS:
+        e = build(kind, J); e.step(np.eye(3), np.zeros(3), 5e-3, omega=np.zeros(3))
+        check(not np.shares_memory(e.sigma_filt, e.sigma) and not np.shares_memory(e.sigma_bias, e.sigma),
+              f"{kind}: sigma_filt / sigma_bias are copies of the state, not aliases")
+    # per-axis knobs ACT per axis (not only stored): a fast roll / medium pitch / slow yaw knob
+    # gives 63%-rise times ordered roll < pitch < yaw, each scaling with its own knob
+    for kind in KINDS:
+        knob = {"steso": "L", "leso": "wo", "mdob": "K"}[kind]
+        vals = (40.0, 20.0, 10.0)
+        t63 = []
+        for axis in range(3):
+            e = st.make_estimator(kind, J, **{knob: vals}, **({"mode": "rate", "eps": "auto"} if kind != "mdob" else {}))
+            out, _ = run_step(e, J, axis, float(J[axis]), T=2.5, t_step=0.5)      # a 1 rad/s^2 step on every axis
+            k63 = np.argmax(out[500:, axis] >= 0.63 * J[axis]); t63.append(k63 * 1e-3)
+        # ESO/DOB: rise time ~ 1/knob (2.2x, 2x per halving); STESO: slew 1.1 L -> rise ~ 1/L
+        ok = t63[0] < t63[1] < t63[2] and 1.5 < t63[1] / t63[0] < 3.0 and 1.5 < t63[2] / t63[1] < 3.0
+        check(ok, f"{kind} {knob}=(40,20,10): 63% rise per axis {t63[0]*1e3:.0f}/{t63[1]*1e3:.0f}/{t63[2]*1e3:.0f} ms -- each axis follows its own knob")
 
     print()
     if FAILS:
