@@ -265,6 +265,9 @@ def main():
                 if time.time() - st["t0"] > 10.0 and (d["V"] > vhi + 1.0 or (d["V"] < vlo - 0.5 and nm != "cruise")): bad.append(f"speed {d['V']:.1f} outside {vlo}-{vhi}")
                 if f - st["f0"] > 3: bad.append(f"solve failures +{f - st['f0']}")
                 if "stale=1" in n.casc_status: bad.append("state stale")
+                mh = re.search(r"hold=1 he=\(([-+0-9.]+),([-+0-9.]+)\)", n.casc_status)   # the cascade's position hold (hover stage)
+                if mh and time.time() - st["t0"] > 10.0 and math.hypot(float(mh.group(1)), float(mh.group(2))) > 3.0:
+                    bad.append(f"hover hold error {math.hypot(float(mh.group(1)), float(mh.group(2))):.1f} m")
                 if bad:
                     st["why"] = "; ".join(bad); return True
                 if nm == "cruise" and d["V"] < 13.0 and time.time() - st["t0"] > 25.0: bad.append(f"never reached cruise (V {d['V']:.1f})")
