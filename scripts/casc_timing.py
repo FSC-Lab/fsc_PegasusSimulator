@@ -149,6 +149,46 @@ def main():
                 print(f"  ELEVATOR->PITCH-ACCEL latency ~{1e3 * k / fs:.0f} ms vs the {name} (|corr| {abs(cc[k]):.2f}; first straight leg, 0.5-8 Hz, 5 ms steps){verdict}")
     except Exception as ex:     # noqa: BLE001
         print(f"  (elevator latency not computed: {ex})")
+    # --- THE DOUBLET (piece 5, 2026-09-16): an elevator doublet injected in flight (`doublet A T` on the
+    # cascade's cmd topic) is an OPEN-LOOP excitation; the cross-correlation of the derivatives of the
+    # elevator command and of the pitch acceleration in its window measures the command-to-effect
+    # delay directly (the gate reads its own transport to 5 ms this way: 35 ms at 30, 65 at 60).
+    try:
+        import numpy as np
+        stat = []
+        for name in tp.values():
+            if name[0].startswith("/uav_0/cascade") and name[0].endswith("/status"):
+                stat += [(t, str(m.data)) for t, m in rows(name[0])]
+        stat.sort()
+        on = [t for t, d in stat if "doublet=1" in d]
+        if on:
+            t_d0, t_d1 = on[0] / 1e9, on[-1] / 1e9
+            ele = [(t, m.control[3]) for t, m in rows("/uav_0/fmu/in/actuator_servos")]
+            srcs = {"mocap": [(t, -m.twist.angular.y) for t, m in rows("/uav_0/mocap")]}
+            try:
+                srcs["odometry"] = [(t, m.angular_velocity[1]) for t, m in rows("/uav_0/fmu/out/vehicle_odometry")]   # FRD q = FLU nose-up
+            except Exception:      # noqa: BLE001
+                pass
+            fs = 200.0; ta = t_d0 - 0.5; tb = t_d1 + 1.0
+            tg = np.arange(ta, tb, 1.0 / fs)
+            te = np.array([t for t, _ in ele]) / 1e9; ue = np.array([u for _, u in ele])
+            de = np.gradient(np.interp(tg, te, ue), 1.0 / fs)
+            for name, qs in srcs.items():
+                if len(qs) < 50:
+                    continue
+                tq = np.array([t for t, _ in qs]) / 1e9; q = np.array([v for _, v in qs])
+                dq = np.gradient(np.gradient(np.interp(tg, tq, q), 1.0 / fs), 1.0 / fs)
+                lags = np.arange(0, 61); cc = []
+                for k in lags:
+                    a = de[:len(de) - k] if k else de; b = dq[k:]
+                    cc.append(float(np.corrcoef(a, b)[0, 1]) if a.std() > 0 and b.std() > 0 else 0.0)
+                k = int(lags[int(np.argmax(np.abs(cc)))])
+                print(f"  DOUBLET ({t_d1 - t_d0:.1f} s window at bag t={t_d0 - rows('/uav_0/mocap')[0][0] / 1e9:.1f} s): elevator -> pitch-accel latency "
+                      f"~{1e3 * k / fs:.0f} ms vs the {name} (|corr| {abs(cc[k]):.2f}, derivatives)")
+        else:
+            print("  (no doublet in this bag: send 'doublet 0.3 0.5' on the cascade's cmd topic in a straight leg to measure the latency)")
+    except Exception as ex:     # noqa: BLE001
+        print(f"  (doublet latency not computed: {ex})")
     return 0
 
 

@@ -20,6 +20,7 @@ import argparse
 import importlib.util
 import math
 import os
+import re
 import sys
 import time
 
@@ -191,6 +192,13 @@ def main():
     ap.add_argument("--land-x", type=float, default=None)
     ap.add_argument("--land-y", type=float, default=None)
     ap.add_argument("--land-time", type=float, default=90.0)
+    ap.add_argument("--stage", default="mission", choices=["hover", "tilt10", "tilt50", "cruise", "mission"],
+                    help="the STAGED envelope (piece 5): fly up to this stage and come back. hover = the engage hover on the "
+                         "cascade (v_cap 0), tilt10 = 3 m/s on the schedule, tilt50 = 8 m/s (the wing at ~30%%), cruise = Vc "
+                         "straight for --stage-hold s; mission = the whole thing (the flown behaviour). Each stage holds "
+                         "--stage-hold s and advances only if its go/no-go passes; a failed check aborts through the "
+                         "schedule's back-transition and lands.")
+    ap.add_argument("--stage-hold", type=float, default=15.0)
     ap.add_argument("--guide", default="",
                     help='guidance plan "T:cmd;T:cmd" (T seconds after the cruise starts), e.g. '
                          '"10:wp 400 0 400 300 0 300;90:rth". With an rth the node brakes itself: '
@@ -221,6 +229,48 @@ def main():
     for _ in range(12):
         n.set_ctrl(a.controller); spin(n, 0.25)
     n.line("engage")
+
+    # ---- 2b THE STAGED ENVELOPE (piece 5, 2026-09-16) --------------------------------------
+    # The node's v_cap parameter holds the speed reference at a stage; the driver watches the
+    # telemetry and the cascade's status feed and advances only on a go. The stages are the
+    # hardware flight card's: nothing new is asked of the aircraft in a stage that the previous
+    # stage did not already show.
+    import subprocess
+    STAGES = [("hover", 0.0), ("tilt10", 3.0), ("tilt50", 8.0), ("cruise", 1e9)]
+    stage_abort = False
+    if a.stage != "mission":
+        want = [nm for nm, _ in STAGES].index(a.stage)
+        z_ref = a.alt; fails0 = None
+        for nm, cap in STAGES[:want + 1]:
+            subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", f"{cap if cap < 1e8 else 0.0}"],
+                           capture_output=True, timeout=10)
+            print(f"\n== STAGE {nm}: v_cap {cap if cap < 1e8 else 'off'} for {a.stage_hold:.0f} s ==")
+            st = {"t0": time.time(), "why": ""}
+            def stage_tick(nm=nm, cap=cap, st=st):
+                n.send([base[0] + 2000.0, base[1], a.alt]); n.set_ctrl(a.controller)
+                d = n.telem(); n.line(nm)
+                m = re.search(r"fails=(\d+)/(\d+)", n.casc_status); f = int(m.group(1)) if m else 0
+                if st.get("f0") is None: st["f0"] = f
+                bad = []
+                if abs(d["roll"]) > 15.0 or abs(d["pitch"]) > 20.0: bad.append(f"attitude {d['roll']:+.0f}/{d['pitch']:+.0f}")
+                if abs(d["p"][2] - z_ref) > 3.0: bad.append(f"altitude {d['p'][2]:.1f}")
+                if f - st["f0"] > 3: bad.append(f"solve failures +{f - st['f0']}")
+                if "stale=1" in n.casc_status: bad.append("state stale")
+                if bad:
+                    st["why"] = "; ".join(bad); return True
+                if nm == "cruise" and d["V"] < 13.0 and time.time() - st["t0"] > 25.0: bad.append(f"never reached cruise (V {d['V']:.1f})")
+                if bad:
+                    st["why"] = "; ".join(bad); return True
+                return time.time() - st["t0"] >= a.stage_hold + (12.0 if nm == "cruise" else 0.0)
+            spin(n, a.stage_hold + 60.0, stage_tick, hz=2.0)
+            if st["why"]:
+                print(f"  !! STAGE {nm} NO-GO: {st['why']} -- aborting through the back-transition")
+                stage_abort = True; break
+            print(f"  STAGE {nm}: go ({a.stage_hold:.0f} s inside the limits)")
+        subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "0.0"], capture_output=True, timeout=10)
+        if a.stage != "mission" or stage_abort:
+            # come back: the schedule's back-transition where it is, then the landing leg
+            a.back_transition = True; a.cruise_time = 0.0
 
     print(f"\n== 3 CRUISE: target {a.dist:.0f} m ahead ==")
     tgt = [base[0] + a.dist, base[1], a.alt]

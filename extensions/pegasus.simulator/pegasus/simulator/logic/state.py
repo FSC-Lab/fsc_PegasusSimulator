@@ -82,11 +82,12 @@ class State:
             np.ndarray: A numpy array with [u,v,w] that defines the velocity of the vehicle expressed in the FRD body frame.
         """
 
-        # Get the linear acceleration in FLU convention
-        linear_acc_body_flu = Rotation.from_quat(self.attitude).inv().apply(self.linear_acceleration)
-
-        # Convert the linear acceleration in the body frame expressed in FLU convention to the FRD convention
-        return rot_FLU_to_FRD.apply(linear_acc_body_flu)
+        # ★ UPSTREAM BUG, FIXED 2026-09-16: this returned the body-frame linear ACCELERATION (a copy of
+        # get_linear_acceleration_ned_frd's body), so every consumer -- the synthesised pitot in
+        # vtol_mavlink_backend, HIL_STATE_QUATERNION's ind_airspeed -- read ~0 in steady cruise. The
+        # pitot therefore never worked in motion (0.0 at 16 m/s on every flight's airspeed_validated),
+        # and the crosswind flight of piece 4 ran the wind estimator on a sensor that only saw the wind.
+        return rot_FLU_to_FRD.apply(np.asarray(self.linear_body_velocity, dtype=float))
 
     def get_linear_velocity_ned(self):
         """

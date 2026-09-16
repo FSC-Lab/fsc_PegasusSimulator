@@ -123,11 +123,11 @@ fi
 say "ARMED"
 
 # --- 3. fly -----------------------------------------------------------------
-say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition + land at ($LAND_X, $LAND_Y)${GUIDE:+; guide: $GUIDE}"
+say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition + land at ($LAND_X, $LAND_Y)${GUIDE:+; guide: $GUIDE}${STAGE:+; STAGED up to $STAGE}"
 timeout 900 "$NODE_PY" "$ROOT/scripts/fly_transition.py" \
     --alt "$ALT" --dist "$DIST" --controller "$CTRL" --climb-time "$CLIMB_T" \
     --cruise-time "$CRUISE_T" --back-transition --land --land-x "$LAND_X" --land-y "$LAND_Y" \
-    ${GUIDE:+--guide "$GUIDE"} \
+    ${GUIDE:+--guide "$GUIDE"} ${STAGE:+--stage "$STAGE"} ${STAGE_HOLD:+--stage-hold "$STAGE_HOLD"} \
     > "$OUT" 2>&1 &
 FPID=$!
 # ★ SUPERVISE. The stack has died mid-flight twice today and the driver flew the last
@@ -178,5 +178,5 @@ echo
 RES=${RES:-$BAG_DIR/results.tsv}
 [ -f "$RES" ] || printf 'trial\tparams\tverdict\twb_s\tpeakV\tmaxtilt\tmaxroll\tmaxyaw\tzmin\tzmax\tfails\tland_err\tbag\n' > "$RES"
 printf 'trial\tparams\tverdict\twb_s\tpeakV\tmaxtilt\tmaxroll\tmaxyaw\tzmin\tzmax\tfails\tland_err\tbag\n'
-/usr/bin/python3 "$ROOT/scripts/night_metrics.py" "${BAG%/}" "$NAME" "model=$MODEL water=${VTOL_TANK_KG:-0.502}kg${VTOL_TANK_R:+ R=${VTOL_TANK_R}m}${VTOL_TANK_DX:+ dx=${VTOL_TANK_DX}m}${GUIDE:+ guided}${CASC_NODE_PY:+ node=$(basename "$CASC_NODE_PY" .py)} ctrl=$CTRL${CASC_EST:+ est=$CASC_EST}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY" .py)}${CASC_STATE:+ state=$CASC_STATE}${EKF_SOURCE:+ ekf=$EKF_SOURCE}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${CASC_ASPD:+ aspd=$CASC_ASPD}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${AF:+ af=$AF}" "${LERR:-}" | tee -a "$RES"
+/usr/bin/python3 "$ROOT/scripts/night_metrics.py" "${BAG%/}" "$NAME" "model=$MODEL water=${VTOL_TANK_KG:-0.502}kg${VTOL_TANK_R:+ R=${VTOL_TANK_R}m}${VTOL_TANK_DX:+ dx=${VTOL_TANK_DX}m}${GUIDE:+ guided}${CASC_NODE_PY:+ node=$(basename "$CASC_NODE_PY" .py)} ctrl=$CTRL${CASC_EST:+ est=$CASC_EST}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY" .py)}${CASC_STATE:+ state=$CASC_STATE}${EKF_SOURCE:+ ekf=$EKF_SOURCE}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${CASC_ASPD:+ aspd=$CASC_ASPD}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${STAGE:+ stage=$STAGE}${AF:+ af=$AF}" "${LERR:-}" | tee -a "$RES"
 say "results -> $RES"

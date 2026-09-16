@@ -191,6 +191,10 @@ fi
 say "4/4 verifying which model Isaac spawned"
 PANE=$(tmux capture-pane -p -J -S -3000 -t "$SESSION:2-isaac" 2>/dev/null)   # -J: join wrapped lines
 BANNER=$(echo "$PANE" | grep -c "VTOL_SLOSH set")
+# the plant's wind line (piece 4) is logged ONCE at its first physics step; read it HERE, from the
+# same early capture -- by READY time PEGASUS_SLOSH_DEBUG has pushed it out of the 2000-line history
+# (the first crosswind launch failed READY on exactly that, 2026-09-16)
+WIND_LINE=$(echo "$PANE" | grep -o "\[VTOL\] wind:.*" | tail -1 | cut -c1-120)
 if [ "$WANT_SLOSH" = "1" ] && [ "$BANNER" -lt 1 ]; then
   echo "[slosh_hil] !! ASKED FOR THE TANK MODEL AND DID NOT GET IT."
   echo "[slosh_hil]    Isaac never logged 'VTOL_SLOSH set -> VTOLSlosh model'."
@@ -455,10 +459,13 @@ if [ "${CASC_ASPD:-none}" = px4 ]; then
   say "    airspeed source: px4 (airspeed_validated at $AHZ Hz)"
 fi
 if [ -n "${VTOL_WIND:-}${VTOL_TURB:-}" ]; then
-  if ! tmux capture-pane -p -J -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -q "\[VTOL\] wind:"; then
+  if [ -z "$WIND_LINE" ]; then
+    WIND_LINE=$(tmux capture-pane -p -J -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -o "\[VTOL\] wind:.*" | tail -1 | cut -c1-120)
+  fi
+  if [ -z "$WIND_LINE" ]; then
     echo "[slosh_hil] !! VTOL_WIND=${VTOL_WIND:-} VTOL_TURB=${VTOL_TURB:-} asked for but Isaac never logged '[VTOL] wind:' (the env did not reach the pane, or the vehicle is not stepping). Not READY."; exit 1
   fi
-  say "    wind: $(tmux capture-pane -p -J -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -o "\[VTOL\] wind:.*" | tail -1 | cut -c1-120)"
+  say "    wind: $WIND_LINE"
 fi
 
 # THE BAG MUST EXIST (2026-09-15): the cold-start launcher runs under `set -u` and an unbound variable

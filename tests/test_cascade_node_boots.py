@@ -39,8 +39,21 @@ NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tan
          "px4src": ("nmpc_cascade_node.py", "cascade", "-p state_source:=px4"),
          # "aspd" = the base node with `airspeed_source: px4` (piece 4, 2026-09-15): it must subscribe to
          # PX4's airspeed_validated and log the first TAS it receives
-         "aspd": ("nmpc_cascade_node.py", "cascade", "-p airspeed_source:=px4")}
+         "aspd": ("nmpc_cascade_node.py", "cascade", "-p airspeed_source:=px4"),
+         # "interlock" (piece 5, 2026-09-16): a mocap sample at 3 m/s is published, then the controller
+         # switch -- the node must REFUSE to engage (hover only) and say so; then a hover sample, the
+         # switch again -> ENGAGED; then no more state for 0.5 s -> STATE STALE logged (the watchdog)
+         "interlock": ("nmpc_cascade_node.py", "cascade", "-p state_stale_s:=0.2")}
 NS = "uav_0"
+
+
+def stack_is_live():
+    """A HIL stack up = this test must not run: it boots a node under the LIVE node's name, feeds it
+    the live mocap, and publishes on the live actuator and active_controller topics (2026-09-16: a
+    boot test started during a flight's boot engaged a second cascade on the stack)."""
+    nl = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 node list"],
+                        capture_output=True, text=True).stdout
+    return any(n in nl for n in ("/nmpc_cascade_control", "/geometric_hover_control", "/isaacsim_mocap_emulator", "/mocap_to_px4_ev"))
 
 
 def run(node, wait_s=60.0):
@@ -108,6 +121,27 @@ def run(node, wait_s=60.0):
                 txt = open(log, errors="replace").read()
                 if "first airspeed_validated: TAS 12.50 m/s" in txt:
                     aspd_ok = True; break
+        il_ok = True; il_why = ""
+        if node == "interlock":
+            def mocap(vx, vy):
+                return (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/mocap fsc_autopilot_ros2_msgs/msg/Mocap "
+                        f"\"{{pose: {{position: {{x: 0.0, y: 0.0, z: 30.0}}, orientation: {{w: 1.0}}}}, twist: {{linear: {{x: {vx}, y: {vy}, z: 0.0}}}}}}\"")
+            switch = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/ground_station/active_controller "
+                      f"std_msgs/msg/String \"{{data: '{cid}'}}\"")
+            subprocess.run(["bash", "-c", mocap(3.0, 0.0)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            subprocess.run(["bash", "-c", switch], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            time.sleep(2.0)
+            txt = open(log, errors="replace").read()
+            if "ENGAGE REFUSED" not in txt or "ENGAGED at" in txt:
+                il_ok = False; il_why = "a switch at 3 m/s was not refused"
+            subprocess.run(["bash", "-c", mocap(0.0, 0.0)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            subprocess.run(["bash", "-c", switch], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            time.sleep(2.0)
+            txt = open(log, errors="replace").read()
+            if il_ok and "ENGAGED at" not in txt:
+                il_ok = False; il_why = "a switch in hover was not accepted"
+            if il_ok and "STATE STALE" not in txt:      # 2 s with no state after the engage: the watchdog
+                il_ok = False; il_why = "no state for 2 s while active did not trip the watchdog"
         alive = proc.poll() is None
         nl = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 node list"],
                             capture_output=True, text=True).stdout.split()
@@ -141,6 +175,8 @@ def run(node, wait_s=60.0):
                 return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/vehicle_odometry"
             if f"/{NS}/mocap:" in info:
                 return False, f"{node}: state_source px4 must NOT also subscribe to the mocap (two state sources)"
+        if node == "interlock" and not il_ok:
+            return False, f"{node}: {il_why}\n" + txt[-1200:]
         if node == "aspd":
             if "airspeed source: px4" not in txt:
                 return False, f"{node}: the node did not report 'airspeed source: px4'"
@@ -153,11 +189,14 @@ def run(node, wait_s=60.0):
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
             if not imu_ok:
                 return False, f"{node}: a SensorCombined message on /{NS}/fmu/out/sensor_combined was not logged as FLU (+0.50, -0.20, +9.81) within 10 s"
-        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "")
+        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "") + (", engage refused at 3 m/s, accepted in hover, watchdog tripped" if node == "interlock" else "")
 
 
 def main():
     which = sys.argv[sys.argv.index("--node") + 1] if "--node" in sys.argv else "both"
+    if stack_is_live():
+        print("REFUSED: a HIL stack is live (ros2 node list shows its nodes) -- this test boots nodes under the live names. Tear it down first.")
+        return 2
     nodes = list(NODES) if which == "both" else [which]
     fails = 0
     for n in nodes:

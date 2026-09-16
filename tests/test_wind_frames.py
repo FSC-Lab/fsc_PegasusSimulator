@@ -90,6 +90,9 @@ def main():
             v_fwd -= float(Rotation.from_quat(state.attitude).inv().apply(np.asarray(wind, float))[0])
         return v_fwd
     check(abs(pitot(stp, None)) < 1e-12 and abs(pitot(stp, np.zeros(3))) < 1e-12, "at rest, no wind: 0 m/s (the flown behaviour)")
+    stv = state_mod.State(); stv.attitude = np.array([0.0, 0.0, 0.0, 1.0])
+    stv.linear_velocity = np.array([12.0, 0.0, 0.0]); stv.linear_body_velocity = np.array([12.0, 0.0, 0.0]); stv.linear_acceleration = np.array([0.5, 0.0, 0.0])
+    check(abs(pitot(stv, None) - 12.0) < 1e-9, "FLYING at 12 m/s in still air: the pitot reads the body VELOCITY, not the acceleration (the upstream State bug that read 0.0 at 16 m/s on every flight)")
     check(abs(pitot(stp, np.array([-5.0, 0.0, 0.0])) - 5.0) < 1e-9, "at rest in a 5 m/s headwind (wind -x, nose +x): 5 m/s")
     stp.attitude = Rotation.from_euler("z", 90, degrees=True).as_quat()        # nose along world +y
     check(abs(pitot(stp, np.array([-5.0, 0.0, 0.0]))) < 1e-9, "yawed 90 deg the same wind is a crosswind: 0 m/s")
