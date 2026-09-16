@@ -392,7 +392,7 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
     fi
   done
   if [ "${GEO_STATE:-mocap}" = px4 ]; then
-    if ! tmux capture-pane -p -J -S -200 -t "$SESSION:6-geometric" 2>/dev/null | grep -q "state source: px4"; then
+    if ! tmux capture-pane -p -J -S - -t "$SESSION:6-geometric" 2>/dev/null | grep -q "state source: px4"; then   # whole scrollback: the pane logs at 2 Hz
       echo "[slosh_hil] !! GEO_STATE=px4 but the safe controller did not report 'state source: px4'. Not READY."; exit 1
     fi
     say "    safe controller: state source px4"
