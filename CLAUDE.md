@@ -37,6 +37,53 @@ position (`fly_transition.py`: the mission's `--land-x/y` is the far target, and
 been sent 700 m along the ground on the safe controller to reach it, "CRASHED 71 m short"). `ims=` 0.80 / 1.29
 in the loop. The two earlier hover flights of the morning (02:07 the creeping cap, 02:32 the resumed schedule,
 09:10 busy / 09:24 poll: the landing target) are in the piece-7 and piece-6 blocks.
+**THE TURBULENCE ENVELOPE'S TWO KNOBS (piece 4 left them untested; `wind_sweep.sh` cells `*_ttr8`, `*_vc17/18`,
+`*_rtf085`, `*_d10`; sweeps `~/flight_bags/wind/turb2..5`, 16 seeds per cell, imu-mdob + pitot, the turning
+mission, the offset 100 mm tank):**
+| cell (turbulence 1-sigma per axis) | landed | fails | corridor pk | Vair min | orbit rho-R | stop |
+|---|---|---|---|---|---|---|
+| still, Vc 16 (wind1) | 16/16 | 16 | 11.6 | 16.01 | -0.2 +- 0.1 | 6.3 m |
+| still, Vc 16, ttr 8 | 16/16 | 5 | 10.3 | 16.01 | -0.2 +- 0.1 | 9.1 |
+| **still, Vc 18** | 16/16 | 18 | **8.6** | 17.94 | +1.0 +- 3.7 | 10.5 |
+| turb 0.5, Vc 16 (wind1) | 15/16 | 99 | 87 (the one stall) | 10.5 | +0.3 +- 1.1 | 5.7 |
+| **turb 0.5, Vc 18** | **16/16** | 24 | 14.2 | 16.56 | +7.9 +- 8.3 | 9.9 |
+| turb 1.0, Vc 16 (wind1) | 2/16 | 1343 | -- | 5.5 | -- | -- |
+| turb 1.0, Vc 16, ttr 8 | 5/16 | 1062 | -- | 6.8 | -- | -- |
+| turb 1.0, Vc 17 | 8/16 | 796 | -- | 6.3 | -- | -- |
+| turb 1.0, ttr 8 + Vc 17 | 6/16 | 855 | -- | 6.7 | -- | -- |
+| **turb 1.0, Vc 18** | **14/16** | 270 | 18.1 | 15.26 | +13.6 +- 13.5 | 21 |
+| headwind 5, Vc 16 (wind2) | 16/16 | 125 | 11.7 | 16.01 | +5.6 +- 16 | 22 |
+| headwind 5, Vc 18 | 16/16 | **8** | 8.2 | 17.94 | +0.3 +- 2.5 | 17 |
+| still, Vc 16, RTF 0.85 (HIL's clock) | 16/16 | 69 | 12.2 | 16.02 | -0.1 +- 0.1 | 9.3 |
+| still, Vc 18, RTF 0.85 | 16/16 | 47 | 9.4 | 17.94 | -0.5 +- 1.7 | 13.4 |
+| turb 0.5, Vc 16, RTF 0.85 | **13/16** (corridor, t 10-17 s) | 241 | 83 | 11.8 | +0.1 +- 1.1 | 11 |
+| turb 0.5, Vc 16, RTF 0.85, decel 1.0 | 13/16 (the same three) | 253 | 83 | 11.8 | -- | 18 |
+| turb 0.5, Vc 18, RTF 0.85 | 15/16 (corridor, t 11 s) | 108 | 70 | 16.3 | +7.6 +- 8.3 | 18 |
+| turb 0.5, Vc 18, RTF 0.85, decel 1.0 | 15/16 (the same one) | 104 | 70 | 16.3 | -- | 29 |
+**READING.** (1) The CRUISE SPEED is the lever, `ttr` is not: at 18 m/s the wing sits 2.9 m/s above its stall
+instead of 0.9 (the cruise AoA lower, 6 deg more to the 13 deg break against a vertical gust) and the 1 m/s cell
+goes 2/16 -> 14/16, the 0.5 m/s cell 15 -> 16/16, the headwind cell's solve failures 125 -> 8; the corridor peak
+is LOWER at 18 (the speed ramp Vc/ttr is quicker -- the ttr finding again); `ttr 8` alone buys 5/16 and costs
+still-air fails. The costs of 18: the orbit is 4x rougher (+-3.7 m still, +-8-13 in turbulence: 18.4 deg of
+coordinated bank for R 100 against the 25 deg limit), the stop 10-13 m (27% more energy), the front throttle
+0.88 (the 12x8's headroom thins: 0.95-1.00 in turbulence). (2) **At HIL's clock the CORRIDOR is where turbulence
+bites, at either speed and whatever the decel rate**: 3/16 at 16 and 1/16 at 18 stall out of the transition at
+t 10-17 s in 0.5 m/s turbulence (the wall-clock ramp asks 1.76 m/s^2 of a 0.85-RTF plant, the known +2-4 deg
+HIL onset, and a 1.5 m/s vertical gust takes the rest) -- hardware has RTF 1, where the same cell is 15/16 and
+16/16. (3) **NOT ADOPTED: the one HIL flight at Vc 18 (row R100_dx3_vc18_turb05_a1_104340, bag
+slosh_20260916_104227, `CASC_VC=18 VTOL_TURB=0.5 CASC_SPIN=poll`) flew the legs, both turns and the orbit at
+18.0-18.2 m/s of air and DEPARTED AT THE RTH STOP'S STALL CROSSING**: back-transition armed at 18.1, the rotors
+upright by V 15.2 (the schedule's "rotors first"), then at V 13.0 pitch +23 (AoA 24.8, the wing share 128 ->
+40%: stalled) with 2 solve failures, +31 at V 11.5 with 8, a tumble at V 6 -- the piece-2/knife-edge signature
+on a crossing that starts 2 m/s higher. Not reproduced by the gate: 32 stops from 18 (16 at RTF 1, 16 at 0.85)
+and the 15 turbulent ones all stop clean. One flight; the stop from 18 is the thing to gate more (a two-speed
+decel -- 18 -> 16 on the cruise trim, then the flown back-transition -- is the design candidate) before 18 is a
+mission option. `vcruise` stays 16; `CASC_VC` (both launchers, forced to a DOUBLE now: `CASC_VC=18` had killed
+both cascade panes with rclpy's INTEGER-for-DOUBLE rejection, the CASC_SETTLE_S lesson) is the knob.
+**THE FINAL-TREE REGRESSION (the flown straight line, `ke_sweep.sh`, 16 seeds, y0 10 m, noise 0.1/1, lat 0.03 /
+comp 0.049 / outer_lag 0.03, the CG tank; `~/flight_bags/ke_sweeps/reg_{imu,steso}`):** imu-mdob 16/16, worst
+crossing +14.2, fails 2, stop 8.8 s; steso-node mdob 16/16, +14.3, fails 2 -- the references (16/16, 14.3, 3)
+to the seed.
 **THE IDENTITY CHECK MOVES WITH IT, DELIBERATELY:** the gate's first 2 s are a hover, so the hold changes the
 flown line's trace there. `--hold_k 0` reproduces the old hashes EXACTLY (steso line `ef8e90e4e5ef6afbe2935ba81fa4bbe0`,
 IMU line `e958efbc7bbf9687db76620563cdabf8`) -- the proof that nothing outside the hold moved -- and the new
