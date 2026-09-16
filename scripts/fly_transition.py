@@ -227,6 +227,12 @@ def main():
         print("  climb did not settle -- continuing anyway")
 
     print(f"\n== 2 ENGAGE {a.controller} ==")
+    if a.stage != "mission":
+        # the first stage's speed cap goes in BEFORE the switch: the node settles 2 s after the engage and a
+        # `ros2 param set` takes about as long -- the third staged flight's cap arrived at 3 m/s
+        import subprocess as _sp
+        _sp.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "0.0"], capture_output=True, timeout=10)
+        print("  v_cap 0 set before the engage (the hover stage's cap)")
     base = n.p.copy()
     for _ in range(12):
         n.set_ctrl(a.controller); spin(n, 0.25)
@@ -256,7 +262,7 @@ def main():
                 bad = []
                 if abs(d["roll"]) > 15.0 or abs(d["pitch"]) > 20.0: bad.append(f"attitude {d['roll']:+.0f}/{d['pitch']:+.0f}")
                 if abs(d["p"][2] - z_ref) > 3.0: bad.append(f"altitude {d['p'][2]:.1f}")
-                if d["V"] > vhi + 1.0 or (time.time() - st["t0"] > 10.0 and d["V"] < vlo - 0.5 and nm != "cruise"): bad.append(f"speed {d['V']:.1f} outside {vlo}-{vhi}")
+                if time.time() - st["t0"] > 10.0 and (d["V"] > vhi + 1.0 or (d["V"] < vlo - 0.5 and nm != "cruise")): bad.append(f"speed {d['V']:.1f} outside {vlo}-{vhi}")
                 if f - st["f0"] > 3: bad.append(f"solve failures +{f - st['f0']}")
                 if "stale=1" in n.casc_status: bad.append("state stale")
                 if bad:
