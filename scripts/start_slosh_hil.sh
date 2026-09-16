@@ -397,7 +397,7 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
     fi
     say "    safe controller: state source px4"
   fi
-  if [ "${EKF_SOURCE:-ev}" = gps ]; then
+  if [ "${EKF_SOURCE:-ev}" = gps ] || [ "${EKF_SOURCE:-ev}" = gpsmag ]; then
     GPHZ=$(timeout 12 ros2 topic hz /uav_0/fmu/out/vehicle_global_position -w 40 2>/dev/null | grep -o "average rate: [0-9.]*" | tail -1 | grep -o "[0-9.]*")
     if [ -z "$GPHZ" ]; then
       echo "[slosh_hil] !! EKF_SOURCE=gps but EKF2 publishes no vehicle_global_position (no GPS aiding). Not READY."; exit 1

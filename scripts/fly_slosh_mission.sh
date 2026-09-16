@@ -38,7 +38,7 @@ set +u; source "$ROOT/scripts/rosenv.sh" 2>/dev/null; set -u
 
 # --- 0. which model is flying? record it with the flight --------------------
 MODEL=baseline_VTOL
-tmux capture-pane -p -S -3000 -t "$SESSION:2-isaac" 2>/dev/null | grep -q "VTOL_SLOSH set" && MODEL=VTOLSlosh
+tmux capture-pane -p -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -q "VTOL_SLOSH set" && MODEL=VTOLSlosh   # the WHOLE scrollback: with PEGASUS_SLOSH_DEBUG the banner scrolls past 3000 lines (a mislabelled row, 2026-09-15)
 say "model in the sim: $MODEL"
 
 # --- 0.5 IS THE VEHICLE FIT?  (not: is the stack up) ------------------------

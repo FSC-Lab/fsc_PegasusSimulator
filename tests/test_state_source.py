@@ -21,7 +21,8 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, "..
 sys.path.insert(0, ROOT)
 from controller_path import controller_dir     # noqa: E402
 sys.path.insert(0, os.path.join(controller_dir(), "px4_vtol_direct_actuator"))
-sys.argv = [sys.argv[0]] + [a for a in sys.argv[1:] if not a.startswith("--")]
+FLAGS = [a for a in sys.argv[1:] if a.startswith("--")]          # our own flags, kept aside so the
+sys.argv = [sys.argv[0]] + [a for a in sys.argv[1:] if not a.startswith("--")]   # controller's argf() never sees them
 import nmpc_cascade_node as base                # noqa: E402
 fails = 0
 
@@ -81,19 +82,19 @@ def bag_check():
         ea.append(math.degrees(math.acos(max(-1.0, min(1.0, (np.trace(Rm[j].T @ R) - 1) / 2)))))
     ep, ev, ew = np.array(ep), np.array(ev), np.array(ew)
     rp = float(np.sqrt((ep ** 2).sum(1).mean())); rv = float(np.sqrt((ev ** 2).sum(1).mean())); rw = float(np.sqrt((ew ** 2).sum(1).mean()))
-    lim_p = 2.5 if "--gps" in sys.argv else 0.8      # a GPS-fed EKF2 carries the receiver's error, not a frame slip
+    lim_p = 2.5 if "--gps" in FLAGS else 0.8      # a GPS-fed EKF2 carries the receiver's error, not a frame slip
     check(rp < lim_p, f"bag: converted EKF2 position vs mocap rms {rp:.2f} m (mean offset {np.round(ep.mean(0), 2)}; a frame slip is metres)")
-    check(rv < 0.25 if "--gps" in sys.argv else rv < 0.15, f"bag: velocity rms {rv:.3f} m/s")
+    check(rv < 0.25 if "--gps" in FLAGS else rv < 0.15, f"bag: velocity rms {rv:.3f} m/s")
     check(np.mean(ea) < 1.0, f"bag: attitude error mean {np.mean(ea):.2f} deg (max {np.max(ea):.1f} in the turns)")
     check(rw < 0.02, f"bag: body-rate error rms {rw:.3f} rad/s")
 
 
-if "--no-bag" not in sys.argv:
+if "--no-bag" not in FLAGS:
     bag_check()
 
 # 3. the SAFE controller on state_source px4 (2026-09-15): boots, reports it, subscribes to the
 #    odometry and NOT the mocap. Needs the ROS env; skipped without it.
-if "--no-boot" not in sys.argv:
+if "--no-boot" not in FLAGS:
     import subprocess, time
     PY = os.path.expanduser("~/envs/isaac_env/bin/python3")
     node = os.path.join(controller_dir(), "px4_vtol_direct_actuator", "geometric_hover_node.py")
@@ -114,5 +115,5 @@ if "--no-boot" not in sys.argv:
     check(up and "state source: px4" in txt, "safe controller boots on state_source px4 and reports it")
     check("/uav_0/fmu/out/vehicle_odometry: px4_msgs/msg/VehicleOdometry" in info, "safe controller subscribes to EKF2's odometry")
     check("/uav_0/mocap:" not in info, "safe controller on px4 does NOT also subscribe to the mocap")
-    print("ALL PASS" if not fails else f"{fails} FAILED")
-    sys.exit(1 if fails else 0)
+print("ALL PASS" if not fails else f"{fails} FAILED")
+sys.exit(1 if fails else 0)
