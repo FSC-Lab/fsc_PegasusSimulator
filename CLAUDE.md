@@ -135,18 +135,30 @@ proxy. **The desktop numbers (24-core workstation; the Orin's A78AE is taken as 
 Parts of the tick (median): L1 applied_moment (model force/moment, the IMU residual, the EKF step + the
 delay-ahead prediction) 0.105 ms, the EKF step alone 0.103, `model_moment` (the CasADi aero call) 0.053,
 the L1 law + moment observer 0.009, the allocation inverse < 0.001.
-**★ THE TICK IN THE ROS PROCESS IS 2.5x THE BENCH'S: `ims=` FROM THE FIRST HIL BAG WITH IT (the hover
-flight of 02:32, imu-mdob + EKF + L1, `state_source px4`, bag slosh_20260916_023035): median 1.05 ms /
-p95 1.66 in the hover, 1.04 / 1.52 in the cruise (worst 5 Hz sample p95 2.2).** The 0.6 ms the bench does
-not see is `inner()`'s ROS path: two actuator messages built and published (rclpy's publish is ~0.2 ms
-each), the outer package read, the telemetry bookkeeping -- the same on any machine. So the Orin
-projection for the plan's pass line (inner p95 < 3 ms at 200 Hz) is **2.1 ms median / 3.3 ms p95: ON the
-line, not 4x inside it** -- the 200 Hz claim on the Orin rests on the publish path, not on the control
-maths. The order of remedies if the Orin's `ims=` p95 reads over 3 ms: the two publishes (one
-pre-allocated message each, no per-tick construction), then the inner loop at 150 Hz (6.7 ms tick: p95
-50%), then a compiled path for the EKF step and the aero call (0.1 ms each here). The outer's line stands
-(27 ms p95 of 50 predicted; `outer_hz` 15 is the fallback). `tests/test_bench_budget.py` holds the desktop
-bench floor; the Orin's own table (the bench AND `ims=` from its first hover bag) goes here when it exists.
+**★ THE TICK IN THE ROS PROCESS WAS 2.5x THE BENCH'S, AND IT WAS THE CORE CLOCK, NOT rclpy (2026-09-16
+morning, controller 82a23b5 + baa27e4).** `ims=` from the first HIL bag with it (the 02:32 hover, imu-mdob +
+EKF + L1, `state_source px4`): 1.05 ms median / 1.66 p95; on the IDLE desktop with a synthetic 200 Hz
+stream (`CASC_PROF=N` cProfiles N ticks of `inner()` in the ROS process -- a dev knob) 1.29 / 2.0 ms, every
+primitive uniformly ~2x its bench cost (`_bob_step` 6.4 vs 3.0 us, the casadi call 0.10 vs 0.05 ms) while
+rclpy's own costs measured tiny (`get_parameter` 0.4 us -- Humble caches; two publishes 26 us; the GIL
+switch interval no effect). The Ryzen's `schedutil` governor clocks a callback thread that runs 1.3 ms in
+every 5 ms DOWN (2.2-2.9 GHz of 4.9) and the bench's busy loop UP. Proof and remedy: **`CASC_SPIN=poll`
+(a polling executor with a 200 us bounded `rcl_wait`) reads 0.58 / 0.89 ms on the same stream and the
+outer solve 17 -> 10 ms** -- one core kept awake (105% of a core; `busy`, a zero-wait poll, is the same tick
+at 134% and let one `ros2 param set` time out in HIL, so `poll` is the mode). In the loaded HIL stack the
+gain is smaller (the machine is busy, so the clock was already up): **0.83 / 1.34 ms with `poll` vs 1.05 /
+1.66** (hover flights 09:10 busy, 09:24 poll; the outer 12.0 / 14.3 ms; the odometry the inner clocks on
+arrives at 80 Hz in HIL). Also taken on the way: the two actuator messages built once and filled in place
+(0.1 ms), the IMU node's dead-reckoning sample test without `np.allclose` (40 us, the same decision), and
+the IMU node attaches its subscription through `base.SPIN_HOOKS` instead of monkeypatching `rclpy.spin`.
+**For the Orin this is `nvpmodel -m 0 && jetson_clocks` (the plan already says so) and/or `CASC_SPIN=poll`;
+the projection is then 1.2 ms median / 1.8 p95 of the 5 ms tick -- inside the pass line with room, not on
+it.** Further remedies in order if its `ims=` still reads over 3 ms: 150 Hz (a 6.7 ms tick), then a compiled
+EKF step / aero call (0.1 ms each here). The outer's line stands (~24 ms p95 of 50 predicted; `outer_hz` 15
+is the fallback). `tests/test_bench_budget.py` holds the desktop bench floor (the bench runs at full clock:
+on a pinned-clock machine it is the right reference, on a scaled one `ims=` is); the Orin's own table (the
+bench AND `ims=` from its first hover bag) goes here when it exists. The launchers forward `CASC_SPIN` to
+both cascade panes (default: `rclpy.spin`, the flown executor).
 **THE TICK WAS 1.32 ms BEFORE THIS PIECE, AND 70% OF IT WAS NOT CONTROL:** cProfile on the tick: (1) the
 predictor's `predict(tau)` evaluated the slosh force at EVERY substep (an `np.r_` 9-vector and `_force_at`
 each) although only the last is read unless a trajectory is asked -- and it was called TWICE per tick, the

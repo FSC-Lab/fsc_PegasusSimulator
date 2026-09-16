@@ -281,8 +281,10 @@ def main():
             print(f"  STAGE {nm}: go ({a.stage_hold:.0f} s inside the limits)")
         subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "-1.0"], capture_output=True, timeout=10)
         if a.stage != "mission" or stage_abort:
-            # come back: the schedule's back-transition where it is, then the landing leg
-            a.back_transition = True; a.cruise_time = 0.0
+            # come back: the schedule's back-transition where it is, then LAND WHERE IT IS -- the
+            # mission's --land-x/y is the far target, and a hover-only stage that was sent there
+            # drove 700 m along the ground on the safe controller (09:24, "CRASHED" 71 m short)
+            a.back_transition = True; a.cruise_time = 0.0; a.land_x = None; a.land_y = None
 
     print(f"\n== 3 CRUISE: target {a.dist:.0f} m ahead ==")
     tgt = [base[0] + a.dist, base[1], a.alt]
