@@ -47,6 +47,7 @@ declare -A CELL=(
   [still_ttr8]="--ttr 8" [turb10_ttr8]="--turb 1.0 --ttr 8"
   [turb10_vc17]="--turb 1.0 --vc 17" [turb10_vc18]="--turb 1.0 --vc 18"
   [turb10_ttr8_vc17]="--turb 1.0 --ttr 8 --vc 17" [turb05_ttr8_vc17]="--turb 0.5 --ttr 8 --vc 17"
+  [still_vc18]="--vc 18" [turb05_vc18]="--turb 0.5 --vc 18" [head5_vc18]="--wind -5,0,0 --vc 18"
 )
 CELLS=${*:-"still head3 head5 cross3 cross5 crossm5 diag5 turb05 turb10 head5_turb05"}
 echo "cells=[$CELLS] seeds $LO-$HI pitot=${PITOT:-NONE} tank_kg=$VTOL_TANK_KG R=$VTOL_TANK_R dx=$VTOL_TANK_DX" > "$D/config"
