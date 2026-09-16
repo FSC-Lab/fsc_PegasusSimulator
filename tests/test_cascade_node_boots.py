@@ -14,6 +14,7 @@ line, publishes one guidance command, and requires the GUIDE ack in the node's o
 process still alive at the end. Needs a sourced ROS env; no stack, no Isaac.
 """
 import os
+import re
 import subprocess
 import sys
 import time
@@ -43,7 +44,11 @@ NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tan
          # "interlock" (piece 5, 2026-09-16): a mocap sample at 3 m/s is published, then the controller
          # switch -- the node must REFUSE to engage (hover only) and say so; then a hover sample, the
          # switch again -> ENGAGED; then no more state for 0.5 s -> STATE STALE logged (the watchdog)
-         "interlock": ("nmpc_cascade_node.py", "cascade", "-p state_stale_s:=0.2")}
+         "interlock": ("nmpc_cascade_node.py", "cascade", "-p state_stale_s:=0.2"),
+         # "vcap" (piece 7, 2026-09-16): v_cap 0 set BEFORE the engage, a hover mocap stream for 14 s, the
+         # switch -> the node settles and its speed reference must STAY at 0.0 (the first cap let the
+         # ramp-up creep past it at +0.1 m/s^2: a "hover" stage that walked to 3.1 m/s)
+         "vcap": ("nmpc_cascade_node.py", "cascade", "-p v_cap:=0.0 -p settle_s:=1.0")}
 NS = "uav_0"
 
 
@@ -81,6 +86,47 @@ def run(node, wait_s=60.0):
         if not ready:
             os.killpg(proc.pid, 15); proc.wait(10)
             return False, f"{node}: never reached standby (exit {proc.poll()})\n" + txt[-1500:]
+        il_ok = True; il_why = ""
+        # (vcap runs FIRST, before any other CLI participant has touched this node: with the ack's
+        # echo/pub participants around, the probe's publishers were never matched -- a DDS quirk of
+        # this harness, not of the node)
+        if node == "vcap":
+            # ONE rclpy participant does the whole exchange (a hover mocap stream at 5 Hz, the switch at
+            # 1 Hz as the driver sends it, then the status feed read): the CLI's per-call participants
+            # were seen never to match the node's subscription while another CLI publisher ran
+            stream = f"""
+import rclpy, time, re
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from std_msgs.msg import String
+from fsc_autopilot_ros2_msgs.msg import Mocap
+rclpy.init(); n = Node('vcap_probe')
+pm = n.create_publisher(Mocap, '/{NS}/mocap', qos_profile_sensor_data)
+ps = n.create_publisher(String, '/{NS}/ground_station/active_controller', 10)
+got = []
+n.create_subscription(String, '/{NS}/{cid}/status', lambda m: got.append(m.data), 10)
+m = Mocap(); m.pose.position.z = 30.0; m.pose.orientation.w = 1.0
+t0 = time.time(); k = 0
+while time.time() - t0 < 16.0:
+    pm.publish(m)
+    if 2.0 < time.time() - t0 < 8.0 and k % 5 == 0:
+        ps.publish(String(data='{cid}'))
+    rclpy.spin_once(n, timeout_sec=0.0); time.sleep(0.2); k += 1
+print('STATUS', got[-1] if got else 'none')
+n.destroy_node(); rclpy.shutdown()
+"""
+            probe_py = os.path.join(os.environ.get("TMPDIR", "/tmp"), "casc_boot_vcap_probe.py")
+            with open(probe_py, "w") as pf:
+                pf.write(stream)
+            pr = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; {PY} {probe_py}"], capture_output=True, text=True, timeout=60)
+            feed = pr.stdout
+            txt = open(log, errors="replace").read()
+            m = re.search(r"vcmd=([-0-9.]+)", feed)
+            vc = float(m.group(1)) if m else None
+            if "SETTLED" not in txt:
+                il_ok = False; il_why = f"the node never settled on the hover stream (no SETTLED in the log; probe said {feed.strip()[-200:]!r} {pr.stderr.strip()[-200:]!r})"
+            elif vc is None or vc > 0.05:
+                il_ok = False; il_why = f"v_cap 0 did not hold the speed reference: vcmd={vc} on the status feed 14 s after the engage"
         # the protocol, end to end: topic -> on_cmd -> Guidance -> logged ack (state is None, so
         # the node must say so rather than throw -- that is the branch a dead subscription hides)
         # listen for the ack on the status topic FIRST (the ground station's Guidance row reads it)
@@ -121,7 +167,6 @@ def run(node, wait_s=60.0):
                 txt = open(log, errors="replace").read()
                 if "first airspeed_validated: CAS 12.40 m/s" in txt:
                     aspd_ok = True; break
-        il_ok = True; il_why = ""
         if node == "interlock":
             def mocap(vx, vy):    # -t 3 -r 5: a best-effort sample can be dropped; three of them are not
                 return (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub -t 3 -r 5 -w 1 /{NS}/mocap fsc_autopilot_ros2_msgs/msg/Mocap "
@@ -162,11 +207,13 @@ def run(node, wait_s=60.0):
             return False, f"{node}: process died after standby (exit {proc.returncode})"
         if want_node not in nl:
             return False, f"{node}: node {want_node} not in `ros2 node list` (got {nl})"
-        if not acked:
+        if not acked and node != "vcap":
             return False, f"{node}: no reaction to /{NS}/{cid}/cmd within 10 s (subscription dead?)"
         # the ack must ALSO reach /<ns>/cascade/status -- that is what the ground station's
         # Guidance row displays (before engage the answer is "ignored: no state yet")
-        if "ack" not in status_out or "wp 100 0" not in status_out.replace("''", "'"):
+        if node != "vcap" and ("ack" not in status_out or "wp 100 0" not in status_out.replace("''", "'")):
+            # (vcap: the node is ENGAGED by then and its 5 Hz status feed is what --once catches, not
+            # the ack; the ack path is every other variant's check)
             return False, f"{node}: no ack on /{NS}/{cid}/status (got {status_out.strip()[:120]!r})"
         if node == "px4src":
             if "state source: px4" not in txt:
@@ -175,7 +222,7 @@ def run(node, wait_s=60.0):
                 return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/vehicle_odometry"
             if f"/{NS}/mocap:" in info:
                 return False, f"{node}: state_source px4 must NOT also subscribe to the mocap (two state sources)"
-        if node == "interlock" and not il_ok:
+        if node in ("interlock", "vcap") and not il_ok:
             return False, f"{node}: {il_why}\n" + txt[-1200:]
         if node == "aspd":
             if "airspeed source: px4" not in txt:
@@ -189,7 +236,7 @@ def run(node, wait_s=60.0):
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
             if not imu_ok:
                 return False, f"{node}: a SensorCombined message on /{NS}/fmu/out/sensor_combined was not logged as FLU (+0.50, -0.20, +9.81) within 10 s"
-        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "") + (", engage refused at 3 m/s, accepted in hover, watchdog tripped" if node == "interlock" else "")
+        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "") + (", engage refused at 3 m/s, accepted in hover, watchdog tripped" if node == "interlock" else "") + (", v_cap 0 held vcmd at 0.0 for 12 s" if node == "vcap" else "")
 
 
 def main():
