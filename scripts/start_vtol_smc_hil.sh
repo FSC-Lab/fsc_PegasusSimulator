@@ -421,7 +421,7 @@ $ROS_PRELUDE
 echo '[6h-cascade] CASCADE NMPC + geometric (STANDBY; activate: active_controller=cascade)...'
 VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} VTOL_TANK_F1=${VTOL_TANK_F1:-} VTOL_TANK_ZETA=${VTOL_TANK_ZETA:-} CASC_SPIN=${CASC_SPIN:-} $AVTOL_ENV\"$NODE_PY\" \"$CASC_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade -p active_at_start:=false \
-    -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
+    -p vcruise:=$(awk -v v="${CASC_VC:-16.0}" 'BEGIN{printf "%.3f", v}') -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
     -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=${CASC_L1:-true} -p state_source:=${CASC_STATE:-mocap} -p airspeed_source:=${CASC_ASPD:-none} \
     -r ${REF_TOPIC}:=${REF_TOPIC}_smc
 echo '[6h-cascade] exited.'; exec bash
@@ -441,7 +441,7 @@ $ROS_PRELUDE
 echo '[6i-adaptive] ADAPTIVE cascade: NMPC + geometric with STESO + slosh predictor (STANDBY; activate: active_controller=cascade_adaptive)...'
 VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} VTOL_TANK_F1=${VTOL_TANK_F1:-} VTOL_TANK_ZETA=${VTOL_TANK_ZETA:-} CASC_EST=${CASC_EST:-steso} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} IMU_WC=${IMU_WC:-} IMU_DR=${IMU_DR:-} IMU_DELAY=${IMU_DELAY:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} SLOSH_PRED_WALL_S=${SLOSH_PRED_WALL_S:-} SLOSH_PRED_F1_SCALE=${SLOSH_PRED_F1_SCALE:-} CASC_SPIN=${CASC_SPIN:-} $AVTOL_ENV\"$NODE_PY\" \"$ADAPTIVE_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
     -p controller_id:=cascade_adaptive -p active_at_start:=false \
-    -p vcruise:=${CASC_VC:-16.0} -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
+    -p vcruise:=$(awk -v v="${CASC_VC:-16.0}" 'BEGIN{printf "%.3f", v}') -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
     -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=true -p state_source:=${CASC_STATE:-mocap} -p airspeed_source:=${CASC_ASPD:-none} \
     -r ${REF_TOPIC}:=${REF_TOPIC}_smc
 echo '[6i-adaptive] exited.'; exec bash
