@@ -3,7 +3,12 @@
 2026-09-16) -- the number to scale for the Jetson Orin (roughly half the single-thread speed of this
 desktop) before promising 150-200 Hz for the inner loop.
 
-  ~/envs/isaac_env/bin/python3 scripts/bench_loops.py [--ticks 2000] [--outer 40] [--profile]
+  ~/envs/isaac_env/bin/python3 scripts/bench_loops.py [--ticks 2000] [--outer 40] [--profile] [--load] [--pin N] [--json F]
+
+  --load   time the inner step WHILE a background thread solves the outer NMPC back to back (what the
+           node does: CasADi releases the GIL, the two share the machine) -- the number that matters
+  --pin N  restrict the process to N cores first (a load proxy for a small companion computer)
+  --json F write every median/p95 to F (tests/test_bench_budget.py reads it)
 
 Times, in the recommended configuration (imu-mdob + EKF predictor + L1, the offset 100 mm tank):
   inner   base.inner_step per tick (the geometric law, the allocation with the prop inflow, the L1
@@ -28,18 +33,27 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--ticks", type=int, default=2000)
 ap.add_argument("--outer", type=int, default=40)
 ap.add_argument("--profile", action="store_true")
+ap.add_argument("--load", action="store_true")
+ap.add_argument("--pin", type=int, default=0)
+ap.add_argument("--json", default="")
 a = ap.parse_args()
+if a.pin > 0:
+    os.sched_setaffinity(0, set(range(a.pin)))
 
 os.environ.setdefault("VTOL_TANK_KG", "0.502"); os.environ.setdefault("VTOL_TANK_R", "0.10"); os.environ.setdefault("VTOL_TANK_DX", "0.3")
 sys.argv = ["bench", "--est", "mdob", "--slosh_pred", "on", "--test"]        # what the variant modules read at import
-sys.path.insert(0, os.path.join(controller_dir(), "px4_vtol_direct_actuator"))
 sys.path.insert(0, controller_dir())
-import nmpc_cascade_node as base                     # noqa: E402
-import nmpc_cascade_steso_node as sv                 # noqa: E402
-import nmpc_cascade_imu_node as iv                   # noqa: E402,F401   (re-points base.L1Aug / base.inner_step)
+# the PACKAGE modules: the variants re-point `base.L1Aug` / `base.inner_step` on
+# px4_vtol_direct_actuator.nmpc_cascade_node, so a top-level import of the same file would benchmark the base L1
+from px4_vtol_direct_actuator import nmpc_cascade_node as base            # noqa: E402
+from px4_vtol_direct_actuator import nmpc_cascade_steso_node as sv        # noqa: E402
+from px4_vtol_direct_actuator import nmpc_cascade_imu_node as iv          # noqa: E402,F401
 so3 = base.so3
+if so3._AERO_NUM is None:          # the node builds it through the schedule; the bench builds it directly
+    so3._AERO_NUM = so3._aero_numeric()
 
-print(f"loops benchmark on {os.uname().nodename} ({os.cpu_count()} cpus), python {sys.version.split()[0]}, numpy {np.__version__}")
+print(f"loops benchmark on {os.uname().nodename} ({os.cpu_count()} cpus{', pinned to ' + str(a.pin) if a.pin else ''}), python {sys.version.split()[0]}, numpy {np.__version__}")
+RESULT = {"host": os.uname().nodename, "cpus": os.cpu_count(), "pin": a.pin, "load": a.load, "numpy": np.__version__, "python": sys.version.split()[0]}
 print(f"  L1 class {base.L1Aug.__name__}, inner_step {base.inner_step.__module__}")
 
 # a wing-borne state: 16 m/s, tilt 90, pitch 7 deg, small rates; the airframe's own constants
@@ -75,17 +89,46 @@ t = np.array(t) * 1e3
 
 
 def row(name, arr):
-    med, p95, mx = np.median(arr), np.percentile(arr, 95), arr.max()
+    med, p95, mx = float(np.median(arr)), float(np.percentile(arr, 95)), float(arr.max())
+    RESULT[name.strip()] = {"median_ms": med, "p95_ms": p95, "max_ms": mx}
     print(f"  {name:34s} median {med:6.3f} ms  p95 {p95:6.3f}  max {mx:6.3f}   = {100 * med / 5.0:4.1f}% of a 200 Hz tick, {100 * med / 6.667:4.1f}% at 150 Hz;  Orin x2: {100 * 2 * med / 5.0:4.1f}% / {100 * 2 * med / 6.667:4.1f}%")
 
 
+nmpc = base.OuterNMPC()
+sched = base.n6.Schedule(V_cruise=16.0, tilt_cap_deg=90.0, alpha_max_deg=8.0)
+refs, _, _ = base.REFS_FN(sched, nmpc.N, nmpc.DT, 0.05, 16.0, 16.0, 10.0, 30.0)
+x0 = np.array([0.0, 30.0, 16.0, 0.0, th, 0.0])
+for _ in range(5):
+    nmpc.solve(x0, refs)
+
 print(f"\nINNER STEP ({a.ticks} ticks, wing-borne state):")
 row("inner_step (all)", t)
+if a.load:
+    import threading
+    stop = threading.Event(); n_solve = [0]
+
+    def _outer_load():
+        while not stop.is_set():
+            nmpc.solve(x0, refs); n_solve[0] += 1
+    th_ = threading.Thread(target=_outer_load, daemon=True); th_.start()
+    time.sleep(0.2)
+    tl = []
+    for _ in range(a.ticks):
+        t0 = time.perf_counter(); tick(); tl.append(time.perf_counter() - t0)
+    stop.set(); th_.join()
+    row("inner_step (all) UNDER OUTER LOAD", np.array(tl) * 1e3)
+    print(f"    ({n_solve[0]} outer solves ran back to back meanwhile, {n_solve[0] / (sum(tl) + 0.2):.0f} Hz)")
 # parts
 tt = []
 for _ in range(a.ticks):
     t0 = time.perf_counter(); l1.adapt(w, 0.005); tt.append(time.perf_counter() - t0)
-row("  L1 adapt (obs + force + EKF)", np.array(tt) * 1e3)
+row("  L1 adapt (the law + observer)", np.array(tt) * 1e3)
+tt = []
+T4 = np.array([Tf / 2, Tf / 2, Tr / 2, Tr / 2])
+for _ in range(a.ticks):
+    base.IMU_ACCEL_T = time.monotonic()
+    t0 = time.perf_counter(); l1.applied_moment(beta, T4, vb, w, de, 0.0, 0.0, 0.005); tt.append(time.perf_counter() - t0)
+row("  L1 applied_moment (model F/M, IMU residual, EKF)", np.array(tt) * 1e3)
 tt = []
 for _ in range(a.ticks):
     t0 = time.perf_counter(); alloc.inv(beta); tt.append(time.perf_counter() - t0)
@@ -94,7 +137,7 @@ pred = getattr(l1, "pred", None)
 if pred is not None:
     tt = []
     for _ in range(a.ticks):
-        t0 = time.perf_counter(); pred.step(np.zeros(3), np.zeros(3), np.array([0.0, 0.0, 9.81]), 0.005); tt.append(time.perf_counter() - t0)
+        t0 = time.perf_counter(); pred.step(np.zeros(2), np.zeros(3), np.array([0.0, 0.0, 9.81]), 0.005); tt.append(time.perf_counter() - t0)
     row("  EKF slosh predictor step", np.array(tt) * 1e3)
 tt = []
 for _ in range(a.ticks):
@@ -102,17 +145,35 @@ for _ in range(a.ticks):
 row("  model_moment (casadi aero call)", np.array(tt) * 1e3)
 
 print(f"\nOUTER SOLVE ({a.outer} warm solves):")
-nmpc = base.OuterNMPC()
-sched = base.n6.Schedule(V_cruise=16.0, tilt_cap_deg=90.0, alpha_max_deg=8.0)
-refs, _, _ = base.REFS_FN(sched, nmpc.N, nmpc.DT, 0.05, 16.0, 16.0, 10.0, 30.0)
-x0 = np.array([0.0, 30.0, 16.0, 0.0, th, 0.0])
-for _ in range(5):
-    nmpc.solve(x0, refs)
 ts = []
 for _ in range(a.outer):
     t0 = time.perf_counter(); nmpc.solve(x0, refs); ts.append(time.perf_counter() - t0)
 ts = np.array(ts) * 1e3
+RESULT["outer_solve"] = {"median_ms": float(np.median(ts)), "p95_ms": float(np.percentile(ts, 95)), "max_ms": float(ts.max())}
 print(f"  solve median {np.median(ts):5.1f} ms  p95 {np.percentile(ts, 95):5.1f}  max {ts.max():5.1f}   of the 50 ms period at 20 Hz: {100 * np.median(ts) / 50:4.1f}% (Orin x2: {100 * 2 * np.median(ts) / 50:4.1f}%)")
+if a.load:
+    # the outer solving while the inner ticks at 200 Hz in another thread -- its own budget under load
+    import threading
+    stop = threading.Event()
+
+    def _inner_load():           # a tick every 5 ms, idle (GIL released) in between, as a callback-driven loop is
+        while not stop.is_set():
+            t0 = time.perf_counter(); tick()
+            time.sleep(max(0.0, 0.005 - (time.perf_counter() - t0)))
+    th_ = threading.Thread(target=_inner_load, daemon=True); th_.start()
+    time.sleep(0.2)
+    tl = []
+    for _ in range(a.outer):
+        t0 = time.perf_counter(); nmpc.solve(x0, refs); tl.append(time.perf_counter() - t0)
+    stop.set(); th_.join()
+    tl = np.array(tl) * 1e3
+    RESULT["outer_solve UNDER INNER LOAD"] = {"median_ms": float(np.median(tl)), "p95_ms": float(np.percentile(tl, 95)), "max_ms": float(tl.max())}
+    print(f"  UNDER a 200 Hz inner loop: median {np.median(tl):5.1f} ms  p95 {np.percentile(tl, 95):5.1f}  max {tl.max():5.1f}")
+if a.json:
+    import json
+    with open(a.json, "w") as fh:
+        json.dump(RESULT, fh, indent=1)
+    print(f"  -> {a.json}")
 
 if a.profile:
     import cProfile, pstats

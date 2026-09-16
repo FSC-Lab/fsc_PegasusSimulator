@@ -119,7 +119,7 @@ def run(node, wait_s=60.0):
             while time.time() - t2 < 10.0:
                 time.sleep(0.5)
                 txt = open(log, errors="replace").read()
-                if "first airspeed_validated: TAS 12.50 m/s" in txt:
+                if "first airspeed_validated: CAS 12.40 m/s" in txt:
                     aspd_ok = True; break
         il_ok = True; il_why = ""
         if node == "interlock":
@@ -183,7 +183,7 @@ def run(node, wait_s=60.0):
             if f"/{NS}/fmu/out/airspeed_validated: px4_msgs/msg/AirspeedValidated" not in info:
                 return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/airspeed_validated"
             if not aspd_ok:
-                return False, f"{node}: an AirspeedValidated message (TAS 12.5) was not logged as 'first airspeed_validated: TAS 12.50 m/s' within 10 s"
+                return False, f"{node}: an AirspeedValidated message (CAS 12.4) was not logged as 'first airspeed_validated: CAS 12.40 m/s' within 10 s"
         if node == "imu":
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"

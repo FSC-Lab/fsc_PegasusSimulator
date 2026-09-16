@@ -2,6 +2,77 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-16 (early morning): HARDWARE-TRANSFER PIECE 6 -- THE COMPUTE BUDGET FOR THE JETSON ORIN,
+# MEASURED HERE PER COMPONENT, THE HOT PATH MADE 3x CHEAPER BIT-IDENTICALLY, THE PX4 RATES THAT MUST
+# CHANGE FOR 200 Hz. Controller 71814b8, sim this commit. The Orin itself is not on the bench yet.
+**THE BENCH: `scripts/bench_loops.py [--ticks N] [--outer N] [--load] [--pin N] [--json F] [--profile]`** times
+the recommended configuration (imu-mdob + EKF predictor + L1, the offset 100 mm tank, a wing-borne state):
+the inner tick as the node runs it (`base.inner_step`: the geometric law, the allocation with the prop inflow,
+the L1 with the moment observer, the IMU force residual, the EKF predictor and its cancellation) and its
+parts, and the outer solve warm; `--load` times each loop WHILE the other runs as in the node (the outer
+solving back to back in a thread while the inner is timed; a 200 Hz inner thread while the outer is timed --
+CasADi releases the GIL, Python does not); `--pin 2` restricts the process to two cores as a small-computer
+proxy. **The desktop numbers (24-core workstation; the Orin's A78AE is taken as half of one of these cores):**
+| loop | median | p95 | of its tick | Orin x2 (predicted) |
+|---|---|---|---|---|
+| inner tick, alone | 0.41 ms | 0.44 | 8% of 5 ms (200 Hz) | 0.83 / 0.88 ms = 17% |
+| inner tick, the outer solving meanwhile | 0.43 | 0.55 | 9% | 0.87 / 1.1 = 22% p95 |
+| inner tick, pinned to 2 cores, under load | 0.42 | 0.57 | 9% | 0.84 / 1.14 |
+| outer solve (nmpc6 JIT, N 14), alone | 11.5 | 12.2 | 23% of 50 ms (20 Hz) | 23 / 24 ms = 49% p95 |
+| outer solve under a 200 Hz inner loop | 12.6 | 13.4 | 25% | 25 / 27 = 54% |
+| outer, 2 cores, under load | 11.8 | 12.8 | 24% | 24 / 26 |
+Parts of the tick (median): L1 applied_moment (model force/moment, the IMU residual, the EKF step + the
+delay-ahead prediction) 0.105 ms, the EKF step alone 0.103, `model_moment` (the CasADi aero call) 0.053,
+the L1 law + moment observer 0.009, the allocation inverse < 0.001. The plan's pass line (inner p95 < 3 ms
+at 200 Hz, outer p95 < 25 ms at 20 Hz, ON THE ORIN) is predicted at 1.1 ms and 27 ms: the inner has 4x of
+room, the outer is on the line -- at 20 Hz the outer would spend half its period solving, which the 20 Hz
+thread tolerates (it never blocks the inner) but leaves no room for a slower core than assumed; `outer_hz`
+15 (67 ms) is the fallback the node already has, and the outer's `solve_ms` column plus the new `ims=` field
+on the status feed are what the first Orin hover bag reports (`tests/test_bench_budget.py` holds the desktop
+floor; run the bench on the Orin and paste its table here).
+**THE TICK WAS 1.32 ms BEFORE THIS PIECE, AND 70% OF IT WAS NOT CONTROL:** cProfile on the tick: (1) the
+predictor's `predict(tau)` evaluated the slosh force at EVERY substep (an `np.r_` 9-vector and `_force_at`
+each) although only the last is read unless a trajectory is asked -- and it was called TWICE per tick, the
+second time for `PRED_TAU_LOG` = +0.25 s (50 substeps) whose only reader is the gate's `--log` rows /
+`--pred_score`; (2) `np.cross` on 3-vectors costs ~30 us a call in numpy 2.x (it is written for arrays) and
+the tick made a dozen: `B_rot` 4, `model_moment`'s gyroscopic term, the observer's gyro term, the tank arm's
+rotation terms 3, the moment of the slosh force 2-3. Now: `predict()` integrates and evaluates the force once
+at the end (per substep only for `trajectory=True`); the +0.25 s prediction runs only when `LOG_PATH` or
+`--pred_score` (both copies, steso and imu, the same line); `cross3` (nmpc_cascade_node, slosh_predictor,
+so3_steso each carry the 3-line helper) computes a x b with np.cross's OWN multiplies and subtractions in the
+same order, so the result is bit-identical INCLUDING signed zeros (`%+.2f` prints -0.00 for a -0.0 -- a
+reordered formula would have changed status lines). 1.32 -> 0.41 ms. **Identity, as the process demands:**
+the flown gate line's trace hash `ef8e90e4e5ef6afbe2935ba81fa4bbe0` unchanged (the steso node, `--log`
+on, so its rows still carry the +0.25 s prediction); the IMU node's own line (`--noise_acc 0.02`, otherwise
+the same) `cd328f91e6a0e7e358cb934885c82576` before and after; `test_residual_estimators.py` (the three
+STESO trace hashes as exact bytes, 64 checks), `test_slosh_predictor.py`, `test_est_swap.py` (pwc = the tank
+node), `test_imu_node.py`, `test_cascade_structure.py` and the boot variants all pass. Not touched: the
+EKF's `step()` (its 14x14 products are 0.1 ms and re-associating them would move bits), the aero call.
+**WHAT MUST CHANGE IN PX4 FOR 200 Hz ON THE ORIN (facts from the tree at ~/PX4-Autopilot, v1.16):**
+(1) the uXRCE-DDS client polls EVERY sent topic at `UXRCE_DEFAULT_POLL_RATE` = 10 ms
+(`src/modules/uxrce_dds_client/dds_topics.h.em:33`, applied by `orb_set_interval` at line 101) -- a
+compile-time constant, not a parameter: 100 Hz is the ceiling on DDS for `sensor_combined`,
+`vehicle_odometry`, `vehicle_attitude`, `airspeed_validated` alike (the 83-87 Hz seen in every HIL bag is
+that interval plus the agent's cadence). Set it to 5 (or 4) and rebuild the firmware for the Orin link; the
+per-topic entries in `dds_topics.yaml` carry no rate field in this version. (2) `EKF2_PREDICT_US` 10000 ->
+5000 (min 1000; `vehicle_odometry` is published at the prediction rate, so it is what sets the odometry rate
+the `state_source: px4` loop clocks on). (3) `IMU_INTEG_RATE` stays 200 (its default; 100/200/250/400,
+reboot required) so one EKF prediction is one integrated IMU sample; `sensor_combined` then arrives at 200 Hz
+once (1) is lifted. Bench the DDS round trip on the Orin with the agent on the Orin and PX4 on Ethernet
+(`MicroXRCEAgent udp4 -p 8888`, PX4 `UXRCE_DDS_AG_IP` = the Orin): the plan's pass is < 5 ms.
+**THE ORIN BUILD, as the plan lists it and nothing here contradicts:** `pip install casadi` has aarch64
+wheels (3.6+), the nmpc6 JIT compiles with the Orin's own gcc on the first launch (~2 min here, expect ~4
+there; the key hashes the model and the airframe digest; the build and the load are under the file lock of
+piece 3, so a launcher that starts both cascades at once is safe -- the locks came with pieces 3 and 4), `nvpmodel -m 0` + `jetson_clocks`, the
+outer thread and the inner loop on separate cores (`taskset`; the bench's `--pin` is the desktop stand-in).
+Clock the inner loop on the odometry (or IMU) callback, not a 120 Hz mocap. If the Orin bench reads more
+than ~2 ms for the tick, the next 0.1 ms each are the EKF step and the CasADi aero call (a numba path for
+`step()` would have to reproduce its products in order to stay bit-identical -- verify by the hashes).
+**THE BOOT TEST'S `aspd` VARIANT HAD BEEN FAILING SINCE THE CAS SWITCH (piece 4, ea2b082):** the node reads
+`calibrated_airspeed_m_s` but logged it as "TAS", and the test still expected the TAS value; both say CAS now
+(`first airspeed_validated: CAS 12.40 m/s`). Nothing flown read that line; the launcher's pitot check reads
+the status feed's `Vair=`.
+
 # ★★★★ 2026-09-16 (night): HARDWARE-TRANSFER PIECE 5 -- FAILSAFES, INTERLOCKS, THE STAGED ENVELOPE, THE
 # LATENCY DOUBLET. Controller piece5 branch (merged: 49a5824 + 4db3e4c), sim 0b1ed3e+. The flight card:
 # https://claude.ai/artifact/5cr6taszbTBBa6p1T1xCD8
