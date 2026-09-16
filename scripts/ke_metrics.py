@@ -6,7 +6,7 @@ stop time, peak roll; a SUMMARY line at the end. usage: ke_metrics.py <dir> [t_d
 import sys, re, glob, os, math
 d = sys.argv[1]; t0 = float(sys.argv[2]) if len(sys.argv) > 2 else 60.0
 rows = []
-for f in sorted(glob.glob(os.path.join(d, "s*.txt")), key=lambda p: int(re.search(r"s(\d+)\.txt", p).group(1))):
+for f in sorted(glob.glob(os.path.join(d, "s[0-9]*.txt")), key=lambda p: int(re.search(r"s(\d+)\.txt", p).group(1))):
     sd = int(re.search(r"s(\d+)\.txt", f).group(1))
     T = []
     for line in open(f):
