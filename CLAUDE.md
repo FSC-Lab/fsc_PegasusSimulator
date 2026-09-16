@@ -84,6 +84,8 @@ both cascade panes with rclpy's INTEGER-for-DOUBLE rejection, the CASC_SETTLE_S 
 comp 0.049 / outer_lag 0.03, the CG tank; `~/flight_bags/ke_sweeps/reg_{imu,steso}`):** imu-mdob 16/16, worst
 crossing +14.2, fails 2, stop 8.8 s; steso-node mdob 16/16, +14.3, fails 2 -- the references (16/16, 14.3, 3)
 to the seed.
+**TAGGED `hw-transfer-1` IN THE FOUR REPOS** (sim 05a4a0e, controller f26e09d, GS 96a1fb3, msgs ebeded8; each
+tag message pins the other three, as `pre-slosh` does): the state the hardware campaign starts from.
 **THE IDENTITY CHECK MOVES WITH IT, DELIBERATELY:** the gate's first 2 s are a hover, so the hold changes the
 flown line's trace there. `--hold_k 0` reproduces the old hashes EXACTLY (steso line `ef8e90e4e5ef6afbe2935ba81fa4bbe0`,
 IMU line `e958efbc7bbf9687db76620563cdabf8`) -- the proof that nothing outside the hold moved -- and the new
