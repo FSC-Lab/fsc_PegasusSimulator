@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The cascade node must CONSTRUCT and STAY ALIVE on the ROS path, and answer its command topic.
 
-    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|px4src|both]
+    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|px4src|aspd|both]
 
 The offline gate (`--test`) uses the class defaults and never runs the constructor's
 parameter/subscription code, so a bug there is invisible to every gate that ran before flight
@@ -36,7 +36,10 @@ PKG = os.path.join(controller_dir(), "px4_vtol_direct_actuator")
 NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tank_node.py", "cascade"),
          "adaptive": ("nmpc_cascade_steso_node.py", "cascade_adaptive"),
          "imu": ("nmpc_cascade_imu_node.py", "cascade_adaptive"),
-         "px4src": ("nmpc_cascade_node.py", "cascade", "-p state_source:=px4")}
+         "px4src": ("nmpc_cascade_node.py", "cascade", "-p state_source:=px4"),
+         # "aspd" = the base node with `airspeed_source: px4` (piece 4, 2026-09-15): it must subscribe to
+         # PX4's airspeed_validated and log the first TAS it receives
+         "aspd": ("nmpc_cascade_node.py", "cascade", "-p airspeed_source:=px4")}
 NS = "uav_0"
 
 
@@ -94,12 +97,23 @@ def run(node, wait_s=60.0):
                 txt = open(log, errors="replace").read()
                 if "first accelerometer sample: FLU (+0.50, -0.20, +9.81)" in txt:
                     imu_ok = True; break
+        aspd_ok = True
+        if node == "aspd":
+            puba = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/fmu/out/airspeed_validated "
+                    f"px4_msgs/msg/AirspeedValidated \"{{true_airspeed_m_s: 12.5, indicated_airspeed_m_s: 12.4, calibrated_airspeed_m_s: 12.4}}\"")
+            subprocess.run(["bash", "-c", puba], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            t2 = time.time(); aspd_ok = False
+            while time.time() - t2 < 10.0:
+                time.sleep(0.5)
+                txt = open(log, errors="replace").read()
+                if "first airspeed_validated: TAS 12.50 m/s" in txt:
+                    aspd_ok = True; break
         alive = proc.poll() is None
         nl = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 node list"],
                             capture_output=True, text=True).stdout.split()
         want_node = "/nmpc_cascade_control" + ("" if cid == "cascade" else "_" + cid.replace("cascade_", "", 1))
         info = ""
-        if node == "px4src":      # BEFORE the kill: the graph forgets a dead node
+        if node in ("px4src", "aspd"):      # BEFORE the kill: the graph forgets a dead node
             info = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 20 ros2 node info {want_node}"],
                                   capture_output=True, text=True).stdout
         txt = open(log, errors="replace").read()      # BEFORE the kill: SIGTERM itself logs an rclpy shutdown traceback
@@ -127,12 +141,19 @@ def run(node, wait_s=60.0):
                 return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/vehicle_odometry"
             if f"/{NS}/mocap:" in info:
                 return False, f"{node}: state_source px4 must NOT also subscribe to the mocap (two state sources)"
+        if node == "aspd":
+            if "airspeed source: px4" not in txt:
+                return False, f"{node}: the node did not report 'airspeed source: px4'"
+            if f"/{NS}/fmu/out/airspeed_validated: px4_msgs/msg/AirspeedValidated" not in info:
+                return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/airspeed_validated"
+            if not aspd_ok:
+                return False, f"{node}: an AirspeedValidated message (TAS 12.5) was not logged as 'first airspeed_validated: TAS 12.50 m/s' within 10 s"
         if node == "imu":
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
             if not imu_ok:
                 return False, f"{node}: a SensorCombined message on /{NS}/fmu/out/sensor_combined was not logged as FLU (+0.50, -0.20, +9.81) within 10 s"
-        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "")
+        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "")
 
 
 def main():

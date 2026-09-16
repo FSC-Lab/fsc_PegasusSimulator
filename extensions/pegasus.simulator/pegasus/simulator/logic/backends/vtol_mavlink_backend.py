@@ -45,6 +45,7 @@ __all__ = [
 ]
 
 import math
+import numpy as np
 import time
 
 import carb
@@ -271,6 +272,13 @@ class PX4VTOLMavlinkBackend(PX4MavlinkBackend):
         super().update_state(state)
         try:
             v_fwd = float(state.get_linear_body_velocity_ned_frd()[0])  # body-x forward [m/s]
+            # ★ AIR-relative (piece 4, 2026-09-15): the vehicle writes its world wind onto the state
+            # (VTOL_WIND / VTOL_TURB); a pitot reads the air, not the ground. Still air: unchanged.
+            w = getattr(state, "wind_world", None)
+            if w is not None and np.any(np.asarray(w, dtype=float) != 0.0):
+                from scipy.spatial.transform import Rotation
+                w_body_flu = Rotation.from_quat(state.attitude).inv().apply(np.asarray(w, dtype=float))
+                v_fwd -= float(w_body_flu[0])          # FLU x == FRD x
         except Exception:
             return
         q_pa = 0.5 * self.AIR_DENSITY * v_fwd * abs(v_fwd)  # signed dynamic pressure [Pa]

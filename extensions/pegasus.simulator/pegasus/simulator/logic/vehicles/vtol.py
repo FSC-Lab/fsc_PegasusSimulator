@@ -292,6 +292,19 @@ def _gps_config_from_env():
         cfg["gps_z_random_walk"] = 2.0 * float(walk)
     return cfg
 
+def _wind_from_env():
+    """VTOL_WIND="wx,wy,wz": a steady WORLD (ENU) wind [m/s] -- the air's velocity -- the plant's
+    aerodynamics and propeller inflow feel through v_air = v - w (hardware-transfer piece 4,
+    2026-09-15). Unset = (0,0,0): still air, every earlier flight repeats."""
+    raw = os.environ.get("VTOL_WIND", "").strip()
+    if not raw:
+        return (0.0, 0.0, 0.0)
+    w = tuple(float(v) for v in raw.split(","))
+    if len(w) != 3:
+        raise ValueError(f"VTOL_WIND must be 'wx,wy,wz' [m/s], got {raw!r}")
+    return w
+
+
 @dataclass
 class VTOLConfig:
     """Everything needed to spawn and run a VTOL.  Pure data (CLAUDE.md rule:
@@ -408,6 +421,14 @@ class VTOLConfig:
     # sigma * sqrt(rate)); its slow random-walk bias stays at the Pegasus default. Empty/unset keeps
     # every default so every earlier flight repeats.
     sensors: list = field(default_factory=lambda: [Barometer(), IMU(), Magnetometer(), GPS(_gps_config_from_env())])
+    # --- WIND (piece 4, 2026-09-15): a steady world wind plus a first-order coloured gust ---------
+    # VTOL_WIND="wx,wy,wz" [m/s, ENU]; VTOL_TURB=sigma [m/s, 1-sigma per axis] of a Gauss-Markov
+    # gust with correlation time VTOL_TURB_TAU [s] (default 1 s), drawn per physics step. The aero
+    # model gets wind_body = R^T w, the momentum prop's axial inflow uses v_air, and the mavlink
+    # backend's synthesised pitot reads the AIR-relative forward speed (state.wind_world).
+    wind_world: tuple = field(default_factory=_wind_from_env)
+    turb_sigma: float = field(default_factory=lambda: float(os.environ.get("VTOL_TURB") or 0.0))
+    turb_tau: float = field(default_factory=lambda: float(os.environ.get("VTOL_TURB_TAU") or 1.0))
     graphical_sensors: list = field(default_factory=list)
     graphs: list = field(default_factory=list)
     backends: list = field(default_factory=list)
@@ -1052,6 +1073,7 @@ class VTOL(Vehicle):
         self._drive_actuators(command, dt)
 
         # (c)/(d) WHERE PHYSICS FORCES ARE APPLIED (Step 2) ------------------
+        self._update_wind(dt)
         if self._cfg.enable_forces:
             self._apply_propulsion(command)
             self._apply_aerodynamics(command)
@@ -1218,6 +1240,38 @@ class VTOL(Vehicle):
     #  (3) PHYSICS FORCES  — Step 2.  Implemented but gated by enable_forces.
     # ========================================================================
 
+    def _update_wind(self, dt: float):
+        """The world wind this step: the steady VTOL_WIND plus a Gauss-Markov gust (VTOL_TURB,
+        VTOL_TURB_TAU), and its body-frame image for the aero and the props. Still air -> zeros,
+        and every consumer subtracts a zero: byte-identical to the flights before piece 4. The
+        world wind is also written to the state (state.wind_world) for the backend's pitot."""
+        cfg = self._cfg
+        steady = np.asarray(getattr(cfg, "wind_world", (0.0, 0.0, 0.0)), dtype=float)
+        sig = float(getattr(cfg, "turb_sigma", 0.0) or 0.0)
+        if sig > 0.0 and dt > 0.0:
+            a = math.exp(-dt / max(float(getattr(cfg, "turb_tau", 1.0) or 1.0), 1e-3))
+            self._turb = a * getattr(self, "_turb", np.zeros(3)) + math.sqrt(max(0.0, 1.0 - a * a)) * sig * np.random.normal(0.0, 1.0, 3)
+        else:
+            self._turb = np.zeros(3)
+        self._wind_world = steady + self._turb
+        if np.any(self._wind_world != 0.0):
+            try:
+                from scipy.spatial.transform import Rotation
+                self._wind_body = Rotation.from_quat(self._state.attitude).inv().apply(self._wind_world)
+            except Exception:                  # noqa: BLE001 - state not ready on the first steps
+                self._wind_body = np.zeros(3)
+        else:
+            self._wind_body = np.zeros(3)
+        try:
+            self._state.wind_world = self._wind_world
+        except Exception:                      # noqa: BLE001
+            pass
+        if (sig > 0.0 or np.any(steady != 0.0)) and not getattr(self, "_wind_logged", False):
+            self._wind_logged = True
+            import carb
+            carb.log_warn(f"[VTOL] wind: steady ({steady[0]:+.1f},{steady[1]:+.1f},{steady[2]:+.1f}) m/s ENU"
+                          + (f", turbulence {sig:.2f} m/s 1-sigma tau {float(getattr(cfg, 'turb_tau', 1.0)):.1f} s" if sig > 0 else ""))
+
     def _apply_propulsion(self, command: dict):
         """Apply each rotor's thrust along the prop link's LOCAL +Z (and, with
         rotor_dynamics, its yaw reaction torque about the prop spin axis).
@@ -1241,7 +1295,7 @@ class VTOL(Vehicle):
         # (tilted) thrust axis -- at 90 deg tilt that is the cruise airspeed, which is exactly
         # where a flat thrust model flatters the aircraft most.
         try:
-            v_body = np.asarray(self._state.linear_body_velocity, dtype=float)
+            v_body = np.asarray(self._state.linear_body_velocity, dtype=float) - getattr(self, "_wind_body", np.zeros(3))   # AIR-relative (piece 4)
         except Exception:                      # noqa: BLE001 - state not ready on the first steps
             v_body = np.zeros(3)
         # ONE source of truth for air density: the aero model's own config, so propulsion and
@@ -1310,7 +1364,9 @@ class VTOL(Vehicle):
         # actual deflection lags and rate-limits behind the command; reading the command here
         # would model an instantaneous surface no matter what the actuator is set to.
         aero_command = self._aero_inputs_from_surfaces(self._surface_command_equiv())
-        force_body, moment_body = self._aero.update(self._state, aero_command)
+        _wb = getattr(self, "_wind_body", None)
+        force_body, moment_body = self._aero.update(self._state, aero_command,
+                                                    wind_body=(_wb if _wb is not None and np.any(_wb != 0.0) else None))
         # `pos` is measured from the body link ORIGIN; PhysX takes the moment
         # about the CoM.  Applying at self._aero_center (default: the CoM)
         # keeps the aerodynamic moment entirely in the moment coefficients

@@ -428,6 +428,29 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
   fi
   say "    state source: px4 (EKF2 vehicle_odometry at $OHZ Hz, EKF_SOURCE=${EKF_SOURCE:-ev})"
 fi
+# CASC_ASPD=px4 (piece 4, 2026-09-15): the cascade's airspeed source is PX4's airspeed_validated (the
+# sim's synthesised pitot, air-relative since VTOL_WIND). The topic must be alive and each cascade pane
+# must have reported 'airspeed source: px4'; VTOL_WIND / VTOL_TURB must have reached the Isaac pane.
+if [ "${CASC_ASPD:-none}" = px4 ]; then
+  AHZ=$(timeout 12 ros2 topic hz /uav_0/fmu/out/airspeed_validated -w 40 2>/dev/null | grep -o "average rate: [0-9.]*" | tail -1 | grep -o "[0-9.]*")
+  if [ -z "$AHZ" ] || ! awk -v a="$AHZ" 'BEGIN{exit (a > 5) ? 0 : 1}'; then
+    echo "[slosh_hil] !! CASC_ASPD=px4 but PX4's airspeed_validated runs at ${AHZ:-<none>} Hz (SYS_HAS_NUM_ASPD?). Not READY."; exit 1
+  fi
+  for W in 6h-cascade 6i-adaptive; do
+    if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W"; then
+      if ! tmux capture-pane -p -J -S -400 -t "$SESSION:$W" 2>/dev/null | grep -q "airspeed source: px4"; then
+        echo "[slosh_hil] !! CASC_ASPD=px4 but the $W node did not report 'airspeed source: px4'. Not READY."; exit 1
+      fi
+    fi
+  done
+  say "    airspeed source: px4 (airspeed_validated at $AHZ Hz)"
+fi
+if [ -n "${VTOL_WIND:-}${VTOL_TURB:-}" ]; then
+  if ! tmux capture-pane -p -J -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -q "\[VTOL\] wind:"; then
+    echo "[slosh_hil] !! VTOL_WIND=${VTOL_WIND:-} VTOL_TURB=${VTOL_TURB:-} asked for but Isaac never logged '[VTOL] wind:' (the env did not reach the pane, or the vehicle is not stepping). Not READY."; exit 1
+  fi
+  say "    wind: $(tmux capture-pane -p -J -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -o "\[VTOL\] wind:.*" | tail -1 | cut -c1-120)"
+fi
 
 # THE BAG MUST EXIST (2026-09-15): the cold-start launcher runs under `set -u` and an unbound variable
 # aborts it half-way -- Isaac, PX4 and the controllers were up (started before the abort), every
@@ -446,7 +469,7 @@ say "    recording: $BAG_DIR/$BAG"
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

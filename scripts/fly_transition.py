@@ -71,6 +71,11 @@ class Flight(Node):
         # on the ACTIVE cascade's own topic (the adaptive cascade listens on cascade_adaptive/cmd)
         gtop = cid if str(cid).startswith("cascade") else "cascade"
         self.cmd = self.create_publisher(String, f"/{ns}/{gtop}/cmd", 10)
+        # the cascade's status feed (5 Hz): `stopped=1` is the node saying its back-transition has
+        # run the speed reference to zero with the rotors upright. In WIND its ground speed after
+        # the stop is the crosswind's drift, so "V < 3 m/s" never comes (piece 4, 2026-09-15).
+        self.casc_status = ""
+        self.create_subscription(String, f"/{ns}/{gtop}/status", self.on_casc_status, 10)
         self.create_subscription(Mocap, f"/{ns}/mocap", self.on_mocap, qos_profile_sensor_data)
         self.create_subscription(ActuatorMotors, f"/{ns}/fmu/in/actuator_motors", self.on_mot, qos)
         self.create_subscription(ActuatorServos, f"/{ns}/fmu/in/actuator_servos", self.on_srv, qos)
@@ -109,6 +114,12 @@ class Flight(Node):
         except Exception:
             pass
         self.ref.publish(r)
+
+    def on_casc_status(self, m):
+        self.casc_status = str(m.data)
+
+    def casc_stopped(self):
+        return "stopped=1" in self.casc_status
 
     def telem(self):
         """Everything needed to tell fixed-wing flight from a fast multicopter."""
@@ -242,9 +253,10 @@ def main():
             print(f"  >> GUIDE t+{now:.0f}: '{cmd}'")
             if cmd.split()[0].lower() == "rth":
                 guided["rth"] = True
-        if guided["rth"] and d["V"] < 3.0 and d["tilt"] < 15.0:
+        if guided["rth"] and ((d["V"] < 3.0 and d["tilt"] < 15.0) or n.casc_stopped()):
             guided["stopped"] = True
-            print(f"  RTH complete: stopped at ({d['p'][0]:.1f}, {d['p'][1]:.1f}), V={d['V']:.2f}")
+            print(f"  RTH complete: stopped at ({d['p'][0]:.1f}, {d['p'][1]:.1f}), V={d['V']:.2f}"
+                  + ("  (the cascade reports stopped=1; the ground speed is the wind's drift)" if d["V"] >= 3.0 else ""))
             return True
         peak["V"] = max(peak["V"], d["V"]); peak["tilt"] = max(peak["tilt"], d["tilt"])
         peak["wing"] = max(peak["wing"], d["wing"])
