@@ -463,6 +463,11 @@ fi
 # ---- 8: EKF arming-check relaxation (the HIL EKF flags 'Attitude failure' on ~half
 #         the boots; the controllers use MOCAP for state, so relax the preflight so
 #         they can arm). Sends the params to the PX4 console once it is up.
+# ★ HW=1 (hardware-transfer piece 5, 2026-09-15): NO relax window at all. On an aircraft every
+#   parameter this window sets is a failsafe that must stay ARMED; start_slosh_hil.sh then reads
+#   PX4 back over MAVLink (scripts/preflight_hw.py, the table preflight_hw.cfg) and refuses READY
+#   unless every one holds.
+if [ "${HW:-0}" != 1 ]; then
 tmux new-window -t "$SESSION" -n "8-relax" "
 echo '[8-relax] waiting $D_RELAX s for PX4...'; sleep $D_RELAX
 for p in 'COM_ARM_EKF_HGT 3.0' 'COM_ARM_EKF_VEL 1.0' 'COM_ARM_EKF_POS 1.0' \
@@ -506,6 +511,9 @@ fi
 echo '[8-relax] arming checks relaxed. (commander arm -f here if a controller wont arm)'
 exec bash
 "
+else
+  echo "[launcher] HW=1: no 8-relax window -- PX4's failsafes stay as the aircraft has them (preflight_hw.py reads them back)"
+fi
 # ---- 9: ground station (inner-loop A/B switch + Trajectory tab / missions) ---
 tmux new-window -t "$SESSION" -n "9-groundstn" "
 echo '[9-groundstn] waiting $D_GS s...'; sleep $D_GS

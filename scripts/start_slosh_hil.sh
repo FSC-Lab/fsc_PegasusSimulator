@@ -428,6 +428,15 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
   fi
   say "    state source: px4 (EKF2 vehicle_odometry at $OHZ Hz, EKF_SOURCE=${EKF_SOURCE:-ev})"
 fi
+# HW=1 (piece 5, 2026-09-15): the hardware preflight. PX4's failsafes are read back over MAVLink
+# against scripts/preflight_hw.cfg; one refused line = not READY. (In HIL, HW=1 is expected to
+# refuse: the sim battery parameter alone is a refusal -- that is the test that the check works.)
+if [ "${HW:-0}" = 1 ]; then
+  if ! /usr/bin/python3 "$ROOT/scripts/preflight_hw.py" --url "${PREFLIGHT_URL:-udpin:0.0.0.0:14550}" --timeout 20; then
+    echo "[slosh_hil] !! HW=1: the hardware preflight REFUSED (above). Not READY."; exit 1
+  fi
+  say "    hardware preflight: every failsafe armed (preflight_hw.cfg)"
+fi
 # CASC_ASPD=px4 (piece 4, 2026-09-15): the cascade's airspeed source is PX4's airspeed_validated (the
 # sim's synthesised pitot, air-relative since VTOL_WIND). The topic must be alive and each cascade pane
 # must have reported 'airspeed source: px4'; VTOL_WIND / VTOL_TURB must have reached the Isaac pane.
@@ -469,7 +478,7 @@ say "    recording: $BAG_DIR/$BAG"
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${HW:+ hw=$HW}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

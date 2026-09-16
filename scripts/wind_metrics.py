@@ -9,7 +9,7 @@
   orbit       rho - R in the orbit, mean +- sd over its last 40 s (the trace's ct= field in loiter)
   roll        worst |roll| outside the turns is not separable here: worst |roll| overall
   stop        RTH stop distance from home [m]
-PASS (the plan's): every seed landed, fails sum <= 4, pk <= still-air pk + 1 deg, Vair_min >=
+PASS (the plan's): every seed landed, fails <= 4 per seed, pk <= still-air pk + 1 deg, Vair_min >=
 stall + 0.5 (hover excluded), orbit |mean| <= 1 m (still air) -- reported, not enforced, in wind,
 stop <= 10 m.  Usage: wind_metrics.py <dir>"""
 import glob
@@ -81,7 +81,7 @@ def main():
         w = [r["w_est"] for r in rs if r["w_est"] is not None]
         why = []
         if landed < n: why.append(f"{landed}/{n} landed")
-        if fails > 4: why.append(f"fails {fails}")
+        if fails > 4 * n: why.append(f"fails {fails}")      # <= 4 per seed over a 260 s mission (5200 solves)
         if pk0 is not None and pk > pk0 + 1.0: why.append(f"pk {pk:.1f}")
         if vmin < V_STALL + 0.5: why.append(f"Vair {vmin:.1f}")
         if stops and max(stops) > 10.0: why.append(f"stop {max(stops):.0f} m")

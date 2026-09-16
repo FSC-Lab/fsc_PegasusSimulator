@@ -1268,9 +1268,13 @@ class VTOL(Vehicle):
             pass
         if (sig > 0.0 or np.any(steady != 0.0)) and not getattr(self, "_wind_logged", False):
             self._wind_logged = True
-            import carb
-            carb.log_warn(f"[VTOL] wind: steady ({steady[0]:+.1f},{steady[1]:+.1f},{steady[2]:+.1f}) m/s ENU"
-                          + (f", turbulence {sig:.2f} m/s 1-sigma tau {float(getattr(cfg, 'turb_tau', 1.0)):.1f} s" if sig > 0 else ""))
+            msg = (f"[VTOL] wind: steady ({steady[0]:+.1f},{steady[1]:+.1f},{steady[2]:+.1f}) m/s ENU"
+                   + (f", turbulence {sig:.2f} m/s 1-sigma tau {float(getattr(cfg, 'turb_tau', 1.0)):.1f} s" if sig > 0 else ""))
+            try:
+                import carb
+                carb.log_warn(msg)
+            except ImportError:            # the headless tests step the plant without Isaac (the import test under VTOL_WIND)
+                print(msg)
 
     def _apply_propulsion(self, command: dict):
         """Apply each rotor's thrust along the prop link's LOCAL +Z (and, with

@@ -2,6 +2,91 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-15/16 (night): HARDWARE-TRANSFER PIECE 4 -- AIRSPEED AND WIND. Controller (piece4 branch,
+# merged), sim efbf5a2+, GS 96a1fb3. Sweep `~/flight_bags/wind/wind1` (`scripts/wind_sweep.sh`, `wind_metrics.py`).
+**WHAT WAS BUILT.** Plant: `VTOL_WIND="wx,wy,wz"` (a steady ENU wind) and `VTOL_TURB=sigma` / `VTOL_TURB_TAU`
+(a Gauss-Markov gust per axis) in `vtol.py` -- the aero's `wind_body`, the momentum prop's air-relative inflow,
+`state.wind_world` for the mavlink backend's synthesised pitot (air-relative now); the gate's `--wind/--turb/
+--airspeed/--noise_aspd/--aspd_hz` (`so3.build_ode(wind=True)` takes a third input; w = 0 bit-identical).
+Controller: `WindEstimator` (the HORIZONTAL wind triangle from PX4's `airspeed_validated` TAS: w = v_h -
+sqrt(TAS^2 - vz^2) heading, tau 2 s, frozen below 2 m/s of indicated airspeed -- a pitot cannot see a vertical
+wind and a vertical estimate would read the angle of attack as wind); `airspeed_source: none|px4` (a string,
+never through gp()); **the outer runs in the AIR-RELATIVE along-course frame** -- with a steady wind
+d(vs - w_s)/dt = vsdot, so no ODE parameter and no JIT rebuild: it is posted vs - w_s, its references are
+built at v_cmd - w_s and the cruise target is Vc + w_s OVER THE GROUND (the wing sees Vc of air: 11 m/s over the
+ground into a 5 m/s headwind, 21 with it), while the speed COMMAND and the RTH stop stay ground quantities (a
+stop in wind is a ground-speed stop, hovering at V_air = -w_s, leaning into it); the inner's wing share,
+surface authority, prop inflow and the L1's model force/moment on v_air; the guidance CRABS its heading into
+the crosswind (asin(w_cross / V_air), faded with the wing share), sizes the orbit for its tailwind sector
+((V_air + |w|)^2 / g tan(phi_max) / kappa x 1.15: an R 100 orbit is INFEASIBLE in a 5 m/s wind through
+kappa 0.8 and flies at R 139), and keeps atan(V_g^2 / g R) as the orbit's bank feed-forward (derived: holding
+a GROUND circle in wind needs chi_dot + the crab's rate = V_g^2 / (R V_air) of heading rate -- V_g V_air, the
+first "fix", asked 19 deg where 24 was needed and left the orbit 130 m wide). The status feed carries
+`stopped=1` (v_cmd at zero, rotors upright) and `Vair= w=(..)`; `fly_transition.py` and the GS's RTH phase hand
+over to the safe controller on it -- in wind the cascade's ground speed after the stop is the crosswind's
+drift (its lateral channel is a bank-to-turn law with no wing to bank), so "V < 3 m/s" never comes. Launchers:
+`VTOL_WIND/VTOL_TURB` to the Isaac pane, `CASC_ASPD=px4` on both cascade panes, READY checks
+`airspeed_validated`'s rate, the "airspeed source: px4" banner and Isaac's "[VTOL] wind:" line; provenance
+`aspd= wind= turb=`; boot test `--node aspd`. **Without a pitot every line is byte-identical** (the flown gate
+line's hash `ef8e90e4e5ef6afbe2935ba81fa4bbe0` through every step; `tests/test_wind_frames.py`, 25 checks).
+**WHAT THE WIND FOUND (all on the gate, seed 1, the turning mission, 100 mm tank at dx 0.3, imu-mdob):**
+1. **The flown controller, blind to the wind, crashes at t = 5 s of the transition in a 5 m/s headwind** --
+   the surface authority is scheduled on GROUND speed, so at 1 m/s over the ground it believes the elevator
+   makes nothing while the plant's elevator at 6 m/s of air makes 1.2 N.m per full deflection; the L1 reads the
+   unmodelled moment as a residual and cancels it the wrong way, the elevator saturates, pitch +33 deg. With
+   the pitot the same case flies (V_air held at 16.0 in cruise, front throttle 0.82 in the tailwind sector:
+   the prop sees 16 m/s of air whatever the ground does -- the "tailwind headroom" of the plan was a
+   ground-speed misreading). A pitot gated on GROUND speed (the first estimator) froze through exactly that
+   phase and crashed identically: gate on what the sensor can see (IAS >= 2 m/s), not on what the vehicle does.
+2. **A tailwind on the FIRST leg (the transition flown downwind) crashes at t = 8 s with or without the pitot:**
+   the pitot reads nothing in reversed flow, and the plant's elevator in 5 m/s of reversed flow makes an
+   unmodelled moment. Not chased: the operational rule is TRANSITION INTO THE WIND (a piece-5 interlock; a
+   pitot in hover cannot tell still air from a tailwind -- a 180 deg yaw in hover reads it).
+3. **The bank-to-turn law in a crosswind:** without the crab a 5 m/s crosswind leaves a straight leg flown with
+   10 deg of sideslip and 12 deg of standing bank (the law holds a HEADING; the ground track is held by the
+   fin's side force), and the orbit's bank demand then sits on the 25 deg limit.
+4. **Turbulence** 0.3 / 0.5 / 1.0 m/s 1-sigma per axis (tau 1 s): flown and stopped (1 / 1 / 14 solve fails,
+   stop 6 / 11 / 17 m) -- a 1 m/s vertical gust at 16 m/s is 3.6 deg of AoA on a wing that stalls at 13,
+   i.e. "light" turbulence for this wing loading is genuinely rough.
+5. **The hover end in a quartering wind** (wind1 head5 seed 2): with v_cmd at zero and V_air falling to 5, the
+   crab angle asin(w_cross / V_air) ran to its 30 deg clamp, the yaw loop swung the nose with the rotors
+   tilted -20 deg aft, and the aircraft departed one second after `stopped=1`. The crab now fades with the
+   wing share (V_air / V_stall)^2: nothing to crab in a hover.
+**★ THE JIT CACHE RACE, TWICE:** six processes compiling one fresh key at once poisoned every solver (the build
+lock, piece 3's record); then sixteen LOADING one cache at once bus-errored one of them at start (the
+"core-dumped two at start" of 2026-09-13, never understood): `jit_serialize: embed` extracts the embedded
+library to a temp file on load. Both are under one exclusive file lock per key now (nmpc6 0acf371 + 99bd727);
+`wind_sweep.sh` re-runs a seed that produced no summary, once.
+**THE WIND TABLE (16 seeds per cell, the turning mission, 100 mm tank at dx 0.3, imu-mdob WITH the pitot;
+`wind1` + the four cells re-run after the crab fade as `wind2`; landed = the RTH stop reached and no ground):**
+| cell | landed | solve fails / seed | corridor pk | V_air min (stall 15.12) | orbit rho-R last 40 s | stop from home | wind estimate |
+|---|---|---|---|---|---|---|---|
+| still air | 16/16 | 1 | 11.6 | 16.01 | -0.2 +- 0.1 | 6.3 m | (-0.1,+0.1) |
+| headwind 3 (leg 1) | 16/16 | 0 | 11.7 | 16.02 | -0.1 +- 2.5 | 3.3 | (-3.4,-0.2) |
+| headwind 5 | 16/16 | 8 (all at the stop) | 11.7 | 16.01 | +5.6 +- 16 (R 139) | 22-24 | (-4.7,-0.4) |
+| crosswind +3 | 16/16 | 0 | 11.9 | 16.02 | +1.4 +- 4.6 | 4.5 | (+0.0,+3.2) |
+| crosswind +5 | 16/16 | 0 | 12.5 | 15.98 | +2.7 +- 4.6 | 9.9 | (+0.2,+5.0) |
+| crosswind -5 | 16/16 | 11 (the stop) | 12.5 | 15.88 | -0.1 +- 2.3 | 20 | (-0.5,-4.6) |
+| diagonal 5 (-3.5,+3.5) | 16/16 | 0 | 12.3 | 15.95 | -0.6 +- 7.9 | 4.2 | (-3.5,+3.5) |
+| turbulence 0.5 m/s | 15/16 | 6 | 87 (the one stall) | 10.5 | +0.3 +- 1.1 | 5.7 | -- |
+| turbulence 1.0 m/s | **2/16** | 84 | -- | -- | -- | -- | -- |
+| headwind 5 + turbulence 0.5 | 11/16 | 32 | -- | -- | -- | -- | -- |
+**READING.** (1) A STEADY wind to 5 m/s (31% of the cruise airspeed) from any direction but dead behind on the
+transition leg is flown and stopped by every seed, with the wing at 16.0 +- 0.1 m/s of AIR throughout, the
+front throttle 0.83-0.84 in every sector, the wind estimate within 0.5 m/s and the orbit within +-5 m at 3 m/s,
++-16 m at 5 (where it flies at R 139, the tailwind sector's minimum through kappa). The stops in a tailwind /
+quartering wind end 20-24 m from home (the ground-speed ramp against an air-relative trim, then the drift the
+safe controller takes over) and cost 5-10 transient solve failures per seed at the hover end -- the plan's
+"stop <= 10 m" is not met there. (2) TURBULENCE is the envelope: 0.5 m/s 1-sigma per axis costs one seed in
+sixteen (a stall at the end of the transition: +11 deg of AoA plus a 1.5 m/s vertical gust = 16 deg on a wing
+that breaks at 13), 1 m/s costs fourteen, in every phase -- the cruise AoA of 7 deg leaves 6 deg = 1.7 m/s of
+vertical gust to the stall. That is this wing loading (110 N/m^2) at 16 m/s, not the controller: a faster
+transition (ttr 8: peak AoA 7.9 vs 9.4-10.3 at 10) and a cruise at 17-18 m/s (the 12x8 has the headroom) are
+the two knobs, both untested in wind. (3) The plan's piece-4 pass line ("16/16 at every wind incl. 1 m/s
+turbulence, orbit +-1 m, stop <= 10 m") is therefore NOT met as written; what is met: 16/16 at every steady
+wind, V_air >= stall + 0.5 through cruise and orbit, the corridor peak within +1 deg of still air, landing at
+home. A HIL flight in a 4 m/s crosswind follows (below).
+
 # ★★★★ 2026-09-15 (late night): HARDWARE-TRANSFER PIECES 2 AND 3 -- THE MODEL-ERROR ENVELOPE MEASURED
 # (48 cells x 16 seeds), AND ONE AIRFRAME FILE. Controller 45355a9 (merged), sim this commit.
 **PIECE 2 -- THE TOLERANCE TABLE (`~/flight_bags/robust/env1`, `scripts/robust_sweep.sh env1` 20:33-22:0x,
