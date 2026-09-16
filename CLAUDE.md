@@ -2,6 +2,43 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-15 (night): THE HARDWARE-TRANSFER PLAN, AND PIECE 1 FLOWN -- THE LOOP FLIES ON AN INS
+# WITH NO MOTION CAPTURE ANYWHERE (GPS 10 Hz + IMU + baro + magnetometer -> EKF2 -> both controllers).
+# Plan (7 pieces, gates, pass criteria): https://claude.ai/artifact/ATaE52LWqS8aeithSpskdF
+# Target: NVIDIA Jetson Orin companion, PX4 over Ethernet (uXRCE-DDS/UDP), inner loop 150-200 Hz.
+**THREE FLIGHTS, ALL LANDED AT HOME** (rows R100_dx3_px4src_a1_193130 / _gps10_a1_195322 / _nomocap_a1_200800;
+bags ..193027 / ..195155 / ..200633), 100 mm tank 0.3 m ahead, turning mission, `cascade_adaptive` + `CASC_EST=mdob`
++ the IMU node (`IMU_DR=1` on the GPS flights), 0 solve failures, z 29.8-30.3:
+| flight | state source | EKF2 fed by | orbit rho / roll sd | lat. bob orbit | fore-aft pred corr / err | wall spikes | landing | EKF2 vs mocap (rms pos / vel / att) |
+|---|---|---|---|---|---|---|---|---|
+| 1a `CASC_STATE=px4` | EKF2 odometry | mocap bridge (EV) | 99.8 +- 0.31 / 0.83 | 0.03 N | 0.94 / 0.05 | 0 | 0.00 m | 0.74 m (its 35 ms) / 0.11 / 0.34 deg |
+| 1b `+EKF_SOURCE=gps VTOL_GPS_HZ=10` | EKF2 odometry | GPS 10 Hz + IMU + baro, vision yaw | 99.9 +- 0.91 / 1.00 | 0.04 | 0.98 / 0.06 | 0 | 0.00 m | 1.11 m (0.57/0.58 offset = the receiver) / 0.04 / 0.20 |
+| 1c `+EKF_SOURCE=gpsmag EV_BRIDGE=0 GEO_STATE=px4` | EKF2, BOTH controllers | GPS + IMU + baro + MAG, no vision | 99.9 +- 0.98 / 0.99 | 0.03 | 0.94 / 0.15 | 0 | **0.04 m** | 1.12 m / 0.06 / 0.66 |
+The only visible cost of a GPS-class source is the orbit radius sd 0.3 -> 0.9 m (the receiver's wander in
+EKF2's position); roll sd, the cancellation and the landing are the mocap's. The fore-aft prediction on the
+px4 source (0.94-0.98) is better than the mocap+IMU flight's (0.36-0.61) -- noted, cause not established
+(the x-bob level differs run to run). **THE SIM GPS HAD TO BECOME A REAL RECEIVER FIRST:** Pegasus's
+Gazebo defaults (random walk 2.0 (m/s)/sqrt(Hz) = 6 cm per sample at 10 Hz) and a white 0.8 m/sample
+"realistic" noise BOTH fail EKF2's GPS drift check (`Preflight: GPS Horizontal Pos Drift too high`, no
+vehicle_global_position, READY refused); a receiver is centimetres of jitter plus a slow wander:
+`VTOL_GPS_SIGMA=0.05 VTOL_GPS_VSIGMA=0.05 VTOL_GPS_WALK=0.05` (knobs in `vtol.py`'s sensor factory,
+forwarded by both launchers). **PX4 SITL PERSISTS PARAMETERS** (`build/.../parameters.bson`): a previous
+run's `EKF2_EV_CTRL 11 / GPS_CTRL 0` survived the restart, so each `EKF_SOURCE` (ev | gps | gpsmag) now
+sets its FULL EKF2 set explicitly and restarts ekf2 (`start_vtol_smc_hil.sh` 8-relax). `GEO_STATE=px4`
+puts the safe controller on `odom_to_state` too (controller c200a9e; boot check in `test_state_source.py`
+section 3: subscribes to the odometry and NOT the mocap); READY verifies the GPS rate, the odometry rate,
+`vehicle_global_position` on GPS, and the "state source: px4" line in every controller pane (from the
+WHOLE scrollback -- 200 lines is 100 s of the safe controller's status). Provenance: `state= geo_state= ekf=
+gps_hz= gps_sigma=` in the launch log and the results row; the row's model label now comes from the
+launch log (a 3000-line pane grep mislabelled two rows `baseline_VTOL`; annotated in results.tsv).
+**LATENCY: NOT MEASURED YET.** `casc_timing.py` now follows the cascade family and adds an
+elevator -> pitch-acceleration estimate, but in CLOSED LOOP its cross-correlation is 0.1-0.3 and the peak
+wanders 45-300 ms -- flagged "not a measurement". The way to measure it is an injected elevator doublet in
+a straight leg (piece 5); `latency_s` stays 0.049 (flown on all three sources; the outer's compensation,
+and EKF2's 35 ms of extra lag did not show at the aircraft level).
+**PROCESS, again:** `pkill -f start_slosh_hil.sh` inside a Bash line that names the pattern killed the
+shell (exit 144) mid-sequence -- kills live in a script file (`teardown.sh`), as CLAUDE.md already says.
+
 # ★★★★ 2026-09-15 (evening): THE ESTIMATORS FLOWN (mdob, leso, and the IMU force channel), THE
 # ACCELEROMETER WIRED, `state_source: px4` BUILT. Controller 5b4601c / 7f416a3 / (+IMU_FCG), sim
 # a07b01e / 350026d / 9bc37e0 / this commit. Flights in `~/flight_bags/slosh` (rows R100_dx3_mdob_a1_165700,

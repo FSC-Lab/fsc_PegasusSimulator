@@ -38,7 +38,10 @@ set +u; source "$ROOT/scripts/rosenv.sh" 2>/dev/null; set -u
 
 # --- 0. which model is flying? record it with the flight --------------------
 MODEL=baseline_VTOL
-tmux capture-pane -p -S - -t "$SESSION:2-isaac" 2>/dev/null | grep -q "VTOL_SLOSH set" && MODEL=VTOLSlosh   # the WHOLE scrollback: with PEGASUS_SLOSH_DEBUG the banner scrolls past 3000 lines (a mislabelled row, 2026-09-15)
+# the model the LAUNCHER verified (LAUNCH_LOG's model= field, written after Isaac's banner check);
+# the Isaac pane's scrollback is finite and PEGASUS_SLOSH_DEBUG pushes the banner out of it
+LM=$(grep -o 'model=[A-Za-z_]*' "$HOME/flight_bags/LAUNCH_LOG.txt" 2>/dev/null | tail -1 | cut -d= -f2)
+[ -n "$LM" ] && MODEL=$LM
 say "model in the sim: $MODEL"
 
 # --- 0.5 IS THE VEHICLE FIT?  (not: is the stack up) ------------------------
