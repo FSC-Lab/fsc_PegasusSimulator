@@ -2,6 +2,50 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-16 (late morning): AFTER THE PLAN -- THE ROS TICK'S CLOCK (piece 6's correction, in the piece-6
+# block), THE HOVER POSITION HOLD, AND THE STAGED HOVER FLOWN CLEAN. Controller 82a23b5..f26e09d, sim this commit.
+**THE HOVER POSITION HOLD (`HoverHold` in the base node, controller 0f1cb5c + f26e09d).** The cascade held a
+heading and a speed reference, never a position: the 30 s hover stage of 02:32 drifted at 0.5-1.7 m/s (20 m)
+and the cross-track intercept law (`track_heading`: heading = bearing + k_ct x cross-track) turned the nose
+27 deg to intercept a track a hover cannot fly. Now, while the speed reference is PARKED at zero -- the engage
+hover before settle, a `v_cap 0` stage, the RTH stop (`_is_stopped()`, the status feed's stopped=1) -- the
+node latches the position and yaw where the hold engages (logged `HOVER HOLD at (x, y) yaw`, `released`) and:
+(1) posts the outer an along-heading SPEED reference vs = -hold_k e_s clamped to `hold_vmax` (the outer's own
+vs channel flies it with tilt and pitch as ever; `sched.at` clamps its trim package at V = 0 and `build_refs`
+carries the negative vs -- the aft tilt is the backward authority); (2) hands the inner a hover ROLL reference
+ky e_y + kvy v_y clamped to `hold_roll_max_deg`, faded by (1 - wing share) -- the multicopter lateral loop;
+FLU +roll = right wing down = the aircraft moves RIGHT, e_y > 0 = left of the point, checked on the gate (a
+wrong sign diverges); the term enters `inner_step` through `g["roll_hover"]` behind a `!= 0.0` branch (a
+"+ 0.0" would flip a signed zero in the trace); (3) holds the latched heading (`heading_cmd = hold.yaw`,
+`ct=` the hold's e_y). Released the moment the schedule ramps (the transition starts from its own zero as
+before). Params `hold_k` 0.5 1/s (0 = the old hover), `hold_vmax` 1.0, `hold_ky` 0.06 rad/m, `hold_kvy`
+0.12, `hold_roll_max_deg` 8; status feed `hold=1 he=(e_s,e_y)`. The gate mirrors it (`--hold_k ..`; the
+2 s start hover, `--hover_only`, the RTH stop) and prints the worst displacement.
+**GATE.** A 2 m/s^2 sinusoidal lateral gust (0.2 g, 7 s period) in a 40 s hover walks the aircraft to
+(20, 13) m without the hold and stays within (1-2, +-2) m with it (k 0.3 / 0.5 / 0.8: 3.4 / 3.3 / 3.2 m worst);
+a 3 cm CG error hover holds within 1.6 m; the turning mission (imu-mdob, 3 seeds): bob 0.058 N in the orbit /
+0 wall hits / roll sd 0.141 / u_ad 0.006 unchanged, the RTH stop 5.8 +- 0.05 m from home and the aircraft
+then sits within 0.71 m of it (before: drifting at 0.5 m/s with the nose walking 28 deg in 5 s), fails 0/0/3
+(scatter). **THE STANDING ALONG-TRACK OFFSET is the outer's vs bias divided by k:** the HIL hover sat 2.0 m
+ahead of the point at k 0.3 (the outer's w_vs 8 against its trim references leaves ~0.5 m/s of standing vs
+error at zero command) -> `hold_k` 0.5, ~1 m; lateral 0.03 m rms. An integral would remove it; not built.
+**FLOWN (row R100_dx3_hover30_hold_a1_094944, bag slosh_20260916_094918; `STAGE=hover STAGE_HOLD=30
+CASC_SPIN=poll`, imu-mdob + EKF + L1, px4 state, the offset tank): LANDED 0.00 m.** The hover stage sat at
+(2.0 +- 0.2, 0.0) at V 0.02-0.05 m/s with yaw 0 for its 30 s ("go"), then the schedule's back-transition from
+the hover, the recover, and the landing WHERE IT WAS: the driver now lands a staged flight at the aircraft's own
+position (`fly_transition.py`: the mission's `--land-x/y` is the far target, and the 09:24 hover flight had
+been sent 700 m along the ground on the safe controller to reach it, "CRASHED 71 m short"). `ims=` 0.80 / 1.29
+in the loop. The two earlier hover flights of the morning (02:07 the creeping cap, 02:32 the resumed schedule,
+09:10 busy / 09:24 poll: the landing target) are in the piece-7 and piece-6 blocks.
+**THE IDENTITY CHECK MOVES WITH IT, DELIBERATELY:** the gate's first 2 s are a hover, so the hold changes the
+flown line's trace there. `--hold_k 0` reproduces the old hashes EXACTLY (steso line `ef8e90e4e5ef6afbe2935ba81fa4bbe0`,
+IMU line `e958efbc7bbf9687db76620563cdabf8`) -- the proof that nothing outside the hold moved -- and the new
+references at the default are **steso `14a3f07da34821e956ad21ceb5bea8c1`, IMU `c9aed0b3e7a64a481e24834eb613b266`**
+(the same lines: `--test --est mdob --ttr 10 --lat 0.03 --comp 0.049 --outer_lag 0.03 --slosh --noise_att 0.1
+--noise_rate 1.0 [--noise_acc 0.02] --l1 --dur 8 --every 1.0 --seed 3 --log`, md5 of the CSV minus the ms
+columns). Tests: boot imu / vcap / interlock, test_imu_node, test_cascade_structure, test_gs_cascade_params,
+test_gs_param_types, test_cascade_guidance, test_wind_frames all pass.
+
 # ★★★★ 2026-09-16 (morning): HARDWARE-TRANSFER PIECE 7 -- THE TANK ON HARDWARE: THE RING-TEST TOOL, THE
 # MEASURED-MODE OVERRIDES ON BOTH SIDES, THE EKF RETUNE FROM A HOVER BAG, AND THE WALL GUARD THAT MAKES A
 # WRONG MODEL HARMLESS. Controller 00ba3d8 / 2f1b519 / dcbcaef / 09f7daa, sim ce3793b / 6aa804f / this
