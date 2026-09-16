@@ -57,6 +57,10 @@ def run(node, wait_s=60.0):
                 break
             if "outer NMPC built" in txt:
                 ready = True; break
+            # a JIT rebuild (a new cache key: mass mode, airframe file edit) takes ~2-4 min; the
+            # 60 s budget is for a node that loads its cache, not for the compiler
+            if "building 6-state outer NMPC" in txt and time.time() - t0 < 360.0:
+                wait_s = max(wait_s, 360.0)
         txt = open(log, errors="replace").read()
         if not ready:
             os.killpg(proc.pid, 15); proc.wait(10)

@@ -15,14 +15,33 @@ import sys
 d = sys.argv[1]
 PAT = re.compile(r"SUMMARY (\S+): (\d+)/(\d+) \| worst pkpitch\s+([\d.]+) pkAoA\s+([\d.]+) \| err rms mean\s+([\d.]+) worst pk\s+([\d.]+) \| revs mean\s+([\d.]+) max (\d+) \| fails sum (\d+) elvsat sum (\d+) \| minz\s+([\d.]+) maxz\s+([\d.]+) \| t_stop max\s+([\d.]+) \| roll worst\s+([\d.]+)")
 rows = {}
+
+
+def seeds_before_bt(name):
+    """Seeds ke_metrics could not score because the run never reached the back-transition
+    ('sN: no BT rows' in the cell's summary.txt) -- a crash in the corridor or cruise, which a
+    summary counts as NOT landed; a cell where every seed did so has no SUMMARY line at all and
+    used to print MISSING, hiding the worst cells of the sweep (2026-09-15)."""
+    try:
+        return sum(1 for ln in open(os.path.join(d, name, "summary.txt")) if "no BT rows" in ln)
+    except OSError:
+        return 0
+
+
 for line in open(os.path.join(d, "cells.txt")):
     name, flags, summ = line.rstrip("\n").split("|", 2)
     m = PAT.search(summ)
+    early = seeds_before_bt(name)
     if not m:
-        rows[name] = dict(flags=flags, missing=True); continue
+        if early:
+            rows[name] = dict(flags=flags, ok=0, n=early, pk=float("nan"), aoa=float("nan"), err=float("nan"), revs=float("nan"),
+                              fails=0, elvsat=0, minz=0.0, maxz=0.0, tstop=float("nan"), roll=float("nan"), missing=False, early=early)
+        else:
+            rows[name] = dict(flags=flags, missing=True)
+        continue
     g = m.groups()
-    rows[name] = dict(flags=flags, ok=int(g[1]), n=int(g[2]), pk=float(g[3]), aoa=float(g[4]), err=float(g[5]), revs=float(g[7]),
-                      fails=int(g[9]), elvsat=int(g[10]), minz=float(g[11]), maxz=float(g[12]), tstop=float(g[13]), roll=float(g[14]), missing=False)
+    rows[name] = dict(flags=flags, ok=int(g[1]), n=int(g[2]) + early, pk=float(g[3]), aoa=float(g[4]), err=float(g[5]), revs=float(g[7]),
+                      fails=int(g[9]), elvsat=int(g[10]), minz=float(g[11]), maxz=float(g[12]), tstop=float(g[13]), roll=float(g[14]), missing=False, early=early)
 nom = rows.get("nominal")
 if nom is None or nom["missing"]:
     print("no nominal cell -- cannot judge"); sys.exit(1)
@@ -32,7 +51,7 @@ def verdict(r):
     if r["missing"]:
         return "MISSING", ""
     why = []
-    if r["ok"] < r["n"]: why.append(f"{r['ok']}/{r['n']} landed")
+    if r["ok"] < r["n"]: why.append(f"{r['ok']}/{r['n']} landed" + (f" ({r['early']} crashed before the BT)" if r.get("early") else ""))
     if r["fails"] > 4: why.append(f"fails {r['fails']}")
     if r["pk"] > nom["pk"] + 3.0: why.append(f"pk {r['pk']:.1f}")
     if r["minz"] < 29.0: why.append(f"minz {r['minz']:.1f}")

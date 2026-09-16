@@ -2,6 +2,85 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-15 (late night): HARDWARE-TRANSFER PIECES 2 AND 3 -- THE MODEL-ERROR ENVELOPE MEASURED
+# (48 cells x 16 seeds), AND ONE AIRFRAME FILE. Controller 45355a9 (merged), sim this commit.
+**PIECE 2 -- THE TOLERANCE TABLE (`~/flight_bags/robust/env1`, `scripts/robust_sweep.sh env1` 20:33-22:0x,
+`scripts/robust_metrics.py`; the flown line: steso node `--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh`,
+CG tank 0.502 kg, straight mission with the back-transition, y0 10 m, noise 0.1 deg / 1 deg/s, 16 seeds per cell;
+the PLANT perturbed, the controller untouched -- `tests/test_plant_knobs.py`). PASS = 16/16 landed, solve-fails
+sum <= 4, corridor peak <= nominal + 3 deg, z >= 29.0, stop <= nominal + 3 s. Nominal: 16/16, pk 14.3, fails 3,
+minz 29.9, stop 8.8 s.**
+| parameter (plant x model) | passes | fails (why) |
+|---|---|---|
+| mass | 0.90 .. 1.20 (all) | -- |
+| inertia (all axes) | 0.8 .. 1.6 | 0.6: 1/16 landed, 12 crashed before the BT (the attitude loop 1.7x too hot) |
+| cQ (yaw torque per N) | 0.06 .. 0.18 (all) | -- |
+| lift (CL0, CLa, CLq, CLde) | 0.70, 0.85 | 1.15 (6 fails, pk 17.4), 1.30 (5 fails, pk 19.7): MORE lift than modelled breaks the trim |
+| pitch (Cm0, Cma, Cmq) | 0.8, 1.25 | 0.6 (pk 18.1), 1.5 (9 fails) |
+| ctrl (Cmde, Clda, Cndr, ..) | 1.25 | 0.6 (0/16, all before the BT), 0.8 (9 fails), 1.5 (pk 18.6) |
+| lat (Clb, Cyb, Cnb, ..) | 0.5, 1.5 (all) | -- |
+| drag (CD0, k) | 0.7, 1.4 (all) | -- |
+| thrust scale | 0.80 .. 1.20 (all) | -- |
+| prop J0 (zero-thrust advance ratio) | 0.60, 0.66, 0.80 | 0.90 (13 fails, pk 17.6) |
+| CG error, cold start | +1.5 cm | -1.5 / -3.0 cm AFT: 0/16 (all before the BT); +3.0: 12/16; +4.5: 1/16 |
+| rotor spin lag (model 0.12 s) | 0.06 | 0.20: 1/16, 0.30: 0/16 -- the L1 predictor's lag model is 0.12 |
+| surface servo lag (model 0.03 s) | 0.10 | 0.06 (5 fails: marginal) |
+**THE SPEC IT WRITES:** mass and thrust are free to +-20% (the loops absorb them; the trim's vertical channel is
+closed), yaw torque and drag do not matter, lateral derivatives +-50% do not matter. What must be measured:
+(1) the LIFT slope and the pitch stiffness within ~-20/+15% (the outer's trim is a package built on them; too much
+lift is worse than too little); (2) the control derivatives within ~-10/+25%; (3) the ROTOR SPIN-UP LAG -- the
+one actuator constant with a hard cliff (0.2 s crashes 15/16 where 0.12 is modelled; a thrust-stand step response,
+not a datasheet); (4) J0 to +-0.1; (5) the CG: a cold-start transition tolerates +1.5 cm forward and NO aft error
+-- the engage HOVER (settle_s with the L1 converged; the HIL 2.6 cm flights) is what buys the 2-5 cm the plan
+quoted, so the piece-5 interlock must refuse the transition until the L1's sigma has settled; (6) inertia to
+-20/+60%. `robust_metrics.py` now counts a seed that crashed BEFORE the back-transition as not landed (ke_metrics
+prints "no BT rows" for it; a cell with all 16 so printed MISSING and hid the worst rows of the sweep).
+**★ THE JIT RACE (found by piece 4's first sweep, fixed in 45355a9's successor):** six gate processes started on a
+FRESH cache key compiled the solver at once in one working directory; the shell compiler's temporaries collided and
+EVERY process ran a poisoned solver (ok=0 on every solve at 130 ms, the aircraft on the ground at t=9 s in STILL
+AIR) while the cache one of them saved was fine. A 16-seed sweep on a fresh key (a new mass mode, an airframe-file
+edit) does the same, silently. nmpc6's cache build is now under an exclusive file lock per key (the first process
+builds and saves atomically, the others wait and load) with `jit_temp_suffix`; three processes racing on a fresh
+key: one built, two loaded, all 0/161.
+**PIECE 3 -- ONE AIRFRAME FILE (controller branch `piece3` -> merged; sim this commit).** Every airframe number
+the controllers carried as a literal now lives in `px4_vtol_direct_actuator/airframe_id.cfg` (sections mass /
+rotors / tilt / surfaces / aero: the assembled mass, CG, inertia, the four hub positions, spin, tiltable, cQ, the
+12x8 propeller, omega_max, the actuator lags and rates, the tilt range, and the full aero coefficient set incl.
+the stall/sideslip blends) and is read by `airframe_id.py` (`AIRFRAME`, `_AF` in every node; numpy +
+configparser only, so the GS python, the tests and the launcher can load it; `FSC_AIRFRAME_ID=/path.cfg`
+overrides; unknown or missing keys are an ERROR -- a typo must not silently keep a default; `.digest()` is a
+hash of the file). Rewired: so3 (M, CG_X0, IXX0.., MAX_THRUST, RPOS = hubs - CG, SPIN, TILTABLE, CQ, TAU_BETA,
+TILT_RATE, PROP_D/J0/OMEGA_MAX, every aero constant), the cascade node (PROP_*, BETA_AFT_MAX = -tilt.min_deg,
+the predictor's default actuator lags, `l1_tau_spin/surf`, `tilt_slew_deg_s`, the prop parameters and every
+gate flag default: `--prop_D/J0/omega_max/tau_spin/surf_tau/surf_rate/plant_tilt_min`), the steso node's
+L1Steso defaults, the safe controller (mass, max_thrust, cg_x, cQ), vtol_nmpc (all of them) and the trim
+generator (m, rho, S, CL0, CL_alpha, CD0, k). `setup.py` ships the cfg as package data. **PROOFS:** (1) every
+numeric module constant in so3 / vtol_nmpc / the safe controller's Gains / the trim generator's FSC dict is
+IDENTICAL before and after (227 rows diffed); (2) the flown gate line's trace hash from the worktree equals the
+main tree's `ef8e90e4e5ef6afbe2935ba81fa4bbe0` (the swap-identity check), `--est pwc` still equals the tank node
+trace-for-trace, the IMU copy runs; (3) `test_tank_model_pairing.py` now resolves the hub's `float(_AF.mass.*)`
+expressions against the loaded file, pins the loader form of each copy as text (`_AF.mass.airframe_kg + VTOL_TANK_KG`,
+`_AF.mass.cg_x + VTOL_TANK_DX ...`), pins the GS's literal `M_KG = 3.449572` numerically to the file, and its
+NEW SECTION 8 edits the mass +5% through `FSC_AIRFRAME_ID` in a subprocess: so3 3.4496 -> 3.6221, vtol_nmpc /
+safe controller / trim generator 3.9516 -> 4.1241 together, the hover trim 38.76 -> 40.45 N (1.0437x = the mass
+ratio), and the pairing itself then REFUSES the file (MASS MISMATCH) -- one file, every copy, and the plant
+notices an edit; `test_prop_pairing.py` / `test_tilt_limit_pairing.py` pin the `_AF` text of every prop / tilt
+site and take their numbers from the file; `controller_path.load_airframe()` is the sim-side loader.
+**JIT CACHE KEYS** (nmpc6/cascade, nmpc_full, vtol_nmpc, the so3 node) hash `_AF.digest()` on top of the values
+they listed: the listed subset never covered CLQ / CD0 / CMQ / S / rho, which the file can now change without a
+source edit -- one rebuild (~2 min) per cfg edit, never a stale solver. **OPS:** `start_slosh_hil.sh` loads the
+file through the controller's own loader (no `3.449572` / `0.176` literals left in it), checks each cascade
+banner's `M=` / `CG_X=` against the FILE + the water, and REQUIRES the banner's new `af=<digest>` to equal the
+file it read (the node loaded the same airframe the launcher verified); the safe controller's and the base
+cascade's "state source" lines carry `af=` too; provenance `af=` in the launch log and the results row
+(`fly_slosh_mission.sh` reads it from the LAUNCH_LOG line). The plant double (`tests/plant_double.py`) keeps
+its OWN copy of the propeller and mass properties on purpose -- it is the sim's side of the pairing.
+**WHAT THE FILE IS NOT:** a measured airframe. Its numbers are the sim's (assembled from the CAD config); the
+hardware campaign replaces them section by section (mass/CG/inertia from the bifilar-pendulum + scale, the
+propeller from a thrust stand, the aero from the wind tunnel or a glide-test fit), and section 8 is the check
+that an edit reaches every copy. `tests/plant_double.py` and the GS's `M_KG` are the two remaining literal
+copies (the plant side, by design; the GS pinned numerically).
+
 # ★★★★ 2026-09-15 (night): THE HARDWARE-TRANSFER PLAN, AND PIECE 1 FLOWN -- THE LOOP FLIES ON AN INS
 # WITH NO MOTION CAPTURE ANYWHERE (GPS 10 Hz + IMU + baro + magnetometer -> EKF2 -> both controllers).
 # Plan (7 pieces, gates, pass criteria): https://claude.ai/artifact/ATaE52LWqS8aeithSpskdF

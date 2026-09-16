@@ -164,6 +164,7 @@ for _ in $(seq 1 10); do sleep 1; pgrep -f "ros2 bag record" >/dev/null || break
 # THIS launch's bag, from the launcher's provenance line (2026-09-15: a launch whose recorder never
 # started scored its landing against the previous flight's bag, the newest one on disk)
 BAG=$(grep -o 'bag=[^ ]*' "$HOME/flight_bags/LAUNCH_LOG.txt" 2>/dev/null | tail -1 | cut -d= -f2)
+AF=$(grep -o ' af=[0-9a-f]*' "$HOME/flight_bags/LAUNCH_LOG.txt" 2>/dev/null | tail -1 | cut -d= -f2)   # the airframe file the launcher verified (piece 3)
 if [ -z "$BAG" ] || [ ! -d "$BAG" ] || ! ls "$BAG"/*.db3 >/dev/null 2>&1; then
   say "!! the bag this launch announced (${BAG:-<none>}) was never recorded -- the flight is UNSCORED; log: $OUT"
   echo -e "${NAME}\tmodel=$MODEL NO BAG\tUNSCORED\t\t\t\t\t\t\t\t\t${LERR:-}\t-" | tee -a "$RES"
@@ -177,5 +178,5 @@ echo
 RES=${RES:-$BAG_DIR/results.tsv}
 [ -f "$RES" ] || printf 'trial\tparams\tverdict\twb_s\tpeakV\tmaxtilt\tmaxroll\tmaxyaw\tzmin\tzmax\tfails\tland_err\tbag\n' > "$RES"
 printf 'trial\tparams\tverdict\twb_s\tpeakV\tmaxtilt\tmaxroll\tmaxyaw\tzmin\tzmax\tfails\tland_err\tbag\n'
-/usr/bin/python3 "$ROOT/scripts/night_metrics.py" "${BAG%/}" "$NAME" "model=$MODEL water=${VTOL_TANK_KG:-0.502}kg${VTOL_TANK_R:+ R=${VTOL_TANK_R}m}${VTOL_TANK_DX:+ dx=${VTOL_TANK_DX}m}${GUIDE:+ guided}${CASC_NODE_PY:+ node=$(basename "$CASC_NODE_PY" .py)} ctrl=$CTRL${CASC_EST:+ est=$CASC_EST}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY" .py)}${CASC_STATE:+ state=$CASC_STATE}${EKF_SOURCE:+ ekf=$EKF_SOURCE}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}" "${LERR:-}" | tee -a "$RES"
+/usr/bin/python3 "$ROOT/scripts/night_metrics.py" "${BAG%/}" "$NAME" "model=$MODEL water=${VTOL_TANK_KG:-0.502}kg${VTOL_TANK_R:+ R=${VTOL_TANK_R}m}${VTOL_TANK_DX:+ dx=${VTOL_TANK_DX}m}${GUIDE:+ guided}${CASC_NODE_PY:+ node=$(basename "$CASC_NODE_PY" .py)} ctrl=$CTRL${CASC_EST:+ est=$CASC_EST}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY" .py)}${CASC_STATE:+ state=$CASC_STATE}${EKF_SOURCE:+ ekf=$EKF_SOURCE}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${AF:+ af=$AF}" "${LERR:-}" | tee -a "$RES"
 say "results -> $RES"

@@ -96,6 +96,16 @@ export CASC_L1=${CASC_L1:-true}
 # capped under the CL peak). Same node name and controller_id, so nothing downstream
 # changes. CASC_NODE_PY=<path> overrides; CASC_NODE_PY=base forces the base node.
 CTRL_DIR=${FSC_CONTROLLER_DIR:-$HOME/ros2_ws/src/px4_vtol_direct_actuator}
+# THE IDENTIFIED AIRFRAME (piece 3, 2026-09-15): every controller constant comes from
+# $CTRL_DIR/px4_vtol_direct_actuator/airframe_id.cfg. The READY checks below compare each banner's
+# M= / CG_X= against THIS file (no 3.449572 / 0.176 literals here any more), and every banner must
+# carry the file's digest (af=): the proof that the node loaded the same file this launcher read.
+AF_LINE=$(cd "$CTRL_DIR/px4_vtol_direct_actuator" && /usr/bin/python3 -c "from airframe_id import AIRFRAME as A; print(A.mass.airframe_kg, A.mass.cg_x, A.digest())" 2>/dev/null) || AF_LINE=""
+if [ -z "$AF_LINE" ]; then
+  echo "[slosh_hil] !! could not load $CTRL_DIR/px4_vtol_direct_actuator/airframe_id.cfg through airframe_id.py (the controller's identified airframe). Not READY."; exit 1
+fi
+AF_M=${AF_LINE%% *}; AF_REST=${AF_LINE#* }; AF_CG=${AF_REST%% *}; AF_DIGEST=${AF_REST#* }
+echo "[slosh_hil] airframe: airframe_id.cfg digest $AF_DIGEST (M_airframe $AF_M kg, CG_X $AF_CG m)${FSC_AIRFRAME_ID:+  OVERRIDE FSC_AIRFRAME_ID=$FSC_AIRFRAME_ID}"
 if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
   case "${CASC_NODE_PY:-}" in
     "")   export CASC_NODE_PY="$CTRL_DIR/px4_vtol_direct_actuator/nmpc_cascade_tank_node.py" ;;
@@ -278,17 +288,21 @@ case "${CASC_NODE_PY:-}" in
     fi
     # and its MASS: the banner's M must be the airframe (3.4496) plus the water asked for
     CM=$(echo "$CBANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
-    if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
-      echo "[slosh_hil] !! the cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}')."
+    if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{exit ((a-m-b)<0.002 && (m+b-a)<0.002)?0:1}'; then
+      echo "[slosh_hil] !! the cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{printf "%.4f", m+b}')."
       echo "[slosh_hil]    The env var did not reach the 6h-cascade pane. Not READY."
       exit 1
     fi
     # and its CG: a tank mounted off the CG (VTOL_TANK_DX) moves it, in the plant's fold and
-    # (since 2026-09-14) in so3.CG_X alike -- the banner's CG_X must be 0.176 + dx * water / M
+    # (since 2026-09-14) in so3.CG_X alike -- the banner's CG_X must be the file's cg_x + dx * water / M
     CCG=$(echo "$CBANNER" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
-    WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 0.176 + dx*b/(3.449572+b)}')
+    WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" -v m="$AF_M" -v c="$AF_CG" 'BEGIN{printf "%.4f", c + dx*b/(m+b)}')
     if [ -z "$CCG" ] || ! awk -v a="$CCG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
       echo "[slosh_hil] !! the cascade models CG_X=${CCG:-<none>} but VTOL_TANK_DX=${VTOL_TANK_DX:-0} with $VTOL_TANK_KG kg puts it at $WANT_CG. Not READY."; exit 1
+    fi
+    CAF=$(echo "$CBANNER" | grep -o "af=[0-9a-f]*" | cut -d= -f2)
+    if [ "$CAF" != "$AF_DIGEST" ]; then
+      echo "[slosh_hil] !! the cascade loaded airframe file ${CAF:-<none>} but this launcher read $AF_DIGEST. Not READY."; exit 1
     fi
     say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water; CG_X $CCG (tank_dx ${VTOL_TANK_DX:-0})" ;;
   *steso*)
@@ -306,15 +320,19 @@ case "${CASC_NODE_PY:-}" in
       echo "[slosh_hil] !! the STESO cascade printed its banner but no nmpc_cascade_steso_node process is alive. Not READY."; exit 1
     fi
     CM=$(echo "$SBANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
-    if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
-      echo "[slosh_hil] !! the STESO cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}'). Not READY."; exit 1
+    if [ -z "$CM" ] || ! awk -v a="$CM" -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{exit ((a-m-b)<0.002 && (m+b-a)<0.002)?0:1}'; then
+      echo "[slosh_hil] !! the STESO cascade models M=${CM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{printf "%.4f", m+b}'). Not READY."; exit 1
     fi
     # and its CG: a tank mounted off the CG (VTOL_TANK_DX) moves it, in the plant's fold and
-    # (since 2026-09-14) in so3.CG_X alike -- the banner's CG_X must be 0.176 + dx * water / M
+    # (since 2026-09-14) in so3.CG_X alike -- the banner's CG_X must be the file's cg_x + dx * water / M
     CCG=$(echo "$SBANNER" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
-    WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 0.176 + dx*b/(3.449572+b)}')
+    WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" -v m="$AF_M" -v c="$AF_CG" 'BEGIN{printf "%.4f", c + dx*b/(m+b)}')
     if [ -z "$CCG" ] || ! awk -v a="$CCG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
       echo "[slosh_hil] !! the cascade models CG_X=${CCG:-<none>} but VTOL_TANK_DX=${VTOL_TANK_DX:-0} with $VTOL_TANK_KG kg puts it at $WANT_CG. Not READY."; exit 1
+    fi
+    CAF=$(echo "$CBANNER" | grep -o "af=[0-9a-f]*" | cut -d= -f2)
+    if [ "$CAF" != "$AF_DIGEST" ]; then
+      echo "[slosh_hil] !! the cascade loaded airframe file ${CAF:-<none>} but this launcher read $AF_DIGEST. Not READY."; exit 1
     fi
     say "    cascade mass: $CM kg = airframe + $VTOL_TANK_KG kg of water; CG_X $CCG (tank_dx ${VTOL_TANK_DX:-0}) (STESO estimator, tank schedule)" ;;
   *)
@@ -345,13 +363,17 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
     echo "[slosh_hil] !! the ADAPTIVE cascade runs estimator=${AEST:-<none>} but CASC_EST=${CASC_EST:-steso} was asked for. Not READY."; exit 1
   fi
   AM=$(echo "$ABANNER" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
-  if [ -z "$AM" ] || ! awk -v a="$AM" -v b="$VTOL_TANK_KG" 'BEGIN{exit ((a-3.449572-b)<0.002 && (3.449572+b-a)<0.002)?0:1}'; then
-    echo "[slosh_hil] !! the ADAPTIVE cascade models M=${AM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 3.449572+b}'). Not READY."; exit 1
+  if [ -z "$AM" ] || ! awk -v a="$AM" -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{exit ((a-m-b)<0.002 && (m+b-a)<0.002)?0:1}'; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade models M=${AM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{printf "%.4f", m+b}'). Not READY."; exit 1
   fi
   ACG=$(echo "$ABANNER" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
-  WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" 'BEGIN{printf "%.4f", 0.176 + dx*b/(3.449572+b)}')
+  WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" -v m="$AF_M" -v c="$AF_CG" 'BEGIN{printf "%.4f", c + dx*b/(m+b)}')
   if [ -z "$ACG" ] || ! awk -v a="$ACG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
     echo "[slosh_hil] !! the ADAPTIVE cascade models CG_X=${ACG:-<none>} but the tank puts it at $WANT_CG. Not READY."; exit 1
+  fi
+  AAF=$(echo "$ABANNER" | grep -o "af=[0-9a-f]*" | cut -d= -f2)
+  if [ "$AAF" != "$AF_DIGEST" ]; then
+    echo "[slosh_hil] !! the ADAPTIVE cascade loaded airframe file ${AAF:-<none>} but this launcher read $AF_DIGEST. Not READY."; exit 1
   fi
   # the IMU-force-twin copy (ADAPTIVE_NODE_PY=.../nmpc_cascade_imu_node.py, 2026-09-15): its own banner
   # must precede the variant's, and the accelerometer subscription line must have been logged --
@@ -424,7 +446,7 @@ say "    recording: $BAG_DIR/$BAG"
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

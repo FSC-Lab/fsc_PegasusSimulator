@@ -39,6 +39,17 @@ def inner_dir():
     return os.path.join(controller_dir(), "px4_vtol_direct_actuator")
 
 
+def load_airframe(path=None):
+    """The controller's identified airframe (airframe_id.cfg) through its own loader, by file
+    path (numpy only -- importing the package would pull casadi). `path` overrides the file, as
+    FSC_AIRFRAME_ID does for the nodes. Piece 3 of the hardware-transfer plan (2026-09-15)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("airframe_id", os.path.join(inner_dir(), "airframe_id.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.load(path)
+
+
 def add_to_path():
     """Put both the package root and the package dir on sys.path.
 

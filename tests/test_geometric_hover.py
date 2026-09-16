@@ -239,7 +239,11 @@ def test_envelope_is_a_hover_controller():
                             "px4_vtol_direct_actuator", "geometric_hover_node.py")).read()
     check("no tilt parameter exists", "tilt_max_deg" not in src and "tilt_for_v" not in src)
     check("servo output is hard-coded to zero", "sc[i] = 0.0" in src)
-    check("the reference velocity is ignored (targets only)", "m.velocity" not in src)
+    # the REFERENCE callback only: since 2026-09-15 (state_source: px4) on_odom reads the odometry
+    # message's m.velocity, which is the STATE, not a reference
+    import re as _re
+    on_ref = _re.search(r"def on_ref\(self, m\):(.*?)\n        def ", src, _re.S)
+    check("the reference velocity is ignored (targets only)", on_ref is not None and "m.velocity" not in on_ref.group(1))
 
 
 if __name__ == "__main__":

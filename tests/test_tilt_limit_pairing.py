@@ -29,22 +29,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from test_slosh_import import stub_isaac, load          # noqa: E402
 sys.path.insert(0, os.path.join(HERE, ".."))
-from controller_path import controller_dir              # noqa: E402
+from controller_path import controller_dir, load_airframe   # noqa: E402
 
 CTRL = os.path.join(controller_dir(), "px4_vtol_direct_actuator", "nmpc_cascade_node.py")
 
 
 def controller_limits():
     src = open(CTRL).read()
-    m = re.search(r"^BETA_AFT_MAX\s*=\s*math\.radians\(([0-9.]+)\)", src, re.M)
-    assert m, "BETA_AFT_MAX"
-    aft = float(m.group(1))
+    # since piece 3 (2026-09-15) the aft limit and the gate's plant default both read the
+    # airframe file's tilt.min_deg (text pinned); the schedule's beta_aft_deg is a CHOICE and
+    # stays a literal, compared to the servo below
+    af = load_airframe()
+    assert re.search(r"^BETA_AFT_MAX = math\.radians\(-float\(so3\._AF\.tilt\.min_deg\)\)", src, re.M), "BETA_AFT_MAX"
+    aft = -float(af.tilt.min_deg)
     m = re.search(r'P\("beta_aft_deg",\s*([0-9.]+)\)', src)
     assert m, 'P("beta_aft_deg")'
     sched = float(m.group(1))
-    m = re.search(r'argf\("--plant_tilt_min",\s*([0-9.]+)\)', src)
-    assert m, "--plant_tilt_min"
-    gate = float(m.group(1))
+    assert re.search(r'argf\("--plant_tilt_min", -float\(so3\._AF\.tilt\.min_deg\)\)', src), "--plant_tilt_min"
+    gate = -float(af.tilt.min_deg)
     # the solver's lower bound must be the same constant, not a literal
     assert re.search(r"self\.lbx\[self\.iU \+ self\.nu \* k \+ 2\]\s*=\s*-BETA_AFT_MAX", src), \
         "the outer's tilt lower bound is not -BETA_AFT_MAX"

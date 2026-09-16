@@ -28,29 +28,35 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from test_slosh_import import stub_isaac, load          # noqa: E402
 sys.path.insert(0, os.path.join(HERE, ".."))
-from controller_path import controller_dir              # noqa: E402
+from controller_path import controller_dir, load_airframe   # noqa: E402
 
 CTRL = os.path.join(controller_dir(), "px4_vtol_direct_actuator", "nmpc_cascade_node.py")
 
 
 def controller_prop():
-    """PROP_D, PROP_J0, OMEGA_MAX, MAX_THRUST -- parsed, not imported (importing pulls casadi)."""
+    """PROP_D, PROP_J0, OMEGA_MAX, MAX_THRUST -- since piece 3 (2026-09-15) every one is read from
+    airframe_id.cfg: the cascade node, the model hub and the gate's flag defaults must all spell
+    that out (text pinned -- a literal would pass a value check and drift), and the numbers come
+    from the loaded file. Parsed, not imported (importing pulls casadi)."""
     src = open(CTRL).read()
-    out = {}
-    for k in ("PROP_D", "PROP_J0", "OMEGA_MAX"):
-        m = re.search(rf"^{k}\s*=\s*([0-9.]+)", src, re.M)
-        assert m, k
-        out[k] = float(m.group(1))
-    m = re.search(r"^MAX_THRUST\s*=\s*([0-9.]+)", src, re.M)
-    if m:
-        out["MAX_THRUST"] = float(m.group(1))
-    else:   # imported from the model hub
-        hub = open(os.path.join(controller_dir(), "px4_vtol_direct_actuator",
-                                "nmpc_so3_transition_node.py")).read()
-        m = re.search(r"^MAX_THRUST\s*=\s*([0-9.]+)", hub, re.M)
-        assert m, "MAX_THRUST"
-        out["MAX_THRUST"] = float(m.group(1))
-    return out
+    hub = open(os.path.join(controller_dir(), "px4_vtol_direct_actuator", "nmpc_so3_transition_node.py")).read()
+    af = load_airframe()
+    for pat, where in ((r"^PROP_D = float\(so3\._AF\.rotors\.prop_d\)", src),
+                       (r"^PROP_J0 = float\(so3\._AF\.rotors\.prop_j0\)", src),
+                       (r"^OMEGA_MAX = float\(so3\._AF\.rotors\.omega_max\)", src),
+                       (r'P\("prop_diameter_m", float\(so3\._AF\.rotors\.prop_d\)\)', src),
+                       (r'P\("prop_zero_thrust_J", float\(so3\._AF\.rotors\.prop_j0\)\)', src),
+                       (r'P\("rotor_omega_max", float\(so3\._AF\.rotors\.omega_max\)\)', src),
+                       (r'argf\("--prop_D", float\(so3\._AF\.rotors\.prop_d\)\)', src),
+                       (r'argf\("--prop_J0", float\(so3\._AF\.rotors\.prop_j0\)\)', src),
+                       (r'argf\("--omega_max", float\(so3\._AF\.rotors\.omega_max\)\)', src),
+                       (r"^PROP_D = float\(_AF\.rotors\.prop_d\)", hub),
+                       (r"^PROP_J0 = float\(_AF\.rotors\.prop_j0\)", hub),
+                       (r"^PROP_OMEGA_MAX = float\(_AF\.rotors\.omega_max\)", hub),
+                       (r"^MAX_THRUST = float\(_AF\.rotors\.max_thrust\)", hub)):
+        assert re.search(pat, where, re.M), f"not read from airframe_id.cfg: {pat}"
+    return {"PROP_D": float(af.rotors.prop_d), "PROP_J0": float(af.rotors.prop_j0),
+            "OMEGA_MAX": float(af.rotors.omega_max), "MAX_THRUST": float(af.rotors.max_thrust)}
 
 
 def thrust_momentum(T_max, omega_max, D, J0, throttle, v_ax):

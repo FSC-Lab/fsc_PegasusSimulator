@@ -20,6 +20,15 @@ reproduces the controller's independently-derived constants exactly (M = 3.450,
 CG_X = 0.1764, I = 0.265/0.303/0.490). That agreement is what makes it credible
 for the tank case, where there is nothing to check against.
 
+SINCE PIECE 3 (2026-09-15) THE CONTROLLER HAS ONE AIRFRAME FILE: `airframe_id.cfg`, read by
+`airframe_id.AIRFRAME` (`_AF` in every node). so3's AIRFRAME_M / CG_X0 / IXX0.. are
+`float(_AF.mass.*)` expressions, and the other copies (the trim generator, the SAFE controller,
+vtol_nmpc) build their mass as `_AF.mass.airframe_kg + VTOL_TANK_KG`. This test resolves the
+`_AF.` expressions against the loaded file, pins that exact text in every copy, and (section 8)
+proves the file is the ONLY source: a 5% mass edit through FSC_AIRFRAME_ID moves so3.M, vtol_nmpc.M,
+the safe controller's hover feed-forward and the trim generator together, moves the hover trim by
+5%, and makes THIS pairing fail against the unedited plant.
+
 NOTE ON THE A/B: once this passes, the controller models the TANK aircraft. Flying
 the baseline plant (`start_slosh_hil.sh --baseline`) against it means flying a
 controller that believes in 0.5 kg of water that is not there. For a true baseline
@@ -37,10 +46,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from test_slosh_import import stub_isaac, load          # noqa: E402  (one stub harness)
 sys.path.insert(0, os.path.join(HERE, ".."))
-from controller_path import controller_dir              # noqa: E402
+from controller_path import controller_dir, load_airframe   # noqa: E402
 
 CTRL_HUB = os.path.join(controller_dir(), "px4_vtol_direct_actuator",
                         "nmpc_so3_transition_node.py")
+
 # Every OTHER copy of the vehicle mass in the controller package. so3.M is the
 # model hub, but the trim generator and the SAFE controller each carry their own,
 # and the 2026-09-12 audit found the generator's still at 3.45 after so3.M moved:
@@ -49,8 +59,8 @@ CTRL_HUB = os.path.join(controller_dir(), "px4_vtol_direct_actuator",
 # copy is "airframe + the env var" with the SAME airframe constant, the SAME variable name and
 # the SAME default -- that exact text is what is pinned, because a copy that reads a different
 # name (or none) flies the wrong aircraft the moment the operator sets the variable.
-AIRFRAME_M = 3.449572
-ENV_PAT = r'3\.449572\s*\+\s*float\(os\.environ\.get\("VTOL_TANK_KG",\s*"0\.502"\)\s*or\s*0\.502\)'
+AIRFRAME_M = 3.449572      # the identified airframe (airframe_id.cfg pins it; section 3 checks the file says so)
+ENV_PAT = r'_AF\.mass\.airframe_kg\s*\+\s*float\(os\.environ\.get\("VTOL_TANK_KG",\s*"0\.502"\)\s*or\s*0\.502\)'
 OTHER_MASS_SITES = {
     "lib/fsc_transition_ref.py":  r"\bm=" + ENV_PAT,             # FSC = dict(m=..., ...)
     "geometric_hover_node.py":    r"self\.mass = " + ENV_PAT,    # safe controller default
@@ -61,10 +71,32 @@ TOL_CG = 1e-3       # m
 TOL_I = 2e-3        # kg m^2
 
 
-def controller_constants():
+def controller_constants(af=None):
     """M, CG_X and the inertia diagonal, read from the controller's model hub.
 
-    Parsed, not imported: importing it pulls casadi and builds solvers."""
+    Parsed, not imported: importing it pulls casadi and builds solvers. Since piece 3 the
+    values are `float(_AF.mass.cg_x)`-style expressions: those are resolved against the loaded
+    airframe file (`af`), so a constant that stops reading the file reads as a literal here and
+    is caught by the file-vs-hub comparison in section 3."""
+    af = af or load_airframe()
+
+    def resolve(node):
+        # float(<chain>) or <chain>, chain rooted at _AF
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "float" and len(node.args) == 1:
+            return resolve(node.args[0])
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Attribute):
+            chain = []; n = node
+            while isinstance(n, ast.Attribute):
+                chain.append(n.attr); n = n.value
+            if isinstance(n, ast.Name) and n.id == "_AF":
+                v = af
+                for a in reversed(chain):
+                    v = getattr(v, a, None)
+                return float(v) if isinstance(v, (int, float)) else None
+        return None
+
     tree = ast.parse(open(CTRL_HUB).read())
     out = {}
     for node in tree.body:
@@ -78,11 +110,13 @@ def controller_constants():
         else:
             targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
         if isinstance(node.value, ast.Tuple):
-            vals = [v.value for v in node.value.elts if isinstance(v, ast.Constant)]
-            if len(targets) == len(vals):
+            vals = [resolve(v) for v in node.value.elts]
+            if len(targets) == len(vals) and None not in vals:
                 out.update(dict(zip(targets, vals)))
-        elif isinstance(node.value, ast.Constant) and len(targets) == 1:
-            out[targets[0]] = node.value.value
+        elif len(targets) == 1:
+            v = resolve(node.value)
+            if v is not None:
+                out[targets[0]] = v
     return out
 
 
@@ -131,9 +165,23 @@ def main():
         bad.append(f"fold_tank_into_body MUTATED the caller's config (mass now {cfg.mass})")
 
     # --- 3. THE PAIRING ------------------------------------------------------
-    k = controller_constants()
+    af = load_airframe()
+    k = controller_constants(af)
     import re
     hub_src = open(CTRL_HUB).read()
+    print(f"  airframe file            : {af.path} (digest {af.digest()}): M={af.mass.airframe_kg} CG_X={af.mass.cg_x} "
+          f"I=({af.mass.ixx},{af.mass.iyy},{af.mass.izz})")
+    # the hub must READ the file for each of them (a literal would resolve too -- and drift)
+    for nm, pat in (("AIRFRAME_M", r"^AIRFRAME_M = float\(_AF\.mass\.airframe_kg\)"),
+                    ("IXX0/IYY0/IZZ0", r"^IXX0, IYY0, IZZ0 = float\(_AF\.mass\.ixx\), float\(_AF\.mass\.iyy\), float\(_AF\.mass\.izz\)"),
+                    ("CG_X0", r"^CG_X0 = float\(_AF\.mass\.cg_x\)"),
+                    ("MAX_THRUST", r"^MAX_THRUST = float\(_AF\.rotors\.max_thrust\)"),
+                    ("RPOS", r"^RPOS = _AF\.rotors\.hubs - "),
+                    ("CQ", r"^CQ = float\(_AF\.rotors\.cq\)")):
+        if re.search(pat, hub_src, re.M) is None:
+            bad.append(f"{os.path.basename(CTRL_HUB)}: {nm} is not read from airframe_id.cfg (_AF)")
+    if abs(af.mass.airframe_kg - AIRFRAME_M) > 1e-6:
+        bad.append(f"airframe_id.cfg mass.airframe_kg {af.mass.airframe_kg} is not the identified {AIRFRAME_M}")
     # since 2026-09-14 the hub's CG_X / IXX.. are DERIVED from the tank position (VTOL_TANK_DX/DZ);
     # the nominal constants are CG_X0 / IXX0.. and section 6 below checks the derivation
     ca_m = k.get("AIRFRAME_M"); ccg = k.get("CG_X0", k.get("CG_X"))
@@ -168,9 +216,9 @@ def main():
         src = open(path).read()
         hit = re.search(pat, src, re.M)
         tag = "ok" if hit else "MISMATCH"
-        print(f"  {rel:28s} mass = 3.449572 + VTOL_TANK_KG   {tag}")
+        print(f"  {rel:28s} mass = _AF.mass.airframe_kg + VTOL_TANK_KG   {tag}")
         if not hit:
-            bad.append(f"{rel} does not carry the mass as 3.449572 + VTOL_TANK_KG (default 0.502) -- "
+            bad.append(f"{rel} does not carry the mass as _AF.mass.airframe_kg + VTOL_TANK_KG (default 0.502) -- "
                        f"a stale or differently-wired copy (the trim generator's copy left a "
                        f"1.245 m/s^2 residual once)")
 
@@ -178,13 +226,16 @@ def main():
     gs = os.path.expanduser("~/ros2_ws/src/ros2_ground_station_gui/src/ROS_Node/trajectory_player.py")
     if os.path.exists(gs):
         src = open(gs).read()
-        hit = re.search(r"M_KG = 3\.449572 \+ WATER_KG", src) and re.search(
+        mk = re.search(r"M_KG = ([0-9.]+) \+ WATER_KG", src)
+        hit = mk and re.search(
             r'WATER_KG = float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\)', src)
-        print(f"  {'GS trajectory_player.py':28s} mass = 3.449572 + VTOL_TANK_KG   {'ok' if hit else 'MISMATCH'}")
-        if not hit:
-            bad.append("the ground station's speed checks do not carry the mass as 3.449572 + "
-                       "VTOL_TANK_KG (default 0.502): it would quote the baseline 14.13 m/s stall "
-                       "for an aircraft that stalls at 15.12 / 15.50")
+        # the GS is another repo (numpy-only python) and carries the airframe as a LITERAL: pin it to the file's number
+        same = hit and abs(float(mk.group(1)) - af.mass.airframe_kg) <= 1e-6
+        print(f"  {'GS trajectory_player.py':28s} mass = {mk.group(1) if mk else '?'} + VTOL_TANK_KG   {'ok' if same else 'MISMATCH'}")
+        if not same:
+            bad.append(f"the ground station's speed checks do not carry the mass as {af.mass.airframe_kg} + "
+                       "VTOL_TANK_KG (default 0.502): it would quote the wrong stall speed "
+                       "(the tank aircraft stalls at 15.12 / 15.50, the baseline 14.13)")
     else:
         print(f"  GS not found at {gs}: skipped")
 
@@ -233,8 +284,8 @@ def main():
                 bad.append(f"tank at ({dx}, 0, {dz}): plant CG/I ({ck[0]:.4f}, {ik}) vs model ({cgx:.4f}, ({ixx:.3f},{iyy:.3f},{izz:.3f}))")
         # the SAFE controller's cg_x must read the same variables (text pinned, like its mass)
         geo = open(os.path.join(controller_dir(), "px4_vtol_direct_actuator", "geometric_hover_node.py")).read()
-        n = len(re.findall(r'0\.176 \+ float\(os\.environ\.get\("VTOL_TANK_DX", "0"\) or 0\.0\) \* float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\) /', geo))
-        print(f"  {'geometric_hover_node.py':28s} cg_x = 0.176 + VTOL_TANK_DX * VTOL_TANK_KG / M   {'ok (x%d)' % n if n >= 2 else 'MISMATCH'}")
+        n = len(re.findall(r'_AF\.mass\.cg_x \+ float\(os\.environ\.get\("VTOL_TANK_DX", "0"\) or 0\.0\) \* float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\) /', geo))
+        print(f"  {'geometric_hover_node.py':28s} cg_x = _AF.mass.cg_x + VTOL_TANK_DX * VTOL_TANK_KG / M   {'ok (x%d)' % n if n >= 2 else 'MISMATCH'}")
         if n < 2:
             bad.append("geometric_hover_node.py: cg_x does not follow VTOL_TANK_DX (both the attribute and the parameter default must)")
     else:
@@ -256,6 +307,58 @@ def main():
         bad.append("vtol.py: the aero force does not default to the assembled CG (the controllers' aero acts through the CG)")
     if cfg.aero_center is not None:
         bad.append(f"the airframe pins aero_center={cfg.aero_center}; the controllers model no lever arm")
+
+    # --- 8. ONE FILE IS THE ONLY SOURCE (piece 3, 2026-09-15) ------------------------------
+    if os.environ.get("FSC_PAIRING_INNER"):
+        edited = None
+    # Edit the airframe's mass by +5% through FSC_AIRFRAME_ID and import the four carriers in a
+    # subprocess: every one must show the edited mass (a copy that still holds a literal shows the
+    # old one), the hover trim must move by the same 5%, and THIS test's pairing must then fail --
+    # the file cannot be edited without the plant noticing. Nothing on disk is touched.
+    else:
+        import subprocess, tempfile
+        src_cfg = open(af.path).read()
+        m_new = round(af.mass.airframe_kg * 1.05, 6)
+        edited = re.sub(r"^(airframe_kg\s*=\s*)[0-9.]+", r"\g<1>%s" % m_new, src_cfg, count=1, flags=re.M)
+    if edited is None:
+        print("  (section 8 skipped: inner run)")
+    elif edited == src_cfg:
+        bad.append("could not edit airframe_kg in a copy of airframe_id.cfg (section 8)")
+    else:
+        with tempfile.NamedTemporaryFile("w", suffix=".cfg", delete=False) as tf:
+            tf.write(edited); tmp_cfg = tf.name
+        probe = (
+            "import sys, os; sys.path.insert(0, %r)\n"
+            "import nmpc_so3_transition_node as so3, vtol_nmpc, geometric_hover_node as g, lib.fsc_transition_ref as fr\n"
+            "Tf, Tr = so3.trim_split(0.0, 0.0, 0.0, 0.0)\n"
+            "print(so3.AIRFRAME_M, vtol_nmpc.M, g.Gains().mass, fr.FSC['m'], Tf + Tr, so3._AF.path)\n"
+        ) % os.path.join(controller_dir(), "px4_vtol_direct_actuator")
+        env = dict(os.environ, VTOL_TANK_KG="0.502", VTOL_TANK_DX="0", VTOL_TANK_DZ="0")
+        r0 = subprocess.run([sys.executable, "-c", probe], env=env, capture_output=True, text=True)
+        r1 = subprocess.run([sys.executable, "-c", probe], env=dict(env, FSC_AIRFRAME_ID=tmp_cfg), capture_output=True, text=True)
+        try:
+            v0 = r0.stdout.split(); v1 = r1.stdout.split()
+            a0, vn0, g0, f0, th0 = map(float, v0[:5]); a1, vn1, g1, f1, th1 = map(float, v1[:5])
+            water = 0.502
+            carriers_ok = all(abs(x - m_new) <= 1e-6 for x in (a1,)) and all(abs(x - (m_new + water)) <= 1e-6 for x in (vn1, g1, f1))
+            trim_ok = abs(th1 / th0 - (m_new + water) / (af.mass.airframe_kg + water)) <= 1e-4   # trim_split is a numeric solve
+            print(f"  FSC_AIRFRAME_ID +5% mass : so3 {a0:.4f}->{a1:.4f}, vtol_nmpc {vn0:.4f}->{vn1:.4f}, safe ctrl {g0:.4f}->{g1:.4f}, "
+                  f"trim gen {f0:.4f}->{f1:.4f}; hover trim {th0:.2f}->{th1:.2f} N ({th1 / th0:.4f}x)  "
+                  f"{'ok' if carriers_ok and trim_ok else 'MISMATCH'}  [{v1[5]}]")
+            if not carriers_ok:
+                bad.append(f"a mass edit in airframe_id.cfg did not reach every copy: so3 {a1}, vtol_nmpc {vn1}, safe {g1}, trim gen {f1} (want {m_new} / {m_new + water})")
+            if not trim_ok:
+                bad.append(f"the hover trim did not follow the edited mass ({th0:.3f} -> {th1:.3f} N)")
+        except (ValueError, IndexError):
+            bad.append(f"section 8 probe failed: {r0.stderr[-400:]} {r1.stderr[-400:]}")
+        # and the pairing itself refuses the edited file against the unedited plant
+        r2 = subprocess.run([sys.executable, os.path.abspath(__file__)], env=dict(env, FSC_AIRFRAME_ID=tmp_cfg, FSC_PAIRING_INNER="1"),
+                            capture_output=True, text=True)
+        refused = r2.returncode != 0 and "MASS MISMATCH" in r2.stdout
+        print(f"  pairing against the edited file: {'refused (MASS MISMATCH), as required' if refused else 'ACCEPTED -- the plant did not notice'}")
+        if not refused:
+            bad.append("the pairing test accepted a controller whose airframe file carries 5% more mass than the plant")
+        os.unlink(tmp_cfg)
 
     print()
     if bad:

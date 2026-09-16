@@ -36,7 +36,11 @@ def node_param_types():
         try:
             out[name] = type(ast.literal_eval(raw))
         except Exception:
-            pass
+            # a default computed from the airframe file (piece 3): `float(so3._AF.rotors.prop_d)`
+            # -- the cast names the declared type (the [^)]+ above stops at the inner paren)
+            for cast in (float, int, bool, str):
+                if raw.startswith(cast.__name__ + "("):
+                    out[name] = cast
     return out
 
 
