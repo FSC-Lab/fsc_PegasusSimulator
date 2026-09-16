@@ -88,6 +88,8 @@ export VTOL_SLOSH=$WANT_SLOSH
 export VTOL_TANK=${VTOL_TANK:-1}
 export VTOL_TANK_KG=${VTOL_TANK_KG:-0.502}    # water mass: 0.1 / 0.502 / 0.7 flown; plant AND controllers
 export VTOL_TANK_R=${VTOL_TANK_R:-}           # tank radius [m], empty = the plan's 41 mm (0.08 / 0.10 gated)
+export VTOL_TANK_F1=${VTOL_TANK_F1:-} VTOL_TANK_ZETA=${VTOL_TANK_ZETA:-}   # the ring test's measured first mode / damping (piece 7), empty = the closed forms
+export SLOSH_PRED_WALL_S=${SLOSH_PRED_WALL_S:-} SLOSH_PRED_F1_SCALE=${SLOSH_PRED_F1_SCALE:-}   # the wall guard's park time (node default 1 s) / a deliberately wrong f1 for the predictor (gate knob; 1 = the tank's)
 export VTOL_TANK_DX=${VTOL_TANK_DX:-0}
 export VTOL_CG_DX=${VTOL_CG_DX:-0}
 export CASC_L1=${CASC_L1:-true}
@@ -240,6 +242,17 @@ if [ "$WANT_SLOSH" = "1" ]; then
       exit 1
     fi
     say "    tank radius: $RMM mm confirmed in Isaac's log"
+    # THE MEASURED MODE (piece 7): with VTOL_TANK_F1 set the same banner must print "f=<F1> Hz
+    # (measured)" -- the ring test's number reached the plant; the predictor's banner is checked
+    # against it below, so one number moves both or the launch refuses
+    if [ -n "${VTOL_TANK_F1:-}" ]; then
+      FHZ=$(echo "$PANE" | grep -o "f=[0-9.]* Hz (measured)" | tail -1 | grep -o "[0-9.]*")
+      if [ -z "$FHZ" ] || ! awk -v a="$FHZ" -v b="$VTOL_TANK_F1" 'BEGIN{exit (a-b<0.006 && b-a<0.006)?0:1}'; then
+        echo "[slosh_hil] !! asked for VTOL_TANK_F1=$VTOL_TANK_F1 but Isaac's banner says f=${FHZ:-<none>} Hz (measured). Not READY."
+        exit 1
+      fi
+      say "    measured first mode: $FHZ Hz confirmed in Isaac's log"
+    fi
   fi
   # phase 3: asked for the free surface -> the banner must say so
   if [ "${VTOL_TANK:-1}" = "slosh" ]; then
@@ -391,6 +404,16 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
       echo "[slosh_hil] !! the IMU node never attached its sensor_combined subscription. Not READY."; exit 1
     fi
     say "    $IBANNER"
+  fi
+  # THE MEASURED MODE reached the predictor too (piece 7): its banner's f1= must be VTOL_TANK_F1
+  # (times SLOSH_PRED_F1_SCALE if a deliberate mismatch is being flown)
+  if [ -n "${VTOL_TANK_F1:-}" ]; then
+    PF1=$(echo "$ABANNER" | grep -o "f1=[0-9.]*Hz" | tail -1 | grep -o "[0-9.]*")
+    WANTF1=$(awk -v f="$VTOL_TANK_F1" -v k="${SLOSH_PRED_F1_SCALE:-1}" 'BEGIN{printf "%.2f", f*k}')
+    if [ -z "$PF1" ] || ! awk -v a="$PF1" -v b="$WANTF1" 'BEGIN{exit (a-b<0.006 && b-a<0.006)?0:1}'; then
+      echo "[slosh_hil] !! VTOL_TANK_F1=$VTOL_TANK_F1 (x ${SLOSH_PRED_F1_SCALE:-1}) but the adaptive cascade's predictor says f1=${PF1:-<none>} Hz. Not READY."; exit 1
+    fi
+    say "    predictor first mode: $PF1 Hz confirmed (the plant's banner: measured)"
   fi
   say "    adaptive cascade: estimator=$AEST, M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
 fi

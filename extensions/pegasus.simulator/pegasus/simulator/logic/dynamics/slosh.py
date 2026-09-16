@@ -128,6 +128,14 @@ class TankConfig:
     #          out to interact with the loops.
     damping_zeta: float | None = None
 
+    # THE MEASURED FIRST MODE (hardware-transfer piece 7, 2026-09-16). None -> the closed form
+    # (Abramson/Ibrahim for this radius and depth). A number = the ring test's f1 [Hz]
+    # (scripts/ana_ring_test.py: tap the tank on the airframe, FFT + log decrement); the
+    # pendulum length then follows from it (L1 = g / omega^2) and the moving mass m1 stays the
+    # closed form's -- the frequency is what a tap measures, the mass fraction is not. The
+    # plant and the predictor both read it through slosh_parameters(), so one number moves both.
+    freq_hz: float | None = None
+
     enabled: bool = True
 
     # Model the FREE SURFACE (the pendulum analogue) or treat the liquid as rigid?
@@ -161,6 +169,8 @@ class TankConfig:
             raise ValueError(f"tank '{self.name}': fluid_density must be > 0")
         if self.damping_zeta is not None and not 0.0 <= self.damping_zeta < 1.0:
             raise ValueError(f"tank '{self.name}': damping_zeta must be in [0, 1)")
+        if self.freq_hz is not None and not self.freq_hz > 0.0:
+            raise ValueError(f"tank '{self.name}': freq_hz (the measured first mode) must be > 0")
 
     # -- convenience ------------------------------------------------------
     @property
@@ -281,6 +291,9 @@ def slosh_parameters(tank: TankConfig) -> SloshParameters:
     omega = math.sqrt(G * EPS_1 / R * t)
     m1 = m_f * (2.0 * t) / ((EPS_1 * EPS_1 - 1.0) * x)
     L1 = R / (EPS_1 * t)                      # equals g / omega^2, checked in the tests
+    if tank.freq_hz is not None:              # the ring test's number overrides the closed form
+        omega = 2.0 * math.pi * float(tank.freq_hz)
+        L1 = G / (omega * omega)
 
     return SloshParameters(
         fluid_mass=m_f,
@@ -317,6 +330,11 @@ TANK_MODES = (0.1, 0.502, 0.7)    # the flown/gated masses; anything else is unt
 # moves 0.38 kg at 1.7 Hz, 100 mm 0.41 kg at 1.1 Hz, below the 1.4 Hz short period. Unset or
 # empty = the plan's 41 mm. Mount it off the CG with VTOL_TANK_DX to give the reaction a lever.
 TANK_R_ENV = "VTOL_TANK_R"
+# VTOL_TANK_F1 [Hz] / VTOL_TANK_ZETA [-]: the MEASURED first mode and damping (the ring test,
+# piece 7), overriding the closed forms on both sides at once (the plant's pendulum and the
+# predictor's model are built from the same slosh_parameters()). Unset = the closed forms.
+TANK_F1_ENV = "VTOL_TANK_F1"
+TANK_ZETA_ENV = "VTOL_TANK_ZETA"
 
 
 def tank_kg_from_env() -> float:
@@ -331,12 +349,29 @@ def tank_radius_from_env() -> float | None:
     return float(v) if v else None
 
 
+def tank_f1_from_env() -> float | None:
+    """The measured first-mode frequency asked for by VTOL_TANK_F1 [Hz], None = the closed form."""
+    v = os.environ.get(TANK_F1_ENV, "").strip()
+    return float(v) if v else None
+
+
+def tank_zeta_from_env() -> float | None:
+    """The measured damping ratio asked for by VTOL_TANK_ZETA, None = the smooth-wall closed form."""
+    v = os.environ.get(TANK_ZETA_ENV, "").strip()
+    return float(v) if v else None
+
+
 def default_tank(**kw) -> TankConfig:
     """The tank every entry point should construct: the plan's geometry with the water mass
     from VTOL_TANK_KG, re-shaped to VTOL_TANK_R if that is set (same water, 75% fill, the
-    tank grown or shrunk to hold it -- what the gate's --slosh_radius builds). kwargs pass
-    through (slosh=True, damping_zeta=..)."""
+    tank grown or shrunk to hold it -- what the gate's --slosh_radius builds), its first mode
+    and damping overridden by VTOL_TANK_F1 / VTOL_TANK_ZETA if measured. kwargs pass through
+    (slosh=True, damping_zeta=..) and win over the environment."""
     kw.setdefault("water_kg", tank_kg_from_env())
+    if tank_f1_from_env() is not None:
+        kw.setdefault("freq_hz", tank_f1_from_env())
+    if tank_zeta_from_env() is not None:
+        kw.setdefault("damping_zeta", tank_zeta_from_env())
     R = tank_radius_from_env()
     if R is not None and "radius" not in kw:
         if R <= 0.0:
@@ -352,8 +387,8 @@ def describe(tank: TankConfig) -> str:
     return (f"tank '{tank.name}': R={1000 * tank.radius:.0f} mm H={1000 * tank.height:.0f} mm "
             f"fill={100 * tank.fill_frac:.0f}% -> {p.fluid_mass:.3f} kg "
             f"(m1 {p.slosh_mass:.3f} + m0 {p.rigid_mass:.3f}), "
-            f"f={p.freq_hz:.2f} Hz  L={1000 * p.pendulum_length:.1f} mm  "
-            f"zeta={100 * p.zeta:.2f}%")
+            f"f={p.freq_hz:.2f} Hz{' (measured)' if tank.freq_hz is not None else ''}  L={1000 * p.pendulum_length:.1f} mm  "
+            f"zeta={100 * p.zeta:.2f}%{' (measured)' if tank.damping_zeta is not None else ''}")
 
 
 # ============================================================================

@@ -70,7 +70,7 @@ def run(p, r_tank, f_of_t, T, dt=1 / 120.0, plant_dt=1 / 240.0, bias_F=(0.0, 0.0
     pred = make(p, r_tank)
     r = np.asarray(r_tank, float)
     zF = np.zeros(2); zM = np.zeros(3)
-    log = dict(t=[], F_true=[], F_est=[], F_meas=[], x_true=[], x_est=[], bF=[], bM=[], eta=[],
+    log = dict(t=[], F_true=[], F_est=[], F_meas=[], x_true=[], x_est=[], bF=[], bM=[], eta=[], wall_s=[], F_bnd=[],
                pred={tau: [] for tau in horizons})
     t = 0.0; nsub = int(round(dt / plant_dt))
     while t < T:
@@ -92,10 +92,11 @@ def run(p, r_tank, f_of_t, T, dt=1 / 120.0, plant_dt=1 / 240.0, bias_F=(0.0, 0.0
         log["t"].append(t); log["F_true"].append(F_true.copy()); log["F_est"].append(pred.force)
         log["F_meas"].append(zF.copy()); log["x_true"].append(np.array(plant.x)); log["x_est"].append(pred.x)
         log["bF"].append(pred.bias_F); log["bM"].append(pred.bias_M)
+        log["wall_s"].append(pred.wall_s); log["F_bnd"].append(pred.bounded(pred.force))
         for tau in horizons:
             log["pred"][tau].append(pred.predict(tau, f_tank=f_of_t(t))[0])
         log["eta"].append(pred.impact_eta(1.0, f_tank=f_of_t(t)))
-    for k in ("t", "F_true", "F_est", "F_meas", "x_true", "x_est", "bF", "bM"):
+    for k in ("t", "F_true", "F_est", "F_meas", "x_true", "x_est", "bF", "bM", "wall_s", "F_bnd"):
         log[k] = np.array(log[k])
     for tau in horizons:
         log["pred"][tau] = np.array(log["pred"][tau])
@@ -189,6 +190,46 @@ def main():
         Ft = log["F_true"][wc, 0]; Fe = log["F_est"][wc, 0]
         check("contact force tracked (corr > 0.8, |peak| within 2x)", np.corrcoef(Fe, Ft)[0, 1] > 0.8 and 0.5 < (np.abs(Fe).max() / max(np.abs(Ft).max(), 1e-6)) < 2.0,
               f"corr {np.corrcoef(Fe, Ft)[0, 1]:+.2f}, peak true {np.abs(Ft).max():.2f} N est {np.abs(Fe).max():.2f} N")
+
+    print("\nE. the wall-saturation guard (hardware-transfer piece 7): the model's force is bounded to its domain,")
+    print("   and the guard's clock counts a PARKED estimate, not a passing one")
+    pred = make(p, r_tank)
+    fb = pred.force_bound(); w1 = pred.omega1
+    check("force_bound = m1 w^2 wall (the bob AT the wall, the largest force the linear model can make)",
+          abs(fb - p.slosh_mass * w1 * w1 * p.wall) < 1e-12 and fb > 0.0, f"{fb:.3f} N for m1 {p.slosh_mass:.3f} kg, f1 {w1 / (2 * math.pi):.2f} Hz, wall {1e3 * p.wall:.0f} mm")
+    check("bounded() clips to +-force_bound and leaves an in-domain force alone",
+          np.allclose(pred.bounded([5.0, -5.0]), [fb, -fb]) and np.allclose(pred.bounded([0.1, -0.2]), [0.1, -0.2]))
+    # E1: a residual the tank did not make -- the plant's bob at rest, the READING a 3 N sinusoid at
+    # the tank's own mode (the HIL clock artefact's shape, 7x what this bob can make inside its wall)
+    f_still = lambda t: (0.0, 0.0, 9.81)
+    rng = np.random.default_rng(5); plant = sl.PendulumSlosh(p); pred = make(p, r_tank)
+    dt = 1 / 120.0; xs = []; Fraw = []; Fbnd = []; ws = []
+    for k in range(int(3.0 / dt)):
+        t = k * dt
+        for _ in range(2):
+            plant.step(np.array(f_still(t)), dt / 2)
+        z = np.array([3.0 * math.sin(w1 * t), 0.0]); zM = np.cross(np.asarray(r_tank), np.array([z[0], z[1], 0.0]))
+        pred.step(z, zM, f_still(t), dt)
+        xs.append(pred.x[0]); Fraw.append(pred.force[0]); Fbnd.append(pred.bounded(pred.force)[0]); ws.append(pred.wall_s)
+    xs, Fraw, Fbnd, ws = map(np.array, (xs, Fraw, Fbnd, ws))
+    check("a fictitious 3 N residual at f1 drives the ESTIMATE past the wall (the failure the flights showed)",
+          np.abs(xs).max() >= p.wall, f"|x_est| max {1e3 * np.abs(xs).max():.0f} mm vs wall {1e3 * p.wall:.0f} (the plant's bob: {1e3 * abs(plant.x[0]):.1f} mm)")
+    check("the RAW model force then carries the contact law's fiction (> the bound)", np.abs(Fraw).max() > 1.5 * fb,
+          f"raw |F| max {np.abs(Fraw).max():.2f} N vs bound {fb:.2f}")
+    check("the BOUNDED force never exceeds what a bob inside the wall makes", np.abs(Fbnd).max() <= fb + 1e-9,
+          f"bounded |F| max {np.abs(Fbnd).max():.2f} N -- the 1 N.m pulses cannot happen on any channel")
+    check("a passing excursion does not read as parked (wall_s never reaches the 1 s guard)", ws.max() < 1.0,
+          f"wall_s max {ws.max():.2f} s (the estimate swings through the centre every half period)")
+    # E2: a legitimately PARKED bob -- section D's braking held 2 s, then released: the clock runs past
+    # the guard while the bob sits on the wall and resets once it leaves
+    f_park = lambda t: (-3.0 if 1.0 <= t < 3.0 else 0.0, 0.0, 9.81)
+    log, pred = run(p, r_tank, f_park, T=5.0, noise_F=0.2)
+    check("a bob held on the wall runs the guard clock past 1 s", log["wall_s"].max() > 1.0, f"wall_s max {log['wall_s'].max():.2f} s")
+    i_rel = np.searchsorted(log["t"], 3.0)
+    check("released, the estimate leaves the wall and the clock resets (wall_s 0 and inside 80% by the end)",
+          log["wall_s"][-1] == 0.0 and pred.inside(0.8), f"wall_s at the end {log['wall_s'][-1]:.2f} s, |x_est| {1e3 * np.abs(pred.x).max():.1f} mm")
+    check("the clock was still running at the release (it counts continuously while parked)", log["wall_s"][i_rel - 1] > 0.5,
+          f"wall_s at t=3 s: {log['wall_s'][i_rel - 1]:.2f} s")
 
     print()
     print("PASS -- the predictor observes the bob, splits the biases and predicts ahead" if not FAIL else f"FAIL ({len(FAIL)}): " + ", ".join(FAIL))

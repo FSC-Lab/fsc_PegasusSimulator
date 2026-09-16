@@ -360,6 +360,34 @@ def main():
             bad.append("the pairing test accepted a controller whose airframe file carries 5% more mass than the plant")
         os.unlink(tmp_cfg)
 
+    # ---- 9. THE MEASURED FIRST MODE (piece 7): VTOL_TANK_F1 / VTOL_TANK_ZETA reach the plant's
+    # tank (default_tank -> slosh_parameters) AND the predictor's model (the steso variant's
+    # _tank_params, the same module by path) -- one number, both sides, and the pendulum length
+    # follows g / omega^2 while m1 keeps the closed form
+    if not os.environ.get("FSC_PAIRING_INNER"):
+        import subprocess
+        print("\n9. the ring test's f1 / zeta override the closed forms on BOTH sides")
+        probe = (
+            "import importlib.util, math, os, sys\n"
+            f"spec = importlib.util.spec_from_file_location('slosh', {os.path.join(HERE, '..', 'extensions', 'pegasus.simulator', 'pegasus', 'simulator', 'logic', 'dynamics', 'slosh.py')!r}); sl = importlib.util.module_from_spec(spec); spec.loader.exec_module(sl)\n"
+            "p = sl.slosh_parameters(sl.default_tank())\n"
+            f"sys.path.insert(0, {controller_dir()!r}); sys.argv = ['x', '--test']\n"
+            "from px4_vtol_direct_actuator import nmpc_cascade_steso_node as sv\n"
+            "q = sv._tank_params()\n"
+            "print(p.freq_hz, p.zeta, p.pendulum_length, p.slosh_mass, q.freq_hz, q.zeta, q.pendulum_length, q.slosh_mass)\n")
+        env = dict(os.environ, VTOL_TANK_R="0.10", VTOL_TANK_F1="1.00", VTOL_TANK_ZETA="0.02")
+        r = subprocess.run([sys.executable, "-c", probe], env=env, capture_output=True, text=True)
+        try:
+            pf, pz, pL, pm, qf, qz, qL, qm = [float(x) for x in r.stdout.strip().split("\n")[-1].split()]
+            ok = (abs(pf - 1.0) < 1e-9 and abs(qf - 1.0) < 1e-9 and abs(pz - 0.02) < 1e-9 and abs(qz - 0.02) < 1e-9
+                  and abs(pL - 9.81 / (2 * 3.141592653589793) ** 2) < 1e-6 and pL == qL and pm == qm and abs(pm - 0.408) < 0.002)
+            print(f"  plant f1 {pf:.2f} Hz zeta {pz:.3f} L1 {1e3 * pL:.1f} mm m1 {pm:.3f} kg | predictor f1 {qf:.2f} zeta {qz:.3f} L1 {1e3 * qL:.1f} m1 {qm:.3f}"
+                  f"  -> {'one number moved both, L1 = g/w^2, m1 the closed form' if ok else 'MISMATCH'}")
+            if not ok:
+                bad.append("VTOL_TANK_F1 / VTOL_TANK_ZETA did not reach both the plant's tank and the predictor identically")
+        except Exception as e:                                          # noqa: BLE001
+            bad.append(f"section 9 probe failed ({type(e).__name__}: {e}): out {r.stdout[-300:]!r} err {r.stderr[-400:]!r}")
+
     print()
     if bad:
         print(f"FAIL ({len(bad)}):")
