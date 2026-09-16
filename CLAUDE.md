@@ -2,6 +2,117 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-16 (morning): HARDWARE-TRANSFER PIECE 7 -- THE TANK ON HARDWARE: THE RING-TEST TOOL, THE
+# MEASURED-MODE OVERRIDES ON BOTH SIDES, THE EKF RETUNE FROM A HOVER BAG, AND THE WALL GUARD THAT MAKES A
+# WRONG MODEL HARMLESS. Controller 00ba3d8 / 2f1b519 / dcbcaef / 09f7daa, sim ce3793b / 6aa804f / this
+# commit. The hardware half (a real tap, a real hover bag) waits for the airframe; everything that can be
+# proven here is, and the two HIL hover flights of the morning found two driver/cap bugs (below).
+**THE RING TEST: `scripts/ana_ring_test.py --bag <dir> [--t0 --t1] | --csv | --selftest`.** Procedure in its
+docstring: the airframe HUNG from a strap or held (on its gear the ground's friction takes the 0.4 N reaction
+and the IMU sees nothing), the tank at the flight fill, PX4 logging `sensor_combined` as in flight, ONE
+lateral tap on the tank wall (body y, then x), 20 s of quiet, three taps per axis, the median. The tool: the
+FFT peak (Hann, 8x zero padding, parabolic refinement) of the detrended lateral acceleration = f1; the
+damping from the log decrement of the band-passed (+-35%) analytic envelope, fitted on ln(env^2 - floor^2)
+where the ring stands clear of the noise (the noise adds in quadrature and flattens a plain envelope fit by
+25% at SNR 2), cross-checked by the successive-peaks decrement; compared to `slosh_parameters()` of the
+tank the environment describes and printed as the export line. `--selftest` rings the simulator's own
+`PendulumSlosh` (by path) at 20 mm and samples its reaction on the 3.95 kg airframe at 200 Hz + white
+noise: f1 1.144 vs 1.144 Hz at every noise tried; zeta 0.23% for 0.25 (0.02 m/s^2 noise), 2.5% for 3 and
+1.1% for 1 at 0.05, 5.4% for 5, 0.36% for 0.5 at 0.1 m/s^2 (SNR 1) -- f1 exact, zeta within 30%. **An
+in-flight window is NOT a ring test:** the staged flight's post-stop hover reads 1.00 Hz at 0.41 m/s^2 --
+the airframe's own ~1 Hz pitch ring with the bob in the loop (every offset-tank flight has it), not the
+tank alone; the tool says OUTSIDE 10% and it is right. There is no HIL rehearsal of a tap (a grounded sim
+vehicle cannot be tapped, and in a hover the loop answers); the self-test is the tool's validation.
+**THE OVERRIDES: `VTOL_TANK_F1` [Hz] / `VTOL_TANK_ZETA`** (slosh.py: `TankConfig.freq_hz`, read by
+`default_tank()` with `damping_zeta`; `slosh_parameters()` then sets omega = 2 pi f1 and L1 = g / omega^2
+while m1 keeps the closed form -- a tap measures the frequency, not the mass fraction). The plant's pendulum
+and the predictor's model (`_tank_params` -> the same module by path) move together by construction:
+`test_tank_model_pairing.py` section 9 sets f1 1.00 / zeta 0.02 in a subprocess and reads f1, zeta, L1
+(248.5 mm = g / w^2) and m1 (0.408, unchanged) identical on both sides. Isaac's banner prints
+`f=1.00 Hz (measured)`; the launchers forward both (Isaac and every controller pane, cold start and
+restart); `start_slosh_hil.sh` refuses READY unless Isaac's banner carries the measured f1 AND the adaptive
+cascade's predictor banner says `f1=<the same>` (times `SLOSH_PRED_F1_SCALE` if a mismatch is flown).
+**THE WALL GUARD (controller 00ba3d8) -- TWO MECHANISMS, THE FIRST IS THE ONE THAT MATTERS:**
+(1) **The cancellation uses the model's force only inside its domain.** `SloshPredictor.force_bound()` =
+m1 w^2 wall (1.05 N for the 100 mm tank) is the largest force the LINEAR model can make; past the wall the
+predictor's contact law is the bound on the model (slosh.py's own words), not an impact to cancel, and an
+estimate that got there on a residual the tank did not make predicts 5-16 N impacts -- the 2026-09-15
+velocity-twin pulses (12-13 clipped 1 N.m yaw pulses per flight). `bounded(F)` clips F_slosh, M_slosh (out
+of the C(s) target) and M_slosh_ahead (the direct term) in BOTH copies; predict(), force, the log and the
+wall ETA keep the raw prediction. `test_slosh_predictor.py` section E: a fictitious 3 N residual at f1 with
+the plant's bob at rest drives the ESTIMATE to 52 mm in a 50 mm wall and the raw model force to 14.5 N;
+bounded, 1.05 N -- so at the 0.26 m arm the worst spurious moment is 0.27 N.m on any channel, 4x under
+PRED_UMAX (which stays 1 N.m). (2) **A parked estimate takes that axis's model out.** `wall_s` (2,)
+counts, PER AXIS, the seconds the estimate sits AT or past the wall (>= wall counts, 80%..wall holds,
+< 80% resets: a pressed bob jitters across the line); past `SLOSH_PRED_WALL_S` (1.0 s, `--pred_wall_s`,
+0 = off) the L1 masks that axis's model force to zero in F_slosh / M_slosh / M_slosh_ahead, so its residual
+goes through C(s) as before the predictor existed, one log line each way, `WALL-GUARD x|y` on the status
+feed, a trip count in the gate summary. Per axis because on this airframe ONLY the y bob has a moment
+arm (r_tank = (0.26, 0, 0): M = (0, 0, r_x F_y)) and the fore-aft bob is PRESSED on its wall by the
+aircraft's own f_x in every corridor and cruise (HIL: 47 of 50 mm in cruise, on the wall through the
+transition -- the 02:32 flight's first guard trip, 312-327 s, was exactly that): a one-axis guard at 90%
+of the wall would have switched the lateral cancellation off for every HIL cruise. A passing excursion
+never trips it (0.28 s max in section E); section D's braking bob held 2 s on the wall runs it past 1 s
+and releases cleanly.
+**THE MISMATCH GATE (`--pred_f1_scale`; imu-mdob + EKF, the offset 100 mm tank, turning mission, 3
+seeds; `~/flight_bags/est_sweeps/p7_f1{nom,08,112,06,115}`):**
+| predictor's f1 | bob|F| orbit [N] | wall hits | orbit roll sd | u_ad | pred corr / err | guard | stop m |
+|---|---|---|---|---|---|---|---|---|
+| off | 0.768 | 269 | 0.359 | 0.035 | -- | -- | 6.0 |
+| x1.0 (1.14 Hz) | 0.059 | 0 | 0.145 | 0.006 | 0.81 / 0.078 | x: 1 trip, 5.4 s in the RTH brake | 5.9 |
+| x0.8 | 0.060 | 0 | 0.138 | 0.006 | 0.77 / 0.096 | 1 trip, 7.3 s (one-axis guard) | 6.0 |
+| x1.2 | 0.059 | 0 | 0.148 | 0.006 | 0.80 / 0.087 | 1 trip, 3.3 s (one-axis guard) | 5.7 |
+| x1.5 | 0.061 | 0 | 0.144 | 0.006 | 0.78 / 0.106 | 0 | 6.0 |
+| x0.6, one-axis guard | 0.770 | 273 | 0.360 | 0.035 | 0.82 / 0.716 | tripped at t~1 s, off 172 of 215 s | 5.8 |
+| **x0.6, per-axis guard (shipped)** | **0.182** | **0** | **0.138** | **0.009** | 0.81 / 0.240 | **x parked 171 s; y never** | 5.9 |
++-20% (and +50%) of f1 costs NOTHING at the aircraft level: the EKF is corrected by the measured residual
+every tick and the direct term looks only 49 ms ahead (6% of a period), so a frequency error is a small
+phase error -- prediction quality slips (err 0.078 -> 0.09-0.11 N), the cancellation does not. At x0.6 the
+model needs a bob 2.8x larger for the same force: the fore-aft estimate parks at its wall from the first
+second (its guard trips and stays tripped: no arm, nothing lost), the lateral one does not park (the
+orbit's y force is smaller) and its cancellation runs on the wrong model -- and STILL takes the orbit bob
+0.77 -> 0.18 N with zero wall hits, roll sd 0.138, u_ad 0.009, the stop unchanged. With the earlier
+one-axis guard the x park had switched y off too and the run was the predictor-off run to three decimals.
+**Either way: a wrong model degrades toward zero, not to harm -- by the bound and the guard, measured.**
+The one x trip per nominal run is the RTH brake's legitimate park (the bob pressed on its wall by the
+1.5 m/s^2 decel for ~5 s); the C(s) path carries the static part meanwhile, stop distances unchanged.
+**THE EKF RETUNE: `scripts/ekf_retune.py <bag> [--window T0 T1] [--gate LOG.csv]`** reads the flown
+cascade's status feed (`slosh F=` the force twin's raw reading, `sig=` the moment observer's raw reading --
+NEW on the feed with 2f1b519, so bags before it give the force floor only; `pred bob=`, `bF`, `bM`), finds
+the longest still hover (V < 0.5, |tilt| < 5 deg, >= 5 s), takes the RESIDUAL of each reading against the
+model (reading minus the model's bob force minus the bias state = the EKF's own innovation; a 0.25%-damped
+tank rings for a minute after the engage kick, so the raw reading is not a floor) on the y force channel and
+the three moment axes as the flown floors, compares them to the gate's (imu-mdob hover, `--log`: F_y
+0.039 N, sigma 0.049 / 0.063 / 0.096 N.m -- or `--gate LOG.csv` recomputes), and scales the sweep's r_F 0.3 / r_M
+0.1 by the ratio per channel, clamped to [0.5x, 5x], printing the `SLOSH_PRED_RF/RM` export line and the
+bias states the hover reveals. Rehearsed on a HIL hover (below). The rule it encodes: keep the sweep's
+ratio of r to floor; measure the floor, do not guess it.
+**THE TWO HIL HOVER FLIGHTS (`STAGE=hover STAGE_HOLD=30`, imu-mdob + EKF + L1, px4 state, the offset
+100 mm tank; rows R100_dx3_hover30_a1_020625 / _023215):** the first was REFUSED by its own stage ("speed
+3.1 outside 0-2" at 20 s): `v_cap 0` was not holding -- the reference ramped up by Vc/ttr and down by
+decel_rate in the same tick, a net +0.1 m/s^2 creep (the piece-5 staged flight's hover stage had "passed"
+only because its 15 s hold ended at 2.3 m/s inside the window's +1 m/s tolerance). Fixed (controller
+dcbcaef: the ramp may not cross the cap; a lowered cap still ramps down), pinned by the boot test's new
+`vcap` variant (one rclpy probe streams a hover, switches, reads the feed: vcmd 1.2 on the flown cap,
+0.0 on the fix). The second held the hover 30 s (V 0.5-1.7 m/s: the cascade holds a heading, not a
+position -- it drifts) -> "go", then the DRIVER let it go: after 3b's `decel_now 0` the still-active,
+settled node resumed its forward schedule and the RECOVER phase (waiting for V < 2) watched it transition
+to 16 m/s; the safe controller took a wing-borne aircraft (roll 49 deg) and still landed it 0.00 m from
+the target. `fly_transition.py` now sets `v_cap 0` before it clears `decel_now`. **What the flight gave:**
+`ims=` in the ROS loop (piece 6's correction above), the `sig=` field, the guard's first HIL trip (the
+x bob parked through the unplanned transition, 312-327 s -- the per-axis guard came from it), and
+`ekf_retune.py`'s rehearsal: hover window 269-307 s, bob 9.5 / 9.8 mm rms (the tank ringing after the
+engage kick at 0.25% damping), raw y reading 0.189 N, residual floor 0.092 N vs the gate's 0.039 (2.4x:
+the sim IMU through the twin plus the model's share), moment floors 0.009 / 0.014 / 0.039 N.m vs the
+gate's 0.049 / 0.063 / 0.096 (5x UNDER: HIL's rates carry no noise, the known blind spot), bias states
+bF (+0.17, -0.03) N, bM (+0.02, -0.01, +0.02) N.m; proposal r_F 0.70 / r_M 0.05 (the 0.5x clamp), NOT
+applied -- the sweep's values flew every HIL flight; the tool is for the airframe's floors.
+**STANDING FOR THE HARDWARE:** tap, read f1; if outside 10% of the closed form export the override (both
+banners must show it or the launch refuses); fly a 30 s hover (`STAGE=hover STAGE_HOLD=30`), run
+`ekf_retune.py` on its bag, fly the hover again with the exported r and score the prediction (status feed /
+`ana_slosh_est.py`) before the mission. The guard needs no retune. What the model still cannot claim:
+breaking waves and roof impacts (the standing statement); a baffled tank remains the hardware answer.
+
 # ★★★★ 2026-09-16 (early morning): HARDWARE-TRANSFER PIECE 6 -- THE COMPUTE BUDGET FOR THE JETSON ORIN,
 # MEASURED HERE PER COMPONENT, THE HOT PATH MADE 3x CHEAPER BIT-IDENTICALLY, THE PX4 RATES THAT MUST
 # CHANGE FOR 200 Hz. Controller 71814b8, sim this commit. The Orin itself is not on the bench yet.
@@ -23,13 +134,19 @@ proxy. **The desktop numbers (24-core workstation; the Orin's A78AE is taken as 
 | outer, 2 cores, under load | 11.8 | 12.8 | 24% | 24 / 26 |
 Parts of the tick (median): L1 applied_moment (model force/moment, the IMU residual, the EKF step + the
 delay-ahead prediction) 0.105 ms, the EKF step alone 0.103, `model_moment` (the CasADi aero call) 0.053,
-the L1 law + moment observer 0.009, the allocation inverse < 0.001. The plan's pass line (inner p95 < 3 ms
-at 200 Hz, outer p95 < 25 ms at 20 Hz, ON THE ORIN) is predicted at 1.1 ms and 27 ms: the inner has 4x of
-room, the outer is on the line -- at 20 Hz the outer would spend half its period solving, which the 20 Hz
-thread tolerates (it never blocks the inner) but leaves no room for a slower core than assumed; `outer_hz`
-15 (67 ms) is the fallback the node already has, and the outer's `solve_ms` column plus the new `ims=` field
-on the status feed are what the first Orin hover bag reports (`tests/test_bench_budget.py` holds the desktop
-floor; run the bench on the Orin and paste its table here).
+the L1 law + moment observer 0.009, the allocation inverse < 0.001.
+**★ THE TICK IN THE ROS PROCESS IS 2.5x THE BENCH'S: `ims=` FROM THE FIRST HIL BAG WITH IT (the hover
+flight of 02:32, imu-mdob + EKF + L1, `state_source px4`, bag slosh_20260916_023035): median 1.05 ms /
+p95 1.66 in the hover, 1.04 / 1.52 in the cruise (worst 5 Hz sample p95 2.2).** The 0.6 ms the bench does
+not see is `inner()`'s ROS path: two actuator messages built and published (rclpy's publish is ~0.2 ms
+each), the outer package read, the telemetry bookkeeping -- the same on any machine. So the Orin
+projection for the plan's pass line (inner p95 < 3 ms at 200 Hz) is **2.1 ms median / 3.3 ms p95: ON the
+line, not 4x inside it** -- the 200 Hz claim on the Orin rests on the publish path, not on the control
+maths. The order of remedies if the Orin's `ims=` p95 reads over 3 ms: the two publishes (one
+pre-allocated message each, no per-tick construction), then the inner loop at 150 Hz (6.7 ms tick: p95
+50%), then a compiled path for the EKF step and the aero call (0.1 ms each here). The outer's line stands
+(27 ms p95 of 50 predicted; `outer_hz` 15 is the fallback). `tests/test_bench_budget.py` holds the desktop
+bench floor; the Orin's own table (the bench AND `ims=` from its first hover bag) goes here when it exists.
 **THE TICK WAS 1.32 ms BEFORE THIS PIECE, AND 70% OF IT WAS NOT CONTROL:** cProfile on the tick: (1) the
 predictor's `predict(tau)` evaluated the slosh force at EVERY substep (an `np.r_` 9-vector and `_force_at`
 each) although only the last is read unless a trajectory is asked -- and it was called TWICE per tick, the

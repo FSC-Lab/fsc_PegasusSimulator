@@ -92,7 +92,7 @@ def run(p, r_tank, f_of_t, T, dt=1 / 120.0, plant_dt=1 / 240.0, bias_F=(0.0, 0.0
         log["t"].append(t); log["F_true"].append(F_true.copy()); log["F_est"].append(pred.force)
         log["F_meas"].append(zF.copy()); log["x_true"].append(np.array(plant.x)); log["x_est"].append(pred.x)
         log["bF"].append(pred.bias_F); log["bM"].append(pred.bias_M)
-        log["wall_s"].append(pred.wall_s); log["F_bnd"].append(pred.bounded(pred.force))
+        log["wall_s"].append(float(pred.wall_s.max())); log["F_bnd"].append(pred.bounded(pred.force))
         for tau in horizons:
             log["pred"][tau].append(pred.predict(tau, f_tank=f_of_t(t))[0])
         log["eta"].append(pred.impact_eta(1.0, f_tank=f_of_t(t)))
@@ -210,7 +210,7 @@ def main():
             plant.step(np.array(f_still(t)), dt / 2)
         z = np.array([3.0 * math.sin(w1 * t), 0.0]); zM = np.cross(np.asarray(r_tank), np.array([z[0], z[1], 0.0]))
         pred.step(z, zM, f_still(t), dt)
-        xs.append(pred.x[0]); Fraw.append(pred.force[0]); Fbnd.append(pred.bounded(pred.force)[0]); ws.append(pred.wall_s)
+        xs.append(pred.x[0]); Fraw.append(pred.force[0]); Fbnd.append(pred.bounded(pred.force)[0]); ws.append(float(pred.wall_s[0]))
     xs, Fraw, Fbnd, ws = map(np.array, (xs, Fraw, Fbnd, ws))
     check("a fictitious 3 N residual at f1 drives the ESTIMATE past the wall (the failure the flights showed)",
           np.abs(xs).max() >= p.wall, f"|x_est| max {1e3 * np.abs(xs).max():.0f} mm vs wall {1e3 * p.wall:.0f} (the plant's bob: {1e3 * abs(plant.x[0]):.1f} mm)")
@@ -227,7 +227,7 @@ def main():
     check("a bob held on the wall runs the guard clock past 1 s", log["wall_s"].max() > 1.0, f"wall_s max {log['wall_s'].max():.2f} s")
     i_rel = np.searchsorted(log["t"], 3.0)
     check("released, the estimate leaves the wall and the clock resets (wall_s 0 and inside 80% by the end)",
-          log["wall_s"][-1] == 0.0 and pred.inside(0.8), f"wall_s at the end {log['wall_s'][-1]:.2f} s, |x_est| {1e3 * np.abs(pred.x).max():.1f} mm")
+          log["wall_s"][-1] == 0.0 and bool(pred.inside(0.8).all()), f"wall_s at the end {log['wall_s'][-1]:.2f} s, |x_est| {1e3 * np.abs(pred.x).max():.1f} mm")
     check("the clock was still running at the release (it counts continuously while parked)", log["wall_s"][i_rel - 1] > 0.5,
           f"wall_s at t=3 s: {log['wall_s'][i_rel - 1]:.2f} s")
 

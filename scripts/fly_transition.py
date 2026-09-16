@@ -372,6 +372,13 @@ def main():
         print(f"  slowed below 3 m/s: {stopped}")
         print(f"  altitude {bt['zmin']:.1f}-{bt['zmax']:.1f} m (excursion {bt['zmax']-bt['zmin']:.1f} m), "
               f"peak |AoA| {bt['aoa']:.0f} deg, peak |vz| {bt['vzmax']:.1f} m/s")
+        # ★ HOLD THE HOVER BEFORE RELEASING decel_now. With decel_now cleared and the node still
+        # active and settled, its forward schedule RESUMES: the hover-stage flight of 2026-09-16
+        # 02:32 came out of a 1.7 m/s "back-transition" straight into a 16 m/s cruise during the
+        # RECOVER phase (which waits for V < 2) and the safe controller took a wing-borne aircraft
+        # (roll 49 deg; it survived). v_cap 0 is the hover hold piece 5 built for this.
+        subprocess.run(["ros2","param","set",ctrl_node(a.controller),"v_cap","0.0"],
+                       capture_output=True, timeout=10)
         subprocess.run(["ros2","param","set",ctrl_node(a.controller),"decel_now","0.0"],
                        capture_output=True, timeout=10)
 
