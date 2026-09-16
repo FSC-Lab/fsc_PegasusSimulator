@@ -2,6 +2,128 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-16 (afternoon): THE SENSOR AUDIT -- WHICH SENSORS THE LOOP CAN ACTUALLY USE, WHAT EACH
+# ONE IS ALLOWED TO GET WRONG, AND HOW THE OBSERVER HOLDS WHEN THEY ALL DO IT AT ONCE. 30 gate cells x
+# 3 seeds (`scripts/sensor_sweep.sh`, `scripts/sensor_metrics.py`, sweeps `~/flight_bags/est_sweeps/
+# sens_*`); sim this commit, controller a5a6a16 UNCHANGED (the realism knobs shipped with the hover
+# hold, so every identity hash still holds). THE PAGE: https://claude.ai/artifact/M836419j6Lg3CGCbBuSUMH
+**THE LOOP HAS FOUR SUBSCRIPTIONS, AND ONLY THREE OF THEM CARRY SENSOR DATA.** The flown configuration
+(`nmpc_cascade_imu_node` on the base node, `state_source px4`, `airspeed_source px4`) reads
+`fmu/out/vehicle_odometry` (EKF2's fused position / velocity / attitude / body rates),
+`fmu/out/sensor_combined` (the accelerometer, FRD->FLU), `fmu/out/airspeed_validated` (CAS) and
+`fmu/out/vehicle_status_v1` (arming state only). **Every other sensor on the aircraft -- the GNSS
+receiver, the barometer, the magnetometer -- reaches this controller ONLY through EKF2**, which means
+the hardware question for them is "does EKF2 stay converged", not "does the loop tolerate them".
+**Three quantities are not sensed at all** and are modelled open-loop: the tilt servo's position (an
+80 deg/s slew model), the rotor speeds (a 0.12 s first-order lag) and the battery.
+**THE ASSUMED SUITE -- CORRECT THIS IF THE AIRFRAME DIFFERS; every hardware column below follows from
+it:** a Pixhawk 6X-class FMU (redundant ICM-42688-P / ICM-20649-class IMUs, ICP-20100 baro, BMM150
+internal mag), a u-blox M9N at 10 Hz (or an F9P RTK) with an external mag, an MS4525DO/SDP3x
+differential-pressure pitot, PX4 v1.16 over uXRCE-DDS/Ethernet to the Orin.
+| the loop's input | what it feeds | hardware source | rate (today / after the piece-6 rebuild) | what it gets wrong | verdict |
+|---|---|---|---|---|---|
+| position (ENU) | guidance only: cross-track, fly-by points, the orbit field, the RTH distance, the hover hold | EKF2 <- GNSS + baro + IMU | 100 / 200 Hz (`EKF2_PREDICT_US`) | receiver wander (flight 1b: +-0.9 m of orbit radius sd vs the mocap's 0.3), ~35 ms of fusion lag | **USED, tolerant**: benign to 5 Hz (2026-09-15 table); the observers never read it |
+| velocity (ENU) | the outer NMPC's vs/vz, the wing share, the L1's model force, the guidance course frame | the same | the same | the lag and the noise are the loop's real sensitivity -- see table B | **USED, the binding one**: >= 20 Hz, lag <= ~35 ms |
+| attitude R | the inner geometric law, the force/moment model, the tank's specific force | EKF2 <- IMU + mag (+ GNSS course) | 100 / 200 Hz | heading is the weak axis: in HOVER only the MAGNETOMETER holds it, near a water tank and four motors | **USED, required**; the mag question is open (below) |
+| body rates | the inner rate damping, the moment observer (mdob), the tank's rotation terms | the gyros, through EKF2's odometry | 100 / 200 Hz | turn-on bias 0.2-1 deg/s; `IMU_GYRO_CUTOFF` 40 Hz | **USED, required**; 1 deg/s of bias costs 7x u_ad and nothing else |
+| specific force a_b | the IMU force twin (`F_hat = m a_b - F_model`), i.e. the whole slosh cancellation | `sensor_combined` (integrated at `IMU_INTEG_RATE` 200 Hz, `IMU_ACCEL_CUTOFF` 30 Hz) | 87 Hz measured in HIL, capped at 100 by DDS / 200 after the rebuild | bias, scale, vibration, walk -- and above all its TIMESTAMP (table A) | **USED, required**; the one hard tolerance in the whole audit is its delay |
+| airspeed (CAS) | the wind estimator, the air-relative outer frame, the wing share, surface authority, prop inflow | the pitot, through `airspeed_selector` | 8.5 Hz measured in HIL (the sim's rate); a real MS4525DO runs 50-100 Hz | 0.3-0.5 m/s of noise, a blocked or iced tube, nothing in reversed flow | **USED, and piece 4 says REQUIRED in wind** (blind, a 5 m/s headwind crashes the transition) |
+| tilt servo position | -- | NOT SENSED (the node integrates its own command at 80 deg/s) | -- | a stuck or slow servo is invisible to the loop | **the gap worth closing**: piece 2 gives no tolerance for it, and one encoder would |
+| rotor speed | -- | NOT SENSED (a 0.12 s lag model) | -- | piece 2: 0.20 s of spin lag crashes 15/16 where 0.12 is modelled -- a HARD cliff | **measure it on a thrust stand, do not sense it** |
+| battery | -- | NOT READ (`battery_status` is on DDS, unused) | 1 Hz | thrust per throttle falls as the pack sags | **PX4's failsafe owns it** (piece 5's preflight); the L1 absorbs the slow part |
+**TABLE A -- THE IMU'S ERRORS, ONE AT A TIME** (imu-mdob + EKF, the turning mission, the offset 100 mm
+tank, 3 seeds; base = the flown gate line at `--noise_acc 0.02`). **y-bob = the LATERAL bob in the
+steady orbit, the channel the cancellation acts on** (the tank's only arm is r_x, so M = r_x F_y);
+x-bob = the fore-aft bob, which has no arm and is the LOOP's own response:
+| cell (the knob) | y-bob [N] | x-bob | hits | roll sd | u_ad | raw corr | pred corr |
+|---|---|---|---|---|---|---|---|
+| base (0.02 m/s^2 white) | **0.018** | 0.055 | 0 | 0.150 | 0.006 | 0.67 | 0.78 |
+| accel noise 0.05 / 0.10 m/s^2 | 0.019 / 0.024 | 0.055 | 0 | 0.150 | 0.006 | 0.50 / 0.32 | 0.71 / 0.57 |
+| turn-on bias 0.2 / 0.5 m/s^2 | 0.017 | 0.055 | 0 | 0.150 | 0.006 | 0.67 | 0.78 |
+| in-run walk 0.01 / 0.03 m/s^2/sqrt(s) | 0.034 / 0.033 | 0.100 | 0 | 0.15 | 0.007 / 0.011 | 0.35 / 0.13 | 0.81 / 0.69 |
+| scale factor +1% / +3% | 0.017 / 0.015 | 0.055 | 0 | 0.150 | 0.006 | 0.65 / 0.54 | 0.78 / 0.76 |
+| vibration 0.3 / 1.0 m/s^2 at 93 Hz | 0.018 | 0.055 | 0 | 0.150 | 0.006 / 0.013 | 0.33 / 0.11 | 0.75 / 0.54 |
+| vibration 0.3 / 1.0 m/s^2 at **30 Hz** | 0.017 / 0.019 | 0.054 / 0.053 | 0 | 0.150 / 0.152 | 0.006 / **0.023** | 0.18 / 0.06 | 0.63 / **0.31** |
+| gyro bias 0.2 / 1.0 deg/s | 0.021 / 0.025 | 0.054 / 0.051 | 0 | 0.149 / 0.139 | 0.010 / **0.043** | 0.69 / 0.71 | 0.79 / 0.81 |
+| accelerometer lag 10 / 20 ms | 0.027 / 0.053 | 0.058 / 0.065 | 0 | 0.150 | 0.006 | 0.70 / 0.72 | 0.80 / 0.81 |
+| **accelerometer lag 40 ms** | **0.364** | 0.166 | **14.7** | 0.161 | 0.008 | 0.85 | 0.88 |
+| **the same 40 ms, DECLARED (`--imu_delay 0.04`)** | **0.084** | 0.077 | **0** | 0.150 | 0.006 | 0.72 | 0.81 |
+| **all of them together (`hw_imu`)** | **0.046** | 0.099 | **0** | 0.141 | 0.012 | 0.28 | 0.75 |
+**TABLE B -- THE STATE SOURCE AND THE PITOT** (the same line; `pos_hz/vel_hz` hold the controller's
+view of position AND velocity, `pv_lag` ages it, `noise_vel` is white per sample):
+| cell | y-bob | x-bob | hits | roll sd | u_ad | stop m | fails |
+|---|---|---|---|---|---|---|---|
+| base (200 Hz, exact) | 0.018 | 0.055 | 0 | 0.150 | 0.006 | 6.0 | 0.7 |
+| pitot noise 0.3 m/s | 0.023 | 0.089 | 0 | 0.280 | 0.022 | 6.4 | 0.0 |
+| velocity noise 0.05 m/s (200 Hz) | 0.055 | 0.259 | 12.7 | 0.152 | 0.011 | 6.9 | 2.0 |
+| 100 Hz + **35 ms of lag** (EKF2's own) | 0.024 | 0.358 | 8.0 | 0.196 | **0.081** | 5.3 | 0.7 |
+| **`ekf2_like` = both** (the realistic hardware state) | 0.057 | 0.322 | 42 | 0.208 | 0.083 | 5.6 | 1.7 |
+| GPS-class 10 Hz + INS dead reckoning | 0.024 | 0.144 | 0 | 0.339 | 0.102 | 4.2 | 0.7 |
+| the same + 0.1 s of lag (no INS) | 0.019 | 0.290 | 1.3 | **1.572** | **0.315** | 4.1 | 2.0 |
+| **`hw_ekf2` = the whole hardware set** (IMU + EKF2-class state + pitot) | **0.088** | 0.353 | 47 | 0.570 | 0.042 | 5.8 | 1.0 |
+| `hw_all` = the same with a BARE 10 Hz GPS instead of EKF2 | 0.039 | 0.283 | 12.7 | **2.202** | 0.080 | 4.0 | 4.3 |
+**TABLE C -- THE OBSERVER, ON THE FULL HARDWARE SET** (`hw_all`, the harshest cell: every IMU error +
+a 10 Hz 0.1 s-late GPS-class state + the pitot; the uncancelled orbit bob is 0.77 N):
+| force channel + moment observer | y-bob | wall hits | roll sd | u_ad | pred corr |
+|---|---|---|---|---|---|
+| **IMU twin + mdob (`imu-mdob`, the recommendation)** | **0.039** | 12.7 | 2.20 | 0.080 | 0.29 |
+| velocity twin + mdob | 0.722 | 261 | 3.06 | 0.355 | -0.00 |
+| velocity twin + steso | 0.582 | 134 | 2.84 | 0.096 | -0.04 |
+**THE READING, which is the point of the audit.**
+1. **The cancellation is an IMU-only loop, and it holds.** The lateral bob it exists to remove sits at
+   0.015-0.088 N in TWENTY-NINE of the thirty cells -- through 5x the sim's accelerometer noise, a
+   0.5 m/s^2 turn-on bias, a 3% scale error, 1 m/s^2 of in-band vibration, 1 deg/s of gyro bias, a
+   10 Hz GPS and the whole hardware set at once (uncancelled: 0.77 N). **The bias, scale and vibration
+   terms are absorbed exactly where the design said they would be**: the EKF's bF state takes a
+   constant (bias 0.2 and 0.5 are byte-level identical at the aircraft), and its 1.14 Hz bob state
+   rejects everything above ~3 Hz, which is why 1 m/s^2 of vibration at 93 Hz drops the RAW reading's
+   correlation 0.67 -> 0.11 and costs the aircraft nothing.
+2. **The one hard tolerance in the whole audit is the accelerometer's TIMESTAMP.** 10 and 20 ms of
+   undeclared delay are free; **40 ms breaks the cancellation outright** (y-bob 0.018 -> 0.364, 14.7
+   wall impacts a flight -- the predictor cancels a force the tank made 40 ms ago, which at 1.14 Hz is
+   16 deg of phase and adds energy). Told to the delay buffer (`IMU_DELAY` / `--imu_delay`), the SAME
+   40 ms costs almost nothing (0.084, 0 hits): **it is not the latency that hurts, it is the
+   MIS-DECLARED latency.** `IMU_DELAY` is 5 ms today, measured on flight 11 (`ana_imu_latency.py`,
+   corr 0.95-0.99 per axis). **Standing item: re-measure it on the Orin link before the first tank
+   flight** -- an Ethernet uXRCE-DDS hop plus the Orin's own scheduling is exactly where 20-40 ms
+   would come from, and it is a one-line parameter, not a redesign.
+3. **In-band vibration is the other thing to watch, and it is a mount problem, not a filter problem.**
+   1 m/s^2 at 30 Hz (i.e. what survives `IMU_ACCEL_CUTOFF` 30 Hz, a soft prop mount or a resonating
+   arm) takes u_ad 0.006 -> 0.023 and the prediction 0.78 -> 0.31 while the aircraft still flies; at
+   93 Hz the same amplitude is harmless. Check the Orin's first hover bag with an FFT of
+   `sensor_combined` before trusting the predictor's numbers, and treat a peak under ~40 Hz as a
+   mount to fix.
+4. **EVERY OTHER degradation in the table is the STATE SOURCE, and it shows up in the fore-aft bob,
+   the orbit roll and u_ad -- never in the cancellation.** Decomposed: the 35 ms of EKF2 fusion lag is
+   what drives u_ad (0.006 -> 0.081) and the fore-aft bob (0.055 -> 0.358); 0.05 m/s of white velocity
+   noise adds the wall hits but leaves u_ad and roll at their base values. A bare 10 Hz GPS with 0.1 s
+   of lag is 10x worse than EKF2 on every column (roll sd 1.57 vs 0.20) -- **which is the argument for
+   the piece-1 architecture stated in one line: the loop flies EKF2's INS, not a receiver.**
+5. **The realistic hardware aircraft (`hw_ekf2`) flies the mission**: 3/3 seeds, 1 solve failure, the
+   stop at 5.8 m, orbit roll sd 0.57 deg (HIL's own band is 0.83-1.26), the lateral bob cancelled to
+   0.088 N. Its 47 wall hits are the FORE-AFT bob pressed on its wall by the loop's response to a
+   lagged velocity -- no arm, no moment, and the per-axis wall guard of piece 7 is what makes that
+   harmless by construction.
+6. **The velocity twins collapse there and imu-mdob does not** -- the 2026-09-15 finding, now measured
+   with real sensor errors rather than a clean hold: on `hw_all` the velocity twins leave the bob
+   uncancelled (0.58-0.72 of 0.77 N), hit the wall 134-261 times a flight and push 0.10-0.36 N.m of
+   augmentation, while the IMU channel keeps it at 0.039 N. **The recommendation stands unchanged and
+   is now hardware-justified, not just rate-justified.**
+**WHAT THE AUDIT DOES NOT COVER, stated plainly:** the magnetometer (the loop never reads it, but in
+HOVER it is the only thing holding EKF2's yaw, and this airframe carries a tank of water and four
+motors -- a sim gate cannot answer it; the flight answer is the piece-5 card's 180 deg hover yaw check
+plus a mag calibration away from the airframe's own currents); GNSS loss / multipath / an RTK fix
+dropping to float (EKF2's business, and its failsafe is PX4's); a blocked or iced pitot (the
+`airspeed_validated` path has PX4's own checks, and `tailwind_max` is the interlock); sensor
+FAILURE rather than sensor error -- the interlocks cover the state going stale (`state_stale_s` 0.2)
+and the accelerometer going stale (`IMU_STALE_S` 0.2 -> the cancellation zeroes itself, one warning),
+but no cell here kills a sensor mid-flight. 3 seeds per cell.
+**THE KNOBS (all on the gate, controller a5a6a16):** `--vib A,f` `--acc_walk W` `--acc_scale S`
+`--imu_lag S` `--bias_gyro x,y,z` on top of the existing `--noise_acc --bias_acc --imu_delay
+--pos_hz --vel_hz --pv_lag --noise_vel --imu_dr --airspeed --noise_aspd --aspd_hz`; the plant's IMU
+seam applies scale, bias, walk, a three-phase vibration and a ring-buffer delay in that order and
+writes `base.IMU_ACCEL`, so the node reads exactly what a hardware accelerometer would hand it.
+
 # ★★★★ 2026-09-16 (late morning): AFTER THE PLAN -- THE ROS TICK'S CLOCK (piece 6's correction, in the piece-6
 # block), THE HOVER POSITION HOLD, AND THE STAGED HOVER FLOWN CLEAN. Controller 82a23b5..f26e09d, sim this commit.
 **THE HOVER POSITION HOLD (`HoverHold` in the base node, controller 0f1cb5c + f26e09d).** The cascade held a
