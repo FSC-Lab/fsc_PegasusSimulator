@@ -123,8 +123,8 @@ def run(node, wait_s=60.0):
                     aspd_ok = True; break
         il_ok = True; il_why = ""
         if node == "interlock":
-            def mocap(vx, vy):
-                return (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/mocap fsc_autopilot_ros2_msgs/msg/Mocap "
+            def mocap(vx, vy):    # -t 3 -r 5: a best-effort sample can be dropped; three of them are not
+                return (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub -t 3 -r 5 -w 1 /{NS}/mocap fsc_autopilot_ros2_msgs/msg/Mocap "
                         f"\"{{pose: {{position: {{x: 0.0, y: 0.0, z: 30.0}}, orientation: {{w: 1.0}}}}, twist: {{linear: {{x: {vx}, y: {vy}, z: 0.0}}}}}}\"")
             switch = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; ros2 topic pub --once -w 1 /{NS}/ground_station/active_controller "
                       f"std_msgs/msg/String \"{{data: '{cid}'}}\"")

@@ -127,7 +127,7 @@ say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition +
 timeout 900 "$NODE_PY" "$ROOT/scripts/fly_transition.py" \
     --alt "$ALT" --dist "$DIST" --controller "$CTRL" --climb-time "$CLIMB_T" \
     --cruise-time "$CRUISE_T" --back-transition --land --land-x "$LAND_X" --land-y "$LAND_Y" \
-    ${GUIDE:+--guide "$GUIDE"} ${STAGE:+--stage "$STAGE"} ${STAGE_HOLD:+--stage-hold "$STAGE_HOLD"} \
+    ${GUIDE:+--guide "$GUIDE"} ${STAGE:+--stage "$STAGE"} ${STAGE_HOLD:+--stage-hold "$STAGE_HOLD"} ${DOUBLET:+--doublet "$DOUBLET"} \
     > "$OUT" 2>&1 &
 FPID=$!
 # ★ SUPERVISE. The stack has died mid-flight twice today and the driver flew the last

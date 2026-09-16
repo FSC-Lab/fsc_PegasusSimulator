@@ -199,6 +199,8 @@ def main():
                          "--stage-hold s and advances only if its go/no-go passes; a failed check aborts through the "
                          "schedule's back-transition and lands.")
     ap.add_argument("--stage-hold", type=float, default=15.0)
+    ap.add_argument("--doublet", default="", help="'A T': in the cruise stage, 8 s in, send an elevator doublet of +-A for T s each "
+                                                  "(the latency measurement; casc_timing.py reads it from the bag)")
     ap.add_argument("--guide", default="",
                     help='guidance plan "T:cmd;T:cmd" (T seconds after the cruise starts), e.g. '
                          '"10:wp 400 0 400 300 0 300;90:rth". With an rth the node brakes itself: '
@@ -236,17 +238,17 @@ def main():
     # hardware flight card's: nothing new is asked of the aircraft in a stage that the previous
     # stage did not already show.
     import subprocess
-    STAGES = [("hover", 0.0), ("tilt10", 3.0), ("tilt50", 8.0), ("cruise", 1e9)]
+    STAGES = [("hover", 0.0, 0.0, 2.0), ("tilt10", 3.0, 2.0, 4.5), ("tilt50", 8.0, 6.5, 9.5), ("cruise", -1.0, 13.0, 25.0)]   # name, v_cap (-1 = off), V window
     stage_abort = False
     if a.stage != "mission":
         want = [nm for nm, _ in STAGES].index(a.stage)
         z_ref = a.alt; fails0 = None
-        for nm, cap in STAGES[:want + 1]:
-            subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", f"{cap if cap < 1e8 else 0.0}"],
+        for nm, cap, vlo, vhi in STAGES[:want + 1]:
+            subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", f"{cap}"],
                            capture_output=True, timeout=10)
-            print(f"\n== STAGE {nm}: v_cap {cap if cap < 1e8 else 'off'} for {a.stage_hold:.0f} s ==")
+            print(f"\n== STAGE {nm}: v_cap {cap if cap >= 0 else 'off'} for {a.stage_hold:.0f} s (V window {vlo}-{vhi}) ==")
             st = {"t0": time.time(), "why": ""}
-            def stage_tick(nm=nm, cap=cap, st=st):
+            def stage_tick(nm=nm, cap=cap, vlo=vlo, vhi=vhi, st=st):
                 n.send([base[0] + 2000.0, base[1], a.alt]); n.set_ctrl(a.controller)
                 d = n.telem(); n.line(nm)
                 m = re.search(r"fails=(\d+)/(\d+)", n.casc_status); f = int(m.group(1)) if m else 0
@@ -254,11 +256,15 @@ def main():
                 bad = []
                 if abs(d["roll"]) > 15.0 or abs(d["pitch"]) > 20.0: bad.append(f"attitude {d['roll']:+.0f}/{d['pitch']:+.0f}")
                 if abs(d["p"][2] - z_ref) > 3.0: bad.append(f"altitude {d['p'][2]:.1f}")
+                if d["V"] > vhi + 1.0 or (time.time() - st["t0"] > 10.0 and d["V"] < vlo - 0.5 and nm != "cruise"): bad.append(f"speed {d['V']:.1f} outside {vlo}-{vhi}")
                 if f - st["f0"] > 3: bad.append(f"solve failures +{f - st['f0']}")
                 if "stale=1" in n.casc_status: bad.append("state stale")
                 if bad:
                     st["why"] = "; ".join(bad); return True
                 if nm == "cruise" and d["V"] < 13.0 and time.time() - st["t0"] > 25.0: bad.append(f"never reached cruise (V {d['V']:.1f})")
+                if nm == "cruise" and a.doublet and not st.get("dbl") and time.time() - st["t0"] > 20.0 and d["V"] > 14.0:
+                    st["dbl"] = True
+                    n.cmd.publish(String(data=f"doublet {a.doublet}")); print(f"  >> DOUBLET {a.doublet} sent (t={time.time() - n.t0:.1f})")
                 if bad:
                     st["why"] = "; ".join(bad); return True
                 return time.time() - st["t0"] >= a.stage_hold + (12.0 if nm == "cruise" else 0.0)
@@ -267,7 +273,7 @@ def main():
                 print(f"  !! STAGE {nm} NO-GO: {st['why']} -- aborting through the back-transition")
                 stage_abort = True; break
             print(f"  STAGE {nm}: go ({a.stage_hold:.0f} s inside the limits)")
-        subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "0.0"], capture_output=True, timeout=10)
+        subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "-1.0"], capture_output=True, timeout=10)
         if a.stage != "mission" or stage_abort:
             # come back: the schedule's back-transition where it is, then the landing leg
             a.back_transition = True; a.cruise_time = 0.0
