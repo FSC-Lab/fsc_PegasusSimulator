@@ -85,7 +85,26 @@ transition (ttr 8: peak AoA 7.9 vs 9.4-10.3 at 10) and a cruise at 17-18 m/s (th
 the two knobs, both untested in wind. (3) The plan's piece-4 pass line ("16/16 at every wind incl. 1 m/s
 turbulence, orbit +-1 m, stop <= 10 m") is therefore NOT met as written; what is met: 16/16 at every steady
 wind, V_air >= stall + 0.5 through cruise and orbit, the corridor peak within +1 deg of still air, landing at
-home. A HIL flight in a 4 m/s crosswind follows (below).
+home.
+**THE CROSSWIND FLIGHT (row R100_dx3_wind4y_a1_004009, bag slosh_20260916_003830; `VTOL_WIND=0,4,0 CASC_ASPD=px4`
+on the 1b configuration -- EKF2 on GPS 10 Hz + IMU + baro, imu-mdob, the offset 100 mm tank): LANDED 0.17 m FROM
+HOME.** The airspeed held at 16.02-16.08 m/s of air through legs, turns, orbit and return while the ground speed ran
+12.2-20.3 with the heading (w_s -3.9..+4.2 in the cascade's own log, the wind triangle's along-heading component), 0
+solve failures in 3794, z 29.8-30.1 wing-borne, both fly-by turns at the 25 deg limit (overshoot +40 / +22 m; still
+air +14), the orbit flown at its wind-enlarged R 139 (steady 139.5 +- 7.5, entry +-11), the RTH stop 13.8 m from
+home in 7.7 s from V 12, then the safe controller's leg and the landing. **THE FIRST ATTEMPT CRASHED IN THE
+TRANSITION (row ..001154) AND FOUND A BUG THAT PREDATES THIS BRANCH:** Pegasus's
+`State.get_linear_body_velocity_ned_frd()` returned the body-frame linear ACCELERATION (an upstream copy of the
+acceleration accessor), so the synthesised pitot read 0.0 at 16 m/s on EVERY flight since it was written (checked
+on the gps10 bag: IAS -0.04..0.12 at 16.05 m/s) and saw only the wind term; the wind estimator therefore read a
+7 m/s TAILWIND at 12 m/s of ground speed in a pure crosswind, the outer flew a 5 m/s schedule at 12 m/s of air and
+departed. Fixed in `state.py` (+ pinned in `test_wind_frames.py`); the node now reads `calibrated_airspeed_m_s`
+(CAS = the speed a rho0 = 1.225 aero model needs; PX4's TAS carries a baro density correction the sim's aero does
+not have: 8.65 for 8.00 at rest in an 8 m/s headwind). Two launcher lessons on the way: Isaac's once-only
+"[VTOL] wind:" line must be read from the EARLY pane capture (PEGASUS_SLOSH_DEBUG pushes it out of the history by
+READY), and `tests/test_cascade_node_boots.py` now REFUSES to run while a stack is live -- it boots a node under
+the live node's name and engaged a second cascade on the stack during a boot (a second "ekf2 missing data" arming
+refusal followed).
 
 # ★★★★ 2026-09-15 (late night): HARDWARE-TRANSFER PIECES 2 AND 3 -- THE MODEL-ERROR ENVELOPE MEASURED
 # (48 cells x 16 seeds), AND ONE AIRFRAME FILE. Controller 45355a9 (merged), sim this commit.
