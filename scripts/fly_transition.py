@@ -241,7 +241,7 @@ def main():
     STAGES = [("hover", 0.0, 0.0, 2.0), ("tilt10", 3.0, 2.0, 4.5), ("tilt50", 8.0, 6.5, 9.5), ("cruise", -1.0, 13.0, 25.0)]   # name, v_cap (-1 = off), V window
     stage_abort = False
     if a.stage != "mission":
-        want = [nm for nm, _ in STAGES].index(a.stage)
+        want = [st_[0] for st_ in STAGES].index(a.stage)
         z_ref = a.alt; fails0 = None
         for nm, cap, vlo, vhi in STAGES[:want + 1]:
             subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", f"{cap}"],
