@@ -172,12 +172,13 @@ def main():
             fs = 200.0; ta = t_d0 - 0.5; tb = t_d1 + 1.0
             tg = np.arange(ta, tb, 1.0 / fs)
             te = np.array([t for t, _ in ele]) / 1e9; ue = np.array([u for _, u in ele])
-            de = np.gradient(np.interp(tg, te, ue), 1.0 / fs)
+            k5 = np.ones(5) / 5.0                                   # a 25 ms box on both: the 120 Hz rate's second derivative is noise otherwise
+            de = np.convolve(np.gradient(np.interp(tg, te, ue), 1.0 / fs), k5, mode="same")
             for name, qs in srcs.items():
                 if len(qs) < 50:
                     continue
                 tq = np.array([t for t, _ in qs]) / 1e9; q = np.array([v for _, v in qs])
-                dq = np.gradient(np.gradient(np.interp(tg, tq, q), 1.0 / fs), 1.0 / fs)
+                dq = np.convolve(np.gradient(np.gradient(np.interp(tg, tq, q), 1.0 / fs), 1.0 / fs), k5, mode="same")
                 lags = np.arange(0, 61); cc = []
                 for k in lags:
                     a = de[:len(de) - k] if k else de; b = dq[k:]

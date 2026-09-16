@@ -2,6 +2,61 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-16 (night): HARDWARE-TRANSFER PIECE 5 -- FAILSAFES, INTERLOCKS, THE STAGED ENVELOPE, THE
+# LATENCY DOUBLET. Controller piece5 branch (merged: 49a5824 + 4db3e4c), sim 0b1ed3e+. The flight card:
+# https://claude.ai/artifact/5cr6taszbTBBa6p1T1xCD8
+**THE HARDWARE PREFLIGHT.** `HW=1` on the launcher skips the 8-relax window entirely (on an aircraft every
+parameter it sets is a failsafe that must stay armed) and `start_slosh_hil.sh` runs `scripts/preflight_hw.py`:
+PX4's parameters read back over MAVLink (`udpin:0.0.0.0:14550`, `PREFLIGHT_URL` overrides) against
+`scripts/preflight_hw.cfg` -- one line per parameter, `NAME op value [optional] # why`, the flight lead's file:
+the battery action (2/3) and threshold, disarm-on-land / preflight, the COM_ARM_EKF/IMU/MAG gates at or under
+their defaults, the geofence (action >= 1, a site-sized horizontal fence, GF_PREDICT 1), offboard loss (<= 1 s,
+Return/Land/Hold -- never a manual mode on an airframe whose CA is best-effort), RC loss, a mapped kill switch,
+SYS_HAS_NUM_ASPD 1, no circuit breakers; `SIM_BAT_MIN_PCT` present = a simulator = refused. One refused line = not
+READY. `tests/test_preflight_hw.py`: the armed map passes, each HIL relaxation ALONE is refused and named, a sim
+parameter present is refused, a missing required one is refused, and the live HIL stack (when up) is refused.
+**THE NODE'S INTERLOCKS (every one a live parameter; the flown behaviour is the default except the first two):**
+`engage_v_max` 1 m/s + `engage_att_max_deg` 10 -- a controller switch at speed or banked is REFUSED (logged,
+rate-limited, `engage_refused=1` on the status feed; the GS/driver re-ask at 1 Hz so a hover engages the moment
+it is one); `state_stale_s` 0.2 -- no state sample while active -> the slow timer publishes `safe_hover` (rotors
+up) until the state returns, once logged; `settle_sigma` (N.m, off) -- with the L1 on, the transition waits until
+u_ad has moved less than this over 1 s (piece 2: the cold-start CG sweeps crash at -1.5 cm where a hover with the
+L1 converged flies 2.6 cm: start from a CONVERGED estimate); `tailwind_max` (m/s, off) -- with a wind estimate,
+no transition downwind (piece 4's every-seed crash; a pitot in hover cannot see a tailwind, so this catches an
+estimate carried from before -- the card's 180 deg wind check is the rest); `v_cap` (m/s, -1 = off, 0 = hold
+the hover, a lowered cap RAMPS the reference down at decel_rate: the first staged flight stepped 16 -> 3 m/s and
+pitched +38 deg). The safe controller's `radius_local_s` (s, off): the local envelope ball grows by it x |v|
+(the 34 m/s runaway of 2026-09-07 outran a 100 m ball). Status feed: `vcmd= tilt= fails= settled= stale=
+doublet=`. Boot test `--node interlock`: a mocap sample at 3 m/s then the switch -> refused; a hover sample ->
+ENGAGED; 2 s without state -> STATE STALE. The boot test itself now REFUSES to run while a stack is live.
+**THE ELEVATOR DOUBLET (the latency measurement piece 1 could not make):** `doublet A T` on the cascade's cmd
+topic (wing-borne only, |A| <= 0.5, T <= 2 s): +A for T then -A for T added to the inner's elevator AFTER the
+allocation, `doublet=1` on the status feed while it runs. The gate's `--doublet T0,A,T` measures the elevator ->
+pitch-acceleration delay from the cross-correlation of the DERIVATIVES (a doublet's edges are impulses; the slow
+terms fall out; |corr| because +de is nose-down): **35 ms at a 30 ms transport, 65 at 60** -- the transport to
+5 ms. `casc_timing.py` does the same on a bag from the `doublet=1` window (the closed-loop correlation of a flown
+trim was never a measurement: 0.1-0.3).
+**THE STAGED DRIVER:** `fly_transition.py --stage hover|tilt10|tilt50|cruise|mission` (`STAGE=` / `STAGE_HOLD=` /
+`DOUBLET="0.3 0.5"` through `fly_slosh_mission.sh`, `stage=` in the results row): after the engage, `v_cap` 0 (the
+hover held, 15 s), 3 m/s (tilt ~15 deg), 8 m/s (~45 deg, the wing at 30%), then the cap off and the cruise for
+27 s with the doublet 20 s in -- each stage advances only if |roll| < 15, |pitch| < 20, altitude +- 3 m, <= 3 new
+solve failures, no stale state and the speed inside the stage's window held for the whole hold; a no-go aborts
+through the schedule's back-transition and lands. A stage short of `mission` comes back the same way.
+**THE STAGED FLIGHT (row R100_dx3_staged_a1_011843, bag slosh_20260916_011703; `STAGE=cruise DOUBLET="0.3 0.5"` on
+the 1b configuration with the pitot, still air, the offset 100 mm tank): LANDED 0.00 m FROM THE COMMANDED POINT.**
+hover (v_cap 0, 15 s: go -- the engage hover creeps forward 1.1 -> 2.4 m/s at tilt 0-3.5 deg, the outer's known
+drift with a zero speed reference), tilt10 (cap 3: go -- V 3.7-4.9, tilt 10-17 deg, the aircraft runs ~1.5 m/s
+above a capped reference), tilt50 (cap 8: go -- V 8.7-9.8, tilt 33-41 deg, the wing at 29-36%, AoA 14 deg), cruise
+(cap off: 16.2-16.3 m/s at tilt 90 within 6 s, wing 113%; the DOUBLET 20 s in), then the schedule's back-transition
+and the landing. Three launches before it: v_cap 0 meant "no cap" (fixed: negative = off), the cap arrived after
+the node had settled (set before the engage now), a lowered cap stepped the reference (it ramps now).
+**THE LATENCY, MEASURED AT LAST:** `casc_timing.py` on the bag's `doublet=1` window (the derivatives of the total
+elevator command and of the pitch acceleration, a 25 ms box on both because a 120 Hz rate's second derivative is
+noise otherwise): **50 ms vs the mocap (|corr| 0.57), 55 ms vs EKF2's odometry (0.55)** -- the command-to-effect
+delay of the HIL chain on the physical path and on the state path the loop flies. `latency_s` 0.049 stands (the
+plan: move it only past 60 ms). The closed-loop correlation on the same bag reads 300 ms at |corr| 0.03-0.10,
+which is why the doublet exists.
+
 # ★★★★ 2026-09-15/16 (night): HARDWARE-TRANSFER PIECE 4 -- AIRSPEED AND WIND. Controller (piece4 branch,
 # merged), sim efbf5a2+, GS 96a1fb3. Sweep `~/flight_bags/wind/wind1` (`scripts/wind_sweep.sh`, `wind_metrics.py`).
 **WHAT WAS BUILT.** Plant: `VTOL_WIND="wx,wy,wz"` (a steady ENU wind) and `VTOL_TURB=sigma` / `VTOL_TURB_TAU`
