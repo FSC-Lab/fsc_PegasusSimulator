@@ -5992,13 +5992,29 @@ transition (8.7 s for the circle).
 | circle 0.5 m, 2 laps | 0.905 / 1.131 | 57.0 s (26.5 s) | 0.133 m/s | 124 / 178 mm | 1.05 s | 55 mm | radius 0.450 of 0.500 m, centre (+0.035, +0.015) m |
 | figure-8 0.5 × 0.25 m, 2 laps | 0.286 / 0.358 | 171.7 s (83.8 s) | 0.034 m/s | 50 / 106 mm | 1.37 s | 27 mm | extent 0.970 × 0.464 of 1.0 × 0.5 m |
 
-z error 2 mm on both; DIRECT lasted 92 s and 205 s. s_max matches the planner
-package's documented binding bounds (circle: yaw rate at 1.13; figure-8:
-acceleration at 0.36). In DIRECT the 4-D watch line read `chi=free`, raw
+z error 2 mm on both; DIRECT lasted 92 s and 205 s. In DIRECT the 4-D watch line read `chi=free`, raw
 `|F_hat|` 0.08–0.24 N, and `w_hat_q` on J2 at −0.07 to −0.11 N·m — the arm
 mass/friction mismatch being trimmed on the joint rows, as designed. **This is
 the first recorded figure-8 flight on any rig** (§7.15.12 and the planner
 package record circles only).
+
+**WHAT LIMITS s_max IS THE DRONE'S YAW RATE, FOR BOTH SHAPES** — measured
+2026-09-17, and it corrects the planner package's own note (which attributes the
+figure-8's limit to acceleration). The EE heading follows the path tangent and
+the arm's q1 is pinned at 0, so **the airframe itself must yaw once per lap**;
+`w_max` (0.30 rad/s, the planner section's generic angle-rate bound) is what
+binds. At their s_max both shapes sit far inside the translational bounds —
+circle peak |v| 0.15 of 0.30 m/s and |a| 0.077 of 0.15; figure-8 0.078 and
+0.035. Raising ONLY `w_max` to 1.0 rad/s in a scratch yaml moves s_max
+**1.131 -> 1.90** (circle, which then binds on speed) and **0.358 -> 0.815**
+(figure-8, which then binds on acceleration at |a| = 0.1498 of 0.15). So the
+lever for a faster demo is the yaw-rate bound or a longer `ee_traj_lap_time`,
+not `v_max`/`a_max` — but raising it asks the attitude loop for more, on a
+plant whose rotor-lag margin is the reason for §7.14.4's tune. Unflown above
+0.30; screen it in sim first. The planner's own diagnostics at s_max (fake-rig
+capture, no sim): sigma_nd 0.306 both shapes, peak joint torque 0.76 N·m,
+peak |q̇| 0.04 / 0.02 rad/s, rotor forces 8–10 N, reference FK round trip
+0.1 mm / 0.0004°.
 
 **Do NOT read the circle row as "4-D tracks better than §7.15.12's 6-D circle"**
 (215 mm, 1.90 s lag, radius 0.387 m). That flight ran on fsc_lab_machine
