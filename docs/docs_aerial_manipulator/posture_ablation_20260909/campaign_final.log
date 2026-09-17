@@ -1,0 +1,22 @@
+  wb_k_x : 16.0 -> 32.0
+  wb_k_v : 12.0 -> 20.0
+  wb_l1_omega_c_r : 0.5 -> 0.5
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/mission_kx32] 0. clean slate ===
+=== [l1/mission_kx32] 1. controller stack ===
+=== [l1/mission_kx32] 2. Pegasus / PX4 / arm ===
+=== [l1/mission_kx32] 3. waiting for odometry ===
+=== [l1/mission_kx32] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/mission_kx32] 3c. waiting for the arm ===
+=== [l1/mission_kx32] 4. flying ===
+=== [l1/mission_kx32] done (driver rc=0) ===
+[ 301.59s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 302.06s] mode -> SAFETY
+[ 302.06s] planner -> IDLE
+[ 313.59s] PHASE LAND  ref=[0.02, 0.022, 0.992] mode='SAFETY'
+[ 333.61s] service rc/disarm requested
+[ 333.61s] PHASE DONE  ref=[0.02, 0.022, 0.35] mode='SAFETY'
+[ 333.63s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ rc=0 ############
+FINAL CHECK DONE
