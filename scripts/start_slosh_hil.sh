@@ -65,9 +65,14 @@ DIRTY=$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l)
 
 # --- 2. the phase-1 gates, before burning 4 minutes on a stack --------------
 if [ "${SKIP_GATES:-0}" != "1" ]; then
-  say "1/4 gates: slosh scaffold + import"
-  for t in test_slosh_scaffold test_slosh_import; do
-    if ! OUT=$(/usr/bin/python3 "$ROOT/tests/$t.py" 2>&1); then
+  say "1/4 gates: slosh scaffold + import, and the plant/controller PAIRINGS"
+  # The pairings are here because the af= digest below proves only that the NODE loaded the file
+  # this launcher read -- nothing at launch proves the PLANT carries the same aircraft, and that
+  # drift has flown twice (the gate's --prop_J0 re-propped only the plant: 0.45 m/s of cruise
+  # overspeed on less throttle; rotor_omega_max flew at 1000 while every model said 749). They are
+  # pure-python and cost a couple of seconds against a 4-minute stack.
+  for t in test_slosh_scaffold test_slosh_import test_prop_pairing test_tilt_limit_pairing; do
+    if ! OUT=$(~/envs/isaac_env/bin/python3 "$ROOT/tests/$t.py" 2>&1 || /usr/bin/python3 "$ROOT/tests/$t.py" 2>&1); then
       echo "$OUT" | tail -12
       echo "[slosh_hil] !! $t FAILED -- not launching. (SKIP_GATES=1 overrides.)"
       exit 1
