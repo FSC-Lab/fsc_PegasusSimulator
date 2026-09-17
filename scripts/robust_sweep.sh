@@ -8,15 +8,20 @@
 # Never while a flight is in the air (it drops the sim's real-time factor).
 set -u
 TAG=$1; CELLS=${2:-}
+[ -n "$CELLS" ] && CELLS=$(readlink -f "$CELLS")
 ROOT=/home/pieper/envs/fsc_PegasusSimulator
 OUT=${ROBUST_DIR:-$HOME/flight_bags/robust}/$TAG; mkdir -p "$OUT"
 SEEDS_LO=${SEEDS_LO:-1}; SEEDS_HI=${SEEDS_HI:-16}
-LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh"
+# The control law under test. Defaults = piece 2's line (the steso node's velocity force twin), so
+# that table reproduces; ROBUST_LINE / ROBUST_NODE run the sweep on another one -- the flown
+# "Adaptive NMPC + Geo" is ROBUST_NODE=nmpc_cascade_imu_node.py with --noise_acc 0.02 on the line.
+LINE=${ROBUST_LINE:-"--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh"}
+NODE=${ROBUST_NODE:-nmpc_cascade_steso_node.py}
 cd /home/pieper/envs/fsc_autopilot_ros2-master
 if ! git diff --quiet -- px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_node.py px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_so3_transition_node.py px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_steso_node.py; then
   echo "!! controller tree dirty -- commit first"; git status --short; exit 1
 fi
-git rev-parse --short HEAD > "$OUT/ctrl_commit"; git -C "$ROOT" rev-parse --short HEAD > "$OUT/sim_commit"
+echo "$NODE | $LINE" > "$OUT/law"; git rev-parse --short HEAD > "$OUT/ctrl_commit"; git -C "$ROOT" rev-parse --short HEAD > "$OUT/sim_commit"
 # cell name | harness flags  (the plant side only; --l1_tau_spin pins the controller's lag when --tau_spin moves the plant's)
 default_cells() { cat <<'C'
 nominal|
@@ -75,7 +80,7 @@ if [ -n "$CELLS" ]; then cat "$CELLS"; else default_cells; fi | grep -v '^#' | w
   if [ -f "$OUT/$name/summary.txt" ]; then echo "skip $name (done)"; continue; fi
   echo "== $name: $flags   $(date '+%H:%M')"
   # shellcheck disable=SC2086
-  KE_DIR="$OUT" KE_NODE=nmpc_cascade_steso_node.py bash "$ROOT/scripts/ke_sweep.sh" "$name" "$SEEDS_LO" "$SEEDS_HI" $flags $LINE > /dev/null 2>&1
+  KE_DIR="$OUT" KE_NODE="$NODE" bash "$ROOT/scripts/ke_sweep.sh" "$name" "$SEEDS_LO" "$SEEDS_HI" $flags $LINE > /dev/null 2>&1
   ~/envs/isaac_env/bin/python3 "$ROOT/scripts/ke_metrics.py" "$OUT/$name" > "$OUT/$name/summary.txt" 2>&1
   echo "$name|$flags|$(grep SUMMARY "$OUT/$name/summary.txt")" >> "$OUT/cells.txt"
   tail -1 "$OUT/$name/summary.txt" | cut -c1-160

@@ -1,0 +1,20 @@
+# The actuator-lag tolerance (2026-09-16): the plant's rotor spin-up lag and surface servo lag against
+# a controller that models 0.12 / 0.03 s. `--l1_tau_spin` / `--l1_tau_surf` PIN the controller's model,
+# so the cell is a genuine MISMATCH; the `_told` cells leave them free (the controller is given the
+# true value) -- the pair separates "the model is wrong" from "the actuator is too slow to fly".
+nominal|
+spin_0.06|--tau_spin 0.06 --l1_tau_spin 0.12
+spin_0.09|--tau_spin 0.09 --l1_tau_spin 0.12
+spin_0.14|--tau_spin 0.14 --l1_tau_spin 0.12
+spin_0.16|--tau_spin 0.16 --l1_tau_spin 0.12
+spin_0.18|--tau_spin 0.18 --l1_tau_spin 0.12
+spin_0.20|--tau_spin 0.20 --l1_tau_spin 0.12
+spin_0.30|--tau_spin 0.30 --l1_tau_spin 0.12
+spin_0.20_told|--tau_spin 0.20
+spin_0.30_told|--tau_spin 0.30
+surf_0.045|--surf_tau 0.045 --l1_tau_surf 0.03
+surf_0.06|--surf_tau 0.06 --l1_tau_surf 0.03
+surf_0.10|--surf_tau 0.10 --l1_tau_surf 0.03
+surf_0.10_told|--surf_tau 0.10
+spin_0.16_told|--tau_spin 0.16
+spin_0.18_told|--tau_spin 0.18

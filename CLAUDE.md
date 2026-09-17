@@ -2,6 +2,84 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-16 (evening): THE ACTUATOR-LAG TOLERANCE, ON THE FLOWN "ADAPTIVE NMPC + GEO" LAW --
+# AND THE ANSWER TO "ISN'T THAT THE L1'S JOB?": THE MODEL'S JOB UP TO 0.16 s, NOBODY'S PAST 0.18.
+# 16 cells x 16 seeds, `scripts/robust_sweep.sh act1 scripts/cells_actuator_lag.txt` (piece 2's line and
+# pass rule), plus a 3-cell bridge on piece 2's own law. Sim this commit; controller a5a6a16 untouched.
+**WHAT WAS ASKED.** Piece 2 left the rotor spin lag as a cliff with nothing between the passing 0.12
+(the modelled value) and the failing 0.20, and its surface row was never a mismatch test at all. The
+question behind it: the L1 augmentation is supposed to absorb actuator error -- how much does it?
+**THE CELLS ARE PAIRED, AND THE PAIR IS THE EXPERIMENT.** `--tau_spin X --l1_tau_spin 0.12` moves the
+PLANT and PINS the controller's model = a genuine mismatch; `--tau_spin X` alone lets `l1_tau_spin`
+follow = the controller is TOLD the truth. The pair separates "the model is wrong" from "the actuator
+is too slow to fly". (The lags live only in `L1Aug.applied_moment`; `slosh_predictor.py` carries none,
+so pinning is a complete mismatch with nothing else told -- checked before the run.)
+**THE TABLE (`~/flight_bags/robust/act1`; imu-mdob + EKF + L1 = the flown `cascade_adaptive`; the
+straight mission, back-transition at 60 s, y0 10 m, noise 0.1/1, CG tank; PASS = 16/16 landed,
+solve-fails sum <= 4, corridor peak <= nominal+3, z >= 29.0, stop <= nominal+3 s):**
+| cell | landed | corridor pk | fails (16 flights) | verdict |
+|---|---|---|---|---|
+| nominal | 16/16 | 14.2 | 2 | PASS (= piece 2's nominal 16/16, 14.3, 3, and the final-tree regression) |
+| spin 0.06, model 0.12 | 16/16 | 13.9 | 1 | PASS |
+| spin 0.09, model 0.12 | 16/16 | 14.0 | 2 | PASS |
+| spin 0.14, model 0.12 | 16/16 | 14.2 | **5** | flies; over the solve-failure budget |
+| spin 0.16, model 0.12 | 16/16 | 14.3 | **6** | flies; over the budget |
+| **spin 0.16, TOLD** | **16/16** | 14.3 | **1** | **PASS -- measuring it removes the whole cost** |
+| spin 0.18, model 0.12 | **11/16** | 14.2 | 4 | FAIL (5 crashed before the BT) |
+| **spin 0.18, TOLD** | **15/16** | 14.4 | 5 | FAIL, but only just -- the knee |
+| spin 0.20, model 0.12 | **0/16** | -- | -- | FAIL (all 16 before the BT) |
+| **spin 0.20, TOLD** | **4/16** | 14.3 | 2 | **FAIL -- the truth buys 4 seeds, not the flight** |
+| spin 0.30, model 0.12 | 0/16 | 34.5 | 6 | FAIL |
+| **spin 0.30, TOLD** | **0/16** | -- | -- | **FAIL -- the truth buys NOTHING** |
+| surf 0.045 / 0.06 / 0.10, model 0.03 | 16/16 | 14.3 / 14.3 / 15.3 | 1 / 1 / 0 | **PASS, all three** |
+| surf 0.10, TOLD | 16/16 | 15.5 | 1 | PASS |
+**THE READING.**
+1. **Two regimes, and the boundary is 0.18 s.** BELOW it the cost is the MISMATCH and identification
+   removes it outright: 0.16 pinned flies 16/16 but at 6 solve failures (3x nominal), and the same
+   0.16 with `l1_tau_spin` told the truth is 1 -- indistinguishable from nominal. ABOVE it the cost is
+   the ACTUATOR: at 0.20 the controller that KNOWS the lag still loses 12 of 16, and at 0.30 knowing
+   buys literally nothing (0/16 either way). **So the L1's answer is: its MODEL covers the band up to
+   ~0.16 s once it is measured -- which is exactly why `l1_tau_spin` is a parameter and not something
+   the adaptation discovers -- and past 0.18 s nothing covers it.**
+2. **WHY knowing stops helping, in one number.** The inner loop's pitch authority in the corridor IS
+   front/rear differential thrust (the wing carries nothing at 39 deg of tilt and 5 m/s), and its
+   bandwidth is 1/tau: 8.3 rad/s at the modelled 0.12, 6.3 at 0.16, 5.0 at 0.20 -- against a **short
+   period of 8.9 rad/s**. At 0.12 the actuator is already only AT the mode it has to control; at 0.20
+   it is 44% below it. No augmentation and no feed-forward stabilises a mode faster than the actuator.
+3. **THE FAILURE IS THE SAME IN BOTH CASES AND IT IS THE CORRIDOR** (spin 0.20, seed 1, t = 5-7 s,
+   V 4-7 m/s, tilt 39 deg): pitch +23 (told: +14.7 then +58), elevator SATURATED at -1.00, the outer's
+   solve time 13 -> 45 ms with ok=0, then roll 156 / yaw 180 and the ground. Never at the
+   back-transition -- every loss in this sweep is BEFORE it. That is the same place piece 2's CG and
+   control-derivative cells fail: the corridor is this airframe's authority minimum, whatever the cause.
+4. **THE CONTROL LAW DOES NOT MATTER TO THIS** (the bridge, `~/flight_bags/robust/act1_steso`, piece 2's
+   own law = the steso node's velocity force twin): spin 0.20 pinned 0/16, told 3/16 -- the flown
+   imu-mdob law gives 0/16 and 4/16. One seed of scatter. The actuator-bandwidth limit is a property
+   of the airframe and the inner loop, not of the estimator, so the piece-2 table's spin row transfers
+   to the flown law unchanged (and its "0.20: 1/16" was the same one seed).
+5. **★ CORRECTION TO PIECE 2's SURFACE ROW.** It recorded "0.10 passes; 0.06 (5 fails: marginal)" --
+   but `robust_sweep.sh`'s surf cells never pinned `--l1_tau_surf`, so the controller was told the true
+   servo lag and that row was never a mismatch test. Run as one: **0.045, 0.06 and 0.10 all pass 16/16
+   with the controller believing 0.03** (fails 1 / 1 / 0), and 0.10 told is the same. 3.3x the modelled
+   surface lag costs ONE degree of corridor peak and nothing else; the old "5 fails at 0.06" was seed
+   scatter. The surface servo is not a sensitivity of this loop, mismatched or not.
+**THE IDENTIFICATION SPEC IT WRITES (for the thrust-stand campaign):** measure `tau_spin` and set
+`l1_tau_spin` to it; then the airframe's requirement is **tau_spin <= 0.16 s** (0.18 marginal, 0.20
+unflyable at any model value) -- i.e. **rotor bandwidth >= ~6 rad/s, 0.7x the short period**. If the
+measurement is NOT taken and the model stays at 0.12, the tolerance narrows to ~0.14 s before the
+solve-failure budget goes. Measure it as a first-order lag on OMEGA, not on thrust: the plant lags
+omega and then squares it, so fitting the raw thrust trace gives a systematically different constant.
+Spin-up and spin-down separately (drag brakes differently than the motor accelerates; the model has
+one constant). At the hover throttle -- that is where the differential authority the corridor needs
+is set. `PROP_J0` is not a static-stand number: it needs airflow.
+**TOOLING + TWO THINGS THAT BIT.** `robust_sweep.sh` now takes the control law as a knob (`ROBUST_NODE`
+/ `ROBUST_LINE`; defaults are piece 2's exactly, so that table reproduces) and writes it to `<tag>/law`;
+the cells live in `scripts/cells_actuator_lag.txt`. (1) The script `cd`s into the CONTROLLER repo before
+it reads the cells file, so a relative path resolved against the wrong repo -- the sweep ran ZERO cells,
+printed "done" and only `robust_metrics.py` noticed (a missing cells.txt). It resolves the path first
+now. **A sweep that runs nothing must not look like a sweep that passed.** (2) The pass rule's
+"fails sum <= 4" is summed over 16 flights, so a FAIL at 5-6 is 0.3-0.4 solve failures per flight
+against nominal's 0.13 -- read the landed column first and the budget second; the 0.14/0.16 rows fly.
+
 # ★★★★ 2026-09-16 (afternoon): THE SENSOR AUDIT -- WHICH SENSORS THE LOOP CAN ACTUALLY USE, WHAT EACH
 # ONE IS ALLOWED TO GET WRONG, AND HOW THE OBSERVER HOLDS WHEN THEY ALL DO IT AT ONCE. 30 gate cells x
 # 3 seeds (`scripts/sensor_sweep.sh`, `scripts/sensor_metrics.py`, sweeps `~/flight_bags/est_sweeps/
@@ -598,6 +676,7 @@ minz 29.9, stop 8.8 s.**
 | prop J0 (zero-thrust advance ratio) | 0.60, 0.66, 0.80 | 0.90 (13 fails, pk 17.6) |
 | CG error, cold start | +1.5 cm | -1.5 / -3.0 cm AFT: 0/16 (all before the BT); +3.0: 12/16; +4.5: 1/16 |
 | rotor spin lag (model 0.12 s) | 0.06 | 0.20: 1/16, 0.30: 0/16 -- the L1 predictor's lag model is 0.12 |
+| surface servo lag: SEE THE 2026-09-16 EVENING BLOCK -- these two rows were re-run paired (told/not told); the spin cliff is bracketed at 0.16-0.18 and the surface row was never a mismatch test |
 | surface servo lag (model 0.03 s) | 0.10 | 0.06 (5 fails: marginal) |
 **THE SPEC IT WRITES:** mass and thrust are free to +-20% (the loops absorb them; the trim's vertical channel is
 closed), yaw torque and drag do not matter, lateral derivatives +-50% do not matter. What must be measured:
