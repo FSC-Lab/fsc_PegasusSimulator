@@ -1,0 +1,28 @@
+GLOBAL POLYNOMIAL FITS — MN_4010_15x5
+=======================================================
+Fit is weighted across all step runs.
+force_origin = False
+
+Channel : rpm  (degree 1)
+  R²       : 0.996987
+  Equation : rpm(x) = 63.5974·x + 611.731
+  Coefficients (x^0 → x^1):
+    x^0  :  611.73062
+    x^1  :  63.597442
+
+Channel : thrust  (degree 2)
+  R²       : 0.998659
+  Equation : thrust(x) = 0.00178203·x^2 + 0.0636277·x - 0.293853
+  Coefficients (x^0 → x^2):
+    x^0  :  -0.29385321
+    x^1  :  0.063627706
+    x^2  :  0.0017820301
+
+Channel : torque  (degree 3)
+  R²       : 0.999146
+  Equation : torque(x) =  - 3.446e-07·x^3 + 7.7154e-05·x^2 - 0.000375849·x + 0.0125214
+  Coefficients (x^0 → x^3):
+    x^0  :  0.012521371
+    x^1  :  -0.00037584896
+    x^2  :  7.7153963e-05
+    x^3  :  -3.4459954e-07
