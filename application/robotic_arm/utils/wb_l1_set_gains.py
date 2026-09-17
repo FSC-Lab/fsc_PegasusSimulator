@@ -3,6 +3,7 @@
 
     /usr/bin/python3 wb_l1_set_gains.py omega_c_t=6.0 omega_c_r=2.0 decompose=false
     /usr/bin/python3 wb_l1_set_gains.py --show
+    /usr/bin/python3 wb_l1_set_gains.py --four-d omega_x=2.0     # the 4-D yaml
 
 The node has NO on-set-parameters callback, so `ros2 param set` changes what
 `param get` reports while the controller keeps flying the launch-time value.
@@ -25,8 +26,12 @@ DEFAULT = os.path.join(
     "src", "fsc_autopilot_ros2", "config",
     "params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml")
 
+FOUR_D = DEFAULT.replace("_whole_body_l1_direct_", "_whole_body_l1_4d_direct_")
+
 KNOWN = ("observer_type a_t a_r a_q adapt_period_s omega_c_t omega_c_r "
          "omega_c_q omega_i omega_x lc_var_f lc_var_m lc_var_q decompose "
+         "four_d omega_q contact collision_threshold_n "
+         "omega_x_t omega_x_r omega_x_q "
          "max_force_n max_torque_nm max_joint_nm max_wrench_force_n "
          "max_wrench_torque_nm").split()
 
@@ -41,8 +46,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("assignments", nargs="*", metavar="key=value")
     ap.add_argument("--file", default=DEFAULT)
+    ap.add_argument("--four-d", action="store_true",
+                    help="edit the 4-D attribution yaml instead (same as "
+                         "--file <..._l1_4d_..._sim.yaml>)")
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
+    if a.four_d and a.file == DEFAULT:
+        a.file = FOUR_D
 
     s = open(a.file).read()
     if a.show or not a.assignments:
@@ -75,6 +85,12 @@ def main():
         cur = pat.search(s).group(2)
         if cur.startswith('"') and not v.startswith('"'):
             v = f'"{v}"'
+        # rclcpp types a parameter from its yaml LITERAL: a double declared
+        # in the node refuses an integer literal at startup (the node dies
+        # before its first log line, 2026-09-17: `omega_x_t=0` did exactly
+        # that). If the file holds a float, write a float.
+        if re.fullmatch(r"-?\d+\.\d*(e[-+]?\d+)?", cur) and re.fullmatch(r"-?\d+", v):
+            v = f"{v}.0"
         s = pat.sub(lambda m: m.group(1) + v + m.group(3), s, count=1)
         print(f"  {full} : {cur} -> {v}")
 

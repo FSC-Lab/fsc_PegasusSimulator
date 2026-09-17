@@ -19,6 +19,14 @@ legs differ only in that the arm moves too.
 The reference is the law's own x_cd (debug [45..47]), not the raw driver
 setpoint, so the comparison is like-for-like between the two observers.
 
+EE POSITION AND EE HEADING ARE REPORTED SEPARATELY, and must be: e_y is
+three position components in METRES plus sin(heading error), which is
+dimensionless. Summing them in one norm turns 8.7 deg of heading error
+into '151 mm' of position error -- which is what this script did until
+2026-09-17. For every reference-tracked channel (CoM position and
+velocity, platform attitude, EE position, EE heading, joints) with peak,
+rms and settled rms per leg, use traj_errors.py in the campaign folder.
+
 Debug layout: see wb_l1_metrics.py.
 """
 
@@ -34,6 +42,7 @@ D_DHAT = slice(31, 41)
 D_XCD = slice(45, 48)
 D_XC = slice(48, 51)
 D_FY = slice(58, 62)
+D_FRAW = slice(97, 101)   # 4-D attribution: the RAW joint-row F_hat (else 0)
 
 SETTLE_WINDOW = 2.0   # s at the end of a leg that counts as "settled"
 
@@ -44,8 +53,8 @@ def load(path):
     if dbg.size == 0:
         raise SystemExit(f"{path}: no debug samples")
     t, d = dbg[:, 0], dbg[:, 1:]
-    if d.shape[1] <= D_FY.stop:
-        d = np.hstack([d, np.full((d.shape[0], D_FY.stop + 1 - d.shape[1]),
+    if d.shape[1] <= D_FRAW.stop:
+        d = np.hstack([d, np.full((d.shape[0], D_FRAW.stop + 1 - d.shape[1]),
                                   np.nan)])
     marks = []
     for s in z["leg_marks"]:
@@ -74,6 +83,11 @@ def legs(run):
     return out
 
 
+def _nanmean_or_nan(v):
+    v = np.asarray(v, float)
+    return float(np.mean(v[np.isfinite(v)])) if np.isfinite(v).any() else float("nan")
+
+
 def score_leg(run, t0, t1):
     t, d = run["t"], run["d"]
     m = (t >= t0) & (t < t1)
@@ -83,7 +97,14 @@ def score_leg(run, t0, t1):
     err = np.linalg.norm(xc - xcd, axis=1)
     tt = t[m]
     settled = tt >= (tt[-1] - SETTLE_WINDOW)
-    ey = np.linalg.norm(d[m][:, D_EY], axis=1)
+    # SPLIT THE TASK ERROR BY UNIT (2026-09-17). e_y is [EE position (3,
+    # metres); EE heading (1, sin of the heading error)], so its 4-norm
+    # adds metres to a dimensionless sine: an 8.7 deg heading error
+    # contributes 0.151 and used to be printed as 151 mm of position
+    # error. The two channels are reported separately, in their own units.
+    ey = np.linalg.norm(d[m][:, D_EY][:, :3], axis=1)
+    eyaw = np.degrees(np.arcsin(np.clip(np.abs(d[m][:, D_EY.start + 3]),
+                                        0.0, 1.0)))
     tau = np.abs(d[m][:, D_TAU])
     log = run["log"]
     lm = (log[:, 0] >= t0) & (log[:, 0] < t1)
@@ -96,12 +117,17 @@ def score_leg(run, t0, t1):
         ee_peak_mm=float(np.nanmax(ey) * 1e3),
         ee_rms_mm=float(np.sqrt(np.nanmean(ey ** 2)) * 1e3),
         ee_settled_mm=float(np.nanmean(ey[settled]) * 1e3),
+        eyaw_peak_deg=float(np.nanmax(eyaw)),
+        eyaw_settled_deg=float(np.sqrt(np.nanmean(eyaw[settled] ** 2))),
         tilt_max=float(np.nanmax(tilt)),
         eR_max=float(np.nanmax(np.linalg.norm(d[m][:, D_ER], axis=1))),
         tau_max=float(np.nanmax(tau)),
         clamp_pct=float(100.0 * np.mean(tau.max(axis=1) > 2.999)),
         sat_pct=float(100.0 * np.nanmean(np.nan_to_num(d[m][:, D_NSAT]) > 0.5)),
         fy=float(np.nanmean(np.linalg.norm(d[m][:, D_FY], axis=1))),
+        # 4-D rigs: F_hat_y above is gated to 0 in free flight; this is the
+        # raw reading the gate hides (nan/0 on the 6-D path).
+        fraw=_nanmean_or_nan(np.linalg.norm(d[m][:, D_FRAW][:, :3], axis=1)),
         u1=float(np.nanmean(d[m][:, D_U1])),
         dz=float(np.nanmean(d[m][:, D_DHAT][:, 2])),
     )
@@ -126,8 +152,9 @@ def report(run):
                   f"ever started -- see the run's own log")
         return {}
     hdr = (f"  {'leg':<14}{'dur':>6}{'peakCoM':>9}{'rms':>7}{'settled':>9}"
-           f"{'peakEE':>8}{'settEE':>8}{'tilt':>7}{'tau':>6}{'clamp%':>8}"
-           f"{'|Fy|':>7}")
+           f"{'peakEE':>8}{'settEE':>8}{'pkHead':>8}{'setHead':>8}"
+           f"{'tilt':>7}{'tau':>6}{'clamp%':>8}"
+           f"{'|Fy|':>7}{'|Fraw|':>8}")
     print(hdr)
     print("  " + "-" * (len(hdr) - 2))
     out = {}
@@ -139,8 +166,9 @@ def report(run):
         print(f"  {name:<14}{s['dur']:>6.1f}{s['peak_mm']:>9.1f}"
               f"{s['rms_mm']:>7.1f}{s['settled_mm']:>9.1f}"
               f"{s['ee_peak_mm']:>8.1f}{s['ee_settled_mm']:>8.1f}"
+              f"{s['eyaw_peak_deg']:>8.1f}{s['eyaw_settled_deg']:>8.1f}"
               f"{s['tilt_max']:>7.2f}{s['tau_max']:>6.2f}"
-              f"{s['clamp_pct']:>8.1f}{s['fy']:>7.3f}")
+              f"{s['clamp_pct']:>8.1f}{s['fy']:>7.3f}{s['fraw']:>8.3f}")
     return out
 
 

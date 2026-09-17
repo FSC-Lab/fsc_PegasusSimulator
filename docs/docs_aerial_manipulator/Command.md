@@ -5463,3 +5463,321 @@ prevent (its own log line said so: `vehicle is 0.305 m from it`). It now
 ordering to get wrong, nothing to chase on a seated vehicle, and the
 SAFETY-revert re-seed becomes automatic. Verified on the relaunch — it starts
 on the zeros and follows to 0.305 as soon as the pose is real.
+
+### 7.17 AM-T650 WHOLE-BODY + L1 with the FOUR-DIMENSIONAL attribution — added 2026-09-16
+
+**§7.15's rig with one thing swapped: how the lumped residual is ATTRIBUTED.**
+Same coupled law, same gains, same plant (the standing config A of the
+2026-09-14 note at the top of §7.15), same SAFETY/DIRECT split, same gates,
+watchdogs and torque-mode arm stack, same two ground stations, **and the same
+executable** — `autopilot_whole_body_l1_direct_actuation_node`. Layer 1 of the L1
+observer (the deadbeat piecewise-constant estimate and the `C(s)` filter feeding
+`f_d` and `u_2`) is untouched. What changes is Layer 2, per the September 2026
+revision of the working note (`disturbance_observer_draft.tex`, *"the
+four-dimensional interaction wrench"*; the six-dimensional design it replaces is
+archived in `disturbance_observer_draft_backup.tex`):
+
+| | §7.15 (6-D) | §7.17 (4-D) |
+|---|---|---|
+| wrench model | `w_e ∈ R^6`, split by a metric-weighted projector onto `N(J_e)` + a dynamic identifier (`ω_i`, `L_c`, `lc_var_*`) | `w_e = S_e^T F + k`, `k ∈ N(J_{e,q}^T)` joint-invisible; `F ∈ R^4` read off the **joint rows** |
+| task force | `F_hat_y = Λ_y S_e Λ_e^{-1} w_hat_e` | `F_hat = J_{y,q}^{-T}([w_hat_Σ]_q − w_hat_q)`, `F_hat_y = (1−χ) C_x F_hat` |
+| free flight (`χ = 1`) | `F_hat_y` ≈ 0.08–0.4 N of phantom | **`F_hat_y ≡ 0` by construction** |
+| joint rows | modelled by the identifier's prior | **trimmed** by `w_hat_q` (`ω_q`, free flight only), frozen in contact |
+| `u_3` feedforward (`wb_u3_internal_ff`) | filtered lumped `d_f` (per-group `ω_c`) | `d_int^f = C_x T^{-T} w_hat_int` (eq. u3_4), one scalar `ω_x` |
+| identifiability | needs excitation + the `W` prior | at every instant iff the four joint rows are known (Property ident) |
+| contact flag | none needed (`Z_0^T J_e^T = 0`) | **exogenous** task flag `wb_l1_contact`, + threshold fallback |
+| yaml | `..._whole_body_l1_direct_actuation_t650_sim.yaml` | `..._whole_body_l1_4d_direct_actuation_t650_sim.yaml` |
+| executable | `autopilot_whole_body_l1_direct_actuation_node` | **identical** |
+
+Implementation: the `four_d` branch of the fork's `wb_l1_observer.cpp` (Python
+reference `extensions/.../utils_controller/l1_observer.py`, section 6 of its
+self-test: exact attribution in contact to 2e-15, where the 6-D identifier had a
+0.59 N error on the same wrench), selected by `wb_l1_four_d`. Parity-locked to 1e-8
+by `WbL1ParityTest` over 9 rollouts (three new `four-d-*` sets cover free flight, a
+task-flagged contact and the collision-threshold latch; one covers the per-block
+filter); the five 6-D rollouts are byte-identical to before, `WbParityTest` 4/4
+still holds. The yamls differ by **`vehicle_name`, `wb_u3_internal_ff_use_w_hat`
+(true — the note's own `u_3` form), `wb_l1_omega_x` and the `wb_l1_four_d` block**
+— diff them before every campaign:
+
+```bash
+cd ~/ros2_ws/src/fsc_autopilot_ros2/config && diff \
+  <(grep -vE '^\s*#|^\s*$' params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml) \
+  <(grep -vE '^\s*#|^\s*$' params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml)
+```
+
+**Two things the port had to decide that the note leaves open**, both recorded
+in the code and reproduced in the Python reference:
+
+- **`Φ_d`, not `Φ`.** Unchanged from §7.15.3 — Layer 1 is the same code.
+- **The order of the discrete Layer-2 operations.** Per tick: joint rows of
+  `T^T d_hat^c` → phase flag (task flag, then the threshold fallback evaluated on
+  the **previous** tick's filtered reading, so the decision never depends on the
+  estimate it gates) → trim `w_hat_q` (exact ZOH of the first-order filter, only if
+  free) → `F_hat` → `C_x` → gate → `w_hat_int` (with the **raw** `F_hat`, as eq.
+  step_int4 writes it) → `C_x T^{-T}` → bounds. The bounds are the existing
+  `wb_l1_max_*` (force/heading rows of `F_hat_y` by `max_wrench_*`, `d_int^f` by
+  `max_force/torque/joint`). `wb_l1_omega_x_{t,r,q}` (default 0 = the note's
+  scalar) let `d_int^f`'s three blocks carry their own `C_x` bandwidth — added as a
+  diagnostic during tuning (7.17.3) and kept.
+
+#### 7.17.1 Run sequence — copy-paste
+
+Identical to §7.15.1 except the two script names. Every trap there applies
+verbatim (never chain step 0 with a launcher, bracketed `pgrep` patterns, params
+read only at node startup, two ground stations, `Ctrl-b d`).
+
+**shiqi_machine** (`shiqi-desktop`):
+
+```bash
+# 0. clean slate            (any terminal — BOTH lines, this order)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. build after every pull (the cd IS part of the command; keep BUILD_TESTING on
+#    here — the parity gtests are how a change to wb_l1_observer.cpp is checked)
+cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2
+~/ros2_ws/build/fsc_autopilot_ros2/fsc_autopilot_lib/single_vehicle_baseline/tests/fsc_autopilot_tests \
+  --gtest_filter='WbL1ParityTest.*:WbParityTest.*'         # 8 tests, all must pass
+#    the Python reference and the fixture, whenever the observer changes:
+/usr/bin/python3 ~/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/l1_observer.py
+/usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/generate_wb_l1_truth.py
+
+# 2. ROS 2 stack            (terminal 1 — FIRST, owns the agent)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+
+# 3. Pegasus / PX4 SITL + TORQUE-MODE ARM STACK + ARM GROUND STATION (terminal 2)
+~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh shiqi_machine
+
+# 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
+source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+
+# 5. SAFETY takeoff to z = 1.2 from the drone GS, settle, then DIRECT (gated):
+ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"
+# ABORT / back to SAFETY (hovers in place, folds the arm home — §7.15.1's guard):
+ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
+```
+
+**Three banners to read before entering DIRECT, in the autopilot pane:** the
+magenta `DISTURBANCE OBSERVER: L1 ADAPTIVE` (else you are on the GMO), the second
+magenta line `ATTRIBUTION: FOUR-DIMENSIONAL, on the joint rows` (else you are on
+§7.15's 6-D rig), and the cyan `LAW CHECK: u3 coupling feedforward ... source 4D
+INTERNAL d_int^f`. **The Pegasus launcher checks the second one for you**: because
+the two rigs share an executable, a process-name gate cannot tell them apart, so
+it reads `wb_l1_four_d` off the RUNNING node (`ros2 param get
+/uav_0/fsc_autopilot_ros2 wb_l1_four_d`) and refuses to start against the 6-D stack
+rather than mislabel a flight. In DIRECT the pane also prints, once a second, the
+magenta `4D attribution:` watch line — `chi`, the raw `F_hat`, `w_hat_q` and the
+consumed `F_hat_y`.
+
+**Automated campaign** (one data point = one full relaunch, ~7 min):
+
+```bash
+# one run of the 4-D rig (or `l1` for the 6-D one, `gmo` for §7.14's):
+application/robotic_arm/utils/wb_l1_tune_cycle.sh l1_4d <tag> shiqi_machine
+# edit the 4-D yaml between runs (unknown key = error; writes a float where the
+# file holds one -- an integer literal for a double parameter kills the node at
+# startup with no log line, 2026-09-17):
+/usr/bin/python3 application/robotic_arm/utils/wb_l1_set_gains.py --four-d omega_x=0.25
+# the 2026-09-16/17 campaign, back to back (restores the yaml on exit; a running
+# copy must NOT be edited -- bash reads a script by byte offset):
+docs/docs_aerial_manipulator/l1_4d_20260916/run_4d.sh shiqi_machine
+# score:
+/usr/bin/python3 application/robotic_arm/utils/wb_l1_metrics.py     docs/docs_aerial_manipulator/l1_4d_20260916/*.npz
+/usr/bin/python3 application/robotic_arm/utils/wb_compare_metrics.py docs/docs_aerial_manipulator/l1_4d_20260916/*.npz
+cd docs/docs_aerial_manipulator/l1_4d_20260916 && /usr/bin/python3 summarize_4d.py && /usr/bin/python3 ripple_4d.py && /usr/bin/python3 ripple_4d.py --soak
+# EVERY reference-tracked state, per leg, peak / rms / settled-rms (7.17.4):
+/usr/bin/python3 traj_errors.py --csv traj_errors.csv
+PYTHONNOUSERSITE=1 /usr/bin/python3 plot_4d.py --six l1_6d_A.npz l1_6d_B.npz --four l1_4d_4d_best_A.npz l1_4d_4d_best_B.npz --out compare_6d_4d.png
+```
+
+#### 7.17.2 Debug array — §7.15.2's 97 elements plus 9
+
+Append-only, so **[0..96] are exactly §7.15.2's** (the L1 block ends at [88],
+`wb_u3_estimate_max_j*` raw/applied at [89..96]). In DIRECT it is now 106:
+
+```
+[97..100]  F_hat RAW, the 4-D joint-row reading J_yq^-T([w_Sigma]_q - w_hat_q)
+           (N, N, N, N.m). This is what the collision test sees and what the
+           impedance WOULD render without the (1 - chi) gate; on this rig it
+           is the honest free-flight phantom number, since [58..61] is gated
+           to exactly 0. Zero on the 6-D path.
+[101..104] w_hat_q, the joint-row trim (N.m), FREE-FLIGHT ONLY: it converges
+           toward the joint-level calibration residual (friction, gravity
+           mismatch, current-loop residual) and freezes in contact.
+[105]      chi: 1 = free flight, 0 = contact (task flag OR threshold latch)
+```
+
+`wb_l1_metrics.py` reports the new slots as `phantom_Fraw_*`, `wq_hat_late_Nm`
+and `chi_free_frac`; `wb_compare_metrics.py` adds an `|Fraw|` column per leg.
+**Do not compare `phantom_Fy_*` across the two rigs** — on the 4-D one it is 0 by
+construction, which is the design, not a measurement.
+
+#### 7.17.3 Tuning the 4-D design — the one knob is `ω_x`, and the answer is 0.25 rad/s
+
+Data `docs/docs_aerial_manipulator/l1_4d_20260916/` (`run_4d.sh`, `summarize_4d.py`,
+`ripple_4d.py`, `plot_4d.py`; tables `metrics.txt`, `legs.txt`, `ripple.txt`,
+`hover.txt`, `summary.json`; figure `compare_6d_4d.png`; launcher/driver logs in
+`logs/`; the `.npz` stay out of git). **Ten flights, 2026-09-16/17, none aborted, 0 %
+joint clamp, 0 % rotor saturation, 0 % estimator bound in every one.** Every run: the
+standing **config A plant** (+15 % allocator kf, body mass/inertia ×1.10 + 10/10/5 mm
+CoM shift, MN4010 rotor lag, current-loop residual, gearbox friction ×1.05, arm mass
+×1.05), the rig's standard mission with `--hold-between 16` (SAFETY takeoff → DIRECT →
+20 s hover soak → x/y/yaw steps ±0.5 m / ±30° → the two compatible-trajectory legs →
+abort → land), the same driver, the same law gains, the same Layer-1 observer. The
+two 6-D runs reproduce the 2026-09-14 config-A flight (phantom 0.40 / 0.24 vs 0.40 N,
+tilt p-p 2.95 / 3.06 vs 3.35°), so the baseline is not the scatter.
+
+**Why `ω_x` is the whole tuning problem.** In free flight (`χ = 1`) the 4-D law differs
+from the flown 6-D one in exactly two places: `F_hat_y ≡ 0` (no knob), and `u_3`'s
+feedforward is `C_x` of the WHOLE residual at ONE bandwidth, where the 6-D path fed
+the per-group-filtered `d_f` (2 / 0.5 / 0.5 rad/s). `ω_q` moves only the RAW `F_hat`
+reading, never a torque, so it is not a flight knob. The 6-D yaml's `ω_x = 20` (a
+wrench-reading smoother there) would hand `u_3` a nearly raw 250 Hz momentum
+difference, so the sweep started at 2.
+
+| run | `ω_x` [rad/s] | CoM err mean / late [mm] | EE pos mean [mm] | tilt p-p [deg] | τ peak [N·m] | j2 / j3 ripple [mN·m] | tilt ripple [deg] |
+|---|---|---|---|---|---|---|---|
+| **6-D A** | (20, 6-D) | 31.6 / 18.6 | 7.2 | 2.95 | 0.96 | 70 / 50 (the §7.15.12 cycle locked in) | 0.256 |
+| **6-D B** | (20, 6-D) | 29.4 / 16.0 | 6.2 | 3.06 | 0.83 | 7.8 / 5.7 | 0.104 |
+| 4-D | 6 | 65.1 / 24.3 | 13.2 | 14.3 | 2.31 | 339 / 363 | 2.11 |
+| 4-D | 2 | 42.3 / 25.5 | 8.7 | 6.04 | 1.65 | 259 / 133 | 1.18 |
+| 4-D | 0.5 | 30.4 / 18.0 | 7.7 | 6.97 | 1.26 | 196 / 91 | 0.88 |
+| 4-D | per-block 2 / 0.5 / 0.5 | 29.8 / 10.5 | 7.0 | 4.81 | 1.23 | 167 / 86 | 0.74 |
+| 4-D | per-block 2 / 0.25 / 0.25 | 29.6 / 27.0 | 7.9 | 6.52 | 1.18 | 182 / 93 | 1.04 |
+| **4-D** | **0.25** | 27.0 / 18.0 | 5.5 | 2.78 | 0.84 | **5.0 / 2.5** | **0.075** |
+| **4-D** | **0.25**, repeat A | **23.1 / 3.7** | **5.0** | **2.69** | 0.88 | **6.3 / 3.6** | **0.075** |
+| **4-D** | **0.25**, repeat B | **22.1 / 3.3** | **4.7** | 2.92 | 0.85 | **5.1 / 3.0** | **0.083** |
+
+(ripple = std of the 0.5–3 Hz band-passed signal over all of DIRECT after the 40 s
+entry allowance, `ripple_4d.py`; CoM/EE from `wb_l1_metrics.py`.)
+
+- **The mode that binds is the airframe's ~0.9 Hz attitude mode** (`√(k_R/I)`,
+  §7.14.4; the metastable j2-torque cycle of §7.15.12). At `ω_x = 2` the arm
+  feedforward drives it to 259 mN·m of j2 ripple at 0.94 Hz; at 0.5 still 196.
+- **It is NOT a bandwidth-mismatch artefact, and it is the TRANSLATIONAL block that
+  excites it.** A per-block `Ω_x` was added (`wb_l1_omega_x_{t,r,q}`, default 0 = the
+  note's scalar, parity-locked) and set to exactly the 6-D path's 2 / 0.5 / 0.5, i.e.
+  `u_3` fed the SAME filtered residual the 6-D flew: still 167 / 86. 2 / 0.25 / 0.25:
+  182 / 93. Scalar 0.25: 5.0 / 2.5. So the boundary sits between 0.25 and 0.5 on the
+  translational block, and what the 6-D design had — the rendered
+  `−(Λ_y M_y⁻¹ − I) F_hat_y`, a ~0.3–0.4 N force read off a 20 rad/s wrench filter,
+  acting as fast momentum-residual feedback into `u_3` — was damping that mode by
+  accident. The 4-D removes that term on purpose, so its feedforward bandwidth has to
+  come down to where the mode is not fed.
+- **At 0.25 the mode is gone**, 3/3: j2/j3 ripple 5–6 / 2.5–3.6 mN·m, below BOTH 6-D
+  runs, and the best CoM, EE and tilt numbers of the campaign. That is the note's own
+  scalar form; the per-block keys stay in the code as the diagnostic they were.
+  **Shipped: `wb_l1_omega_x: 0.25`** in the 4-D yaml.
+
+#### 7.17.4 6-D vs 4-D on the same plant — what the attribution buys
+
+**EVERY LEG OF THIS MISSION IS A COMPATIBLE TRAJECTORY**, steps included: the
+whole-body planner solves a min-snap transition and streams the full reference set
+(`x_cd` + derivatives, `b1_d`, `r_ed`, `b1_de`, `q_d`), so every state has a
+reference and each is scored below on its own, in its own unit —
+`traj_errors.py` in the campaign folder, `traj_errors.txt` / `.csv` for the full
+per-run output.
+
+> **CORRECTION, 2026-09-17.** The per-leg table first published here reported one
+> translation number (CoM) plus an "EE" column that was
+> `norm(e_y)` over ALL FOUR components — three in METRES plus
+> `sin(heading error)`, which is DIMENSIONLESS. An 8.7° heading error contributes
+> 0.151 to that norm and was printed as "151 mm" of EE position error. **The EE
+> position error was never 110–233 mm; it is 4–7 mm settled on both designs.**
+> `wb_compare_metrics.py` now reports `peakEE`/`settEE` (position, mm) and
+> `pkHead`/`setHead` (heading, deg) as separate columns; the numbers below are
+> recomputed per channel and cross-checked between two independent
+> implementations (`traj_errors.py` and the fixed `wb_compare_metrics.py`).
+
+**Conventions, and they matter.** `‖e_R‖ = |sin θ|` exactly for the angle θ between
+`R_0` and the commanded `R_0c`, and `e_y[3] = −(b1ec·b2e)` is the SINE of the EE
+heading error — both are inverted through `asin`, never read as radians. The joint
+channel is `max_j |q_j − q_dj|` with the log's broadcaster order `[q2,q3,q1,q4]`
+mapped back through `LOG_Q_OF_JOINT`. Every window is masked to DIRECT: the last
+leg runs past the abort into the SAFETY descent, where the node publishes the
+shorter debug prefix and the recorder zero-pads it, which reads as a 0 mm CoM
+"error" and a 65° joint "error".
+
+**Hover** (the 20 s soak, DIRECT +26…+43 s, arm at rest; **rms over the window**):
+
+| | CoM pos [mm] | EE pos [mm] | EE heading [deg] | heading p-p [deg] | attitude [deg] | joints [deg] | rendered \|F_hat_y\| [N] | raw \|F_hat\| [N] |
+|---|---|---|---|---|---|---|---|---|
+| 6-D A | 40.2 | 5.5 | **8.94** | **13.23** | 1.62 | 9.08 | **0.30** | – |
+| 6-D B | 38.8 | 5.2 | **9.52** | **13.05** | 1.63 | 9.58 | **0.30** | – |
+| 4-D 0.25 | 33.9 | 5.8 | **0.20** | **0.53** | 1.40 | 3.11 | **0** | 0.32 |
+| 4-D 0.25 A | 35.5 | 6.4 | **0.31** | **0.66** | 1.57 | 3.61 | **0** | 0.37 |
+| 4-D 0.25 B | 34.4 | 6.1 | **0.35** | **0.79** | 1.43 | 3.09 | **0** | 0.33 |
+
+**The 6-D heading error is a slow OSCILLATION, not a standing offset**: 0 → 13°
+peak-to-peak at **0.06–0.11 Hz**, continuous through hover and through the settled
+window of every leg. The 4-D holds 0.8° p-p. The joint column is the same error
+seen at the actuators — the EE heading is carried by the `(q1,q4)` pair, which is
+why the two columns track each other to a few tenths on the 6-D.
+
+**Whole mission, all eleven legs pooled** (peak = worst sample on any leg; rms and
+settled pooled across legs; settled = last 2 s of each leg, inside its 16 s hold):
+
+| state | unit | 6-D peak / rms / settled | 4-D peak / rms / settled | settled gain |
+|---|---|---|---|---|
+| CoM position `\|x_c − x_cd\|` | mm | 247 / 50 / 30 | 241 / 46 / 13 | 2.3× |
+| CoM velocity `\|v_c − ẋ_cd\|` | mm/s | 342 / 65 / 22 | 338 / 65 / 17 | 1.3× |
+| platform attitude `asin‖e_R‖` | deg | 9.39 / 2.05 / 1.29 | 9.26 / 1.91 / 0.50 | 2.6× |
+| EE position `\|e_y[0:3]\|` | mm | 32.3 / 7.8 / 5.5 | 34.5 / 6.9 / 3.0 | 1.8× |
+| **EE heading** `asin\|e_y[3]\|` | deg | 26.28 / 9.72 / **9.57** | 26.87 / 6.00 / **1.33** | **7.2×** |
+| **joints** `max_j\|q_j − q_dj\|` | deg | 25.38 / 9.85 / **9.68** | 26.42 / 6.07 / **1.88** | **5.1×** |
+
+**THE PEAKS ARE IDENTICAL ON EVERY CHANNEL AND THE SETTLED ERRORS ARE NOT.** Peak
+error is the planner's transition, which both designs fly the same way (247 vs
+241 mm, 9.4 vs 9.3°, 32 vs 35 mm, 26.3 vs 26.9°). What the attribution changes is
+what is left once the vehicle has arrived, and it changes the ORIENTATION channels
+by far the most — heading 7.2× and joints 5.1×, against 2.3× for CoM position and
+1.8× for EE position. A translation-only metric would have called these two designs
+nearly equivalent.
+
+**Per leg, peak / settled** (6-D = mean of 2 runs, 4-D = mean of 3 at ω_x = 0.25):
+
+| leg | CoM 6-D | CoM 4-D | EE pos 6-D | EE pos 4-D | EE head 6-D | EE head 4-D | joints 6-D | joints 4-D |
+|---|---|---|---|---|---|---|---|---|
+| step x +0.5 m | 233 / 15 | 186 / 20 | 14.4 / 4.8 | 12.0 / 2.9 | 14.3 / 8.6 | 1.1 / 0.7 | 14.3 / 8.5 | 4.5 / 1.7 |
+| step x back | 232 / 35 | 240 / 30 | 11.1 / 4.7 | 10.7 / 4.3 | 12.3 / 8.5 | 0.8 / 0.1 | 12.3 / 8.6 | 2.5 / 2.5 |
+| step y +0.5 m | 225 / 24 | 222 / 4 | 8.5 / 5.4 | 7.0 / 1.9 | 14.6 / 10.4 | 2.7 / 0.1 | 13.2 / 10.3 | 2.6 / 1.0 |
+| step y back | 206 / 29 | 208 / 5 | 9.2 / 5.8 | 7.5 / 2.6 | 15.2 / 7.9 | 2.6 / 0.3 | 14.9 / 7.9 | 1.6 / 1.2 |
+| yaw +30° | 44 / 7 | 14 / 2 | 28.4 / 5.7 | 31.8 / 1.4 | 12.3 / 11.2 | 1.3 / 0.3 | 12.5 / 11.3 | 1.4 / 0.4 |
+| yaw back | 43 / 34 | 7 / 2 | 31.0 / 5.2 | 32.7 / 1.4 | 15.0 / 8.5 | 1.4 / 0.1 | 15.1 / 8.6 | 1.3 / 0.8 |
+| EE traj (arm moves) | 68 / 43 | 27 / 3 | 18.5 / 6.1 | 13.2 / 2.7 | 19.3 / 7.6 | 16.7 / 2.4 | 18.9 / 8.3 | 15.4 / 2.5 |
+| EE traj back | 43 / 39 | 40 / 15 | 14.9 / 4.1 | 21.6 / 4.8 | 14.0 / 10.0 | 23.2 / 2.1 | 14.1 / 9.9 | 22.0 / 2.3 |
+| base + arm traj | 113 / 35 | 157 / 11 | 13.6 / 6.0 | 12.2 / 3.5 | 14.3 / 5.9 | 25.3 / 0.9 | 14.4 / 6.5 | 24.4 / 2.4 |
+| base + arm back | 44 / 20 | 61 / 9 | 8.3 / 5.6 | 10.1 / 3.1 | 13.4 / 11.4 | 11.8 / 1.7 | 13.6 / 11.6 | 11.6 / 1.8 |
+| final hold | 43 / 20 | 13 / 4 | 8.2 / 6.7 | 4.2 / 2.0 | 12.1 / 8.7 | 2.1 / 1.4 | 12.1 / 9.1 | 2.4 / 2.2 |
+
+- **The 6-D carries 8–11° of EE heading into the settled window of EVERY leg**,
+  step and trajectory alike, with the joint column mirroring it. The 4-D settles to
+  0.1–2.5°.
+- **The one place the 4-D peaks HIGHER is the three trajectory legs (17–25°), and
+  that is tracking lag on a commanded 60° EE heading sweep, not a standing error**
+  — it decays to 0.9–2.4° inside the hold while the 6-D's comparable peak never
+  decays. Both designs lag that sweep, because the heading impedance is
+  deliberately soft (`K_y,ψ = 0.3` N·m/rad).
+- **Peak on a single leg of a single run is not reproducible on this rig** and the
+  means above hide two cases worth stating: the 6-D `base + arm` peak is 182 mm in
+  run A and 44 mm in run B, and one of the three 4-D runs took a 147 mm excursion
+  on `base + arm back` where the repeats took 16 and 19 mm. The settled columns and
+  the pooled rms are the reproducible quantities.
+- **Same entry transient** (peak 499–542 vs 435–439 mm — within the 374–545 mm
+  scatter of this handover, §7.15.8; settle 7.2–7.3 s both), same `d_hat_z`
+  (−11.18 N both: Layer 1 is the same code), same peak torque (0.85–0.88 vs
+  0.83–0.96 N·m).
+- **The raw `F_hat` is 0.15–0.24 N late** (the collision test's reading), with
+  `w_hat_q` still converging at `ω_q = 0.2` over the 5-minute flight; it is a
+  250 Hz momentum difference through `J_yq⁻ᵀ` (5–10 m⁻¹), so its instantaneous
+  value is noisy (0.9–1.7 N std) and a collision threshold must sit on its filtered
+  value — which is what `C_x` and the hysteresis are for.
+
+**Not covered:** contact (the `χ = 0` branch — trim freeze, `F_hat_y` rendered,
+`w_hat_int` split — is parity-locked and self-tested to 2e-15 against the note's
+exact-attribution lemma, but no contact exists in Isaac, so it has never been flown);
+`ω_q` in flight (never a torque in free flight); hardware.

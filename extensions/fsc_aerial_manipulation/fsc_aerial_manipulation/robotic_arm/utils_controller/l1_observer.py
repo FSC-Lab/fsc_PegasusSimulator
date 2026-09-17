@@ -203,6 +203,27 @@ class L1Gains:
     F_hat_y = (J_y^#)^T d_hat_f evaluated on the L1 estimate, so the two ideas
     in the note -- a better ESTIMATE and a correct ATTRIBUTION -- can be
     measured apart.
+
+    four_d=True (2026-09-16) selects the note's September revision, the
+    FOUR-DIMENSIONAL attribution on the joint rows (disturbance_observer_
+    draft.tex Sec. 1.3 / 2.2), in place of the metric + projector + dynamic
+    identifier above:
+
+        w_e = S_e^T F + k,   k in N(J_{e,q}^T)     (M4)
+        [w_Sigma]_q = w_q + J_{y,q}^T F            (a platform wrench has
+                                                    [w]_q = 0 EXACTLY)
+        w_hat_q  <- low-pass omega_q of [w_hat_Sigma]_q, free flight only
+        F_hat     = J_{y,q}^{-T} ([w_hat_Sigma]_q - w_hat_q)
+        w_hat_int = w_hat_Sigma - (1 - chi) T^T J_y^T F_hat
+        F_hat_y   = (1 - chi) C_x F_hat,   d_hat_int^f = C_x T^{-T} w_hat_int
+
+    so in free flight (chi = 1) the phantom force is zero BY CONSTRUCTION and
+    u3's feedforward is C_x of the whole residual; in contact the trim
+    freezes and the four joint rows are inverted for F. `contact` is the
+    task's phase flag; `collision_threshold_n` is the note's threshold
+    fallback (hysteresis, releases at 70 %) on the filtered force reading of
+    the PREVIOUS tick. decompose / omega_i / lc_var_* are unused in this mode;
+    omega_x is C_x on both outputs.
     """
 
     def __init__(self, a_t=2.0, a_r=2.0, a_q=2.0,
@@ -210,8 +231,23 @@ class L1Gains:
                  omega_i=1.0, omega_x=20.0, adapt_period_s=0.0, decompose=True,
                  lc_var_f=1.0, lc_var_m=1.0, lc_var_q=1.0,
                  max_force_n=25.0, max_torque_nm=3.0, max_joint_nm=3.0,
-                 max_wrench_force_n=25.0, max_wrench_torque_nm=5.0, n=4):
+                 max_wrench_force_n=25.0, max_wrench_torque_nm=5.0, n=4,
+                 four_d=False, omega_q=0.2, contact=False,
+                 collision_threshold_n=0.0,
+                 omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0):
         self.n = int(n)
+        # per-block C_x on d_int^f (4-D only); <= 0 falls back to omega_x, the
+        # note's scalar form. F_hat^f always uses the scalar.
+        self.omega_x_blocks = np.concatenate([
+            np.full(3, float(omega_x_t) if omega_x_t > 0 else float(omega_x)),
+            np.full(3, float(omega_x_r) if omega_x_r > 0 else float(omega_x)),
+            np.full(self.n, float(omega_x_q) if omega_x_q > 0 else float(omega_x))])
+        self.four_d = bool(four_d)
+        self.omega_q = float(omega_q)
+        self.contact = bool(contact)
+        self.collision_threshold_n = float(collision_threshold_n)
+        if self.omega_q < 0.0 or self.collision_threshold_n < 0.0:
+            raise ValueError("omega_q and collision_threshold_n must be >= 0")
         self.a = np.concatenate([np.full(3, float(a_t)),
                                  np.full(3, float(a_r)),
                                  np.full(self.n, float(a_q))])
@@ -275,6 +311,11 @@ class L1DisturbanceObserver:
         self._d_hold = np.zeros(ng)   # d_hat held over the adaptation interval
         self._t_since_adapt = 0.0     # time since the last adaptation
         self._p_at_adapt = None       # p_tilde captured at the interval start
+        # ---- four-dimensional attribution state ----
+        self._w_q_hat = np.zeros(self.n)   # eq. wq_law4
+        self._F_f = np.zeros(4)            # C_x F_hat
+        self._d_int_f = np.zeros(ng)       # C_x T^-T w_hat_int
+        self._collision_latched = False
 
     @property
     def initialized(self):
@@ -286,7 +327,10 @@ class L1DisturbanceObserver:
                 "d_rho": np.zeros(self.n), "d_f": np.zeros(ng),
                 "d_sigma_c": self._d_c.copy(), "F_y": np.zeros(4),
                 "w_hat": self._w_hat.copy(), "w_e": np.zeros(6),
-                "p_tilde": np.zeros(ng), "adapted": False}
+                "p_tilde": np.zeros(ng), "adapted": False,
+                "F_raw": np.zeros(4), "F_f": np.zeros(4),
+                "d_int_f": np.zeros(ng), "w_q_hat": self._w_q_hat.copy(),
+                "chi_free": True}
 
     # ------------------------------------------------------- Layer 1 + Layer 2
     def update(self, dyn, R_0, xi, dt):
@@ -346,6 +390,8 @@ class L1DisturbanceObserver:
 
         # ---- geometry the attribution chain needs ---------------------------
         Je = end_effector_jacobian(dyn)
+        if g.four_d:
+            return self._attribute_four_d(dyn, R_0, dt, d_f, Je)
         Z0 = null_motion_basis(dyn)
         M = dyn["M"]
         Lam_e_inv = Je @ np.linalg.solve(M, Je.T)     # Lambda_e^-1 (6x6, SPD)
@@ -390,7 +436,89 @@ class L1DisturbanceObserver:
         return {"d_t": d_f[0:3], "d_r": d_f[3:6], "d_rho": d_f[6:],
                 "d_f": d_f, "d_sigma_c": self._d_c.copy(), "F_y": F_y,
                 "w_hat": self._w_hat.copy(), "w_e": w_e,
-                "w_e_raw": w_e_raw}
+                "w_e_raw": w_e_raw,
+                # four-dimensional outputs: zero on this path
+                "F_raw": np.zeros(4), "F_f": np.zeros(4),
+                "d_int_f": np.zeros(6 + self.n),
+                "w_q_hat": self._w_q_hat.copy(), "chi_free": True}
+
+    # ------------------------------------------- the four-dimensional variant
+    def _attribute_four_d(self, dyn, R_0, dt, d_f, Je):
+        """The note's Sec. 2.2 (Sept 2026): attribution on the joint rows.
+
+        The ORDER of the discrete operations is part of the contract with the
+        C++ port (wb_l1_observer.cpp, the `four_d` branch) and must not be
+        rearranged without regenerating the parity fixture.
+        """
+        g = self.g
+        n = self.n
+        R_e = R_0 @ dyn["R_e_0"]
+        Se = np.zeros((4, 6))                 # task velocity selection (S_e)
+        Se[0:3, 0:3] = R_e
+        Se[3, 5] = 1.0
+        # J_{y,q} = S_e J_{e,q}: qdot -> ydot with the platform frozen. Invertible
+        # on the workspace (Assumption ws4) -- the manuscript's block argument
+        # with rho_k replaced by r_e - o_k.
+        J_yq = Se @ Je[:, 6:]
+
+        # Step T4: the residual in the ORIGINAL coordinates; its joint rows
+        # carry w_q + J_{y,q}^T F and NOTHING from the platform (Property rows).
+        w_sigma = dyn["T"].T @ self._d_c
+        wq_rows = w_sigma[6:]
+
+        # The phase flag chi: the task's, with the threshold fallback of
+        # Remark flag4 for an unannounced collision. Hysteresis on the
+        # FILTERED force reading of the previous tick, so the decision never
+        # depends on the estimate it gates within the same tick.
+        chi_free = not g.contact
+        if g.collision_threshold_n > 0.0:
+            fn = float(np.linalg.norm(self._F_f[0:3]))
+            if self._collision_latched:
+                if fn < 0.7 * g.collision_threshold_n:
+                    self._collision_latched = False
+            elif fn > g.collision_threshold_n:
+                self._collision_latched = True
+            if self._collision_latched:
+                chi_free = False
+
+        # eq. wq_law4: the joint-row trim, FREE FLIGHT ONLY (exact ZOH of the
+        # first-order filter; held bit-constant in contact).
+        if chi_free:
+            aq = np.exp(-g.omega_q * dt)
+            self._w_q_hat = aq * self._w_q_hat + (1.0 - aq) * wq_rows
+
+        # eq. steps4: the task wrench -- four equations in four unknowns.
+        F_raw = np.linalg.solve(J_yq.T, wq_rows - self._w_q_hat)
+
+        # eq. outputs4: C_x on the task wrench, then the (1 - chi) gate. The
+        # bounds apply to what is CONSUMED.
+        ax = np.exp(-g.omega_x * dt)
+        self._F_f = ax * self._F_f + (1.0 - ax) * F_raw
+        F_f = self._F_f.copy()
+        F_f[0:3] = np.clip(F_f[0:3], -g.max_wrench_force_n, g.max_wrench_force_n)
+        F_f[3] = np.clip(F_f[3], -g.max_wrench_torque_nm, g.max_wrench_torque_nm)
+        F_y = np.zeros(4) if chi_free else F_f.copy()
+
+        # eq. step_int4: in contact the internal disturbance is the residual
+        # minus the task wrench's image; in free flight it IS the residual.
+        w_int = w_sigma.copy()
+        if not chi_free:
+            w_int = w_int - dyn["T"].T @ (dyn["J_y"].T @ F_raw)
+        # eq. outputs4: d_hat_int^f = C_x T^-T w_hat_int -> u3's feedforward.
+        d_int_raw = np.linalg.solve(dyn["T"].T, w_int)
+        axb = np.exp(-g.omega_x_blocks * dt)
+        self._d_int_f = axb * self._d_int_f + (1.0 - axb) * d_int_raw
+        d_int_f = self._d_int_f.copy()
+        d_int_f[0:3] = np.clip(d_int_f[0:3], -g.max_force_n, g.max_force_n)
+        d_int_f[3:6] = np.clip(d_int_f[3:6], -g.max_torque_nm, g.max_torque_nm)
+        d_int_f[6:] = np.clip(d_int_f[6:], -g.max_joint_nm, g.max_joint_nm)
+
+        return {"d_t": d_f[0:3], "d_r": d_f[3:6], "d_rho": d_f[6:],
+                "d_f": d_f, "d_sigma_c": self._d_c.copy(), "F_y": F_y,
+                "w_hat": w_int, "w_e": Se.T @ F_f,
+                "F_raw": F_raw, "F_f": F_f, "d_int_f": d_int_f,
+                "w_q_hat": self._w_q_hat.copy(), "chi_free": bool(chi_free),
+                "J_yq": J_yq}
 
     # --------------------------------------------------------------- propagate
     def propagate(self, dyn, xi, u, dt):
@@ -542,6 +670,13 @@ def _selftest():
     print(f"     w_e_hat = {est['w_e']}")
     print(f"     w_e     = {w_e_true}")
     check("   |w_e_hat - w_e|_inf, static arm", np.abs(est["w_e"] - w_e_true).max(), 0.7)
+    est_6d_w_e = est["w_e"].copy()
+
+    def Se_home(dyn):
+        Se = np.zeros((4, 6))
+        Se[0:3, 0:3] = dyn["R_e_0"]
+        Se[3, 5] = 1.0
+        return Se
 
     # ---- 5. the wrench must NOT leak into the internal estimate -------------
     # Z_0^T J_e^T = 0 exactly, so w_hat must be identical with and without a
@@ -557,6 +692,80 @@ def _selftest():
         ws.append(est["w_hat"])
     check("   |w_hat(no contact) - w_hat(10x contact)|_inf",
           np.abs(ws[0] - ws[2]).max(), 1e-9)
+
+    # ---- 6. the FOUR-DIMENSIONAL attribution (note, Sept 2026 revision) ----
+    # (a) free flight: the platform rows of an internal disturbance never
+    #     reach F_hat (Property rows); the joint rows w_q are absorbed by the
+    #     trim, so F_hat raw -> 0 and F_hat_y == 0 exactly.
+    # (b) contact, trim frozen at the converged w_q: F_hat equals the note's
+    #     F = J_yq^-T J_eq^T w_e EXACTLY (Lemma exact4), for the SAME wrench
+    #     that carried a 0.7 N error through the 6-D identifier above, and
+    #     w_hat_int recovers w + J_e^T k.
+    # (c) the joint-invisible remainder k really is invisible: J_eq^T k = 0.
+    print("6. four-dimensional attribution on the joint rows")
+    g4 = L1Gains(four_d=True, omega_q=2.0, omega_x=20.0)
+    obs4 = L1DisturbanceObserver(g4)
+    for _ in range(int(20.0 / dt)):
+        est = obs4.attribute(dyn0, np.eye(3), dt, d_c=d_c_true)
+    check("   free flight: |F_hat raw| after the trim (internal only)",
+          np.linalg.norm(est["F_raw"]), 1e-6)
+    check("   free flight: F_hat_y is exactly zero",
+          np.abs(est["F_y"]).max(), 0.0)
+    check("   free flight: w_hat_q converged to w_q",
+          np.abs(est["w_q_hat"] - w_true[6:]).max(), 1e-6)
+    check("   free flight: d_int^f = T^-T w_Sigma (the whole residual)",
+          np.abs(est["d_int_f"] - d_c_true).max(), 1e-6)
+    # now a contact phase, flag from the task, same trim
+    g4c = L1Gains(four_d=True, omega_q=2.0, omega_x=20.0, contact=True)
+    obs4c = L1DisturbanceObserver(g4c)
+    obs4c._w_q_hat = est["w_q_hat"].copy()
+    for _ in range(int(2.0 / dt)):
+        estc = obs4c.attribute(dyn0, np.eye(3), dt, d_c=d_c_mix)
+    J_yq = estc["J_yq"]
+    F_true = np.linalg.solve(J_yq.T, Je[:, 6:].T @ w_e_true)
+    k_true = w_e_true - Se_home(dyn0).T @ F_true
+    check("   contact: |F_hat - F| (exact attribution, Lemma exact4)",
+          np.abs(estc["F_raw"] - F_true).max(), 1e-6)
+    check("   contact: |F_hat_y - C_x F| (rendered, after the filter)",
+          np.abs(estc["F_y"] - F_true).max(), 1e-6)
+    check("   contact: |w_hat_int - (w + J_e^T k)|",
+          np.abs(estc["w_hat"] - (w_true + Je.T @ k_true)).max(), 1e-6)
+    check("   the remainder k is joint-invisible: |J_eq^T k|",
+          np.abs(Je[:, 6:].T @ k_true).max(), 1e-9)
+    print(f"     F (task wrench felt by the arm) = {F_true}")
+    print(f"     6-D identifier error on the same wrench was "
+          f"{np.abs(est_6d_w_e - w_e_true).max():.3f}; 4-D: "
+          f"{np.abs(estc['F_raw'] - F_true).max():.2e}")
+    # (d) the collision fallback: an UNANNOUNCED wrench above the threshold
+    #     flips chi to contact (trim freezes), and releases with hysteresis.
+    g4t = L1Gains(four_d=True, omega_q=2.0, omega_x=20.0,
+                  collision_threshold_n=1.0)
+    obs4t = L1DisturbanceObserver(g4t)
+    obs4t._w_q_hat = est["w_q_hat"].copy()
+    # Until the FILTERED reading crosses the threshold the flag still says
+    # free and the trim drifts along the alias (Remark flag4 bounds it by
+    # |J_yq^T F| (1 - e^{-omega_q tau}) over the detection time tau); from
+    # the tick the latch fires it must be bit-constant.
+    w_q_at_trip, k_trip = None, None
+    for k in range(int(1.0 / dt)):
+        estt = obs4t.attribute(dyn0, np.eye(3), dt, d_c=d_c_mix)
+        if w_q_at_trip is None and not estt["chi_free"]:
+            w_q_at_trip, k_trip = estt["w_q_hat"].copy(), k
+    check("   collision fallback: chi flipped to CONTACT above 1 N",
+          float(estt["chi_free"]), 0.0)
+    tau = (k_trip + 1) * dt
+    bound = np.linalg.norm(J_yq.T @ F_true) * (1.0 - np.exp(-2.0 * tau))
+    drift = np.linalg.norm(w_q_at_trip - est["w_q_hat"])
+    print(f"     detected after {tau*1e3:.0f} ms; trim drift before the latch "
+          f"{drift:.4f} N.m (note's bound {bound:.4f})")
+    check("   collision fallback: pre-detection drift within the note's bound",
+          drift / bound, 1.0)
+    check("   collision fallback: trim frozen from the latch on",
+          np.abs(estt["w_q_hat"] - w_q_at_trip).max(), 1e-12)
+    for _ in range(int(1.0 / dt)):
+        estt = obs4t.attribute(dyn0, np.eye(3), dt, d_c=d_c_true)
+    check("   collision fallback: released once the wrench is gone",
+          1.0 - float(estt["chi_free"]), 0.0)
 
     print("\n" + ("ALL CHECKS PASSED" if ok else "SOME CHECKS FAILED"))
     return 0 if ok else 1

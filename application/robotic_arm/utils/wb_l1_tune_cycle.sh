@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # One whole-body observer data point, clean slate to npz.
 #
-#   wb_l1_tune_cycle.sh <gmo|l1> <run-tag> [machine-config]
+#   wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]
 #
-# Both cases fly the SAME plant through the SAME mission with the SAME driver;
+# l1_4d (2026-09-16) is the L1 observer with the working note's
+# FOUR-DIMENSIONAL attribution: same executable as l1, its own stack script
+# and yaml (..._l1_4d_..._sim.yaml); the Pegasus launcher reads wb_l1_four_d
+# off the running node to confirm which design is flying.
+#
+# All cases fly the SAME plant through the SAME mission with the SAME driver;
 # only the controller node and its yaml differ, which is the whole point. The
 # `_sim` yamls are used (not the comparison ones), because those are the pair
 # that carries the deliberate deviations the campaign is about: a +15%
@@ -25,10 +30,10 @@
 # these commands in a terminal.
 set -uo pipefail
 
-WHICH="${1:?usage: wb_l1_tune_cycle.sh <gmo|l1> <run-tag> [machine-config]}"
-TAG="${2:?usage: wb_l1_tune_cycle.sh <gmo|l1> <run-tag> [machine-config]}"
+WHICH="${1:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]}"
+TAG="${2:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]}"
 CFG="${3:-shiqi_machine}"
-case "$WHICH" in gmo|l1) ;; *) echo "first arg must be gmo or l1"; exit 2;; esac
+case "$WHICH" in gmo|l1|l1_4d) ;; *) echo "first arg must be gmo, l1 or l1_4d"; exit 2;; esac
 
 PEG="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 # shellcheck source=/dev/null
@@ -38,6 +43,10 @@ AUT="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2"
 if [[ "$WHICH" == l1 ]]; then
   STACK="$AUT/scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh"
   SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_direct_actuation_sitl.sh"
+  NODE="autopilot_whole_body_l1_direct_actuation_node"
+elif [[ "$WHICH" == l1_4d ]]; then
+  STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh"
   NODE="autopilot_whole_body_l1_direct_actuation_node"
 else
   STACK="$AUT/scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh"

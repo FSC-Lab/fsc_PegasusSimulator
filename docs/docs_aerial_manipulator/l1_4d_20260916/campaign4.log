@@ -1,0 +1,43 @@
+  wb_l1_omega_x : 2.0 -> 0.25
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+
+############ l1_4d/4d_best_A  omega_x=0.25 ############
+=== [l1_4d/4d_best_A] 0. clean slate ===
+=== [l1_4d/4d_best_A] 1. controller stack ===
+=== [l1_4d/4d_best_A] 2. Pegasus / PX4 / arm ===
+=== [l1_4d/4d_best_A] 3. waiting for odometry ===
+=== [l1_4d/4d_best_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d/4d_best_A] 3c. waiting for the arm ===
+=== [l1_4d/4d_best_A] 4. flying ===
+=== [l1_4d/4d_best_A] done (driver rc=0) ===
+[ 336.07s] mode -> SAFETY
+[ 336.07s] planner -> IDLE
+[ 336.09s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 348.09s] PHASE LAND  ref=[0.03, 0.04, 0.989] mode='SAFETY'
+[ 368.09s] service rc/disarm requested
+[ 368.09s] PHASE DONE  ref=[0.03, 0.04, 0.35] mode='SAFETY'
+[ 368.11s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ 4d_best_A rc=0 ############
+  wb_l1_omega_x : 0.25 -> 0.25
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+
+############ l1_4d/4d_best_B  omega_x=0.25 ############
+=== [l1_4d/4d_best_B] 0. clean slate ===
+=== [l1_4d/4d_best_B] 1. controller stack ===
+=== [l1_4d/4d_best_B] 2. Pegasus / PX4 / arm ===
+=== [l1_4d/4d_best_B] 3. waiting for odometry ===
+=== [l1_4d/4d_best_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d/4d_best_B] 3c. waiting for the arm ===
+=== [l1_4d/4d_best_B] 4. flying ===
+=== [l1_4d/4d_best_B] done (driver rc=0) ===
+[ 337.05s] mode -> SAFETY
+[ 337.05s] planner -> IDLE
+[ 337.07s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 349.07s] PHASE LAND  ref=[-0.011, 0.028, 0.993] mode='SAFETY'
+[ 369.07s] service rc/disarm requested
+[ 369.07s] PHASE DONE  ref=[-0.011, 0.028, 0.35] mode='SAFETY'
+[ 369.09s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ 4d_best_B rc=0 ############
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml

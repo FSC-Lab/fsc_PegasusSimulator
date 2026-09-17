@@ -1,0 +1,11 @@
+l1_4d 4d_wx2 gains='omega_x=2.0' driver='--hold-between 16' 2026-09-16T23:59:22-04:00
+l1 6d_A gains='' driver='--hold-between 16' 2026-09-17T00:06:31-04:00
+l1_4d 4d_wx0p5 gains='omega_x=0.5' driver='--hold-between 16' 2026-09-17T00:13:35-04:00
+l1_4d 4d_wx6 gains='omega_x=6.0' driver='--hold-between 16' 2026-09-17T00:20:46-04:00
+l1 6d_B gains='' driver='--hold-between 16' 2026-09-17T00:27:49-04:00
+l1_4d 4d_blk gains='omega_x=2.0 omega_x_t=2.0 omega_x_r=0.5 omega_x_q=0.5' driver='--hold-between 16' 2026-09-17T09:06:18-04:00
+l1_4d 4d_wx0p25 gains='omega_x=0.25 omega_x_t=0 omega_x_r=0 omega_x_q=0' driver='--hold-between 16' 2026-09-17T09:07:31-04:00
+l1_4d 4d_wx0p25 gains='omega_x=0.25 omega_x_t=0.0 omega_x_r=0.0 omega_x_q=0.0' driver='--hold-between 16' 2026-09-17T09:14:51-04:00
+l1_4d 4d_blk_slow gains='omega_x=2.0 omega_x_t=2.0 omega_x_r=0.25 omega_x_q=0.25' driver='--hold-between 16' 2026-09-17T09:21:56-04:00
+l1_4d 4d_best_A gains='omega_x=0.25' driver='--hold-between 16' 2026-09-17T09:29:52-04:00
+l1_4d 4d_best_B gains='omega_x=0.25' driver='--hold-between 16' 2026-09-17T09:37:02-04:00

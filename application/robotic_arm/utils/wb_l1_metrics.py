@@ -23,6 +23,16 @@ Debug array layout (fsc_autopilot_ros2, wb_control_debug):
   [52..55] unallocated wrench      [56] streamed reference fresh
   [57] L1 active  [58..61] F_hat_y [62..71] d_hat^c (UNFILTERED)
   [72..77] w_hat_e                 [78..87] w_hat      [88] outputs on a bound
+  [89..92] u3_est raw  [93..96] u3_est applied (per-joint cap)
+  [97..100] F_hat RAW (4-D attribution: the joint-row reading, what the
+            collision test sees; zero on the 6-D path)
+  [101..104] w_hat_q (4-D joint-row trim)   [105] chi (1 = free flight)
+
+ON THE 4-D RIG [58..61] IS ZERO BY CONSTRUCTION in free flight (the phase
+flag gates it), so `phantom_Fy_*` reads 0 there and is not the number to
+compare. The like-for-like phantom on that design is the RAW F_hat at
+[97..100], reported as `phantom_Fraw_*`; it is what the impedance WOULD have
+rendered without the gate, and what the trim w_hat_q is absorbing.
 """
 
 import sys
@@ -43,6 +53,9 @@ D_DC = slice(62, 72)
 D_WE = slice(72, 78)
 D_WHAT = slice(78, 88)
 D_NCLAMP = 88
+D_FRAW = slice(97, 101)   # 4-D attribution only
+D_WQ = slice(101, 105)
+D_CHI = 105
 
 
 def score(path, settle=20.0):
@@ -196,6 +209,19 @@ def score(path, settle=20.0):
     out["phantom_Fy_late_N"] = np.nanmean(fy_f[late])
     out["phantom_Fy_max_N"] = np.nanmax(fy_f[soak])
     out["phantom_Fy_psi_Nm"] = np.nanmean(np.abs(d[:, D_FY][:, 3])[late])
+    # 4-D attribution: the RAW joint-row reading (zero on the 6-D path).
+    if d.shape[1] > D_CHI:
+        fr = np.linalg.norm(d[:, D_FRAW][:, :3], axis=1)
+        chi = np.nan_to_num(d[:, D_CHI])
+        if np.nanmax(np.abs(d[:, D_FRAW])) > 0.0:
+            out["four_d"] = True
+            out["phantom_Fraw_force_N"] = np.nanmean(fr[soak])
+            out["phantom_Fraw_late_N"] = np.nanmean(fr[late])
+            out["phantom_Fraw_max_N"] = np.nanmax(fr[soak])
+            out["phantom_Fraw_psi_Nm"] = np.nanmean(np.abs(d[:, D_FRAW][:, 3])[late])
+            wq = d[:, D_WQ]
+            out["wq_hat_late_Nm"] = float(np.nanmax(np.abs(wq[late])))
+            out["chi_free_frac"] = float(np.nanmean(chi[soak]))
 
     # ---- per-leg scoring: the x / y / yaw steps and the compatible
     # trajectory. Each leg is bounded by its own mark and the next one.
@@ -269,6 +295,12 @@ ROWS = [
     ("phantom_Fy_late_N", "{:.4f}", "N"),
     ("phantom_Fy_max_N", "{:.4f}", "N"),
     ("phantom_Fy_psi_Nm", "{:.4f}", "N.m"),
+    ("four_d", "{}", ""),
+    ("phantom_Fraw_force_N", "{:.4f}", "N"),
+    ("phantom_Fraw_late_N", "{:.4f}", "N"),
+    ("phantom_Fraw_max_N", "{:.4f}", "N"),
+    ("phantom_Fraw_psi_Nm", "{:.4f}", "N.m"),
+    ("wq_hat_late_Nm", "{:.4f}", "N.m"), ("chi_free_frac", "{:.3f}", ""),
     ("we_force_N", "{:.4f}", "N"), ("we_moment_Nm", "{:.4f}", "N.m"),
     ("what_thrust_N", "{:.3f}", "N"), ("n_clamped_frac", "{:.3f}", ""),
     ("dc_z_std_N", "{:.3f}", "N"), ("dhat_z_std_N", "{:.4f}", "N"),

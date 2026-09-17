@@ -50,7 +50,11 @@ ROLLOUT_STEPS = 40
 #: implementation has: N = 1 vs N > 1 adaptation, equal vs unequal A_s across
 #: the three channel groups, minimum-norm vs prior-variance L_c, and the
 #: decompose on/off switch that selects between the attributed and the lumped
-#: task force.
+#: task force. The three `four-d-*` sets (2026-09-16) cover the note's
+#: September revision: the joint-row attribution in free flight (trim live),
+#: in a task-flagged contact (trim frozen, F_hat_y rendered), and with the
+#: collision-threshold fallback set low enough to trip mid-rollout so both
+#: edges of its hysteresis are recorded.
 GAIN_SETS = [
     dict(tag="baseline", a_t=2.0, a_r=2.0, a_q=2.0, adapt_period_s=0.0,
          omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5, omega_i=1.0,
@@ -74,6 +78,22 @@ GAIN_SETS = [
          decompose=True, max_force_n=1.5, max_torque_nm=0.2,
          max_joint_nm=0.15, max_wrench_force_n=2.0,
          max_wrench_torque_nm=0.3),
+    dict(tag="four-d-free", a_t=2.0, a_r=2.0, a_q=2.0, adapt_period_s=0.0,
+         omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5, omega_x=6.0,
+         four_d=True, omega_q=0.5, contact=False),
+    dict(tag="four-d-contact", a_t=4.0, a_r=2.0, a_q=2.0, adapt_period_s=0.0,
+         omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5, omega_x=20.0,
+         four_d=True, omega_q=0.5, contact=True, max_wrench_force_n=3.0,
+         max_wrench_torque_nm=0.2, max_force_n=4.0, max_torque_nm=0.3,
+         max_joint_nm=0.25),
+    dict(tag="four-d-threshold", a_t=2.0, a_r=2.0, a_q=2.0,
+         adapt_period_s=0.008, omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5,
+         omega_x=12.0, four_d=True, omega_q=1.0, contact=False,
+         collision_threshold_n=0.05),
+    dict(tag="four-d-blocks", a_t=2.0, a_r=2.0, a_q=2.0, adapt_period_s=0.0,
+         omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5, omega_x=20.0,
+         four_d=True, omega_q=0.2, contact=False,
+         omega_x_t=2.0, omega_x_r=0.5, omega_x_q=0.5),
 ]
 
 
@@ -177,6 +197,11 @@ def main():
                 "w_hat": _j(est["w_hat"]),
                 "w_e": _j(est["w_e"]),
                 "adapted": bool(est["adapted"]),
+                # four-dimensional attribution outputs (zero unless four_d)
+                "F_raw": _j(est["F_raw"]),
+                "d_int_f": _j(est["d_int_f"]),
+                "w_q_hat": _j(est["w_q_hat"]),
+                "chi_free": bool(est["chi_free"]),
             })
             obs.propagate(dyn, xi, u, DT)
 
@@ -215,10 +240,13 @@ def main():
     # that silently produced zeros is obvious.
     for r in data["rollouts"]:
         last = r["steps"][-1]
-        print(f"  {r['tag']:<14s} |d^c|={np.abs(last['d_sigma_c']).max():9.4f}"
+        n_contact = sum(1 for s in r["steps"] if not s["chi_free"])
+        print(f"  {r['tag']:<16s} |d^c|={np.abs(last['d_sigma_c']).max():9.4f}"
               f"  |d_f|={np.abs(last['d_f']).max():8.4f}"
               f"  |F_y|={np.abs(last['F_y']).max():8.4f}"
               f"  |w_e|={np.abs(last['w_e']).max():8.4f}"
+              f"  |F_raw|={np.abs(last['F_raw']).max():8.4f}"
+              f"  contact steps={n_contact:2d}"
               f"  adapted={last['adapted']}")
     return 0
 

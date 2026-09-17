@@ -3102,3 +3102,90 @@ comparable with a run from here on** — the frictionless baseline is
 `PEGASUS_ARM_FRICTION_SCALE=0 PEGASUS_ARM_MASS_SCALE=1.0` reproduces that plant
 for an A/B. The GMO twin (§7.14) carries the same values on purpose: the repo's
 own rule is that the two sim yamls must not describe different plants.
+
+**THE FOUR-DIMENSIONAL ATTRIBUTION — THE NOTE'S SEPTEMBER REVISION, IMPLEMENTED,
+PARITY-LOCKED AND FLOWN AGAINST THE 6-D DESIGN ON THE SAME PLANT (2026-09-16/17,
+user request).** `disturbance_observer_draft.tex` ("the four-dimensional interaction
+wrench"; the 6-D design is archived in `_backup.tex`) replaces the metric +
+projector + identifier of the 2026-09-06 observer with an ALGEBRAIC attribution on
+the JOINT ROWS: `w_e = S_e^T F + k` with `k` joint-invisible, `[w_Σ]_q = w_q +
+J_yq^T F` (a platform wrench has `[w]_q = 0` EXACTLY), `F̂ = J_yq^-T([ŵ_Σ]_q − ŵ_q)`,
+`ŵ_q` a slow trim (`ω_q`) in free flight and frozen in contact, `F̂_y = (1−χ) C_x F̂`
+(ZERO in free flight by construction), `u3`'s feedforward `d_int^f = C_x T^-T ŵ_int`.
+Layer 1 untouched. Everything additive: the `four_d` branch of `wb_l1_observer.cpp`
++ `l1_observer.py` (self-test section 6: exact attribution in contact to 2e-15 where
+the 6-D identifier had 0.59 N of error), keys `wb_l1_four_d / omega_q / contact /
+collision_threshold_n / omega_x_{t,r,q}`, debug [97..100] raw F̂ / [101..104] ŵ_q /
+[105] χ, a 4D banner + per-second watch line, `WbL1ParityTest` 9 rollouts, **same
+executable** — the yaml `..._whole_body_l1_4d_..._sim.yaml` is the switch; new
+stack script `start_whole_body_l1_4d_..._stack.sh` and Pegasus launcher
+`start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh`,
+which READS `wb_l1_four_d` OFF THE RUNNING NODE (`ros2 param get`) and refuses the
+6-D stack, since a process-name gate cannot tell them apart. Tooling:
+`wb_l1_tune_cycle.sh l1_4d`, `wb_l1_set_gains.py --four-d`, `phantom_Fraw_*` in
+`wb_l1_metrics.py`, `|Fraw|` in `wb_compare_metrics.py`; campaign
+`docs/docs_aerial_manipulator/l1_4d_20260916/` (`run_4d.sh`, `summarize_4d.py`,
+`ripple_4d.py`, `plot_4d.py`). Commands + every table: Command.md §7.17.
+- **THE ONE TUNING KNOB IS `ω_x`, AND THE ANSWER IS 0.25 rad/s — the note's own scalar
+  form, shipped.** In free flight the 4-D law differs from the flown 6-D one in exactly
+  two places: `F̂_y ≡ 0`, and `u3`'s feedforward is `C_x` of the WHOLE residual at ONE
+  bandwidth where the 6-D fed the per-group `d_f` (2/0.5/0.5). The 6-D yaml's `ω_x = 20`
+  (a wrench-reading smoother there) is NOT a starting point. Sweep, 10 flights, none
+  aborted, 0 % clamp/saturation: 6 → 339 mN·m of j2 ripple at the airframe's 0.94 Hz
+  attitude mode (§7.15.12's metastable cycle) and 14° tilt p-p; 2 → 259; 0.5 → 196;
+  **0.25 → 5.0 mN·m, tilt ripple 0.075°, below BOTH 6-D baselines (7.8 / 70), repeated
+  3/3.** NOT a bandwidth mismatch: per-block `Ω_x` at the 6-D's own 2/0.5/0.5 still
+  rippled 167, 2/0.25/0.25 rippled 182 — the TRANSLATIONAL block of the feedforward at
+  2 rad/s excites the mode and the boundary is between 0.25 and 0.5. What the 6-D had
+  and the 4-D removes on purpose is the rendered `−(Λ_y M_y⁻¹ − I) F̂_y`, a ~0.3–0.4 N
+  force off a 20 rad/s filter acting as fast momentum feedback into `u3`, i.e. damping
+  that mode by accident.
+- **WHAT THE ATTRIBUTION BUYS ON THE CONFIG-A PLANT, SCORED PER STATE** (friction
+  ×1.05 + arm mass ×1.05 are JOINT-ROW disturbances, the class a 6-D metric can never
+  keep off the task). **EVERY LEG IS A COMPATIBLE TRAJECTORY**, steps included, so
+  every state has a reference; `traj_errors.py` scores each channel in its own unit,
+  peak/rms/settled-rms per leg (`traj_errors.txt`/`.csv`). Pooled over the mission,
+  6-D → 4-D settled: CoM position 30 → 13 mm (2.3×), CoM velocity 22 → 17 mm/s,
+  attitude 1.29 → 0.50° (2.6×), EE POSITION 5.5 → 3.0 mm (1.8×), **EE HEADING
+  9.57 → 1.33° (7.2×)**, **joints 9.68 → 1.88° (5.1×)**. **THE PEAKS ARE IDENTICAL ON
+  EVERY CHANNEL** (247 vs 241 mm, 9.4 vs 9.3°, 32 vs 35 mm, 26.3 vs 26.9°) — peak is
+  the planner's transition, which both designs fly the same way; the attribution
+  changes only what is left after arrival, and it changes ORIENTATION far more than
+  translation. A translation-only metric calls these two designs nearly equivalent.
+  **THE 6-D HEADING ERROR IS A SLOW OSCILLATION, NOT AN OFFSET**: 0 → 13° p-p at
+  **0.06–0.11 Hz**, continuous through hover and the settled window of every leg
+  (4-D: 0.8° p-p); the joint column mirrors it because the EE heading is carried by
+  the `(q1,q4)` pair. The 4-D's one HIGHER peak, 17–25° on the three trajectory legs,
+  is tracking lag on a commanded 60° heading sweep that decays to 0.9–2.4° inside the
+  hold, where the 6-D's comparable peak never decays; both lag it because
+  `K_y,ψ = 0.3` is deliberately soft. Entry transient and `d̂_z` (−11.18 N) identical
+  (same Layer 1). Raw F̂ (collision reading, gated) 0.15–0.24 N late with `ŵ_q` at
+  0.05–0.13 N·m still converging at `ω_q = 0.2`; instantaneously it is a 250 Hz
+  momentum difference through `J_yq⁻ᵀ` and noisy (~1 N std) — a collision threshold
+  sits on the filtered value.
+- **A UNIT DEFECT IN THE PER-LEG TOOL, FOUND 2026-09-17 AND FIXED.**
+  `wb_compare_metrics.py` reported an "EE error" that was `norm(e_y)` over ALL FOUR
+  components — three in METRES plus `sin(heading error)`, DIMENSIONLESS. An 8.7°
+  heading error contributes 0.151 to that norm and was printed as **"151 mm" of EE
+  position error**; the first published version of the §7.17.4 table and the artifact
+  carried 110–233 mm "EE" figures that were mostly heading. **EE position was never
+  more than ~7 mm settled on either design.** The tool now reports `peakEE`/`settEE`
+  (mm) and `pkHead`/`setHead` (deg) separately, and the campaign's numbers are
+  recomputed per channel by `traj_errors.py` and cross-checked against it. **Never
+  norm a task vector whose components carry different units**; and note `‖e_R‖` and
+  `e_y[3]` are SINES, inverted through `asin`, not radians. Every analysis window
+  must also be masked to DIRECT: the last leg runs past the abort into the SAFETY
+  descent, where the node publishes the shorter debug prefix and the recorder
+  zero-pads it — which reads as a 0 mm CoM "error" and a 65° joint "error".
+- **Traps hit:** `wb_l1_set_gains.py` wrote `omega_x_t=0` as an INTEGER and rclcpp
+  refused the double at startup — the node died before its first log line and the
+  cycle reported "never came up" (the setter now writes a float when the file holds
+  one); a running `run_4d.sh` must NOT be edited (bash reads scripts by byte offset —
+  revert to the original bytes if you did); the campaign's EXIT trap restores the
+  yaml from a backup taken at START, so a mid-campaign yaml edit needs the backup
+  refreshed or is lost; `setsid nohup … &`'s "Done" is the shell reaping the wrapper,
+  not the campaign; `pgrep -f run_4d.sh` matches the checking shell itself; the
+  session's scratchpad does not survive a restart — keep drafts in the repo.
+- **NOT covered:** contact (the `χ = 0` branch is parity-locked and self-tested, never
+  flown — no contact exists in Isaac); `ω_q` as a flight knob; hardware. `wb_l1_omega_x`
+  on the 6-D yaml is unchanged at 20 (there it filters only the wrench reading).

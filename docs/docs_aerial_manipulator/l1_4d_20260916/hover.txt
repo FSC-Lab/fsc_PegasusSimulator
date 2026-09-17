@@ -1,0 +1,7 @@
+HOVER SOAK WINDOW ONLY (DIRECT +26..+43 s: after the entry settle, before the first step):
+run                     tau_j1  tau_j2  tau_j3  tau_j4    tilt  |e_psi|   |Fy| |Fraw|   (band-passed 0.5-3 Hz std, mN.m / deg; EE heading mean deg; phantom N; all DIRECT t>40 s)
+l1_6d_A                    9.7    17.7    12.1    11.9   0.183     7.82  0.301  0.000   CoM  29.9 mm  EE  5.2 mm
+l1_6d_B                   10.3    11.2     7.3     9.8   0.194     8.88  0.298  0.000   CoM  27.9 mm  EE  5.0 mm
+l1_4d_4d_wx0p25            5.8     6.5     7.6     1.0   0.117     0.17  0.000  0.321   CoM  22.3 mm  EE  5.7 mm
+l1_4d_4d_best_A            5.5     7.2     9.4     4.5   0.197     0.26  0.000  0.365   CoM  26.2 mm  EE  6.2 mm
+l1_4d_4d_best_B            6.1     8.3     8.9     6.0   0.148     0.29  0.000  0.330   CoM  23.8 mm  EE  6.0 mm
