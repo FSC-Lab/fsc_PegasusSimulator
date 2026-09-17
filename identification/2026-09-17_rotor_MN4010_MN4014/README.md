@@ -39,10 +39,18 @@ time to 1 ms at this bench's noise and sample rate.
 
 ## Two things this data cannot say
 
-1. **`PROP_J0` (the zero-thrust advance ratio).** A static stand has no airflow. On the geometric
-   estimate a 15×5 gives J0 ≈ 0.33, and at 16 m/s the cruise sits at J ≈ 0.30 — *at* the point where
-   this prop stops making thrust. See the 2026-09-17 entry in `claud_implementation.md`: this is a
-   propeller-choice question, not a control question.
+1. **`PROP_J0` (the zero-thrust advance ratio).** A static stand has no airflow, so this number is
+   not in the data. The sim's catalogue carries a fitted line, J0 = 0.72·(pitch/D) + 0.24 (which
+   reproduces 12x6 → 0.60, 12x8 → 0.72, 12x10 → 0.84), giving **J0 ≈ 0.48 for a 15×5**. At that value
+   the cruise is *fine*: nD = 53.7 m/s on the MN_4014 at full speed, so thrust reaches zero only at
+   ~26 m/s, and 16 m/s needs 71 % throttle — 29 % spare against the flown 12x8's 22 % on the same
+   arithmetic. The MN_4010 is thinner at 80 % / 20 %.
+   **But the sensitivity is steep and it is why the number still has to be measured:** cruise throttle
+   runs 97 % at J0 0.33, 86 % at 0.38, 71 % at 0.48, 62 % at 0.58. The low end is the
+   lateral-authority-notch failure (the front pair saturated, nothing left for the inner loop's
+   differential). Piece 2 needs J0 to ±0.1.
+   *(An earlier version of this file claimed a 15×5 could not hold the cruise. That used a naive
+   geometric J0 of 0.33 and ignored that this prop turns a much larger nD; it was wrong.)*
 2. **The dead time.** The fit gives 81–88 ms from the PX4 throttle timestamp to the first RPM
    response, but the stand's `ESC signal (µs)` column is empty, so that number cannot be separated
    from the clock offset between the PX4 logger and the stand. **For the next bench session: log the
