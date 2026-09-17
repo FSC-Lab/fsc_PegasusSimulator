@@ -1,0 +1,16 @@
+=== [l1_4d/ee_circle_A] 0. clean slate ===
+=== [l1_4d/ee_circle_A] 1. controller stack ===
+=== [l1_4d/ee_circle_A] 2. Pegasus / PX4 / arm ===
+=== [l1_4d/ee_circle_A] 3. waiting for odometry ===
+=== [l1_4d/ee_circle_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d/ee_circle_A] 3c. waiting for the arm ===
+=== [l1_4d/ee_circle_A] 4. flying (ee_circle) ===
+=== [l1_4d/ee_circle_A] done (driver rc=0) ===
+[ 115.37s] mission complete -> SAFETY
+[ 115.37s] PHASE ABORT_SETTLE  mode=DIRECT plan=HOLD ee=READY s=0.90 max=1.13 T=57.04s EE err 0.1mm/0.0deg
+[ 115.37s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 127.39s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[ 147.41s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 147.41s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+EE tracking during the run: 856 samples, mean 124.0 mm, p95 167.5 mm, max 177.8 mm
+completed

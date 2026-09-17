@@ -5686,7 +5686,11 @@ read only at node startup, two ground stations, `Ctrl-b d`).
 
 # 1. build after every pull (the cd IS part of the command; keep BUILD_TESTING on
 #    here — the parity gtests are how a change to wb_l1_observer.cpp is checked)
-cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2
+#    fsc_trajectory_planner (the C++ whole-body planner the stack's `planner` window
+#    runs, a sibling at ~/ros2_ws/src/fsc_trajectory_planner since 2026-09-17) LINKS
+#    this package's wb_law, which compiles wb_l1_observer.cpp -- so it is rebuilt
+#    after every law/observer change too; colcon orders the two.
+cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2 fsc_trajectory_planner
 ~/ros2_ws/build/fsc_autopilot_ros2/fsc_autopilot_lib/single_vehicle_baseline/tests/fsc_autopilot_tests \
   --gtest_filter='WbL1ParityTest.*:WbParityTest.*'         # 8 tests, all must pass
 #    the Python reference and the fixture, whenever the observer changes:
@@ -5931,3 +5935,107 @@ nearly equivalent.
 `w_hat_int` split — is parity-locked and self-tested to 2e-15 against the note's
 exact-attribution lemma, but no contact exists in Isaac, so it has never been flown);
 `ω_q` in flight (never a torque in free flight); hardware.
+
+#### 7.17.5 The 4-D rig on the C++ trajectory planner, and its hardware pair (2026-09-17)
+
+**What moved under it.** The whole-body planner is now `fsc_trajectory_planner`
+(§7.15.11), and it gained the END-EFFECTOR TRAJECTORY mode (§7.15.12). On this
+desktop the package is cloned beside the flight stack at
+`~/ros2_ws/src/fsc_trajectory_planner`. It links `fsc_autopilot_ros2::wb_law`, and
+that library compiles `wb_l1_observer.cpp` too, so it is rebuilt after every
+law/observer change (§7.17.1 step 1 now builds both). The 4-D rig needed no law
+change for it: the planner streams the same `WholeBodyReference` the node already
+consumed, and the attribution sits entirely downstream of the reference.
+
+**What was adapted, and how to re-derive it.** The 4-D sim yaml and its isaacsim
+stack script were REBUILT as "the merged 6-D twin + the saved 6-D→4-D patch" —
+not hand-edited. So they now carry the `/**/whole_body_trajectory_planner` section
+(bspline backend, every `ee_traj_*` key) and launch the C++ node in the `planner`
+window exactly as the 6-D stack does. The old-vs-new 4-D delta was precisely the
+incoming planner change. Diff the pair before any campaign, as before:
+
+```bash
+cd ~/ros2_ws/src/fsc_autopilot_ros2/config
+diff params_single_aerial_manipulator_whole_body_l1{,_4d}_direct_actuation_t650_sim.yaml
+diff params_single_aerial_manipulator_whole_body_l1{,_4d}_direct_actuation_t650.yaml
+```
+
+**Flying the EE trajectory mode on the 4-D rig.** From the arm GS's "EE
+trajectory" tab (select Circle/Figure-8 → slider → Go to start → Start trajectory),
+exactly as §7.15.12. Or unattended through the standard harness. The planner
+package's own `ee_trajectory_sim_cycle.sh` hard-codes the 6-D stack, so
+`wb_l1_tune_cycle.sh` gained a mission selector that runs that package's installed
+driver on any of the three rigs:
+
+```bash
+WB_L1_MISSION=ee_circle  WB_L1_EE_SCALE=0.8 application/robotic_arm/utils/wb_l1_tune_cycle.sh l1_4d <tag> shiqi_machine
+WB_L1_MISSION=ee_figure8 WB_L1_EE_SCALE=0.8 application/robotic_arm/utils/wb_l1_tune_cycle.sh l1_4d <tag> shiqi_machine
+# WB_L1_MISSION unset (= standard) is the 7.15.5 mission via wb_l1_campaign_driver.py, unchanged
+```
+
+That driver records odometry, the planner's EE reference and the measured EE —
+not `wb_control_debug`, so §7.17.4's ripple and attribution scorers do not apply
+to its npz.
+
+**FLOWN 2026-09-17 on this desktop — the 4-D rig through BOTH shapes**
+(`docs/docs_aerial_manipulator/l1_4d_planner_20260917/`, harness above, scorer
+`ee_run_score.py`). Plant is §7.15's config A: friction ×1.05, arm mass ×1.05,
++17.6 % allocator kf, body mass/inertia ×1.10, CoM shift, rotor lag. Law is
+§7.17's: posture term absent, `ω_x` 0.25. Both flights ran the full sequence
+with no abort, no refusal and no INFEASIBLE: SAFETY climb → DIRECT (accepted
+first try) → select → READY → rescale to 0.8 s_max → Go-to-start → Start gate
+passed → run → HOLD → SAFETY → land → disarm. Go-to-start was a real planned
+transition (8.7 s for the circle).
+
+| run | s / s_max | T (lap) | EE ref speed | raw EE err mean / max | lag | residual after lag | flown vs commanded |
+|---|---|---|---|---|---|---|---|
+| circle 0.5 m, 2 laps | 0.905 / 1.131 | 57.0 s (26.5 s) | 0.133 m/s | 124 / 178 mm | 1.05 s | 55 mm | radius 0.450 of 0.500 m, centre (+0.035, +0.015) m |
+| figure-8 0.5 × 0.25 m, 2 laps | 0.286 / 0.358 | 171.7 s (83.8 s) | 0.034 m/s | 50 / 106 mm | 1.37 s | 27 mm | extent 0.970 × 0.464 of 1.0 × 0.5 m |
+
+z error 2 mm on both; DIRECT lasted 92 s and 205 s. s_max matches the planner
+package's documented binding bounds (circle: yaw rate at 1.13; figure-8:
+acceleration at 0.36). In DIRECT the 4-D watch line read `chi=free`, raw
+`|F_hat|` 0.08–0.24 N, and `w_hat_q` on J2 at −0.07 to −0.11 N·m — the arm
+mass/friction mismatch being trimmed on the joint rows, as designed. **This is
+the first recorded figure-8 flight on any rig** (§7.15.12 and the planner
+package record circles only).
+
+**Do NOT read the circle row as "4-D tracks better than §7.15.12's 6-D circle"**
+(215 mm, 1.90 s lag, radius 0.387 m). That flight ran on fsc_lab_machine
+(RTF ≈ 0.34, §7.15's 2026-09-11 finding) on a frictionless arm with the 6-D
+design. Three things differ, and §7.15.12 does not record how its lag was
+fitted. The matched comparison is one command on this desktop:
+`WB_L1_MISSION=ee_circle WB_L1_EE_SCALE=0.8 wb_l1_tune_cycle.sh l1 <tag>`. One
+flight per shape — repeat before quoting any number as a property (the
+2026-08-10 scatter lesson). The error has the same structure §7.15.12
+describes, a first-order lag with gain below one that shrinks with speed: the
+figure-8 moves at a quarter of the circle's speed and halves every column.
+
+**The HARDWARE pair (new, never flown):**
+`config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml`
+is the 6-D hardware yaml plus the identical parameter delta the sim pair carries
+(checked key by key), with identity `AM-T650-WB-L1-4D-HW`. It deliberately carries
+two values over from the 6-D hardware file. The first is the **2026-09-12
+experiment kf 4.260431e-05** (bench 4.540431e-05); restore the bench value in both
+files together. The second is the J4 stiction cap `wb_u3_estimate_max_j4 0.06`,
+which bounds the 4-D feedforward too, because `est_task` includes `d_int`. Launch
+with:
+
+```bash
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh uav_0
+```
+
+It is the 6-D hardware launcher (same shared `fsc_indoor_autopilot_stack`
+session, same C++ planner window with the measured `base_com` and the
+`[-1,1,1,-1]` sign map), plus a **FATAL design gate**. The gate requires
+`wb_l1_four_d: true` and observer `l1`, and refuses the 6-D hardware identity.
+That file is hardware-clean and would sail through the sim-value gate, and the
+node is the same executable, so only the yaml can say which design flies.
+`ALLOW_SIM_CONFIG` does not override it. Dry-run of the gates: the 4-D hardware
+yaml passes; the 6-D hardware yaml and the 4-D sim yaml are refused, each with
+its reason. Loaded into the real node and planner under `/uav_test`: 4-D banner,
+posture-OFF law check, mass cross-check, planner `straight_line` with the
+overrides and the `ee_traj_*` keys. **Both L1 hardware launchers' arm-side check
+now expects `current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.2]`** — the arm
+repo's TEMPORARY 2026-09-14 j4 trim. It had printed a red MISMATCH on every
+start. Move the two together when the trim is reverted.

@@ -3227,3 +3227,57 @@ which READS `wb_l1_four_d` OFF THE RUNNING NODE (`ros2 param get`) and refuses t
 - **NOT covered:** contact (the `χ = 0` branch is parity-locked and self-tested, never
   flown — no contact exists in Isaac); `ω_q` as a flight knob; hardware. `wb_l1_omega_x`
   on the 6-D yaml is unchanged at 20 (there it filters only the wrench reading).
+
+**THE 4-D RIG ON THE C++ TRAJECTORY PLANNER, THE THREE-REPO SYNC, AND A HARDWARE
+PAIR (2026-09-17, user request).** Local work in all three repos was committed and
+the remotes merged in (nothing pushed): Pegasus `dev_robotic_arm`,
+fsc_autopilot_ros2 `dev_CCM` (the Python planner deleted, `ee_traj_*` keys), and
+`fsc_trajectory_planner` cloned at **`~/ros2_ws/src/fsc_trajectory_planner`** on
+this desktop. The incoming notes say `~/Workspaces/fsc_autopilot_ws`; that is the
+other machine. Full record: Command.md §7.17.5.
+- **The arm GS's circle / figure-8 "EE trajectory" tab was ALREADY in the local
+  arm repo** (`omx-torque-control`, Longhao's 5d22f50/537a5c0/2abcd3d, and in the
+  Sep-14 GS build). There is **no `dev_robotic_arm` branch** on either arm remote
+  (`origin` = Gao907/fsc_open_manipulator; a separate FSC-Lab/fsc_open_manipulator
+  exists and its `omx-torque-control` is BEHIND the local checkout).
+- **Command.md renumbering:** the incoming §7.15.11 (C++ planner flight) and
+  §7.15.12 (EE circle) kept their numbers; the local PD+ section is now
+  **§7.15.13** and the friction-mismatch flights **§7.15.14**.
+- **4-D sim pair re-derived, not hand-edited:** merged 6-D twin + the saved
+  6-D->4-D patch, so the 4-D yaml carries `/**/whole_body_trajectory_planner`
+  (bspline, `ee_traj_*`) and the 4-D stack launches the C++ node. The planner
+  LINKS `wb_law`, which compiles `wb_l1_observer.cpp`: rebuild it after any
+  law/observer change (`colcon build --packages-select fsc_autopilot_ros2
+  fsc_trajectory_planner`). Verified: WbParityTest 4/4, WbReferenceBuilderTest
+  2/2, WbL1ParityTest 4/4, flat-planner parity, planner gtests 14/14, and both of
+  the planner's rig loopbacks (transition; EE circle, 8890 samples within 3 mm of
+  the radius) with `params_file:=` the 4-D sim yaml.
+- **`wb_l1_tune_cycle.sh` gained `WB_L1_MISSION=ee_circle|ee_figure8`** (default
+  `standard`, unchanged). It runs the planner package's installed
+  `ee_trajectory_sim_driver.py` on any of gmo/l1/l1_4d; that package's own
+  `ee_trajectory_sim_cycle.sh` hard-codes the 6-D stack and the other machine's
+  paths. The EE driver's npz has no `wb_control_debug`; score it with
+  `docs/docs_aerial_manipulator/l1_4d_planner_20260917/ee_run_score.py` (the
+  §7.15.12 metrics).
+- **FLOWN in Isaac on this desktop, both EE shapes on the 4-D rig** (config-A
+  plant), each end to end with no abort, refusal or INFEASIBLE:
+  - circle (s 0.905/1.131): raw EE error 124/178 mm, lag 1.05 s, residual
+    55 mm, radius 0.450 of 0.500 m.
+  - figure-8 (s 0.286/0.358): 50/106 mm, lag 1.37 s, residual 27 mm, extent
+    0.970 × 0.464 of 1.0 × 0.5 m. **The first recorded figure-8 flight on any
+    rig.**
+
+  The 4-D watch line showed `chi=free` and the J2 trim `w_hat_q` at about
+  −0.1 N·m. **NOT comparable with §7.15.12's 6-D circle**: that flight ran on
+  another machine at RTF 0.34, on a frictionless arm. The matched 6-D run is
+  `WB_L1_MISSION=ee_circle ... wb_l1_tune_cycle.sh l1 <tag>`. Data:
+  `docs/docs_aerial_manipulator/l1_4d_planner_20260917/`.
+- **4-D HARDWARE PAIR, never flown:**
+  `params_..._whole_body_l1_4d_direct_actuation_t650.yaml` (the 6-D hardware yaml
+  + the identical parameter delta, identity `AM-T650-WB-L1-4D-HW`) and
+  `fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh`,
+  with a FATAL design gate (`wb_l1_four_d: true`, not overridable). **It carries
+  the 6-D hardware file's 2026-09-12 experiment kf 4.260431e-05 on purpose**;
+  restore the bench value in both files together. Both L1 hardware launchers
+  now expect `current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.2]` (the arm's
+  TEMPORARY j4 trim); before, they printed a red MISMATCH on every start.

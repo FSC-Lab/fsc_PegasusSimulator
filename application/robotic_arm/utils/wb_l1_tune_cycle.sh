@@ -8,6 +8,18 @@
 # and yaml (..._l1_4d_..._sim.yaml); the Pegasus launcher reads wb_l1_four_d
 # off the running node to confirm which design is flying.
 #
+# MISSION (2026-09-17): WB_L1_MISSION picks what is flown after the bring-up.
+#   standard  (default) wb_l1_campaign_driver.py -- the 7.15.5 steps + compatible
+#             trajectories, full wb_control_debug recorded
+#   ee_circle / ee_figure8   fsc_trajectory_planner's END-EFFECTOR TRAJECTORY
+#             mode, flown by that package's installed ee_trajectory_sim_driver.py
+#             (select -> time scale -> go_to_start -> start, exactly what the arm
+#             GS's "EE trajectory" tab publishes). WB_L1_EE_SCALE = fraction of
+#             the planner's s_max (default 0.8). Records odometry, the EE
+#             reference and the measured EE, not the control debug. The planner
+#             package's own ee_trajectory_sim_cycle.sh hard-codes the 6-D stack;
+#             this is how the GMO / 6-D / 4-D rigs fly the same shape.
+#
 # All cases fly the SAME plant through the SAME mission with the SAME driver;
 # only the controller node and its yaml differ, which is the whole point. The
 # `_sim` yamls are used (not the comparison ones), because those are the pair
@@ -34,6 +46,9 @@ WHICH="${1:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]
 TAG="${2:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]}"
 CFG="${3:-shiqi_machine}"
 case "$WHICH" in gmo|l1|l1_4d) ;; *) echo "first arg must be gmo, l1 or l1_4d"; exit 2;; esac
+MISSION="${WB_L1_MISSION:-standard}"
+case "$MISSION" in standard|ee_circle|ee_figure8) ;; *)
+  echo "WB_L1_MISSION must be standard, ee_circle or ee_figure8"; exit 2;; esac
 
 PEG="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 # shellcheck source=/dev/null
@@ -71,6 +86,13 @@ set -u
 /usr/bin/python3 -c \
   "from fsc_autopilot_ros2_msgs.msg import PositionControllerReference" 2>/dev/null || {
   echo "FAILED: fsc_autopilot_ros2_msgs is not the built one." >&2; exit 1; }
+if [[ "$MISSION" != standard ]]; then
+  # The stacks launch the planner from this install; without it there is no EE
+  # trajectory mode to fly and the driver would only time out.
+  EE_DRIVER="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/install/fsc_trajectory_planner/lib/fsc_trajectory_planner/ee_trajectory_sim_driver.py"
+  [[ -f "$EE_DRIVER" ]] || {
+    echo "FAILED: $EE_DRIVER not found -- build fsc_trajectory_planner first." >&2; exit 1; }
+fi
 
 echo "=== [$WHICH/$TAG] 0. clean slate ==="
 "$AUT/scripts/isaacsim/stop_isaacsim_stack.sh" >/dev/null 2>&1
@@ -130,11 +152,18 @@ done
 [ "$ok" = 1 ] || echo "WARNING: no arm joint states -- DIRECT entry may refuse"
 sleep 10
 
-echo "=== [$WHICH/$TAG] 4. flying ==="
-/usr/bin/python3 "$PEG/application/robotic_arm/utils/wb_l1_campaign_driver.py" \
-    --out "$OUT/${WHICH}_${TAG}.npz" ${WB_L1_DRIVER_ARGS:-} \
-    > "$LOGS/${WHICH}_${TAG}.log" 2>&1
-rc=$?
+echo "=== [$WHICH/$TAG] 4. flying ($MISSION) ==="
+if [[ "$MISSION" == standard ]]; then
+  /usr/bin/python3 "$PEG/application/robotic_arm/utils/wb_l1_campaign_driver.py" \
+      --out "$OUT/${WHICH}_${TAG}.npz" ${WB_L1_DRIVER_ARGS:-} \
+      > "$LOGS/${WHICH}_${TAG}.log" 2>&1
+  rc=$?
+else
+  /usr/bin/python3 "$EE_DRIVER" --shape "${MISSION#ee_}" --scale "${WB_L1_EE_SCALE:-0.8}" \
+      --out "$OUT/${WHICH}_${TAG}.npz" ${WB_L1_DRIVER_ARGS:-} \
+      > "$LOGS/${WHICH}_${TAG}.log" 2>&1
+  rc=$?
+fi
 
 echo "=== [$WHICH/$TAG] done (driver rc=$rc) ==="
 tail -8 "$LOGS/${WHICH}_${TAG}.log"

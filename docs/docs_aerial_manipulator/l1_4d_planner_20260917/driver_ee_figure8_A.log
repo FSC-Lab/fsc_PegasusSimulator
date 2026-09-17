@@ -1,0 +1,29 @@
+[   0.85s] PHASE OFFBOARD  mode=SAFETY plan= ee=
+[   1.87s] PHASE ARM  mode=SAFETY plan=IDLE ee=NONE
+[   1.87s] service rc/offboard -> std_srvs.srv.Trigger_Response(success=True, message='Offboard mode request sent')
+[   4.89s] PHASE CLIMB  mode=SAFETY plan=IDLE ee=NONE
+[   4.89s] service rc/arm -> std_srvs.srv.Trigger_Response(success=True, message='Arm command sent')
+[   6.91s] PHASE TAKEOFF  mode=SAFETY plan=IDLE ee=NONE
+[  21.01s] PHASE ENTER_DIRECT  mode=SAFETY plan=IDLE ee=NONE
+[  21.03s] PHASE CONFIRM  mode=SAFETY plan=IDLE ee=NONE
+[  21.03s] service set_direct_mode(true) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to DIRECT mode')
+[  21.05s] PHASE DIRECT_SETTLE  mode=DIRECT plan=HOLD ee=NONE
+[  36.05s] PHASE SELECT  mode=DIRECT plan=HOLD ee=NONE
+[  37.07s] READY: s_max 0.358 -> requesting s = 0.286
+[  37.07s] PHASE RESCALE  mode=DIRECT plan=HOLD ee=PENDING_RESCALE
+[  37.21s] READY s=0.29 max=0.36 T=171.69s EE err 0.0mm/0.0deg  T_total 171.7s lap 83.8s
+[  37.21s] PHASE GO_TO_START  mode=DIRECT plan=HOLD ee=READY s=0.29 max=0.36 T=171.69s EE err 0.0mm/0.0deg
+[  37.21s] service ee_trajectory/go_to_start -> std_srvs.srv.Trigger_Response(success=True, message="planning the compatible transition to the trajectory's start; it executes as soon as it is PLANNED")
+[  46.17s] PHASE START  mode=DIRECT plan=HOLD ee=READY s=0.29 max=0.36 T=171.69s EE err 0.0mm/0.0deg
+[  46.17s] service ee_trajectory/start -> std_srvs.srv.Trigger_Response(success=True, message='executing the EE trajectory, T = 171.7 s')
+[  46.19s] PHASE RUN  mode=DIRECT plan=EXECUTING T=171.7s ee=READY s=0.29 max=0.36 T=171.69s EE err 0.0mm/0.0deg
+[ 217.87s] run complete
+[ 217.87s] PHASE POST_HOLD  mode=DIRECT plan=HOLD ee=READY s=0.29 max=0.36 T=171.69s EE err 0.0mm/0.0deg
+[ 225.89s] mission complete -> SAFETY
+[ 225.89s] PHASE ABORT_SETTLE  mode=DIRECT plan=HOLD ee=READY s=0.29 max=0.36 T=171.69s EE err 0.0mm/0.0deg
+[ 225.89s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 237.91s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[ 257.93s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 257.93s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+EE tracking during the run: 2575 samples, mean 50.4 mm, p95 85.6 mm, max 105.7 mm
+completed
