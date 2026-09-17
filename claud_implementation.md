@@ -11,6 +11,88 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-17 — The first measured propulsion: MN_4014 + 15×5, and a yaw-gain casualty
+
+**sim `<this commit>` · controller `airframe_id.cfg` · NEW identity references**
+
+### What changed, and where each number came from
+
+| constant | was | now | source |
+|---|---|---|---|
+| `max_thrust` | 18.0 N | 36.3 N | thrust stand, extrapolated to 100 % from ≤ 80 % |
+| `omega_max` | 749 rad/s | 885.8 | thrust stand |
+| `tau_spin` | 0.12 s | 0.067 s | thrust stand, **at the hover point** |
+| `cq` | 0.12 m | 0.0190 m | thrust stand, identical from both motors |
+| prop | 12×8, J0 0.72 | 15×5, J0 0.52 | UIUC wind-tunnel database |
+| tilt `tau` / `rate_deg_s` / `max_deg` | 0.12 / 80 / 90 | 0.0756 / 106 / 100 | specified by the user |
+
+Four paired copies moved together: `vtol.py` (`quad_tiltrotor_config` + the `PROPS` catalogue),
+`tests/plant_double.py`, the controller's `airframe_id.cfg`, and the catalogue's J0 for every entry.
+`test_prop_pairing.py`, `test_tilt_limit_pairing.py` and `test_tank_model_pairing.py` all pass.
+
+### Reproduce
+
+```bash
+# the rotor fit (tau, omega_max, max_thrust, cq) from the bench logs
+~/envs/isaac_env/bin/python3 scripts/ana_spin_lag.py --dir identification/2026-09-17_rotor_MN4010_MN4014/MN_4014
+~/envs/isaac_env/bin/python3 scripts/ana_spin_lag.py --selftest      # validates the fitter first
+
+# J0 from published wind-tunnel data (downloads 87 MB, md5 a41e484f1fd0fb6ff80b76e27410808b)
+~/envs/isaac_env/bin/python3 scripts/ana_prop_j0.py --db <UIUC-propDB> --min_d 10 --pd 0.3333
+
+# the regressions
+KE_DIR=~/flight_bags/ke_sweeps KE_NODE=nmpc_cascade_imu_node.py bash scripts/ke_sweep.sh \
+  reg_mn4014 1 16 --est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02
+KINDS="imu-mdob" PREDS="on" bash scripts/est_sweep.sh mn4014_turns turns 1 3 --noise_acc 0.02
+~/envs/isaac_env/bin/python3 tests/test_hover_hold.py                # the yaw gate -- see below
+```
+
+### Result
+
+| | 12×8 baseline | MN_4014 + 15×5 |
+|---|---|---|
+| straight line, 16 seeds | 16/16, pk 14.2°, fails 2, stop 8.8 s | **16/16, pk 13.9°, fails 6, stop 8.8** |
+| turning mission, 3 seeds | 3/3, bob orbit 0.058 N, hits 0, roll sd 0.150°, u_ad 0.006 | **3/3, 0.049, 0, 0.154, 0.006** |
+| hover yaw gate | shipped gains **OK** | shipped gains **OSCILLATE** |
+
+### The one casualty, and how it was attributed
+
+The measured `cq` cuts the maximum hover yaw moment 3.99 → 0.74 N·m, i.e. **466 → 86 deg/s² of yaw
+acceleration**, and `test_hover_hold.py` turns: the shipped kR_yaw 5.0 / kW_yaw 2.0 oscillates, and
+the highest gains that hold a clean hover are **3.0 / 1.5**. A/B'd by putting `cq` back to 0.12 and
+re-running — the shipped gains pass there — so it is the cQ and nothing else in the build.
+`vtol.py`'s own comment had always said `0.12 (raised for MC yaw authority; sim-only, real props
+~0.02)`; the bench says 0.0190 and the yaw loop had been tuned against 6× the real authority.
+**Not retuned here** — a controller gain change is its own piece with its own gate.
+
+Neither mission exposes it, because above ~10 m/s yaw is the rudder's job and the rotor differential
+is not the actuator. The exposure is hover and the low-speed ends.
+
+### Method notes worth keeping
+
+- **Spin-up vs spin-down is an averaging artefact, not an asymmetry.** Whole-range medians read
+  0.064 s up / 0.532 s down; spin-down is drag-driven and drag ∝ ω², so its constant scales with 1/ω
+  (0.53 s at 20→10 % throttle, 0.057 s at 80→70 %). At the hover point the two agree (0.064 / 0.072).
+  Always take τ where the aircraft lives.
+- **The dead time (81–88 ms) is unusable.** The stand's `ESC signal (µs)` column is empty, so it
+  cannot be separated from clock offset between the PX4 logger and the stand. *Next bench session:
+  log the ESC PWM on the stand.*
+- **A pairing test's invariant can be wrong in the safe direction.** `test_tilt_limit_pairing.py`
+  demanded the servo's travel *equal* the controller's planned 90°, so +100° of headroom read as a
+  mismatch. The correct invariant is containment; the dangerous case is the reverse, and it has
+  happened (the outer planned −25° of aft tilt on a servo that stopped at −20).
+
+### Standing
+
+1. Retune the hover yaw gains for the measured cQ (the gate already says 3.0 / 1.5) and re-gate.
+2. `vtol_nmpc.py`'s **baked** trim table is stale against the new propulsion. Not in the flown path
+   (the cascade's `Schedule.at` is live Python), but regenerate before that node ever flies.
+3. Wire the AS5048A tilt encoder into the node — β becomes measured rather than integrated from the
+   command, which closes the one gap the sensor audit could not put a tolerance on.
+4. The straight-line solve failures went 2 → 6 over 16 flights. Small, named, not chased.
+
+---
+
 ## 2026-09-16 (evening) — The actuator-lag tolerance on the flown control law
 
 **sim `3f53a14` · controller `a5a6a16` untouched (no identity hash moved)**

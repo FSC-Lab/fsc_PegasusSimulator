@@ -78,8 +78,16 @@ from pegasus.simulator.logic.dynamics.vtol_aerodynamics import (
 # controller silently under- or over-deliver).
 #
 # Each entry is (diameter [m], zero-thrust advance ratio J0). J0 is where thrust reaches zero and
-# it tracks PITCH: J0 ~ 0.72*(pitch/diameter) + 0.24, which puts a 12x6 at 0.60 and a 12x10 at
-# 0.84 -- in the usual 0.6-0.9 band for props of this class. CT0 is NOT tabulated: it is derived
+# it tracks PITCH. ★ MEASURED (2026-09-17): every value below is now the x-intercept of the
+# wind-tunnel C_T(J) sweeps in the UIUC Propeller Data Site (Selig et al.), fitted by
+# `scripts/ana_prop_j0.py` -- the sim's own momentum model non-dimensionalises exactly to
+# C_T = C_T0 (1 - J/J0), so the intercept IS this number and the fit residual (R^2 0.97-0.999
+# across 237 propellers) says the linear form is sound. The previous entries came from a line
+# J0 = 0.72*(pitch/D) + 0.24 drawn through three 12-inch guesses and were LOW by 0.03-0.15; the
+# measured line for props not tabulated here is J0 = 0.922*(pitch/D) + 0.216 (134 propellers of
+# 10 in and over, residual sd 0.099). Two independent families agree on the flown 12x8 to 0.002
+# (APC Thin Electric 0.776, Aero-Naut CAM folding 0.774), which is the cross-check.
+# CT0 is NOT tabulated: it is derived
 # per rotor from (max_thrust, rotor_omega_max, diameter) so STATIC thrust is preserved exactly and
 # only the airspeed behaviour changes between props.
 #
@@ -90,12 +98,16 @@ from pegasus.simulator.logic.dynamics.vtol_aerodynamics import (
 # A flight on the 12x6 overspeeded to 19.4 m/s, where that prop SATURATES at 100% throttle, the
 # roll/yaw differential had nothing left to work with and the aircraft departed in pitch
 # (bag vtol_20260911_122940). On a 12x8 the same 19.4 m/s still leaves 14%.
-PROPS = {
-    "12x6":  (0.3048, 0.60),
-    "12x8":  (0.3048, 0.72),
-    "12x10": (0.3048, 0.84),
-    "13x8":  (0.3302, 0.68),
-    "13x10": (0.3302, 0.79),
+PROPS = {                       # (diameter [m], J0)   measured | was | source
+    "12x6":  (0.3048, 0.63),    # 0.60   APC Thin Electric 0.613, Aero-Naut 0.642
+    "12x8":  (0.3048, 0.78),    # 0.72   APC 0.776, Aero-Naut 0.774  <- the flown prop
+    "12x10": (0.3048, 0.93),    # 0.84   APC 0.926
+    "13x8":  (0.3302, 0.73),    # 0.68   APC 0.725
+    "13x10": (0.3302, 0.94),    # 0.79   APC 0.935
+    "15x5":  (0.3810, 0.52),    # new    not tabulated at p/D 0.333; the >=10 in line gives 0.523 and
+                                #        the 16 measured props within +-0.08 of that p/D give
+                                #        0.39-0.71 (median 0.51), the closest analogues -- Aero-Naut
+                                #        folding 10x4 / 11x4 / 13x5 / 15x6 / 16x6 -- 0.51-0.55.
 }
 
 
@@ -534,30 +546,32 @@ def quad_tiltrotor_config(
             # 0.88 -> 0.78; every gate number (trim, corridor, back-transition, upsets, CG
             # hover, latency) is unchanged. The controllers, plant double and GS override carry
             # J0 = 0.72 with it; tests/test_prop_pairing.py holds them together.
-            spin_dir=+1, max_thrust=18.0, prop="12x8",
+            spin_dir=+1, max_thrust=36.3, prop="15x5",
             # tilt_min -20: the front pair may lean BACKWARDS.  With beta >= 0 the only way to
             # decelerate is to pitch nose-up, which converts speed into HEIGHT (bag full_tr31
             # ballooned 18.9 m, of which 12.8 m is unavoidable kinetic->potential conversion).
             # Tilting the rotors aft puts the braking force in the airstream direction instead,
             # so the body can stay level: T*sin(20 deg) = 12.3 N = 3.6 m/s^2 with no zoom.
-            tiltable=True, tilt_axis="Y", tilt_min_deg=-20.0, tilt_max_deg=90.0,
+            tiltable=True, tilt_axis="Y", tilt_min_deg=-20.0, tilt_max_deg=100.0,
+            tilt_rate_deg_s=106.0,          # measured: the specified servo slew cap
             throttle_channel="motor_front_L", tilt_channel="tilt_left",
             mesh=front_left_mesh, nacelle_mesh=front_left_arm_mesh, **r,
         ),
         RotorConfig(
             name="front_R", position=(0.459, -0.284, -0.066), spin_offset=(-0.002, -0.001, 0.088),
-            spin_dir=-1, max_thrust=18.0, prop="12x8",
-            tiltable=True, tilt_axis="Y", tilt_min_deg=-20.0, tilt_max_deg=90.0,
+            spin_dir=-1, max_thrust=36.3, prop="15x5",
+            tiltable=True, tilt_axis="Y", tilt_min_deg=-20.0, tilt_max_deg=100.0,
+            tilt_rate_deg_s=106.0,          # measured: the specified servo slew cap
             throttle_channel="motor_front_R", tilt_channel="tilt_right",
             mesh=front_right_mesh, nacelle_mesh=front_right_arm_mesh, **r,
         ),
         RotorConfig(
-            name="rear_L", position=(-0.112, 0.284, -0.019), spin_dir=-1, max_thrust=18.0, prop="12x8",
+            name="rear_L", position=(-0.112, 0.284, -0.019), spin_dir=-1, max_thrust=36.3, prop="15x5",
             tiltable=False, throttle_channel="motor_rear_L",
             mesh=rear_left_mesh, **r,
         ),
         RotorConfig(
-            name="rear_R", position=(-0.112, -0.284, -0.017), spin_dir=+1, max_thrust=18.0, prop="12x8",
+            name="rear_R", position=(-0.112, -0.284, -0.017), spin_dir=+1, max_thrust=36.3, prop="15x5",
             tiltable=False, throttle_channel="motor_rear_R",
             mesh=rear_right_mesh, **r,
         ),
@@ -600,7 +614,18 @@ def quad_tiltrotor_config(
         # command on less throttle than the gate needs, and the back-transition onset braked
         # from behind its reference (+21 deg pitch, gate 11-13). The default had never been set
         # for this airframe; tests/test_prop_pairing.py now holds sim and controller together.
-        rotor_omega_max=749.0,
+        # ★ THE MN_4014 + 15x5 BUILD, bench-measured 2026-09-17 (identification/2026-09-17_rotor_*,
+        # scripts/ana_spin_lag.py). Static thrust 36.3 N per rotor at omega_max 885.8 rad/s
+        # (thrust = 4.627e-5 omega^2, fitted over 21 settled step points); tau_spin 0.067 s taken AT
+        # THE HOVER POINT (9.69 N/rotor -> 458 rad/s, 52% throttle) because spin-DOWN is drag-driven
+        # and its constant scales with 1/omega -- 0.53 s at 20->10% but 0.072 s where the aircraft
+        # lives. cq 0.0190 m is the measured torque/thrust and the same from both motors; the 0.12
+        # default above says in its own comment that real props are ~0.02, so this is the physical
+        # value replacing one raised for yaw authority -- it cuts hover yaw authority ~6x.
+        rotor_omega_max=885.8,
+        rotor_tau_spin=0.067,
+        rotor_moment_ratio=0.0190,
+        tilt_tau=0.0756,                 # [s] measured tilt actuator time constant (13 rad/s)
         surface_tau=0.03,                # [s] small digital servo
         surface_rate_deg_s=400.0,        # [deg/s] its no-load slew rate
         stage_prefix="quad_tiltrotor",

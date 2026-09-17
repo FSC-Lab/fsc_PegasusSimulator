@@ -69,8 +69,14 @@ def main():
     for r in tilting:
         if abs(-r.tilt_min_deg - aft) > 1e-9:
             bad.append(f"{r.name}: servo tilt_min {r.tilt_min_deg} deg vs controller BETA_AFT_MAX {-aft} deg")
-        if abs(r.tilt_max_deg - 90.0) > 1e-9:
-            bad.append(f"{r.name}: servo tilt_max {r.tilt_max_deg} deg; the controller plans to 90")
+        # The invariant is CONTAINMENT, not equality: the controller's planned range must fit
+        # inside the servo's travel. A servo that goes further than the loop plans is headroom
+        # (the MN_4014 build's nacelle reaches +100 deg, but past 90 the thrust vectors forward
+        # and DOWN, which no schedule wants). The failure that matters is the reverse, and it has
+        # happened: the outer planned -25 deg of aft tilt on a servo that stops at -20, and the
+        # 1.9 N of braking it counted on never arrived (2026-09-14).
+        if r.tilt_max_deg < 90.0 - 1e-9:
+            bad.append(f"{r.name}: servo tilt_max {r.tilt_max_deg} deg is SHORT of the 90 the controller plans")
     if len([r for r in cfg.rotors if not r.tiltable]) != 2:
         bad.append("the rear pair must be fixed (the cascade's allocation holds it vertical)")
     if sched > aft + 1e-9:

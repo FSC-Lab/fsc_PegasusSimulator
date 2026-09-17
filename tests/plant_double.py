@@ -81,16 +81,16 @@ ROTOR_HUB = np.array([[0.459, 0.284, -0.068], [0.459, -0.284, -0.066],
                       [-0.112, 0.284, -0.019], [-0.112, -0.284, -0.017]])
 ROTOR_SPIN = np.array([+1.0, -1.0, -1.0, +1.0])          # FL, FR, RL, RR
 ROTOR_TILTABLE = np.array([True, True, False, False])
-MAX_THRUST = 18.0
+MAX_THRUST = 36.3
 # ★ THRUST MODEL, matching vtol.py. The sim's FSC airframe runs thrust_model="momentum": thrust
 # is QUADRATIC in throttle (via omega) and falls with the airspeed along the rotor's own axis,
 # reaching zero at the advance ratio J0. A harness that keeps the FLAT model disagrees with the
 # plant it is meant to double, and then fails a CORRECT controller -- which is exactly what
 # happened: the safe controller was fixed for the momentum sim and promptly failed 9 checks here.
 THRUST_MODEL = "momentum"        # "instant" (legacy flat) | "momentum"
-PROP_D = 0.3048                  # m, 12 in
-PROP_J0 = 0.72                   # advance ratio at zero thrust (12x8, as the airframe)
-PROP_OMEGA_MAX = 749.0           # rad/s at throttle 1
+PROP_D = 0.3810                  # m, 15 in
+PROP_J0 = 0.52                   # advance ratio at zero thrust (15x5, as the airframe)
+PROP_OMEGA_MAX = 885.8           # rad/s at throttle 1 (MN_4014, measured)
 _N_MAX = PROP_OMEGA_MAX / (2.0 * math.pi)
 _CT0 = MAX_THRUST / (1.225 * _N_MAX ** 2 * PROP_D ** 4)
 

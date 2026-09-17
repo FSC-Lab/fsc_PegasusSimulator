@@ -2,6 +2,101 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-17: THE AIRFRAME GETS ITS FIRST MEASURED PROPULSION -- MN_4014 + 15x5 FROM A THRUST
+# STAND, J0 FROM PUBLISHED WIND-TUNNEL DATA, THE SPECIFIED TILT ACTUATOR -- AND THE MEASURED cQ BREAKS
+# THE SHIPPED YAW GAINS. Sim this commit, controller (airframe_id.cfg). NEW IDENTITY REFERENCES.
+**WHAT WAS MEASURED, AND BY WHAT.** The user supplied two thrust-stand campaigns (T-Motor MN_4010 and
+MN_4014, both on a 15x5, ~71 Hz, thrust in N, torque in N.m, optical RPM); they are stored with their
+raw logs in `identification/2026-09-17_rotor_MN4010_MN4014/` and fitted by **`scripts/ana_spin_lag.py`**
+(each throttle step as a DEAD TIME + first-order rise on OMEGA -- what the plant integrates and the L1
+predictor models -- with the dead time free so a transport delay cannot be absorbed into tau; a
+cross-check on sqrt(thrust); `--selftest` recovers a known tau to 3% and a known dead time to 1 ms at
+the bench's noise and rate). **We refit rather than taking the shipped lambda:** the reports ship two
+estimators that disagree 3x (DIRECT divides by (omega_cmd - omega) and gives R^2 0.24 with 18-24%
+NEGATIVE lambda) and the two archives ship different ones.
+| constant | was | now | where from |
+|---|---|---|---|
+| max_thrust | 18.0 N | **36.3 N** | bench, extrapolated to 100% from <= 80% |
+| omega_max | 749 rad/s | **885.8** | bench |
+| tau_spin | 0.12 s | **0.067 s** | bench, AT THE HOVER POINT |
+| cq | 0.12 m | **0.0190 m** | bench; the SAME from both motors |
+| prop | 12x8, J0 0.72 | **15x5, J0 0.52** | UIUC wind tunnel (below) |
+| tilt tau | 0.12 s | **0.0756 s** | specified (13 rad/s) |
+| tilt rate | 80 deg/s | **106 deg/s** | specified |
+| tilt range | -20..+90 deg | **-20..+100** | specified; the aft brake is KEPT |
+**★ SPIN-UP vs SPIN-DOWN IS NOT AN ASYMMETRY, IT IS AN AVERAGING ARTEFACT.** The whole-range medians
+read 0.064 s up and 0.532 s down (8x) and that number is meaningless: spin-down is DRAG-driven, drag
+goes as omega^2, so its constant scales with 1/omega -- 0.53 s at 20->10% throttle but 0.057 s at
+80->70%. **At the hover point (9.69 N/rotor -> 458 rad/s -> 52% throttle) up and down agree: 0.064 /
+0.072 s.** The tool therefore reports tau banded by omega and exports the hover-point value. This is
+why the 2026-09-16 bench spec said "at the hover throttle": it is not a detail, it is the difference
+between 0.067 and 0.53. Both motors are WELL inside the 0.16 s envelope -- half the modelled 0.12.
+**THE DEAD TIME (81-88 ms) IS UNATTRIBUTABLE AND MUST NOT BE USED.** The fit is clean and consistent
+across steps, but the stand's `ESC signal (µs)` column is EMPTY, so it cannot be separated from the
+clock offset between the PX4 logger and the stand. **For the next bench session: log the ESC PWM on
+the stand** and it becomes a one-clock measurement.
+**J0 FROM PUBLISHED DATA, AND THE CATALOGUE WAS BIASED LOW (`scripts/ana_prop_j0.py`).** A static
+stand cannot produce J0 (no airflow). The UIUC Propeller Data Site (Selig et al., 87 MB, md5 verified
+against the published checksum) has wind-tunnel C_T(J) for hundreds of props, and **the sim's momentum
+model non-dimensionalises EXACTLY to C_T = C_T0 (1 - J/J0)** -- so the x-intercept IS J0 and the fit
+residual says whether that linear form is even right (R^2 0.97-0.999 over 237 propellers: it is).
+| prop | catalogue said | measured | |
+|---|---|---|---|
+| 12x6 | 0.60 | 0.613 (APC) / 0.642 (Aero-Naut) | **-> 0.63** |
+| **12x8 (flown until today)** | **0.72** | **0.776 / 0.774** | **-> 0.78**, two families agreeing to 0.002 |
+| 12x10 | 0.84 | 0.926 | -> 0.93 |
+| 13x8 / 13x10 | 0.68 / 0.79 | 0.725 / 0.935 | -> 0.73 / 0.94 |
+| **15x5 (new)** | -- | not tabulated at p/D 0.333 | **-> 0.52** |
+The old catalogue line `J0 = 0.72(p/D) + 0.24` was drawn through three 12-inch guesses and is low by
+0.03-0.15; the measured line over 134 props of 10 in and over is **`J0 = 0.922(p/D) + 0.216`**. For the
+15x5 (p/D 0.333) that gives 0.523, and the 16 measured props within +-0.08 of that p/D give 0.39-0.71
+(median 0.51) with the closest analogues -- Aero-Naut folding 10x4 / 11x4 / 13x5 / 15x6 / 16x6 --
+at 0.51-0.55. **The sim was therefore PESSIMISTIC about cruise thrust on every prop it has flown**;
+nothing flown is invalidated (piece 2 allows +-0.1 and 0.72 vs 0.78 is inside it). At the new J0 the
+15x5 cruise is comfortable: 67% throttle at 16 m/s against the flown 12x8's 78%.
+**★★ THE MEASURED cQ BREAKS THE SHIPPED HOVER YAW GAINS -- the one real casualty, caught by the gate.**
+`vtol.py`'s own comment always said so: `rotor_moment_ratio 0.12 (raised for MC yaw authority;
+sim-only, real props ~0.02)`. The bench says **0.0190, identically from both motors**. Paired in, the
+maximum hover yaw moment falls from 3.99 to 0.74 N.m -- **466 -> 86 deg/s^2 of yaw acceleration** --
+and `tests/test_hover_hold.py` turns: **shipped kR_yaw 5.0 / kW_yaw 2.0 OSCILLATES; the highest gains
+that hold a clean hover are 3.0 / 1.5.** A/B'd to attribute it: with cq back at 0.12 the shipped gains
+pass, with 0.0190 they do not -- it is the cQ and nothing else in the build. The yaw loop was tuned
+against 6x the authority the real propeller provides. **NOT retuned here** (a controller gain change
+is its own piece with its own gate); 3.0 / 1.5 is the answer the gate already gives.
+**WHAT THE MISSIONS SAY (both on `imu-mdob` + EKF + L1, the flown "Adaptive NMPC + Geo"):**
+| | 12x8 baseline | MN_4014 + 15x5 |
+|---|---|---|
+| straight line, 16 seeds (`ke_sweeps/reg_mn4014`) | 16/16, pk 14.2, fails 2, stop 8.8 s | **16/16, pk 13.9, fails 6, stop 8.8** |
+| turning mission, 3 seeds (`est_sweeps/mn4014_turns`) | 3/3, bob orbit 0.058, hits 0, roll sd 0.150, u_ad 0.006, stop 6.0 | **3/3, 0.049, 0, 0.154, 0.006, 5.9** |
+The corridor peak IMPROVES (more thrust crosses the stall corridor at less angle of attack); the
+turning mission is a null result to three decimals, INCLUDING the cancellation. The one column that
+moved the wrong way is the solve failures, 2 -> 6 over 16 flights (0.13 -> 0.4 per flight). **Neither
+mission tests the cQ finding** -- above ~10 m/s yaw is the rudder's job and the rotors' differential
+is not the actuator; the exposure is hover and the low-speed ends, which is exactly where
+`test_hover_hold.py` looks.
+**IDENTITY, as the process demands -- the model changed deliberately, so NEW REFERENCES:** steso
+`567a68790d16ffa5235663b9e6e9c29f`, IMU `fdd734f49160de7a07129826c78806c6` (same line as ever). The
+J0-only intermediate step (12x8, 0.72 -> 0.78, before the propulsion swap) was `d492ca8a5b37f5c5b084583402e45a67`
+/ `7f7b1e9f8d6294f155ce8c772dc873db`, recorded so the two changes stay separable.
+**THE TILT PAIRING TEST FAILED AND WAS RIGHT TO; ITS INVARIANT WAS WRONG.** It required the servo's
+`tilt_max_deg` to EQUAL the 90 the controller plans, so the new +100 read as a mismatch. The invariant
+is **containment** -- the controller's planned range must fit INSIDE the servo's travel; extra travel
+is headroom (past 90 the thrust vectors forward and DOWN, which no schedule should ever want). The
+failure that matters is the reverse and it has bitten: the outer planned -25 deg of aft tilt on a
+servo that stopped at -20 and the 1.9 N of braking never arrived (2026-09-14). Fixed in the test.
+**THE ENCODER CLOSES THE ONE GAP THE SENSOR AUDIT COULD NOT BOUND.** The build specifies an AS5048A
+(14-bit absolute) on each tilt shaft beside the servo, so beta becomes MEASURED rather than integrated
+open-loop from the command. The audit's table had tilt position as "not sensed -- the one input for
+which this audit can offer no tolerance at all". Wiring the node to READ it is a controller piece and
+is not done. NOTE the servo torque: 106 deg/s against a ~630 deg/s no-load servo is a SOFTWARE slew
+cap, not gearing (6:1 gearing would leave only ~20-30 deg of nacelle travel from a servo's ~180), so
+the shaft sees the servo's own ~2.9 N.m -- and the dominant hinge-moment term, thrust-line offset x
+thrust, has DOUBLED with the 36 N prop. Measure that offset.
+**STANDING AFTER THIS:** (1) retune the hover yaw gains for the measured cQ (the gate says 3.0 / 1.5)
+and re-gate; (2) `vtol_nmpc.py`'s BAKED trim table is now stale against the new propulsion -- it is not
+in the flown path (the cascade's `Schedule.at` is live Python and adapts) but regenerate it before that
+node ever flies; (3) wire the tilt encoder into the node; (4) the 16-seed solve-failure count 2 -> 6.
+
 # ★★★★ 2026-09-16 (evening): THE ACTUATOR-LAG TOLERANCE, ON THE FLOWN "ADAPTIVE NMPC + GEO" LAW --
 # AND THE ANSWER TO "ISN'T THAT THE L1'S JOB?": THE MODEL'S JOB UP TO 0.16 s, NOBODY'S PAST 0.18.
 # 16 cells x 16 seeds, `scripts/robust_sweep.sh act1 scripts/cells_actuator_lag.txt` (piece 2's line and
