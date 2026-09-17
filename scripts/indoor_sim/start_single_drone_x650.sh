@@ -187,6 +187,19 @@ for _CL in "$ARM_COUNTS_NOMINAL" "$ARM_COUNTS_TRUE"; do
     exit 2
   fi
 done
+# GEARBOX FRICTION + ARM GRAVITY MISMATCH (2026-09-14): the plant's arm loses
+# PEGASUS_ARM_FRICTION_SCALE x the calibration report's friction (0 = off, the
+# pre-2026-09-14 plant) and its links weigh PEGASUS_ARM_MASS_SCALE x nominal.
+# Baked into the pane command line like everything else here.
+ARM_FRICTION_SCALE="${PEGASUS_ARM_FRICTION_SCALE:-}"
+ARM_FRICTION_WIDTH="${PEGASUS_ARM_FRICTION_WIDTH:-}"
+ARM_MASS_SCALE="${PEGASUS_ARM_MASS_SCALE:-}"
+for _NV in "$ARM_FRICTION_SCALE" "$ARM_FRICTION_WIDTH" "$ARM_MASS_SCALE"; do
+  if [[ -n "$_NV" && ! "$_NV" =~ ^${_NUM_RE}$ ]]; then
+    echo "ERROR: PEGASUS_ARM_FRICTION_SCALE / _FRICTION_WIDTH / PEGASUS_ARM_MASS_SCALE must be a non-negative decimal (got '$_NV')." >&2
+    exit 2
+  fi
+done
 command -v tmux >/dev/null 2>&1 || { echo "ERROR: tmux is not installed or not on PATH." >&2; exit 1; }
 command -v timeout >/dev/null 2>&1 || { echo "ERROR: timeout is not installed or not on PATH." >&2; exit 1; }
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: missing $PEGASUS_SCRIPT" >&2; exit 1; }
@@ -259,6 +272,9 @@ PEGASUS_PLANT_KM_SCALE=$PLANT_KM_SCALE \
 PEGASUS_ARM_COUNTS_ENABLE=$ARM_COUNTS_ENABLE \
 PEGASUS_ARM_COUNTS_NOMINAL=$ARM_COUNTS_NOMINAL \
 PEGASUS_ARM_COUNTS_TRUE=$ARM_COUNTS_TRUE \
+PEGASUS_ARM_FRICTION_SCALE=$ARM_FRICTION_SCALE \
+PEGASUS_ARM_FRICTION_WIDTH=$ARM_FRICTION_WIDTH \
+PEGASUS_ARM_MASS_SCALE=$ARM_MASS_SCALE \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

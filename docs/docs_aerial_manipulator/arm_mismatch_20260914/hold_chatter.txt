@@ -1,0 +1,12 @@
+1. per hold: tau_j2 std [N.m] / power in 0.6-1.3 Hz
+  l1_mismatch_A.npz        step_x+   0.021/13%  step_x-   0.033/44%  step_y+   0.073/84%  step_y-   0.120/92%  step_yaw+ 0.109/96%  step_yaw- 0.109/96%  traj_ee   0.112/93%  traj_ee_b 0.104/79%  traj_both 0.086/93%  traj_both 0.090/72%  post_hold 0.081/81%  final     0.106/93%
+  l1_matched_B.npz         step_x+   0.095/94%  step_x-   0.110/87%  step_y+   0.093/91%  step_y-   0.108/94%  step_yaw+ 0.093/94%  step_yaw- 0.095/92%  traj_ee   0.099/98%  traj_ee_b 0.085/82%  traj_both 0.078/78%  traj_both 0.098/95%  post_hold 0.096/98%  final     0.106/97%
+  l1_uncomp_C.npz          step_x+   0.029/27%  step_x-   0.032/43%  step_y+   0.021/ 8%  step_y-   0.010/56%  step_yaw+ 0.010/76%  step_yaw- 0.015/74%  traj_ee   0.106/97%  traj_ee_b 0.072/53%  traj_both 0.042/13%  traj_both 0.042/11%  post_hold 0.036/ 6%  final     0.026/ 5%
+  l1_mission_kx32.npz      step_x+   0.003/13%  step_x-   0.004/ 6%  step_y+   0.005/ 3%  step_y-   0.003/ 8%  step_yaw+ 0.003/ 8%  step_yaw- 0.003/ 7%  traj_ee   0.003/ 7%  traj_ee_b 0.004/ 5%  traj_both 0.004/ 5%  traj_both 0.004/ 4%  post_hold 0.003/12%  final     0.003/ 7%
+
+2. final hold (16 s before the end of DIRECT)
+  run                       e_com y mean/std [mm]  e_y std [mm]   F_hat_y,z mean/std [N]       tau_j2 std @ f tau_j3 std
+  l1_mismatch_A.npz           -4.6 /  25.1          0.9          -0.156 / 0.438      0.1057 @ 0.88 Hz   0.0752
+  l1_matched_B.npz            -7.4 /  16.2          1.6          -0.009 / 0.423      0.1048 @ 0.94 Hz   0.0749
+  l1_uncomp_C.npz            -11.7 /  17.2          1.0          -0.283 / 0.102      0.0246 @ 0.06 Hz   0.0155
+  l1_mission_kx32.npz         -0.4 /   1.2          0.0          -0.039 / 0.014      0.0028 @ 3.81 Hz   0.0023

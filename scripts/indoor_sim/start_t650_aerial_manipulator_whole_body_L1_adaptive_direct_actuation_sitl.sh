@@ -275,6 +275,46 @@ else
   echo "Arm count<->torque path off: continuous torque, perfect calibration."
 fi
 
+# ── GEARBOX FRICTION + ARM GRAVITY MISMATCH (2026-09-14) ─────────────────────
+# The calibration report's friction (eq. 5) on the PLANT, scaled, and the arm
+# link masses scaled -- while the flight law, the arm controller's correction
+# and 06's own hold keep the nominal arm. 1.05 / 1.05 = the requested 5 %
+# imperfect friction + gravity compensation. Same precedence: env > yaml >
+# built-in (0 / 1.0 = the pre-2026-09-14 plant).
+for KV in "PEGASUS_ARM_FRICTION_SCALE:sim_arm_friction_scale" \
+          "PEGASUS_ARM_FRICTION_WIDTH:sim_arm_friction_width" \
+          "PEGASUS_ARM_MASS_SCALE:sim_arm_mass_scale"; do
+  VAR="${KV%%:*}"; KEY="${KV##*:}"
+  if [[ -z "${!VAR:-}" ]]; then
+    V="$(yaml_scalar "$KEY")"
+    [[ -n "$V" ]] && export "$VAR=$V"
+  fi
+done
+# THE COMPENSATION IS COUPLED TO THE PLANT. The arm controller's friction
+# feed-forward (torque_controller_isaac_aerial.yaml, passthrough_auxiliary_terms)
+# is switched ON exactly when the plant has friction, and OFF when it has none
+# -- a feed-forward against a frictionless plant is a pure disturbance.
+# PEGASUS_ARM_FRICTION_COMP=0|1 overrides (the "uncompensated" A/B).
+if [[ -z "${PEGASUS_ARM_FRICTION_COMP:-}" ]]; then
+  if awk -v s="${PEGASUS_ARM_FRICTION_SCALE:-0}" 'BEGIN{exit !(s+0 > 0)}'; then
+    export PEGASUS_ARM_FRICTION_COMP=1
+  else
+    export PEGASUS_ARM_FRICTION_COMP=0
+  fi
+fi
+case "$PEGASUS_ARM_FRICTION_COMP" in 0|1) ;;
+  *) echo "ERROR: PEGASUS_ARM_FRICTION_COMP must be 0 or 1 (got '$PEGASUS_ARM_FRICTION_COMP')" >&2; exit 2 ;;
+esac
+ARM_PT_CORR=$([[ "$PEGASUS_ARM_FRICTION_COMP" == 1 ]] && echo true || echo false)
+if awk -v s="${PEGASUS_ARM_FRICTION_SCALE:-0}" 'BEGIN{exit !(s+0 > 0)}'; then
+  echo -e "\033[1;31mGEARBOX FRICTION ACTIVE on the plant: x${PEGASUS_ARM_FRICTION_SCALE} the report's fc/mu (tanh width ${PEGASUS_ARM_FRICTION_WIDTH:-0.015} rad/s); arm-side friction compensation ${ARM_PT_CORR} (passthrough_auxiliary_terms).\033[0m"
+else
+  echo "Gearbox friction off (frictionless plant); arm-side friction compensation ${ARM_PT_CORR}."
+fi
+if [[ -n "${PEGASUS_ARM_MASS_SCALE:-}" && "${PEGASUS_ARM_MASS_SCALE}" != "1.0" ]]; then
+  echo -e "\033[1;31mARM GRAVITY MISMATCH ACTIVE: arm link masses x${PEGASUS_ARM_MASS_SCALE}; every model keeps the nominal arm.\033[0m"
+fi
+
 
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
@@ -384,7 +424,7 @@ until timeout 5 ros2 topic echo --once $ARM_STATE_TOPIC >/dev/null 2>&1; do
   sleep 2
 done
 echo 'Isaac arm is reporting; launching the TORQUE-mode ros2_control stack.'
-ros2 launch open_manipulator_x_isaac_bridge torque_control_isaac.launch.py namespace:=$ARM_NS
+ros2 launch open_manipulator_x_isaac_bridge torque_control_isaac.launch.py namespace:=$ARM_NS passthrough_corrections:=$ARM_PT_CORR
 echo 'Arm ros2_control stack exited.'
 exec bash
 "

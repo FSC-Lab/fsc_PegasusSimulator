@@ -55,6 +55,11 @@ from isaacsim import SimulationApp
 #                            wall-clock DDS path; the SITL launcher pushes it
 #                            onto the tmux server (an export alone is discarded
 #                            when a tmux server already exists).
+#   PEGASUS_ARM_FRICTION_SCALE   gearbox friction on the plant, x the report's
+#                            identified level (0 = off; 1.05 = 5 % more than
+#                            the arm controller compensates), 2026-09-14
+#   PEGASUS_ARM_FRICTION_WIDTH   its tanh half-width, rad/s (default 0.015)
+#   PEGASUS_ARM_MASS_SCALE       arm link masses x this, every model nominal
 HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
@@ -95,6 +100,17 @@ ARM_CURRENT_NOISE_SEED = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_SEED", "") o
 ARM_COUNTS_ENABLE = (os.environ.get("PEGASUS_ARM_COUNTS_ENABLE", "") or "0").strip() == "1"
 ARM_COUNTS_NOMINAL = (os.environ.get("PEGASUS_ARM_COUNTS_NOMINAL", "") or "").strip()
 ARM_COUNTS_TRUE = (os.environ.get("PEGASUS_ARM_COUNTS_TRUE", "") or "").strip()
+# GEARBOX FRICTION and ARM GRAVITY MISMATCH (2026-09-14). The calibration
+# report's friction (eq. 5) on the plant, scaled: 0 = frictionless (every
+# earlier rig), 1.0 = exactly what the arm controller's feed-forward pays,
+# 1.05 = 5 % more than compensated. The arm link masses (and inertias) scaled
+# by PEGASUS_ARM_MASS_SCALE while every model -- the flight law's, the arm
+# controller's and this file's own hold -- keeps the nominal arm, so 1.05 is a
+# 5 % gravity-compensation error. Forwarded by the launcher from the paired
+# yaml's sim_arm_friction_* / sim_arm_mass_scale keys.
+ARM_FRICTION_SCALE = (os.environ.get("PEGASUS_ARM_FRICTION_SCALE", "") or "").strip()
+ARM_FRICTION_WIDTH = (os.environ.get("PEGASUS_ARM_FRICTION_WIDTH", "") or "").strip()
+ARM_MASS_SCALE = (os.environ.get("PEGASUS_ARM_MASS_SCALE", "") or "").strip()
 simulation_app = SimulationApp({"headless": HEADLESS})
 
 # ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
@@ -331,11 +347,35 @@ def _counts_env(raw, name):
 
 _COUNTS_NOMINAL = _counts_env(ARM_COUNTS_NOMINAL, "PEGASUS_ARM_COUNTS_NOMINAL")
 _COUNTS_TRUE = _counts_env(ARM_COUNTS_TRUE, "PEGASUS_ARM_COUNTS_TRUE")
+def _scalar_env(raw, name, default):
+    v = _float_env(raw, name)
+    if v is None:
+        return default
+    if not np.isscalar(v):
+        raise SystemExit(f"[AM-T650-WB] {name} must be ONE number (got {raw!r})")
+    return float(v)
+
+
+_FRICTION_SCALE = _scalar_env(ARM_FRICTION_SCALE, "PEGASUS_ARM_FRICTION_SCALE", 0.0)
+_FRICTION_WIDTH = _float_env(ARM_FRICTION_WIDTH, "PEGASUS_ARM_FRICTION_WIDTH")
+if _FRICTION_WIDTH is not None and (not np.isscalar(_FRICTION_WIDTH) or _FRICTION_WIDTH <= 0.0):
+    raise SystemExit("[AM-T650-WB] PEGASUS_ARM_FRICTION_WIDTH must be ONE number > 0")
+ARM_MASS_SCALE_F = _scalar_env(ARM_MASS_SCALE, "PEGASUS_ARM_MASS_SCALE", 1.0)
+if ARM_MASS_SCALE_F <= 0.0:
+    raise SystemExit("[AM-T650-WB] PEGASUS_ARM_MASS_SCALE must be > 0")
 # The digital path engages if the register is modelled OR the two calibrations
 # disagree; either alone is a real effect, and both default to off/matched.
 _DIGITAL = dict(quantize=ARM_COUNTS_ENABLE,
                 nm_to_counts_nominal=_COUNTS_NOMINAL,
                 nm_to_counts_true=_COUNTS_TRUE)
+# The gearbox is downstream of the winding, so its friction applies in BOTH
+# servo modes: `ideal` means an exact ELECTROMAGNETIC torque source, and a
+# frictionless plant is friction_scale 0, not `ideal`. The momentum clamp uses
+# the armature this file authors (ARM_ARMATURE), the smallest inertia a joint
+# can present.
+_FRICTION = dict(friction_scale=_FRICTION_SCALE,
+                 inertia_min=ARM_ARMATURE,
+                 **({"friction_width": _FRICTION_WIDTH} if _FRICTION_WIDTH is not None else {}))
 
 if ARM_SERVO_MODEL == "ideal":
     # `ideal` switches off the CURRENT NOISE, nothing else. The count↔torque
@@ -345,14 +385,14 @@ if ARM_SERVO_MODEL == "ideal":
     # off, a +10% calibration injection reached the launcher, was reported
     # ACTIVE, and then did nothing at all).
     ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX),
-                                  current_noise_a=0.0, **_DIGITAL)
+                                  current_noise_a=0.0, **_DIGITAL, **_FRICTION)
 elif ARM_SERVO_MODEL == "current":
     ARM_SERVO = DynamixelPwmServo(
         tau_cap=np.full(4, TAU_MAX),
         current_noise_a=CURRENT_NOISE_A if _NOISE_A is None else _NOISE_A,
         current_noise_bw_hz=(CURRENT_NOISE_BW_HZ if _NOISE_BW is None
                              else _NOISE_BW),
-        seed=_NOISE_SEED, **_DIGITAL)
+        seed=_NOISE_SEED, **_DIGITAL, **_FRICTION)
 elif ARM_SERVO_MODEL in ("pwm", "pwm_0903"):
     raise SystemExit(
         f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL={ARM_SERVO_MODEL!r} is GONE "
@@ -418,6 +458,7 @@ class AmT650WholeBodyArmSim:
         self._disable_self_collisions()
         self._disable_rotor_colliders()
         self._apply_t650_body_override()
+        self._apply_arm_mass_injection()
         self._setup_gripper_drive()
         self.world.reset()
         self.stage = omni.usd.get_context().get_stage()
@@ -531,6 +572,21 @@ class AmT650WholeBodyArmSim:
             print("[AM-T650-WB] count↔torque path OFF: the arm command stays a "
                   "continuous torque (perfect calibration, no register)",
                   flush=True)
+        # GEARBOX FRICTION. Print the verdict either way, like the count path.
+        if ARM_SERVO.friction_scale > 0.0:
+            lvl_home = ARM_SERVO.friction_coulomb_nm(np.array([0.0, 0.70, 0.24, 0.0]))
+            print(f"\033[1;31m[AM-T650-WB] GEARBOX FRICTION ACTIVE x{ARM_SERVO.friction_scale:g}: "
+                  f"[fc + mu|tau|] tanh(qd/{ARM_SERVO.friction_width:g}) with fc "
+                  f"{np.round(ARM_SERVO.friction_fc * 1e3, 1).tolist()} mN·m, mu "
+                  f"{ARM_SERVO.friction_mu.tolist()} -- at the home hold load that is "
+                  f"{np.round(lvl_home * 1e3, 1).tolist()} mN·m per joint, of which the "
+                  f"arm controller's feed-forward pays 1/{ARM_SERVO.friction_scale:g}. "
+                  f"Momentum-clamped at I_min {ARM_SERVO.inertia_min:.4f} kg·m².\033[0m",
+                  flush=True)
+        else:
+            print("[AM-T650-WB] gearbox friction OFF (friction_scale 0): the plant "
+                  "loses nothing in the gearbox. If the arm controller's friction "
+                  "feed-forward is on, it is a pure disturbance here.", flush=True)
         print("[AM-T650-WB] arm dofs in effort mode; EXTERNAL TORQUE "
               f"(clip ±{TAU_MAX} N·m, fresh < {CMD_FRESH_S}s) with PD+gravity "
               f"fallback KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} on a stale stream",
@@ -966,6 +1022,58 @@ class AmT650WholeBodyArmSim:
               f"vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. "
               f"The .usda is untouched.", flush=True)
 
+    def _apply_arm_mass_injection(self):
+        """Scale the ARM links' mass (and authored inertia) by ARM_MASS_SCALE.
+
+        A GRAVITY-COMPENSATION MISMATCH (2026-09-14). The flight law, the arm
+        controller's gravity correction and this file's own hold all keep the
+        nominal arm; the plant's arm is heavier (or lighter), so every gravity
+        feed-forward is wrong by exactly the scale. Distinct from
+        PLANT_MASS_SCALE, which moves the BODY so the vehicle total hits its
+        target and leaves the arm untouched. Applied after the body override,
+        so the nominal-total consistency gate there is unaffected -- the plant
+        total printed here is what actually flies. The links are every rigid
+        body under the vehicle that is not /body and not a rotor: the four
+        arm links and the gripper fingers.
+        """
+        self._arm_dm = 0.0
+        if ARM_MASS_SCALE_F == 1.0:
+            return
+        stage = omni.usd.get_context().get_stage()
+        body_path = self.drone_path + BODY_PATH
+        rotor_paths = {self.drone_path + r for r in ROTOR_PATHS}
+        scaled = []
+        for p in Usd.PrimRange(stage.GetPrimAtPath(self.drone_path)):
+            path = str(p.GetPath())
+            if path == body_path or path in rotor_paths or not p.HasAPI(UsdPhysics.RigidBodyAPI):
+                continue
+            mass_api = UsdPhysics.MassAPI(p)
+            m_attr = mass_api.GetMassAttr()
+            if not (m_attr and m_attr.HasValue()):
+                continue
+            m_old = float(m_attr.Get())
+            m_new = m_old * ARM_MASS_SCALE_F
+            m_attr.Set(m_new)
+            I_attr = mass_api.GetDiagonalInertiaAttr()
+            if I_attr and I_attr.HasValue():
+                I_attr.Set(Gf.Vec3f(*(np.array(I_attr.Get(), float) * ARM_MASS_SCALE_F)))
+            self._arm_dm += m_new - m_old
+            scaled.append((p.GetName(), m_old, m_new))
+        if not scaled:
+            print("[AM-T650-WB] WARNING: ARM_MASS_SCALE set but no arm link carries an "
+                  "authored mass -- nothing scaled.", flush=True)
+            return
+        m_arm_old = sum(m for _, m, _ in scaled)
+        print(f"\033[1;31m[AM-T650-WB] INJECTION arm links mass x{ARM_MASS_SCALE_F:.4f} "
+              f"({m_arm_old:.6f} -> {m_arm_old * ARM_MASS_SCALE_F:.6f} kg, "
+              f"+{self._arm_dm:.6f} kg; inertias scaled alike): "
+              + ", ".join(f"{n} {a:.4f}->{b:.4f}" for n, a, b in scaled)
+              + f". Every model keeps the nominal arm -- a {100 * (ARM_MASS_SCALE_F - 1):+.1f} % "
+              f"gravity-compensation error on every joint.\033[0m", flush=True)
+        print(f"[AM-T650-WB] PLANT TOTAL carries an extra {self._arm_dm:+.6f} kg in the arm "
+              f"on top of the body injection (the nominal-total gate above is unaffected).",
+              flush=True)
+
     def _setup_gripper_drive(self):
         stage = omni.usd.get_context().get_stage()
         root = stage.GetPrimAtPath(self.drone_path)
@@ -1066,7 +1174,9 @@ class AmT650WholeBodyArmSim:
         # a property of the motor and its current loop, not of whoever computed
         # the command, and on hardware the controller's own PD fallback pays it
         # too. Called exactly once per physics step — it advances the noise.
-        tau = ARM_SERVO.applied(tau_cmd, dt)
+        # `qdot` feeds the gearbox friction model (a loss on the joint's actual
+        # motion); the noise and clamp do not use it.
+        tau = ARM_SERVO.applied(tau_cmd, dt, qdot=qdot)
         self._art.set_joint_efforts(np.asarray(tau, float),
                                     joint_indices=self._arm_idx)
         self._tau_cmd_applied = np.clip(tau_cmd, -ARM_SERVO.tau_cap, ARM_SERVO.tau_cap)

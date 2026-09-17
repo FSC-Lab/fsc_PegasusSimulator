@@ -92,12 +92,54 @@ times it (``sense()`` reproduces this). The residual current error, by contrast,
 IS in Present Current and so IS visible there -- it is measured from exactly that
 signal.
 
+GEARBOX FRICTION (2026-09-14, user request: the calibration report's friction
+and gravity compensation are the dominant terms, so the plant must carry the
+friction the arm controller compensates, with a controllable mismatch).
+``tau_applied`` above is Kt x Present Current, the ELECTROMAGNETIC torque; the
+353.5:1 gearbox's losses sit downstream of it. The calibration campaign
+identified them (``fsc_open_manipulator/doc/Calibration Result for PWM Torque
+Control.pdf`` S1.5, eq. 5, the antisymmetric part of the inverse-dynamics
+residual over 3 poses x 5 speeds per joint):
+
+    tau_f = [fc + mu * |tau_load|] * sgn(qd) + fv * qd
+
+with, in the controller's duty counts, ``fc`` = [2.9, 4.705, 7.778, 7.778],
+``mu`` = [0, 0.246, 0.161, 0] and ``fv`` shipped 0 (the report's own choice:
+j3's measured viscous rise is reproduced by the tanh shape). The plant applies
+the SAME shape the controller pays, ``tanh(qd / w)`` at the same width, on the
+MEASURED velocity and the TRANSMITTED (clipped) torque, scaled by
+``friction_scale``:
+
+    tau_applied -= friction_scale * ([fc + mu * |tau|] * tanh(qd / w) + fv * qd)
+
+so ``friction_scale`` = 1.05 is a plant with 5 % MORE friction than the
+controller's feed-forward pays -- the "imperfect compensation" under test --
+and 0 (the default) is the frictionless plant every earlier campaign flew.
+Two things are deliberately NOT the report's: (a) the plant's friction is a
+function of the actual ``qd`` where the compensation is driven by the reference
+``qd_d``, so in a transient the two differ by more than the scale (that is
+real, and it is what hardware does); (b) STICTION is not modelled -- ``tanh``
+is exactly zero at rest, so there is no breakaway and nothing for a dither to
+break, which is why the sim compensation runs with ``dither_amplitude`` 0.
+
+NUMERICS. Friction is applied EXPLICITLY as a torque on a joint whose smallest
+possible effective inertia is the armature, 0.0200 kg m^2, at 250 Hz. A
+Coulomb term steeper than ``I/dt`` near zero velocity would flip the joint's
+velocity sign inside one step and inject energy (the ``b*dt/I < 2`` rule the
+back-EMF droop recorded), and ``mu*|tau|`` at the 3 N.m clamp is 8x too steep
+for that. So the applied friction is MOMENTUM-CLAMPED: it may never remove
+more than the joint's own momentum in one step, ``|tau_f| <= I_min*|qd|/dt``.
+Near rest that is a linear ramp reaching the Coulomb level at
+``(fc + mu|tau|)*dt/I_min`` (0.04 rad/s on a loaded j2, 0.01 on j4), which
+is also the physically sensible "stick": the joint stops, it does not
+oscillate. ``_self_test`` spins an isolated inertia down under it and asserts
+the velocity never reverses.
+
 WHAT THIS MODEL DOES NOT CONTAIN:
 
-* **gearbox friction.** ``tau_applied`` here is Kt x Present Current, the
-  ELECTROMAGNETIC torque; the 353.5:1 gearbox's Coulomb and viscous losses sit
-  downstream of it and the flight data cannot separate them (there is no torque
-  sensor). A breakaway torque has to come from a bench measurement.
+* **stiction / breakaway.** See above: ``tanh`` is zero at rest. A breakaway
+  torque has to come from a bench measurement, and the report's own escape
+  mechanism for it (the gated dither) therefore has nothing to do in sim.
 * **the current loop's own dynamics.** Only its steady outcome is modelled. The
   loop is a 1.5 Hz integrator, so a torque command stepping faster than that is
   briefly delivered at the open-loop gain (0.85 incremental) before the trim
@@ -209,6 +251,21 @@ TAU_CAP_AS_FLOWN = DUTY_CAP_AS_FLOWN / NM_TO_DUTY   # [0.340, 2.437, 1.420, 0.38
 # PWM Limit re-sized to match, so this is the arm as it is TODAY.
 TAU_CAP_CURRENT = np.full(4, 3.0)
 
+# ── gearbox friction, the calibration report's eq. (5) ─────────────────────
+# In the controller's DUTY COUNTS, exactly as
+# external_torque_controller_hardware_aerial_pwm.yaml carries them
+# (friction_ff / friction_load_coeff / viscous_ff / friction_ff_width), so the
+# plant and the compensation are one set of numbers. N.m through NM_TO_DUTY.
+FRICTION_FC_DUTY = np.array([2.9, 4.705, 7.7776, 7.7776])   # Coulomb, duty
+FRICTION_FC_NM = FRICTION_FC_DUTY / NM_TO_DUTY   # [0.01711, 0.03143, 0.05751, 0.05237]
+FRICTION_MU = np.array([0.0, 0.246, 0.161, 0.0])        # x |transmitted torque|
+FRICTION_FV_NM_S = np.zeros(4)                           # viscous, N.m per rad/s
+FRICTION_WIDTH_RAD_S = 0.015                             # tanh half-width, = the compensation's
+# Smallest effective inertia a joint can present: the armature 06 authors,
+# 353.5^2 * 1.6e-7 = 0.0200 kg m^2 (the link adds to it). The momentum clamp
+# uses this, so it is conservative for every pose.
+ARMATURE_KG_M2 = 353.5 ** 2 * 1.6e-7
+
 
 class DynamixelPwmServo:
     """An OM-X joint set with the software current loop closed.
@@ -246,7 +303,10 @@ class DynamixelPwmServo:
     def __init__(self, tau_cap=None, current_noise_a=CURRENT_NOISE_A,
                  current_noise_bw_hz=CURRENT_NOISE_BW_HZ, seed=0,
                  quantize=False, nm_to_counts_nominal=None,
-                 nm_to_counts_true=None, pwm_full_scale=PWM_FULL_SCALE):
+                 nm_to_counts_true=None, pwm_full_scale=PWM_FULL_SCALE,
+                 friction_scale=0.0, friction_width=FRICTION_WIDTH_RAD_S,
+                 friction_fc_nm=None, friction_mu=None, friction_fv=None,
+                 inertia_min=ARMATURE_KG_M2):
         self.tau_cap = (np.array(TAU_CAP_CURRENT, float) if tau_cap is None
                         else np.asarray(tau_cap, float).copy())
         if self.tau_cap.shape != (4,):
@@ -304,15 +364,35 @@ class DynamixelPwmServo:
         self.digital = self.quantize or not np.allclose(
             self.gain_error, 1.0, rtol=0.0, atol=0.0)
 
+        # ── gearbox friction (module docstring) ─────────────────────────────
+        self.friction_scale = float(friction_scale)
+        self.friction_width = float(friction_width)
+        if (not np.isfinite(self.friction_scale) or self.friction_scale < 0.0
+                or not np.isfinite(self.friction_width) or self.friction_width <= 0.0):
+            raise ValueError(f"friction_scale must be >= 0 and friction_width > 0, "
+                             f"got {friction_scale}, {friction_width}")
+        self.friction_fc = (np.array(FRICTION_FC_NM, float) if friction_fc_nm is None
+                            else _four(friction_fc_nm, "friction_fc_nm", False))
+        self.friction_mu = (np.array(FRICTION_MU, float) if friction_mu is None
+                            else _four(friction_mu, "friction_mu", False))
+        self.friction_fv = (np.array(FRICTION_FV_NM_S, float) if friction_fv is None
+                            else _four(friction_fv, "friction_fv", False))
+        self.inertia_min = float(inertia_min)
+        if not np.isfinite(self.inertia_min) or self.inertia_min <= 0.0:
+            raise ValueError(f"inertia_min must be > 0, got {inertia_min}")
+
     # ── the model ───────────────────────────────────────────────────────────
 
-    def applied(self, tau_cmd, dt):
-        """Torque the motor actually produces over the next ``dt``, N.m.
+    def applied(self, tau_cmd, dt, qdot=None):
+        """Torque that reaches the joint over the next ``dt``, N.m.
 
         ``tau_cmd`` is what the whole-body law asked for (the arm controller's
         own clamp is applied here), shape (4,). ``dt`` is the step, seconds --
         it advances the noise state, so call this **once per physics step** and
-        no more.
+        no more. ``qdot`` is the MEASURED joint velocity, rad/s; it is needed
+        only when ``friction_scale`` > 0 (the gearbox loss is a function of
+        the joint's actual motion), and omitting it then is an error rather
+        than a silent frictionless step.
         """
         tau = np.clip(np.asarray(tau_cmd, float), -self.tau_cap, self.tau_cap)
         if self.digital:
@@ -322,7 +402,32 @@ class DynamixelPwmServo:
             tau_e = self.duty(tau) / self.nm_to_duty_true
         else:
             tau_e = tau
-        return tau_e + self.kt_true * self.step_noise(dt)
+        out = tau_e + self.kt_true * self.step_noise(dt)
+        if self.friction_scale > 0.0:
+            if qdot is None:
+                raise ValueError("applied(): qdot is required when friction_scale > 0")
+            out = out - self.friction_torque(tau, qdot, dt)
+        return out
+
+    def friction_torque(self, tau_transmitted, qdot, dt):
+        """The gearbox loss for this step, N.m, SIGNED with ``qdot`` (subtract it).
+
+        ``friction_scale * ([fc + mu*|tau|] * tanh(qd/w) + fv*qd)``, then
+        momentum-clamped to ``inertia_min*|qd|/dt`` so an explicit application
+        can never reverse the joint (module docstring, NUMERICS).
+        """
+        qd = np.asarray(qdot, float)
+        load = np.abs(np.asarray(tau_transmitted, float))
+        f = self.friction_scale * ((self.friction_fc + self.friction_mu * load)
+                                   * np.tanh(qd / self.friction_width)
+                                   + self.friction_fv * qd)
+        cap = self.inertia_min * np.abs(qd) / float(dt)
+        return np.clip(f, -cap, cap)
+
+    def friction_coulomb_nm(self, tau_transmitted=0.0):
+        """Full-speed friction level per joint at a given load, N.m (diagnostic)."""
+        load = np.abs(np.broadcast_to(np.asarray(tau_transmitted, float), (4,)))
+        return self.friction_scale * (self.friction_fc + self.friction_mu * load)
 
     def step_noise(self, dt):
         """Advance the residual current error by ``dt`` and return it, amps.
@@ -397,7 +502,11 @@ class DynamixelPwmServo:
                 f"{np.round(self.torque_noise_nm() * 1e3, 1).tolist()} mN.m, "
                 f"tau_cap={np.round(self.tau_cap, 3).tolist()} N.m, "
                 f"quantize={self.quantize}, "
-                f"gain_error={np.round(self.gain_error, 4).tolist()})")
+                f"gain_error={np.round(self.gain_error, 4).tolist()}, "
+                f"friction x{self.friction_scale:g}"
+                + (f" [fc {np.round(self.friction_fc * 1e3, 1).tolist()} mN.m, "
+                   f"mu {self.friction_mu.tolist()}, w {self.friction_width:g} rad/s]"
+                   if self.friction_scale > 0.0 else "") + ")")
 
 
 # ── self-test ───────────────────────────────────────────────────────────────
@@ -548,6 +657,56 @@ def _self_test():
           f"mN.m rms (torque noise "
           f"{np.round(nz.torque_noise_nm()*1e3, 2).tolist()})")
     ok &= np.all(d.std(axis=0) > 0.5 * nz.torque_noise_nm())
+
+    # ── gearbox friction ────────────────────────────────────────────────────
+    print("\n--- gearbox friction (report eq. 5, momentum-clamped) ---")
+    print("fc          =", np.round(FRICTION_FC_NM * 1e3, 2), "mN.m  (duty",
+          FRICTION_FC_DUTY.tolist(), ")")
+    print("mu          =", FRICTION_MU.tolist(), " fv =", FRICTION_FV_NM_S.tolist(),
+          " w =", FRICTION_WIDTH_RAD_S, "rad/s")
+    fr = DynamixelPwmServo(current_noise_a=0.0, friction_scale=1.05)
+    print(fr)
+    rng = np.random.default_rng(3)
+    # (k) dissipative, zero at rest, odd in qd, and never a gain in sign
+    for _ in range(2000):
+        v = rng.uniform(-1.0, 1.0, 4) * rng.choice([1e-4, 1e-2, 1.0])
+        t = rng.uniform(-3.0, 3.0, 4)
+        f = fr.friction_torque(t, v, dt)
+        assert np.all(f * v >= 0.0), "friction must oppose motion (f*qd >= 0)"
+        assert np.allclose(fr.friction_torque(t, -v, dt), -f), "odd in qd"
+        assert np.all(np.abs(f) * dt <= fr.inertia_min * np.abs(v) + 1e-15), \
+            "momentum clamp: |f| dt <= I_min |qd|"
+    assert np.all(fr.friction_torque(np.ones(4), np.zeros(4), dt) == 0.0), "zero at rest"
+    print("dissipative, odd, zero at rest, momentum-clamped: OK")
+    # (l) at speed the level is scale*(fc + mu|tau|), i.e. the 5 % surplus
+    lvl = fr.friction_torque(np.full(4, 0.7), np.full(4, 0.5), dt)
+    exp = 1.05 * (FRICTION_FC_NM + FRICTION_MU * 0.7)
+    assert np.allclose(lvl, exp, rtol=1e-6), f"level {lvl} vs {exp}"
+    print(f"at 0.5 rad/s under 0.7 N.m: {np.round(lvl * 1e3, 2).tolist()} mN.m "
+          f"= 1.05 x (fc + mu*0.7)   (compensation pays {np.round(exp / 1.05 * 1e3, 2).tolist()})")
+    # (m) an isolated armature spinning down under friction alone: explicit
+    # integration must never reverse the sign, and must come to rest.
+    for I in (ARMATURE_KG_M2, 3.0 * ARMATURE_KG_M2):
+        v = np.full(4, 0.3)
+        reversed_ = False
+        for _ in range(2000):
+            f = fr.friction_torque(np.full(4, 3.0), v, dt)   # worst load: the clamp
+            v_new = v - dt / I * f
+            reversed_ |= bool(np.any(v_new * v < 0.0))
+            v = v_new
+        assert not reversed_, f"velocity reversed under friction at I={I}"
+        assert np.all(np.abs(v) < 1e-9), f"did not come to rest: {v}"
+    print("spin-down at the 3 N.m clamp: stops, never reverses, I = armature and 3x")
+    # (n) scale 0 is the frictionless plant, bit for bit
+    z0 = DynamixelPwmServo(current_noise_a=0.0)
+    assert z0.friction_scale == 0.0
+    assert np.array_equal(z0.applied(tau, dt, qdot=np.ones(4)), tau), "scale 0 = no friction"
+    try:
+        fr.applied(tau, dt)
+        raise AssertionError("friction without qdot must refuse")
+    except ValueError:
+        pass
+    print("scale 0 is exact; friction without a velocity is refused")
 
     print("\nself-test", "PASS" if ok else "FAIL")
     return 0 if ok else 1

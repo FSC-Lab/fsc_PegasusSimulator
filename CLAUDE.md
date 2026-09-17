@@ -3006,3 +3006,99 @@ legs each). NOTHING HAPPENS, and the reason is exact.** Driver
   the bench" as evidence about the ARM only.
   NOT established by this: any hardware number (the report is qualitative), the
   heading channel (sim lags 21 deg mid-move), or a base-translating leg.
+
+**THE PD+ CALIBRATION CORRECTIONS NOW ACT ON THE STREAMED u3 — ARM SIDE,
+LAW AND OBSERVER UNTOUCHED (2026-09-14, user request).** The whole-body L1
+rig (§7.15) streams `u3` in N·m to `fsc_open_manipulator`'s
+`ExternalTorqueController`, whose shared base already ran the PD+ campaign's
+command-level pipeline (report §2.2: mapping → friction → dither → clamp →
+back-EMF + current trim) but gated the friction/dither/integral OFF on the
+pass-through. The pass-through now treats the streamed torque as a second
+NOMINAL law and applies the same bottom-level correction: three LIVE keys in
+`external_torque_controller_hardware_aerial_pwm.yaml`, all default false so
+every existing config is byte-identical — `passthrough_auxiliary_terms: true`
+(friction + dither, reference-driven, exactly zero at a hold),
+`passthrough_gravity_correction: true` (`(S−1)·g(q)`, VALID because
+`wb_arm_model_check` puts the whole-body model's `g(q)` within 0.0016 N·m of
+the URDF's, so the law's `g` IS `g_urdf`; −0.072 N·m on j2 = the handover step
+the observer used to absorb), `passthrough_integral: false` (DELIBERATE: the
+L1 arm channel + `wb_u3_internal_ff` already integrate the joint residual; a
+second integrator would corrupt `ŵ`). The friction load term is the corrected
+streamed torque (eq. 5's `µ|τ_load|`). Nothing in fsc_autopilot_ros2's law,
+observer or node changed; the Isaac yaml leaves the keys unset on purpose
+(the sim plant has no gearbox friction). `law_debug` 18 → 28 append-only
+(`[18..21]` aux added, `[22..25]` gravity correction, `[26]/[27]` flags); the
+"`[3]` = complement of `[0]`" invariant now holds only with the aux key false.
+**Validated on mock hardware, 24/24** (`test/run_passthrough_corrections_test.sh`:
+real controller on `fake_components/GenericSystem`, real yaml, every stage
+scored against the yaml's own constants — κτ to 0.01 counts, friction to
+0.02, dither rms = A/√2 exact, exactly 0 at rest). Found and fixed on the way:
+`current_loop_bandwidth_hz_joints` was live in PD+ but not in the pass-through's
+copy of the callback. Trap: mock hardware mirrors the written duty into Present
+Current, so the trim must be OFF (scalar and list) in any loopback. The
+hardware stack script's arm-side check prints the two keys either way and
+reds out a true integral. Commands + watch list: Command.md §7.15.11.
+**NOT flown.**
+
+**GEARBOX FRICTION + A 5 % ARM GRAVITY MISMATCH IN THE PLANT, AND THE
+COMPENSATION IN SIM — 3 FLIGHTS, STABLE (2026-09-14, user request off the
+calibration report).** `servo_model.py` gained the report's eq. (5) gearbox
+friction `[fc + µ|τ|]·tanh(q̇/w)` (fc [17.1, 31.4, 57.5, 52.4] mN·m = the
+yaml's duty counts / κ_pwm, µ [0, .246, .161, 0], w 0.015), applied on the
+MEASURED velocity downstream of the electromagnetic torque and
+**momentum-clamped** to `I_min·|q̇|/dt` (armature 0.02) so an explicit Coulomb
+term at 250 Hz can never reverse a joint (self-test: spin-down at the 3 N·m
+clamp never reverses). `06` gained `PEGASUS_ARM_FRICTION_SCALE` (0 = off, the
+old plant; 1.05 = 5 % more than compensated), `_FRICTION_WIDTH`, and
+`PEGASUS_ARM_MASS_SCALE` (arm links AND inertias ×, every model nominal —
+distinct from `sim_plant_mass_scale`, which moves the BODY only and leaves the
+arm exact); both WB launchers forward `sim_arm_friction_scale/_width` and
+`sim_arm_mass_scale` from the `_sim` yamls (both twins now ship 1.05/0.015/1.05)
+and pass `passthrough_corrections:=true|false` to `torque_control_isaac.launch.py`
+so the arm-side friction feed-forward (now in `torque_controller_isaac_aerial.yaml`,
+same fc/µ in N·m, `passthrough_auxiliary_terms: true`, dither 0) is on iff the
+plant has friction (`PEGASUS_ARM_FRICTION_COMP=0` = the uncompensated A/B). No
+back-EMF, on purpose — the current loop owns it. **Flown 3× (A mismatch,
+B matched, C uncompensated) vs the ideal-arm 16 s-hold baseline: all complete,
+0 % clamp, 0 % saturation, peak τ ≤ 1.06 of 3 N·m, tilt ≤ 3.6° p-p — it
+stabilizes.** The 5 % itself is cheap (A vs B: j3 err 0.6→2.6°, CoM wander
+16→25 mm std; `d̂_z` finds the 0.31 N of extra arm weight, `τ_q2` the +5 %).
+**`late_com` is a WANDER not an offset** (per-axis means 1–7 mm; the std of
+`e_com,y` is 16–25 mm at ~0.1 Hz; EE error 1–2 mm std). **Compensation buys
+the standing accuracy (C: joints park short 1.5/3.0°, phantom bias −0.28 N,
+`late_com` 36 mm) and costs a metastable 0.88 Hz j2-torque cycle at 0.105 N·m
+rms** = the attitude loop's `√(k_R/I)` mode (2026-08-23): the friction
+feed-forward is exactly zero at a hold (streamed `q_d` bit-constant — checked),
+so it cannot drive it there; it RE-EXCITES it at each leg end (FF off on `q̇_d`,
+plant friction off on the lagging `q̇`); in C the same mode is kicked by the
+EE leg and DECAYS (97→53→13→6 %); in A/B it locks in. Damping is
+model-dependent (the clamp is an effective stick below ~0.04 rad/s); the mode is
+the airframe's. Per-hold scorer: `arm_mismatch_20260914/hold_chatter.py`
+(`wb_l1_metrics`' `late_com` cannot tell offset from wander). Not implicated:
+`wb_l1_lc_var_q`. Not tried: repeat C, damp the 0.88 Hz mode (k_w/M_r_d), a
+rate-limited FF switch-off. Tables: Command.md §7.15.12. Three traps hit
+again and worth the reminder: `pkill -f` kills the invoking shell when the
+SAME command line mentions the pattern in plain text — even inside a heredoc;
+`tmux capture-pane` wraps at the pane width, so multi-word greps need `-J`; a
+metric that averages |e| reads an oscillation as a standing error.
+
+**CONFIG A MADE THE STANDING §7.15 SIM PLANT (2026-09-14, user request — "use A
+for the current simulation ... to simulate this minor mismatching case for
+robustness validation before the flight test").** No code change was needed:
+both `_sim` twins already shipped `sim_arm_friction_scale: 1.05` /
+`_width: 0.015` / `sim_arm_mass_scale: 1.05`, the launcher derives
+`passthrough_corrections:=true` from friction > 0, and `wb_l1_set_gains.py`
+preserves the new keys (it re.subs only the observer keys it knows) — all three
+VERIFIED, not assumed. What was missing was DISCOVERABILITY, now fixed in the
+three places that describe the plant: both yamls' section-1 FACTOR table gained
+the two rows and now say SIX factors, not four; the L1 isaacsim stack script's
+header listed a plant that was stale twice over (it still promised the
+2026-09-09-deleted back-EMF droop and knew nothing of the friction); and
+Command.md §7.15 now opens with the change, with a "CONFIRM THE PLANT TOO"
+banner check beside the observer one in §7.15.1. **The consequence to carry:
+every number in §7.15.4–§7.15.11 was flown on a FRICTIONLESS arm and is NOT
+comparable with a run from here on** — the frictionless baseline is
+`posture_ablation_20260909/l1_mission_kx32.npz`, and
+`PEGASUS_ARM_FRICTION_SCALE=0 PEGASUS_ARM_MASS_SCALE=1.0` reproduces that plant
+for an A/B. The GMO twin (§7.14) carries the same values on purpose: the repo's
+own rule is that the two sim yamls must not describe different plants.
