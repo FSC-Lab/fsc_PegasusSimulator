@@ -35,6 +35,6 @@ docs/docs_aerial_manipulator/arm_mismatch_20260914/run_mismatch.sh shiqi_machine
 /usr/bin/python3 docs/docs_aerial_manipulator/arm_mismatch_20260914/hold_chatter.py <the same npz>
 ```
 
-Results and the mechanism: Command.md §7.15.12. Figure `compare_mismatch.png`,
+Results and the mechanism: Command.md §7.15.14. Figure `compare_mismatch.png`,
 full metrics `metrics.txt`, launcher/driver logs in `logs/`. Raw `.npz` stay out
 of git (`.gitignore`).

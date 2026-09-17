@@ -4,7 +4,7 @@
     /usr/bin/python3 ripple_4d.py [run.npz ...]
 
 The soak window alone under-reads the 6-D runs: their 0.9 Hz joint-torque
-cycle (Command.md 7.15.12) locks in only over the later legs. So this scores
+cycle (Command.md 7.15.14) locks in only over the later legs. So this scores
 the ripple over ALL of DIRECT after the 40 s entry allowance, as the std of the
 band-passed (0.5-3 Hz) joint torques and of the logged tilt.
 """

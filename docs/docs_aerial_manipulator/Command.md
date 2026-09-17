@@ -3488,6 +3488,16 @@ the MATCHED kf only; the mismatch case is a flight question.
 
 #### 7.14.3 The whole-body WHOLE-BODY PLANNER — paper-faithful DIRECT commanding (2026-08-23)
 
+> **2026-09-14: the planner window now runs the C++ rclcpp node
+> `whole_body_trajectory_planner` from the `fsc_trajectory_planner` package**
+> (`~/Workspaces/fsc_autopilot_ws/src/fsc_trajectory_planner`; build it with
+> `colcon build --packages-select fsc_trajectory_planner`). Same topics,
+> services, states and operator flow as described below — only the process
+> behind them changed. It needs no Pegasus checkout and plans in ~3-4 ms.
+> `planner/whole_body_planner.py` no longer exists in the autopilot repo.
+> See §7.15.11 for the flight that validated it on this rig.
+
+
 In DIRECT the law now always receives the paper's FULL compatible reference
 set — system-CoM chain through snap, base heading, EE position+heading chains,
 consistent q_d — streamed as `fsc_autopilot_ros2_msgs/WholeBodyReference` on
@@ -3897,10 +3907,13 @@ reference again` on the revert. One flight each — repeat before hardware.
 > arm — a 5 % under-compensation of the two corrections the report calls
 > dominant, for robustness validation before the flight test. It is set in both
 > `_sim` yamls (`sim_arm_friction_scale` / `_width` / `sim_arm_mass_scale`) and
-> the launcher prints it in red at every start. Flown 3× and stable: §7.15.12.
+> the launcher prints it in red at every start. Flown 3× and stable: §7.15.14.
 >
-> **Every number in §7.15.4 – §7.15.11 was flown on a FRICTIONLESS arm and is
-> not comparable with a run from here on.** The frictionless baseline is
+> **Every flight number in §7.15.4 – §7.15.12 was flown on a FRICTIONLESS arm and
+> is not comparable with a run from here on** — that includes the C++-planner and
+> EE-trajectory flights of §7.15.11/12 (2026-09-14/15), flown from a checkout that
+> did not yet carry the friction plant. (§7.15.13 is a mock-hardware bench test,
+> no flight numbers.) The frictionless baseline is
 > `posture_ablation_20260909/l1_mission_kx32.npz`;
 > `PEGASUS_ARM_FRICTION_SCALE=0 PEGASUS_ARM_MASS_SCALE=1.0 <launcher>`
 > reproduces that plant for an A/B.
@@ -3967,6 +3980,13 @@ L1 Augmented Disturbance Observer.md`**, Python reference
 parity-locked to 1e-8 by `WbL1ParityTest`.
 
 #### 7.15.1 Run sequence — copy-paste, per machine
+
+> **Since 2026-09-14 step 1 must also build `fsc_trajectory_planner`** (the
+> C++ whole-body planner the step-2 stack launches in its `planner` window):
+> `cd ~/Workspaces/fsc_autopilot_ws && colcon build --packages-select
+> fsc_trajectory_planner fsc_autopilot_ros2 --cmake-args -DBUILD_TESTING=OFF`.
+> Nothing else in this sequence changes.
+
 
 Identical to §7.14.1 except the two launcher names. Every trap in §7.14.1
 applies verbatim: never chain step 0's lines with a launcher, use bracketed
@@ -4212,7 +4232,7 @@ ships on the experiment side, as a new pair beside the GMO hardware stack:
 compensation true` and `ARM GRAVITY MISMATCH ACTIVE: arm link masses x1.05`,
 and Isaac repeats both with the per-joint numbers. That pair is the standing
 config A; their absence means you are flying the pre-2026-09-14 frictionless
-arm, which is a different plant (§7.15.12).
+arm, which is a different plant (§7.15.14).
 
 **CONFIRM THE OBSERVER BEFORE YOU FLY.** The autopilot pane prints a magenta
 banner at startup; **if it is absent you are flying the GMO**, because the
@@ -5053,7 +5073,137 @@ torque carries 13–19 mN·m of ripple in the same window — plus the asynchron
 the whole mission too, but **its settled numbers are not comparable** with the
 16 s baseline (§7.15.7's hold-length trap).
 
-#### 7.15.11 The PD+ calibration corrections, applied to the streamed u3 (2026-09-14)
+
+#### 7.15.11 The C++ whole-body trajectory planner — full §7.15.1 flight, 2026-09-14
+
+The planner behind the `planner` window is no longer `whole_body_planner.py`
+importing this repo's `utils_planner`; it is the rclcpp node
+`whole_body_trajectory_planner` of the new, self-contained package
+`fsc_trajectory_planner` (`~/Workspaces/fsc_autopilot_ws/src/fsc_trajectory_planner`,
+see its CLAUDE.md). Same topics, services and states. Its maths is locked to
+this repo's Python by gtests (kinematics 1e-12, straight-line plan samples
+≤3.5e-9, flat B-spline 1e-9) and it plans in ~3-4 ms.
+
+**One full §7.15.1 mission on this rig, standard test via
+`wb_l1_tune_cycle.sh l1 cpp_planner fsc_lab_machine`** (L1 stack, `_sim`
+yaml, backend `bspline`, plant as configured on 2026-09-11 incl. the per-joint
+current-loop residual). The steps went through the drone-GS reference topic and
+the compatible-trajectory legs through the arm-GS `whole_body_planner/ee_target`
+path — the ground stations' own ROS interface, driven by the campaign driver.
+**Ten legs, ten PLANNED verdicts within 10-20 ms of the target, no refusal, no
+abort, no watchdog**; SAFETY revert, landing and disarm normal. Data:
+`trajectory_planner_cpp_20260914/l1_cpp_planner.npz`, score in
+`l1_cpp_planner_metrics.txt`, logs in `logs/`.
+
+| leg | peak CoM err | settled | max tilt |
+|---|---|---|---|
+| step x +0.5 / −0.5 m | 352 / 386 mm | 61 / 50 mm | 4.6 / 5.5° |
+| step y +0.5 / −0.5 m | 356 / 389 mm | 94 / 73 mm | 4.7 / 5.7° |
+| step yaw +30 / −30° | 166 / 70 mm | 45 / 40 mm | 4.3 / 2.3° |
+| **compatible trajectory, EE (down 6 cm, +8 cm y, +60° heading)** | **34 mm** | **11 mm** | 1.2° |
+| compatible trajectory, back | 15 mm | 5 mm | 0.8° |
+| whole-system move (base + arm at once) / back | 211 / 199 mm | 69 / 71 mm | 2.5 / 2.6° |
+
+`u1` 47.59 N soak mean (run E: 47.57 N — same injections), `w_hat_thrust` −10.65 N, `d_hat_z` −10.81 N, zero joint clamping, debug[56]
+(streamed reference fresh) = 1 throughout DIRECT at 100.0 Hz. The ordering of
+§7.15.5 holds — the compatible-trajectory legs are the best-tracked motions
+by an order of magnitude over the translations. The absolute numbers are NOT
+comparable with the 2026-09-06 run E table (the ARM-side plant moved after it:
+the count↔torque register path and the per-joint current-loop residual of
+§7.15.10 were not in run E), and no
+same-day Python-planner A/B was flown; the reference streams of the two
+planners are identical to 1e-9 by the gtests, so a flight A/B would measure
+run-to-run scatter, not the port.
+
+One capture warning, as with the Python planner: `arm is NOT at rest at
+capture: max |qdot| = 0.057 rad/s (> 0.05)` — the servo jitter of the
+current-loop residual, harmless.
+
+**Second flight the same evening, after the package was re-based on the flight
+stack's exported `wb_law` library** (the model and flat planner are now linked
+from `fsc_autopilot_ros2`, not copied; only the IK and the straight-line Picard
+planner are the package's own code). Same rig, same mission, tag
+`cpp_planner_wblaw`: 10/10 legs, no refusal, no abort, stream fresh 100 %,
+`u1` 47.60 N, zero clamping. Per-leg peak / settled: x 318-356 / 79-84 mm,
+y 328-389 / 79-89 mm, yaw 77-167 / 46-53 mm, compatible EE trajectory 46 / 21 mm
+(back 35 / 15 mm), whole-system move 209-220 / 71-76 mm — the same profile as
+the first flight within this rig's run-to-run scatter. Data
+`l1_cpp_planner_wblaw.npz`, score `l1_cpp_planner_wblaw_metrics.txt`.
+
+#### 7.15.12 END-EFFECTOR TRAJECTORY mode — two circle flights, 2026-09-15
+
+`fsc_trajectory_planner`'s second mode (see its CLAUDE.md, "End-effector
+trajectory mode"): a periodic circle / figure-8 EE trajectory with yaw along
+the tangent, planned as ONE compatible whole-body run (min-snap ramp-in, laps,
+ramp-out, rest at both ends) — the MATLAB task-space planner's redundant
+recovery adapted to the z-x-x-z arm (q1 = 0, q2 an assigned sinusoid, drone
+yaw the first z angle), the thrust feasibility residual solved as a relaxed
+Picard fixed point on B-spline flat outputs, every bound of the constraint set
+checked over the run, the largest feasible time scale found by bisection.
+Commanded from the arm GS's new **EE trajectory** tab (Sine Test / Demos tabs
+removed) or, as here, from `fsc_trajectory_planner/test/ee_trajectory_sim_driver.py`
+through the same topics/services:
+`ee_trajectory_sim_cycle.sh <tag> fsc_lab_machine circle <fraction of s_max>`.
+
+Two flights on this rig (L1 stack, `_sim` yaml), both complete: SAFETY to 1 m
+→ DIRECT → select circle (0.5 m, 2 laps, s_max 1.13 limited by the 0.30 rad/s
+yaw rate) → time scale → Go-to-start (compatible transition, executed) → at
+start → Start → run → HOLD at the start → SAFETY → land → disarm. The planner's
+own FK round trip of the reference was 0.0-0.1 mm / 0.0° on both.
+
+| flight | s | lap | EE speed | raw EE err mean / max | lag | residual after lag | circle radius flown |
+|---|---|---|---|---|---|---|---|
+| `ee_circle_eecircle` | 0.90 | 26.5 s | 0.118 m/s | 214 / 267 mm | 1.90 s | 102 mm | 0.398 m of 0.508 |
+| `ee_circle_eecircle_slow` | 0.45 | 53.0 s | 0.059 m/s | 138 / 166 mm | 2.35 s | 56 mm | 0.447 m of 0.502 |
+
+(EE error = the planner's `current_ee`, i.e. measured joints on measured
+odometry, against its `reference_pose`; z error 1-2 mm throughout.)
+
+**Third flight, 2026-09-15, after the circle was re-centred on the WORLD
+ORIGIN** (`ee_traj_center_origin`, the default; the two above were anchored on
+the held EE point). Same rig, same 0.5 m radius, 2 laps, s = 0.905 of the 1.131
+maximum — `ee_circle_origin_circle.npz`:
+
+| | reference | flown |
+|---|---|---|
+| distance from the world origin | 0.500 m, sd **0 mm** | 0.387 m, sd 14 mm |
+| path centre (x, y) | — | (+0.047, +0.005) m |
+| raw EE error mean / max | — | 215 / 262 mm |
+| lag / residual after it | — | 1.90 s / 104 mm |
+
+The reference is exactly the commanded circle about the origin; the flown one
+is concentric with it to ~5 cm and 77 % of its radius, which is the same
+first-order lag with gain below one as the two flights above, at the same
+speed. Re-centring changed where the run is, not how well it is tracked.
+
+**What this flight tested that the first two could not: Go-to-start as a real
+transition.** With the circle anchored on the held EE point the start rest was
+where the vehicle already was, so the button was a null move. Centred on the
+origin it is a **0.56 m translation with a 90° yaw change** — planned by the
+transition planner, executed without a Send, complete in 15 s, and it settled
+inside the Start gate's 5 cm / 5° / 3° tolerance on the first try. That gate
+was the open question when the circle moved: §7.15.5 measures 50-90 mm of
+settled CoM error after a 0.5 m step leg, which is the same order as the
+tolerance. It passed here; on a vehicle that settles worse, the gate is the
+thing that will refuse, and its three numbers are `ee_traj_start_*_tol`.
+
+**The error is the whole-body law's tracking bandwidth, not the reference.**
+It is a first-order lag of ~2 s with a gain below one (the flown circle is
+78 % / 89 % of the commanded radius at the two speeds), and it halves when the
+speed halves. That is the same structural P/D position-loop behaviour §7.15.5
+measured on the step legs (55-90 mm settled offsets, 200-390 mm peaks) now seen
+on a continuously moving reference; the reference itself is dynamically
+consistent to 0.1 mm. Raising the loop's bandwidth (or adding the missing
+velocity/acceleration feedforward path in the law) is the lever; slowing the
+time scale is the operator's. Data and logs under
+`trajectory_planner_cpp_20260914/` (`ee_circle_*.npz`).
+
+Operational note for cleanup on this machine: `stop_isaacsim_stack.sh` now
+`pkill -f`s `whole_body_trajectory_planner`, so — as the cycle script already
+warns for the controller names — never type that string on the command line
+that runs it; run the stop scripts from a script file.
+
+#### 7.15.13 The PD+ calibration corrections, applied to the streamed u3 (2026-09-14)
 
 **The request.** The PD+ campaign (`fsc_open_manipulator/doc/Calibration
 Result for PWM Torque Control.pdf`) does two things after its nominal law:
@@ -5163,9 +5313,9 @@ estimate (it should shrink — the gearbox is now paid at the servo), and
 whether this yaml's `wb_u3_estimate_max_j4: 0.06` stiction cap is still
 needed with the dither acting on the stream.
 
-#### 7.15.12 Imperfect friction + gravity compensation on the arm — 5 % mismatch, 3 flights (2026-09-14)
+#### 7.15.14 Imperfect friction + gravity compensation on the arm — 5 % mismatch, 3 flights (2026-09-14)
 
-**The request.** §7.15.11 gave the whole-body torque the calibration report's
+**The request.** §7.15.13 gave the whole-body torque the calibration report's
 corrections. The report also says friction and gravity compensation are the
 *dominant* corrections on the real arm, so: put both into the simulated plant
 with a controlled **5 % mismatch** against what the arm controller compensates
@@ -5641,7 +5791,7 @@ difference, so the sweep started at 2.
 
 | run | `ω_x` [rad/s] | CoM err mean / late [mm] | EE pos mean [mm] | tilt p-p [deg] | τ peak [N·m] | j2 / j3 ripple [mN·m] | tilt ripple [deg] |
 |---|---|---|---|---|---|---|---|
-| **6-D A** | (20, 6-D) | 31.6 / 18.6 | 7.2 | 2.95 | 0.96 | 70 / 50 (the §7.15.12 cycle locked in) | 0.256 |
+| **6-D A** | (20, 6-D) | 31.6 / 18.6 | 7.2 | 2.95 | 0.96 | 70 / 50 (the §7.15.14 cycle locked in) | 0.256 |
 | **6-D B** | (20, 6-D) | 29.4 / 16.0 | 6.2 | 3.06 | 0.83 | 7.8 / 5.7 | 0.104 |
 | 4-D | 6 | 65.1 / 24.3 | 13.2 | 14.3 | 2.31 | 339 / 363 | 2.11 |
 | 4-D | 2 | 42.3 / 25.5 | 8.7 | 6.04 | 1.65 | 259 / 133 | 1.18 |
@@ -5656,7 +5806,7 @@ difference, so the sweep started at 2.
 entry allowance, `ripple_4d.py`; CoM/EE from `wb_l1_metrics.py`.)
 
 - **The mode that binds is the airframe's ~0.9 Hz attitude mode** (`√(k_R/I)`,
-  §7.14.4; the metastable j2-torque cycle of §7.15.12). At `ω_x = 2` the arm
+  §7.14.4; the metastable j2-torque cycle of §7.15.14). At `ω_x = 2` the arm
   feedforward drives it to 259 mN·m of j2 ripple at 0.94 Hz; at 0.5 still 196.
 - **It is NOT a bandwidth-mismatch artefact, and it is the TRANSLATIONAL block that
   excites it.** A per-block `Ω_x` was added (`wb_l1_omega_x_{t,r,q}`, default 0 = the

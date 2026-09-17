@@ -1344,6 +1344,43 @@ ADDITIVE — no original file's behaviour changed:
   python3, run the file): defect 4.4e-8 m, hold handover 0.028 mm / ~1e-5 m/s, FD-consistency
   5e-11, IK round-trip 1e-14 rad, σ_nd ≥ 0.51 on the test transit, wrist-singular and
   out-of-range goals refused with operator-readable reasons.
+- **2026-09-14: the whole-body planner is now a C++ (rclcpp) node in its OWN
+  ROS 2 package, `fsc_trajectory_planner`** (`~/Workspaces/fsc_autopilot_ws/src/
+  fsc_trajectory_planner`, node `whole_body_trajectory_planner`, namespaced per
+  vehicle by the launch file's `uav_prefix`). It links the flight stack's
+  exported `fsc_autopilot_ros2::wb_law` for the whole-body model and the flat
+  B-spline planner, and carries its own C++ IK and straight-line Picard
+  transition planner — **it does not import this repo's `utils_planner`**,
+  so the `pegasus_root` / `FSC_PEGASUS_ROOT` coupling described in the next
+  bullet is gone from every stack script. Interface unchanged (same
+  `whole_body_planner/*` topics/services, same states), so the arm GS tab, the
+  Isaac `viz_path`/`viz_pose` drawing in 06 and `wb_l1_campaign_driver.py` work
+  as before. Plans in ~3-4 ms (was 45-260 ms). Parity against
+  `transition_planner.py` / `flat_bspline_planner.py` is locked by gtests with
+  fixtures generated from THIS repo's Python (`scripts/dump_python_fixtures.py`
+  there; `dump_flat_reference.py` here), which is now the only remaining
+  relation between the two: a change to `utils_planner`'s maths must be
+  mirrored there or the fixtures diverge. The vehicle model and the trajectory
+  backends sit behind registries (`vehicleFactories()`, `plannerFactories()`)
+  so a second airframe or a figure-8/circle shape is one factory each. Full
+  §7.15.1 sim flight with it: Command.md §7.15.11. The Python
+  `whole_body_planner.py` and its `planner/` directory were DELETED from the
+  autopilot repo the same day (its rig tests moved to the new package). This
+  repo's `utils_planner` stays: the 02/03 demos, comparison/plot tools,
+  `l1_observer.py`'s self-test and the C++ truth generators
+  (`generate_wb_truth.py`, `generate_wb_l1_truth.py`, `dump_flat_reference.py`)
+  import it, and no flight-stack process does. The bullet below describes
+  the Python node as it was.
+- **2026-09-15: END-EFFECTOR TRAJECTORY MODE in fsc_trajectory_planner.** Circle /
+  figure-8 EE trajectories (yaw along the tangent) planned as compatible whole-body
+  runs following `~/Downloads/Task-space Planner`'s `main_redundant_zyxx.m` adapted
+  to the z-x-x-z OM-X (q1 fixed at 0, q2 an assigned sinusoid, drone yaw = the first
+  z angle; the fmincon feasibility residual solved as a relaxed Picard fixed point).
+  Note the MATLAB script's `Ref_TrajGen.m` sweeps ALL THREE EE Euler angles linearly
+  and does not align yaw to the tangent — tangent yaw with zero extra roll/pitch is
+  the user's specification, and a literally level EE is this arm's wrist singularity
+  (refused). Flown from the arm GS's new "EE trajectory" tab (Sine Test and Demos
+  tabs removed). Sim record: Command.md §7.15.12.
 - **fsc_autopilot_ros2 (dev_CCM): the whole-body planner**
   (`.../single_aerial_manipulator_whole_body_direct_actuation/planner/
   whole_body_planner.py`, plain rclpy script, no build; own tmux WINDOW
@@ -3037,7 +3074,7 @@ scored against the yaml's own constants — κτ to 0.01 counts, friction to
 copy of the callback. Trap: mock hardware mirrors the written duty into Present
 Current, so the trim must be OFF (scalar and list) in any loopback. The
 hardware stack script's arm-side check prints the two keys either way and
-reds out a true integral. Commands + watch list: Command.md §7.15.11.
+reds out a true integral. Commands + watch list: Command.md §7.15.13.
 **NOT flown.**
 
 **GEARBOX FRICTION + A 5 % ARM GRAVITY MISMATCH IN THE PLANT, AND THE
@@ -3076,7 +3113,7 @@ model-dependent (the clamp is an effective stick below ~0.04 rad/s); the mode is
 the airframe's. Per-hold scorer: `arm_mismatch_20260914/hold_chatter.py`
 (`wb_l1_metrics`' `late_com` cannot tell offset from wander). Not implicated:
 `wb_l1_lc_var_q`. Not tried: repeat C, damp the 0.88 Hz mode (k_w/M_r_d), a
-rate-limited FF switch-off. Tables: Command.md §7.15.12. Three traps hit
+rate-limited FF switch-off. Tables: Command.md §7.15.14. Three traps hit
 again and worth the reminder: `pkill -f` kills the invoking shell when the
 SAME command line mentions the pattern in plain text — even inside a heredoc;
 `tmux capture-pane` wraps at the pane width, so multi-word greps need `-J`; a
@@ -3096,7 +3133,8 @@ header listed a plant that was stale twice over (it still promised the
 2026-09-09-deleted back-EMF droop and knew nothing of the friction); and
 Command.md §7.15 now opens with the change, with a "CONFIRM THE PLANT TOO"
 banner check beside the observer one in §7.15.1. **The consequence to carry:
-every number in §7.15.4–§7.15.11 was flown on a FRICTIONLESS arm and is NOT
+every flight number in §7.15.4–§7.15.12 (incl. the C++-planner and EE-trajectory
+flights, 2026-09-14/15) was flown on a FRICTIONLESS arm and is NOT
 comparable with a run from here on** — the frictionless baseline is
 `posture_ablation_20260909/l1_mission_kx32.npz`, and
 `PEGASUS_ARM_FRICTION_SCALE=0 PEGASUS_ARM_MASS_SCALE=1.0` reproduces that plant
@@ -3132,7 +3170,7 @@ which READS `wb_l1_four_d` OFF THE RUNNING NODE (`ros2 param get`) and refuses t
   bandwidth where the 6-D fed the per-group `d_f` (2/0.5/0.5). The 6-D yaml's `ω_x = 20`
   (a wrench-reading smoother there) is NOT a starting point. Sweep, 10 flights, none
   aborted, 0 % clamp/saturation: 6 → 339 mN·m of j2 ripple at the airframe's 0.94 Hz
-  attitude mode (§7.15.12's metastable cycle) and 14° tilt p-p; 2 → 259; 0.5 → 196;
+  attitude mode (§7.15.14's metastable cycle) and 14° tilt p-p; 2 → 259; 0.5 → 196;
   **0.25 → 5.0 mN·m, tilt ripple 0.075°, below BOTH 6-D baselines (7.8 / 70), repeated
   3/3.** NOT a bandwidth mismatch: per-block `Ω_x` at the 6-D's own 2/0.5/0.5 still
   rippled 167, 2/0.25/0.25 rippled 182 — the TRANSLATIONAL block of the feedforward at
