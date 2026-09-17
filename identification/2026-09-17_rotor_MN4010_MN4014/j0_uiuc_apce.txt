@@ -1,0 +1,44 @@
+             propeller                 family    p/D     J0    sd  runs linear R2
+                  18x8      APC Thin Electric  0.444  0.607 0.109     9    0.9963
+                   8x4      APC Thin Electric  0.500  0.683 0.009     5    0.9976
+                 9x4.5      APC Thin Electric  0.500  0.645 0.030     6    0.9990
+                  10x5      APC Thin Electric  0.500  0.669 0.016     6    0.9986
+                11x5.5      APC Thin Electric  0.500  0.614 0.013     6    0.9970
+                  12x6      APC Thin Electric  0.500  0.613 0.051     6    0.9986
+                13x6.5      APC Thin Electric  0.500  0.628 0.145     8    0.9973
+                  14x7      APC Thin Electric  0.500  0.605 0.076     7    0.9987
+                  16x8      APC Thin Electric  0.500  0.659 0.140     7    0.9947
+                 20x10      APC Thin Electric  0.500  0.680 0.124     6    0.9932
+                 18x10      APC Thin Electric  0.556  0.718 0.182     7    0.9970
+                14x8.5      APC Thin Electric  0.607  0.734 0.208     7    0.9910
+                  13x8      APC Thin Electric  0.615  0.725 0.259     8    0.9953
+                 21x13      APC Thin Electric  0.619  0.759 0.101     6    0.9952
+                 16x10      APC Thin Electric  0.625  0.886 0.309     8    0.9854
+                 19x12      APC Thin Electric  0.632  0.760 0.120     6    0.9927
+                  11x7      APC Thin Electric  0.636  0.781 0.201     6    0.9954
+                   9x6      APC Thin Electric  0.667  0.800 0.011     5    0.9967
+                  12x8      APC Thin Electric  0.667  0.776 0.250     6    0.9963
+                 18x12      APC Thin Electric  0.667  0.961 0.236     7    0.9919
+                  10x7      APC Thin Electric  0.700  0.839 0.251     6    0.9907
+                 17x12      APC Thin Electric  0.706  0.849 0.236     6    0.9897
+                 14x10      APC Thin Electric  0.714  0.858 0.296     8    0.9873
+                  11x8      APC Thin Electric  0.727  0.852 0.235     7    0.9817
+                   8x6      APC Thin Electric  0.750  0.951 0.006     4    0.9972
+                 16x12      APC Thin Electric  0.750  0.937 0.379     6    0.9912
+                 13x10      APC Thin Electric  0.769  0.935 0.455     9    0.9873
+                11x8.5      APC Thin Electric  0.773  0.885 0.222     5    0.9876
+                 9x7.5      APC Thin Electric  0.833  0.973 0.011     4    0.9960
+                 12x10      APC Thin Electric  0.833  0.926 0.335     5    0.9927
+                 14x12      APC Thin Electric  0.857  0.924 0.015     5    0.9933
+                 11x10      APC Thin Electric  0.909  1.021 0.020     4    0.9929
+                   8x8      APC Thin Electric  1.000  1.176 0.013     4    0.9908
+                   9x9      APC Thin Electric  1.000  1.115 0.018     3    0.9939
+
+FIT over 34 propellers: J0 = 0.957*(p/D) + 0.175   (residual sd 0.043, worst 0.148)
+vtol.py's catalogue line:      J0 = 0.720*(p/D) + 0.240
+   12x6: catalogue 0.600   measured 0.645   this fit 0.654
+   12x8: catalogue 0.720   measured 0.800   this fit 0.813
+   12x10: catalogue 0.840   measured 0.949   this fit 0.973
+
+FOR p/D = 0.333: this fit 0.494, catalogue line 0.480
+  no measured propeller within +-0.08 of that p/D -- the fit is an EXTRAPOLATION

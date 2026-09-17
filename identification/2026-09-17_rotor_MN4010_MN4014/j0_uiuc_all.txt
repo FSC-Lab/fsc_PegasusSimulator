@@ -1,0 +1,269 @@
+             propeller                 family    p/D     J0    sd  runs linear R2
+                 125x6  Aero-Naut CAM folding  0.048  0.657 0.048     7    0.9965
+                 125x9  Aero-Naut CAM folding  0.072  0.897 0.092     6    0.9954
+                  11x3              APC Sport  0.273  0.476 0.014     5    0.9975
+                  10x3              APC Sport  0.300  0.488 0.014     5    0.9982
+                5x1.58                 da4002  0.316  0.493 0.007     2    0.9983
+                5x1.58                 da4052  0.316  0.387 0.004     3    0.9984
+                9x2.85                 da4002  0.317  0.525 0.016     3    0.9875
+                9x2.85                 da4052  0.317  0.411 0.005     3    0.9973
+                 2x0.8                 GWS DD  0.320  0.366 0.011    11    0.9872
+                140x45                     vp  0.321  0.391 0.007     4    0.9865
+                11x3.8         APC Slow Flyer  0.345  0.496 0.029     7    0.9908
+                 57x20              Plantraco  0.351  0.705 0.041     5    0.9957
+                  11x4  Aero-Naut CAM folding  0.364  0.509 0.023     5    0.9953
+                  11x4              APC Sport  0.364  0.564 0.016     6    0.9993
+                  11x4           Graupner CAM  0.364  0.469 0.022     5    0.9959
+                  11x4        Master Airscrew  0.364  0.400 0.026     4    0.9975
+                  11x4                   magf  0.364  0.492 0.030     5    0.9948
+                  11x4                   rusp  0.364  0.508 0.017     5    0.9966
+                  16x6  Aero-Naut CAM folding  0.375  0.515 0.026     5    0.9949
+                  13x5  Aero-Naut CAM folding  0.385  0.539 0.046     8    0.9945
+                  10x4  Aero-Naut CAM folding  0.400  0.546 0.039     7    0.9960
+                  15x6  Aero-Naut CAM folding  0.400  0.510 0.027     5    0.9957
+                  10x4              APC Sport  0.400  0.596 0.013     6    0.9990
+                   2x1                 GWS DD  0.400  0.412 0.005     4    0.9895
+                  12x5  Aero-Naut CAM folding  0.417  0.590 0.042     6    0.9966
+                 9x3.8         APC Slow Flyer  0.422  0.570 0.039     5    0.9897
+                11x4.7         APC Slow Flyer  0.427  0.610 0.046     7    0.9967
+                11x4.7                 GWS SF  0.427  0.567 0.014     6    0.9955
+                  14x6  Aero-Naut CAM folding  0.429  0.548 0.031     7    0.9944
+                   9x4  Aero-Naut CAM folding  0.444  0.583 0.019     5    0.9968
+                   9x4                apc29ff  0.444  0.615 0.013     5    0.9982
+                  18x8      APC Thin Electric  0.444  0.607 0.109     9    0.9963
+                   9x4        APC Free Flight  0.444  0.582 0.012     5    0.9986
+                   9x4           Graupner CAM  0.444  0.528 0.022     5    0.9951
+                   9x4                   grsn  0.444  0.567 0.018     5    0.9980
+                   9x4                  Kavan  0.444  0.488 0.009     4    0.9973
+                   9x4        Master Airscrew  0.444  0.554 0.038     5    0.9952
+                   9x4                   magf  0.444  0.570 0.036     5    0.9933
+                  11x5              APC Sport  0.455  0.666 0.039     6    0.9991
+                  11x5                   magf  0.455  0.591 0.053     5    0.9940
+                10x4.7         APC Slow Flyer  0.470  0.659 0.049     7    0.9968
+                10x4.7                 GWS SF  0.470  0.636 0.010     4    0.9951
+                 8x3.8         APC Slow Flyer  0.475  0.648 0.044     5    0.9893
+                   4x2              APC Sport  0.476  0.597 0.024     6    0.9927
+                  10x5  Aero-Naut CAM folding  0.500  0.625 0.032     6    0.9952
+                  12x6  Aero-Naut CAM folding  0.500  0.642 0.050     7    0.9968
+                13x6.5  Aero-Naut CAM folding  0.500  0.685 0.086     9    0.9929
+                  16x8  Aero-Naut CAM folding  0.500  0.774 0.090     6    0.9943
+                   8x4      APC Thin Electric  0.500  0.683 0.009     5    0.9976
+                 9x4.5      APC Thin Electric  0.500  0.645 0.030     6    0.9990
+                  10x5      APC Thin Electric  0.500  0.669 0.016     6    0.9986
+                11x5.5      APC Thin Electric  0.500  0.614 0.013     6    0.9970
+                  12x6      APC Thin Electric  0.500  0.613 0.051     6    0.9986
+                13x6.5      APC Thin Electric  0.500  0.628 0.145     8    0.9973
+                  14x7      APC Thin Electric  0.500  0.605 0.076     7    0.9987
+                  16x8      APC Thin Electric  0.500  0.659 0.140     7    0.9947
+                 20x10      APC Thin Electric  0.500  0.680 0.124     6    0.9932
+                   8x4              APC Sport  0.500  0.669 0.013     5    0.9970
+                  10x5              APC Sport  0.500  0.702 0.037     7    0.9988
+                   8x4                   magf  0.500  0.626 0.028     5    0.9949
+                  10x5        Master Airscrew  0.500  0.705 0.077     7    0.9900
+                 9x4.7         APC Slow Flyer  0.522  0.662 0.034     6    0.9917
+                 9x4.7                 GWS SF  0.522  0.589 0.023     6    0.9963
+                9x4.76                 da4002  0.529  0.698 0.029     5    0.9897
+                9x4.76                 da4052  0.529  0.596 0.005     4    0.9959
+                5x2.65                 da4002  0.530  0.656 0.015     3    0.9957
+                5x2.65                 da4052  0.530  0.573 0.006     4    0.9997
+                  15x8  Aero-Naut CAM folding  0.533  0.716 0.072     6    0.9944
+                 8x4.3                 GWS SF  0.537  0.623 0.020     5    0.9956
+                130x70                E-flite  0.538  0.652 0.010     5    0.9942
+                12x6.5  Aero-Naut CAM folding  0.542  0.682 0.068     7    0.9924
+                  11x6  Aero-Naut CAM folding  0.545  0.744 0.073     7    0.9948
+                  11x6              APC Sport  0.545  0.760 0.110     7    0.9983
+                  11x6           Graupner CAM  0.545  0.606 0.034     6    0.9965
+                  11x6                   grsn  0.545  0.624 0.026     6    0.9987
+                  11x6                  Kavan  0.545  0.645 0.024     6    0.9975
+                  11x6        Master Airscrew  0.545  0.638 0.093     6    0.9880
+                  11x6        Master Airscrew  0.545  0.697 0.033     7    0.9950
+                   9x5  Aero-Naut CAM folding  0.556  0.710 0.055     6    0.9937
+                   9x5                apc29ff  0.556  0.734 0.090     6    0.9896
+                 18x10      APC Thin Electric  0.556  0.718 0.182     7    0.9970
+                   9x5                  grcsp  0.556  0.639 0.033     6    0.9955
+                   9x5                   grsn  0.556  0.663 0.053     6    0.9960
+                   9x5                 GWS DD  0.556  0.616 0.016    11    0.9988
+                   9x5                   magf  0.556  0.694 0.055     6    0.9933
+                   9x5        Master Airscrew  0.556  0.680 0.029     6    0.9959
+                  14x8  Aero-Naut CAM folding  0.571  0.783 0.113     6    0.9909
+                   7x4                   magf  0.571  0.657 0.027     4    0.9940
+                  10x6  Aero-Naut CAM folding  0.600  0.748 0.073     6    0.9924
+                125x75  Aero-Naut CAM folding  0.600  0.880 0.143     7    0.9902
+                  10x6              APC Sport  0.600  0.798 0.170     7    0.9873
+                  10x6           Graupner CAM  0.600  0.737 0.065     7    0.9955
+                  10x6                  grcsp  0.600  0.825 0.115     7    0.9967
+                  10x6                   grsn  0.600  0.702 0.044     7    0.9993
+                   5x3                 GWS DD  0.600  0.600 0.002     3    0.9936
+                  10x6                 GWS DD  0.600  0.642 0.042     6    0.9966
+                  10x6                 Kyosho  0.600  0.807 0.162     7    0.9701
+                  10x6                   magf  0.600  0.732 0.106     7    0.9894
+                14x8.5      APC Thin Electric  0.607  0.734 0.208     7    0.9910
+                  13x8  Aero-Naut CAM folding  0.615  0.861 0.113     9    0.9948
+                  13x8      APC Thin Electric  0.615  0.725 0.259     8    0.9953
+                 21x13      APC Thin Electric  0.619  0.759 0.101     6    0.9952
+                 16x10      APC Thin Electric  0.625  0.886 0.309     8    0.9854
+                   8x5              APC Sport  0.625  0.787 0.047     6    0.9922
+                 4x2.5                 GWS DD  0.625  0.632 0.018     4    0.9944
+                 19x12      APC Thin Electric  0.632  0.760 0.120     6    0.9927
+                  11x7  Aero-Naut CAM folding  0.636  0.835 0.099     7    0.9942
+                  11x7      APC Thin Electric  0.636  0.781 0.201     6    0.9954
+                  11x7         APC Slow Flyer  0.636  0.848 0.052     7    0.9908
+                  11x7              APC Sport  0.636  0.860 0.181     7    0.9953
+                  11x7                   grsn  0.636  0.705 0.043     5    0.9927
+                  11x7                 GWS DD  0.636  0.652 0.040     6    0.9987
+                  11x7                 Kyosho  0.636  0.847 0.226     7    0.9944
+                  11x7        Master Airscrew  0.636  0.674 0.098     6    0.9901
+                  11x7                    mae  0.636  0.951 0.170     7    0.9899
+                  11x7        Master Airscrew  0.636  0.738 0.030     7    0.9967
+                  11x7                Zingali  0.636  0.667 0.049     6    0.9930
+                  14x9  Aero-Naut CAM folding  0.643  0.884 0.234     6    0.9884
+                   9x6  Aero-Naut CAM folding  0.667  0.814 0.068     6    0.9936
+                  12x8  Aero-Naut CAM folding  0.667  0.774 0.110     7    0.9937
+                 15x10  Aero-Naut CAM folding  0.667  0.888 0.162     7    0.9869
+                   9x6      APC Thin Electric  0.667  0.800 0.011     5    0.9967
+                  12x8      APC Thin Electric  0.667  0.776 0.250     6    0.9963
+                 18x12      APC Thin Electric  0.667  0.961 0.236     7    0.9919
+                   9x6         APC Slow Flyer  0.667  0.921 0.088     7    0.9924
+                   9x6              APC Sport  0.667  0.834 0.116    12    0.9930
+                   9x6           Graupner CAM  0.667  0.763 0.079     7    0.9954
+                   9x6                  grcsp  0.667  0.948 0.282     7    0.9982
+                   9x6                   grsn  0.667  0.788 0.063     7    0.9987
+                   3x2                 GWS DD  0.667  0.659 0.045     3    0.9957
+                   4x3                 GWS DD  0.667  0.674 0.019     6    0.9921
+                   9x6                  Kavan  0.667  0.795 0.093     7    0.9920
+                   9x6                 Kyosho  0.667  0.790 0.040     7    0.9994
+                   9x6        Master Airscrew  0.667  0.784 0.138     7    0.9888
+                   9x6                    mae  0.667  0.955 0.158     7    0.9901
+                   9x6        Master Airscrew  0.667  0.759 0.041     7    0.9950
+                   9x6                Zingali  0.667  0.712 0.036     6    0.9937
+                 4x2.7                     mi  0.675  0.543 0.011     3    0.9919
+                 3x2.2                     mi  0.688  0.684 0.037     6    0.9917
+                  10x7  Aero-Naut CAM folding  0.700  0.837 0.091     7    0.9921
+                  10x7      APC Thin Electric  0.700  0.839 0.251     6    0.9907
+                  10x7         APC Slow Flyer  0.700  0.881 0.079     7    0.9933
+                  10x7              APC Sport  0.700  0.831 0.185     6    0.9937
+                  10x7                   grsn  0.700  0.839 0.129     6    0.9928
+                  10x7                 Kyosho  0.700  0.958 0.254     7    0.9872
+                  10x7                    mae  0.700  0.962 0.160     7    0.9879
+                  10x7        Master Airscrew  0.700  0.789 0.036     5    0.9979
+                 5x3.5                     mi  0.700  0.432 0.013     3    0.9885
+               11x7.75                  Kavan  0.705  0.789 0.024     7    0.9986
+                   8x6          Aero-Naut CAM  0.706  0.847 0.112     6    0.9871
+                 17x12      APC Thin Electric  0.706  0.849 0.236     6    0.9897
+                 14x10      APC Thin Electric  0.714  0.858 0.296     8    0.9873
+                  11x8  Aero-Naut CAM folding  0.727  0.892 0.129     7    0.9906
+                  11x8      APC Thin Electric  0.727  0.852 0.235     7    0.9817
+                  11x8              APC Sport  0.727  0.937 0.252     7    0.9897
+                  11x8           Graupner CAM  0.727  0.929 0.173     7    0.9890
+                  11x8                   grsn  0.727  0.783 0.126     7    0.9946
+                  11x8                 GWS SF  0.727  0.775 0.053     7    0.9925
+                  11x8        Master Airscrew  0.727  0.842 0.214     7    0.9819
+                  11x8                   magf  0.727  0.890 0.162     7    0.9881
+                  11x8        Master Airscrew  0.727  0.825 0.012     5    0.9964
+                 96x70                    kpf  0.729  0.877 0.043     6    0.9884
+                  12x9  Aero-Naut CAM folding  0.750  0.969 0.226     8    0.9915
+                   8x6      APC Thin Electric  0.750  0.951 0.006     4    0.9972
+                 16x12      APC Thin Electric  0.750  0.937 0.379     6    0.9912
+                   8x6         APC Slow Flyer  0.750  1.002 0.116     7    0.9914
+                   8x6              APC Sport  0.750  0.902 0.038     5    0.9988
+                5x3.75                 da4002  0.750  0.897 0.022     3    0.9862
+                9x6.75                 da4002  0.750  0.899 0.067     6    0.9880
+                5x3.75                 da4022  0.750  0.837 0.025    10    0.9899
+                9x6.75                 da4022  0.750  0.811 0.033    14    0.9941
+                5x3.75                 da4052  0.750  0.760 0.029    12    0.9963
+                9x6.75                 da4052  0.750  0.783 0.034    10    0.9901
+                   8x6                 GWS SF  0.750  0.831 0.036     6    0.9937
+                 13x10  Aero-Naut CAM folding  0.769  1.059 2.452     5    0.9921
+                   8x6       APC Carbon Fiber  0.769  0.933 0.236     6    0.9875
+                 13x10      APC Thin Electric  0.769  0.935 0.455     9    0.9873
+                11x8.5      APC Thin Electric  0.773  0.885 0.222     5    0.9876
+                   9x7  Aero-Naut CAM folding  0.778  0.907 0.076     6    0.9930
+                   9x7              APC Sport  0.778  0.905 0.287     6    0.9836
+                   9x7                   grsn  0.778  0.991 0.206     8    0.9893
+                   9x7                 GWS SF  0.778  0.859 0.065     6    0.9926
+                   9x7                   magf  0.778  0.897 0.180     7    0.9834
+                   9x7        Master Airscrew  0.778  0.839 0.051     7    0.9980
+                  10x8  Aero-Naut CAM folding  0.800  0.963 0.115     6    0.9885
+                  10x8              APC Sport  0.800  0.921 0.015     4    0.9951
+                  10x8           Graupner CAM  0.800  0.936 0.182     7    0.9884
+                  10x8                  grcsp  0.800  1.050 0.429     6    0.9828
+                  10x8                 GWS SF  0.800  0.799 0.028     5    0.9928
+                  10x8                   magf  0.800  0.914 0.224     7    0.9913
+                   5x4                    mit  0.800  0.818 0.009     4    0.9835
+                100x80              Plantraco  0.800  0.931 0.011     3    0.9948
+                 4x3.5                    mit  0.814  0.638 0.009     3    0.9855
+                  11x9              APC Sport  0.818  1.003 0.028     3    0.9958
+                  11x9                 Kyosho  0.818  1.104 0.377     7    0.9758
+                  11x9        Master Airscrew  0.818  0.925 0.238     7    0.9782
+                   8x7          Aero-Naut CAM  0.824  0.881 0.151     7    0.9865
+                 12x10  Aero-Naut CAM folding  0.833  1.053 0.565     6    0.9910
+                 9x7.5      APC Thin Electric  0.833  0.973 0.011     4    0.9960
+                 12x10      APC Thin Electric  0.833  0.926 0.335     5    0.9927
+                 9x7.5         APC Slow Flyer  0.833  1.070 0.163     7    0.9921
+                 13x11  Aero-Naut CAM folding  0.846  0.977 0.061     5    0.9939
+                 14x12  Aero-Naut CAM folding  0.857  1.120 0.098     4    0.9940
+                 14x12      APC Thin Electric  0.857  0.924 0.015     5    0.9933
+                   7x6              APC Sport  0.857  0.980 0.058     4    0.9884
+                 5x4.3                 GWS DD  0.860  0.815 0.057    12    0.9940
+                   8x7              APC Sport  0.875  0.942 0.004     3    0.9981
+                   9x8              APC Sport  0.889  0.979 0.011     4    0.9983
+                   4x4                 GWS DD  0.889  0.903 0.030     5    0.9910
+                   9x8        Master Airscrew  0.889  0.975 0.337     5    0.9856
+                   8x7       APC Carbon Fiber  0.897  1.017 0.005     3    0.9937
+                  10x9              APC Sport  0.900  1.035 0.025     4    0.9964
+                 11x10  Aero-Naut CAM folding  0.909  1.131 0.086     5    0.9931
+                 11x10      APC Thin Electric  0.909  1.021 0.020     4    0.9929
+                 11x10                   grsn  0.909  0.982 0.162     6    0.9882
+                 11x10        Master Airscrew  0.909  1.017 0.358     5    0.9605
+                 14x13              APC Sport  0.929  1.042 0.015     4    0.9972
+                   4x4        APC Free Flight  0.952  1.061 0.191     5    0.9761
+                5x4.92                 da4002  0.984  1.150 0.093     5    0.9790
+                5x4.92                 da4052  0.984  0.963 0.032     5    0.9832
+                9x8.95                 da4002  0.994  1.117 0.109     6    0.9891
+                9x8.95                 da4052  0.994  1.007 0.118     6    0.9837
+                   8x8      APC Thin Electric  1.000  1.176 0.013     4    0.9908
+                   9x9      APC Thin Electric  1.000  1.115 0.018     3    0.9939
+                   8x8              APC Sport  1.000  1.124 0.013     3    0.9944
+                   9x9              APC Sport  1.000  1.163 0.628     7    0.9800
+                 10x10              APC Sport  1.000  1.171 0.607     6    0.9877
+                   3x3                 GWS DD  1.000  0.994 0.094     5    0.9884
+                   4x4                 GWS DD  1.000  0.958 0.064     5    0.9853
+                 12x13  Aero-Naut CAM folding  1.083  1.337 0.110     3    0.9856
+                 11x12  Aero-Naut CAM folding  1.091  1.436 0.156     4    0.9844
+                  9x10              APC Sport  1.111  1.281 0.406     5    0.9758
+                7x8.25       APC Carbon Fiber  1.115  1.149 0.005     3    0.9981
+                   8x9              APC Sport  1.125  2.174 1.388     6    0.9729
+                 10x12  Aero-Naut CAM folding  1.200  1.694 1.213     6    0.9705
+                  8x10              APC Sport  1.250  1.702 0.518     6    0.9787
+                   7x9              APC Sport  1.286  1.408 2.365     4    0.9737
+
+FIT over 237 propellers: J0 = 0.978*(p/D) + 0.159   (residual sd 0.117, worst 0.915)
+vtol.py's catalogue line:      J0 = 0.720*(p/D) + 0.240
+   12x6: catalogue 0.600   measured 0.659   this fit 0.648
+   12x8: catalogue 0.720   measured 0.790   this fit 0.811
+   12x10: catalogue 0.840   measured 1.013   this fit 0.974
+
+FOR p/D = 0.333: this fit 0.485, catalogue line 0.480
+  measured props within +-0.08 of that p/D (22): J0 0.366-0.705, median 0.494
+    11x3 (APC Sport), p/D 0.273: J0 0.476
+    10x3 (APC Sport), p/D 0.300: J0 0.488
+    5x1.58 (da4002), p/D 0.316: J0 0.493
+    5x1.58 (da4052), p/D 0.316: J0 0.387
+    9x2.85 (da4002), p/D 0.317: J0 0.525
+    9x2.85 (da4052), p/D 0.317: J0 0.411
+    2x0.8 (GWS DD), p/D 0.320: J0 0.366
+    140x45 (vp), p/D 0.321: J0 0.391
+    11x3.8 (APC Slow Flyer), p/D 0.345: J0 0.496
+    57x20 (Plantraco), p/D 0.351: J0 0.705
+    11x4 (Aero-Naut CAM folding), p/D 0.364: J0 0.509
+    11x4 (APC Sport), p/D 0.364: J0 0.564
+    11x4 (Graupner CAM), p/D 0.364: J0 0.469
+    11x4 (Master Airscrew), p/D 0.364: J0 0.400
+    11x4 (magf), p/D 0.364: J0 0.492
+    11x4 (rusp), p/D 0.364: J0 0.508
+    16x6 (Aero-Naut CAM folding), p/D 0.375: J0 0.515
+    13x5 (Aero-Naut CAM folding), p/D 0.385: J0 0.539
+    10x4 (Aero-Naut CAM folding), p/D 0.400: J0 0.546
+    15x6 (Aero-Naut CAM folding), p/D 0.400: J0 0.510
+    10x4 (APC Sport), p/D 0.400: J0 0.596
+    2x1 (GWS DD), p/D 0.400: J0 0.412
