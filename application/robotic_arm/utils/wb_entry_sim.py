@@ -114,7 +114,11 @@ def make_l1(**over):
              omega_c_q=0.5, omega_i=2.0, omega_x=20.0, adapt_period_s=0.0,
              decompose=True, lc_var_f=100.0, lc_var_m=0.25, lc_var_q=0.0025,
              max_force_n=20.0, max_torque_nm=2.0, max_joint_nm=1.5,
-             max_wrench_force_n=15.0, max_wrench_torque_nm=3.0)
+             max_wrench_force_n=15.0, max_wrench_torque_nm=3.0,
+             # 4-D attribution (2026-09-16): inert at the defaults
+             four_d=False, omega_q=0.2, contact=False,
+             collision_threshold_n=0.0,
+             omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0)
     for k, val in over.items():
         if k not in v:
             raise KeyError(f"unknown L1 gain '{k}'")
@@ -147,6 +151,7 @@ class Case:
         self.com = (0.010, 0.010, 0.005)   # plant body CoM shift, ACTUAL frame [m]
         self.kf = 0.85              # plant kf scale (allocator believes KF_TRUE)
         self.kf_alloc = 1.0         # allocator belief scale (1.0 = matched; 1/0.85 = legacy)
+        self.arm_mass = 1.0         # plant arm-link mass/inertia scale (PEGASUS_ARM_MASS_SCALE)
         self.delay_ms = 16.0        # DDS + PX4 HIL transport delay
         self.observer = "l1"        # "l1" | "gmo" | "none"
         self.gains = {}             # law-gain overrides
@@ -181,6 +186,10 @@ def plant_params(model, case):
     total = sum(p["m_i"])
     p["m_i"][0] = p["m_i"][0] + (case.mass - 1.0) * total
     p["I_i_i"][0] = p["I_i_i"][0] * case.inertia
+    if getattr(case, "arm_mass", 1.0) != 1.0:
+        for i in range(1, len(p["m_i"])):
+            p["m_i"][i] = p["m_i"][i] * case.arm_mass
+            p["I_i_i"][i] = p["I_i_i"][i] * case.arm_mass
     # 06 shifts the body CoM in the ACTUAL (x-forward) frame; the model frame
     # is R_MODEL rotated: v_model = R_MODEL^T v_actual.
     p["base_com"] = TP.R_MODEL.T @ np.asarray(case.com, float)
@@ -404,7 +413,11 @@ class Law:
         # it: inner += (J_y^#)^T d_hat_int. In free flight the whole estimate
         # is internal, so the lumped filtered d_e_hat is used here.
         if case.int_ff:
-            if case.int_ff_source == "internal" and l1_est is not None:
+            if case.int_ff_source == "four_d" and l1_est is not None:
+                # the 4-D branch's own output: C_x T^-T w_hat_int, already
+                # low-passed at omega_x (wb_l1_observer.cpp, eq. u3_4)
+                d_int = l1_est["d_int_f"]
+            elif case.int_ff_source == "internal" and l1_est is not None:
                 d_int = np.linalg.solve(T.T, l1_est["w_hat"])     # T^-T w_hat
             else:
                 d_int = d_e_hat
@@ -701,7 +714,7 @@ def main():
         for kv in a.case.split(","):
             k, v = kv.split("=")
             k = k.strip(); v = v.strip()
-            if k in ("ee_ref", "observer"):
+            if k in ("ee_ref", "observer", "int_ff_source", "int_ff_blocks"):
                 kw[k] = v
             elif k == "com":
                 kw[k] = tuple(float(x) for x in v.split("/"))

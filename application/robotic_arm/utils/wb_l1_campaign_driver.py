@@ -597,6 +597,14 @@ class Driver(Node):
                     self.goto("ABORT_SETTLE")
                 else:
                     self.legs = self.build_legs()
+                    if self.a.legs:
+                        keep = [x.strip() for x in self.a.legs.split(",") if x.strip()]
+                        unknown = [k for k in keep if k not in [l[0] for l in self.legs]]
+                        if unknown:
+                            self.ev(f"!! --legs names unknown: {unknown} "
+                                    f"(have {[l[0] for l in self.legs]})")
+                        self.legs = [l for l in self.legs if l[0] in keep]
+                        self.ev(f"mission restricted to {[l[0] for l in self.legs]}")
                     self.leg_i = 0
                     if not self.legs:
                         self.goto("POST_HOLD")
@@ -756,6 +764,10 @@ def main():
                     help="settle time after each leg completes [s]")
     ap.add_argument("--no-steps", action="store_true",
                     help="hover-only mission (what the 2026-09-06 sweep flew)")
+    ap.add_argument("--legs", default="",
+                    help="comma list of leg names to fly, in the mission's own "
+                         "order (default: all). E.g. step_x+,step_x-,step_y+,"
+                         "step_y- for a step-only tuning flight (2026-09-18).")
     ap.add_argument("--direct-settle", type=float, default=20.0,
                     help="seconds after DIRECT entry excluded from the soak; "
                          "the observer needs tens of seconds to learn a 13% "
