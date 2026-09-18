@@ -6027,6 +6027,50 @@ flight per shape — repeat before quoting any number as a property (the
 describes, a first-order lag with gain below one that shrinks with speed: the
 figure-8 moves at a quarter of the circle's speed and halves every column.
 
+**THE ARM SPLIT OF THE EE RUNS — q2 30 +- 10 deg AT A 60 deg FOLD, 48 s PERIOD
+(2026-09-17, user request).** Both 4-D yamls; the 6-D twins still carry the old
+80 / 40 +- 8 / one-lap set.
+
+**The fold and the q2 centre are ONE choice.** At rest `q3 = fold - q2` EXACTLY,
+so lowering the q2 centre raises q3 by the same amount, and symmetric margins
+mean `centre = fold/2`. The old 40 +- 8 at fold 80 put BOTH joints at 48 deg,
+2 deg off the +50 stop. The requested 30 +- 10 **at the old fold is refused by
+the planner in 0.1 ms** — q3 would run to 60 deg — and its message names the only
+admissible centre there, exactly 40. Dropping the fold to 60 puts q2 and q3 both
+in [20, 40] deg, 10 deg of margin each, which is what the request was for.
+
+**The period must DIVIDE `laps * lap_time`** (48 s here) or the run does not end
+on the pose it started from; 48 s is one q2 cycle per run. Peak joint rate is
+`amp * 2pi * s / period`, and **the GS slider sets the worst case**, so it is
+scored at s_max, not at s = 1:
+
+| | s = 1 | at s_max | bound |
+|---|---|---|---|
+| circle (s_max 1.131) | 1.58 deg/s | **1.79 deg/s** | 2 deg/s |
+| figure-8 (s_max 0.358) | 0.55 deg/s | **0.62 deg/s** | 2 deg/s |
+
+The old default (period 0 = one lap, 24 s) would be 2.96 deg/s at the circle's
+s_max. What the lower fold costs, measured: the EE sits **0.135 m below the base
+instead of 0.061** (reach 0.264 vs 0.253 m), sigma_nd **0.306 -> 0.258** (still
+2.6x the 0.10 keep-out), peak joint torque 0.76 -> 0.82 N.m of 3.0. s_max is
+unchanged in both shapes — it is the drone yaw rate, which does not care about
+the arm. The run's start arm pose becomes [0, 30, 30, 0] deg, so Go-to-start now
+unfolds the arm from the folded home as part of the transition.
+
+Check any `ee_traj_*` edit against the planner BEFORE flying it — same
+feasibility checks as DIRECT, no Isaac, ~1 min:
+
+```bash
+cd ~/ros2_ws/src/fsc_trajectory_planner/test && source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
+PYTHONNOUSERSITE=1 /usr/bin/python3 \
+  ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/l1_4d_planner_20260917/ee_plan_probe.py \
+  ~/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml circle
+```
+
+It prints the READY/INFEASIBLE verdict, the diagnostics, and the rates re-planned
+at s_max. NOT re-flown at this split — the 2026-09-17 circle and figure-8 flights
+above were flown at 40 +- 8 / fold 80.
+
 **The HARDWARE pair (new, never flown):**
 `config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml`
 is the 6-D hardware yaml plus the identical parameter delta the sim pair carries

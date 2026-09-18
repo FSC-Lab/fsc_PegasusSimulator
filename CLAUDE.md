@@ -3272,6 +3272,18 @@ other machine. Full record: Command.md §7.17.5.
   another machine at RTF 0.34, on a frictionless arm. The matched 6-D run is
   `WB_L1_MISSION=ee_circle ... wb_l1_tune_cycle.sh l1 <tag>`. Data:
   `docs/docs_aerial_manipulator/l1_4d_planner_20260917/`.
+- **EE-run arm split retuned 2026-09-17 (user): q2 30 +- 10 deg at a 60 deg
+  fold, 48 s period**, both 4-D yamls (the 6-D twins keep 80 / 40 +- 8). **The
+  fold and the centre are one choice** — at rest `q3 = fold - q2`, so 30 +- 10
+  at the old 80 deg fold is REFUSED (q3 -> 60 vs the +50 stop; the planner names
+  the only admissible centre, 40). At fold 60 both joints sit in [20, 40], 10 deg
+  of margin. The period must DIVIDE `laps * lap_time` or the run does not end on
+  its start pose. Peak joint rate is `amp * 2pi * s / period` and the SLIDER sets
+  the worst case: 1.79 deg/s at the circle's s_max, 0.62 at the figure-8's.
+  Costs: EE 0.135 m below the base (was 0.061), sigma_nd 0.306 -> 0.258, peak
+  joint torque 0.82 of 3.0 N.m; s_max unchanged (it is the yaw rate). Check any
+  `ee_traj_*` edit with `l1_4d_planner_20260917/ee_plan_probe.py` before flying.
+  NOT re-flown at this split.
 - **4-D HARDWARE PAIR, never flown:**
   `params_..._whole_body_l1_4d_direct_actuation_t650.yaml` (the 6-D hardware yaml
   + the identical parameter delta, identity `AM-T650-WB-L1-4D-HW`) and
