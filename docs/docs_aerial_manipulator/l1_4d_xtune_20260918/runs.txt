@@ -1,0 +1,10 @@
+l1_4d wx0p1 gains='omega_x=0.1' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:21:05-04:00
+l1_4d wct1 gains='omega_c_t=1.0' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:25:12-04:00
+l1_4d kR3kw1p8 gains='wb_k_r=3.0 wb_k_w=1.8' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=1 2026-09-18T00:27:37-04:00
+l1_4d kv28 gains='wb_k_v=28.0' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:31:42-04:00
+l1_4d wcr0p25 gains='omega_c_r=0.25' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:35:48-04:00
+l1_4d kw1p1 gains='wb_k_w=1.1' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:39:58-04:00
+l1_4d kx24 gains='wb_k_x=24.0' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:44:06-04:00
+l1_4d mrdx0p16 gains='wb_mrd_x=0.160' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:49:21-04:00
+l1_4d mrdx0p19 gains='wb_mrd_x=0.190' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:53:46-04:00
+l1_4d wct1p5 gains='omega_c_t=1.5' driver='--hold-between 16 --soak 10 --legs step_x+,step_x-,step_y+,step_y-' rc=0 2026-09-18T00:58:03-04:00

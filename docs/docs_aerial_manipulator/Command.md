@@ -6148,3 +6148,248 @@ overrides and the `ee_traj_*` keys. **Both L1 hardware launchers' arm-side check
 now expects `current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.2]`** — the arm
 repo's TEMPORARY 2026-09-14 j4 trim. It had printed a red MISMATCH on every
 start. Move the two together when the trim is reverted.
+
+### 7.18 Flight-test preparation: x-axis settling tune, cruise speeds, and the WHOLE-BODY vs DECOUPLED comparison — 2026-09-18
+
+Four asks the night before the §7.17 flight test, in order. Data directories:
+`l1_4d_xtune_20260918/` (tune), `wb_vs_decoupled_20260918/` (speeds + comparison).
+
+#### 7.18.1 The along-arm (x) settling — measured, swept, NOT fixable by a gain
+
+`l1_4d_xtune_20260918/README.md` carries the full table (`step_score.py` over the
+step legs: peak during the move, t20/t50 = last time the along-step CoM error exceeds
+20/50 mm after the move, the envelope ratio between hold seconds 8-12 and 0-4, the
+settled rms). Baseline: after a 0.5 m step ALONG the arm the CoM error carries a
+~0.15 Hz, lightly damped oscillation (envelope 0.4-0.6) and is still >20 mm at the end
+of a 16 s hold; the LATERAL step settles under 20 mm in ~5 s (envelope 0.25). Twelve
+single-change flights (`run_xtune.sh`, a new `--legs` option of the campaign driver
+flies only the four translation steps, ~5 min each):
+
+- `omega_x` 0.1, `omega_c_r` 0.25, `k_x` 24, `M_r_d_x` 0.16: no change.
+- `k_R` 3/`k_w` 1.8: crash; `k_v` 28: diverging oscillation; `k_w` 1.1: worse on both
+  axes; `M_r_d_x` 0.19: reverted to SAFETY 3.8 s after entry. The loop sits at its
+  delay margin, as §7.14.4 found.
+- `omega_c_t` 1.0 is the ONLY lever that moves the arm-axis mode (t20 10 s, settled
+  7-8 mm) — and it moves the lateral axis the other way (16 s, 23-25 mm). 1.5 is a wash.
+
+**Shipped config unchanged.** The mechanism is the ~1.1-1.4 s effective closed-loop lag
+every trajectory run below measures; the x/y asymmetry is that lag through the arm-axis
+coupling. A fix is a model change (observer predicting the rotor-lagged applied wrench,
+or a reference lead in the planner), not a gain — see 7.18.4.
+
+Tooling added: `application/robotic_arm/utils/wb_step_sim.py` (offline planned step
+on `wb_entry_sim.py`'s plant, 4-D observer + arm-mass scale added to that tool). It
+does NOT reproduce the flown step (17 mm vs ~200 mm peak; aborts at 40 ms delay) —
+ordering only, like its parent.
+
+#### 7.18.2 The decoupled rig now flies the SAME plant, planner and task
+
+For a fair comparison the geometric+L1 rig (`start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh`)
+was moved onto the whole-body rig's plant and task path. Everything additive:
+
+- **Plant**: the launcher runs `06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py`
+  with the new `PEGASUS_ARM_COMMAND_MODE=position` (06 emulates the position servo —
+  PD + gravity + an integral term, the servo's own integrator — tracking
+  `isaacsim_manipulator/position_commands` THROUGH the same servo model: current
+  residual, gearbox friction x1.05, arm mass x1.05, body mass/inertia x1.10 + CoM
+  shift, rotor lag). Knobs come from the geometric L1 `_sim.yaml`, whose new section 1
+  is a byte copy of the WB 4-D yaml's, via `scripts/indoor_sim/lib/am_plant_from_yaml.sh`
+  (a verbatim copy of the WB launcher's block; the WB launchers were deliberately not
+  touched before the flight test — fold them onto the lib afterwards). The base
+  launcher bakes the new variable into the Isaac pane like every other knob.
+- **Allocator error matched**: `alloc_thrust_coeff` 4.8495396e-05 (+20 %) → 4.7544506e-05
+  (+17.6 %, = WB); `armff_mismatch_x` 0.010 → 0.0 (the CoM error is plant-side now).
+  SAFETY block aligned too (`ude_disturbance_lbz/ubz` ±2 → ±10, `ude_height_threshold`
+  0.4 → 0.35, `system_wd_max_tilt_deg` 40 → 20): with ±2 N the +10 % plant STALLED at
+  z = 0.94 m in SAFETY and never reached the hover (measured, first attempt).
+- **Arm**: `PositionController` gained `external_reference_topic`/`_timeout` (pure
+  tracking of a streamed JointTrajectory, freeze on stale, no homing, the GS interface
+  not advertised — TorqueControllerBase's 2026-09-05 contract). The Isaac aerial
+  position yaml sets it and carries an `arm_planner` section (mode topic = the
+  geometric+L1 fork's); `position_control_isaac.launch.py` starts `arm_planner`
+  (`arm_planner:=false` for the old bring-up).
+- **Planner + bridge** (stack script, own tmux window `planner`): `fsc_trajectory_planner`
+  launched by `ros2 run` with the **WB 4-D sim yaml** as params (ONE planner config for
+  both rigs) and `mode_topic`/`arm_reference_topic` remapped, plus
+  `fsc_autopilot_ros2/scripts/tools/decoupled_reference_bridge.py`: the planner's
+  WholeBodyReference → base position (`x_b = x_cd − R0 r_0c(q_d)`), velocity/acceleration
+  (smoothed differences of the arm term), yaw (`atan2(b1_d) + π/2`) →
+  `position_controller/reference`, published ONLY in DIRECT. Loopback:
+  `application/robotic_arm/utils/test_decoupled_wiring_loopback.py`.
+- **Ground stations**: the arm GS "EE Trajectory" tab has a Controller lamp (from the
+  flight node's latched `fsc_autopilot_ros2/controller_type`) saying WHOLE-BODY /
+  DECOUPLED / Baseline; every button is the same press in both DIRECT stacks. The drone
+  GS shows Baseline / Decoupled / Whole-Body display names (registry names unchanged).
+- **Arm-GS tab tidied (2026-09-18, user request)**: group title "End-Effector
+  Trajectory" (the "Periodic Whole-Body Run" half is gone), the view's
+  "<shape> · Time Scale x Of Max y" overlay line deleted (every one of those numbers is
+  already in the table above it), the three status rows COMPACTED to ONE row of two
+  blocks carrying a STATE only — Controller (WHOLE-BODY / DECOUPLED / BASELINE) and
+  Planner (Idle / Calculating / Ready / Planned / Executing / Paused / Infeasible) —
+  with the full status strings, including an INFEASIBLE reason, in the tooltips; the
+  world triad 0.25 -> 0.10 of the view extent; the reference frame's label "EE Ref" ->
+  "EE".
+- **THE VIEW SHOWS TWO TRAJECTORIES, AND ONE OF THEM IS DRAWN TWICE — that is real
+  data, measured** (`wb_wb_c24.npz`, the shipped 2-lap circle): the EE path is an EXACT
+  circle (least-squares fit r = 0.7500 m, radius span over the whole run **0.0 mm**),
+  but the DRONE path is the EE path minus the arm offset, and the arm's assigned q2
+  sinusoid sweeps ONCE PER RUN (`ee_traj_q2_period_s` 48 s against 2 x 23.6 s laps), so
+  lap 2 flies a ring **11.5 mm smaller in radius and 29 mm higher** than lap 1. Three
+  rings on screen = EE (r 0.750) + drone lap 1 (0.799) + drone lap 2 (0.7875), which is
+  exactly the 37 mm / 11 mm spacing the screenshot shows. Both paths were also coloured
+  by their own SPEED map and a constant-speed run puts both at the top of their ramp
+  (two near-identical yellows), so nothing said which line belonged to which body. Fix:
+  **the drone path is now DASHED** (drawn by skipping segment groups — a dashed PEN
+  restarts its phase on every few-pixel segment). To make every lap identical instead,
+  set `ee_traj_q2_period_s` to ONE LAP; that doubles the arm's peak joint rate
+  (~1.5 -> ~3 deg/s at s_max, well inside the planner's 0.5 rad/s bound) and has not
+  been flown.
+- Comparison tooling: `am_ee_compare_driver.py` (stability gate before the shape is
+  selected; sets the planner's `ee_traj_*` live; records odom, joints, the stream, the
+  debug array, the arm reference), `am_compare_cycle.sh`, `am_ee_compare_score.py`
+  (EE position + FK heading, base position/velocity/yaw against the converted
+  reference, joints; 3-D and error plots), `wb_vs_decoupled_20260918/run_compare.sh`.
+  Two scorer traps: the estimator's odometry TWIST reads ~2x the true speed on this
+  rig (base velocity is differenced from position instead), and yaw must be
+  interpolated UNWRAPPED (a 135 deg phantom at the ±180 crossing otherwise).
+
+#### 7.18.3 Cruise speeds for the 0.75 m circle and the 1.5 x 0.75 m figure-8
+
+`wb_vs_decoupled_20260918/run_compare.sh`, whole-body rig, `am_ee_compare_driver.py`
+(`--laps 2 --time-scale 1.0 --hover-z 1.2`, circle centred on the world origin at the EE
+height, figure-8 through the EE start point with its long axis along the nose):
+
+| run | EE speed | EE err mean / p95 [mm] | lag fit | residual after lag | EE heading mean | base yaw mean |
+|---|---|---|---|---|---|---|
+| circle lap 24 s | 0.220 m/s | 202 / 256 | 1.08 s | 69 mm | 9.4 deg | 9.8 deg |
+| circle lap 48 s | 0.111 m/s | 121 / 143 | 1.26 s | 35 mm | 5.0 deg | 5.2 deg |
+| figure-8 lap 67 s, heading 0 (long axis at −45 deg) | 0.064 m/s | 91 / 142 | 1.38 s | 35 mm | 4.9 deg | 6.2 deg |
+| figure-8 lap 67 s, heading 90 (long axis at +45 deg) | 0.064 m/s | 88 / 142 | 1.32 s | 34 mm | 4.8 deg | 6.1 deg |
+| figure-8 lap 67 s, heading 45 (long axis on world x) | 0.064 m/s | **ABORTED at 113 s of 138**: tilt grew 5 → 9 → 17 → 20 deg over the last third, tilt watchdog → SAFETY | | | | |
+| figure-8 lap 67 s, heading 135 (long axis on world y) | 0.064 m/s | 92 / 142 | 1.38 s | 35 mm | 5.0 deg | 6.3 deg |
+
+**THE FIGURE-8 IS ANCHORED BY ITS START TANGENT ALONG THE NOSE, 45 deg OFF ITS LONG
+AXIS** (the Gerono lemniscate's tangent at theta = 0 is (A, 2B) = (0.75, 0.75)): heading
+0 put the long axis at −45 deg and heading 90 at +45 deg (measured by SVD of the flown
+reference), so "long axis on world x/y" needs `--yaw-deg 45` / `135`. The first two rows
+above were flown before this was noticed and are the diagonal placements.
+
+(the lap-32 circle was refused once — `run does not start/end at rest` — because the arm's
+q2 sinusoid period must divide `laps x lap_time`; the driver now sets it to one cycle per
+run.) **The error is a LAG: EE error ~ speed x 1.1-1.4 s** on every run, with a 34-69 mm
+residual once the lag is removed, so the cruise speed is a budget, not an optimum. The
+figure-8 is bounded by the planner's 0.3 rad/s yaw-rate limit (s_max 0.358 at the 24 s
+default lap = 67 s per lap); its ORIENTATION barely matters (88 vs 91 mm on the two diagonals; the
+on-axis rows DECIDE it: long axis on world x = the arm axis TRIPPED the 20 deg tilt watchdog at
+113 s, long axis on world y completed at 92 mm) — **recommendation: take off heading 135 deg so the
+long axis lies on world y** (the better-damped lateral axis of 7.18.1). For the flight test: circle at 0.10 m/s
+(48 s lap) and figure-8 at 0.064 m/s (67 s lap) hold the error near 100 mm; 0.20 m/s
+doubles it. The lever that would move this curve is the lag itself (7.18.1).
+
+#### 7.18.4 Whole-body (4-D L1) vs decoupled (geometric + L1) on the same task — flown 2026-09-18
+
+Same plant, same planner config, same EE task, same driver (`am_ee_compare_driver.py`:
+SAFETY takeoff to 1.2 m → DIRECT → at least 20 s AND a stability gate (|v| < 0.03 m/s,
+drift < 0.03 m for 4 s) → planner parameters → select → time scale 1.0 → Go-to-start →
+Start gate → run → hold → SAFETY → land). Scored by `am_ee_compare_score.py` over the
+EXECUTING window; EE heading by FK from the measured joints and attitude against the
+streamed `b1_de`; base position against the bridge's converted airframe reference (same
+conversion on both rigs); the estimator's odometry twist is NOT used (reads ~2x).
+
+| run | rig | EE pos mean / p95 [mm] | lag | resid. | EE heading mean [deg] | base pos mean [mm] | base yaw mean [deg] | base z [mm] | joints rms [deg] |
+|---|---|---|---|---|---|---|---|---|---|
+| circle lap 48 s (0.11 m/s) | whole-body | **121 / 143** | 1.26 s | 35 | **5.0** | 129 | 5.2 | 0.4 | 1.20 |
+| | decoupled | 138 / 158 | 1.46 s | 31 | 10.3 | 156 | 10.3 | 11.2 | 0.31 |
+| circle lap 24 s (0.22 m/s) | whole-body | **202 / 256** | 1.08 s | 69 | **9.4** | 214 | 9.8 | 1.6 | 3.92 |
+| | decoupled | 248 / 302 | 1.38 s | 52 | 20.3 | 280 | 20.3 | 11.5 | 0.87 |
+| figure-8 lap 67 s, heading 90 (0.064 m/s) | whole-body | **88 / 142** | 1.32 s | 34 | **4.8** | 100 | 6.1 | 0.4 | 1.99 |
+| | decoupled | 98 / 162 | 1.46 s | 29 | 11.5 | 120 | 11.5 | 11.2 | 0.22 |
+| figure-8 lap 67 s, heading 135 (long axis on y, 0.064 m/s) | whole-body | **92 / 142** | 1.38 s | 35 | **5.0** | 103 | 6.3 | 0.4 | 2.03 |
+| | decoupled | 97 / 155 | 1.44 s | 26 | 11.4 | 119 | 11.4 | 11.2 | 0.22 |
+| figure-8 lap 67 s, heading 45 (long axis on x) | whole-body | ABORTED at 113 s: tilt 5→20 deg, watchdog → SAFETY (7.18.3) | | | | | | | |
+
+- **EE position: whole-body better by 10–23 % on every run**; both are lag-dominated
+  (1.1–1.3 s vs 1.4–1.5 s) and the lag-fitted residuals are alike.
+- **EE heading: whole-body halves it**, and the decoupled rig's heading error IS its base
+  yaw error to the decimal (10.3/10.3, 11.5/11.5, 20.3/20.3): the paper's constant-yaw
+  specialization has no yaw-rate feed-forward, the airframe lags the turning reference, and
+  the position-mode arm (0.2–0.9 deg rms to its joint reference) passes the lag straight to
+  the gripper. The whole-body law's arm moves 1.2–3.9 deg rms against its joint reference to
+  keep the gripper on task.
+- The decoupled rig holds altitude ~11 mm LOW on every run (its L1 settling against the
+  +17.6 % allocator error) vs 0.4–1.6 mm for the whole-body observer.
+- Both took off through the same SAFETY cascade, which on this +10 % plant swings ~1.5 m
+  sideways at t ≈ 8–12 s before settling (pre-existing, both rigs, before the gate).
+- ONE flight per configuration. Report: artifact "AM-T650 Flight-Test Prep"
+  (`wb_vs_decoupled_20260918/report.html`, built by `make_report.py`).
+
+#### 7.18.5 The tuning question settled ON THE DEMO TRAJECTORY, and the safety guard during it (2026-09-18)
+
+**`omega_c_t` 2 -> 1.0 is a STEP-RESPONSE result and does NOT carry to the demo.** 7.18.1's
+table is four 0.5 m base steps; the demo is a tracked trajectory, and the two rank
+differently. Same circle (r 0.75, lap 48 s, 2 laps), same plant, one flight each:
+
+| | shipped `omega_c_t` 2.0 | candidate 1.0 |
+|---|---|---|
+| EE position mean / p95 / max [mm] | **121 / 143 / 149** | 130 / 163 / 179 |
+| EE lag fit | **1.26 s** | 1.34 s |
+| EE heading mean / max [deg] | **5.0 / 6.4** | 5.4 / 8.9 |
+| base position mean / max [mm] | **129 / 157** | 139 / 186 |
+| tilt max [deg] | **1.48** | 5.22 |
+| joint rms q4 / peak [deg] | **1.61 / 2.08** | 2.23 / 6.24 |
+
+The candidate is worse on every column and costs 3.5x the tilt, which is consistent with
+7.18.1's own reading: a slower translational observer bought the arm axis and paid for it
+on the lateral one, and a circle drives both axes every lap. **The shipped configuration
+IS the best tuned result for the demo; nothing was changed.**
+
+**THE SAFETY GUARD, CHECKED DURING THE TRACKED TRAJECTORY (2026-09-18, user request).**
+What it does on a trip, first, because it is the question people get wrong: **it HOLDS
+STILL, it does not land.** `switchMode(kSafety)` re-seeds `outer_ref_` to the pose of that
+instant, PX4 regains attitude+rate+mixing, the trajectory planner goes silent on the mode
+edge, and `arm_planner` folds the arm home 1.0 s later (the delay is so the arm's reaction
+torque arrives after PX4 has the attitude). **Landing is a DIFFERENT failsafe**: only
+`feedbackLost()` (odometry stale, or EKF2 stopped fusing external vision, gate
+`system_fb_timeout_s` 1.0 s) descends, at `system_fb_land_speed` 0.2 m/s, holding x/y at
+the pose where it tripped — and if PX4's own fused odometry is ALSO stale it does not
+descend at all, it holds and says TAKE MANUAL CONTROL.
+
+**It is armed throughout the trajectory, and that is structural, not incidental**: the
+tilt/rate check runs at the top of every DIRECT inner-loop tick, and the drift check runs
+in the same tick AFTER the reference is selected, so it measures the law's CoM error
+against the STREAMED plan — a planned 0.5 m move is not drift, only losing the vehicle is.
+One trip latches; only a deliberate `set_direct_mode(true)` re-arms it.
+
+Three flights, and the node's own log quoted:
+
+| flight | what tripped it | what followed |
+|---|---|---|
+| `wb_c48_guardtrip` (drift limit tightened to 0.12 m) | `excess drift (horizontal CoM error 0.12/0.12 m)` at 1.6 s into DIRECT, 7 deg tilt | coasted out its 0.46 m/s (511 mm, +440 mm of altitude), came back and **settled 3 mm from the trip point, altitude 1.050 m = the trip altitude, arm home to 0.7 deg, planner STOPPED** |
+| `wb_c48_diverge` (`wb_k_r` 3.0 / `wb_k_w` 1.8, the gain that crashed in 7.18.1) | `excess tilt (tilt 20.1/20.0 deg, rate 96 deg/s)` | **flipped anyway**: 47 deg at +0.5 s, 124 deg at +1 s, on the ground at +2 s |
+| `wb_c48_midrun_abort` (SAFETY commanded 30 s INTO the tracked circle) | operator abort, the same `switchMode` path | see MIDRUN below |
+
+**Read the second row carefully: the guard is a FALLBACK, NOT A RESCUE.** It fired exactly
+as designed, at the 20 deg limit — but the vehicle was already 95 s into a 12-20 deg
+attitude limit cycle and was rotating at **96 deg/s** when it fired, and nothing recovers
+that in a metre of altitude. The rate limit (360 deg/s) is far too permissive to have
+caught it earlier; tilt at 20 deg was the binding one. The argument this makes is for
+keeping the tilt limit LOW (early) rather than raising it, and for never starting a run on
+a vehicle that has not settled — which the campaign driver enforces with its own stability
+gate (|v| < 0.03 m/s and < 0.03 m of drift for 4 s), and which is why that flight never
+started its trajectory at all.
+
+**A trip cannot be forced mid-trajectory by lowering a threshold**, and that is worth
+knowing before someone tries: the DIRECT-ENTRY transient (0.4-0.9 m, 6-7 deg) is larger
+than anything the tracked trajectory produces (0.13-0.19 m, 1.5 deg), so every threshold
+that survives entry is above the whole run. That is the correct ordering — it means no
+false trip during the demo — but it makes the entry, not the run, the guard's sizing case.
+
+**The DECOUPLED rig had no drift guard, and now does (2026-09-18).** Its fork carried tilt
+(20 deg), rate (360 deg/s) and the feedback-loss failsafe, but not the sideways-drift
+watchdog the whole-body fork gained on 2026-09-11 — the one failure the other two miss is
+a vehicle walking away LEVEL. Added as the exact twin: `system_wd_max_drift_m`, **default
+0.0 = off so every other config is byte-identical**, measured against `outer_ref_` (on the
+comparison rig, the airframe reference converted from the planner's plan, so a planned
+motion is not drift), sharing the same latch and the same `switchMode(kSafety)`. Set to
+**0.75 m** in `..._geometric_l1_direct_actuation_t650_sim.yaml` — 4x the 0.19 m worst base
+error measured on the flown circle.

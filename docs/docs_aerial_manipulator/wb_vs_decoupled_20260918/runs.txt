@@ -1,0 +1,17 @@
+wb wb_c24 args='--shape circle --radius 0.75 --lap-time 24 --yaw-deg 0' rc=0 2026-09-18T01:02:35-04:00
+wb wb_c32 args='--shape circle --radius 0.75 --lap-time 32 --yaw-deg 0' rc=0 2026-09-18T01:04:50-04:00
+wb wb_c48 args='--shape circle --radius 0.75 --lap-time 48 --yaw-deg 0' rc=0 2026-09-18T01:09:36-04:00
+wb wb_f67 args='--shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 0' rc=0 2026-09-18T01:14:56-04:00
+wb wb_f67_y90 args='--shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 90' rc=0 2026-09-18T01:20:16-04:00
+decoupled dec_c48 args='--shape circle --radius 0.75 --lap-time 48 --yaw-deg 0' rc=0 2026-09-18T01:22:54-04:00
+decoupled dec_c48 args='--shape circle --radius 0.75 --lap-time 48 --yaw-deg 0' rc=0 2026-09-18T01:27:27-04:00
+decoupled dec_c48 args='--shape circle --radius 0.75 --lap-time 48 --yaw-deg 0' rc=0 2026-09-18T01:34:11-04:00
+decoupled dec_f67_y90 args='--shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 90' rc=0 2026-09-18T01:39:01-04:00
+decoupled dec_c24 args='--shape circle --radius 0.75 --lap-time 24 --yaw-deg 0' rc=0 2026-09-18T01:42:29-04:00
+wb wb_c32 args='--shape circle --radius 0.75 --lap-time 32 --yaw-deg 0' rc=0 2026-09-18T01:46:43-04:00
+wb wb_f67_y135 args='--shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 135' rc=0 2026-09-18T01:52:39-04:00
+wb wb_f67_y45 args='--shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 45' rc=0 2026-09-18T01:58:31-04:00
+decoupled dec_f67_y135 args='--shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 135' rc=0 2026-09-18T02:03:25-04:00
+wb c48_guardtrip gains='system_wd_max_drift_m=0.12' args='--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2 --guard-watch 25' rc=0 2026-09-18T09:25:08-04:00
+wb c48_midrun_abort gains='shipped' args='--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2 --abort-mid-run 30 --guard-watch 30' rc=0 2026-09-18T09:34:03-04:00
+decoupled dec_c48_guardtrip gains='system_wd_max_drift_m=0.12' args='--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2 --guard-watch 25' rc=0 2026-09-18T09:36:30-04:00

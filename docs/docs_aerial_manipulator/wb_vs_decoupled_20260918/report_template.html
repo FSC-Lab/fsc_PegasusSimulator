@@ -1,0 +1,121 @@
+<title>AM-T650 Flight-Test Prep</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#f4f5f3;--ink:#1e2327;--ink-2:#4e565c;--ink-3:#7a848b;--line:#d5dad8;--panel:#ffffff;
+  --wb:#2a78d6;--dec:#eb6834;--ok:#1f8a4c;--warn:#b26a00;--bad:#b3261e;--mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#15181b;--ink:#e7eaec;--ink-2:#b8c0c6;--ink-3:#8a949b;--line:#2f363b;--panel:#1d2126;--wb:#3987e5;--dec:#f0784a;--ok:#3fb56f;--warn:#e0a03a;--bad:#e5594f}}
+:root[data-theme="dark"]{--paper:#15181b;--ink:#e7eaec;--ink-2:#b8c0c6;--ink-3:#8a949b;--line:#2f363b;--panel:#1d2126;--wb:#3987e5;--dec:#f0784a;--ok:#3fb56f;--warn:#e0a03a;--bad:#e5594f}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0;padding-block:24px 64px;padding-inline:16px}
+main{max-width:980px;margin:0 auto}
+h1{font-size:1.9rem;font-weight:600;line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2{font-size:1.25rem;font-weight:600;margin:40px 0 10px;text-wrap:balance;border-top:1px solid var(--line);padding-top:18px}
+h3{font-size:1.02rem;font-weight:600;margin:22px 0 6px}
+p{max-width:70ch;margin:8px 0}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.lede{color:var(--ink-2);max-width:72ch;font-size:1.02rem}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:18px 0 6px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.tile .k{font-family:var(--mono);font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+.tile .v{font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px}
+.tile .s{color:var(--ink-2);font-size:.86rem;margin-top:2px}
+.wb{color:var(--wb)}.dec{color:var(--dec)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem;margin:10px 0}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:var(--mono);font-size:.76rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.tw{overflow-x:auto}
+figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line);border-radius:4px;background:#fff}
+figcaption{color:var(--ink-2);font-size:.86rem;margin-top:6px;max-width:80ch}
+.note{border-left:3px solid var(--warn);padding:6px 12px;background:var(--panel);margin:12px 0;max-width:76ch}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.88rem;color:var(--ink-2);margin:6px 0 0}
+.legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.legend .lw::before{background:var(--wb)}.legend .ld::before{background:var(--dec)}
+code{font-family:var(--mono);font-size:.85em;background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+ul{max-width:76ch;padding-left:20px}li{margin:4px 0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+</style>
+<main>
+<div class="eyebrow">FSC Lab · Isaac Sim · 2026-09-18 · shiqi-desktop</div>
+<h1>Whole-body vs decoupled aerial-manipulator control on one planned task</h1>
+<p class="lede">Preparation for the 2026-09-18 flight test of the AM-T650 whole-body + L1 (four-dimensional attribution) controller: the arm-forward settling question, cruise speeds for the 0.75 m circle and the 1.5 × 0.75 m figure-8, and a matched comparison against the decoupled geometric + L1 controller of Cai et al. on the same plant, the same planner and the same end-effector trajectory.</p>
+
+<div class="verdict">
+  <div class="tile"><div class="k">circle, 0.098 m/s</div><div class="v"><span class="wb">{{C48_WB}}</span> vs <span class="dec">{{C48_DEC}}</span> mm</div><div class="s">mean end-effector position error, whole-body vs decoupled</div></div>
+  <div class="tile"><div class="k">figure-8, 0.068 m/s</div><div class="v"><span class="wb">{{F67_WB}}</span> vs <span class="dec">{{F67_DEC}}</span> mm</div><div class="s">mean end-effector position error</div></div>
+  <div class="tile"><div class="k">closed-loop lag</div><div class="v">{{LAG}} s</div><div class="s">both rigs; EE error ≈ speed × lag on every run</div></div>
+  <div class="tile"><div class="k">x-axis settling</div><div class="v">unchanged</div><div class="s">12 single-gain flights, none fixes it; see §1</div></div>
+</div>
+<div class="legend"><span class="lw">Whole-Body (4-D L1)</span><span class="ld">Decoupled (geometric + L1)</span></div>
+
+<h2>1. The arm-forward (x) settling is not a gain problem</h2>
+<p>After a 0.5 m base step along the arm the centre-of-mass error keeps a ~0.15 Hz, lightly damped oscillation and is still above 20 mm at the end of a 16 s hold; the lateral step settles under 20 mm in about 5 s. Twelve flights changed one parameter each (controller, observer and feed-forward filter):</p>
+<div class="tw"><table><thead><tr><th>change</th><th>along-arm t20 / settled</th><th>lateral t20 / settled</th><th>verdict</th></tr></thead><tbody>
+<tr><td>baseline (2 flights)</td><td>14–16 s / 14–28 mm</td><td>5–11 s / 3–6 mm</td><td>—</td></tr>
+<tr><td>u₃ feed-forward filter ω_x 0.25 → 0.1</td><td>15–16 s / 21–37 mm</td><td>5 s / 2–3 mm</td><td>no</td></tr>
+<tr><td>translational observer ω_c,t 2 → 1.0</td><td class="ok">10 s / 7–8 mm</td><td class="bad">16 s / 23–25 mm</td><td>trades x for y</td></tr>
+<tr><td>translational observer ω_c,t 2 → 1.5</td><td>12–16 s / 14–23 mm</td><td>5–6 s / 3–4 mm</td><td>within scatter</td></tr>
+<tr><td>attitude k_R 2 → 3, k_ω 1.5 → 1.8</td><td colspan="2" class="bad">crash, 36° tilt 4 s after the first step</td><td>no</td></tr>
+<tr><td>position damping k_v 20 → 28</td><td colspan="2" class="bad">diverging oscillation on every leg</td><td>no</td></tr>
+<tr><td>rotational observer ω_c,r 0.5 → 0.25</td><td>15–16 s / 16–40 mm</td><td>5–10 s</td><td>no</td></tr>
+<tr><td>attitude damping k_ω 1.5 → 1.1</td><td class="bad">16 s / 58–63 mm</td><td class="bad">worse (27 mm)</td><td>no</td></tr>
+<tr><td>position stiffness k_x 32 → 24</td><td>16 s / 19–26 mm</td><td>6 s / 3–4 mm</td><td>no</td></tr>
+<tr><td>imposed inertia M_r,d,x 0.1165 → 0.16 (equalises the per-axis attitude gain)</td><td>16 s / 30–43 mm</td><td>5 s / 4–6 mm</td><td>no</td></tr>
+<tr><td>imposed inertia M_r,d,x → 0.19</td><td colspan="2" class="bad">reverted to SAFETY 3.8 s after entering DIRECT</td><td>no</td></tr>
+</tbody></table></div>
+<p><b>The candidate was then flown on the demo trajectory itself, and it loses there.</b> The table above is four half-metre steps; the demo is a tracked circle, and the two rank differently &mdash; a slower translational observer buys the arm axis and pays for it on the lateral one, and a circle drives both axes every lap:</p>
+<div class="tw">{{TUNE_TABLE}}</div>
+<p>Worse on every column, at three and a half times the tilt. <b>The shipped configuration is the best tuned result for the demo; nothing was changed.</b></p>
+<p>The loop is at its delay margin: any gain increase destabilises it, less attitude damping is worse on both axes, and the only lever that moves the arm-axis mode (the translational observer bandwidth) moves the lateral axis the other way. Every trajectory run below shows the same signature, a ~1.1–1.4 s effective closed-loop lag, so the shipped configuration was left unchanged. Reducing the lag needs a model change (an observer that predicts the rotor-lagged applied wrench, or a reference lead in the planner), not a gain, and that is the recommended follow-up after the flight test.</p>
+
+<h2>2. Cruise speed: error scales with speed, so the speed is a budget</h2>
+<p>Whole-body rig, 0.75 m circle at three lap times and the 1.5 × 0.75 m figure-8 at its planner-feasible maximum (bounded by the 0.3 rad/s yaw-rate limit: the airframe yaws once per lap), long axis on world x and on world y:</p>
+<div class="tw">{{SWEEP_TABLE}}</div>
+<p>The mean end-effector error is speed × a lag of 1.1–1.4 s, with a 35–70 mm residual after the lag is removed, so the cruise speed is a budget rather than an optimum. The circle at 0.10 m/s (48 s lap) and the figure-8 at 0.064 m/s (67 s lap, the planner's maximum under its 0.3 rad/s yaw-rate bound) keep the error near 100 mm; the 0.22 m/s circle doubles it.</p>
+<p><b>Figure-8 orientation.</b> The planner anchors the lemniscate by its start tangent along the vehicle's nose, and that tangent is 45° off the long axis, so takeoff headings 0° and 90° put the long axis on the diagonals (−45°, +45°: 91 vs 88 mm) and headings 45° and 135° put it on world x and world y. {{ORIENT_TEXT}}</p>
+
+<h2>3. Whole-body vs decoupled on the same task</h2>
+<p>Same Isaac plant (body mass and inertia ×1.10, 10/10/5 mm CoM shift, +17.6 % allocator thrust belief, MN4010 rotor lag, arm gearbox friction ×1.05, arm mass ×1.05, current-loop residual), same trajectory planner and configuration, same end-effector task, same flight sequence with a stability gate before the run starts. The decoupled rig receives the planner's flat output converted to an airframe reference (position, velocity, acceleration, yaw) while its position-mode arm tracks the planner's joint trajectory sample for sample.</p>
+<h3>Circle, r = 0.75 m, lap 48 s</h3>
+<div class="tw">{{CIRCLE_TABLE}}</div>
+<figure>{{IMG_C48_3D}}<figcaption>Three-dimensional end-effector (colour) and base (grey) trajectories, reference dashed, measured solid; heading arrows every few seconds, black = reference gripper heading, red = measured.</figcaption></figure>
+<figure>{{IMG_C48_TOP}}<figcaption>Top view of the end-effector path.</figcaption></figure>
+<figure>{{IMG_C48_ERR}}<figcaption>Error time series: end-effector position and heading, base position and yaw.</figcaption></figure>
+<h3>Figure-8, 1.5 × 0.75 m, lap 67 s, long axis on world y (heading 135°)</h3>
+<div class="tw">{{FIG8_TABLE}}</div>
+<figure>{{IMG_F67_3D}}<figcaption>Three-dimensional trajectories, figure-8.</figcaption></figure>
+<figure>{{IMG_F67_TOP}}<figcaption>Top view, figure-8.</figcaption></figure>
+<figure>{{IMG_F67_ERR}}<figcaption>Error time series, figure-8.</figcaption></figure>
+<h3>Circle at 0.22 m/s (lap 24 s)</h3>
+<div class="tw">{{FAST_TABLE}}</div>
+<h3>Figure-8 on the +45° diagonal (heading 90°)</h3>
+<div class="tw">{{FIG8D_TABLE}}</div>
+<h3>What the comparison shows</h3>
+<ul>
+<li><b>End-effector position: the whole-body law is better on every run, by 10–23 %</b> — circle 48 s: 121 vs 138 mm mean; figure-8 (+45° diagonal): 88 vs 98 mm; circle 24 s: 202 vs 248 mm. Both errors are dominated by the same closed-loop lag (1.1–1.3 s whole-body, 1.4–1.5 s decoupled); once the lag is fitted out the residuals are alike (29–52 mm decoupled, 34–69 mm whole-body).</li>
+<li><b>End-effector heading: the whole-body law halves the error</b> — 5.0° vs 10.3° (circle 48 s), 4.8° vs 11.5° (figure-8), 9.4° vs 20.3° (circle 24 s). The decoupled law's heading error is its base yaw error (10.3°, 11.5°, 20.3° — identical numbers): it runs the paper's constant-yaw specialization with no yaw-rate feed-forward, so the airframe lags the turning reference and the arm, holding its joints to 0.2–0.9° rms, carries that lag straight to the gripper. The whole-body law's yaw error is half (5.2°, 6.1°, 9.8°) and its arm moves 1.2–3.9° rms against its joint reference to keep the gripper on task.</li>
+<li><b>Base position follows the same ordering</b> (129 vs 156 mm, 100 vs 120 mm, 214 vs 280 mm). The decoupled law also holds altitude 11 mm low on every run (its L1 thrust estimate settling against the +17.6 % allocator error) where the whole-body observer holds it within 0.4–1.6 mm.</li>
+<li><b>Joint tracking is the decoupled rig's strength</b> (0.2–0.9° rms position servo vs 1.2–3.9° for the torque-mode arm under the whole-body law): its arm reproduces the planned joint trajectory almost exactly, which is precisely why its gripper inherits every base error. The whole-body law spends joint error to buy end-effector accuracy.</li>
+<li><b>Neither saturated or tilted beyond 2.5°</b>; both took off on the same SAFETY cascade, which on this +10 % plant swings ~1.5 m sideways before settling (pre-existing, both rigs, before the stability gate).</li>
+</ul>
+
+<h2>4. The safety guard during the trajectory</h2>
+<p><b>On a trip the vehicle holds station where it is. It does not land.</b> The revert re-seeds the position reference to the pose of that instant, PX4 regains attitude, rate and mixing, the trajectory planner goes silent, and the arm folds home one second later, so the arm's reaction torque arrives after the attitude is back. Landing belongs to a different failsafe: only a loss of position feedback descends, at 0.2 m/s, holding x and y &mdash; and if the flight controller's own odometry is stale too, it does not descend at all.</p>
+<p>The guard is armed throughout the tracked trajectory by construction: tilt and body rate are checked at the top of every inner-loop tick, and the drift check runs in the same tick after the reference is chosen, so it measures tracking error against the streamed plan. A planned half-metre move is not drift; only losing the vehicle is.</p>
+<div class="tw"><table><thead><tr><th>flight</th><th>trigger</th><th>what followed</th></tr></thead><tbody>
+<tr><td>drift limit tightened to 0.12 m</td><td>tripped at 0.12 m of 0.12 m, 1.6 s into DIRECT, at 7&deg; tilt</td><td>coasted out its 0.46 m/s, then <b>settled 3 mm from the trip point at the trip altitude</b>; arm home to 0.7&deg;; planner stopped</td></tr>
+<tr><td><b>SAFETY commanded 30 s into the tracked circle</b></td><td>operator abort, the path a watchdog takes</td><td>291 mm of travel, <b>settled 4 mm from the trip point, altitude back to 1.227 m from 1.229 m</b>; arm folded from mid-sweep to home; planner stopped; tilt 0.1&deg;</td></tr>
+<tr><td>attitude gain set to the value that crashed in the step campaign</td><td>tilt 20.1&deg; of 20&deg;, <b>rotating at 96&deg;/s</b></td><td class="bad">flipped anyway: 47&deg; at +0.5 s, on the ground at +2 s</td></tr>
+</tbody></table></div>
+<div class="note"><b>The guard is a fallback, not a rescue.</b> It fired exactly as designed in all three, but the third vehicle had already been in a 12&ndash;20&deg; attitude limit cycle for 95 seconds and was rotating at 96&deg;/s when the limit was reached; nothing recovers that within a metre of the floor. That argues for keeping the tilt limit low rather than raising it, and for never starting a run on a vehicle that has not settled. A trip also cannot be forced mid-trajectory by lowering a threshold: the entry transient (0.4&ndash;0.9 m, 6&ndash;7&deg;) is larger than anything the tracked run produces (0.13&ndash;0.19 m, 1.5&deg;), which is the right ordering &mdash; it is why there is no false trip during the demo &mdash; but it makes entry, not the run, the sizing case.</div>
+<p>The decoupled controller had tilt, rate and feedback-loss guards but no drift guard, so a vehicle walking away level would have tripped nothing. It now has the same one, default off everywhere else, set to 0.75 m here &mdash; four times the worst base error measured on the flown circle.</p>
+
+<h2>5. What changed in the repositories</h2>
+<ul>
+<li><b>Decoupled rig moved onto the whole-body plant.</b> Its launcher runs the whole-body Isaac script with the arm in a new position-command mode (servo emulation through the same servo model); the plant knobs come from its own controller yaml, whose reality-model section is a copy of the whole-body one. Allocator thrust belief and CoM error matched; the SAFETY block aligned (the ±2 N UDE bound could not lift the +10 % plant — it stalled at 0.94 m).</li>
+<li><b>One planner, two consumers.</b> The decoupled stack launches the same trajectory planner from the whole-body yaml, and a reference bridge converts its stream for the decoupled law. The controller's reference input is remapped so the converted stream cannot re-enter the planner as a target (it did, on the first attempt).</li>
+<li><b>Position-mode arm tracks a streamed trajectory.</b> The position controller gained pure-tracking mode; the arm planner owns the reference in SAFETY, the trajectory planner in DIRECT.</li>
+<li><b>Ground stations.</b> The arm station's EE Trajectory tab shows which controller its operations land in (Whole-Body / Decoupled / Baseline); the drone station lists Baseline, Decoupled and Whole-Body.</li>
+<li>Full record: <code>docs/docs_aerial_manipulator/Command.md</code> §7.18, data in <code>l1_4d_xtune_20260918/</code> and <code>wb_vs_decoupled_20260918/</code>.</li>
+</ul>
+<div class="note">Every number above is ONE flight per configuration. The rig's run-to-run scatter (2026-08-10 lesson) means a difference of a few percent is not a property; the whole-body vs decoupled gaps reported here are far larger than that. All simulations were closed at the end of the session.</div>
+</main>

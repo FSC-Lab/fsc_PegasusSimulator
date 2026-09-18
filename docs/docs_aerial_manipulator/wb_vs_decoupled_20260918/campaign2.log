@@ -1,0 +1,26 @@
+
+############ decoupled/dec_c48  --shape circle --radius 0.75 --lap-time 48 --yaw-deg 0 ############
+=== [decoupled/dec_c48] 0. clean slate ===
+=== [decoupled/dec_c48] 1. controller stack ===
+=== [decoupled/dec_c48] 2. Pegasus / PX4 / arm ===
+=== [decoupled/dec_c48] 3. waiting for odometry ===
+=== [decoupled/dec_c48] 3b. waiting for EKF yaw/EV alignment ===
+=== [decoupled/dec_c48] 3c. waiting for the arm stack + planner ===
+=== [decoupled/dec_c48] 4. flying (--laps 2 --time-scale 1.0 --hover-z 1.2 --shape circle --radius 0.75 --lap-time 48 --yaw-deg 0) ===
+=== [decoupled/dec_c48] done (driver rc=0) ===
+[ 167.70s] PHASE LAND  mode=DIRECT plan=PLANNED T=3.0s ee=READY s=1.00 max=2.26 T=100.00s EE err 0.1mm/0.0deg
+[ 167.70s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 168.05s] mode -> SAFETY
+[ 187.72s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 187.72s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918/decoupled_dec_c48.npz aborted=True never at start: plan=PLANNED T=3.0s err=[0.024711410336011284, 0.018801670992056537, 0.05989580980190621, 0.0, 0.05, 5.0, 3.0]
+############ dec_c48 rc=0 ############
+
+############ decoupled/dec_f67_y90  --shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 90 ############
+=== [decoupled/dec_f67_y90] 0. clean slate ===
+=== [decoupled/dec_f67_y90] 1. controller stack ===
+=== [decoupled/dec_f67_y90] 2. Pegasus / PX4 / arm ===
+=== [decoupled/dec_f67_y90] 3. waiting for odometry ===
+=== [decoupled/dec_f67_y90] 3b. waiting for EKF yaw/EV alignment ===
+=== [decoupled/dec_f67_y90] 3c. waiting for the arm stack + planner ===
+=== [decoupled/dec_f67_y90] 4. flying (--laps 2 --time-scale 1.0 --hover-z 1.2 --shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 67 --q2-period 134 --yaw-deg 90) ===

@@ -1,0 +1,16 @@
+############ wb/c48_midrun_abort  shipped ############
+=== [wb/c48_midrun_abort] 0. clean slate ===
+=== [wb/c48_midrun_abort] 1. controller stack ===
+=== [wb/c48_midrun_abort] 2. Pegasus / PX4 / arm ===
+=== [wb/c48_midrun_abort] 3. waiting for odometry ===
+=== [wb/c48_midrun_abort] 3b. waiting for EKF yaw/EV alignment ===
+=== [wb/c48_midrun_abort] 3c. waiting for the arm stack + planner ===
+=== [wb/c48_midrun_abort] 4. flying (--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2 --abort-mid-run 30 --guard-watch 30) ===
+=== [wb/c48_midrun_abort] done (driver rc=0) ===
+[ 111.49s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 141.51s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[ 161.51s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 161.51s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+EE tracking during the run: 450 samples, mean 110.7 mm, p95 150.2 mm, max 154.8 mm
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918/wb_c48_midrun_abort.npz aborted=False 
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml

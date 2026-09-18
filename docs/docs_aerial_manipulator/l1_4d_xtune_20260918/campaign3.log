@@ -1,0 +1,22 @@
+  wb_l1_omega_c_t : 2.0 -> 1.5
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+
+############ l1_4d/wct1p5  omega_c_t=1.5 ############
+=== [l1_4d/wct1p5] 0. clean slate ===
+=== [l1_4d/wct1p5] 1. controller stack ===
+=== [l1_4d/wct1p5] 2. Pegasus / PX4 / arm ===
+=== [l1_4d/wct1p5] 3. waiting for odometry ===
+=== [l1_4d/wct1p5] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d/wct1p5] 3c. waiting for the arm ===
+=== [l1_4d/wct1p5] 4. flying (standard) ===
+=== [l1_4d/wct1p5] done (driver rc=0) ===
+[ 156.71s] mode -> SAFETY
+[ 156.71s] planner -> IDLE
+[ 156.73s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 168.73s] PHASE LAND  ref=[0.04, 0.026, 0.998] mode='SAFETY'
+[ 188.73s] service rc/disarm requested
+[ 188.73s] PHASE DONE  ref=[0.04, 0.026, 0.35] mode='SAFETY'
+[ 188.75s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ wct1p5 rc=0 ############
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml

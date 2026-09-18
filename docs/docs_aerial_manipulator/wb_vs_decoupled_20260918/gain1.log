@@ -1,0 +1,20 @@
+  wb_l1_omega_c_t : 2.0 -> 1.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+############ wb/c48_wct1  omega_c_t=1.0 ############
+=== [wb/c48_wct1] 0. clean slate ===
+=== [wb/c48_wct1] 1. controller stack ===
+=== [wb/c48_wct1] 2. Pegasus / PX4 / arm ===
+=== [wb/c48_wct1] 3. waiting for odometry ===
+=== [wb/c48_wct1] 3b. waiting for EKF yaw/EV alignment ===
+=== [wb/c48_wct1] 3c. waiting for the arm stack + planner ===
+=== [wb/c48_wct1] 4. flying (--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2) ===
+=== [wb/c48_wct1] done (driver rc=0) ===
+[ 183.39s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 195.41s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[ 215.43s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 215.43s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+EE tracking during the run: 1500 samples, mean 130.1 mm, p95 162.6 mm, max 178.6 mm
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918/wb_c48_wct1.npz aborted=False 
+./run_gain_check.sh: line 18: syntax error near unexpected token `then'
+./run_gain_check.sh: line 18: `wb_* || "$KV" == omega* || "$KV" == a_* || "$KV" == lc_* || "$KV" == max_* ]]; then'
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml

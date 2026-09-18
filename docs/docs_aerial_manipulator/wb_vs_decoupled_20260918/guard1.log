@@ -1,0 +1,17 @@
+  system_wd_max_drift_m: 0.75 -> 0.12
+############ wb/c48_guardtrip  system_wd_max_drift_m=0.12 ############
+=== [wb/c48_guardtrip] 0. clean slate ===
+=== [wb/c48_guardtrip] 1. controller stack ===
+=== [wb/c48_guardtrip] 2. Pegasus / PX4 / arm ===
+=== [wb/c48_guardtrip] 3. waiting for odometry ===
+=== [wb/c48_guardtrip] 3b. waiting for EKF yaw/EV alignment ===
+=== [wb/c48_guardtrip] 3c. waiting for the arm stack + planner ===
+=== [wb/c48_guardtrip] 4. flying (--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2 --guard-watch 25) ===
+=== [wb/c48_guardtrip] done (driver rc=0) ===
+[  23.08s] !! NODE REVERTED TO SAFETY DURING DIRECT_SETTLE -- guard trip; freezing the reference at [0.19, 0.121, 1.052] and recording for 25.0 s
+[  23.08s] PHASE GUARD_WATCH  mode=DIRECT plan=HOLD ee=NONE
+[  48.09s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[  68.11s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[  68.11s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918/wb_c48_guardtrip.npz aborted=False 
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
