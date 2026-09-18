@@ -3291,11 +3291,18 @@ other machine. Full record: Command.md §7.17.5.
   met: bspline flew the 2026-09-14 §7.15.1 sim mission 10/10 and planned every
   Go-to-start of the 09-17 EE flights, and it enforces rotor force + joint torque
   which straight_line does NOT (its refusals are a superset). Verified on the 4-D
-  hardware yaml through the planner's rig loopback. **`straight_line` is KEPT**:
-  one key away, the only backend with HARDWARE time (0912), the parity anchor to
-  `utils_planner/transition_planner.py`, and the only one that holds the EE to a
-  straight line — an operational property near a net/person/object. Delete it
-  only after bspline has flown on hardware.
+  hardware yaml through the planner's rig loopback. **`straight_line` WAS THEN REMOVED**
+  (same day, user request): with every config on bspline it was a name nothing
+  selected, and its refusals were a SUBSET (rotor force + joint torque are
+  checked only in the flat path). Gone: the C++ backend, its registry entry,
+  the straight_line-only `PlanOptions` knobs, 4 gtests + a 156 kB fixture, and
+  this repo's `transition_planner.plan_transition` (221 lines, no callers —
+  `flat_bspline_planner.plan_transition` is the drop-in). **That module keeps
+  the model, FK, IK and rest algebra**, which eleven tools import. Parity
+  suites still pass against the COMMITTED fixtures. **Fixture trap:**
+  regenerating them drifts in the last bits (max |Δ| 8.6e-13 vs a 1e-8
+  tolerance, 13894 of 34950 numbers) from BLAS/threading in the iterative IK —
+  do not commit regenerated fixtures without a reason.
 - **4-D HARDWARE PAIR, never flown:**
   `params_..._whole_body_l1_4d_direct_actuation_t650.yaml` (the 6-D hardware yaml
   + the identical parameter delta, identity `AM-T650-WB-L1-4D-HW`) and

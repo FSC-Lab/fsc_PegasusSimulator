@@ -6086,13 +6086,39 @@ the 2026-09-17 EE flights. It also enforces MORE than straight_line — rotor fo
 and joint torque are checked in the bspline path and not in straight_line — so
 its refusals are a superset.
 
-**`straight_line` is KEPT, and not only as legacy.** It is one key away, it is
-the only backend with hardware time on it (the 2026-09-12 whole-body flight), it
-is the parity anchor to this repo's `utils_planner/transition_planner.py` through
-the planner package's gtest fixtures, and it has an operational property bspline
-does not: it holds the end-effector to a **straight line**, which is what you
-want near a net, a person or an object. Revisit deleting it after bspline has
-flown on hardware — not before.
+**`straight_line` WAS THEN REMOVED (same day, user request).** With every
+shipped config on bspline it was a selectable name nothing selected, and its
+refusals were a SUBSET of bspline's — rotor force and joint torque are checked
+in the flat path and were not checked at all in the Picard one. Gone from
+`fsc_trajectory_planner`: the backend (~420 lines), its registry entry, the
+`straight_line`-only `PlanOptions` knobs, four `StraightLine.*` gtests and their
+156 kB fixture, and the transition half of `dump_python_fixtures.py`; gone from
+this repo: `utils_planner/transition_planner.py`'s `plan_transition` (221 lines,
+no callers — `flat_bspline_planner.plan_transition` takes the same rest specs
+and returns the same dict). **That file keeps the model, FK, IK and rest
+algebra**, which eleven tools here import. `PlannerRegistry.NamesAndUnknown`
+moved beside the surviving backend and asserts the registry holds exactly
+`bspline`.
+
+What it was, for recovery: a straight EE line with the CoM on a degree-16
+polynomial solved by a Picard fixed point — the backend of the 2026-09-12
+hardware flight, and the only one that guaranteed a straight end-effector path.
+Recover it from git if a transit ever has to clear something.
+
+Verified after the removal: the planner package builds Release clean and its
+10 gtests pass (kinematics 4, flat parity + registry 2, EE trajectory 4); all
+four rig loopbacks pass against the built node; **`WbParityTest` 4/4,
+`WbReferenceBuilderTest` 2/2 and `WbL1ParityTest` 4/4 still pass against the
+COMMITTED fixtures**; `transition_planner.py`'s trimmed self-test passes
+(IK round-trip 3.2e-13 rad, rest_ref-vs-FK 8.3e-17 m).
+
+**A fixture trap found while checking this:** regenerating
+`wb_l1_truth_t650.json` and `python_kinematics_t650.txt` produces last-bit
+drift — max |Δ| **8.6e-13** against a 1e-8 parity tolerance, 13894 of 34950
+numbers — on code that did not change. The generators are deterministic within
+a run pair, so this is BLAS/threading noise in the iterative IK and rollouts,
+not a behaviour change. **Do not commit regenerated fixtures unless a fixture
+value actually needed to move**; restore them and re-run the parity tests.
 
 **The HARDWARE pair (new, never flown):**
 `config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml`

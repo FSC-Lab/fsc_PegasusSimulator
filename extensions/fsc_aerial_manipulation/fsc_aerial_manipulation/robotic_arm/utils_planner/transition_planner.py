@@ -1,47 +1,30 @@
 """
-transition_planner.py — dynamically-compatible SETPOINT-TO-SETPOINT
-transitions for the whole-body aerial manipulator (2026-08-23).
+transition_planner.py — the whole-body MODEL, FK, IK and rest algebra for the
+aerial manipulator (2026-08-23; the straight-line planner removed 2026-09-17).
 
-The engine behind the whole-body WHOLE-BODY PLANNER (fsc_autopilot_ros2's
-single_aerial_manipulator_whole_body_direct_actuation fork): in whole-body
-DIRECT mode the operator's drone-GS base target and arm-GS inertial EE target
-define a GOAL rest configuration, and this module plans the compatible
-transition from the CURRENT rest setpoint to it — the paper's full reference
-set (system-CoM position through snap, base heading, EE position + heading
-through 2 derivatives, and the consistent joint reference), with the CoM
-trajectory SOLVED from the prescribed EE task exactly like
-compatible_trajectory.py's Picard fixed point (thrust-direction <-> arm-
-kinematics coupling). A large GS step therefore never reaches the law as a
-step.
+What lives here now, and what every other tool in this repo imports:
 
-NEW FILE, additive on purpose: compatible_trajectory.py (the flight-validated
-catalogue engine) is imported, never modified.
+  make_params_t650()      the T650 whole-body model (the flight variant, with
+                          the gripper offset), shared with the C++ t650Defaults
+  arm_fk_model(q, params) the arm chain: link CoM, EE position, EE rotation
+  rest_ref(...)           the 16-field reference of a STATIC rest pose
+  ik_position_azimuth /   damped-Newton 4-DOF IK (EE position + heading
+  ik_world(...)           azimuth), multi-seed, on the exact chain
+  _sigma_nd(q, params)    the nondimensional singularity margin
+
+Consumers: generate_wb_truth.py / generate_wb_l1_truth.py (the C++ parity
+fixtures), dump_flat_reference.py, l1_observer.py's self-test, the campaign
+drivers and wb_entry_sim.py, and fsc_trajectory_planner's kinematics fixture
+(scripts/dump_python_fixtures.py there).
+
+TRANSITIONS ARE PLANNED BY flat_bspline_planner.plan_transition — same rest
+specs, same returned reference dict, constraints ENFORCED rather than
+verified. The straight-line Picard planner that used to live here was removed
+with its C++ backend on 2026-09-17 (see the note where it stood).
 
 Everything here lives in the MODEL frame (AM_realign's y-forward body frame —
-the frame controller.make_params()/wb_types.hpp declare). The whole-body planner owns
-every actual<->model conversion at its ROS boundary, mirroring the C++
-frame_adapter.
-
-Structure of a transition (all rest-to-rest):
-
-  rest spec        r = {"x_b": base position (world), "phi": MODEL heading
-                        angle [rad], "q": joint vector (4,)}
-  prescribed task  every scalar channel A->B on ONE shared MIN-SNAP phase
-                   sigma(t): EE position straight-line p_e0 -> p_e1, z-x-z
-                   EE-orientation angles (al, be, ga), platform heading pp,
-                   and the beta split q2/(q2+q3). Min-snap (septic, zero
-                   jerk at both ends) is REQUIRED, not a nicety: the solved
-                   CoM VELOCITY depends on the prescribed jerk through the
-                   thrust-direction map, so min-jerk endpoints would put a
-                   CoM-velocity step at the hold<->transition joins.
-  rest identity    at a rest point R0 = Rz(phi) exactly, so the z-x-z task
-                   angles are (al, be, ga) = (phi + q1, q2 + q3, q4) and the
-                   endpoints of every channel are algebraic in (phi, q) — the
-                   planned trajectory starts and ends EXACTLY on the holds.
-  CoM solve        single-segment Picard fixed point on a degree-`deg`
-                   polynomial p_c (the classic planner's flight-validated
-                   unconstrained fit), recovered q via the z-x-z
-                   decomposition with the time-varying split.
+the frame controller.make_params()/wb_types.hpp declare); the flight node owns
+every actual<->model conversion at its ROS boundary.
 
 Offline validation: run this file directly (system python3, no Isaac):
     python3 transition_planner.py
@@ -349,226 +332,15 @@ _DEFAULT_TRANSITION_OPTS = {
 }
 
 
-def _rest_angles(phi, q):
-    """(al, be, ga, pp, split) of the rest task at (phi, q)."""
-    be = q[1] + q[2]
-    split = q[1] / be if abs(be) > 1e-9 else 0.5
-    return phi + q[0], be, q[3], phi, split
+# The STRAIGHT-LINE planner (plan_transition + _rest_angles) was REMOVED
+# 2026-09-17 with the C++ backend it was the reference for: nothing called it
+# any more (the whole-body stack plans every transition with the flat B-spline
+# planner, flat_bspline_planner.plan_transition, which takes the same rest
+# specs and returns the same reference dict), and its only verification link,
+# fsc_trajectory_planner's StraightLine.ParityWithPython, went with it. The
+# model, FK, IK and rest algebra above are UNCHANGED and are what the rest of
+# this repo imports. Recover the planner from this file before that commit.
 
-
-def plan_transition(params, rest0, rest1, opts=None):
-    """Plan the compatible transition rest0 -> rest1.
-
-    rest = {"x_b": (3,) world base position, "phi": model heading [rad],
-            "q": (4,) joints}. Returns a plan dict:
-      T          duration [s]
-      ref(t)     full reference dict (rest_ref keys) at time t (clamped)
-      q1         terminal joints (rest1["q"], for the whole-body planner's next hold)
-      diag       defect / margins / peaks / endpoint mismatch
-    Raises ValueError with an operator-readable reason when infeasible.
-    """
-    o = dict(_DEFAULT_TRANSITION_OPTS, **(opts or {}))
-    q0 = np.asarray(rest0["q"], float)
-    q1 = np.asarray(rest1["q"], float)
-    for name, q in (("start", q0), ("goal", q1)):
-        be = np.degrees(q[1] + q[2])
-        if be < o["beta_min_deg"]:
-            raise ValueError(
-                f"{name} fold beta = {be:.1f} deg < {o['beta_min_deg']:.0f} "
-                "deg (wrist singularity) — z-x-z recovery is ill-posed")
-        if np.any(q < Q_MIN - 1e-9) or np.any(q > Q_MAX + 1e-9):
-            raise ValueError(f"{name} joints outside the working range")
-
-    al0, be0, ga0, pp0, sp0 = _rest_angles(float(rest0["phi"]), q0)
-    al1, be1, ga1, pp1, sp1 = _rest_angles(float(rest1["phi"]), q1)
-    # continuity: goal angles on the branch nearest the start
-    al1 = _unwrap_near(al1, al0)
-    ga1 = _unwrap_near(ga1, ga0)
-    pp1 = _unwrap_near(pp1, pp0)
-
-    p_e0 = rest_ref(params, rest0["x_b"], rest0["phi"], q0)["r_ed"]
-    p_e1 = rest_ref(params, rest1["x_b"], rest1["phi"], q1)["r_ed"]
-    d_pos = float(np.linalg.norm(p_e1 - p_e0))
-    # the CoM travels a comparable distance; base translation bounds it too
-    d_base = float(np.linalg.norm(
-        np.asarray(rest1["x_b"], float) - np.asarray(rest0["x_b"], float)))
-    d_move = max(d_pos, d_base)
-    d_ang = max(abs(al1 - al0), abs(be1 - be0), abs(ga1 - ga0),
-                abs(pp1 - pp0))
-
-    # duration from the min-snap peak factors
-    t_v = PEAK_DS * d_move / o["v_max"] if d_move > 0 else 0.0
-    t_a = np.sqrt(PEAK_D2S * d_move / o["a_max"]) if d_move > 0 else 0.0
-    t_w = PEAK_DS * d_ang / o["w_max"] if d_ang > 0 else 0.0
-    T = float(np.clip(max(t_v, t_a, t_w), o["T_min"], o["T_max"]))
-
-    dp = p_e1 - p_e0
-
-    def task(tq):
-        """Prescribed task at time tq — the classic-task structure with every
-        channel A->B on one min-snap phase (chain rule for TIME derivs)."""
-        s, ds, d2s = CT._minsnap3(min(1.0, max(0.0, tq / T)))
-        sd, sdd = ds / T, d2s / T ** 2
-        tk = {}
-        tk["r_ed"] = p_e0 + dp * s
-        tk["r_ed_dot"] = dp * sd
-        tk["r_ed_ddot"] = dp * sdd
-
-        al, al1_, al2_ = al0 + (al1 - al0) * s, (al1 - al0), 0.0
-        be, be1_, be2_ = be0 + (be1 - be0) * s, (be1 - be0), 0.0
-        ga, ga1_, ga2_ = ga0 + (ga1 - ga0) * s, (ga1 - ga0), 0.0
-        A, B, Cc = CT._Rz(al), CT._Rx(be), CT._Rz(ga)
-        dA = CT._SZ @ A * al1_
-        d2A = CT._SZ @ CT._SZ @ A * al1_ ** 2 + CT._SZ @ A * al2_
-        dB = CT._SX @ B * be1_
-        d2B = CT._SX @ CT._SX @ B * be1_ ** 2 + CT._SX @ B * be2_
-        dC = CT._SZ @ Cc * ga1_
-        d2C = CT._SZ @ CT._SZ @ Cc * ga1_ ** 2 + CT._SZ @ Cc * ga2_
-        re = A @ B @ Cc
-        dre = dA @ B @ Cc + A @ dB @ Cc + A @ B @ dC
-        d2re = (d2A @ B @ Cc + A @ d2B @ Cc + A @ B @ d2C
-                + 2.0 * (dA @ dB @ Cc + dA @ B @ dC + A @ dB @ dC))
-        tk["R_e"] = re
-        tk["b1_de"] = re[:, 0]
-        tk["b1_de_dot"] = dre[:, 0] * sd
-        tk["b1_de_ddot"] = d2re[:, 0] * sd ** 2 + dre[:, 0] * sdd
-
-        pp = pp0 + (pp1 - pp0) * s
-        pp1_, pp2_ = (pp1 - pp0), 0.0
-        cp, sp = np.cos(pp), np.sin(pp)
-        b1d = np.array([cp, sp, 0.0])
-        b1d_s1 = pp1_ * np.array([-sp, cp, 0.0])
-        b1d_s2 = (pp2_ * np.array([-sp, cp, 0.0])
-                  + pp1_ ** 2 * np.array([-cp, -sp, 0.0]))
-        tk["b1_d"] = b1d
-        tk["b1_d_dot"] = b1d_s1 * sd
-        tk["b1_d_ddot"] = b1d_s2 * sd ** 2 + b1d_s1 * sdd
-
-        tk["split"] = sp0 + (sp1 - sp0) * s
-        return tk
-
-    def recover_q(pcdd, tk):
-        """Thrust dir -> R0 -> z-x-z of R0' R_e -> q, with the time-varying
-        split (compatible_trajectory's _recover_q, split per-sample)."""
-        ac = pcdd + params["g"] * _E3
-        r0 = CT._build_R0(ac / np.linalg.norm(ac), tk["b1_d"])
-        a, b, c = CT._zxz_angles(r0.T @ tk["R_e"])
-        sp = tk["split"]
-        return np.array([a, sp * b, (1.0 - sp) * b, c]), r0, ac
-
-    # ---- Picard fixed point on a single-segment polynomial p_c -------------
-    _yield = o["yield_hook"]
-    _every = max(1, int(o["yield_every"]))
-    n = int(o["N"])
-    t = np.linspace(0.0, T, n)
-    pe = np.zeros((3, n))
-    tks = []
-    for k in range(n):
-        tk = task(t[k])
-        tks.append(tk)
-        pe[:, k] = tk["r_ed"]
-    bounds = [0.0, T]
-    pc = CT._fit_pc_segments(t, pe, bounds, o["deg"])
-    hist = []
-    for _ in range(int(o["maxit"])):
-        pcdd = CT._eval_pc(pc, t)[2]
-        pc_new = np.zeros((3, n))
-        for k in range(n):
-            if _yield is not None and k % _every == 0:
-                _yield()
-            q, r0, _ = recover_q(pcdd[:, k], tks[k])
-            r0c, r0e = CT._arm_kin(q, params)
-            pc_new[:, k] = pe[:, k] + r0 @ (r0c - r0e)
-        pc_cur = CT._eval_pc(pc, t)[0]
-        pc_next = CT._fit_pc_segments(
-            t, (1.0 - o["relax"]) * pc_cur + o["relax"] * pc_new,
-            bounds, o["deg"])
-        step = float(np.max(np.linalg.norm(
-            CT._eval_pc(pc_next, t)[0] - pc_cur, axis=0)))
-        hist.append(step)
-        pc = pc_next
-        if step < o["tol"]:
-            break
-
-    # ---- diagnostics on a fine grid ----------------------------------------
-    nf = int(o["Nfine"])
-    tf = np.linspace(0.0, T, nf)
-    pcf, pc1f, _, _, _ = CT._eval_pc(pc, tf)
-    pcddf = CT._eval_pc(pc, tf)[2]
-    e_dyn = np.zeros(nf)
-    sig_nd = np.zeros(nf)
-    qs = np.zeros((4, nf))
-    for k in range(nf):
-        if _yield is not None and k % _every == 0:
-            _yield()
-        tk = task(tf[k])
-        q, r0, _ = recover_q(pcddf[:, k], tk)
-        r0c, r0e = CT._arm_kin(q, params)
-        e_dyn[k] = np.linalg.norm(pcf[:, k] - (tk["r_ed"] + r0 @ (r0c - r0e)))
-        sig_nd[k] = _sigma_nd(q, params)
-        qs[:, k] = q
-    # endpoint mismatch of the unconstrained fit vs the exact rest CoM
-    x_c0 = rest_ref(params, rest0["x_b"], rest0["phi"], q0)["x_cd"]
-    x_c1 = rest_ref(params, rest1["x_b"], rest1["phi"], q1)["x_cd"]
-    end_err = max(float(np.linalg.norm(CT._eval_pc(pc, 0.0)[0] - x_c0)),
-                  float(np.linalg.norm(CT._eval_pc(pc, T)[0] - x_c1)))
-
-    diag = {
-        "T": T, "iterations": len(hist),
-        "max_dyn_defect": float(e_dyn.max()),
-        "min_sigma_nd": float(sig_nd.min()),
-        "q_min_deg": np.degrees(qs.min(axis=1)),
-        "q_max_deg": np.degrees(qs.max(axis=1)),
-        "peak_com_speed": float(np.max(np.linalg.norm(pc1f, axis=0))),
-        "peak_ee_speed": PEAK_DS * d_pos / T if T > 0 else 0.0,
-        "endpoint_mismatch": end_err,
-    }
-    if diag["min_sigma_nd"] < SIGMA_ND_MARGIN:
-        raise ValueError(
-            f"transition leaves the certified-safe set: min sigma_nd = "
-            f"{diag['min_sigma_nd']:.3f} < {SIGMA_ND_MARGIN:.2f}")
-    lo_ok = np.all(diag["q_min_deg"] >= np.degrees(Q_MIN) - 1e-6)
-    hi_ok = np.all(diag["q_max_deg"] <= np.degrees(Q_MAX) + 1e-6)
-    if not (lo_ok and hi_ok):
-        raise ValueError(
-            "recovered joint path exceeds the working range: "
-            f"min {np.round(diag['q_min_deg'], 1).tolist()} "
-            f"max {np.round(diag['q_max_deg'], 1).tolist()} deg")
-    if diag["endpoint_mismatch"] > 2e-3:
-        raise ValueError(
-            f"CoM fit endpoint mismatch {diag['endpoint_mismatch'] * 1e3:.2f}"
-            " mm — refusing a stepped hold handover")
-
-    def ref(tq):
-        tq = float(np.clip(tq, 0.0, T))
-        p, p1, p2, p3, p4 = CT._eval_pc(pc, tq)
-        tk = task(tq)
-        q, _, _ = recover_q(p2, tk)
-        # qdot by central FD of the recovered q (endpoints one-sided)
-        h = 1e-3
-        ta, tb = max(0.0, tq - h), min(T, tq + h)
-        qa, _, _ = recover_q(CT._eval_pc(pc, ta)[2], task(ta))
-        qb, _, _ = recover_q(CT._eval_pc(pc, tb)[2], task(tb))
-        out = {"x_cd": p, "x_cd_dot": p1, "x_cd_ddot": p2,
-               "x_cd_d3": p3, "x_cd_d4": p4,
-               "q_d": q, "qdot_d": (qb - qa) / (tb - ta)}
-        for k in ("b1_d", "b1_d_dot", "b1_d_ddot",
-                  "r_ed", "r_ed_dot", "r_ed_ddot",
-                  "b1_de", "b1_de_dot", "b1_de_ddot"):
-            out[k] = tk[k]
-        return out
-
-    if o["verbose"]:
-        print(f"[transition] T = {T:.2f} s, {len(hist)} Picard iters, "
-              f"defect {diag['max_dyn_defect']:.2e} m, "
-              f"sigma_nd >= {diag['min_sigma_nd']:.3f}, "
-              f"endpoint mismatch {diag['endpoint_mismatch'] * 1e3:.3f} mm")
-    return {"T": T, "ref": ref, "q1": q1.copy(), "diag": diag}
-
-
-# ===========================================================================
-# offline validation
-# ===========================================================================
 
 def _selftest():
     print("=== transition_planner offline validation (T650 model) ===")
@@ -588,66 +360,19 @@ def _selftest():
           f"sigma_nd={info['sigma_nd']:.3f}")
     assert err_ik < 1e-7 and info["ok"]
 
-    # 2) plan a combined base+arm transition and validate everything
-    rest0 = {"x_b": np.array([0.0, 0.0, 1.2]), "phi": 0.0, "q": home}
-    rest1 = {"x_b": np.array([0.4, 0.3, 1.4]), "phi": np.deg2rad(20.0),
-             "q": q_star}
-    plan = plan_transition(params, rest0, rest1, {"verbose": True})
-    T = plan["T"]
+    # 2) FK <-> rest_ref agreement at a second, unrelated rest
+    q2_ = np.array([np.deg2rad(-20.0), np.deg2rad(45.0),
+                    np.deg2rad(-10.0), np.deg2rad(60.0)])
+    rr2 = rest_ref(params, np.array([-0.3, 0.4, 0.9]), np.deg2rad(-40.0), q2_)
+    r0c, r0e, _ = arm_fk_model(q2_, params)
+    x_c = rr2["x_cd"]
+    p_e = rr2["r_ed"]
+    off = np.linalg.norm((x_c - p_e) - _Rz(np.deg2rad(-40.0)) @ (r0c - r0e))
+    print(f"rest_ref vs FK chain: |x_c - p_e - R0 (r0c - r0e)| = {off:.2e} m")
+    assert off < 1e-12
+    print(f"sigma_nd at that rest: {_sigma_nd(q2_, params):.3f}")
 
-    # endpoints match the holds
-    for tq, rest in ((0.0, rest0), (T, rest1)):
-        want = rest_ref(params, rest["x_b"], rest["phi"], rest["q"])
-        got = plan["ref"](tq)
-        e_q = float(np.max(np.abs(got["q_d"] - want["q_d"])))
-        e_pe = float(np.linalg.norm(got["r_ed"] - want["r_ed"]))
-        e_pc = float(np.linalg.norm(got["x_cd"] - want["x_cd"]))
-        e_v = float(np.linalg.norm(got["x_cd_dot"]))
-        print(f"t={tq:5.2f}: |dq|={e_q:.2e} rad, |d r_ed|={e_pe:.2e} m, "
-              f"|d x_cd|={e_pc:.2e} m, |v_c|={e_v:.2e} m/s")
-        assert e_q < 1e-3 and e_pe < 1e-9 and e_pc < 2e-3 and e_v < 2e-3
-
-    # 3) FD-consistency of every prescribed derivative chain (interior)
-    h = 1e-5
-    worst = 0.0
-    for tq in np.linspace(0.15 * T, 0.85 * T, 9):
-        ra, r0_, rb = (plan["ref"](tq - h), plan["ref"](tq),
-                       plan["ref"](tq + h))
-        for k, kd in (("r_ed", "r_ed_dot"), ("b1_de", "b1_de_dot"),
-                      ("b1_d", "b1_d_dot"), ("x_cd", "x_cd_dot"),
-                      ("x_cd_dot", "x_cd_ddot")):
-            fd = (rb[k] - ra[k]) / (2 * h)
-            worst = max(worst, float(np.max(np.abs(fd - r0_[kd]))))
-    print(f"FD-consistency (all chains): worst {worst:.2e}")
-    assert worst < 1e-4
-
-    # 4) defect + margins already asserted inside plan_transition
-    d = plan["diag"]
-    print(f"defect {d['max_dyn_defect']:.2e} m | sigma_nd {d['min_sigma_nd']:.3f} | "
-          f"q range [{np.round(d['q_min_deg'], 1).tolist()}, "
-          f"{np.round(d['q_max_deg'], 1).tolist()}] deg | "
-          f"peak CoM speed {d['peak_com_speed']:.3f} m/s")
-
-    # 5) heading-only and arm-only degenerate transitions plan cleanly
-    plan_yaw = plan_transition(params, rest0,
-                               {"x_b": rest0["x_b"], "phi": np.deg2rad(30.0),
-                                "q": home})
-    plan_arm = plan_transition(params, rest0,
-                               {"x_b": rest0["x_b"], "phi": 0.0, "q": q_star})
-    print(f"yaw-only T={plan_yaw['T']:.2f} s, arm-only T={plan_arm['T']:.2f} s"
-          f" (defects {plan_yaw['diag']['max_dyn_defect']:.1e} / "
-          f"{plan_arm['diag']['max_dyn_defect']:.1e} m)")
-
-    # 6) infeasible targets are refused with a reason
-    try:
-        plan_transition(params, rest0,
-                        {"x_b": rest0["x_b"], "phi": 0.0,
-                         "q": np.array([0.0, 0.02, 0.02, 0.0])})
-        raise AssertionError("wrist-singular goal was not refused")
-    except ValueError as e:
-        print(f"refusal (expected): {e}")
-
-    print("=== ALL TRANSITION-PLANNER CHECKS PASSED ===")
+    print("=== MODEL / FK / IK CHECKS PASSED ===")
 
 
 if __name__ == "__main__":
