@@ -194,6 +194,17 @@ done
 ARM_FRICTION_SCALE="${PEGASUS_ARM_FRICTION_SCALE:-}"
 ARM_FRICTION_WIDTH="${PEGASUS_ARM_FRICTION_WIDTH:-}"
 ARM_MASS_SCALE="${PEGASUS_ARM_MASS_SCALE:-}"
+# ARM COMMAND MODE (2026-09-18): effort (default, the torque-mode arm) or
+# position (06 emulates the position servo tracking isaacsim_manipulator/
+# position_commands -- the DECOUPLED rig's arm on the SAME plant). Validated
+# here and BAKED into the Isaac pane like every other knob (the tmux-server
+# environment trap): an exported variable does not reliably reach a pane of
+# an already-running tmux server.
+ARM_COMMAND_MODE="${PEGASUS_ARM_COMMAND_MODE:-effort}"
+case "$ARM_COMMAND_MODE" in
+  effort|position) ;;
+  *) echo "ERROR: PEGASUS_ARM_COMMAND_MODE must be effort or position (got '$ARM_COMMAND_MODE')." >&2; exit 2 ;;
+esac
 for _NV in "$ARM_FRICTION_SCALE" "$ARM_FRICTION_WIDTH" "$ARM_MASS_SCALE"; do
   if [[ -n "$_NV" && ! "$_NV" =~ ^${_NUM_RE}$ ]]; then
     echo "ERROR: PEGASUS_ARM_FRICTION_SCALE / _FRICTION_WIDTH / PEGASUS_ARM_MASS_SCALE must be a non-negative decimal (got '$_NV')." >&2
@@ -275,6 +286,7 @@ PEGASUS_ARM_COUNTS_TRUE=$ARM_COUNTS_TRUE \
 PEGASUS_ARM_FRICTION_SCALE=$ARM_FRICTION_SCALE \
 PEGASUS_ARM_FRICTION_WIDTH=$ARM_FRICTION_WIDTH \
 PEGASUS_ARM_MASS_SCALE=$ARM_MASS_SCALE \
+PEGASUS_ARM_COMMAND_MODE=$ARM_COMMAND_MODE \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

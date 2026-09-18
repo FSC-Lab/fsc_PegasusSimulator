@@ -188,6 +188,24 @@ ARM_STATE_TOPIC     = "/uav_0/isaacsim_manipulator/joint_states"
 # The name Arm Topic Naming.md reserved for torque mode — written ONLY by
 # IsaacTopicEffortSystem, read ONLY by this plant.
 ARM_EFFORT_TOPIC    = "/uav_0/isaacsim_manipulator/effort_commands"
+# --- ARM COMMAND MODE (2026-09-18) ------------------------------------------
+# PEGASUS_ARM_COMMAND_MODE = effort (default, every existing rig bit-identical)
+#                          | position
+# `position` makes THIS plant the DECOUPLED rig's too: the arm is commanded by
+# the position-mode ros2_control stack (IsaacTopicSystem, 05's bus) and the
+# PD + gravity-comp servo emulation tracks the streamed
+# isaacsim_manipulator/position_commands -- 05's emulation, but through the
+# SAME servo model (current-loop residual, gearbox friction, arm-mass and
+# body injections) as the torque-mode arm, so the whole-body and decoupled
+# controllers meet an identical plant. The emulation additionally carries an
+# INTEGRAL term (a Dynamixel position servo has one; it is what absorbs the
+# gearbox friction that the torque-mode stack feeds forward instead).
+ARM_COMMAND_MODE    = (os.environ.get("PEGASUS_ARM_COMMAND_MODE", "") or "effort").strip().lower()
+if ARM_COMMAND_MODE not in ("effort", "position"):
+    raise SystemExit(f"PEGASUS_ARM_COMMAND_MODE must be effort or position (got '{ARM_COMMAND_MODE}')")
+ARM_POSITION_TOPIC  = "/uav_0/isaacsim_manipulator/position_commands"
+ARM_POS_KI          = 2.0    # [N·m/(rad·s)] servo-integrator emulation, position mode only
+ARM_POS_I_MAX       = 0.35   # [N·m] anti-windup clamp (below the friction+gravity residual it absorbs)
 
 # --- PLANNED-TRAJECTORY VISUALISATION (2026-09-04, user request) -----------
 # BLUE  = the drone reference path (the system CoM the law tracks) + an arrow
@@ -632,8 +650,18 @@ class AmT650WholeBodyArmSim:
         self._arm_node = RclpyNode(f"isaac_arm_torque_plant_{VEHICLE_ID}")
         self._arm_state_pub = self._arm_node.create_publisher(
             JointState, ARM_STATE_TOPIC, 10)
-        self._arm_eff_sub = self._arm_node.create_subscription(
-            JointState, ARM_EFFORT_TOPIC, self._on_arm_effort, 10)
+        if ARM_COMMAND_MODE == "position":
+            self._q_cmd = Q_HOME.copy()          # latest position command (latched)
+            self._i_pos = np.zeros(4)
+            self._arm_pos_sub = self._arm_node.create_subscription(
+                JointState, ARM_POSITION_TOPIC, self._on_arm_position, 10)
+            print(f"[AM-T650-WB] ARM COMMAND MODE = POSITION: servo emulation tracking "
+                  f"{ARM_POSITION_TOPIC} (KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} KI={ARM_POS_KI} "
+                  f"clamp {TAU_MAX} N·m) through the servo model; the effort bus is NOT subscribed",
+                  flush=True)
+        else:
+            self._arm_eff_sub = self._arm_node.create_subscription(
+                JointState, ARM_EFFORT_TOPIC, self._on_arm_effort, 10)
 
         # --- planned-trajectory visualisation -------------------------------
         self._viz_path = None       # (N, 12) world-frame samples of the plan
@@ -751,6 +779,24 @@ class AmT650WholeBodyArmSim:
         print(f"[AM-T650-WB] arm ROS2 bridge up: states -> {ARM_STATE_TOPIC}, "
               f"efforts <- {ARM_EFFORT_TOPIC} (names {ARM_ROS_JOINT_NAMES})",
               flush=True)
+
+    def _on_arm_position(self, msg):
+        # 05's semantics: match by name, latch what arrives, keep the rest.
+        q = self._q_cmd.copy()
+        matched = 0
+        names = list(msg.name)
+        for j, nm in enumerate(ARM_ROS_JOINT_NAMES):
+            try:
+                k = names.index(nm)
+            except ValueError:
+                continue
+            if k < len(msg.position) and math.isfinite(msg.position[k]):
+                q[j] = float(msg.position[k])
+                matched += 1
+        if matched:
+            self._q_cmd = q
+            self._cmd_stamp_t = self._t
+            self._n_cmds += 1
 
     def _on_arm_effort(self, msg):
         # Match BY NAME; reject the WHOLE message if any joint is missing or
@@ -1138,6 +1184,12 @@ class AmT650WholeBodyArmSim:
         # ── Torque source arbitration (hysteresis, mirrors the controller) ─
         fresh = (self._cmd_stamp_t is not None
                  and (self._t - self._cmd_stamp_t) < CMD_FRESH_S)
+        if ARM_COMMAND_MODE == "position":
+            # POSITION mode: the PD hold IS the servo; its target is the
+            # latched ROS 2 position command, slewed below exactly as 05 does.
+            self._q_hold_target = np.asarray(self._q_cmd, float)
+            self._ext_active = False
+            fresh = False
         if not fresh:
             self._fresh_count = 0
             if self._ext_active:
@@ -1169,6 +1221,11 @@ class AmT650WholeBodyArmSim:
                             -ARM_HOLD_RATE * dt, ARM_HOLD_RATE * dt)
             self._hold_ref = self._hold_ref + d_ref
             tau_cmd = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm
+            if ARM_COMMAND_MODE == "position":
+                # the servo's integrator (position mode only)
+                self._i_pos = np.clip(self._i_pos - ARM_POS_KI * (q - self._hold_ref) * dt,
+                                      -ARM_POS_I_MAX, ARM_POS_I_MAX)
+                tau_cmd = tau_cmd + self._i_pos
 
         # THE SERVO. Both branches go through it: the residual current error is
         # a property of the motor and its current loop, not of whoever computed
@@ -1201,7 +1258,8 @@ class AmT650WholeBodyArmSim:
             else:
                 cmd_txt = (f"n={self._n_cmds}, age "
                            f"{self._t - self._cmd_stamp_t:4.1f}s")
-            mode_txt = "EXT-TORQUE" if self._ext_active else "PD-HOLD"
+            mode_txt = ("POS-SERVO" if ARM_COMMAND_MODE == "position"
+                        else ("EXT-TORQUE" if self._ext_active else "PD-HOLD"))
             print(f"[AM-T650-WB] t={self._t:7.1f}s  z={p0[2]:6.3f} m  "
                   f"|v|={np.linalg.norm(v0):5.2f} m/s  arm={mode_txt}  "
                   f"q={np.degrees(q).round(1)} deg  "

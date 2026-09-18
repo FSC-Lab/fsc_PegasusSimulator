@@ -96,12 +96,34 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # geometric launcher; only the label differs — the plant is the same).
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py"
+#
+# THE PLANT IS THE WHOLE-BODY RIG'S (2026-09-18, user request: a FAIR
+# comparison). This launcher used to run 05 (an idealised plant: no body
+# mass/inertia/CoM injection, no arm friction, no current residual, no arm
+# mass mismatch). It now runs the SAME Isaac script as the whole-body 4-D rig,
+# 06, with the arm in POSITION-COMMAND mode (PEGASUS_ARM_COMMAND_MODE): 06's
+# PD + gravity + integral servo emulation tracks the position-mode ros2_control
+# stack's isaacsim_manipulator/position_commands through the same servo model
+# (current residual, gearbox friction, arm mass x1.05, body x1.10 + CoM shift,
+# rotor lag). The knobs are read from THIS rig's own yaml, whose section 1 is a
+# byte copy of the whole-body 4-D sim yaml's, by the shared lib below.
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py"
 export INDOOR_SIM_VEHICLE_LABEL="AM-T650-L1"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
+export PEGASUS_ARM_COMMAND_MODE="${PEGASUS_ARM_COMMAND_MODE:-position}"
 # Fail before physics starts if this plant ever drifts from the mass used by
 # the paired geometric+L1 controller YAML.
 export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
+
+# ── PLANT KNOBS FROM THE CONTROLLER YAML (section 1, REALITY MODEL) ─────────
+# Identical semantics to the whole-body launchers (env > yaml > built-in);
+# see scripts/indoor_sim/lib/am_plant_from_yaml.sh. The geometric+L1 NODE never
+# declares these keys -- rclcpp ignores them -- they are here for the plant.
+WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim.yaml}"
+[[ -r "$WB_SIM_YAML" ]] || { echo "ERROR: plant yaml not readable: $WB_SIM_YAML" >&2; exit 1; }
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/indoor_sim/lib/am_plant_from_yaml.sh"
+echo -e "\033[1;36mPlant knobs read from $(basename "$WB_SIM_YAML"); arm command mode: $PEGASUS_ARM_COMMAND_MODE\033[0m"
 
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
@@ -161,7 +183,8 @@ else
 fi
 
 echo "Starting AM-T650 GEOMETRIC+L1 direct-actuator SITL with the ROS2 position-mode arm stack."
-echo "Plant: AM_xfwd on T650 motors; controller: L1-augmented geometric SE(3)"
+echo "Plant: AM_xfwd on T650 motors (06, the whole-body rig's plant, arm in $PEGASUS_ARM_COMMAND_MODE-command mode);"
+echo "  controller: L1-augmented geometric SE(3)"
 echo "  (Cai et al., CEP 2025) from the paired fsc_autopilot_ros2 L1 stack;"
 echo "  arm commanded by fsc_open_manipulator PositionController (aerial config,"
 echo "  home [0,40,40,0] deg) via open_manipulator_x_isaac_bridge;"
@@ -194,8 +217,8 @@ echo 'Waiting for Isaac arm joint states on $ARM_STATE_TOPIC ...'
 until timeout 5 ros2 topic echo --once $ARM_STATE_TOPIC >/dev/null 2>&1; do
   sleep 2
 done
-echo 'Isaac arm is reporting; launching the position-mode ros2_control stack.'
-ros2 launch open_manipulator_x_isaac_bridge position_control_isaac.launch.py namespace:=$ARM_NS
+echo 'Isaac arm is reporting; launching the position-mode ros2_control stack (pure tracking + arm_planner).'
+ros2 launch open_manipulator_x_isaac_bridge position_control_isaac.launch.py namespace:=$ARM_NS arm_planner:=true
 echo 'Arm ros2_control stack exited.'
 exec bash
 "
@@ -205,7 +228,9 @@ $ARM_ENV
 export DISPLAY='$ARM_DISPLAY'
 echo 'Arm ground station (inverted). It discovers the active controller on its own.'
 ros2 run utils_custom_ground_station joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
-  -p torque_constant:=1.81 -p mount_height:=$ARM_GS_MOUNT_HEIGHT
+  -p controller:=position_controller -p torque_constant:=1.81 -p mount_height:=$ARM_GS_MOUNT_HEIGHT \\
+  -p fallback_min_deg:='[-35.0, -80.0, -40.0, -120.0]' \\
+  -p fallback_max_deg:='[35.0, 50.0, 50.0, 120.0]'
 echo 'Arm ground station exited.'
 exec bash
 "
