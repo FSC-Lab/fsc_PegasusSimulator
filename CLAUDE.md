@@ -3284,6 +3284,18 @@ other machine. Full record: Command.md §7.17.5.
   joint torque 0.82 of 3.0 N.m; s_max unchanged (it is the yaw rate). Check any
   `ee_traj_*` edit with `l1_4d_planner_20260917/ee_plan_probe.py` before flying.
   NOT re-flown at this split.
+- **SIM AND EXPERIMENT PLAN IDENTICALLY (2026-09-17, user request).** The
+  `planner` backend was the ONLY difference between each whole-body yaml and its
+  `_sim` twin (all three pairs, 33 keys, one diff); all three hardware files now
+  select **`bspline`**, so the planner sections are byte-identical. Precondition
+  met: bspline flew the 2026-09-14 §7.15.1 sim mission 10/10 and planned every
+  Go-to-start of the 09-17 EE flights, and it enforces rotor force + joint torque
+  which straight_line does NOT (its refusals are a superset). Verified on the 4-D
+  hardware yaml through the planner's rig loopback. **`straight_line` is KEPT**:
+  one key away, the only backend with HARDWARE time (0912), the parity anchor to
+  `utils_planner/transition_planner.py`, and the only one that holds the EE to a
+  straight line — an operational property near a net/person/object. Delete it
+  only after bspline has flown on hardware.
 - **4-D HARDWARE PAIR, never flown:**
   `params_..._whole_body_l1_4d_direct_actuation_t650.yaml` (the 6-D hardware yaml
   + the identical parameter delta, identity `AM-T650-WB-L1-4D-HW`) and

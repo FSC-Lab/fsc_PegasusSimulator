@@ -6071,6 +6071,29 @@ It prints the READY/INFEASIBLE verdict, the diagnostics, and the rates re-planne
 at s_max. NOT re-flown at this split — the 2026-09-17 circle and figure-8 flights
 above were flown at 40 +- 8 / fold 80.
 
+**SIM AND EXPERIMENT NOW PLAN THE SAME WAY (2026-09-17, user request).** The
+`planner` backend was the ONLY difference between every whole-body yaml and its
+`_sim` twin — measured across all three pairs, 33 keys each, one difference. All
+three hardware files (GMO, 6-D L1, 4-D) now select **`bspline`**, so the planner
+sections are byte-identical and a sim rehearsal plans the trajectory the flight
+will fly. Verified: the 4-D hardware yaml drives the planner's own rig loopback
+end to end (`PLANNED T=5.5s (a_max, 0 dilations)` — the bspline message format —
+Send, 546 samples, hold at the goal, SAFETY revert).
+
+The precondition the old comment set is met: bspline has the 2026-09-14 full
+§7.15.1 sim mission (10/10 legs, no refusal) and it planned every Go-to-start of
+the 2026-09-17 EE flights. It also enforces MORE than straight_line — rotor force
+and joint torque are checked in the bspline path and not in straight_line — so
+its refusals are a superset.
+
+**`straight_line` is KEPT, and not only as legacy.** It is one key away, it is
+the only backend with hardware time on it (the 2026-09-12 whole-body flight), it
+is the parity anchor to this repo's `utils_planner/transition_planner.py` through
+the planner package's gtest fixtures, and it has an operational property bspline
+does not: it holds the end-effector to a **straight line**, which is what you
+want near a net, a person or an object. Revisit deleting it after bspline has
+flown on hardware — not before.
+
 **The HARDWARE pair (new, never flown):**
 `config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml`
 is the 6-D hardware yaml plus the identical parameter delta the sim pair carries
