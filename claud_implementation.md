@@ -11,6 +11,41 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-21 (evening) — The measured build's first HIL flight: a 30 s hover stage
+
+**sim `f4a9863` · controller `1990e91` · row `R100_dx3_mn4014_hover30_a1_155915`, bag
+`~/flight_bags/slosh/slosh_20260921_155735` · LANDED 0.00 m**
+
+`STAGE=hover STAGE_HOLD=30 CASC_SPIN=poll` on the 1b configuration (`CTRL=cascade_adaptive CASC_EST=mdob
+ADAPTIVE_NODE_PY=…/nmpc_cascade_imu_node.py CASC_STATE=px4 EKF_SOURCE=gps VTOL_GPS_HZ=10 IMU_DR=1 CASC_ASPD=px4`,
+`VTOL_TANK=slosh VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3`) through `run_slosh_flight.sh`, `af=21fad0371f`.
+
+| stage | result |
+|---|---|
+| climb (safe controller, yaw-last mixer + weathervane in the loop, still air) | 30 m, no release |
+| engage hover (along-track hold only) | `HOVER HOLD at (-0.6,-0.1)`, settled at z 30.1 |
+| 30 s hover stage | **go**: 0.6–1.4 m ahead of the point, V 0.15–0.4 m/s, z 29.7–31.1, pitch −1…−2°, roll ±1°, yaw 0, tilt −1…−3.5°, 0/693 solve failures, outer 11–12 ms |
+| back-transition from the hover, recover, land | +14/−4° pitch, 3.6 m, V 2.45 (the 09-16 shape); landed at (0.81, 0.08), 0.00 m |
+
+Scored: `bag_axis_fit.py` (now on the airframe file) — yaw diagonal sd 0.046 at 0.9 Hz (quiet < 0.02, thrash
+0.4–0.8), yaw I_eff 0.32 vs 0.49 (the plant makes 1.5× the modelled yaw per throttle step: the spin-up
+reaction is no longer small beside cQ 0.019 → measure the rotor + prop inertia from the stand's torque
+transients); `ekf_retune.py` — floors 0.074 N / (0.009, 0.012, 0.022) N·m, bias bF +0.07 N, the 09-16 rehearsal's
+numbers.
+
+### Reproduce
+
+```bash
+VTOL_TANK=slosh VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3 CTRL=cascade_adaptive CASC_EST=mdob \
+  ADAPTIVE_NODE_PY=$HOME/envs/fsc_autopilot_ros2-master/px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_imu_node.py \
+  CASC_STATE=px4 EKF_SOURCE=gps VTOL_GPS_HZ=10 IMU_DR=1 CASC_ASPD=px4 CASC_SPIN=poll \
+  STAGE=hover STAGE_HOLD=30 NAME=R100_dx3_mn4014_hover30 bash scripts/run_slosh_flight.sh
+VTOL_TANK_DX=0.3 ~/envs/isaac_env/bin/python3 scripts/bag_axis_fit.py ~/flight_bags/slosh/slosh_20260921_155735
+~/envs/isaac_env/bin/python3 scripts/ekf_retune.py ~/flight_bags/slosh/slosh_20260921_155735
+```
+
+---
+
 ## 2026-09-21 (evening) — The wind table on the measured build, the diag5 regression, and B2 (the tilt servo as a mismatch)
 
 **controller `2ab28bf` (hold: lean + weathervane in the stages only, `hold_wv_s` 1.5, gate `--settle`) +
