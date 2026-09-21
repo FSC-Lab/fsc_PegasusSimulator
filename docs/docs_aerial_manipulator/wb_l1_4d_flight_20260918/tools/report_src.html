@@ -1,0 +1,108 @@
+<title>0918 Whole-Body L1 4-D Flight</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+:root{--surf:#fcfcfb;--panel:#f4f3ef;--ink:#0b0b0b;--ink2:#52514e;--ink3:#8a8985;--rule:#e3e2dd;--accent:#2a78d6;--good:#1baf7a;--warn:#eda100;--crit:#e34948;--good-bg:#e4f6ee;--warn-bg:#fdf3dc;--crit-bg:#fbe6e5;--code:#f1f0eb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--surf:#131312;--panel:#1c1c1a;--ink:#f2f1ec;--ink2:#b9b7b0;--ink3:#8a8985;--rule:#2d2d2a;--accent:#6ea8ef;--good:#3fc48f;--warn:#f0b642;--crit:#ef6b6a;--good-bg:#173126;--warn-bg:#3a2d10;--crit-bg:#3b1c1c;--code:#1f1f1c}}
+:root[data-theme="dark"]{--surf:#131312;--panel:#1c1c1a;--ink:#f2f1ec;--ink2:#b9b7b0;--ink3:#8a8985;--rule:#2d2d2a;--accent:#6ea8ef;--good:#3fc48f;--warn:#f0b642;--crit:#ef6b6a;--good-bg:#173126;--warn-bg:#3a2d10;--crit-bg:#3b1c1c;--code:#1f1f1c}
+body{background:var(--surf);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.55;padding-inline:16px;padding-block:32px 64px}
+main{max-width:960px;margin:0 auto}
+h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:2rem;line-height:1.15;margin:0 0 .35rem;text-wrap:balance}
+h2{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:1.35rem;margin:2.6rem 0 .8rem;padding-top:.8rem;border-top:1px solid var(--rule);text-wrap:balance}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .4rem}
+p{max-width:70ch;margin:.5rem 0}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.lede{color:var(--ink2);font-size:1.02rem;max-width:72ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;margin:1rem 0 0;font-family:"IBM Plex Mono",monospace;font-size:.8rem;color:var(--ink2)}
+.meta b{color:var(--ink);font-weight:500}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums;margin:.6rem 0}
+th{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);text-align:left;font-weight:500;padding:6px 10px 6px 0;border-bottom:1px solid var(--rule)}
+td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+td.n{font-family:"IBM Plex Mono",monospace;font-size:.82rem;white-space:nowrap}
+.tw{overflow-x:auto}
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.04em;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.ok{background:var(--good-bg);color:var(--good)}.watch{background:var(--warn-bg);color:var(--warn)}.bad{background:var(--crit-bg);color:var(--crit)}
+.verdict td:first-child{font-weight:600;width:17%}
+figure{margin:1.4rem 0}figure img{width:100%;height:auto;border:1px solid var(--rule);border-radius:2px}
+figcaption{font-size:.85rem;color:var(--ink2);margin-top:.5rem;max-width:80ch}
+.finding{border-left:3px solid var(--rule);padding:2px 0 2px 14px;margin:1.1rem 0}
+.finding.crit{border-color:var(--crit)}.finding.good{border-color:var(--good)}.finding.warn{border-color:var(--warn)}
+.finding h3{margin:.1rem 0 .3rem}
+code,.mono{font-family:"IBM Plex Mono",monospace;font-size:.84em;background:var(--code);padding:1px 4px;border-radius:2px}
+ol,ul{padding-left:1.3rem;max-width:72ch}li{margin:.35rem 0}
+.note{background:var(--panel);padding:12px 16px;border-radius:3px;font-size:.9rem;max-width:80ch}
+</style>
+<main>
+<div class="eyebrow">Hardware flight · AM-T650 · 18 September 2026</div>
+<h1>0918 — T650-AM Whole-body L1 Adaptive, four-dimensional attribution</h1>
+<p class="lede">First flight of the 4-D joint-row attribution on the real vehicle: 83 s of whole-body DIRECT, five planned legs, every one completed, and the operator returned the vehicle to SAFETY by hand. No watchdog, no saturation, no clamp. The controller is stable; what limits accuracy is the arm's gearbox friction and a 2.2 s motion-capture dropout that the estimator turned into a 15 cm jump.</p>
+<div class="meta"><span>bag <b>flight_wb_l1_4d_20260918_144828</b></span><span>config <b>AM-T650-WB-L1-4D-HW</b></span><span>DIRECT <b>9.66 – 92.65 s</b> (83.0 s, 20 748 ticks at 250 Hz)</span><span>pack <b>24.1 → 23.6 V</b></span></div>
+
+<h2>Verdict on the five questions</h2>
+<div class="tw"><table class="verdict">
+<tr><th>Question</th><th>Answer</th><th>The number</th></tr>
+<tr><td>Stability</td><td><span class="pill ok">stable</span> Bounded through all five legs and both arm excursions; nothing grows. Tilt never exceeded 5.3°, the loop ran at exactly 250 Hz, and the only large transient was externally caused (mocap).</td><td class="n">|e_R| rms 0.03–0.09 in holds<br>tilt p-p 1.1–3.6°<br>0 saturation · 0 bound hits · 0 aborts</td></tr>
+<tr><td>Tracking</td><td><span class="pill watch">bounded, not tight</span> The base carries a slow 0.08–0.16 Hz wander of ±15–35 mm that neither decays nor grows; the end effector holds to a few millimetres on top of it. Heading and joints park 2–5° off after every move.</td><td class="n">CoM xy rms 24 mm hover, 30–78 mm holds<br>EE 4 mm hover, 8–16 mm holds, 29 mm peak<br>heading 0.7° → 2.3° standing</td></tr>
+<tr><td>Arm torque executed?</td><td><span class="pill ok">in the holds</span> <span class="pill watch">not during moves</span> With the reference still, the motor produces the written torque to 0.04–0.05 N·m rms on joints 2 and 3. During the 3 s transitions the applied torque departs by up to 0.9 N·m for a few hundred milliseconds. The arm moves (it did not on 0912) but stops wherever friction catches it.</td><td class="n">j2 hold: mean 0.00, rms 0.05 N·m of 0.75<br>moves: rms 0.17 (j2), 0.22 (j3)<br>peak law torque 1.10 of 3.0 N·m</td></tr>
+<tr><td>Observer compensates?</td><td><span class="pill ok">yes</span> Converges from zero within ~3 s of entry, then tracks the pack sag (−0.1 → −1.0 N over the flight) so the commanded collective stays exactly on the model weight. Finds a standing −0.10 N·m yaw moment and ±0.5 N lateral force and cancels them.</td><td class="n">u1 + d̂z = 36.79 N vs mg 36.74<br>bounds used: 16 of 20 N (jump), 0.44 of 2 N·m, 0.20 of 1.5 N·m</td></tr>
+<tr><td>Phantom force</td><td><span class="pill ok">zero, by construction</span> χ = free on 100 % of ticks; the force the impedance consumed is identically 0. The raw reading behind the gate is noisy on hardware (3–6 N std) but its 0.25 rad/s-filtered value stays under 0.5 N — against the 0912 six-dimensional flight's +0.5 N standing and 3.6 N peaks reaching the arm.</td><td class="n">F̂_y consumed: 0.000 N, 20 748/20 748<br>raw F̂ filtered: mean 0.1–0.4 N, max 0.49 N</td></tr>
+</table></div>
+
+<h2>Timeline</h2>
+<div class="tw"><table>
+<tr><th>t [s]</th><th>Event</th><th>Reads</th></tr>
+<tr><td class="n">0.3</td><td>Bag opens with the vehicle already armed in OFFBOARD, SAFETY hovering at (−0.11, −0.24, 1.02) m, arm folded home [0, 40, 40, 0]°</td><td class="n">—</td></tr>
+<tr><td class="n">9.66</td><td>Whole-body DIRECT engaged; CoM anchor 7/−11/1 mm; planner HOLD; arm_planner silent</td><td class="n">entry peak 45 mm at 2–4 s</td></tr>
+<tr><td class="n">27.97–30.98</td><td>Leg 1 — EE +0.02 x / −0.07 z (q → [0.3, 33.1, 26.2, −4.7]°), T = 3.0 s</td><td class="n">EE peak 29 mm, j3 12° late</td></tr>
+<tr><td class="n">39.70–42.71</td><td>Leg 2 — go home</td><td class="n">j2 stops at 35.2°, 4.8° short</td></tr>
+<tr><td class="n">44.65–46.87</td><td><b>Mocap NO DATA for 2.2 s.</b> The estimator repeated the last pose on 134 of 210 samples, then jumped 151 mm and 2.6 m/s when tracking returned</td><td class="n">|e_R| 1.0 and u1 9 N for 8 ms; CoM error 231 mm</td></tr>
+<tr><td class="n">52.52–58.16</td><td>Leg 3 — base +0.61 m along world x at fixed EE offset, T = 5.6 s (still carrying ~90 mm of the jump)</td><td class="n">peak 81 mm, settled 30 mm rms</td></tr>
+<tr><td class="n">71.90–74.91</td><td>Leg 4 — EE +0.02 x / −0.07 z again</td><td class="n">EE settled 16 mm (j3 4.6° short)</td></tr>
+<tr><td class="n">85.99–89.00</td><td>Leg 5 — go home</td><td class="n">q ends [−0.3, 37.9, 36.2, 2.9]°</td></tr>
+<tr><td class="n">92.65</td><td>Operator: return to SAFETY. Reference re-seeded at the current pose; arm folded home by the guard 1 s later</td><td class="n">no watchdog, no failsafe</td></tr>
+<tr><td class="n">100–105</td><td>Land to z = 0.35, disarm at 104.8 s</td><td class="n">—</td></tr>
+</table></div>
+<p class="note">Two bags were delivered. Only <code>flight_wb_l1_4d_20260918_144828</code> has a database; <code>flight_wb_l1_4d_20260918_152112</code> holds a metadata file describing a 242 s, 1.10 M-message recording whose <code>.db3</code> was not copied. Everything here is the first flight.</p>
+
+<h2>Reference tracking</h2>
+<figure><img src="figures/f1_com_tracking.png" alt="System centre of mass reference, measurement and error"><figcaption>Centre of mass in the law's model frame. Grey bands are the planner's executing windows, red the mocap dropout. The error is dominated by a slow wander of ±15–35 mm at 0.08–0.16 Hz that the 18 September simulation sweep already showed no gain removes; on top of it each leg adds a 60–95 mm transient that returns to the wander band within one period. The 231 mm excursion at 46.9 s is the estimator's jump, not the controller's.</figcaption></figure>
+<figure><img src="figures/f2_ee_tracking.png" alt="End-effector reference, actual position and impedance error"><figcaption>End effector against the planned reference. Because the EE reference is anchored to the measured CoM, the impedance error the law regulates is the arm's own contribution: 4 mm rms while hovering, 8–16 mm in the holds after a move, 29 mm peak inside the first transition. The heading error grows from 0.7° to a standing 2.3° after the first go-home and never recovers, because joint 4 stops 3° short.</figcaption></figure>
+<figure><img src="figures/f3_joint_tracking.png" alt="Arm joint references and measurements"><figcaption>Joints in the model convention. Joint 2 follows the reference out (2° short), then does not come back: it sits at 35.2° for the rest of the flight against a 40° reference. Joint 3 overshoots each move by 2.5–4° and stays where it lands. Joint 4 parks 3° from every target. This is friction at the gearbox output: the arm-side friction feedforward acts only while the reference moves, and at 20 N/m the task stiffness converts a 9 mm EE error into far less than the breakaway torque.</figcaption></figure>
+<figure><img src="figures/f4_attitude.png" alt="Commanded and measured attitude"><figcaption>Attitude commanded by the law (recovered from the logged e_R) against the odometry. Roll and pitch stay inside ±4° with 0.25–0.55° of standard deviation in the holds; the commanded-minus-measured gap is 0.3–0.5° rms. The clipped spike at 46.9 s is the mocap re-acquisition.</figcaption></figure>
+
+<h2>Control inputs</h2>
+<figure><img src="figures/f5_body_inputs.png" alt="Collective, body torque and motor commands"><figcaption>Collective sits 0.5–1.0 N above the model weight; motor commands stay in 0.43–0.77 with two ticks at 0.13 during the jump. The motors split into pairs 10 points apart: M1/M2 (the CCW pair) low, M3/M4 high — a standing +0.10 N·m yaw command that the observer asked for and the vehicle needs.</figcaption></figure>
+<figure><img src="figures/f6_arm_torque.png" alt="Streamed, written and applied arm torque"><figcaption>Three torques per joint: the law's stream, the duty the arm controller actually wrote (with its gravity-scale correction, friction feedforward and dither, all active on the pass-through since 14 September), and the applied torque from the measured current. In the holds joint 2 tracks its written duty to 0.05 N·m rms with zero mean; joint 2's written duty sits 0.074 N·m below the stream by design (gravity scale 0.897). During moves the written duty carries ±0.6 N·m of correction that the current does not follow for a few hundred milliseconds. Joints 1 and 4 command ~0.01 N·m and their 0.02–0.03 N·m rms residual is the current sensor's floor, not torque.</figcaption></figure>
+
+<h2>Disturbance estimation</h2>
+<figure><img src="figures/f7_disturbance.png" alt="Filtered disturbance estimate with the deadbeat z reading"><figcaption>The estimate the loops see. The deadbeat reading behind it has a standard deviation of 24/29/15 N — twenty-five times the simulation's — because it differences a motion-capture velocity at 250 Hz; the 2 rad/s filter brings it to 0.3–0.5 N. Lateral +0.57/−0.43 N is constant for the whole flight (a ~1° thrust-axis bias). The joint channel swings ±0.1–0.16 N·m on joint 2 with the arm pose.</figcaption></figure>
+<figure><img src="figures/f9_sag.png" alt="Collective, vertical estimate and battery voltage"><figcaption>The vertical estimate starts at +0.7…+1.0 N in the first three seconds of DIRECT, crosses zero by 12 s and walks to −1.0 N as the pack drops from 24.06 to 23.64 V; the collective walks up by the same amount so that u1 + d̂z stays at the model weight. Back-solved, the effective thrust constant is 4.21e-05 early and 4.14e-05 late against the allocator's 4.260e-05 — the same pack-state drift the 0912 flight and the 25 August anchor measured.</figcaption></figure>
+
+<h2>Four-dimensional attribution</h2>
+<figure><img src="figures/f8_attribution.png" alt="Raw interaction reading, consumed force and joint-row trim"><figcaption>Top: the raw joint-row reading that a collision detector would threshold, with its 0.25 rad/s filtered value. Middle: what the impedance consumed — zero on every tick, the free-flight gate doing its job. Bottom: the joint-row trim ŵ_q, which follows the arm's friction and gravity residual as the pose changes (+0.18 N·m on joint 2 with the arm out, −0.18 N·m after the go-home) at ω_q = 0.2 rad/s.</figcaption></figure>
+
+<h2>Findings, most important first</h2>
+<div class="finding good"><h3><span class="pill ok">confirmed</span> The controller is stable on hardware and the attribution removes the phantom force</h3><p>Eighty-three seconds of DIRECT with two arm excursions, a 0.6 m base step and a 15 cm estimator jump in the middle, and every transient decays back to the same bounded wander. Nothing in the actuation chain was near a limit: motor commands in 0.43–0.77, the law's peak arm torque 1.10 of 3.0 N·m, no allocator saturation, no observer bound reached (the 16 N peak was the jump), the arm reference and state fresh on 100 % of samples and the streamed reference on 99.99 %. The force the arm impedance consumed was 0.000 N on all 20 748 ticks; on the 0912 six-dimensional flight the same slot carried a +0.51 N standing bias and peaks of 3.6 N.</p></div>
+<div class="finding crit"><h3><span class="pill bad">defect</span> A 2.2 s motion-capture dropout became a 15 cm jump and a two-tick thrust collapse</h3><p>From 44.65 to 46.87 s the VRPN feed reported no data. The state estimator kept publishing — 134 of its 210 samples in that window carried a byte-identical position — so the flight node's 1.0 s feedback timeout never fired. When tracking returned, the odometry stepped 151 mm and its velocity read 2.6 m/s for one sample. The law's velocity term turned that into a sideways force command; for two ticks the collective fell to 9 N, the motors to 0.13–0.41, |e_R| reached 1.0, and joint 1 hit its 0.34 N·m duty clamp for 76 ms. The vehicle tilted only to 4.7°, recovered within 30 ms, and re-converged the 200 mm error in about ten seconds, but the next leg was flown with 90 mm still open. Nothing in the controller caused this; something upstream must catch it.</p></div>
+<div class="finding warn"><h3><span class="pill watch">defect</span> The arm moves now, but stops wherever friction catches it</h3><p>Joint 2 was commanded 40° → 33° → 40° and measured 40° → 35.2° → 35.2°: it never returned. Joint 3 overshoots each move by 2.5–4° and holds the overshoot; joint 4 parks 3° short. The standing joint errors after the first go-home are −4.7 / +2.8 / +3.1° and they set the standing EE error (8–16 mm) and heading error (2.3°). Compared with 0912, where joint 2 rotated 0.35° of a 3.8° request, the friction feedforward on the pass-through is doing its job while the reference moves; what remains is the hold: once the reference stops, that term is zero, and 20 N/m of task stiffness on a 9 mm error is 0.2 N — an order of magnitude under the breakaway torque.</p></div>
+<div class="finding warn"><h3><span class="pill watch">unchanged</span> The slow base wander is the same mode the simulation could not tune away</h3><p>In every quiet hold the CoM error has a dominant 0.08–0.16 Hz component of 15–35 mm standard deviation, present before the arm ever moved (hover 18/15 mm). It neither decays nor grows and the attitude follows it with 0.3–0.5° of commanded-minus-measured gap. The 18 September twelve-flight sweep concluded this needs a model change, not a gain; the flight agrees.</p></div>
+<div class="finding good"><h3><span class="pill ok">confirmed</span> The observer's bookkeeping is right, and it is doing the allocator's homework</h3><p>u1 + d̂z = 36.79 N against a 36.74 N model weight throughout, while the pack drops 0.4 V and the vertical estimate walks from −0.1 to −1.0 N. The allocator still carries the 4.260e-05 experiment thrust constant the 0912 report asked to restore; the flight measures 4.21e-05 → 4.14e-05, so the observer is absorbing a 1–3 % thrust deficit that a re-anchored constant would remove. The −0.10 N·m standing yaw and the 0.5 N lateral bias are real vehicle asymmetries, found and cancelled.</p></div>
+<div class="finding warn"><h3><span class="pill watch">watch</span> The deadbeat reading is twenty-five times noisier than in simulation</h3><p>The unfiltered momentum-difference estimate has 24/29/15 N of standard deviation on hardware against ~1 N in Isaac, and the raw interaction reading 3–6 N with a 95th percentile of 12–15 N. The 2 rad/s translational filter handles it (0.3–0.5 N), and a collision threshold on the 0.25 rad/s-filtered reading would sit above 0.5 N with margin. But any use of the raw reading — the note's collision latch at <code>collision_threshold_n</code> — must be defined on a filtered value or it will trip on noise.</p></div>
+
+<h2>What to change before the next flight</h2>
+<ol>
+<li><b>Catch the mocap dropout upstream of the law.</b> The estimator must not republish a frozen pose as fresh odometry, and the node should treat a single-sample position step above a few centimetres (or a velocity above the planner's v_max) as a feedback fault — hold the previous velocity, or revert to SAFETY through the existing feedback-loss path. Also find why the markers were lost for 2.2 s with the arm folded home.</li>
+<li><b>Give the arm a way to finish a move.</b> Options in increasing order of intrusion: keep the friction feedforward active for a short tail after the reference stops; raise the joint-space authority of the heading and position tasks (K_y 20 → 50, K_ψ 0.3 → 1.0, both flown in simulation); or a small hold-phase breakaway pulse on the arm side. The joint-row trim already finds the residual (±0.18 N·m on joint 2) — what it needs is somewhere to put it.</li>
+<li><b>Re-anchor <code>alloc_thrust_coeff</code></b> to a measured value and re-derive the SAFETY pair, as the 0912 report already asked; the observer's −1.0 N is the price of not doing it.</li>
+<li><b>Fly the base alone for two minutes</b> to characterise the 0.1 Hz wander without the arm in the loop, and test the observer-predicts-rotor-lag idea from the 18 September sweep against it.</li>
+<li><b>Recover the second bag.</b> The metadata describes a 242 s recording with twice the message count; only its <code>metadata.yaml</code> arrived.</li>
+</ol>
+
+<h2>Data notes</h2>
+<ul>
+<li>Vehicle-side stamped topics run 0.348 s ahead of the recorder clock (30 ms spread); odometry is stamped on the recorder side. All times here are recorder time with t = 0 at the first <code>wb_control_debug</code> sample.</li>
+<li><code>/rosout</code> lines from the flight node between 9 and 13 s arrive 3.0 s late; the planner's lines agree with the topics from 24 s on. Topic transitions were used for every timing.</li>
+<li>Debug slots follow §7.17.2 of Command.md and the client source (<code>[97..100]</code> raw F̂, <code>[101..104]</code> ŵ_q, <code>[105]</code> χ); the joint_state_broadcaster order is [j2, j3, j1, j4]; wb_control_debug is in the model convention, the arm topics in the hardware one.</li>
+<li>Reproduction: <code>tools/extract_bag.py</code> (needs ROS 2, /usr/bin/python3) → <code>tools/prepare.py</code> → <code>tools/analyze*.py</code> and <code>tools/figures.py</code> (<code>PYTHONNOUSERSITE=1</code>). Printed numbers are in <code>analysis1-3.txt</code>.</li>
+</ul>
+</main>

@@ -1,0 +1,42 @@
+=== oscillation content in quiet holds (dominant freq, fraction of power in +-0.15 Hz) ===
+  hover 15-27.9  CoMx 0.08Hz(1.02)  CoMy 0.16Hz(0.76)  eR_x 0.08Hz  eR_y 0.16Hz  roll 0.46Hz  pitch 0.54Hz  tau_j2 0.08Hz  tau_j4 2.17Hz  u1 0.08Hz  tb_y 0.08Hz
+     std: CoMx 17.5 mm CoMy 14.7 mm  roll 0.281 pitch 0.234 deg  gyro std [0.0681 0.1158 0.1097] rad/s  tau_j2 std 44.9 mN.m p-p 288  tau_j4 std 6.9 p-p 55  u1 std 0.58 N  tb std [0.1063 0.1498 0.0481]
+  hold 33-39.6   CoMx 0.15Hz(0.83)  CoMy 0.15Hz(0.66)  eR_x 0.15Hz  eR_y 0.15Hz  roll 0.90Hz  pitch 0.45Hz  tau_j2 0.45Hz  tau_j4 1.67Hz  u1 1.67Hz  tb_y 0.15Hz
+     std: CoMx 34.3 mm CoMy 13.5 mm  roll 0.469 pitch 0.549 deg  gyro std [0.2636 0.281  0.3171] rad/s  tau_j2 std 46.2 mN.m p-p 278  tau_j4 std 6.5 p-p 48  u1 std 0.80 N  tb std [0.1538 0.1814 0.05  ]
+  hold 60-71.8   CoMx 0.08Hz(0.93)  CoMy 0.08Hz(1.12)  eR_x 0.08Hz  eR_y 0.08Hz  roll 0.51Hz  pitch 0.42Hz  tau_j2 0.08Hz  tau_j4 0.08Hz  u1 1.10Hz  tb_y 0.08Hz
+     std: CoMx 15.3 mm CoMy 26.2 mm  roll 0.295 pitch 0.336 deg  gyro std [0.0872 0.1464 0.1608] rad/s  tau_j2 std 55.7 mN.m p-p 373  tau_j4 std 6.8 p-p 44  u1 std 0.54 N  tb std [0.1065 0.1513 0.0466]
+  hold 76-85.9   CoMx 0.10Hz(1.42)  CoMy 0.10Hz(1.09)  eR_x 0.10Hz  eR_y 0.10Hz  roll 0.60Hz  pitch 0.20Hz  tau_j2 0.10Hz  tau_j4 0.10Hz  u1 1.01Hz  tb_y 0.10Hz
+     std: CoMx 24.8 mm CoMy 19.3 mm  roll 0.275 pitch 0.272 deg  gyro std [0.0933 0.14   0.1463] rad/s  tau_j2 std 57.8 mN.m p-p 331  tau_j4 std 5.9 p-p 36  u1 std 0.52 N  tb std [0.1028 0.1371 0.044 ]
+
+=== post-leg decay: CoM xy error envelope (peak |e| in 2 s bins after each leg end) ===
+  arm out      |e_xy| peak per 2 s bin:    65    75    52    53    26    63 mm   |e_R| peak: 0.178 0.178 0.113 0.157 0.121 0.166
+  arm home     |e_xy| peak per 2 s bin:    63    37   232   130    94    74 mm   |e_R| peak: 0.192 0.032 0.999 0.166 0.190 0.145
+  base step    |e_xy| peak per 2 s bin:    41    62    61    52    68    68 mm   |e_R| peak: 0.140 0.109 0.084 0.096 0.110 0.075
+  arm out #2   |e_xy| peak per 2 s bin:   107   126    90    44    79    88 mm   |e_R| peak: 0.122 0.157 0.113 0.092 0.181 0.190
+  arm home #2  |e_xy| peak per 2 s bin:    52    61 mm   |e_R| peak: 0.089 0.131
+
+=== entry: first 12 s in 1 s bins (|e_xy| peak mm, |e_R| peak, u1 mean) ===
+   0- 1 s      7 mm  eR 0.071  u1 35.5 N  d_z +0.66 N
+   1- 2 s     21 mm  eR 0.084  u1 35.8 N  d_z +0.86 N
+   2- 3 s     44 mm  eR 0.101  u1 35.7 N  d_z +1.02 N
+   3- 4 s     45 mm  eR 0.064  u1 36.0 N  d_z +0.92 N
+   4- 5 s     28 mm  eR 0.052  u1 36.3 N  d_z +0.67 N
+   5- 6 s     26 mm  eR 0.055  u1 36.2 N  d_z +0.50 N
+   6- 7 s     26 mm  eR 0.070  u1 36.3 N  d_z +0.44 N
+   7- 8 s     36 mm  eR 0.086  u1 36.2 N  d_z +0.48 N
+   8- 9 s     41 mm  eR 0.071  u1 36.2 N  d_z +0.55 N
+   9-10 s     38 mm  eR 0.079  u1 36.2 N  d_z +0.58 N
+  10-11 s     36 mm  eR 0.073  u1 36.2 N  d_z +0.61 N
+  11-12 s     32 mm  eR 0.053  u1 36.6 N  d_z +0.24 N
+
+=== the blind window 44.65-46.86 s and its recovery ===
+   43.0- 44.6  |e_xy| mean    36 max    63 mm  e_x mean    +20 e_y    +25  |e_R| max 0.192  u1 min 35.9
+   44.6- 46.9  |e_xy| mean    37 max    37 mm  e_x mean    +37 e_y     +2  |e_R| max 0.032  u1 min 37.3
+   46.9- 48.0  |e_xy| mean   203 max   232 mm  e_x mean    -68 e_y   -190  |e_R| max 0.998  u1 min 9.0
+   48.0- 50.0  |e_xy| mean   120 max   202 mm  e_x mean    -66 e_y   -100  |e_R| max 0.203  u1 min 35.6
+   50.0- 52.5  |e_xy| mean    74 max    94 mm  e_x mean    -58 e_y    -41  |e_R| max 0.190  u1 min 34.8
+   52.5- 58.2  |e_xy| mean    58 max    81 mm  e_x mean    -57 e_y     +4  |e_R| max 0.219  u1 min 35.1
+   58.2- 62.0  |e_xy| mean    38 max    60 mm  e_x mean    -20 e_y    -31  |e_R| max 0.140  u1 min 35.9
+   62.0- 66.0  |e_xy| mean    45 max    62 mm  e_x mean    -18 e_y    -40  |e_R| max 0.096  u1 min 36.2
+   66.0- 71.8  |e_xy| mean    44 max    68 mm  e_x mean    -38 e_y     +3  |e_R| max 0.110  u1 min 36.2
+  odom velocity around 46.87 s (|v| max): 2.6160521190491983  normal |v| in 60-69: 0.03743612840414832

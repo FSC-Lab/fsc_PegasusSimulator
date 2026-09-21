@@ -3201,3 +3201,30 @@ other machine. Full record: Command.md §7.17.5.
   restore the bench value in both files together. Both L1 hardware launchers
   now expect `current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.2]` (the arm's
   TEMPORARY j4 trim); before, they printed a red MISMATCH on every start.
+
+**FIRST HARDWARE FLIGHT OF THE 4-D RIG — STABLE; ARM FRICTION + A MOCAP DROPOUT ARE THE
+STORY (2026-09-18, user request: analyse + report).** Bag `docs/experimental_data_ros2_bag/
+0918 - T650-AM whole-body-L1-4D-.../flight_wb_l1_4d_20260918_144828` (the `_152112` twin has
+metadata only, NO `.db3`). Report, tools and numbers in
+`docs/docs_aerial_manipulator/wb_l1_4d_flight_20260918/` (report.html; `tools/extract_bag.py`
+is a GENERIC rosbag2→npz flattener, `prepare.py` aligns clocks/orderings/conventions into a
+numeric npz for numpy-1.x matplotlib); Command.md §7.17.6. 83 s of DIRECT, five planner legs
+(two EE excursions, two go-homes, a 0.61 m base step), all completed, operator-commanded
+SAFETY revert — no watchdog, 0 saturation, 0 bound hits, 0 clamp except 19 ticks. Verdicts:
+STABLE (|e_R| rms 0.03–0.09, tilt ≤ 5.3°, transients decay to the same ±15–35 mm 0.1 Hz
+wander §7.18.1 already knows); tracking CoM 24 mm rms hover / 30–78 mm holds, EE 4 → 8–16 mm,
+heading 0.7 → 2.3° standing; ARM TORQUE precise in holds (j2 applied − written 0.00 mean /
+0.05 rms of 0.75 N·m) but not during moves (0.9 N·m spikes on j3); OBSERVER compensates
+(u1 + d̂z = 36.79 vs mg 36.74 N, d̂z walks −0.1 → −1.0 N with the pack 24.06 → 23.64 V,
+finds a −0.10 N·m standing yaw and 0.5 N lateral bias); PHANTOM FORCE consumed = 0.000 on
+every tick, χ free 100 %, raw reading LP-0.25 ≤ 0.49 N (0912's 6-D: +0.51 N standing, 3.6 N
+peaks). Two defects, neither in the law: (a) **mocap NO DATA 44.65–46.87 s** — the estimator
+republished the frozen pose (134/210 odom samples identical, so `system_fb_timeout_s` never
+fired) then jumped 151 mm / 2.6 m/s at re-acquisition → 2 ticks of u1 = 9 N, |e_R| 1.0, j1
+clamped 76 ms, ~10 s to re-converge; (b) **the arm moves now (0912: 0.35° of 3.8°) but parks
+where friction catches it** — j2 40 → 35.2 → 35.2° against 40 → 33 → 40, j3 overshoots 2.5–4°
+and holds, j4 3° short: the pass-through friction FF is zero at a hold and K_y 20 × 9 mm ≪
+breakaway. Also: the hardware DEADBEAT estimate is 25× noisier than Isaac's (std 24/29/15 N);
+define any collision latch on a filtered reading. Traps: vehicle topics 0.348 s AHEAD of the
+recorder clock; `/rosout` 3 s late early in the bag; the written duty legitimately exceeds
+`max_effort` (back-EMF FF is added after the clamp). Hardware yamls UNCHANGED by this entry.

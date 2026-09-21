@@ -5968,6 +5968,59 @@ now expects `current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.2]`** — the ar
 repo's TEMPORARY 2026-09-14 j4 trim. It had printed a red MISMATCH on every
 start. Move the two together when the trim is reverted.
 
+#### 7.17.6 FIRST HARDWARE FLIGHT of the 4-D rig — 83 s of DIRECT, stable, arm friction and a mocap dropout (2026-09-18)
+
+Bag `docs/experimental_data_ros2_bag/0918 - T650-AM whole-body-L1-4D-.../flight_wb_l1_4d_20260918_144828`
+(the second directory, `..._152112`, has a `metadata.yaml` describing a 242 s recording and
+NO `.db3` — not analysed). Report + tools + printed numbers:
+`docs/docs_aerial_manipulator/wb_l1_4d_flight_20260918/` (`report.html`; `tools/extract_bag.py`
+→ `prepare.py` → `analyze{,2,3}.py` + `figures.py`; `analysis1-3.txt`). Config
+`AM-T650-WB-L1-4D-HW` as committed 2026-09-17 (kf 4.260431e-05, K_y 20/D_y 12, ω_x 0.25).
+
+**Mission.** DIRECT 9.66–92.65 s (20 748 ticks, median 4.00 ms, p99 5.3, max 16.9), five
+planner legs all completed: EE +0.02 x/−0.07 z (q → [0.3, 33.1, 26.2, −4.7]°), go home, base
++0.61 m along world x (T 5.6 s), the same EE leg again, go home. SAFETY revert was the
+OPERATOR (`activate 'Baseline (Safety)'`), not a watchdog; land to z 0.35, disarm 104.8 s.
+
+| question | answer | numbers |
+|---|---|---|
+| stability | STABLE, bounded, nothing grows | |e_R| rms 0.03–0.09 in holds, tilt p-p 1.1–3.6°, peak 5.3°; 0 rotor sat, 0 bound hits, 0 unallocated, arm ref/state fresh 100 %, stream 99.99 % |
+| tracking | bounded, not tight | CoM xy rms 24 mm hover, 30–78 mm holds (0.08–0.16 Hz wander ±15–35 mm std); leg peaks 60–95 mm; EE 4 mm hover, 8–16 mm holds, 29 mm peak; heading 0.7° → 2.3° standing; z ≤ 8 mm |
+| arm torque | PRECISE IN HOLDS, not during moves | j2 applied − written mean 0.00 / rms 0.04–0.05 N·m of 0.75; j3 0.03–0.05; moves rms 0.17/0.22 with 0.9 N·m spikes on j3; j1/j4 residual 0.02–0.03 = current-sensor floor; law peak 1.10 of 3.0 N·m; clamp only 19 ticks (j1, the mocap jump) |
+| observer | COMPENSATES | u1 + d̂z = 36.79 vs mg 36.74 N; d̂z +0.7…+1.0 N first 3 s → 0 by 12 s → −1.0 N by 60 s (pack 24.06 → 23.64 V; effective kf 4.21e-05 → 4.14e-05); standing yaw −0.10 N·m (motors CCW−CW = −0.10), lateral +0.57/−0.43 N; bounds 16/20 N (jump), 0.44/2, 0.20/1.5 N·m |
+| phantom | ZERO, χ = free 100 % | F̂_y consumed 0.000 on all ticks; raw F̂ std 3–6 N (p95 12–15), LP 0.25 rad/s mean 0.1–0.4 max 0.49 N; ŵ_q j2 swings +0.18 → −0.18 N·m with pose; 0912 (6-D) had +0.51 N standing / 3.6 N peaks |
+
+**Findings.**
+- **MOCAP DROPOUT 44.65–46.87 s (2.2 s) became a 151 mm ESTIMATOR JUMP.** The estimator
+  republished the frozen pose (134 of 210 odom samples byte-identical) so `system_fb_timeout_s`
+  1.0 never fired; at re-acquisition odom stepped 151 mm with a 2.6 m/s velocity sample →
+  k_v·e_v drove the law sideways for 2 ticks: u1 9 N, motors 0.13–0.41, |e_R| 1.0, j1 on its
+  0.34 N·m duty clamp 76 ms. Recovered in ~30 ms, tilt ≤ 4.7°, no watchdog; the 200 mm error
+  re-converged over ~10 s and leg 3 started with ~90 mm open. Also an 80 ms loss at 27.95 s.
+  Nothing in the law; the estimator must not publish a frozen pose as fresh, and the node
+  should treat a single-sample step/velocity spike as a feedback fault.
+- **THE ARM MOVES NOW (0912: j2 rotated 0.35° of 3.8°) BUT PARKS WHERE FRICTION CATCHES IT.**
+  j2 40 → 35.2 → 35.2° against 40 → 33 → 40 (never returned, −4.8° standing); j3 overshoots
+  2.5–4° per move and holds it; j4 3° short. The pass-through friction feedforward (§7.15.13)
+  works while q̇_d ≠ 0 and is zero at the hold; K_y 20 × 9 mm = 0.2 N ≪ breakaway. Sets the
+  standing EE (8–16 mm) and heading (2.3°) errors. Fix candidates: FF tail after the reference
+  stops, K_y 20 → 50 / K_ψ 0.3 → 1.0 (sim-flown), or a hold-phase breakaway pulse.
+- The 0.08–0.16 Hz base wander (hover 18/15 mm std, before any arm motion) is §7.18.1's mode,
+  unchanged — a model change, not a gain.
+- The DEADBEAT estimate is 25× noisier than in Isaac (std 24/29/15 N vs ~1 N): the 2 rad/s
+  filter brings it to 0.3–0.5 N, but any collision latch must be defined on a FILTERED reading.
+- Standing yaw disturbance −0.10 N·m (10-point CCW/CW motor split) and lateral 0.5 N bias are
+  real vehicle asymmetries, found and cancelled; `alloc_thrust_coeff` still the 0912
+  experiment value — the observer's −1.0 N is the cost.
+
+**Traps.** Vehicle-side stamped topics run 0.348 s AHEAD of the recorder (odom is recorder-
+stamped); `/rosout` from the flight node arrives 3.0 s late between 9 and 13 s — use topic
+transitions for timing. The extractor's npz (numpy 2.x object arrays) does not load under the
+apt numpy 1.x that matplotlib needs — `prepare.py` writes a numeric-only npz for the figures.
+`joint_state_broadcaster` order is [j2, j3, j1, j4]. The written duty (`law_debug[13..16]`)
+can exceed `max_effort` because the back-EMF feedforward is added AFTER the clamp by design.
+
+
 ### 7.18 Flight-test preparation: x-axis settling tune, cruise speeds, and the WHOLE-BODY vs DECOUPLED comparison — 2026-09-18
 
 Four asks the night before the §7.17 flight test, in order. Data directories:
