@@ -2,6 +2,37 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★ 2026-09-21 (evening): B2 -- THE TILT SERVO AS A MISMATCH. THE GATE'S PLANT HAS ITS OWN SERVO NOW, AND THE
+# SPECIFIED ACTUATOR HAS 4-5x OF MARGIN. Controller 1990e91, sim this commit; sweep `~/flight_bags/robust/tilt1`.
+**WHAT WAS BUILT.** `so3.build_ode(tilt_tau=, tilt_rate=)` gives the gate's PLANT its own tanh slew-limited servo
+(None = the file's, byte-identical); the gate's `--plant_tilt_tau S` / `--plant_tilt_rate DEG_S` set it while the
+controller keeps the file's (its applied-tilt estimate is the pure slew at `--tilt_slew` = the node's
+`tilt_slew_deg_s`, and the L1's applied moment reads that estimate); `--tilt_slew X` is the "told" knob (only the
+rate has a controller-side counterpart -- the node models no lag). `test_plant_knobs` has the tilt knob.
+**AND THE GATE'S MODEL OF THE NODE'S OWN SLEW WAS A HARD-CODED 80 deg/s** while the node has read the file's 106
+since 2026-09-17: the gate's controller was 25% slower than the flown one on the tilt estimate. Fixed -> the
+identity references move (deliberately): **steso `b501024381f70fc1b3d546479031bcb1`, IMU
+`460eb532b42d5443e66edd6218233957`** (md5sum of the --log CSV); `--tilt_slew 80` reproduces the previous
+`22a5a153` / `0ebd9753` exactly, so nothing else moved.
+**THE TABLE (`scripts/cells_tilt_servo.txt`, the flown law, 16 seeds; the spec is tau 0.0756 s / 106 deg/s):**
+| plant servo | landed | corridor pk | fails BT / in flight | stop | verdict |
+|---|---|---|---|---|---|
+| nominal (as specified) | 16/16 | 13.9 | 7 / 0 | 8.8 | PASS |
+| tau 0.10 / 0.15 / 0.25 / 0.40 s (1.3-5.3x) | 16/16 | 13.9 / 13.9 / 13.8 / 13.8 | 0 / 0 / 1 / 1 in flight | 8.8 | PASS, all |
+| rate 80 / 60 / 40 deg/s, controller told 106 | 16/16 | 13.9 / 13.9 / 13.9 | 0 / 0 / 0 | 8.8 | PASS |
+| rate 25 deg/s (a quarter), told 106 | 16/16 | 15.4 | 4 in flight | 8.8 | PASS |
+| rate 60 / 40 / 25, controller TOLD | 16/16 | 13.9 / 13.8 / **17.0** | 0 / 0 / 3 | 8.8 | PASS / PASS / FAIL on the peak |
+| tau 0.15 + rate 60 (a derated servo) | 16/16 | 13.8 | 0 | 8.8 | PASS |
+**READING.** The tilt servo is not a sensitivity of this loop: five times the specified lag and a quarter of the
+specified slew both fly the mission at the nominal corridor peak, and only 25 deg/s TOLD to the controller
+costs 3 deg (its own applied-tilt estimate then lags as much as the plant and the two errors add -- knowing a
+slow servo is worse than not knowing, the opposite of the spin lag). The schedule's tilt reference is
+rate-limited at 35 deg/s (`tilt_slew_ref_deg_s`) and the corridor asks ~25 deg/s of the servo, so a 106 deg/s
+actuator sits 4x above what is ever demanded; the spin lag (cliff at 0.18 s) remains the only actuator constant
+with a hard requirement. The hinge-moment question (the 36 N prop's thrust-line offset) is therefore a
+"does it move at all under load" question, not a bandwidth one: measure the offset, size the servo's torque
+with margin, and the rate follows.
+
 # ★★★★ 2026-09-21 (late afternoon): THE WIND TABLE ON THE MEASURED BUILD -- AND THE HOVER HOLD'S LEAN IN A
 # QUARTERING WIND AT THE ENGAGE, A REGRESSION OLDER THAN TODAY, FOUND AND FIXED. Controller 2ab28bf, sim this
 # commit; sweeps `~/flight_bags/wind/wind3` (the first pass) and `wind4` (the five cells re-run after the fix).

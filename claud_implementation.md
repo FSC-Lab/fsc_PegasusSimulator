@@ -11,6 +11,58 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-21 (evening) — The wind table on the measured build, the diag5 regression, and B2 (the tilt servo as a mismatch)
+
+**controller `2ab28bf` (hold: lean + weathervane in the stages only, `hold_wv_s` 1.5, gate `--settle`) +
+`1990e91` (B2) · sim this commit · identity references (md5sum of the `--log` CSV): after 2ab28bf steso
+`22a5a15381bdcb77d3fcca7d68c38fd4` / IMU `0ebd9753611143df22a618f449377520` (the engage hover's roll_hover
+gone, first differing row t 0.115); after 1990e91 **steso `b501024381f70fc1b3d546479031bcb1` / IMU
+`460eb532b42d5443e66edd6218233957`** (the gate's node slew 80 → the file's 106; `--tilt_slew 80` reproduces
+the previous pair exactly).**
+
+### The wind table (`wind_sweep.sh`, 16 seeds, imu-mdob + pitot + L1; `~/flight_bags/wind/wind3`, `wind4`)
+
+| cell | wind1/2 (12x8, pre-hold) | wind3 (measured build, 660dd83) | wind4 (after 2ab28bf) |
+|---|---|---|---|
+| still | 16/16, pk 11.6, stop 6.3 | 16/16, 11.5, 6.1 | 16/16, 11.5, 6.0 |
+| head3 / head5 | 16/16, 11.7, 3.3 / 16/16, 11.7, 22–24 | 16/16, 11.5, 9.0 / 16/16, 11.3, 23.4 | — / 16/16, 11.3, 23.4 |
+| cross3 / cross5 / crossm5 | 16/16 ×3, pk 11.9–12.5, stops 4.5 / 9.9 / 20 | 16/16 ×3, 12.3–12.7, 4.7 / 4.9 / 22.3 | — / 16/16, 12.1, 10.0 / 16/16, 12.0, 21.1 |
+| **diag5** | 16/16, 12.3, 4.2 | **0/16 (corridor, t 8–9 s)** | **16/16, 12.0, 9.8** |
+| turb 0.5 / 1.0 / head5+turb0.5 | 15/16 / 2/16 / 11/16 | 15/16 / **5/16** / **15/16** | — |
+
+diag5 A/B on seed 1 (all with the pitot): weathervane off → lost; the 12×8 airframe file → lost; `--hold_k 0`
+→ flies; `--hold_roll_max 0` or `4` → flies; L1 off → flies; `--settle 4/6/10` → lost 6–7 s after the start;
+pure crosswind or pure headwind 3.5 → flies. The chain is the hold's 8° lean into a wind the pitot estimator
+puts on the nose (a 45° sideslip the model then lacks), the L1 learning that (u_ad 0.5–0.6 N·m every axis),
+and the transition's tilt swing outrunning C(s). Fix: `lean_ok` / `wv_ok` — the hold leans and weathervanes
+only in a `v_cap 0` stage or at the RTH stop; the engage hover is along-track only (the pre-hold behaviour).
+
+### B2 — the tilt servo (`~/flight_bags/robust/tilt1`, `scripts/cells_tilt_servo.txt`)
+
+`so3.build_ode(tilt_tau=, tilt_rate=)`, gate `--plant_tilt_tau` / `--plant_tilt_rate` / `--tilt_slew`, the
+tilt knob in `test_plant_knobs`. Plant τ 0.10–0.40 s and slew 80–25 °/s (told 106) all 16/16 at pk 13.8–15.4;
+25 °/s told 17.0 (FAIL on the peak); τ 0.15 + 60 °/s 13.8. The servo is not a sensitivity; the spin lag is.
+
+### Reproduce
+
+```bash
+JOBS=16 bash scripts/wind_sweep.sh wind4 1 16 still cross5 diag5 head5 crossm5   # + wind_metrics.py
+# the diag5 A/B (controller repo root; VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3)
+... --airspeed --dur 30 --seed 1 --guide "20:wp 500 0 500 400 100 400;150:rth" --wind -3.5,3.5,0 [--hold_k 0 | --hold_roll_max 4 | --settle 10]
+ROBUST_NODE=nmpc_cascade_imu_node.py ROBUST_LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02" \
+  bash scripts/robust_sweep.sh tilt1 scripts/cells_tilt_servo.txt
+```
+
+### Standing
+
+- The pitot wind estimator in a hover that is not into the wind is wrong by the sideslip angle (worse than
+  blind): freeze its direction below a ground speed, or hold the L1 through the first seconds of a transition
+  in wind. The card's "transition into the wind" is the operational cover.
+- The post-stop hover's solve failures are ~7 per seed on the measured build with the pitot (1 on the 12×8);
+  all at t_stop + 0.5–3 s, V 0.1. Named three times now.
+
+---
+
 ## 2026-09-21 (afternoon) — Yaw served last, and a weathervane, in both controllers
 
 **controller `e2432f1` (safe controller) + `660dd83` (cascade hold) · sim `824d207` (test) · identity: both
