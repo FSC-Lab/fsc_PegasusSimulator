@@ -2,6 +2,35 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-21 (evening): THE MEASURED BUILD'S FIRST HIL FLIGHT -- A 30 s HOVER STAGE, LANDED 0.00 m.
+# Row R100_dx3_mn4014_hover30_a1_155915, bag slosh_20260921_155735 (`STAGE=hover STAGE_HOLD=30 CASC_SPIN=poll`,
+# the 1b configuration: cascade_adaptive / imu-mdob + EKF + L1 / px4 state / GPS 10 Hz / pitot, the offset
+# 100 mm tank, af=21fad0371f = the measured cfg). Sim this commit, controller 1990e91.
+**WHAT IT DID.** Climb on the safe controller (its yaw-last mixer + weathervane in the loop for the first time,
+still air: nothing to release), the engage hover (the along-track-only hold now), the 30 s hover stage: **"go"**
+-- the hold sat 0.6-1.4 m ahead of its point (the outer's vs bias, as on 2026-09-16) at V 0.15-0.4 m/s, z
+29.7-31.1, pitch -1..-2, roll +-1, yaw 0, tilt -1..-3.5, rotors 36-38 N, **0/693 solve failures, outer
+11-12 ms**; then the schedule's back-transition from the hover (+14 / -4 deg of pitch, 3.6 m, V 2.45 -- the
+2026-09-16 shape), the recover, the landing at (0.81, 0.08): 0.00 m from where it was. The measured cfg's
+digest is in the row; the launcher's four gates (scaffold, import, prop pairing, tilt pairing) passed; no JIT
+rebuild was needed (the cache key had not moved).
+**THE HOVER YAW LOOP ON THE REAL cQ, IN HIL** (`bag_axis_fit.py`, which now reads the airframe FILE -- it had
+carried its own cQ 0.12 / 18 N / CAD arms and read this hover at half the torque, the plant-double trap
+again): yaw diagonal sd **0.046 at 0.9 Hz** (quiet < 0.02; the 2026-09-11 thrash 0.4-0.8) -- the diagonal is
+4.4x the old throttle per N.m and the offset tank's ~1 Hz fore-aft ring is in it; the yaw held 0 throughout.
+And **the plant's yaw response is 1.5x the model's** (I_eff 0.32 vs the assembled 0.49 at the file's cQ; the
+old sim-only cQ read the same bag at x1.5 the OTHER way): with cQ down 6x, the rotors' SPIN-UP reaction
+(prop inertia x omega_dot; the sim's 1e-4 kg m^2 per prop) is no longer small beside the aerodynamic cQ.
+**Hardware item:** the rotor + prop inertia of the MN_4014 + 15x5 sets that transient yaw and is in the
+thrust stand's own torque trace on a throttle step (I = torque transient / omega_dot) -- fit it from the
+2026-09-17 logs before the first hover on the airframe.
+**THE PIECE-7 REHEARSAL ON THIS BUILD** (`ekf_retune.py` on the bag): hover window 34 s, bob 9.0 / 3.2 mm rms,
+bias states bF (+0.07, -0.00) N (2026-09-16: +0.17), bM (+0.01, +0.02, +0.00) N.m, force floor 0.074 N vs
+the gate's 0.039, moment floors (0.009, 0.012, 0.022) vs (0.049, 0.063, 0.096) -- the 2026-09-16 numbers to
+the second decimal; proposal r_F 0.57 / r_M 0.05, not applied (the tool is for the airframe's floors).
+**NOT FLOWN YET on this build:** the turning mission (the gate says 3/3, the 09-17 decimals) and any wind
+(HIL has none); the safe controller's weathervane has flown only its climb and landing in still air.
+
 # ★★★ 2026-09-21 (evening): B2 -- THE TILT SERVO AS A MISMATCH. THE GATE'S PLANT HAS ITS OWN SERVO NOW, AND THE
 # SPECIFIED ACTUATOR HAS 4-5x OF MARGIN. Controller 1990e91, sim this commit; sweep `~/flight_bags/robust/tilt1`.
 **WHAT WAS BUILT.** `so3.build_ode(tilt_tau=, tilt_rate=)` gives the gate's PLANT its own tanh slew-limited servo

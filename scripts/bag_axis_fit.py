@@ -27,9 +27,19 @@ from fsc_autopilot_ros2_msgs.msg import Mocap
 from px4_msgs.msg import ActuatorMotors, ActuatorServos
 from std_msgs.msg import String
 
-SPIN = np.array([1, -1, -1, 1]); CQ = 0.12; TMAX = 18.0
-X = np.array([0.282, 0.282, -0.289, -0.289]); Y = np.array([0.284, -0.284, 0.284, -0.284])
-I_CTL = {"roll": 0.265, "pitch": 0.303, "yaw": 0.490}
+# The airframe from the controller's own file (piece 3): this analyser carried its OWN copy (cQ 0.12,
+# 18 N, the CAD arms and inertia) and read the measured build's first hover (2026-09-21) at half the
+# torque -- the same unpinned-copy trap as the plant double. The hub arms are about the assembled CG
+# (+ the tank's shift through VTOL_TANK_DX, as so3 folds it); --cg_dx moves them for a flown VTOL_CG_DX.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from controller_path import load_airframe          # noqa: E402
+_AF = load_airframe()
+SPIN = np.array([float(v) for v in _AF.rotors.spin]); CQ = float(_AF.rotors.cq); TMAX = float(_AF.rotors.max_thrust)
+_tank_kg = float(os.environ.get("VTOL_TANK_KG", "0.502") or 0.502)
+_cg_x = float(_AF.mass.cg_x) + float(os.environ.get("VTOL_TANK_DX", "0") or 0.0) * _tank_kg / (float(_AF.mass.airframe_kg) + _tank_kg)
+_hubs = np.array([_AF.rotors.hub_fl, _AF.rotors.hub_fr, _AF.rotors.hub_rl, _AF.rotors.hub_rr], float)
+X = _hubs[:, 0] - _cg_x; Y = _hubs[:, 1]
+I_CTL = {"roll": float(_AF.mass.ixx), "pitch": float(_AF.mass.iyy), "yaw": float(_AF.mass.izz)}
 
 
 def load(bagdir):
@@ -54,7 +64,8 @@ def main():
     a = ap.parse_args()
     rows = load(a.bag)
     ac = rows("active_controller", String)
-    eng = a.eng if a.eng is not None else next((t for t, m in ac if m.data == "cascade"), None)
+    # the cascade FAMILY engages the inner loop this fits (cascade_adaptive since 2026-09-14)
+    eng = a.eng if a.eng is not None else next((t for t, m in ac if m.data.startswith("cascade")), None)
     if eng is None:
         print("no cascade engage in this bag"); return 1
     mot = rows("/actuator_motors", ActuatorMotors); srv = rows("/actuator_servos", ActuatorServos)
@@ -76,7 +87,7 @@ def main():
     tm = np.array([r[0] for r in mc]); W = np.array([r[1:] for r in mc]); Wd = np.gradient(W, tm, axis=0)
     tmo = T[(T > a0 - 1) & (T < b0)]; thr = M[(T > a0 - 1) & (T < b0)]
     xs = X - a.cg_dx
-    for tau in (0.06, 0.12):
+    for tau in (float(_AF.rotors.tau_spin), 0.12):     # the file's spin lag, and the old 0.12 for the record
         om = np.zeros(4); Mx = []; My = []; Mz = []; tprev = tmo[0]
         for t, th in zip(tmo, thr):
             dd = t - tprev; tprev = t; om += (th - om) * min(dd / tau, 1.0); Tn = TMAX * om ** 2
