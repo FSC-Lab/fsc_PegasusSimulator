@@ -161,15 +161,6 @@ if [[ ! "$PLANT_KF_SCALE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "ERROR: PEGASUS_PLANT_KF_SCALE must be a non-negative decimal (got '$PLANT_KF_SCALE')." >&2
   exit 2
 fi
-# The yaw-channel twin of the above. k_f and k_m are applied in DIFFERENT
-# places (per-rotor force vs one summed body yaw moment), so zeroing k_f alone
-# leaves props that torque but do not lift. 0.0 on both = "props removed",
-# which is what the ground-test rig uses.
-PLANT_KM_SCALE="${PEGASUS_PLANT_KM_SCALE:-1.0}"
-if [[ ! "$PLANT_KM_SCALE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-  echo "ERROR: PEGASUS_PLANT_KM_SCALE must be a non-negative decimal (got '$PLANT_KM_SCALE')." >&2
-  exit 2
-fi
 # Arm count<->torque path: whether the int16 Goal PWM register is modelled, and
 # the counts-per-N.m the command chain BELIEVES vs the winding actually HAS.
 # Empty count lists = servo_model.py's calibrated value on both sides.
@@ -279,7 +270,6 @@ PEGASUS_PLANT_INERTIA_SCALE=$PLANT_INERTIA_SCALE \
 PEGASUS_PLANT_COM_SHIFT_X=$PLANT_COM_X PEGASUS_PLANT_COM_SHIFT_Y=$PLANT_COM_Y \
 PEGASUS_PLANT_COM_SHIFT_Z=$PLANT_COM_Z \
 PEGASUS_PLANT_KF_SCALE=$PLANT_KF_SCALE \
-PEGASUS_PLANT_KM_SCALE=$PLANT_KM_SCALE \
 PEGASUS_ARM_COUNTS_ENABLE=$ARM_COUNTS_ENABLE \
 PEGASUS_ARM_COUNTS_NOMINAL=$ARM_COUNTS_NOMINAL \
 PEGASUS_ARM_COUNTS_TRUE=$ARM_COUNTS_TRUE \
