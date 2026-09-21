@@ -70,7 +70,7 @@ def fly(targets, duration, start=(0.0, 0.0, 5.0), start_yaw=0.0, ctrl_hz=200.0,
     dt_p = 1.0 / plant_hz
     sub = max(1, int(round(dt_c / dt_p)))
     ei = np.zeros(3)
-    hover = float(np.clip(MASS * G / 4.0 / 18.0, 0.0, 1.0))
+    hover = float(np.clip(math.sqrt(MASS * G / 4.0 / gains.max_thrust), 0.0, 1.0))   # the momentum prop's throttle is quadratic
     delay_n = max(0, int(round(latency / dt_c)))
     queue = [[hover] * 4] * (delay_n + 1)
     out = {k: [] for k in ("t", "p", "sp", "tgt", "v", "rpy", "mot", "err")}
@@ -186,25 +186,71 @@ def test_upset_recovery(lat):
           f"min z {np.min(r['p'][:, 2]):.2f} m")
 
 
-def test_wind(lat):
-    print("\n7. holds position in a 6 m/s crosswind")
-    gains = _gh.Gains()
+def _wind_run(wind, wv_yield_s, dur=40.0, yaw_headroom=None):
+    """The safe controller holding (0,0,12) in a steady crosswind on the plant double, stepped
+    exactly as the node steps it: the yaw-last mixer inside geometric_command, the Weathervane
+    fed its `yaw_clamped` flag and re-latching the yaw reference when it releases."""
+    gains = _gh.Gains(wv_yield_s=wv_yield_s, **({"yaw_headroom": yaw_headroom} if yaw_headroom is not None else {}))
     Ainv = np.linalg.pinv(_gh.allocation_matrix(gains.cg_x, gains.cQ))
     ramp = _gh.SetpointRamp(); ramp.seed((0.0, 0.0, 12.0), 0.0)
-    plant = VTOLPlant(wind_world=[0.0, 6.0, 0.0]); plant.reset(pos=(0.0, 0.0, 12.0))
-    ei = np.zeros(3); dt = 1.0 / 200.0
-    for k in range(200 * 40):
-        p_sp, v_ff, a_ff, yaw_sp = ramp.step([0.0, 0.0, 12.0], 0.0, dt, 4.0, 2.0, 1.0,
+    wv = _gh.Weathervane(gains.wv_yield_s)
+    plant = VTOLPlant(wind_world=[0.0, wind, 0.0]); plant.reset(pos=(0.0, 0.0, 12.0))
+    ei = np.zeros(3); dt = 1.0 / 200.0; yaw_target = 0.0
+    sat = clamped = 0; worst = 0.0; t_release = None
+    n = int(200 * dur)
+    for k in range(n):
+        p_sp, v_ff, a_ff, yaw_sp = ramp.step([0.0, 0.0, 12.0], yaw_target, dt, 4.0, 2.0, 1.0,
                                              1.5, 1.5, math.radians(45.0))
-        mot, ei, _ = _gh.geometric_command(plant.pos, plant.vel, plant.R, plant.omega,
+        mot, ei, d = _gh.geometric_command(plant.pos, plant.vel, plant.R, plant.omega,
                                            p_sp, v_ff, a_ff, yaw_sp, ramp.yaw_rate,
                                            ei, dt, gains, Ainv)
+        sat += int(d["saturated"]); clamped += int(d["yaw_clamped"])
+        yaw_now = math.atan2(plant.R[1, 0], plant.R[0, 0])
+        was = wv.released
+        y = wv.update(bool(d["yaw_clamped"]), yaw_now, dt)
+        if y is not None:
+            yaw_target = y; ramp.yaw = y; ramp.yaw_rate = 0.0
+            if not was:
+                t_release = k * dt
         for _ in range(5):
             plant.step(mot, 0.0, [0.0, 0.0, 0.0], 1.0 / 1000.0)
+        worst = max(worst, float(np.linalg.norm(plant.pos - np.array([0.0, 0.0, 12.0]))))
     err = float(np.linalg.norm(plant.pos - np.array([0.0, 0.0, 12.0])))
-    print(f"      final pos ({plant.pos[0]:.2f},{plant.pos[1]:.2f},{plant.pos[2]:.2f})  "
-          f"roll {plant.rpy[0]:+.1f} deg into the wind")
-    check("holds station in wind (integral nulls the offset)", err < 0.35, f"error {err:.3f} m")
+    return dict(err=err, worst=worst, rpy=plant.rpy, sat=sat / n, clamped=clamped / n,
+                released=wv.released, t_release=t_release, ei=ei.copy())
+
+
+def test_wind(lat):
+    print("\n7. holds position in a crosswind -- yaw served last, the heading released to the fin")
+    # ★ 2026-09-21: at the MEASURED cQ (0.0190) the rotors make 0.74 N.m of yaw at hover and the
+    # fin's weathercock at 6 m/s is 1.87 N.m. The old heading hold saturated the mixer 91-99% of
+    # the ticks and flew away (77 m); the yaw-last mixer keeps the collective, and the
+    # weathervane releases a heading the rotors cannot hold. What must be true:
+    #   6 m/s: position held with the nose free (the fin swings it into the wind); the mixer
+    #          itself never saturates; the release happens within a few seconds.
+    #   3 m/s: inside the authority -- the heading is HELD (no release), standing yaw error
+    #          bounded, position held. The clip may touch, the policy must not yield.
+    #   clip only (wv_yield_s 0) at 6 m/s: position still held -- the mixer alone is safe.
+    rows = {}
+    for wind, ys, label in ((3.0, 0.5, "3 m/s, shipped"), (6.0, 0.5, "6 m/s, shipped"),
+                            (6.0, 0.0, "6 m/s, clip only (no weathervane)")):
+        r = _wind_run(wind, ys)
+        rows[label] = r
+        print(f"      {label:34s} final err {r['err']:5.2f} m (worst {r['worst']:5.2f})  yaw {r['rpy'][2]:+6.1f} deg  "
+              f"mixer sat {100*r['sat']:4.1f}%  yaw clipped {100*r['clamped']:4.1f}%  "
+              f"released {'at %.1f s' % r['t_release'] if r['released'] else 'no'}  ei_y {r['ei'][1]:+.1f}")
+    r6, r3, rc = rows["6 m/s, shipped"], rows["3 m/s, shipped"], rows["6 m/s, clip only (no weathervane)"]
+    check("6 m/s: holds station with the nose free", r6["err"] < 0.35, f"error {r6['err']:.3f} m")
+    check("6 m/s: the heading is released to the fin", r6["released"] and r6["t_release"] < 5.0,
+          f"released at {r6['t_release']} s")
+    check("6 m/s: the nose weathervanes into the wind", abs(abs(r6["rpy"][2]) - 90.0) < 25.0,
+          f"yaw {r6['rpy'][2]:+.1f} deg (into the wind = -90)")
+    check("6 m/s: the mixer itself never saturates", r6["sat"] < 0.05, f"{100*r6['sat']:.1f}% of ticks")
+    check("3 m/s: the heading is held (no release)", not r3["released"] and abs(r3["rpy"][2]) < 25.0,
+          f"yaw {r3['rpy'][2]:+.1f} deg, released {r3['released']}")
+    check("3 m/s: holds station", r3["err"] < 0.35, f"error {r3['err']:.3f} m")
+    check("6 m/s, clip only: the mixer alone keeps the position", rc["err"] < 0.35 and rc["sat"] < 0.05,
+          f"error {rc['err']:.3f} m, mixer sat {100*rc['sat']:.1f}%")
 
 
 def test_latency_margin():
