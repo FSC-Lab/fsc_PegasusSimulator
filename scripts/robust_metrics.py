@@ -13,7 +13,7 @@ import re
 import sys
 
 d = sys.argv[1]
-PAT = re.compile(r"SUMMARY (\S+): (\d+)/(\d+) \| worst pkpitch\s+([\d.]+) pkAoA\s+([\d.]+) \| err rms mean\s+([\d.]+) worst pk\s+([\d.]+) \| revs mean\s+([\d.]+) max (\d+) \| fails sum (\d+) elvsat sum (\d+) \| minz\s+([\d.]+) maxz\s+([\d.]+) \| t_stop max\s+([\d.]+) \| roll worst\s+([\d.]+)")
+PAT = re.compile(r"SUMMARY (\S+): (\d+)/(\d+) \| worst pkpitch\s+([\d.]+) pkAoA\s+([\d.]+) \| err rms mean\s+([\d.]+) worst pk\s+([\d.]+) \| revs mean\s+([\d.]+) max (\d+) \| fails sum (\d+) elvsat sum (\d+) \| minz\s+([\d.]+) maxz\s+([\d.]+) \| t_stop max\s+([\d.]+) \| roll worst\s+([\d.]+)(?: \| flight fails (\d+))?")
 rows = {}
 
 
@@ -41,7 +41,9 @@ for line in open(os.path.join(d, "cells.txt")):
         continue
     g = m.groups()
     rows[name] = dict(flags=flags, ok=int(g[1]), n=int(g[2]) + early, pk=float(g[3]), aoa=float(g[4]), err=float(g[5]), revs=float(g[7]),
-                      fails=int(g[9]), elvsat=int(g[10]), minz=float(g[11]), maxz=float(g[12]), tstop=float(g[13]), roll=float(g[14]), missing=False, early=early)
+                      fails=int(g[9]), elvsat=int(g[10]), minz=float(g[11]), maxz=float(g[12]), tstop=float(g[13]), roll=float(g[14]), missing=False, early=early,
+                      # the solve failures BEFORE the stop (ke_metrics >= 2026-09-21); older summaries carry only the total
+                      ffails=int(g[15]) if g[15] is not None else None)
 nom = rows.get("nominal")
 if nom is None or nom["missing"]:
     print("no nominal cell -- cannot judge"); sys.exit(1)
@@ -52,7 +54,11 @@ def verdict(r):
         return "MISSING", ""
     why = []
     if r["ok"] < r["n"]: why.append(f"{r['ok']}/{r['n']} landed" + (f" ({r['early']} crashed before the BT)" if r.get("early") else ""))
-    if r["fails"] > 4: why.append(f"fails {r['fails']}")
+    # the budget reads the failures in FLIGHT (before the stop) when the summary carries them: the
+    # post-stop hover's single-tick solve failures moved 1-17 between cells whose flights were
+    # identical (mn1, 2026-09-21) and had made the column meaningless
+    f_budget = r["ffails"] if r.get("ffails") is not None else r["fails"]
+    if f_budget > 4: why.append(f"fails {f_budget}" + (f" (of {r['fails']} incl. the post-stop hover)" if r.get("ffails") is not None else ""))
     if r["pk"] > nom["pk"] + 3.0: why.append(f"pk {r['pk']:.1f}")
     if r["minz"] < 29.0: why.append(f"minz {r['minz']:.1f}")
     if r["tstop"] > nom["tstop"] + 3.0: why.append(f"stop {r['tstop']:.1f}s")
@@ -60,14 +66,17 @@ def verdict(r):
 
 
 print(f"robust sweep {d}  (nominal: {nom['ok']}/{nom['n']} pk {nom['pk']:.1f} fails {nom['fails']} minz {nom['minz']:.1f} stop {nom['tstop']:.1f})")
-hdr = f"{'cell':13s} {'landed':7s} {'pk':5s} {'fails':5s} {'revs':4s} {'minz':5s} {'stop':5s} {'roll':5s} {'verdict':7s} why"
+if nom.get("ffails") is not None:
+    print("  fails = total in the BT window / BEFORE the stop (the budget reads the second; the rest is the post-stop hover's solve)")
+hdr = f"{'cell':13s} {'landed':7s} {'pk':5s} {'fails':9s} {'revs':4s} {'minz':5s} {'stop':5s} {'roll':5s} {'verdict':7s} why"
 print(hdr); print("-" * len(hdr))
 table = []
 for name, r in rows.items():
     v, why = verdict(r)
     if r["missing"]:
         print(f"{name:13s} MISSING"); table.append((name, r["flags"], "MISSING", why)); continue
-    print(f"{name:13s} {r['ok']:2d}/{r['n']:<4d} {r['pk']:5.1f} {r['fails']:5d} {r['revs']:4.1f} {r['minz']:5.1f} {r['tstop']:5.1f} {r['roll']:5.1f} {v:7s} {why}")
+    fcol = f"{r['fails']:3d}/{r['ffails']:<3d}" if r.get("ffails") is not None else f"{r['fails']:5d}    "
+    print(f"{name:13s} {r['ok']:2d}/{r['n']:<4d} {r['pk']:5.1f} {fcol:9s} {r['revs']:4.1f} {r['minz']:5.1f} {r['tstop']:5.1f} {r['roll']:5.1f} {v:7s} {why}")
     table.append((name, r["flags"], v, why))
 # the envelope: per parameter, the passing levels
 print("\nENVELOPE (levels that pass, per parameter):")

@@ -37,9 +37,15 @@ for f in sorted(glob.glob(os.path.join(d, "s[0-9]*.txt")), key=lambda p: int(re.
     elv_sat = sum(1 for r in cross if abs(r["elv"]) >= 0.99)
     minz = min(r["z"] for r in bt); maxz = max(r["z"] for r in bt)
     t_stop = next((r["t"] - t0 for r in bt if r["V"] < 3.0), None)
+    # ★ solve failures BEFORE the stop (the corridor, the crossing, the brake) vs in the post-stop
+    # hover: on the measured build (2026-09-21) every failure of every cell but one sat at t 71-76 s,
+    # V 0.3-0.5 m/s, single ticks at 40-50 ms -- the outer's hover solve, not the flight. "fails sum"
+    # keeps counting both (the old tables); "flight fails" is the number the pass rule should read.
+    t_end_flight = t0 + t_stop if t_stop is not None else t0 + 20
+    fails_flight = sum(1 for r in bt if r["ok"] == 0 and r["t"] < t_end_flight)
     peak_roll = max(abs(r["roll"]) for r in bt)
-    rows.append((sd, fin["z"], pk_th, pk_aoa, rms, pk_err, rev, fails, elv_sat, minz, maxz, t_stop, peak_roll))
-    print(f"s{sd:2d} final z={fin['z']:5.1f}  pkpitch {pk_th:5.1f} pkAoA {pk_aoa:5.1f}  err rms {rms:4.2f} pk {pk_err:4.1f}  revs {rev:2d}  fails {fails:2d} elvsat {elv_sat:2d}  z[{minz:5.1f},{maxz:5.1f}]  t_stop {t_stop if t_stop is None else round(t_stop,1)}  roll {peak_roll:5.1f}")
+    rows.append((sd, fin["z"], pk_th, pk_aoa, rms, pk_err, rev, fails, elv_sat, minz, maxz, t_stop, peak_roll, fails_flight))
+    print(f"s{sd:2d} final z={fin['z']:5.1f}  pkpitch {pk_th:5.1f} pkAoA {pk_aoa:5.1f}  err rms {rms:4.2f} pk {pk_err:4.1f}  revs {rev:2d}  fails {fails:2d} ({fails_flight} before the stop) elvsat {elv_sat:2d}  z[{minz:5.1f},{maxz:5.1f}]  t_stop {t_stop if t_stop is None else round(t_stop,1)}  roll {peak_roll:5.1f}")
 if rows:
     ok = sum(1 for r in rows if r[1] > 20)
-    print(f"SUMMARY {os.path.basename(d.rstrip('/'))}: {ok}/{len(rows)} | worst pkpitch {max(r[2] for r in rows):5.1f} pkAoA {max(r[3] for r in rows):5.1f} | err rms mean {sum(r[4] for r in rows)/len(rows):4.2f} worst pk {max(r[5] for r in rows):4.1f} | revs mean {sum(r[6] for r in rows)/len(rows):4.1f} max {max(r[6] for r in rows)} | fails sum {sum(r[7] for r in rows)} elvsat sum {sum(r[8] for r in rows)} | minz {min(r[9] for r in rows):5.1f} maxz {max(r[10] for r in rows):5.1f} | t_stop max {max((r[11] or 99) for r in rows):4.1f} | roll worst {max(r[12] for r in rows):4.1f}")
+    print(f"SUMMARY {os.path.basename(d.rstrip('/'))}: {ok}/{len(rows)} | worst pkpitch {max(r[2] for r in rows):5.1f} pkAoA {max(r[3] for r in rows):5.1f} | err rms mean {sum(r[4] for r in rows)/len(rows):4.2f} worst pk {max(r[5] for r in rows):4.1f} | revs mean {sum(r[6] for r in rows)/len(rows):4.1f} max {max(r[6] for r in rows)} | fails sum {sum(r[7] for r in rows)} elvsat sum {sum(r[8] for r in rows)} | minz {min(r[9] for r in rows):5.1f} maxz {max(r[10] for r in rows):5.1f} | t_stop max {max((r[11] or 99) for r in rows):4.1f} | roll worst {max(r[12] for r in rows):4.1f} | flight fails {sum(r[13] for r in rows)}")
