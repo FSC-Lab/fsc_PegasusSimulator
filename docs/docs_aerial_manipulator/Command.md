@@ -5492,9 +5492,9 @@ in the code and reproduced in the Python reference:
 
 #### 7.17.1 Run sequence — copy-paste
 
-Identical to §7.15.1 except the two script names. Every trap there applies
-verbatim (never chain step 0 with a launcher, bracketed `pgrep` patterns, params
-read only at node startup, two ground stations, `Ctrl-b d`).
+Same as §7.15.1 with the 4-D script names; step numbers match it (1 = build and
+5 = DIRECT are not needed here). Run each step in its own terminal, and never
+chain step 0 with a launcher.
 
 **shiqi_machine** (`shiqi-desktop`):
 
@@ -5503,35 +5503,24 @@ read only at node startup, two ground stations, `Ctrl-b d`).
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
 ~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
-# 1. build after every pull (the cd IS part of the command; keep BUILD_TESTING on
-#    here — the parity gtests are how a change to wb_l1_observer.cpp is checked)
-#    fsc_trajectory_planner (the C++ whole-body planner the stack's `planner` window
-#    runs, a sibling at ~/ros2_ws/src/fsc_trajectory_planner since 2026-09-17) LINKS
-#    this package's wb_law, which compiles wb_l1_observer.cpp -- so it is rebuilt
-#    after every law/observer change too; colcon orders the two.
-cd ~/ros2_ws && colcon build --packages-select fsc_autopilot_ros2 fsc_trajectory_planner
-~/ros2_ws/build/fsc_autopilot_ros2/fsc_autopilot_lib/single_vehicle_baseline/tests/fsc_autopilot_tests \
-  --gtest_filter='WbL1ParityTest.*:WbParityTest.*'         # 8 tests, all must pass
-#    the Python reference and the fixture, whenever the observer changes:
-/usr/bin/python3 ~/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/l1_observer.py
-/usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/generate_wb_l1_truth.py
-
 # 2. ROS 2 stack            (terminal 1 — FIRST, owns the agent)
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
-# 3. Pegasus / PX4 SITL + TORQUE-MODE ARM STACK + ARM GROUND STATION (terminal 2)
+# 3. Pegasus / PX4 SITL     (terminal 2 — also starts the arm stack + arm ground station)
 ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh shiqi_machine
+
+# 3'. INSTEAD OF 3, WITH THE EE MARKER CUBE (terminal 2) — a mocap cube welded
+#     into the gripper; the arm GS's EE Trajectory tab draws it as "EE (Meas)".
+#     Step 2 needs nothing extra (its emulator already lists obj_0). 30 g is the
+#     flown mass — do NOT take the yaml's 0.2 kg default, see below.
+PEGASUS_EE_MARKER_CUBE=1 PEGASUS_EE_MARKER_CUBE_MASS=0.03 \
+  ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh shiqi_machine
 
 # 4. OFFBOARD, then arm     (terminal 3 — order is mandatory)
 source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
 ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
 sleep 2
 ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
-
-# 5. SAFETY takeoff to z = 1.2 from the drone GS, settle, then DIRECT (gated):
-ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: true}"
-# ABORT / back to SAFETY (hovers in place, folds the arm home — §7.15.1's guard):
-ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
 ```
 
 **Three banners to read before entering DIRECT, in the autopilot pane:** the
@@ -5545,6 +5534,33 @@ it reads `wb_l1_four_d` off the RUNNING node (`ros2 param get
 rather than mislabel a flight. In DIRECT the pane also prints, once a second, the
 magenta `4D attribution:` watch line — `chi`, the raw `F_hat`, `w_hat_q` and the
 consumed `F_hat_y`.
+
+**EE marker cube (step 3', added 2026-09-18).** Off unless asked for: the yaml
+carries `sim_ee_marker_cube: false`, and the environment overrides the yaml, which
+is all step 3' does. Chain: 06 welds the cube to the wrist-roll link at the model's
+grasp point → publishes it as mocap body `obj_0` → the step-2 emulator turns it
+into `/obj_0/mocap` → the arm GS draws EE (Meas) with a black line to EE (FK).
+**Confirm before arming**: the Pegasus pane prints magenta
+`EE MARKER CUBE ACTIVE: 0.03 kg welded into the gripper ...` (off prints
+`EE marker cube off`), `ros2 topic hz /obj_0/mocap` streams, and the tab's overlay
+reads `EE (FK) → EE (Meas) Rigid Offset: … mm, …°`. The two triads should COINCIDE,
+axes included: the cube's body frame is the planner's EE convention (x along the
+claw, z the gripper's up). Seated at five arm poses (2026-09-20): **0.1–0.3°, 0.3–1.0 mm**;
+in flight 8.6–10.5 mm was seen at the circle's start rest (2026-09-18). That offset
+is the model's grasp frame against the USD gripper, not a tracking error: EE (FK)
+is computed from the MEASURED joints. **~120° means the rigid body is on the wrist's
+own axes** — what 06 did before 2026-09-20, and what a hardware rigid body defined
+any other way will show.
+**The cube is an UNMODELLED end-effector payload — no controller knows its mass —
+so keep it light** (measured 2026-09-18, `ee_marker_cube_20260918/`):
+- 200 g (the yaml default) cannot take off. It noses over at spin-up in SAFETY.
+- 100 g takes off, but the SAFETY arm hold sags 5.5°, and the DIRECT gate
+  (`wb_gate_arm_rad` 0.05 rad = 2.9°) refuses. The sag is ~4.7°/100 g + 0.8°, so
+  ≤ ~44 g passes the gate.
+- 30 g flew the whole circle: DIRECT, go-to-start, 2 laps, back to HOLD.
+
+A heavier cube needs a wider gate or an integral/feed-forward in the SAFETY arm
+hold. That is a design decision, not a launch flag.
 
 **Automated campaign** (one data point = one full relaunch, ~7 min):
 

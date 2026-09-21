@@ -191,6 +191,19 @@ ARM_MASS_SCALE="${PEGASUS_ARM_MASS_SCALE:-}"
 # here and BAKED into the Isaac pane like every other knob (the tmux-server
 # environment trap): an exported variable does not reliably reach a pane of
 # an already-running tmux server.
+# EE MARKER CUBE (2026-09-18): 1 = a small cube welded into the gripper at
+# spawn, published as the mocap body obj_0 (the MEASURED end-effector pose)
+# and, unmodelled, an end-effector payload. 0 = no cube, the plant as before.
+EE_MARKER_CUBE="${PEGASUS_EE_MARKER_CUBE:-0}"
+EE_MARKER_CUBE_MASS="${PEGASUS_EE_MARKER_CUBE_MASS:-}"
+case "$EE_MARKER_CUBE" in
+  0|1) ;;
+  *) echo "ERROR: PEGASUS_EE_MARKER_CUBE must be 0 or 1 (got '$EE_MARKER_CUBE')." >&2; exit 2 ;;
+esac
+if [[ -n "$EE_MARKER_CUBE_MASS" && ! "$EE_MARKER_CUBE_MASS" =~ ^${_NUM_RE}$ ]]; then
+  echo "ERROR: PEGASUS_EE_MARKER_CUBE_MASS must be a non-negative decimal (got '$EE_MARKER_CUBE_MASS')." >&2
+  exit 2
+fi
 ARM_COMMAND_MODE="${PEGASUS_ARM_COMMAND_MODE:-effort}"
 case "$ARM_COMMAND_MODE" in
   effort|position) ;;
@@ -277,6 +290,7 @@ PEGASUS_ARM_FRICTION_SCALE=$ARM_FRICTION_SCALE \
 PEGASUS_ARM_FRICTION_WIDTH=$ARM_FRICTION_WIDTH \
 PEGASUS_ARM_MASS_SCALE=$ARM_MASS_SCALE \
 PEGASUS_ARM_COMMAND_MODE=$ARM_COMMAND_MODE \
+PEGASUS_EE_MARKER_CUBE=$EE_MARKER_CUBE PEGASUS_EE_MARKER_CUBE_MASS=$EE_MARKER_CUBE_MASS \
   \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

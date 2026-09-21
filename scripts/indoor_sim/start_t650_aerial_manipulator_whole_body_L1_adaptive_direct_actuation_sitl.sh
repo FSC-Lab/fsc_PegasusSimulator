@@ -316,6 +316,29 @@ if [[ -n "${PEGASUS_ARM_MASS_SCALE:-}" && "${PEGASUS_ARM_MASS_SCALE}" != "1.0" ]
 fi
 
 
+# ── EE MARKER CUBE (2026-09-18, user request) ────────────────────────────────
+# sim_ee_marker_cube: true welds a cube into the gripper at spawn. Isaac
+# publishes it as the mocap body obj_0, the emulator turns that into
+# /obj_0/mocap, and the arm ground station draws it as "EE (Meas)" beside the
+# forward-kinematics "EE (FK)". NEVER enters any control law -- it is ground
+# truth for the end-effector, and an UNMODELLED end-effector payload.
+# false = no cube, the plant exactly as before. Same precedence: env > yaml.
+if [[ -z "${PEGASUS_EE_MARKER_CUBE:-}" ]]; then
+  case "$(yaml_scalar sim_ee_marker_cube)" in
+    true|True|TRUE|1) export PEGASUS_EE_MARKER_CUBE=1 ;;
+    *)                export PEGASUS_EE_MARKER_CUBE=0 ;;
+  esac
+fi
+if [[ -z "${PEGASUS_EE_MARKER_CUBE_MASS:-}" ]]; then
+  V="$(yaml_scalar sim_ee_marker_cube_mass_kg)"
+  [[ -n "$V" ]] && export PEGASUS_EE_MARKER_CUBE_MASS="$V"
+fi
+if [[ "$PEGASUS_EE_MARKER_CUBE" == 1 ]]; then
+  echo -e "\033[1;35mEE MARKER CUBE ACTIVE: ${PEGASUS_EE_MARKER_CUBE_MASS:-0.2} kg welded into the gripper, published as obj_0 -> /obj_0/mocap (measured EE pose). Unmodelled by every controller.\033[0m"
+else
+  echo "EE marker cube off (no end-effector payload, no /obj_0/mocap)."
+fi
+
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
 [[ -f "$INDOOR_SIM_PEGASUS_SCRIPT" ]] || {

@@ -60,6 +60,9 @@ from isaacsim import SimulationApp
 #                            the arm controller compensates), 2026-09-14
 #   PEGASUS_ARM_FRICTION_WIDTH   its tanh half-width, rad/s (default 0.015)
 #   PEGASUS_ARM_MASS_SCALE       arm link masses x this, every model nominal
+#   PEGASUS_EE_MARKER_CUBE=1     weld a 200 g mocap-marker cube into the gripper
+#                                (obj_0 -> /obj_0/mocap = the MEASURED EE pose)
+#   PEGASUS_EE_MARKER_CUBE_MASS  its mass, kg (default 0.2)
 HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
@@ -254,6 +257,36 @@ def _envf(name, default):
     except ValueError:
         raise SystemExit(f"[AM-T650-WB] {name} must be a number, got '{v}'")
 
+
+# ── EE MARKER CUBE (2026-09-18, user request) ────────────────────────────────
+# PEGASUS_EE_MARKER_CUBE=1 welds a small cube into the gripper at spawn and
+# publishes its rigid-body state as `obj_0` (state/pose, state/twist,
+# state/twist_inertial), which the OptiTrack emulator turns into /obj_0/mocap:
+# the END-EFFECTOR'S MEASURED POSE, ground truth for the arm ground station's
+# "EE (Meas)" triad. It is at the same time an UNMODELLED EE PAYLOAD -- no
+# controller, planner or hold in this process knows about it, which is the
+# test. Default 0 = every existing rig bit-identical.
+EE_MARKER_CUBE      = (os.environ.get("PEGASUS_EE_MARKER_CUBE", "") or "0").strip() == "1"
+EE_MARKER_CUBE_MASS = _envf("PEGASUS_EE_MARKER_CUBE_MASS", 0.2)      # [kg]
+EE_MARKER_CUBE_SIDE = 0.03                                            # [m]
+EE_MARKER_GRASP_DEPTH = 0.108     # [m] wrist -> grasp point, = transition_planner.GRIPPER_OFF_WRIST
+EE_MARKER_BODY      = "obj_0"            # the mocap rigid-body name the stack expects
+EE_MARKER_PRIM      = "/World/ee_marker_cube"
+EE_MARKER_JOINT     = "/World/ee_marker_cube_weld"
+# The gripper hangs off the wrist-roll link, which the asset names
+# `manip_base` (manip_joint4's child; the fingers ride on `hub` below it).
+EE_MARKER_WRIST_LINK = "/manip_base"
+EE_MARKER_PAD_LINKS  = ("/left_grip", "/right_grip")
+# The cube's BODY FRAME is the end-effector frame the trajectory planner
+# publishes as current_ee ("EE (FK)", its eeFrameQuat): x = the claw axis (the
+# wrist's -z), y = the wrist's -x, z = the gripper's up (the wrist's +y). This
+# is the wrist -> EE rotation, columns in wrist coordinates. Welding the bare
+# wrist frame instead drew "EE (Meas)" 120 deg off "EE (FK)" (2026-09-20) -- the
+# sim equivalent of defining the mocap rigid body on the gripper's axes, which
+# is what a hardware rigid body needs too for the two triads to coincide.
+EE_MARKER_R_WRIST_EE = np.array([[0.0, -1.0, 0.0],
+                                 [0.0,  0.0, 1.0],
+                                 [-1.0, 0.0, 0.0]])
 
 PLANT_MASS_SCALE    = _envf("PEGASUS_PLANT_MASS_SCALE", 1.0)
 PLANT_INERTIA_SCALE = _envf("PEGASUS_PLANT_INERTIA_SCALE", 1.0)
@@ -522,6 +555,12 @@ class AmT650WholeBodyArmSim:
             position=np.asarray(pr, float) + np.array([0.0, 0.0, dz]))
         print(f"[AM-T650-WB] ground-seated: body z {pose_g.p.z:.3f} -> "
               f"{GROUND_BODY_Z:.3f} m (dz={dz:+.3f})", flush=True)
+
+        # AFTER the re-seat and the ground seat: the cube is placed where the
+        # gripper actually ended up, and a weld authored before a teleport of
+        # the articulation would be torn open by it.
+        if EE_MARKER_CUBE:
+            self._spawn_ee_marker_cube()
 
         # --- Arm actuation: TRUE effort control from the start ---------------
         self._set_arm_armature()
@@ -1096,6 +1135,102 @@ class AmT650WholeBodyArmSim:
               f"gravity-compensation error on every joint.\033[0m", flush=True)
         print(f"[AM-T650-WB] PLANT TOTAL carries an extra {self._arm_dm:+.6f} kg in the arm "
               f"on top of the body injection (the nominal-total gate above is unaffected).",
+              flush=True)
+
+    # ── EE MARKER CUBE (2026-09-18) ──────────────────────────────────────────
+    def _spawn_ee_marker_cube(self):
+        """Weld a cube into the gripper and publish it as the mocap body obj_0.
+
+        Placed at the midpoint of the two finger-pad centres of mass, in the
+        WRIST link's frame, with its body axes on the EE convention
+        (EE_MARKER_R_WRIST_EE), and held by a FIXED joint whose frames are
+        taken from the live poses -- so it is exactly satisfied at creation and
+        the marker-to-wrist pose is a constant the ground station can draw. No
+        collider on purpose: the weld carries it, and a collider inside the
+        fingers would only fight the joint.
+        """
+        from pxr import UsdGeom
+        from fsc_aerial_manipulation.utils import ROS2RigidBodyBackend
+
+        wrist_path = self.drone_path + EE_MARKER_WRIST_LINK
+        wrist = self._dc.get_rigid_body(wrist_path)
+        pads = [self._dc.get_rigid_body(self.drone_path + p) for p in EE_MARKER_PAD_LINKS]
+        if not wrist or not all(pads):
+            raise RuntimeError(
+                f"[AM-T650-WB] EE marker cube: gripper bodies not found under "
+                f"{self.drone_path} ({EE_MARKER_WRIST_LINK}, {EE_MARKER_PAD_LINKS})")
+
+        def pose(h):
+            P = self._dc.get_rigid_body_pose(h)
+            return (np.array([P.p.x, P.p.y, P.p.z]),
+                    C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z))
+
+        p_w, R_w = pose(wrist)
+        # Laterally centred between the pads (their CoM midpoint, x and y in
+        # the wrist frame), and pushed out along the gripper axis -- the
+        # wrist's -z -- to the GRASP POINT the whole-body model uses
+        # (transition_planner.GRIPPER_OFF_WRIST, 0.108 m from the wrist), so
+        # "EE (FK)" and "EE (Meas)" coincide by construction and the marker
+        # sits at the fingertips, not inside the pad plates. The pad meshes'
+        # own bounds are NOT usable for this: the flattened prototypes are
+        # not authored in the pad frame (measured 30 cm boxes, 2026-09-18).
+        pad_com = []
+        for path, h in zip(EE_MARKER_PAD_LINKS, pads):
+            p, R = pose(h)
+            com = UsdPhysics.MassAPI(self.stage.GetPrimAtPath(self.drone_path + path)) \
+                .GetCenterOfMassAttr().Get()
+            pad_com.append(R_w.T @ ((p + R @ np.array([com[0], com[1], com[2]], float)) - p_w))
+        mid = 0.5 * (pad_com[0] + pad_com[1])
+        side = float(EE_MARKER_CUBE_SIDE)
+        off_wrist = np.array([mid[0], mid[1], -EE_MARKER_GRASP_DEPTH])
+        p_c = p_w + R_w @ off_wrist
+
+        # the cube: a rigid body with mass and inertia, no collider
+        cube = UsdGeom.Cube.Define(self.stage, EE_MARKER_PRIM)
+        cube.CreateSizeAttr(side)
+        cube.CreateDisplayColorAttr([Gf.Vec3f(0.95, 0.15, 0.85)])
+        qw, qx, qy, qz = _rot_to_quat_wxyz(R_w @ EE_MARKER_R_WRIST_EE)
+        xf = UsdGeom.Xformable(cube)
+        xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p_c)))
+        xf.AddOrientOp().Set(Gf.Quatf(float(qw), Gf.Vec3f(float(qx), float(qy), float(qz))))
+        prim = cube.GetPrim()
+        UsdPhysics.RigidBodyAPI.Apply(prim)
+        mass = UsdPhysics.MassAPI.Apply(prim)
+        mass.CreateMassAttr(float(EE_MARKER_CUBE_MASS))
+        i_side = EE_MARKER_CUBE_MASS * side ** 2 / 6.0
+        mass.CreateDiagonalInertiaAttr(Gf.Vec3f(i_side, i_side, i_side))
+        mass.CreateCenterOfMassAttr(Gf.Vec3f(0.0, 0.0, 0.0))
+
+        # the weld, outside the vehicle prim so PhysX never reads it as an
+        # articulation joint
+        joint = UsdPhysics.FixedJoint.Define(self.stage, EE_MARKER_JOINT)
+        joint.CreateBody0Rel().SetTargets([wrist_path])
+        joint.CreateBody1Rel().SetTargets([EE_MARKER_PRIM])
+        joint.CreateLocalPos0Attr(Gf.Vec3f(*map(float, off_wrist)))
+        # the joint frame on the wrist side IS the cube's frame (identity on
+        # the cube side), so the weld holds cube = wrist * (off_wrist, R_wrist_ee)
+        jw, jx, jy, jz = _rot_to_quat_wxyz(EE_MARKER_R_WRIST_EE)
+        joint.CreateLocalRot0Attr(Gf.Quatf(float(jw), Gf.Vec3f(float(jx), float(jy), float(jz))))
+        joint.CreateLocalPos1Attr(Gf.Vec3f(0.0, 0.0, 0.0))
+        joint.CreateLocalRot1Attr(Gf.Quatf(1.0, Gf.Vec3f(0.0, 0.0, 0.0)))
+
+        # its state on the wire, as the payload scripts do it. The handle
+        # only exists after PhysX has seen the new prim, hence the guard.
+        class _MarkerBackend(ROS2RigidBodyBackend):
+            def update_sim_state(this, dt):
+                if not this.get_dc_interface().get_rigid_body(this.payload_path):
+                    return
+                super().update_sim_state(dt)
+
+        self._marker_backend = _MarkerBackend(
+            world=self.world, payload_path=EE_MARKER_PRIM,
+            config={"topic_prefix": EE_MARKER_BODY, "pub_state": True})
+        print(f"\033[1;35m[AM-T650-WB] EE MARKER CUBE: {EE_MARKER_CUBE_MASS*1e3:.0f} g, "
+              f"{side*1e2:.1f} cm, welded to {EE_MARKER_WRIST_LINK} at "
+              f"{np.round(off_wrist, 4).tolist()} m in the wrist frame; world "
+              f"{np.round(p_c, 3).tolist()} m -> published as {EE_MARKER_BODY}/state/* "
+              f"(mocap /{EE_MARKER_BODY}/mocap). UNMODELLED by every controller: "
+              f"the plant now weighs +{EE_MARKER_CUBE_MASS:.3f} kg at the end-effector.\033[0m",
               flush=True)
 
     def _setup_gripper_drive(self):

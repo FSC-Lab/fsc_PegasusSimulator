@@ -3228,3 +3228,105 @@ breakaway. Also: the hardware DEADBEAT estimate is 25× noisier than Isaac's (st
 define any collision latch on a filtered reading. Traps: vehicle topics 0.348 s AHEAD of the
 recorder clock; `/rosout` 3 s late early in the bag; the written duty legitimately exceeds
 `max_effort` (back-EMF FF is added after the clamp). Hardware yamls UNCHANGED by this entry.
+
+**EE MARKER CUBE — THE MEASURED END-EFFECTOR, AN UNMODELLED EE PAYLOAD, AND
+WHAT IT REVEALED (2026-09-18, user request).** The arm GS's EE Trajectory tab
+now draws TWO end-effector triads: **EE (FK)** = the planner's `current_ee`
+(forward kinematics of the MEASURED base pose and joints on its own model —
+it now carries orientation, `eeFrameQuat(R0_actual·r_model, Re)`, same
+convention as `reference_pose`) and **EE (Meas)** = `/obj_0/mocap`, with a
+SOLID BLACK line between them and its length in the overlay. The commanded-EE
+triad and the Pause button are GONE (pause/resume services and the `PAUSED`
+suffix deleted from the planner; test renamed `test_ee_trajectory_origin.py`).
+- **THE MARKER.** `PEGASUS_EE_MARKER_CUBE=1` (yaml `sim_ee_marker_cube`, mass
+  `sim_ee_marker_cube_mass_kg`, env > yaml, forwarded by all three WB launchers,
+  baked by the base launcher; `false` = the plant exactly as before) makes 06
+  weld a cube into the gripper AFTER the re-seat + ground seat (a weld authored
+  before the articulation teleport is torn open): a shapeless rigid body (no
+  collider — it would fight the weld) with mass/inertia, `UsdPhysics.FixedJoint`
+  at `/World/ee_marker_cube_weld` (OUTSIDE the vehicle prim so PhysX never reads
+  it as an articulation joint), body0 = `/manip_base` — the WRIST-ROLL link
+  (manip_joint4's child; the name lies), placed laterally at the two pads' CoM
+  midpoint and 0.108 m out along the wrist −z = the model's own grasp point
+  (`transition_planner.GRIPPER_OFF_WRIST`), 3 cm. Published as `obj_0` by a
+  `ROS2RigidBodyBackend` (handle-guarded: the actor exists only after PhysX
+  sees the prim); the stack scripts pass `bodies:="uav_0 obj_0"` and the
+  **emulator now skips a body until its first pose arrives** — before, a
+  listed-but-absent body was emulated as a phantom at the origin.
+  **The pad MESH bounds are unusable for placement**: `ComputeLocalBound` on the
+  flattened prototypes returns ~30 cm boxes not in the pad frame (measured —
+  the cube landed 42 cm away); the `physics:centerOfMass` attrs ARE in the pad
+  frame. The USD link xforms are also NOT synced after the dc teleport — take
+  poses from `dc`, never from `XformCache`, at spawn time.
+- **FK ↔ MARKER AGREE TO 0.7 mm AT HOME but 8.6–10.5 mm at the circle's
+  start rest** (hover, then go-to-start): the whole-body model's grasp frame
+  and the USD gripper differ by a pose-dependent ~1 cm — the black line is
+  exactly the instrument for that, and it is NOT a tracking error (FK uses
+  the measured joints).
+- **200 g CANNOT TAKE OFF: nose-over on the ground at spin-up.** Roll stays
+  0.0° while pitch runs monotonically nose-down 2.6° → 59° in 2 s from z 0.31,
+  vehicle thrown 7–10 m, PX4 "Attitude failure (pitch)" failsafe. The
+  weld held (cube–body 0.287–0.292 m throughout). Control run without the
+  cube: clean takeoff, hover 1.198 m within 1.4 cm — but even that peaks at
+  16.9° pitch and 1.56 m of excursion: PX4's softened attitude loop has thin
+  margin against the arm's standing moment, and the cube's +0.57 N·m plus the
+  10° arm sag it causes on the SAFETY hold (q2/q3 30/33 vs 40/40) tips it.
+  100 g takes off (peak pitch 22.9°, 2.25 m excursion, hover 1.198 ± 0.0002 m).
+- **THE BINDING LIMIT IS THE DIRECT-ENTRY ARM GATE, NOT FLIGHT.** The SAFETY
+  hold (PD + nominal gravity comp, no integral) sags under the unmodelled
+  mass, and `wb_gate_arm_rad` 0.05 refuses: 100 g → 5.53°, 50 g → 3.16°
+  (slope ~4.7°/100 g + ~0.8° baseline from config A's own friction/gravity
+  mismatch) → the gate admits ≤ ~44 g. `ros2 param set` does NOT change the
+  live gate (params read at startup — the documented trap). **30 g flew the
+  whole thing**: DIRECT entered (12 cm entry transient, settled < 1 cm), circle
+  READY s=1.00, go-to-start 8.1 s, run 2 laps (cube swept 715°, z 1.126 ±
+  3.8 mm, tilt ≤ 3.5°), back to HOLD, no abort. Widening the gate or an
+  integral/feed-forward in the SAFETY arm hold is what a real 200 g test needs;
+  both are the user's call. Data + traces + `takeoff_trace.py` (a 50 Hz
+  body/cube/joints recorder — its `actuator_motors` field never filled, QoS):
+  `docs/docs_aerial_manipulator/ee_marker_cube_20260918/`.
+  **Launch recipe (added 2026-09-20): Command.md §7.17.1 step 3'** —
+  `PEGASUS_EE_MARKER_CUBE=1 PEGASUS_EE_MARKER_CUBE_MASS=0.03` in front of the
+  4-D Pegasus launcher; nothing changes in step 2. The yaml keeps
+  `sim_ee_marker_cube: false` / `_mass_kg: 0.2`, and that default mass is
+  exactly the one that cannot take off, so never enable the cube from the
+  yaml without also lowering the mass.
+  **CUBE AXES = THE EE CONVENTION (2026-09-20, user report: EE (Meas) triad
+  did not line up with EE (FK)).** 06 spawned the cube on the bare WRIST-link
+  frame (`R_w`, identity weld rotations), while the planner's `current_ee` is
+  `Re·M`, `M = [-e3, -e1, e2]` (x = claw = wrist -z, z = gripper up = wrist +y):
+  a constant 120 deg. The cube is now oriented `R_w·M` and the weld's
+  `localRot0 = M` (`EE_MARKER_R_WRIST_EE`), i.e. the mocap rigid body defined
+  on the gripper's axes — a HARDWARE rigid body must be defined the same way
+  or its triad will be off by whatever its axes are. Verified in Isaac,
+  seated, 5 poses via arm_planner (q1 +-20, q4 +-60/90, q2/q3 30/45): 0.08-0.29
+  deg, 0.3-1.0 mm. The arm GS overlay now prints the angle too (`… mm, …°`).
+- **THE "TWO DRONE CIRCLES" ARE REAL GEOMETRY**: `ee_traj_q2_period_s` 48 s =
+  the whole 2-lap phase, so the arm folds once per RUN and the base rides a
+  different loop on each lap (13 mm radial / 24 mm vertical apart at equal
+  bearing, measured; the EE loops coincide to 0.0 mm). Separately, inferno and
+  viridis converge to the same yellow at the top of the range (33/255 apart) —
+  the drone map now ends at a saturated orange.
+  **2026-09-20 (user request): the tab now draws ONE airframe loop, and the
+  Drone triad is MEASURED.** The planner reports where the first lap ends
+  (`/ee_trajectory/info` [15], bisected on its own time profile) and the tab
+  cuts `drone_path` there; the topic still carries the whole run. Lap 2 vs
+  lap 1 at MID-lap (q2 40 vs 20 deg), interpolated: **45 mm** on the 4-D sim
+  yaml, 0.0 mm on the node defaults (q2 period = one lap); lap 1 closes on
+  itself to 0.4 mm. So during lap 2 the Drone triad rides up to ~4.5 cm off
+  the drawn ring by design; `q2_period_s = lap_time` would make the flight
+  itself one loop (a design change, not made). The Drone triad now reads the
+  planner's new `whole_body_planner/current_base` (odometry position + PX4
+  attitude, x = nose — the pair `current_ee` is computed from, same 15 Hz tick
+  and 0.5 s gate), so before Go To Start it moves with EE (FK); it used to
+  read the COMMANDED `ee_trajectory/drone_reference_pose`, a static hold.
+  `drone_reference_pose` is still published (the origin test reads it).
+  Verified: `test_ee_trajectory_origin.py` PASS on defaults AND with
+  `EE_ORIGIN_PARAMS_FILE=<4-D sim yaml>` (new: current_base == fed odom/att,
+  info[15] == Tr/2 + T_lap), and an offscreen grab of the REAL panel linked
+  from `libjoint_plot_core.a` against a moving loopback base.
+- **Two traps hit AGAIN, four times between them**: `pkill -f`/`pgrep -f` with a
+  bracketed pattern still matches your own shell when the SAME command line
+  later spells the target out in plain text (a `ros2 topic pub ...` launch line
+  did it); and a `2>&1 | cut` behind `run_in_background` lost a script's entire
+  output. NOT flown on hardware; nothing committed.
