@@ -11,6 +11,63 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-21 (night) — An INDI inner loop as a variant of the flown node (gated, not flown)
+
+**controller `401f4a8` (`nmpc_cascade_indi_node.py`) · sim `21831f2` (boot test `--node indi`, `scripts/indi_ab.sh`)**
+
+The user's question: would an incremental nonlinear dynamic inversion inner loop, built on the model in use,
+replace the geometric inner loop so the model need not be as accurate? Built as a copy in the variant pattern
+(`L1Indi(imu.L1Imu)` re-pointing `base.L1Aug`; the flown node untouched, `--indi_off` reproduces its hash
+`460eb532b42d5443e66edd6218233957`).
+
+### The derivation (the docstring has the long form)
+
+1. `J w_dot = M_c(x,u) + M_a(x) + M_d − w × J w`
+2. first order about the current state and the control **in force** (u0, through the delay and the lags)
+3. time-scale separation: `w_dot ≈ w_dot_0 + G (u − u0)`, `G = J⁻¹ ∂M_c/∂u`
+4. `u = u0 + G⁺ (ν − w_dot_0)` — the increment; `w_dot_0` measured, so the aero, the unmodelled moment and the
+   gyroscopics are inside it; only the control effectiveness is modelled (an error in (0, 2) converges)
+5. at the moment level: `M_des = M_c(u0) + J (ν − w_dot_0)`
+6. with `ν = M_geo / J`: **`M_des = M_geo + [M_c(u0) − J w_dot_0]`** — the flown law plus the measured
+   non-control moment cancelled at the rate filter's bandwidth (40 rad/s; yaw 10). It is the L1's job
+   (`u_ad = −C(s) σ̂`) with the residual measured instead of adapted, at 40 rad/s instead of 2, **and with the
+   aero stiffness and damping cancelled too** — which is the whole story of the gates.
+
+Synchronisation: the rate derivative and the applied control moment (the L1's delay FIFO + actuator-lag states)
+go through the same two first-order lags.
+
+### What was measured (the flown IMU node as the A; `scripts/indi_ab.sh`)
+
+| | flown | INDI (roll + faded yaw) |
+|---|---|---|
+| hovers still / CG 5 cm / lat 50 / noise 3 (worst displacement) | 1.22 / 1.50 / 1.25 / 1.25 m | 1.22 / 1.51 / 1.26 / 1.25 |
+| 5 cm CG standing pitch | −1.14° | −1.14 (−1.15 with pitch INDI: the outer's crutch) |
+| still-hover yaw diagonal sd | 0.063 | 0.071 |
+| **quartering-wind hover, leaning** | 1.22 m, roll 8.4° | **1.12 m, roll 5.3°** (the one win) |
+| straight 90 s incl. cQ 0.5×/2×, inertia 0.6, lat aero 1.5, spin 0.18, lat 50/80 ms | 0/1801 | 0/1801, indistinguishable |
+| straight back-transition | +12.0 / z 29.9 / stop 71.0 s | identical to the tenth |
+| turning mission 3 seeds + cross5 | flies | flies; fly-by peak bank **28.1 vs 24.4** (ref 25), orbit sd 0.14 vs 0.11 |
+| yaw INDI unfaded | — | stalls out of the first turn (seeds 2, 3, cross5, diag5) |
+| pitch INDI | — | crashes the corridor at t 9.7 |
+
+### The reading
+
+- Yaw at speed: the flown damping-only law is safe **because it is weak** — the fin flies the coordinated turn;
+  INDI made it exact and the aircraft stalled out of the turn → the yaw increment fades with the wing share.
+- Pitch: the outer plans with the airframe's pitch stiffness (`build_ode6`'s cma); an inner loop that inverts
+  it hands the outer a plant it did not model — the 2026-09-10 "two loops doing pitch" bang-bang, measured again.
+- Roll: harmless to invert, but INDI removes the roll subsidence (Lp 1.68 N·m·s at 16 m/s > the loop's kW 1.2),
+  so the flown gains are under-damped on the inverted plant (ζ 1.0 vs 1.7) and the bank overshoots the 25°
+  reference by 3–4°; `indi_kw` (default Lp at cruise) puts the damping back, the rest is the 55 ms of delay + filter.
+- **INDI needs the actuator model more, not less** (G, the delay, the lags must be synchronous); what it lets
+  you drop is the aero model — and this loop's outer NMPC and yaw law are built on it. The premise holds for a
+  multicopter whose inner loop is the controller; here the model lives in the outer, which INDI never touches.
+
+### Standing (only if pursued)
+
+The roll retune for the inverted plant; a hover-stage flight of the variant; yaw INDI in hover under the
+measured cQ against the fin (the +13 % hover diagonal is the noise gain).
+
 ## 2026-09-21 (evening) — The measured build's first HIL flight: a 30 s hover stage
 
 **sim `f4a9863` · controller `1990e91` · row `R100_dx3_mn4014_hover30_a1_155915`, bag

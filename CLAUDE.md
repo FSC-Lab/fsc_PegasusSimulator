@@ -2,6 +2,81 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-21 (night): AN INDI INNER LOOP, AS A VARIANT OF THE FLOWN NODE -- BUILT, GATED, NOT FLOWN.
+# THE ANSWER TO "WOULD INDI LET THE MODEL BE LESS ACCURATE": NOT IN THIS LOOP -- THE FLOWN PITCH AND YAW LAWS ARE
+# BUILT ON THE AIRFRAME'S OWN AERO, AND INDI INVERTS IT AWAY. Controller 401f4a8 (`nmpc_cascade_indi_node.py`),
+# sim 21831f2 (boot test `--node indi`, `scripts/indi_ab.sh`). The flown node is byte-identical (identity holds).
+**THE QUESTION (the user's).** Instead of the geometric inner loop, an incremental nonlinear dynamic inversion
+(INDI) inner loop based on the model in use, so the model itself need not be as accurate. Asked as a design
+question first, then "copy the node and replace the geometric section's inner loop with the INDI".
+**THE DERIVATION, for this loop (the node's docstring carries it in full).** The rotational plant every controller
+here writes: `J w_dot = M_c(x,u) + M_a(x) + M_d - w x J w` (1) -- control moment, aero moment of the state,
+unmodelled, gyroscopic. First order about the current state and the control the actuators are APPLYING now
+(u0, not the last command): `w_dot ~ w_dot_0 + (dw_dot/dx)(x - x0) + (dw_dot/du)(u - u0)` (2); time-scale
+separation drops the state term: `w_dot ~ w_dot_0 + G (u - u0)`, `G = J^-1 dM_c/du` (3); demand `w_dot = nu`
+and solve for the INCREMENT: `u = u0 + G^+ (nu - w_dot_0)` (4). `w_dot_0` is MEASURED, so M_a, M_d and the
+gyroscopics are inside it: the only model left is the control effectiveness G (an error `G_true G_est^+` in
+(0, 2) per axis converges). At the moment level, where this cascade allocates: `M_des = M_c(u0) + J (nu - w_dot_0)`
+(5), and with `nu = M_geo / J` (the flown geometric law's moment, every gain and fade as it is):
+**`M_des = M_geo + [M_c(u0) - J w_dot_0]`** (6) -- the geometric law plus the algebraic estimate of everything
+that is NOT the control moment, sign flipped. That is the L1's job description (`I w_dot = M_model + sigma`,
+`u_ad = -C(s) sigma_hat`) with three differences: the residual is MEASURED, not predicted-and-adapted; it comes
+out at the rate filter's bandwidth (40 rad/s) instead of C(s)'s 2 rad/s; and **M_a is not in the model, so the
+aero stiffness and damping are cancelled with the rest.** Synchronisation is what INDI lives by: `w_dot_0` and
+`M_c(u0)` must describe the same interval -- the rate difference through two first-order lags at wf, and the
+commanded thrusts/deflections through the L1's transport-delay FIFO + actuator-lag states through THE SAME two
+lags (a mis-declared delay is the IMU's 40 ms failure class).
+**THE VARIANT.** `L1Indi(imu.L1Imu)`: the force twin, EKF predictor, wall guard, status feed and log inherited;
+`adapt()` returns on the INDI axes the bracket of (6) (+ the predictor's model-based direct term: INDI reacts,
+the predictor anticipates) in place of C(s)'s u; re-points `base.L1Aug` like the STESO variant, `base.STATUS_EXTRA`
+adds `indi axes= wdot= sig_indi=`. Knobs `--indi_axes ry` (default: roll + yaw), `--indi_wf 40 / --indi_wf_yaw 10`,
+`--indi_kw 1.68,0,0` (below), `--indi_yaw_fade 1` (below), `--indi_umax 6,6,3` (never bound), `--indi_hold_fade_s 0.5`
+(the increment fades out through the back-transition instead of holding a 40 rad/s snapshot), `--indi_off` =
+the IMU node exactly. Boot test `tests/test_cascade_node_boots.py --node indi` (its banner + the IMU node's + the
+ack). `scripts/indi_ab.sh hover|mission|model|turns|final` reproduces the table below. NOT wired to a launcher
+(`ADAPTIVE_NODE_PY` would do it); not flown.
+**THE GATES (`~/flight_bags/indi_ab` / the scratch runs, the flown IMU node as the A, the flown line, same seeds):**
+| case | flown node | INDI (roll + faded yaw) |
+|---|---|---|
+| identity `--indi_off` | `460eb532b42d5443e66edd6218233957` | the same hash |
+| hovers: still / CG 5 cm / lat 50 ms / rate noise 3 deg/s (worst displacement, m) | 1.22 / 1.50 / 1.25 / 1.25 | 1.22 / 1.51 / 1.26 / 1.25 |
+| CG 5 cm hover standing pitch | -1.14 deg | -1.14 (pitch INDI too: -1.15 -- the OUTER's crutch, not the inner's) |
+| still hover yaw diagonal sd | 0.063 | 0.071 (rate noise through wf_yaw) |
+| **hover, 5 m/s quartering wind (the hold leaning)** | **1.22 m, roll 8.4** | **1.12 m, roll 5.3** (0.92 at kw 2.0) -- the one win |
+| hover, 6 m/s crosswind | 9.6 m (the lean cap) | 10.4 |
+| straight 90 s: nominal / lat 50 / lat 80 ms / spin 0.18 / cQ 0.5x / 2x / inertia 0.6 / lat aero 1.5 | 0/1801 each | 0/1801 each, indistinguishable |
+| straight, control derivatives 0.6 | ground t 24.9 (corridor) | ground t 36.9 (the same corridor; pitch authority) |
+| **straight back-transition at 60 s** | peak +12.0, z min 29.9, V<0.5 at 71.0 | **identical to the tenth** |
+| turning mission (100 mm tank dx 0.3), 3 seeds + cross5 | 3/3 + 1/1 | 3/3 + 1/1 |
+| seed 2: orbit roll / fly-by peak bank vs the 25 deg ref / RTH stop | -18.2 sd 0.11 / **24.4** / 5.8 m | -18.2 sd 0.14 / **28.1** / 8.9 m (the RTH geometry: the orbit's phase at the rth and the roll guard's window; the fixed-geometry stop above is identical) |
+| yaw INDI UNFADED | -- | **crashed seeds 2, 3, cross5, diag5**: stalled out of the first fly-by turn at AoA 22 |
+| pitch INDI (`--indi_axes rpy`) | -- | **crashes the corridor at t 9.7** (peak +76.6; +51.7 at lat 50), straight and turning |
+| `--indi_kw` 1.0 / 2.0 / 3.5 (peak bank, orbit sd) | -- | 27.7 / 28.1 / 29.5, sd 0.11 / 0.13 / **1.64** |
+| `--indi_wf` 20 / 80 (peak bank) | -- | 30.2 / 28.7 -- the filter is not the overshoot's cause |
+**THE READING.** (1) **Yaw at speed: the flown law is safe BECAUSE it is weak.** It is damping only (`-kW_yaw r`)
+and the fin flies the coordinated turn; INDI made that law exact -- it fought the turn's yaw rate with the rudder
+and the rotors, the sideslip grew, the wing stalled out of the turn. So the yaw increment fades with the wing
+share, the same fade the heading law uses: INDI owns yaw where the rotors do (the hover), the fin owns it at
+speed. (2) **Pitch: the outer plans with the stiffness INDI removes** -- build_ode6's cma is in the outer's model,
+and an inner loop that inverts it hands the outer a plant it did not model; the corridor crash at t 9.7 is the
+"two loops doing pitch" bang-bang of 2026-09-10 in a new coat. Measured, not a caveat. (3) **Roll, the one axis
+where the inversion is harmless, is a wash with a cost:** the airframe's roll subsidence `Lp = -Clp qbar S b^2/2V`
+= 1.68 N.m s at 16 m/s is MORE than the loop's own kW 1.2, and INDI inverts it away -- the double-integrator plant
+it leaves has zeta 1.0 at the flown gains where the airframe made it 1.7, and through 55 ms of transport + filter
+lag the bank overshoots the 25 deg reference by 3-4 deg. `indi_kw` (default = Lp at cruise) puts the damping
+back; the remainder is the delay, and an INDI loop wants its virtual-control gains DESIGNED for the inverted
+plant -- a retune, its own piece if INDI is ever pursued. (4) **The 5 cm CG hover's -1.14 deg is not the inner
+loop's to fix** (pitch INDI leaves it at -1.15): the outer's package assumes a balanced airframe and parks the
+tilt as a crutch -- the "honest split" of the STESO block (sigma_bias into the outer as a parameter) is where
+that lives. (5) **INDI needs the actuator model MORE, not less:** the effectiveness G (B_rot, the surface
+derivatives), the transport delay and the lags must be right for the increment to be synchronous; the model
+INDI lets you drop is the AERO's, and this loop's outer and its yaw law are built on that aero. The question's
+premise -- "so the model does not have to be as accurate" -- holds for a multicopter whose inner loop is the
+whole controller; here the model lives in the outer NMPC, which INDI never touches.
+**STANDING (only if INDI is pursued):** the roll retune for the inverted plant; a flight of the variant on the
+hover stage (the leaning-wind hover is the place it showed anything); yaw INDI in hover under the measured cQ
+against the fin's weathercock (the hover diagonal +13% says the noise gain is real).
+
 # ★★★★ 2026-09-21 (evening): THE MEASURED BUILD'S FIRST HIL FLIGHT -- A 30 s HOVER STAGE, LANDED 0.00 m.
 # Row R100_dx3_mn4014_hover30_a1_155915, bag slosh_20260921_155735 (`STAGE=hover STAGE_HOLD=30 CASC_SPIN=poll`,
 # the 1b configuration: cascade_adaptive / imu-mdob + EKF + L1 / px4 state / GPS 10 Hz / pitot, the offset
