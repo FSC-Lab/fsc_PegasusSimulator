@@ -2,6 +2,55 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-21 (afternoon): THE YAW POLICY ON THE MEASURED cQ -- YAW SERVED LAST AND A WEATHERVANE, IN
+# BOTH CONTROLLERS. Controller e2432f1 (safe controller) + 660dd83 (cascade hold), sim 824d207. The
+# 2026-09-21 morning block below is the finding this answers. NEW IDENTITY REFERENCES (procedure below).
+**THE SAFE CONTROLLER (`geometric_hover_node.py`, e2432f1).** (1) **Yaw is allocated LAST**: `geometric_command`
+solves the collective, roll and pitch first (`T0 = Ainv @ [f, Mx, My, 0]`), then clips the yaw moment to
+`yaw_headroom` (0.7) of the differential that keeps every rotor inside [0, kf] on top of them, and reports
+`yaw_clamped`. At cQ 0.0190 one N.m of yaw is 13 N of differential per rotor, so an unclipped heading hold in a
+crosswind ran the rotors to their rails and the "attitude-priority" collective shift then took the LIFT. (2) **A
+weathervane** (`Weathervane`, params `wv_yield_s` 0.5, 0 = never): once the yaw moment has sat on its clip for
+0.5 s the yaw reference is RELEASED to the current heading and follows it (damping only) until the operator
+gives a new yaw (`arm`). Plant double, hold at (0,0,12), 40 s:
+| crosswind | shipped before (heading hold) | now: 3 m/s | 4.5 | 6 | 8 | 6, clip only (wv 0) | 6, headroom 1.0 |
+|---|---|---|---|---|---|---|---|
+| final / worst error | 0.00 to 4 m/s, **29-77 m flyaway from 4.5** | 0.00 / 0.97 m | 0.00 / 1.28 | **0.00 / 1.76** | 0.00 / 2.56 | 0.00 / 1.75 | 0.00 / 1.87 |
+| nose | held with 12-19 deg of standing error | held, -11.8 | released 0.8 s, -90 | released 0.7 s, **-90** | released 0.6 s, -90 | -66 (the fin vs the clip) | -57 |
+| mixer saturated | 91-99% of ticks | 0.0% | 0.0 | **0.0** | 0.0 | 0.0 | 0.2 |
+| position integral | 13 N (pinned) | 8.1 | 0.6 | **1.2** | 2.6 | 8.4 | 11.5 |
+The clip ALONE keeps the position (the mixer is safe by construction); the weathervane is what makes it clean
+(nose-in the side-drag area collapses: 1.2 N of integral instead of 8-13). Every other section of
+`test_geometric_hover` reproduces its numbers to the digit -- the clip never touches in still air; the latency
+margin is still 125 ms; the node boots (`test_state_source` §3) and the pairing holds. §7 is re-armed on the
+three rows (6 m/s nose free + mixer never saturating + released within 5 s; 3 m/s heading HELD; clip-only holds).
+**THE CASCADE'S HOVER HOLD (`HoverHold`, 660dd83).** The hold kept its latched heading in a crosswind only by
+giving up the position (the 8 deg roll clamp), and with the nose released the L1 held it across the wind anyway:
+the fin's weathercock IS the yaw residual the L1 cancels (no pitot in a hover -> the model sees no fin). Now
+`inner_step` publishes `INNER_DIAG["yaw_ratio"]` (the rotor yaw demand over the rotor yaw authority from the
+headroom, i.e. |M_rot_z| / A_rot_z) and `HoverHold.update(yaw_ratio, dt)` releases the latched yaw after
+`hold_wv_s` (0.5) of ratio > `hold_wv_ratio` (1.0): the hold's frame follows the nose, `l1.yaw_mask` zeroes and
+un-learns the L1's yaw residual channel (the model-based slosh term stays), and the along-track channel (the
+outer's vs through the tilt) holds the position as the headwind case always did. Gate, imu-mdob + L1, 30 s hover:
+| hover in wind | still | headwind 6 | crosswind 3 | 4 | 6 | -6 (mirror) |
+|---|---|---|---|---|---|---|
+| before (2026-09-16 hold) | 1.22 m | 1.13 m | within 2.6 m | drifts 0.9 m/s | **drifts 2.8 m/s** | -- |
+| now | 1.22, no release | 1.13, no release | 1.47 m, released 2.5 s, nose -79 | 2.82 m, 2.1 s, -84 | **6.6 m (the swing), 0.6 s, -89, then held** | 6.6 m, +88 |
+`hold_wv_s` counts seconds of the SLOW loop (50 Hz in the node); the gate's hold block runs at the outer's rate,
+so its dt is `OUTER_EVERY * DT` (it was DT: the release came 10x late). Turning mission, 3 seeds: 3/3, bob
+0.049, hits 0, roll sd 0.154, u_ad 0.006, stop 5.9 -- the 2026-09-17 reference, 0 releases.
+**IDENTITY, AND A CORRECTION TO THE PROCEDURE.** Both flown gate lines are byte-identical before and after
+660dd83 (`git stash` A/B, `cmp` on the `--log` CSV). The CSV carries no `ms` column, so "md5 minus the ms columns"
+is the plain `md5sum` of the file: **steso `3cf1bdfc13a9a8070b7defd72b0fe2de`, IMU `ba1021676f02b6c6853a3339a85b182e`**
+(the same lines as ever). The 2026-09-17 values (`567a6879…` / `fdd734f4…`) do NOT reproduce on the unchanged
+tree today and cannot have been this procedure on this build; from here the reference is the md5sum of the
+CSV and the two numbers above. (`tests/test_plant_knobs.py`'s `trace_hash` -- the same minus a trailing
+newline -- gives `daca89f2…` / `7931a728…` for the same files.)
+**WHAT IT MEANS FOR HARDWARE:** in hover the nose goes where the wind puts it above ~4 m/s and both controllers
+hold POSITION through it; a heading is guaranteed only inside the rotors' 0.74 N.m (a hover 180 deg yaw check in
+wind, the flight card's, will read the release in the log: `WEATHERVANE` / `wv=1` on the status feed). The
+landing is therefore into the wind by construction. `wv_yield_s 0` / `hold_wv_s 0` give the old behaviour.
+
 # ★★★★★ 2026-09-21: THE FULL SUITE ON THE MEASURED BUILD -- THE REAL CASUALTY OF THE MEASURED cQ IS
 # HEADING-HOLD IN A CROSSWIND (THE FIN OUT-TORQUES THE ROTORS ABOVE ~4 m/s), NOT THE CASCADE'S YAW GAINS;
 # THE PLANT DOUBLE HAD KEPT cQ 0.12; THE ROBUSTNESS TABLE RE-SIZED TO WHAT IS NOW UNCERTAIN (23 x 16).
