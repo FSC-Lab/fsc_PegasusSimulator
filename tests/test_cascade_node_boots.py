@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The cascade node must CONSTRUCT and STAY ALIVE on the ROS path, and answer its command topic.
 
-    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|px4src|aspd|both]
+    ~/envs/isaac_env/bin/python3 tests/test_cascade_node_boots.py [--node base|tank|adaptive|imu|indi|px4src|aspd|both]
 
 The offline gate (`--test`) uses the class defaults and never runs the constructor's
 parameter/subscription code, so a bug there is invisible to every gate that ran before flight
@@ -37,6 +37,9 @@ PKG = os.path.join(controller_dir(), "px4_vtol_direct_actuator")
 NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tank_node.py", "cascade"),
          "adaptive": ("nmpc_cascade_steso_node.py", "cascade_adaptive"),
          "imu": ("nmpc_cascade_imu_node.py", "cascade_adaptive"),
+         # "indi" = the INDI inner-loop variant of the IMU node (2026-09-21): booted the same way, it must
+         # print its own banner (the axes and filter it runs) AND the IMU node's (it inherits the twin)
+         "indi": ("nmpc_cascade_indi_node.py", "cascade_adaptive"),
          "px4src": ("nmpc_cascade_node.py", "cascade", "-p state_source:=px4"),
          # "aspd" = the base node with `airspeed_source: px4` (piece 4, 2026-09-15): it must subscribe to
          # PX4's airspeed_validated and log the first TAS it receives
@@ -231,6 +234,11 @@ n.destroy_node(); rclpy.shutdown()
                 return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/airspeed_validated"
             if not aspd_ok:
                 return False, f"{node}: an AirspeedValidated message (CAS 12.4) was not logged as 'first airspeed_validated: CAS 12.40 m/s' within 10 s"
+        if node == "indi":
+            if "[cascade+indi] INDI inner loop on axes" not in txt:
+                return False, f"{node}: no '[cascade+indi] INDI inner loop on axes' banner"
+            if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
+                return False, f"{node}: the INDI variant did not inherit the IMU node's sensor_combined subscription"
         if node == "imu":
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
