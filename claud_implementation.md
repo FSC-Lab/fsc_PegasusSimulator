@@ -11,6 +11,54 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-21 (afternoon) — Yaw served last, and a weathervane, in both controllers
+
+**controller `e2432f1` (safe controller) + `660dd83` (cascade hold) · sim `824d207` (test) · identity: both
+flown gate lines byte-identical pre/post (`cmp` on the `--log` CSV); references from here = `md5sum` of the CSV:
+steso `3cf1bdfc13a9a8070b7defd72b0fe2de`, IMU `ba1021676f02b6c6853a3339a85b182e`**
+
+### What changed
+
+| where | what | knobs |
+|---|---|---|
+| `geometric_hover_node.geometric_command` | collective/roll/pitch allocated first; the yaw moment clipped to `yaw_headroom` of the remaining rotor headroom; `yaw_clamped`, `mz_req`, `mz_avail` in the diag | `yaw_headroom` 0.7 |
+| `geometric_hover_node.Weathervane` | after `wv_yield_s` on the clip the yaw reference is released to the current heading (damping only) until a new operator yaw re-arms it; the node logs the release / re-arm | `wv_yield_s` 0.5 (0 = never) |
+| `nmpc_cascade_node.INNER_DIAG` | `yaw_ratio` = rotor yaw demand / rotor yaw authority (from the headroom), `sat` — written every inner tick | — |
+| `nmpc_cascade_node.HoverHold.update(…, yaw_ratio, dt)` | releases the latched yaw after `hold_wv_s` of ratio > `hold_wv_ratio`; the hold's frame then follows the nose; `wv_released` / `wv_released_now`; `wv=1` on the status feed | `hold_wv_s` 0.5, `hold_wv_ratio` 1.0; gate `--hold_wv_s/--hold_wv_ratio` |
+| `nmpc_cascade_node.inner_step` | `l1.yaw_mask`: the L1's yaw residual channel zeroed and not learned while the hold is released (the fin's weathercock is exactly that residual); the model-based slosh term stays | set by the node / the gate from the hold |
+
+### Results
+
+Safe controller (plant double, 40 s hold): 3 m/s heading held (−11.8°), 0.00 m; 4.5 / 6 / 8 m/s released at
+0.6–0.8 s, nose −90°, 0.00 m final (worst 1.3 / 1.8 / 2.6 m during the swing), mixer 0.0 % saturated, integral
+0.6 / 1.2 / 2.6 N (was 13, pinned, and a 29–77 m flyaway). Clip alone (wv 0): 0.00 m, nose −66°.
+Cascade hold (gate, imu-mdob + L1, 30 s): crosswind 3 / 4 / 6 m/s → 1.5 / 2.8 / 6.6 m worst then held, nose
+−79 / −84 / −89 (was 2.6 m / 0.9 m/s / 2.8 m/s of drift); headwind and still air unchanged (1.13 / 1.22 m, no
+release). Turning mission 3 seeds: the 09-17 numbers (3/3, bob 0.049, hits 0, roll sd 0.154, u_ad 0.006,
+stop 5.9), 0 releases.
+
+### Reproduce
+
+```bash
+~/envs/isaac_env/bin/python3 tests/test_geometric_hover.py                          # §7: the three rows
+# the cascade's hover hold in wind (controller repo root; W = 3, 4, 6; -6,0,0 = the headwind)
+~/envs/isaac_env/bin/python3 px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_imu_node.py \
+  --test --est mdob --ttr 10 --lat 0.03 --comp 0.049 --outer_lag 0.03 --slosh --noise_att 0.1 --noise_rate 1.0 \
+  --noise_acc 0.02 --l1 --hover_only --dur 30 --every 2.0 --seed 3 --wind 0,6,0
+# identity (md5sum of the CSV) and the turning regression
+... --dur 8 --every 1.0 --seed 3 --log /tmp/id.csv && md5sum /tmp/id.csv
+KINDS="imu-mdob" PREDS="on" bash scripts/est_sweep.sh wv_turns turns 1 3 --noise_acc 0.02
+```
+
+### Found on the way
+
+- The gate's model of the node's own tilt slew is a hard-coded 80 °/s (`slew = math.radians(80.0) * DT`) while
+  the node reads `tilt_slew_deg_s` = the file's 106 since 2026-09-17: the gate's controller has been 25 % slower
+  than the flown one on the tilt estimate. Fixed in the B2 piece (below), with new references.
+- The 2026-09-17 identity values do not reproduce on the unchanged tree; the procedure is now written down.
+
+---
+
 ## 2026-09-21 — The full suite on the measured build: the cQ casualty is heading-hold in wind, not the yaw gains
 
 **sim `85bce90` + `2ec6729` · controller `334893f` (the 2026-09-17 `airframe_id.cfg` edit, committed today) ·
