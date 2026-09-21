@@ -2,6 +2,59 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★ 2026-09-21 (late afternoon): THE WIND TABLE ON THE MEASURED BUILD -- AND THE HOVER HOLD'S LEAN IN A
+# QUARTERING WIND AT THE ENGAGE, A REGRESSION OLDER THAN TODAY, FOUND AND FIXED. Controller 2ab28bf, sim this
+# commit; sweeps `~/flight_bags/wind/wind3` (the first pass) and `wind4` (the five cells re-run after the fix).
+**THE TABLE (`wind_sweep.sh`, 16 seeds per cell, imu-mdob + pitot + L1, the turning mission, the offset 100 mm
+tank; wind1/wind2 = the 12x8 build of 2026-09-15/16, BEFORE the hover hold existed):**
+| cell | wind1/2 (12x8, no hold) | wind3 (measured build + hold + weathervane, 660dd83) | wind4 (after 2ab28bf) |
+|---|---|---|---|
+| still | 16/16, fails 16, pk 11.6, stop 6.3 | 16/16, fails 107, pk 11.5, stop 6.1 | 16/16, fails 121, 11.5, 6.0 |
+| head3 | 16/16, 0, 11.7, 3.3 | 16/16, 1, 11.5, 9.0 | -- |
+| head5 | 16/16, 128, 11.7, 22-24 | 16/16, 41, 11.3, 23.4 | 16/16, 50, 11.3, 23.4 |
+| cross3 | 16/16, 0, 11.9, 4.5 | 16/16, 1, 12.3, 4.7 | -- |
+| cross5 | 16/16, 0, 12.5, 9.9 | 16/16, 3, 12.7, 4.9 | 16/16, 1, 12.1, 10.0 |
+| crossm5 | 16/16, 176, 12.5, 20 | 16/16, 120, 12.7, 22.3 | 16/16, 89, 12.0, 21.1 |
+| **diag5 (-3.5,+3.5)** | 16/16, 0, 12.3, 4.2 | **0/16 -- all in the corridor at t 8-9 s** | **16/16, 2, 12.0, 9.8** |
+| turb 0.5 | 15/16 | 15/16, pk 88.6 (the one stall) | -- |
+| turb 1.0 | 2/16 | **5/16** | -- |
+| head5 + turb 0.5 | 11/16 | **15/16** | -- |
+The measured build flies the steady winds as the 12x8 did (V_air 16.0 +- 0.1 in every cell, front throttle
+0.70-0.71 against the 12x8's 0.83, the estimate within 0.5 m/s) and is a little better in turbulence (more
+thrust: 1.0 m/s 2 -> 5 of 16, headwind + 0.5 11 -> 15). The "fails" column is the post-stop hover's solve
+again (still air: 7 per seed, every one at t_stop + 0.5..3 s, V 0.1 -- verified on seed 1 at every tick),
+higher on the measured build than on the 12x8 (1 per seed): the standing solver nuisance, now named twice.
+**THE diag5 LOSS WAS NOT THE WEATHERVANE.** A/B on seed 1: the weathervane off -> still lost; the OLD airframe
+file (12x8) -> still lost; `--hold_k 0` -> flies; `--hold_roll_max 0` -> flies; `--hold_roll_max 4` -> flies; the
+L1 off -> flies; a longer engage hover (`--settle` 4 / 6 / 10, a new gate flag) -> still lost 6-7 s after the
+transition starts. The chain: the hover hold (2026-09-16) LEANS 8 deg into the wind at the engage; the pitot
+wind estimator puts the whole wind ON THE NOSE (its small-sideslip assumption -- in a hover in a 45 deg
+quartering wind the sideslip is 45 deg), so the model's v_air has no sideslip while the plant's does; the L1
+learns the sideslip aero the model lacks (u_ad 0.5-0.6 N.m on EVERY axis in the hover) and cancels it; when
+the tilt swings 8 -> 39 deg at the transition the real moments change faster than C(s) follows, the outer's
+solve fails at V 1.5 (ok=0, 23-28 ms), the fallback freezes the tilt and the nose runs +14 -> +29 -> +50 ->
++89 in 0.7 s. The pre-hold controller drifted through the same hover unbanked and flew it 16/16; a pure
+crosswind (0,3.5) or a pure headwind (-3.5,0) flies with the lean -- only the quartering wind's 45 deg of
+sideslip + the lean + the L1 does it. **Never gated since the hold landed: the wind cells with a
+cross component were last run on 2026-09-16 morning, before it.**
+**THE FIX (2ab28bf): the hold LEANS (and weathervanes) only in a hover STAGE -- a `v_cap 0` stage or the RTH
+stop -- and is along-track only in the ENGAGE hover**, which is what every flight before 2026-09-16 did there
+(`lean_ok` / `wv_ok` in `HoverHold.update`; the gate mirrors it with `hover_only or _stopped`). diag5 16/16
+(seeds 1-4 by hand 0/5201 each; the cell 16/16 at pk 12.0), the still-air straight regression 16/16 pk 13.9 /
+flight fails 0, the turning mission 3/3 to the 2026-09-17 decimals. `hold_wv_s` 0.5 -> 1.5: the 2 m/s^2
+gust hover released its heading at 0.5 and 1.0 s of transient yaw demand and not at 1.5 (position 3.30 m, as
+on 2026-09-16); the 6 m/s crosswind release moves 0.6 -> 1.6 s (swing 6.6 -> 11.4 m, then held), 4 m/s 2.8 -> 4.2.
+**IDENTITY MOVED, DELIBERATELY:** the engage hover's roll_hover under noise is gone from the flown lines --
+**steso `22a5a15381bdcb77d3fcca7d68c38fd4`, IMU `0ebd9753611143df22a618f449377520`** (md5sum of the --log CSV;
+first differing row t=0.115 against 3cf1bdfc / ba102167).
+**WHAT THIS SAYS ABOUT THE ESTIMATOR (open, the real item):** in a hover the pitot cannot tell a headwind from
+a quartering wind, and the estimator's assumption makes the model WRONG BY THE SIDESLIP ANGLE -- worse than
+blind (no pitot: 30 solve failures but flies). The flight card's rule "transition INTO the wind" (the 180 deg
+hover yaw check reads the direction) is what makes the engage hover a headwind case; a hover heading that
+is not into the wind should not be assumed to know its wind. Candidates, not built: freeze the estimate's
+DIRECTION below a ground speed and keep the magnitude; or hold the L1 (as the back-transition does) through
+the first seconds of a transition started in wind. `--settle` is on the gate for the next look.
+
 # ★★★★★ 2026-09-21 (afternoon): THE YAW POLICY ON THE MEASURED cQ -- YAW SERVED LAST AND A WEATHERVANE, IN
 # BOTH CONTROLLERS. Controller e2432f1 (safe controller) + 660dd83 (cascade hold), sim 824d207. The
 # 2026-09-21 morning block below is the finding this answers. NEW IDENTITY REFERENCES (procedure below).

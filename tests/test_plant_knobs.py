@@ -24,11 +24,14 @@ BASE = ["--test", "--est", "mdob", "--ttr", "10", "--lat", "0.03", "--comp", "0.
 KNOBS = {"mass": ["--plant_mass_scale", "1.1"], "inertia": ["--plant_inertia_scale", "1,1.25,1"],
          "cq": ["--plant_cq", "0.18"], "aero": ["--plant_aero_scale", "pitch=1.3,lift=0.8"],
          "thrust": ["--plant_thrust_scale", "0.85"], "j0": ["--plant_J0", "0.6"],
-         "cg": ["--plant_cg_dx", "0.03"], "lag": ["--tau_spin", "0.24", "--l1_tau_spin", "0.12"]}
+         "cg": ["--plant_cg_dx", "0.03"], "lag": ["--tau_spin", "0.24", "--l1_tau_spin", "0.12"],
+         # the tilt servo (B2, 2026-09-21): the plant's own tau / slew, the controller's model untouched
+         "tilt": ["--plant_tilt_tau", "0.20", "--plant_tilt_rate", "50"]}
 # the neutral cQ is the AIRFRAME's, read from the file: a literal here was the sim-only 0.12 and
 # failed the moment the measured 0.0190 went in (2026-09-21)
-NEUTRAL = ["--plant_mass_scale", "1.0", "--plant_inertia_scale", "1,1,1", "--plant_cq", repr(float(load_airframe().rotors.cq)),
-           "--plant_thrust_scale", "1.0"]
+_AF = load_airframe()
+NEUTRAL = ["--plant_mass_scale", "1.0", "--plant_inertia_scale", "1,1,1", "--plant_cq", repr(float(_AF.rotors.cq)),
+           "--plant_thrust_scale", "1.0", "--plant_tilt_tau", repr(float(_AF.tilt.tau)), "--plant_tilt_rate", repr(float(_AF.tilt.rate_deg_s))]
 fails = 0
 
 
@@ -64,9 +67,9 @@ if l0 and l1:
 LEAK = ("import sys, os; sys.argv=[sys.argv[0]] + %r; "
         "sys.path.insert(0, %r); from px4_vtol_direct_actuator import nmpc_so3_transition_node as so3; "
         "from px4_vtol_direct_actuator import nmpc_cascade_node as base; "
-        "before=(so3.M, so3.IXX, so3.IYY, so3.IZZ, so3.CQ, so3.CMA, so3.CLA, so3.CMDE, so3.RPOS.tolist(), base.PROP_J0, base._CT0); "
+        "before=(so3.M, so3.IXX, so3.IYY, so3.IZZ, so3.CQ, so3.CMA, so3.CLA, so3.CMDE, so3.RPOS.tolist(), base.PROP_J0, base._CT0, so3.TAU_BETA, so3.TILT_RATE); "
         "base.offline_test(); "
-        "after=(so3.M, so3.IXX, so3.IYY, so3.IZZ, so3.CQ, so3.CMA, so3.CLA, so3.CMDE, so3.RPOS.tolist(), base.PROP_J0, base._CT0); "
+        "after=(so3.M, so3.IXX, so3.IYY, so3.IZZ, so3.CQ, so3.CMA, so3.CLA, so3.CMDE, so3.RPOS.tolist(), base.PROP_J0, base._CT0, so3.TAU_BETA, so3.TILT_RATE); "
         "print('LEAK' if before != after else 'NOLEAK', before if before != after else '')")
 for tag, extra in KNOBS.items():
     lg, out = run(tag, extra)

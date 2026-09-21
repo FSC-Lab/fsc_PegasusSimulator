@@ -1,0 +1,28 @@
+# THE TILT SERVO AS A MISMATCH (hardware-transfer B2, 2026-09-21): the actuator is SPECIFIED (tau 0.0756 s,
+# 106 deg/s, from the Savox-class servo's datasheet and a software slew cap), not measured, and the
+# hinge moment it must carry doubled with the 36 N prop. The gate's plant servo (so3.build_ode's
+# tanh slew-limited first-order lag) now takes its own --plant_tilt_tau / --plant_tilt_rate while the
+# controller keeps the file's values (its applied-tilt model is a pure slew at tilt_slew_deg_s = 106,
+# the L1's applied moment reads that estimate). "told" cells give the controller the plant's RATE
+# (--tilt_slew); a tau mismatch has no controller-side counterpart (the node models no lag), so it is
+# always pinned. Run:
+#   ROBUST_NODE=nmpc_cascade_imu_node.py \
+#   ROBUST_LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02" \
+#   bash scripts/robust_sweep.sh tilt1 scripts/cells_tilt_servo.txt
+nominal|
+# a laggier servo than specified (the small-error time constant), rate as specified
+tilt_tau_0.10|--plant_tilt_tau 0.10
+tilt_tau_0.15|--plant_tilt_tau 0.15
+tilt_tau_0.25|--plant_tilt_tau 0.25
+tilt_tau_0.40|--plant_tilt_tau 0.40
+# a slower servo than specified (the slew cap: a heavier hinge moment, a lower supply voltage)
+tilt_rate_80|--plant_tilt_rate 80
+tilt_rate_60|--plant_tilt_rate 60
+tilt_rate_40|--plant_tilt_rate 40
+tilt_rate_25|--plant_tilt_rate 25
+# the same slower servo, the controller TOLD its rate
+tilt_rate_60_told|--plant_tilt_rate 60 --tilt_slew 60
+tilt_rate_40_told|--plant_tilt_rate 40 --tilt_slew 40
+tilt_rate_25_told|--plant_tilt_rate 25 --tilt_slew 25
+# both at once: the specified servo derated on a hot day with the prop's full hinge moment
+tilt_tau_0.15_rate_60|--plant_tilt_tau 0.15 --plant_tilt_rate 60
