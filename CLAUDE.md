@@ -2,6 +2,94 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-21: THE FULL SUITE ON THE MEASURED BUILD -- THE REAL CASUALTY OF THE MEASURED cQ IS
+# HEADING-HOLD IN A CROSSWIND (THE FIN OUT-TORQUES THE ROTORS ABOVE ~4 m/s), NOT THE CASCADE'S YAW GAINS;
+# THE PLANT DOUBLE HAD KEPT cQ 0.12; THE ROBUSTNESS TABLE RE-SIZED TO WHAT IS NOW UNCERTAIN (23 x 16).
+# Sim 85bce90 + 2ec6729, controller 334893f (the cfg of 2026-09-17 was UNCOMMITTED until today), GS e7866ac.
+**WHAT WAS RUN.** Every headless test (34 pass, 2 live-stack tests skipped) -- the 2026-09-17 build had only
+had its three pairing tests run. Three failed, and NONE of the three was the cascade:
+1. **`test_geometric_hover` section 7 -- the SAFE controller's 6 m/s crosswind hold: 76 m flyaway. REAL, and
+   the finding of the day.** Hover yaw authority at the measured cQ is 4 x 9.7 N x 0.0190 = **0.74 N.m** (it was
+   4.65 at the sim-only 0.12). The plant's aero at 90 deg of sideslip makes **1.87 N.m of weathercock at 6 m/s**
+   (0.47 at 3; roll 2.0 N.m from the fin's height): above ~4 m/s of pure crosswind the fin wins. The safe
+   controller's heading hold (kR_yaw 2 / kW_yaw 0.5, P on yaw) holds to 4 m/s with 12-19 deg of standing error;
+   at 4.5 m/s and up its yaw demand saturates the mixer 91-99% of the ticks, the "attitude-priority" collective
+   shift corrupts the thrust, and it climbs and drifts away (29 / 71 / 77 m at 4.5 / 5 / 6). **Yaw DAMPING only --
+   a weathervane, PX4's `WV_EN` idea -- holds 0.00 m at 6 m/s with the nose swung into the wind and the
+   position integral at 1.3 N instead of 13** (nose-in, the airframe's side-drag area collapses). The test is
+   left FAILING on purpose until the safe controller's yaw policy changes (its own piece, safety-relevant):
+   mixer priority collective/roll/pitch FIRST and yaw with whatever headroom is left, plus a weathervane in
+   hover. Bracketed with `scratchpad/wind7b,c.py`-style A/Bs on `tests/plant_double.py` (numbers above).
+2. **`test_hover_hold` "OSCILLATES" -- WITHDRAWN; the 2026-09-17 record over-read the test.** Its verdict bar was
+   0.05 of diagonal split in THROTTLE units, set at cQ 0.12 / 18 N; the same yaw loop on the new build needs
+   4.4x the throttle per N.m (6.3x from cQ, 0.7x from the lower hover throttle), so the split read 0.064 while
+   the yaw held to 0.039 deg and the torque chatter was **0.046 N.m -- vs 0.049 on the old build**. A 6 x 5
+   grid (kR_yaw 2-5 x kW_yaw 1-2, at rest and from a 30 deg upset) is clean everywhere. The bar is now the
+   yaw torque (0.16 N.m = exactly the old 0.05 at cQ 0.12, so the 2026-09-13 table's verdicts are unchanged;
+   the throttle chatter is still printed). **The shipped 5.0 / 2.0 stay. Standing item (1) of 2026-09-17 is
+   closed without a retune.**
+3. **`test_plant_knobs`: its "neutral" `--plant_cq 0.12` was a literal**, now read from the airframe file.
+And a fourth, silent one: **`tests/plant_double.py` had received the 36.3 N propeller on 2026-09-17 and KEPT
+`ROTOR_MOMENT_RATIO 0.12`** (nothing paired it -- `test_prop_pairing` never looked at the double despite its
+docstring). Paired to 0.0190 (+ the 106 deg/s tilt slew) and PINNED: `test_prop_pairing` now holds the
+double's six constants to the airframe and the airframe's `rotor_moment_ratio` / `tilt_rate_deg_s` to the
+controller's cfg, mutation-checked (flip the copy -> FAIL). Lesson, twice in one morning: a bar in actuator
+units or a copy no test pairs is where the next identification lands as a false controller verdict.
+**THE CASCADE'S HOVER HOLD IN A CROSSWIND (gate, `--hover_only --wind 0,W,0`, imu-mdob + L1, 30 s):** heading
+holds at every W (yaw err <= 6 deg, the yaw diagonal at +-0.2 throttle), but the hold's `hold_roll_max_deg` 8
+(5.4 N of side force) caps what it can hold: **W 3: within 2.6 m; 4: drifts at 0.9 m/s; 5: 1.9; 6: 2.8 m/s**
+(headwind 6: within 1.1 m, roll 0.5). The 8 deg was sized for the tank's bob, never gated in wind. Nose-into-
+wind (the same weathervane) or a lean sized to the wind are the options; the wind estimator is frozen below
+2 m/s IAS, so a hover has no wind estimate to lean into -- the drift itself is the signal.
+**THE ROBUSTNESS TABLE, RE-SIZED TO THE MEASURED BUILD'S OWN UNCERTAINTIES (`scripts/cells_mn4014.txt`,
+`~/flight_bags/robust/mn1`, imu-mdob + L1 = the flown law, 16 seeds per cell, ~1 min per cell here; PASS =
+piece 2's rule):** J0 0.42-0.71 (the analogue band), thrust +-20% (the stand stopped at 80%), cQ 0.5-2x, spin
+0.10/0.13/0.16 (told 0.067), CG +-1.5 / +3 cm, inertia 0.8 / 1.25.
+| cell | landed | corridor pk | fails BT-window / IN FLIGHT | stop | verdict |
+|---|---|---|---|---|---|
+| nominal | 16/16 | 13.9 | 6 / **0** | 8.8 | PASS |
+| J0 0.42 / 0.47 (plant BELOW the model) | 16/16 | 12.8 / 11.1 | 7/1, 1/0 | 8.7 | PASS |
+| J0 0.57 (+0.05) | 16/16 | 16.5 | 4/2 | 8.8 | PASS |
+| **J0 0.62 / 0.71 (+0.10 / +0.19)** | 16/16 | **18.5 / 19.9** | 1/1 | 8.8 | **FAIL on the peak** |
+| thrust 0.8 / 0.9 / 1.1 / 1.2 | 16/16 | 14.3 / 14.5 / 13.5 / 13.4 | 0-1 / 0-1 | 8.7-8.9 | PASS |
+| cQ 0.5x / 0.75x / 1.5x / 2x | 16/16 | 13.9 (identical) | 4-17 / **0** | 8.8 | PASS (0.5x: post-stop roll 5.9) |
+| spin 0.10 / 0.13 / 0.16 pinned, 0.16 told | 16/16 | 14.1 / 14.4 / 14.5 / 14.5 | 1-15 / **0** | 8.8 | PASS |
+| CG +1.5 / +3 cm | 16/16 | 13.3 / 13.1 | 3/0, 0/0 | 9.1 / 9.7 | PASS |
+| **CG -1.5 cm, cold start** | **0/16** | -- | -- | -- | FAIL (all 16 before the BT, t ~8 s -- piece 2's row exactly) |
+| inertia 0.8 / 1.25 | 16/16 | 14.0 / 14.5 | 13/0, 5/0 | 8.8 | PASS |
+**READING.** (1) **J0 is the number to measure, and the tolerance is one-sided: -0.10 is free, +0.05 costs
+2.6 deg of corridor peak, +0.10 fails it.** A plant with MORE thrust at speed than the model runs ahead of the
+speed ramp and buys the corridor with pitch -- the same family as piece 2's "more lift than modelled breaks the
+trim". The 15x5's analogue band (0.39-0.71) is wider than that on the high side, so either measure it (a fan
+at 10-16 m/s on the stand, or the cruise throttle of the first flight bag: the momentum model reads J0 straight
+off the 16 m/s throttle, gate 0.67) or, until then, carry the controller's J0 on the HIGH side of the estimate
+(a plant below the model is the safe error). (2) **cQ does not touch the flight at all** (peak 13.9 to the
+tenth at every level) -- the whole cQ story is hover and heading, item 1 above. (3) **The spin-lag cliff
+did not move with the smaller tau**: 0.16 pinned against a 0.067 model (+0.09 s of mismatch) flies at pk 14.5.
+(4) **The aft-CG cold start is still zero tolerance** (piece 2's -1.5 cm row reproduced: pitch +53 at t 6 s,
+inverted at 8): the engage-hover settle interlock remains the answer, not the plant.
+**★ THE SOLVE-FAILURE COLUMN WAS MEASURING THE POST-STOP HOVER, NOT THE FLIGHT -- AND IT REWRITES TWO
+EARLIER READINGS.** Every `ok=0` tick of every cell but one (j0 0.42, one at t 64 s) sits at t 71-76 s, V
+0.3-0.5 m/s, a single tick at 40-50 ms: the outer's hover solve after the stop, where the count swings 1-17
+between cells whose flights are identical. `ke_metrics` now prints the failures BEFORE the stop ("flight
+fails") and `robust_metrics`' budget reads that (old summaries fall back to the total, so env1 / act1
+reproduce). Re-scored: **the 2026-09-16 actuator-lag table's "0.14 / 0.16 pinned: flies but over the budget
+(5-6 fails, 3x nominal)" were ALL post-stop hover ticks -- 0 in flight, pinned or told.** So regime 1 of that
+block ("below 0.18 the cost is the mismatch and identification removes it") shrinks to: **below 0.18 s there is
+no in-flight cost at all, told or not**; the cliff at 0.18 (5-16 of 16 lost before the BT, knowing does not
+help) stands, and the spec (tau_spin <= 0.16, measure it) stands; the line "if not measured the tolerance
+narrows to ~0.14" is withdrawn. Likewise the 2026-09-17 "solve failures 2 -> 6" (standing item 4): 0 -> 0
+in flight; the post-stop hover count went up (the AoA read at 0.4 m/s swings +-90 deg and the outer's solve
+hits its iteration cap for a tick) -- a solver nuisance at V < 0.5, named, not chased.
+**WHAT THIS LEAVES, in order:** (a) the SAFE controller's yaw policy on the measured cQ (mixer priority + a
+weathervane in hover; gate = `test_geometric_hover` §7 re-armed as "holds position, nose free" + a heading
+check within authority at 3 m/s) -- safety-relevant, the flight lead's call; (b) the cascade hover hold in
+wind (weathervane or a wind-sized lean; gate `--hover_only --wind`); (c) re-run the piece-4 wind table on the
+measured build (its stops and hover ends were measured at 6x the real yaw authority); (d) B2 -- give the gate's
+plant its own tilt-servo tau / rate knobs (today the ODE's servo IS the controller's `_AF` values, so a
+specified-not-measured servo cannot be gated for mismatch) and sweep it like the spin lag; (e) the sensor
+audit's `hw_ekf2` cell + the turning mission on the measured build; (f) then the staged HIL flight.
+
 # ★★★★★ 2026-09-17: THE AIRFRAME GETS ITS FIRST MEASURED PROPULSION -- MN_4014 + 15x5 FROM A THRUST
 # STAND, J0 FROM PUBLISHED WIND-TUNNEL DATA, THE SPECIFIED TILT ACTUATOR -- AND THE MEASURED cQ BREAKS
 # THE SHIPPED YAW GAINS. Sim this commit, controller (airframe_id.cfg). NEW IDENTITY REFERENCES.
@@ -55,6 +143,8 @@ at 0.51-0.55. **The sim was therefore PESSIMISTIC about cruise thrust on every p
 nothing flown is invalidated (piece 2 allows +-0.1 and 0.72 vs 0.78 is inside it). At the new J0 the
 15x5 cruise is comfortable: 67% throttle at 16 m/s against the flown 12x8's 78%.
 **★★ THE MEASURED cQ BREAKS THE SHIPPED HOVER YAW GAINS -- the one real casualty, caught by the gate.**
+**[SUPERSEDED 2026-09-21: the test's bar was in throttle units; the loop is clean and the gains stay. The real
+casualty is heading-hold in a crosswind (the fin out-torques 0.74 N.m above ~4 m/s) -- see the block above.]**
 `vtol.py`'s own comment always said so: `rotor_moment_ratio 0.12 (raised for MC yaw authority;
 sim-only, real props ~0.02)`. The bench says **0.0190, identically from both motors**. Paired in, the
 maximum hover yaw moment falls from 3.99 to 0.74 N.m -- **466 -> 86 deg/s^2 of yaw acceleration** --
@@ -129,7 +219,9 @@ solve-fails sum <= 4, corridor peak <= nominal+3, z >= 29.0, stop <= nominal+3 s
 | surf 0.045 / 0.06 / 0.10, model 0.03 | 16/16 | 14.3 / 14.3 / 15.3 | 1 / 1 / 0 | **PASS, all three** |
 | surf 0.10, TOLD | 16/16 | 15.5 | 1 | PASS |
 **THE READING.**
-1. **Two regimes, and the boundary is 0.18 s.** BELOW it the cost is the MISMATCH and identification
+1. **Two regimes, and the boundary is 0.18 s.** **[CORRECTED 2026-09-21: the 5-6 "solve failures" of the
+   0.14 / 0.16 rows were all post-stop HOVER ticks, 0 in flight -- below 0.18 there is no in-flight cost,
+   told or not; the cliff and the spec stand. See the 2026-09-21 block.]** BELOW it the cost is the MISMATCH and identification
    removes it outright: 0.16 pinned flies 16/16 but at 6 solve failures (3x nominal), and the same
    0.16 with `l1_tau_spin` told the truth is 1 -- indistinguishable from nominal. ABOVE it the cost is
    the ACTUATOR: at 0.20 the controller that KNOWS the lag still loses 12 of 16, and at 0.30 knowing

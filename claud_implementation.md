@@ -11,6 +11,96 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-21 — The full suite on the measured build: the cQ casualty is heading-hold in wind, not the yaw gains
+
+**sim `85bce90` + `2ec6729` · controller `334893f` (the 2026-09-17 `airframe_id.cfg` edit, committed today) ·
+GS `e7866ac` · identity references unchanged (no controller code moved)**
+
+### What was run
+
+The whole headless suite (`tests/test_*.py`, isaac_env python with the `/usr/bin/python3` fallback, live-stack
+tests skipped): 34 pass, 3 fail. The 2026-09-17 build had only had its three pairing tests run.
+
+| failure | what it was | fixed here |
+|---|---|---|
+| `test_geometric_hover` §7 (safe controller, 6 m/s crosswind) | **real**: hover yaw authority 0.74 N·m < the fin's weathercock 1.87 N·m; the yaw demand saturates the mixer and the aircraft flies away (76 m) | **no** — left failing; the safe controller's yaw policy is its own piece |
+| `test_hover_hold` (cascade hover yaw) | the bar was 0.05 of diagonal split in **throttle** units, set at cQ 0.12; ×4.4 on the new build while the yaw held to 0.04° and the torque chatter was 0.046 N·m (old 0.049) | bar in N·m (0.16 = the old bar exactly); the 2026-09-17 "OSCILLATES" is withdrawn |
+| `test_plant_knobs` | neutral `--plant_cq 0.12` as a literal | read from the airframe file |
+| *(silent)* `tests/plant_double.py` | got the 36.3 N prop on 09-17, kept `ROTOR_MOMENT_RATIO 0.12` — unpinned | paired (0.0190, tilt slew 106) and **pinned** in `test_prop_pairing` (+ cQ / tilt-rate airframe↔controller), mutation-checked |
+
+### The finding
+
+Hover yaw authority at the measured cQ: 4 × 9.7 N × 0.0190 = **0.74 N·m** (was 4.65). The plant's aero at 90° of
+sideslip: **1.87 N·m at 6 m/s**, 0.47 at 3. Consequences, measured:
+
+| controller, hover in a pure crosswind | 3 m/s | 4 | 4.5 | 5 | 6 |
+|---|---|---|---|---|---|
+| safe controller, heading hold (shipped) | 0.00 m, yaw err 12° | 0.00 m, 19°, mixer sat. 1% | **29 m flyaway**, sat. 96% | 71 m | 77 m |
+| safe controller, yaw damping only (weathervane) | 0.00 m, nose −90° | 0.00 | — | — | **0.00 m**, integral 1.3 N (was 13) |
+| cascade `HoverHold` (`hold_roll_max_deg` 8) | within 2.6 m, heading held | drifts 0.9 m/s | — | 1.9 m/s | 2.8 m/s (headwind 6: 1.1 m) |
+
+### The robustness table, re-sized to the measured build (`scripts/cells_mn4014.txt`)
+
+`~/flight_bags/robust/mn1`, 23 cells × 16 seeds, the flown law (`nmpc_cascade_imu_node.py`, `--est mdob --l1
+--ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02`), ~1 min per cell on this machine.
+
+| parameter | passes | fails |
+|---|---|---|
+| J0 (model 0.52) | 0.42, 0.47, 0.57 | **0.62 (pk 18.5), 0.71 (19.9)** — one-sided: −0.10 free, +0.05 costs 2.6°, +0.10 fails |
+| thrust scale | 0.80 … 1.20 (all) | — |
+| cQ | 0.5x … 2x (all; corridor peak 13.9 at every level) | — |
+| spin lag (model 0.067) | 0.10, 0.13, 0.16 pinned, 0.16 told (pk ≤ 14.5) | — |
+| CG cold start | +1.5, +3 cm | **−1.5 cm: 0/16** (piece 2's row, unchanged) |
+| inertia | 0.8, 1.25 | — |
+
+**Solve-failure column repaired.** Every `ok=0` of every cell but one sat at t 71–76 s, V 0.3–0.5 m/s: the
+outer's post-stop hover solve, a single 40–50 ms tick, swinging 1–17 between identical flights. `ke_metrics`
+now also prints `flight fails` (before the stop) and `robust_metrics`' budget reads it (older summaries fall
+back to the total). Re-scored `act1`: the 2026-09-16 rows "spin 0.14 / 0.16 pinned: over the budget (5–6)"
+were **0 in flight** — below 0.18 s there is no in-flight cost, told or not; the cliff at 0.18 and the spec
+stand; "if not measured the tolerance narrows to ~0.14" is withdrawn. The 2026-09-17 "fails 2 → 6" is 0 → 0
+in flight.
+
+### Reproduce
+
+```bash
+# the suite (from the sim root; a test that fails under isaac_env is retried under /usr/bin/python3)
+for f in tests/test_*.py; do ~/envs/isaac_env/bin/python3 $f > /tmp/$(basename $f .py).log 2>&1 || echo "FAIL $f"; done
+
+# the weathercock numbers and the safe-controller A/B (plant double, 40 s, wind 0,W,0)
+~/envs/isaac_env/bin/python3 tests/test_geometric_hover.py            # §7 fails: the flyaway
+#   yaw-policy A/B: tests/test_geometric_hover.py's test_wind with gains.kR_yaw = 0 (damping only) holds 0.00 m
+
+# the cascade hover hold in a crosswind (controller repo root)
+~/envs/isaac_env/bin/python3 px4_vtol_direct_actuator/px4_vtol_direct_actuator/nmpc_cascade_imu_node.py \
+  --test --est mdob --ttr 10 --lat 0.03 --comp 0.049 --outer_lag 0.03 --slosh --noise_att 0.1 --noise_rate 1.0 \
+  --noise_acc 0.02 --l1 --hover_only --dur 30 --every 2.0 --seed 3 --wind 0,6,0
+
+# the yaw-gain grid (a test, not a change) and the re-armed hover-hold test
+~/envs/isaac_env/bin/python3 tests/test_hover_hold.py [--kR_yaw K --kW_yaw K --dur 20 --yaw0 30]
+
+# the robustness table on the measured build, and its re-scoring
+ROBUST_NODE=nmpc_cascade_imu_node.py \
+  ROBUST_LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02" \
+  bash scripts/robust_sweep.sh mn1 scripts/cells_mn4014.txt
+~/envs/isaac_env/bin/python3 scripts/robust_metrics.py ~/flight_bags/robust/mn1
+```
+
+### Standing (replaces the 2026-09-17 list's item 1 and 4)
+
+1. **Safe controller yaw policy on the measured cQ** — mixer priority (collective/roll/pitch first, yaw with
+   the remaining headroom) and a weathervane in hover; gate = `test_geometric_hover` §7 re-armed as "holds
+   position with the nose free" plus a heading-hold check within authority at 3 m/s. Safety-relevant.
+2. **Cascade hover hold in wind** — the 8° roll clamp limits it to ~3.5 m/s of crosswind; weathervane or a
+   drift-sized lean; gate `--hover_only --wind`.
+3. Re-run the piece-4 wind table on the measured build (stops and hover ends were at 6× the yaw authority).
+4. B2: the gate's plant needs its own tilt-servo τ / rate knobs before a servo mismatch can be gated.
+5. Measure J0 (a fan on the stand at 10–16 m/s, or the first flight bag's cruise throttle); until then carry
+   the controller's J0 on the high side of the estimate.
+6. `vtol_nmpc.py`'s baked trim table (stale, not flown) and the AS5048A encoder read — unchanged from 09-17.
+
+---
+
 ## 2026-09-17 — The first measured propulsion: MN_4014 + 15×5, and a yaw-gain casualty
 
 **sim `<this commit>` · controller `airframe_id.cfg` · NEW identity references**
@@ -53,7 +143,7 @@ KINDS="imu-mdob" PREDS="on" bash scripts/est_sweep.sh mn4014_turns turns 1 3 --n
 |---|---|---|
 | straight line, 16 seeds | 16/16, pk 14.2°, fails 2, stop 8.8 s | **16/16, pk 13.9°, fails 6, stop 8.8** |
 | turning mission, 3 seeds | 3/3, bob orbit 0.058 N, hits 0, roll sd 0.150°, u_ad 0.006 | **3/3, 0.049, 0, 0.154, 0.006** |
-| hover yaw gate | shipped gains **OK** | shipped gains **OSCILLATE** |
+| hover yaw gate | shipped gains **OK** | shipped gains **OSCILLATE** — *withdrawn 2026-09-21: a throttle-unit bar; the loop is clean* |
 
 ### The one casualty, and how it was attributed
 
@@ -84,12 +174,12 @@ is not the actuator. The exposure is hover and the low-speed ends.
 
 ### Standing
 
-1. Retune the hover yaw gains for the measured cQ (the gate already says 3.0 / 1.5) and re-gate.
+1. ~~Retune the hover yaw gains for the measured cQ (the gate already says 3.0 / 1.5) and re-gate.~~ *Closed 2026-09-21 without a retune — the test's bar, not the loop. The real cQ casualty is heading-hold in wind (see that entry).*
 2. `vtol_nmpc.py`'s **baked** trim table is stale against the new propulsion. Not in the flown path
    (the cascade's `Schedule.at` is live Python), but regenerate before that node ever flies.
 3. Wire the AS5048A tilt encoder into the node — β becomes measured rather than integrated from the
    command, which closes the one gap the sensor audit could not put a tolerance on.
-4. The straight-line solve failures went 2 → 6 over 16 flights. Small, named, not chased.
+4. The straight-line solve failures went 2 → 6 over 16 flights. Small, named, not chased. *2026-09-21: all post-stop hover ticks; 0 → 0 in flight.*
 
 ---
 
