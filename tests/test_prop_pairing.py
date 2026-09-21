@@ -91,6 +91,33 @@ def main():
             t_ctl = thrust_momentum(c["MAX_THRUST"], c["OMEGA_MAX"], c["PROP_D"], c["PROP_J0"], thr, 16.0)
             if abs(t_sim - t_ctl) > 0.05:
                 bad.append(f"{r.name}: thrust at throttle {thr}, 16 m/s: sim {t_sim:.2f} N vs controller {t_ctl:.2f} N")
+    # ★ THE PLANT DOUBLE (tests/plant_double.py) keeps its OWN copy of the propeller and the yaw
+    # reaction ratio on purpose (it is the sim's side of the pairing) -- and a copy nobody checks
+    # drifts: on 2026-09-17 it got the 36.3 N propeller and kept cQ 0.12 while every controller
+    # read 0.0190, a 6.3x yaw-allocation mismatch that failed the safe controller's crosswind hold
+    # (test_geometric_hover section 7, found 2026-09-21). Pinned to the airframe here, with cQ and
+    # the tilt slew, which no other test paired.
+    import plant_double as PD
+    af = load_airframe()
+    r0 = cfg.rotors[0]
+    D0, J00 = vtol.prop_spec(r0.prop, r0.prop_diameter_m, r0.prop_zero_thrust_J)
+    for what, dbl, sim in (("MAX_THRUST", PD.MAX_THRUST, r0.max_thrust), ("PROP_D", PD.PROP_D, D0),
+                           ("PROP_J0", PD.PROP_J0, J00), ("PROP_OMEGA_MAX", PD.PROP_OMEGA_MAX, cfg.rotor_omega_max),
+                           ("ROTOR_MOMENT_RATIO", PD.ROTOR_MOMENT_RATIO, cfg.rotor_moment_ratio),
+                           ("TILT_RATE", math.degrees(PD.TILT_RATE), r0.tilt_rate_deg_s)):
+        if abs(dbl - sim) > 1e-6:
+            bad.append(f"plant double {what} {dbl} vs airframe {sim}")
+    if getattr(PD, "THRUST_MODEL", "instant") != "momentum":
+        bad.append(f"plant double THRUST_MODEL={PD.THRUST_MODEL!r}; the airframe is momentum")
+    # the yaw reaction ratio and the tilt slew, airframe vs the controller's file (the propeller
+    # constants above are pinned against the node's text; these two live only in airframe_id.cfg)
+    if abs(cfg.rotor_moment_ratio - float(af.rotors.cq)) > 1e-9:
+        bad.append(f"rotor_moment_ratio: airframe {cfg.rotor_moment_ratio} vs controller cq {af.rotors.cq}")
+    for r in cfg.rotors:
+        if getattr(r, "tiltable", False) and abs(r.tilt_rate_deg_s - float(af.tilt.rate_deg_s)) > 1e-9:
+            bad.append(f"{r.name}: tilt_rate_deg_s {r.tilt_rate_deg_s} vs controller tilt.rate_deg_s {af.tilt.rate_deg_s}")
+    print(f"plant double: {PD.THRUST_MODEL}, {PD.MAX_THRUST} N, D {PD.PROP_D}, J0 {PD.PROP_J0}, omega_max {PD.PROP_OMEGA_MAX}, "
+          f"cQ {PD.ROTOR_MOMENT_RATIO}, tilt slew {math.degrees(PD.TILT_RATE):.0f} deg/s")
     print(f"airframe: {cfg.thrust_model}, omega_max {cfg.rotor_omega_max} rad/s, "
           f"{len(cfg.rotors)} rotors x {cfg.rotors[0].max_thrust} N, prop {cfg.rotors[0].prop} "
           f"-> at 0.8 throttle / 16 m/s: {thrust_momentum(cfg.rotors[0].max_thrust, cfg.rotor_omega_max, *vtol.prop_spec(cfg.rotors[0].prop), 0.8, 16.0):.2f} N per rotor")

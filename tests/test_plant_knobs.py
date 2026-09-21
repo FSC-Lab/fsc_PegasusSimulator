@@ -14,7 +14,7 @@ import subprocess
 import sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.join(HERE, "..")
 sys.path.insert(0, ROOT)
-from controller_path import controller_dir     # noqa: E402
+from controller_path import controller_dir, load_airframe     # noqa: E402
 PY = os.path.expanduser("~/envs/isaac_env/bin/python3")
 PKG = os.path.join(controller_dir(), "px4_vtol_direct_actuator")
 NODE = os.path.join(PKG, "nmpc_cascade_steso_node.py")
@@ -25,7 +25,10 @@ KNOBS = {"mass": ["--plant_mass_scale", "1.1"], "inertia": ["--plant_inertia_sca
          "cq": ["--plant_cq", "0.18"], "aero": ["--plant_aero_scale", "pitch=1.3,lift=0.8"],
          "thrust": ["--plant_thrust_scale", "0.85"], "j0": ["--plant_J0", "0.6"],
          "cg": ["--plant_cg_dx", "0.03"], "lag": ["--tau_spin", "0.24", "--l1_tau_spin", "0.12"]}
-NEUTRAL = ["--plant_mass_scale", "1.0", "--plant_inertia_scale", "1,1,1", "--plant_cq", "0.12", "--plant_thrust_scale", "1.0"]
+# the neutral cQ is the AIRFRAME's, read from the file: a literal here was the sim-only 0.12 and
+# failed the moment the measured 0.0190 went in (2026-09-21)
+NEUTRAL = ["--plant_mass_scale", "1.0", "--plant_inertia_scale", "1,1,1", "--plant_cq", repr(float(load_airframe().rotors.cq)),
+           "--plant_thrust_scale", "1.0"]
 fails = 0
 
 

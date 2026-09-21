@@ -104,8 +104,11 @@ def rotor_thrust(throttle, v_axial=0.0):
     n = t * _N_MAX
     return max(0.0, 1.225 * PROP_D ** 2
                * (_CT0 * (n * PROP_D) ** 2 - (_CT0 / PROP_J0) * (n * PROP_D) * float(v_axial)))
-ROTOR_MOMENT_RATIO = 0.12                                 # VTOLConfig.rotor_moment_ratio
-TILT_RATE = math.radians(80.0)                            # RotorConfig.tilt_rate_deg_s
+ROTOR_MOMENT_RATIO = 0.0190                               # the FSC airframe's rotor_moment_ratio, MEASURED
+                                                          # (MN_4014 + 15x5 thrust stand, 2026-09-17; was the
+                                                          # sim-only 0.12 -- a 6.3x yaw-allocation mismatch that
+                                                          # failed the safe controller's crosswind hold, 2026-09-21)
+TILT_RATE = math.radians(106.0)                           # RotorConfig.tilt_rate_deg_s (the specified servo)
 G = 9.81
 
 

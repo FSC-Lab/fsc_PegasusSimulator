@@ -103,6 +103,21 @@ def fly(kR_yaw, kW_yaw, dur=12.0, yaw0=0.0, lat=0.03, dt=1.0 / 120.0, verbose=Fa
     return np.array(yaws), np.array(diag), worst
 
 
+def yaw_torque_per_diag():
+    """N.m of yaw torque per unit of the diagonal split, at the hover throttle: the split is in
+    THROTTLE, and what the airframe feels is cQ * (T_FL - T_FR - T_RL + T_RR) with T = mot^2 * T_max.
+    ★ 2026-09-21: the measured cQ (0.0190, was the sim-only 0.12) makes the allocation ask 6.3x the
+    throttle differential for the same moment, so a bar written in throttle units at cQ 0.12 tripped
+    on the new build (diag sd 0.064 against 0.05 -- "OSCILLATES" in the 2026-09-17 record) while
+    the yaw held to 0.04 deg and the torque chatter was 3.5x UNDER the old bar. The verdict is the
+    torque; the throttle chatter is still printed (it is what the ESCs see)."""
+    mot_h = math.sqrt(so3.M * so3.G / 4.0 / so3.MAX_THRUST)
+    return so3.CQ * 2.0 * mot_h * so3.MAX_THRUST
+
+
+TAU_BAR = 0.16      # N.m: the old 0.05 of diagonal split at cQ 0.12 / 18 N (0.733 hover throttle)
+
+
 def metrics(yaws, diag):
     """Oscillation = high-frequency content. A settled hover has a near-zero sample-to-sample
     change in the diagonal split; an oscillating one alternates every sample."""
@@ -119,14 +134,18 @@ def main():
         kr, kw = argf("--kR_yaw", 5.0), argf("--kW_yaw", 2.0)
         y, d, worst = fly(kr, kw, dur, yaw0, verbose=verbose)
         ysd, dsd, flips = metrics(y, d)
-        print(f"  kR_yaw={kr} kW_yaw={kw}: yaw sd {ysd:.3f} deg, diag-split sd {dsd:.4f}, "
+        print(f"  kR_yaw={kr} kW_yaw={kw}: yaw sd {ysd:.3f} deg, diag-split sd {dsd:.4f} "
+              f"(= {dsd * yaw_torque_per_diag():.3f} N.m of yaw chatter), "
               f"alternations {flips}/{len(d)-1}, worst attitude {worst:.2f} deg")
         return 0
 
     print("  hover hold, 12 s, true plant, 30 ms latency, REPRESENTATIVE MOCAP NOISE")
     print("  (0.1 deg attitude, 1 deg/s rate -- a noise-free hover holds at exactly 0")
     print("   and tells you nothing, which is how this mode stayed hidden)")
-    print("   kR_yaw  kW_yaw |  yaw sd   diag sd   alternations   verdict")
+    k_tau = yaw_torque_per_diag()
+    print(f"   (cQ {so3.CQ} m, T_max {so3.MAX_THRUST} N: one unit of diagonal split = {k_tau:.2f} N.m; "
+          f"bar {TAU_BAR} N.m = diag sd {TAU_BAR / k_tau:.3f})")
+    print("   kR_yaw  kW_yaw |  yaw sd   diag sd   yaw N.m   alternations   verdict")
     best = None
     rows = []
     for kr, kw in ((5.0, 2.0), (3.0, 1.5), (2.0, 1.2), (1.5, 1.0), (1.0, 0.8), (0.6, 0.6)):
@@ -141,10 +160,11 @@ def main():
         # test could not reproduce the thrash and its bar sank to "the command changes sign a
         # lot" -- which a rate feedback on 1 deg/s of white rate noise does 50-66% of the time by
         # construction, at a diagonal sd of 0.01. That is noise following, not oscillation.
-        ok = (dsd < 0.05) and (ysd < 1.0)
+        tsd = dsd * k_tau
+        ok = (tsd < TAU_BAR) and (ysd < 1.0)
         rows.append((kr, kw, ysd, dsd, frac, ok))
-        v = "OK" if ok else ("OSCILLATING" if dsd > 0.2 or ysd > 3.0 else "marginal")
-        print(f"   {kr:6.1f}  {kw:6.1f} | {ysd:7.3f}  {dsd:8.4f}   {frac*100:5.0f}%        {v}")
+        v = "OK" if ok else ("OSCILLATING" if tsd > 4.0 * TAU_BAR or ysd > 3.0 else "marginal")
+        print(f"   {kr:6.1f}  {kw:6.1f} | {ysd:7.3f}  {dsd:8.4f}  {tsd:7.3f}   {frac*100:5.0f}%        {v}")
         if ok and best is None:
             best = (kr, kw)
 
@@ -153,7 +173,7 @@ def main():
         print("  NO GAIN PAIR HOLDS A CLEAN HOVER -- the yaw loop needs more than a gain change")
         return 1
     print(f"  highest gains that hold a clean hover: kR_yaw={best[0]}, kW_yaw={best[1]}")
-    print(f"  shipped default is kR_yaw=5.0 / kW_yaw=2.0 -> {'OK' if rows[0][5] else 'OSCILLATES'}")
+    print(f"  shipped default is kR_yaw=5.0 / kW_yaw=2.0 -> {'OK' if rows[0][5] else 'NOT CLEAN (see the row)'}")
     return 0 if rows[0][5] else 1
 
 

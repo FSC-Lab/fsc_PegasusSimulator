@@ -1,0 +1,40 @@
+# THE MEASURED BUILD'S OWN UNCERTAINTIES (2026-09-21): the plant perturbed around the MN_4014 + 15x5
+# values it was given on 2026-09-17, the controller at nominal -- piece 2's experiment re-sized to
+# what is now actually uncertain. Run: ROBUST_NODE=nmpc_cascade_imu_node.py \
+#   ROBUST_LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02" \
+#   bash scripts/robust_sweep.sh mn1 scripts/cells_mn4014.txt
+# cell name | harness flags (the plant side only)
+nominal|
+# J0 -- THE least certain number in the build: the 15x5 is not tabulated by UIUC, the >=10 in fit
+# gives 0.523 and the 16 measured props within +-0.08 of its p/D span 0.39-0.71 (median 0.51).
+j0_0.42|--plant_J0 0.42
+j0_0.47|--plant_J0 0.47
+j0_0.57|--plant_J0 0.57
+j0_0.62|--plant_J0 0.62
+j0_0.71|--plant_J0 0.71
+# static thrust -- extrapolated to 100% throttle from a stand that stopped at 80%
+thrust_0.80|--plant_thrust_scale 0.80
+thrust_0.90|--plant_thrust_scale 0.90
+thrust_1.10|--plant_thrust_scale 1.10
+thrust_1.20|--plant_thrust_scale 1.20
+# cQ -- measured 0.0190 on both motors, but the yaw loop now lives on a sixth of the authority it
+# was tuned for, so a factor of two here is the question piece 2's 0.06-0.18 never asked
+cq_0.5x|--plant_cq 0.0095
+cq_0.75x|--plant_cq 0.0143
+cq_1.5x|--plant_cq 0.0285
+cq_2x|--plant_cq 0.038
+# rotor spin lag -- measured 0.067 at the hover point (0.064 up / 0.072 down), the controller told
+# 0.067: how far a slower motor (a hotter day, a sagging pack, a heavier prop) can drift before the
+# 2026-09-16 cliff (0.16 told / 0.18 knee) -- pinned, and told, at the new model value
+spin_0.10|--tau_spin 0.10 --l1_tau_spin 0.067
+spin_0.13|--tau_spin 0.13 --l1_tau_spin 0.067
+spin_0.16|--tau_spin 0.16 --l1_tau_spin 0.067
+spin_0.16_told|--tau_spin 0.16
+# CG -- the hinge-moment / mount question with a 36 N prop on the front pair: the airframe file's
+# CG is still the CAD's; piece 2's cold-start tolerance was +1.5 cm forward and NO aft error
+cg_-0.015|--plant_cg_dx -0.015
+cg_0.015|--plant_cg_dx 0.015
+cg_0.03|--plant_cg_dx 0.03
+# inertia -- unmeasured (bifilar pendulum pending); the doubled prop mass sits on the front arms
+inertia_0.8|--plant_inertia_scale 0.8
+inertia_1.25|--plant_inertia_scale 1.25
