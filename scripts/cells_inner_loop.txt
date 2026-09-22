@@ -1,0 +1,33 @@
+# MODEL ERROR, FOR THE TWO INNER LOOPS (2026-09-22). The plant is perturbed and the controller is
+# told NOTHING -- piece 2's experiment, run twice: once on the flown geometric inner loop and once
+# on the INDI one (indi_mode full), so the question "which is more model robust" is a measurement.
+# Levels bracket the flown loop's own known failures (inertia 0.6, lift 1.15, ctrl 0.6, cg -1.5 cm).
+#   ROBUST_NODE=nmpc_cascade_imu_node.py ROBUST_LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02" \
+#     bash scripts/robust_sweep.sh il_geo scripts/cells_inner_loop.txt
+#   ROBUST_NODE=nmpc_cascade_indi_node.py ROBUST_LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02 --indi_mode full" \
+#     bash scripts/robust_sweep.sh il_indi scripts/cells_inner_loop.txt
+nominal|
+# INERTIA: what the attitude loop's gains are sized against. INDI divides by J explicitly.
+inertia_0.6|--plant_inertia_scale 0.6
+inertia_0.8|--plant_inertia_scale 0.8
+inertia_1.25|--plant_inertia_scale 1.25
+inertia_1.6|--plant_inertia_scale 1.6
+# AERO the loop does not model as a control: the lift slope and the pitch stiffness the OUTER
+# plans with, and the CONTROL derivatives, which are the effectiveness G an INDI loop inverts.
+lift_1.15|--plant_aero_scale lift=1.15
+lift_1.30|--plant_aero_scale lift=1.30
+pitch_0.6|--plant_aero_scale pitch=0.6
+pitch_1.5|--plant_aero_scale pitch=1.5
+ctrl_0.6|--plant_aero_scale ctrl=0.6
+ctrl_0.8|--plant_aero_scale ctrl=0.8
+ctrl_1.25|--plant_aero_scale ctrl=1.25
+lat_1.5|--plant_aero_scale lat=1.5
+# THE EFFECTIVENESS OF THE ROTORS: yaw torque per newton, and the thrust itself.
+cq_0.5x|--plant_cq 0.0095
+cq_2x|--plant_cq 0.038
+thrust_0.8|--plant_thrust_scale 0.80
+thrust_1.2|--plant_thrust_scale 1.20
+# GEOMETRY and the one actuator constant with a cliff.
+cg_-0.015|--plant_cg_dx -0.015
+cg_0.03|--plant_cg_dx 0.03
+spin_0.18|--tau_spin 0.18 --l1_tau_spin 0.067
