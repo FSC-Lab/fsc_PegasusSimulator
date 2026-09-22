@@ -125,6 +125,11 @@ if [ "${ADAPTIVE:-1}" != "0" ]; then
 else
   say "    adaptive: OFF (ADAPTIVE=0)"
 fi
+if [ "${INDI:-1}" != "0" ]; then
+  say "    indi: $(basename "${INDI_NODE_PY:-nmpc_cascade_indi_node.py}") as cascade_indi (window 6j-indi; GS 'INDI NMPC + Geo'; driver CTRL=cascade_indi)"
+else
+  say "    indi: OFF (INDI=0)"
+fi
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"
@@ -279,7 +284,7 @@ fi
 # to look at: tmux was gone and with it every pane's scrollback, so the cause is
 # still unknown. A pane log costs nothing and is the only forensic trail a dead
 # stack leaves.
-for w in 2-isaac 1-px4 6h-cascade 6i-adaptive; do
+for w in 2-isaac 1-px4 6h-cascade 6i-adaptive 6j-indi; do
   tmux pipe-pane -o -t "$SESSION:$w" "cat >> $BAG_DIR/pane_${w}_$(date +%H%M%S).log" 2>/dev/null
 done
 say "    pane logs -> $BAG_DIR/pane_*.log"
@@ -423,6 +428,48 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6i-adaptive; t
   say "    adaptive cascade: estimator=$AEST, M $AM kg, CG_X $ACG, standby as cascade_adaptive (GS: Adaptive NMPC + Geo)"
 fi
 
+# THE INDI CASCADE (window 6j-indi, id cascade_indi; 2026-09-21): the same checks as the adaptive
+# block above -- its own banner, the IMU node's banner and accelerometer line it inherits, no
+# traceback, the process alive, the estimator asked for, mass / CG / airframe digest paired.
+if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6j-indi; then
+  JPANE=$(tmux capture-pane -p -J -S -400 -t "$SESSION:6j-indi" 2>/dev/null)
+  JBANNER=$(echo "$JPANE" | grep -o "\[cascade+indi\] INDI inner loop on axes.*" | tail -1 | cut -c1-260)
+  if [ -z "$JBANNER" ]; then
+    echo "[slosh_hil] !! the INDI cascade window exists but its [cascade+indi] banner never appeared. Not READY."; exit 1
+  fi
+  say "    $JBANNER"
+  if echo "$JPANE" | grep -qi traceback; then
+    echo "[slosh_hil] !! the INDI cascade printed its banner and then THREW:"; echo "$JPANE" | grep -i -A3 traceback | tail -8; exit 1
+  fi
+  if ! ros2 node list 2>/dev/null | grep -qx "/nmpc_cascade_control_indi"; then
+    echo "[slosh_hil] !! the INDI cascade printed its banner but /nmpc_cascade_control_indi is not a live node. Not READY."; exit 1
+  fi
+  # the INDI node IS the IMU node underneath: without the accelerometer subscription it flies with
+  # no force channel and no cancellation, silently (the 2026-09-15 lesson, on this copy too)
+  if ! echo "$JPANE" | grep -q "\[cascade+imu\] accelerometer: /"; then
+    echo "[slosh_hil] !! the INDI cascade never attached its sensor_combined subscription. Not READY."; exit 1
+  fi
+  JSB=$(echo "$JPANE" | grep -o "\[cascade+steso\] estimator=.*" | tail -1 | cut -c1-260)
+  JEST=$(echo "$JSB" | grep -o "estimator=[a-z]*" | cut -d= -f2)
+  if [ "$JEST" != "${CASC_EST:-mdob}" ]; then
+    echo "[slosh_hil] !! the INDI cascade runs estimator=${JEST:-<none>} but CASC_EST=${CASC_EST:-mdob} was asked for. Not READY."; exit 1
+  fi
+  JM=$(echo "$JSB" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
+  if [ -z "$JM" ] || ! awk -v a="$JM" -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{exit ((a-m-b)<0.002 && (m+b-a)<0.002)?0:1}'; then
+    echo "[slosh_hil] !! the INDI cascade models M=${JM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{printf "%.4f", m+b}'). Not READY."; exit 1
+  fi
+  JCG=$(echo "$JSB" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
+  WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" -v m="$AF_M" -v c="$AF_CG" 'BEGIN{printf "%.4f", c + dx*b/(m+b)}')
+  if [ -z "$JCG" ] || ! awk -v a="$JCG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
+    echo "[slosh_hil] !! the INDI cascade models CG_X=${JCG:-<none>} but the tank puts it at $WANT_CG. Not READY."; exit 1
+  fi
+  JAF=$(echo "$JSB" | grep -o "af=[0-9a-f]*" | cut -d= -f2)
+  if [ "$JAF" != "$AF_DIGEST" ]; then
+    echo "[slosh_hil] !! the INDI cascade loaded airframe file ${JAF:-<none>} but this launcher read $AF_DIGEST. Not READY."; exit 1
+  fi
+  say "    indi cascade: estimator=$JEST, M $JM kg, CG_X $JCG, standby as cascade_indi (GS: INDI NMPC + Geo)"
+fi
+
 # THE STATE SOURCE (2026-09-15): CASC_STATE=px4 flies the cascades on EKF2's odometry; EKF_SOURCE=gps
 # leaves EKF2 on GPS position/velocity (the airframe defaults) instead of the mocap bridge's full EV;
 # VTOL_GPS_HZ sets the sim GPS's rate. Each is verified on the live stack, not assumed from the env:
@@ -438,7 +485,7 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
   if [ -z "$OHZ" ] || ! awk -v a="$OHZ" 'BEGIN{exit (a > 30) ? 0 : 1}'; then
     echo "[slosh_hil] !! CASC_STATE=px4 but EKF2's vehicle_odometry runs at ${OHZ:-<none>} Hz. Not READY."; exit 1
   fi
-  for W in 6h-cascade 6i-adaptive; do
+  for W in 6h-cascade 6i-adaptive 6j-indi; do
     if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W"; then
       if ! tmux capture-pane -p -J -S -400 -t "$SESSION:$W" 2>/dev/null | grep -q "state source: px4"; then
         echo "[slosh_hil] !! CASC_STATE=px4 but the $W node did not report 'state source: px4'. Not READY."; exit 1
@@ -477,7 +524,7 @@ if [ "${CASC_ASPD:-none}" = px4 ]; then
   if [ -z "$AHZ" ] || ! awk -v a="$AHZ" 'BEGIN{exit (a > 5) ? 0 : 1}'; then
     echo "[slosh_hil] !! CASC_ASPD=px4 but PX4's airspeed_validated runs at ${AHZ:-<none>} Hz (SYS_HAS_NUM_ASPD?). Not READY."; exit 1
   fi
-  for W in 6h-cascade 6i-adaptive; do
+  for W in 6h-cascade 6i-adaptive 6j-indi; do
     if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W"; then
       if ! tmux capture-pane -p -J -S -400 -t "$SESSION:$W" 2>/dev/null | grep -q "airspeed source: px4"; then
         echo "[slosh_hil] !! CASC_ASPD=px4 but the $W node did not report 'airspeed source: px4'. Not READY."; exit 1
@@ -513,7 +560,7 @@ say "    recording: $BAG_DIR/$BAG"
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${HW:+ hw=$HW}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${HW:+ hw=$HW}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}${JBANNER:+  indi: $JBANNER}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"

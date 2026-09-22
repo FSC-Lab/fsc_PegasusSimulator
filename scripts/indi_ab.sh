@@ -15,7 +15,10 @@ D=px4_vtol_direct_actuator/px4_vtol_direct_actuator
 BASE="--test --est mdob --ttr 10 --lat 0.03 --comp 0.049 --outer_lag 0.03 --slosh --noise_att 0.1 --noise_rate 1.0 --noise_acc 0.02 --l1"
 GUIDE="20:wp 500 0 500 400 100 400;150:rth"
 cd "$CTRL" || exit 1
-git diff --quiet || { echo "controller tree is dirty -- commit first (a gate on an unrecorded tree is not a record)"; exit 1; }
+git diff --quiet || [ "${ALLOW_DIRTY:-0}" = 1 ] || {
+  echo "controller tree is dirty -- commit first (a gate on an unrecorded tree is not a record)."
+  echo "ALLOW_DIRTY=1 runs anyway: for a TUNING pass, whose numbers are provisional until the"
+  echo "chosen defaults are committed and the table re-run."; exit 1; }
 run() {  # name, extra flags...
   local name=$1; shift
   timeout 900 $PY $D/nmpc_cascade_imu_node.py "$@" $BASE > "$OUT/${name}_imu.txt" 2>&1 &
@@ -61,10 +64,51 @@ case "${1:-help}" in
     run turns_yawfull_s2 --indi_yaw_fade 0 --dur 260 --every 1.0 --seed 2 --guide "$GUIDE"    # the unfaded yaw INDI: crashes
     run turns_rpy_s2 --indi_axes rpy --dur 260 --every 1.0 --seed 2 --guide "$GUIDE"          # pitch INDI: crashes the corridor
     ;;
+  tune)
+    # the 2026-09-22 tuning pass: does fading the ROLL increment with the wing share (INDI in the
+    # hover, the airframe's own Lp in the cruise) remove the fly-by bank overshoot and keep the
+    # leaning-hover win? Each row against the flown node on the same seed.
+    export VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3
+    run tune_turns_fade_ry --indi_fade ry --dur 260 --every 1.0 --seed 2 --guide "$GUIDE"
+    run tune_turns_fade_y --indi_fade y --dur 260 --every 1.0 --seed 2 --guide "$GUIDE"
+    run tune_turns_fade_ry_kw0 --indi_fade ry --indi_kw 0,0,0 --dur 260 --every 1.0 --seed 2 --guide "$GUIDE"
+    unset VTOL_TANK_R VTOL_TANK_DX
+    run tune_hover_diag --indi_fade ry --wind -3.5,3.5,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run tune_hover_cross4 --indi_fade ry --wind 0,4,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run tune_straightBT --indi_fade ry --decel_at 60 --dur 100 --every 1.0 --seed 1
+    ;;
+  tune2)
+    # with the roll fade in, is the damping-replacement `indi_kw` still doing anything? It only
+    # acts where the increment does (it fades with it), i.e. in the hover, where there is no Lp
+    # to replace and the flown gains were tuned without it.
+    run tune2_hover_diag_kw0 --indi_fade ry --indi_kw 0,0,0 --wind -3.5,3.5,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run tune2_hover_cross4_kw0 --indi_fade ry --indi_kw 0,0,0 --wind 0,4,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run tune2_hover_still_kw0 --indi_fade ry --indi_kw 0,0,0 --hover_only --dur 30 --every 2.0 --seed 3
+    run tune2_hover_still_kw168 --indi_fade ry --hover_only --dur 30 --every 2.0 --seed 3
+    run tune2_hover_cg5_kw0 --indi_fade ry --indi_kw 0,0,0 --plant_cg_dx 0.05 --hover_only --dur 30 --every 2.0 --seed 3
+    run tune2_hover_gust_kw0 --indi_fade ry --indi_kw 0,0,0 --gust 2.0 --hover_only --dur 40 --every 2.0 --seed 3
+    run tune2_hover_gust_kw168 --indi_fade ry --gust 2.0 --hover_only --dur 40 --every 2.0 --seed 3
+    ;;
   final)
     # the identity: --indi_off must reproduce the IMU node's reference hash (CLAUDE.md)
     timeout 600 $PY $D/nmpc_cascade_indi_node.py --indi_off $BASE --dur 8 --every 1.0 --seed 3 --log "$OUT/identity.csv" > "$OUT/identity.txt" 2>&1
     md5sum "$OUT/identity.csv"
+    ;;
+  ship)
+    # the shipped defaults, every row the record quotes, against the flown node
+    run ship_hover_still --hover_only --dur 30 --every 2.0 --seed 3
+    run ship_hover_diag --wind -3.5,3.5,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run ship_hover_cross4 --wind 0,4,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run ship_hover_cross6 --wind 0,6,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run ship_hover_cg5 --plant_cg_dx 0.05 --hover_only --dur 30 --every 2.0 --seed 3
+    run ship_hover_gust --gust 2.0 --hover_only --dur 40 --every 2.0 --seed 3
+    run ship_straightBT --decel_at 60 --dur 100 --every 1.0 --seed 1
+    run ship_straight_lat05 --lat 0.05 --comp 0.049 --plant_cg_dx 0.026 --dur 90 --every 1.0 --seed 1
+    run ship_straight_spin18 --tau_spin 0.18 --l1_tau_spin 0.067 --dur 90 --every 1.0 --seed 1
+    export VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3
+    for sd in 1 2 3; do run ship_turns_s$sd --dur 260 --every 1.0 --seed $sd --guide "$GUIDE"; done
+    run ship_turns_cross5 --airspeed --wind 0,5,0 --dur 260 --every 1.0 --seed 1 --guide "$GUIDE"
+    run ship_turns_diag5 --airspeed --wind -3.5,3.5,0 --dur 260 --every 1.0 --seed 1 --guide "$GUIDE"
     ;;
   *) sed -n 2,9p "$0"; exit 1 ;;
 esac

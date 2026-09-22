@@ -244,6 +244,30 @@ echo "    adaptive cascade tracebacks (want 0): $TC"
 fi
 
 # ---------------------------------------------------------------------------------------------
+# 8d/8 THE INDI CASCADE (2026-09-21): the incremental-nonlinear-dynamic-inversion variant as its
+# OWN controller, controller_id `cascade_indi`, node `nmpc_cascade_control_indi`, guidance on
+# /uav_0/cascade_indi/{cmd,status}. Standby beside the base and adaptive cascades (a standby
+# cascade runs no inner step and no outer solve). The GS's "INDI NMPC + Geo" button / ctrl choice
+# select it. INDI_NODE_PY overrides the file; INDI=0 skips the window.
+# ---------------------------------------------------------------------------------------------
+INDI_NODE="${INDI_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_indi_node.py}"
+if [ "${INDI:-1}" != "0" ] && [ -f "$INDI_NODE" ]; then
+say "8d/8 starting the INDI cascade (measured moment on roll/yaw, standby)"
+tmux kill-window -t "$SESSION:6j-indi" 2>/dev/null
+tmux new-window -d -t "$SESSION:" -n 6j-indi; sleep 1
+tmux send-keys -t "$SESSION:6j-indi" \
+ "source $ROOT/scripts/rosenv.sh; VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_F1=${VTOL_TANK_F1:-} VTOL_TANK_ZETA=${VTOL_TANK_ZETA:-} VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} CASC_EST=${CASC_EST:-mdob} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} IMU_WC=${IMU_WC:-} IMU_DR=${IMU_DR:-} IMU_DELAY=${IMU_DELAY:-} INDI_AXES=${INDI_AXES:-} INDI_WF=${INDI_WF:-} INDI_WF_YAW=${INDI_WF_YAW:-} INDI_KW=${INDI_KW:-} INDI_YAW_FADE=${INDI_YAW_FADE:-} INDI_UMAX=${INDI_UMAX:-} INDI_HOLD_FADE_S=${INDI_HOLD_FADE_S:-} INDI_OFF=${INDI_OFF:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} SLOSH_PRED_WALL_S=${SLOSH_PRED_WALL_S:-} SLOSH_PRED_F1_SCALE=${SLOSH_PRED_F1_SCALE:-} CASC_SPIN=${CASC_SPIN:-} \"\$HOME/envs/isaac_env/bin/python3\" \
+$INDI_NODE \
+--ros-args -p px4_ns:=uav_0 -p auto_arm:=false -p controller_id:=cascade_indi -p active_at_start:=false \
+-p vcruise:=$(awk -v v="${CASC_VC:-16.0}" 'BEGIN{printf "%.3f", v}') -p cap_deg:=90.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p outer_hz:=20.0 -p latency_s:=0.049 -p l1_on:=true -p state_source:=${CASC_STATE:-mocap} \
+-r /uav_0/fsc_autopilot_ros2/position_controller/reference:=/uav_0/fsc_autopilot_ros2/position_controller/reference_smc" Enter
+sleep 20
+TC=$(tmux capture-pane -p -S -40 -t "$SESSION:6j-indi" 2>/dev/null | grep -ci traceback)
+echo "    indi cascade tracebacks (want 0): $TC"
+[ "$TC" -gt 0 ] && { echo "    !! indi cascade threw on startup"; exit 1; }
+fi
+
+# ---------------------------------------------------------------------------------------------
 # RESTART THE BAG RECORDER, with a FRESH name.
 #
 # WHY: this script restarts nodes, PX4 and Isaac -- everything except the one thing that RECORDS

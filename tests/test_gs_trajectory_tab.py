@@ -25,7 +25,14 @@ class Ros:
     def __init__(s):
         s.position_com_pub = Pub(); s.ctrl = Pub()
         s.data_struct = types.SimpleNamespace()
-    def create_publisher(s, *a, **k): return s.ctrl
+    def create_publisher(s, *a, **k):
+        # record the TOPIC each publisher was created for (the stub returns one Pub, so the
+        # object cannot distinguish them -- the guidance topics per cascade id are checked here)
+        try:
+            s.pub_topics.append(a[1] if len(a) > 1 else k.get('topic'))
+        except AttributeError:
+            s.pub_topics = [a[1] if len(a) > 1 else k.get('topic')]
+        return s.ctrl
     def create_subscription(s, *a, **k): return None
     def get_clock(s): return Clock()
 
@@ -346,6 +353,32 @@ n1 = len(_guide_msgs()); tab.edit_wps.setText("500 0 500 400"); tab._on_guide_wp
 assert len(_guide_msgs()) == n1 + 1 and _guide_msgs()[-1].startswith("wp 500.0 0.0"), "guidance must be accepted on the adaptive cascade"
 assert tab._guide_pubs["cascade_adaptive"] is not None and tab._guide_pubs["cascade"] is not None
 print("adaptive cascade: button, ctrl choice, cascade parameter set, guidance accepted OK")
+
+# ---- THE INDI CASCADE (2026-09-21): a THIRD selectable controller, "INDI NMPC + Geo" -- id
+# cascade_indi, node /nmpc_cascade_control_indi, guidance on /uav_0/cascade_indi/*. Same rule:
+# the GS must treat it as a cascade everywhere, and it must be SEPARATE from the other two (its
+# own button, its own id on active_controller, its own guidance publisher, its own node in the
+# arm/disarm sweeps) -- a variant that quietly reused another id would fly the wrong node.
+assert "cascade_indi" in tab.CASCADE_IDS and tab.WB_CONTROLLERS["cascade_indi"] == "/nmpc_cascade_control_indi"
+assert hasattr(tab, "btn_indi") and "INDI" in tab.btn_indi.text()
+tab.btn_indi.click()
+assert tab._controller == "cascade_indi" and ros.ctrl.msgs[-1].data == "cascade_indi", ros.ctrl.msgs[-1].data
+assert "INDI" in tab.lbl_ctrl.text()
+i = tab.cmb_wb.findData("cascade_indi"); assert i >= 0, "the mission ctrl choice lacks the INDI cascade"
+tab.cmb_wb.setCurrentIndex(i); tab._wb_choice = "cascade_indi"
+assert tab._wb_id() == "cascade_indi" and tab._wb_node() == "/nmpc_cascade_control_indi"
+pi_ = tab._wb_params(); tab._wb_choice = "cascade"; pc3 = tab._wb_params(); tab._wb_choice = "cascade_indi"
+assert pi_ == pc3, "the INDI cascade must get exactly the cascade's parameter set"
+n1 = len(_guide_msgs()); tab.edit_wps.setText("500 0 500 400"); tab._on_guide_wps()
+assert len(_guide_msgs()) == n1 + 1 and _guide_msgs()[-1].startswith("wp 500.0 0.0"), "guidance must be accepted on the INDI cascade"
+assert tab._guide_pubs["cascade_indi"] is not None
+for cid in tab.CASCADE_IDS:
+    assert f"/uav_0/{cid}/cmd" in getattr(ros, "pub_topics", []), \
+        f"no guidance publisher on /uav_0/{cid}/cmd -- each cascade owns its topic"
+for cid in tab.CASCADE_IDS:
+    assert tab.WB_CONTROLLERS[cid] in tab.ARM_NODES, f"{cid}'s node is not in the arm/disarm sweep"
+assert len(set(tab.ARM_NODES)) == len(tab.ARM_NODES) and "/geometric_hover_control" in tab.ARM_NODES
+print("INDI cascade: own button, id, node, guidance topic, arm sweep OK")
 tab._controller = "cascade"; tab._wb_choice = "cascade"
 
 # RTH inside the auto mission: the cruise phase becomes RTH, the mission lands AT HOME once the

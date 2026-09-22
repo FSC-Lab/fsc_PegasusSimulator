@@ -8,7 +8,7 @@ PATS=(
   "isaac-sim" "isaacsim" "kit/python" "03_vtol_px4_hil"
   "geometric_hover_node" "traj_track_node" "smc_outer_node" "nmpc_attitude_node" "nmpc_cruise_node"
   "aero_transition_node" "nmpc_so3_transition_node" "nmpc_so3_cascade_node"
-  "nmpc6_cruise_node" "nmpc_full_smc_node" "nmpc_cascade_node" "nmpc_cascade_tank_node" "nmpc_cascade_steso_node"
+  "nmpc6_cruise_node" "nmpc_full_smc_node" "nmpc_cascade_node" "nmpc_cascade_tank_node" "nmpc_cascade_steso_node" "nmpc_cascade_imu_node" "nmpc_cascade_indi_node"
   "mocap_to_px4_ev" "isaacsim_optitrack" "single_drone_ground_control" "fly_trajectory"
   "autopilot_sv_baseline" "ros2 bag record" "pubraw" "pubref.py"
 )

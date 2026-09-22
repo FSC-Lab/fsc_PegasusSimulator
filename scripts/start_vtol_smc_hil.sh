@@ -447,6 +447,27 @@ VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_D
 echo '[6i-adaptive] exited.'; exec bash
 "
 fi
+# ---- 6j: INDI CASCADE -- the same cascade with an INCREMENTAL NONLINEAR DYNAMIC INVERSION inner
+#      augmentation (nmpc_cascade_indi_node.py: M_des = M_geo + [M_c(u0) - J wdot] on the roll axis
+#      and on yaw while the rotors own it), as its OWN controller (id cascade_indi, node
+#      nmpc_cascade_control_indi, guidance on /uav_0/cascade_indi/*). STANDBY beside 6h and 6i:
+#      the GS's "INDI NMPC + Geo" button / ctrl choice selects it. INDI=0 skips it.
+#      Starts 15 s after 6i (30 s after 6h): all three load the same nmpc6 JIT cache file and
+#      parallel loads of one cache have core-dumped casadi before.
+INDI_NODE="${INDI_NODE_PY:-${DA_DIR}/nmpc_cascade_indi_node.py}"
+if want cascade && [ "${INDI:-1}" != "0" ] && [ -f "$INDI_NODE" ]; then
+tmux new-window -t "$SESSION" -n "6j-indi" "
+echo '[6j-indi] waiting $((D_CTRL + 30)) s...'; sleep $((D_CTRL + 30))
+$ROS_PRELUDE
+echo '[6j-indi] INDI cascade: NMPC + geometric with the MEASURED non-control moment on roll/yaw (STANDBY; activate: active_controller=cascade_indi)...'
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} VTOL_TANK_F1=${VTOL_TANK_F1:-} VTOL_TANK_ZETA=${VTOL_TANK_ZETA:-} CASC_EST=${CASC_EST:-mdob} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} IMU_WC=${IMU_WC:-} IMU_DR=${IMU_DR:-} IMU_DELAY=${IMU_DELAY:-} INDI_AXES=${INDI_AXES:-} INDI_WF=${INDI_WF:-} INDI_WF_YAW=${INDI_WF_YAW:-} INDI_KW=${INDI_KW:-} INDI_YAW_FADE=${INDI_YAW_FADE:-} INDI_UMAX=${INDI_UMAX:-} INDI_HOLD_FADE_S=${INDI_HOLD_FADE_S:-} INDI_OFF=${INDI_OFF:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} SLOSH_PRED_WALL_S=${SLOSH_PRED_WALL_S:-} SLOSH_PRED_F1_SCALE=${SLOSH_PRED_F1_SCALE:-} CASC_SPIN=${CASC_SPIN:-} $AVTOL_ENV\"$NODE_PY\" \"$INDI_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+    -p controller_id:=cascade_indi -p active_at_start:=false \
+    -p vcruise:=$(awk -v v="${CASC_VC:-16.0}" 'BEGIN{printf "%.3f", v}') -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
+    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=true -p state_source:=${CASC_STATE:-mocap} -p airspeed_source:=${CASC_ASPD:-none} \
+    -r ${REF_TOPIC}:=${REF_TOPIC}_smc
+echo '[6j-indi] exited.'; exec bash
+"
+fi
 # ---- 7: inner loop B -- attitude-NMPC + embedded SMC (STANDBY at start) -----
 #         hover_throttle=0.50 (0.70 over-scaled -> climb-away, see diagnosis).
 if want attnmpc; then

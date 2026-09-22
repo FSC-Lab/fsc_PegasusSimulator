@@ -167,11 +167,16 @@ CTRL_NODE = {
     "nmpc_full": "/nmpc_full_smc_control",
     "cascade": "/nmpc_cascade_control",
     "cascade_adaptive": "/nmpc_cascade_control_adaptive",   # STESO + slosh predictor (2026-09-14)
+    "cascade_indi": "/nmpc_cascade_control_indi",           # INDI on roll/hover-yaw (2026-09-21)
     "nmpc6_cruise": "/nmpc6_cruise_control",
 }
 
 
 def ctrl_node(cid):
+    # any cascade id follows the node's own rule (base.node_name_for): `cascade` keeps
+    # /nmpc_cascade_control, every other id is suffixed -- so a new variant needs no edit here
+    if cid not in CTRL_NODE and str(cid).startswith("cascade_"):
+        return "/nmpc_cascade_control_" + str(cid)[len("cascade_"):]
     return CTRL_NODE.get(cid, "/nmpc_full_smc_control")
 
 
