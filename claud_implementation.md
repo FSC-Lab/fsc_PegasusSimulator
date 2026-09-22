@@ -11,6 +11,74 @@ msgs ebeded8).
 
 ---
 
+## 2026-09-22 — The INDI inner loop as its own controller: wired, tuned, flown, and the loop audit
+
+**controller `401f4a8`…`204c0c4` · sim this commit · GS `f4aac46` + `5bd7177` · flights
+`R100_dx3_indi_hover30_a1_122623` and `R100_dx3_indifull_hover30_a1_134802`, both LANDED 0.00 m**
+
+### 1. Its own controller, separate from everything else
+
+`controller_id cascade_indi` → node `/nmpc_cascade_control_indi`, guidance `/uav_0/cascade_indi/*`,
+launcher window `6j-indi` (standby, 30 s behind 6h), GS button "INDI NMPC + Geo" + mission ctrl
+choice, READY gates, health check, driver, results row. The GS's `CASCADE_IDS` / `ARM_NODES` now
+drive every place a cascade id is enumerated, so a fourth one is a single edit.
+
+### 2. The correction that mattered
+
+The 09-21 build put INDI *beside* the geometric law (the L1 seam) and then faded it out at speed.
+The ask was to replace the geometric inner loop. `--indi_mode full` does: ν = −ωn²e − 2ζωn·ω and
+**M = J ν − k(J ω̇_f − M_c(u₀)) − M_trim** into the same allocation, via a new `MOMENT_LAW` seam in
+the base (flown lines byte-identical: `460eb532…` / `b5010243…`).
+
+Three bugs the gate found, in order of importance:
+1. the allocation adds the inner moment **on top of the outer's trim**, so the law must return a
+   correction — otherwise the trim's own moment is applied twice (zero on roll/yaw, the whole story
+   on pitch);
+2. `M_c` must come from `model_moment`, not a second hand-written copy — the copy mirrored the
+   allocation's inverse formulas including its deliberate `−CNDR` rudder sign, i.e. the yaw control
+   moment backwards, and in an incremental loop M_c cancels against J ω̇ *exactly*, so any error is
+   fed back with gain one;
+3. k must scale the whole increment.
+
+### 3. What the full replacement costs and buys
+
+k = 1 (the textbook increment) loses the aircraft in the corridor at t 14.6 s; k ≤ 0.8 flies. Not
+noise (crashes identically with noise off), not the filter (8–40 rad/s), not the ν bandwidth
+(3.1→12 only postpones), not the slew limit, not command-vs-achieved. It flies with the elevator
+30× faster, or with only pitch inverted, or only roll+yaw — and a *slower* transition is worse. The
+pitch effectiveness is not one G: the allocation splits it between rotors (67 ms) and elevator
+(30 ms) and the split moves with qbar.
+
+| | flown | INDI full (k 0.7) |
+|---|---|---|
+| hovers (still / CG 5 cm / quartering / crosswind) | 1.22 / 1.50 / 1.22 / 3.39 m | 0.98 / 1.55 / 1.48 / **2.84** |
+| straight + back-transition | 0–1 fails | 21–24 fails, tighter hold |
+| turning, 3 seeds | orbit roll −18.2 sd **0.11** | −27 sd 0.74–2.21, bank 29–30 |
+
+### 4. The flights
+
+Both landed 0.00 m with 0 solve failures in the stage. The full form gave the quietest hover yaw
+diagonal of the three builds (0.028 vs 0.042 / 0.046) and tracked pitch more tightly than the flown
+loop (sd 0.07 vs 0.15) — **and crept 7.2 m along track in 30 s** where the augmented form held 1.3.
+The hover hold brakes through the outer's planned pitch, and the flown law's standing pitch error
+(+1.3° vs the plan's +0.5°) was part of that braking. So `INDI_MODE` defaults to `aug`; `full` is
+one env var away until `hold_k` is retuned. The gate does not reproduce the creep (its hover starts
+at rest) — a named blind spot.
+
+### 5. The loop audit (live stack, three cascades + the safe controller)
+
+- **Gating:** 5 publishers on `actuator_motors`; with `active_controller=none` the stream is
+  **silent**; with geometric active, 199.9 Hz from one node. Activation is an exact id match.
+- **Identity:** 4 distinct node names, each `controller_id` matching; the node name comes from argv
+  and the topics from the parameter — the boot test proves they agree.
+- **Guidance:** one controller subscriber per `<id>/cmd`, its own.
+- **The flight:** only `/uav_0/cascade_indi/status` carried traffic (563 lines vs 0 and 0).
+- **Seams:** L1Indi → L1Imu → L1Steso → L1Aug; `STATUS_EXTRA` chains the parent's, so the slosh and
+  predictor fields stay on the feed.
+- **Two real findings:** `kill_hil.sh` was missing `nmpc_cascade_imu_node` — the *flown* node — so it
+  survived every teardown; and the GS HUD subscribed to only two cascade status feeds, so the
+  Guidance row would have shown a stale line while the INDI one flew. Both fixed.
+
 ## 2026-09-21 (night) — An INDI inner loop as a variant of the flown node (gated, not flown)
 
 **controller `401f4a8` (`nmpc_cascade_indi_node.py`) · sim `21831f2` (boot test `--node indi`, `scripts/indi_ab.sh`)**

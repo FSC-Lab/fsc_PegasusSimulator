@@ -2,6 +2,126 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-22: THE INDI INNER LOOP IS ITS OWN CONTROLLER AND IT REPLACES THE GEOMETRIC LAW
+# (`cascade_indi`, GS button "INDI NMPC + Geo", launcher window 6j-indi). TWO HIL FLIGHTS, BOTH
+# LANDED 0.00 m. THE FULL REPLACEMENT FLIES THE MISSION AND IS QUIETER IN YAW -- AND IT IS WORSE
+# WHERE THE WING IS THE PLANT (the sustained orbit) AND CREEPS IN THE HOVER HOLD, SO THE NODE'S
+# DEFAULT STAYS THE AUGMENTED FORM. Controller 401f4a8..204c0c4, sim this commit, GS 5bd7177.
+**WHAT WAS ASKED, AND THE CORRECTION.** 2026-09-21 built INDI as an AUGMENTATION: the geometric law
+stayed and the increment went through the L1's seam beside it (`M_des = M_geo + [M_c(u0) - J w_dot]`),
+and the tuning then FADED it out at speed -- the opposite of replacing the geometric portion. The
+ask was outer MPC + INDI inner loop, the geometric law gone. That is now `--indi_mode full`.
+**THE SEAM (base `MOMENT_LAW`, the flown path byte-identical).** `inner_step` computes the geometric
+law, then: `MOMENT_LAW is None` -> the flown law + the L1's u_ad exactly as before; otherwise a
+variant owns the law and is handed everything it reads (the errors, the gains, the fades, the L1,
+the outer's Tf/Tr/de_trim/beta, and the geometric law's OWN answer so it can keep it per axis).
+Everything else the tick does -- the references, the authority split, the allocation, the per-rotor
+desaturation, the surfaces, the tilt -- is shared, because none of it is the law. Both flown gate
+lines still hash `460eb532b42d5443e66edd6218233957` (IMU) and `b501024381f70fc1b3d546479031bcb1`
+(steso) with the seam in.
+**THE LAW.** `nu = -wn^2 e - 2 zeta wn w` (a double integrator's gains -- the point of inverting the
+plant is that the closed loop is (wn, zeta) on every axis at every flight condition; the defaults
+are the FLOWN loop's own bandwidth, 3.4/3.1/3.2 rad/s at zeta 0.66/0.70/0.64, so an A/B isolates
+the inversion and not the gains), then **`M_des = J nu - k (J w_dot_f - M_c(u0)) - M_trim`**.
+**THREE THINGS THE FIRST PASS GOT WRONG, AND ONLY THE GATE COULD SAY SO:**
+1. **The allocation adds the inner loop's moment ON TOP of the outer's trim, so the law must return
+   a CORRECTION.** Commanding the whole required control moment counts the trim's own moment TWICE.
+   On roll and yaw the trim makes none -- which is why the hover and the augmented form never saw
+   it -- and on PITCH the trim is the whole story (the tilted front pair against the rear, plus
+   de_trim). Subtract `M_trim = B_rot(beta) [Tf/2,Tf/2,Tr/2,Tr/2] + qbar S c CMDE de_trim`.
+2. **M_c must come from `model_moment`, the model the L1, the predictor and the plant double all
+   use.** The hand-written copy mirrored the ALLOCATION's inverse formulas -- including its
+   deliberate `-CNDR` rudder sign (the base's own note: using CNDR directly makes the yaw damping
+   positive feedback) -- i.e. the yaw control moment BACKWARDS. In an incremental loop that is
+   fatal and invisible: the law reduces to `M_des = J nu - lag{M_other}` only because M_c cancels
+   against `J w_dot` exactly, so any error in M_c is fed back with gain ONE.
+3. **k must scale the whole increment**, not just the cancellation (`M = (1-k) J w_dot_f - sigma +
+   k J nu`); scaling sigma alone left the trim subtraction unbalanced and made the k sweep
+   non-monotone (0.7 flew, 0.5 and 0.3 crashed).
+**★ THE TEXTBOOK INCREMENT (k = 1) LOSES THE AIRCRAFT IN THE CORRIDOR at t 14.6 s; k <= 0.8 flies**
+(0.8 / 0.6 / 0.4: 0 / 3 / 3 solve failures in 800). The convergence condition of an incremental law
+is `0 < k G_true/G_est < 2`, and on this airframe **the pitch effectiveness is not one G**: the
+allocation splits the moment between the rotors (67 ms) and the elevator (30 ms) and the split
+moves with qbar all the way through the corridor. What it is NOT, each measured: not sensor noise
+(it crashes identically with noise OFF), not the rate-derivative filter (wf 8 / 15 / 40 rad/s the
+same), not the virtual control's bandwidth (wn 3.1 -> 12 only postpones 9.3 -> 21.4 s), not the
+surface slew limit (400 deg/s never binds), not the command-vs-achieved gap (`--indi_mc cmd`
+postpones 13.2 -> 15.6). What it IS: it FLIES when the elevator servo is made 30x faster (4 solve
+failures in 601), when only pitch is inverted, or when only roll and yaw are -- and a SLOWER
+transition (ttr 30) makes it worse, which is what a slow wind-up does.
+**THE FULL REPLACEMENT'S TABLE (k 0.7, all three axes, the flown node as the A):**
+| case | flown | INDI full |
+|---|---|---|
+| hover still / CG 5 cm (worst displacement) | 1.22 / 1.50 m | **0.98** / 1.55 |
+| hover, 5 m/s quartering wind | 1.22 m, roll 8.4 | 1.48 m, **roll 5.4** |
+| hover, 4 m/s crosswind | 3.39 m, roll 10.0 | **2.84**, 9.1 |
+| straight mission / + back-transition | 0-1 fails, hold 0.64 m | 21-24 fails, hold **0.47** |
+| straight, spin lag 0.18 s pinned | 0 fails | 15 fails |
+| **turning mission, 3 seeds** | 3/3, orbit roll -18.2 sd **0.11-0.13**, peak bank 24.3-24.5, stop 5.6-6.0 m | 3/3, orbit roll **-27.0..-27.8 sd 0.74-2.21**, peak bank 29.1-30.2, stop 4.1-11.8 |
+| the same, `--indi_fade rpy` / `ry` | -- | orbit roll -17.3 / -15.9 but sd **5.8 / 6.8** |
+**THE READING.** The full inversion is at least as good as the flown loop wherever the ROTORS are
+the actuator -- every hover, the corridor, the back-transition -- and worse wherever the WING is:
+the sustained 16 m/s orbit, flown at 27-30 deg of bank with 7-20x the roll noise. Same physics the
+augmented form measured from the other side: what INDI cancels at speed is mostly the airframe's
+own STABILISING aero, and an inner loop that inverts it must then make that moment with actuators,
+continuously. **INDI does not make the model matter less here** -- the model lives in the outer
+NMPC, which INDI never touches, and INDI needs the ACTUATOR model (effectiveness, its split, the
+delay, the lags) more precisely than the L1 does.
+**TWO HIL FLIGHTS, BOTH LANDED 0.00 m** (the 30 s hover stage, the 1b configuration, the measured
+build; rows R100_dx3_indi_hover30_a1_122623 and R100_dx3_indifull_hover30_a1_134802):
+| | flown node (2026-09-21) | INDI aug | INDI full |
+|---|---|---|---|
+| landing / solve failures | 0.00 m, 0/693 | 0.00 m, 0 in the stage | 0.00 m, 0 in the stage |
+| hover yaw diagonal sd | 0.046 | 0.042 | **0.028** (the quietest of the three) |
+| hover pitch mean / sd | -- | +1.30 / 0.15 deg | **+0.52 / 0.07** (it tracks the plan) |
+| along-track spread in the 30 s hover | ~1.4 m | 1.3 m | **6.3 m, creeping at 0.6 m/s** |
+| inner tick `ims=` median / p95 | 0.83 / 1.34 ms | 0.94 / 1.47 | 1.16 / 1.87 |
+**★ THE CREEP IS THE HOLD'S, NOT THE LOOP'S, AND IT IS A REAL LESSON.** The hover hold brakes along
+track through the OUTER's planned pitch. The flown geometric law carries a standing pitch ERROR
+(+1.3 deg nose-up where the outer's plan alone gives +0.5) and that error was part of the braking
+all along -- the hold was tuned around it. An inner loop that tracks the plan EXACTLY removes it
+and the aircraft creeps. `hold_k` is the knob and it is the hold's piece. Until then the node's
+default is `INDI_MODE=aug` (the augmented form, flown, no creep) and the full replacement is one
+env var away. The gate does NOT reproduce the creep (`--hover_only` starts at rest with the hold
+already latched; HIL's engage hover starts with residual speed) -- one more gate blind spot, named.
+**WIRED AS ITS OWN CONTROLLER, SEPARATE FROM EVERY OTHER ONE (the ask):** `controller_id
+cascade_indi` -> node `/nmpc_cascade_control_indi`, guidance `/uav_0/cascade_indi/{cmd,status}`;
+launcher window `6j-indi` in both launchers (STANDBY, 30 s behind 6h: three processes load one
+nmpc6 JIT cache), `INDI=0` skips it, `INDI_NODE_PY` overrides the file; `start_slosh_hil.sh` gates
+READY on its banner, its inherited accelerometer subscription, no traceback, a live node, the
+estimator asked for and the mass / CG / airframe digest, and puts its banner in the launch log;
+`hil_health.sh` requires the node when the window exists; `fly_transition.py` derives ANY cascade
+id's node name the way the node does; the results row carries `ctrl=cascade_indi inode=`. GS: its
+own button, its own entry in the mission's ctrl choice, its own guidance publisher, and the family
+list `CASCADE_IDS` now drives the parameter filter, the guidance row, the trajectory auto-engage,
+STOP's back-transition and the arm/disarm/land sweeps (`ARM_NODES`), so a fourth cascade is ONE
+edit. Gates: `tests/test_cascade_node_boots.py --node indi` boots it under its own id;
+`test_gs_trajectory_tab.py` holds the button, the id, the node, the guidance topic and the sweep.
+**★ THE LOOP AUDIT (asked for after the wiring; live stack, three cascades + the safe controller):**
+1. **Actuator gating, the decisive one:** 5 publishers exist on `fmu/in/actuator_motors` (geometric,
+   nmpc_full, three cascades) and with `active_controller=none` the stream is **SILENT**; with
+   geometric active it is 199.9 Hz from one node. `pub()` returns unless active and the match is
+   EXACT (`m.data == self.cid`), so no id can activate another.
+2. **Identity:** 4 nodes, distinct names; each node's `controller_id` parameter equals its name's
+   id; the node NAME comes from argv and the topics from the parameter, and the boot test proves
+   they agree (a mismatch would answer the wrong activation and publish guidance elsewhere).
+3. **Guidance:** each `/uav_0/<id>/cmd` has exactly one controller subscriber -- its own node (plus
+   the recorder) -- and one publisher, the GS.
+4. **The flight itself:** the bag's `active_controller` went geometric -> cascade_indi -> geometric,
+   `/uav_0/cascade_indi/status` carried 563 lines and the other two cascades' status topics carried
+   **0**; only the 6j pane logged an ENGAGED.
+5. **Seams (per process, checked by import):** `base.L1Aug` = L1Indi (MRO L1Indi -> L1Imu -> L1Steso
+   -> L1Aug), `base.inner_step` = the steso variant's, `base.STATUS_EXTRA` = the INDI one which
+   CHAINS the parent's (so `slosh F= sig= pred bob=` stay on the feed and `ekf_retune.py` still
+   reads it), `base.MOMENT_LAW` = the INDI law only in full mode.
+6. **★ TWO REAL FINDINGS.** `kill_hil.sh` was missing **`nmpc_cascade_imu_node`** -- the FLOWN node --
+   so it survived every teardown (both it and the INDI node are in the list now); and the GS's HUD
+   subscribed to only two cascade status feeds, so the Guidance row would have shown a stale line
+   while the INDI one flew (one list in `flight_hud.py` now, which the tab imports).
+7. Not crossed, checked: the bag records `-a` so a new status topic is captured; the launcher
+   forwards every knob as `${VAR:-}` (no stale tmux-server value); the INDI-only knobs are env/argv
+   and NOT ROS parameters, so the GS's parameter sweep cannot touch them -- stated, not a defect.
+
 # ★★★★ 2026-09-21 (night): AN INDI INNER LOOP, AS A VARIANT OF THE FLOWN NODE -- BUILT, GATED, NOT FLOWN.
 # THE ANSWER TO "WOULD INDI LET THE MODEL BE LESS ACCURATE": NOT IN THIS LOOP -- THE FLOWN PITCH AND YAW LAWS ARE
 # BUILT ON THE AIRFRAME'S OWN AERO, AND INDI INVERTS IT AWAY. Controller 401f4a8 (`nmpc_cascade_indi_node.py`),

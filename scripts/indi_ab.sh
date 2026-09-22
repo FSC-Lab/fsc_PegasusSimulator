@@ -110,5 +110,46 @@ case "${1:-help}" in
     run ship_turns_cross5 --airspeed --wind 0,5,0 --dur 260 --every 1.0 --seed 1 --guide "$GUIDE"
     run ship_turns_diag5 --airspeed --wind -3.5,3.5,0 --dur 260 --every 1.0 --seed 1 --guide "$GUIDE"
     ;;
+  full)
+    # ★ THE FULL REPLACEMENT (indi_mode full, the node's default): the geometric inner law is gone
+    # -- nu = -wn^2 e - 2 zeta wn w and the incremental inversion, on all three axes, no fade.
+    run full_hover_still --hover_only --dur 30 --every 2.0 --seed 3
+    run full_hover_cg5 --plant_cg_dx 0.05 --hover_only --dur 30 --every 2.0 --seed 3
+    run full_hover_diag --wind -3.5,3.5,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run full_straight --dur 90 --every 1.0 --seed 1
+    run full_straightBT --decel_at 60 --dur 100 --every 1.0 --seed 1
+    ;;
+  full3)
+    # the pitch loop's BANDWIDTH: the flown gain is scheduled to sit pitch_ratio^2 above the aero
+    # stiffness (wn ~ 5.9 rad/s in the corridor at V 9) and INDI cancels that stiffness, so the
+    # virtual control has to supply it. Sweep wn_pitch with the inversion on all three axes.
+    run full3_wnp6 --indi_wn 3.4,6,3.2 --indi_zeta 0.66,0.8,0.64 --dur 90 --every 1.0 --seed 1
+    run full3_wnp9 --indi_wn 3.4,9,3.2 --indi_zeta 0.66,0.8,0.64 --dur 90 --every 1.0 --seed 1
+    run full3_wn5 --indi_wn 5,9,5 --indi_zeta 0.8,0.8,0.8 --dur 90 --every 1.0 --seed 1
+    run full3_wnp12 --indi_wn 3.4,12,3.2 --indi_zeta 0.66,0.8,0.64 --dur 90 --every 1.0 --seed 1
+    ;;
+  fullship)
+    # the FULL replacement (geometric law gone, all three axes, k 0.7) against the flown node
+    run fs_hover_still --hover_only --dur 30 --every 2.0 --seed 3
+    run fs_hover_cg5 --plant_cg_dx 0.05 --hover_only --dur 30 --every 2.0 --seed 3
+    run fs_hover_diag --wind -3.5,3.5,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run fs_hover_cross4 --wind 0,4,0 --airspeed --hover_only --dur 30 --every 2.0 --seed 3
+    run fs_straight --dur 90 --every 1.0 --seed 1
+    run fs_straightBT --decel_at 60 --dur 100 --every 1.0 --seed 1
+    run fs_straight_mc_applied --indi_mc applied --dur 90 --every 1.0 --seed 1
+    run fs_straight_spin18 --tau_spin 0.18 --l1_tau_spin 0.067 --dur 90 --every 1.0 --seed 1
+    export VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3
+    for sd in 1 2 3; do run fs_turns_s$sd --dur 260 --every 1.0 --seed $sd --guide "$GUIDE"; done
+    run fs_turns_cross5 --airspeed --wind 0,5,0 --dur 260 --every 1.0 --seed 1 --guide "$GUIDE"
+    ;;
+  full2)
+    # separate the causes of the corridor loss: the pitch axis, the rate-derivative noise (wf),
+    # the bandwidth, and the fade
+    run full_straight_ry --indi_axes ry --dur 90 --every 1.0 --seed 1
+    run full_straight_wf15 --indi_wf 15 --dur 90 --every 1.0 --seed 1
+    run full_straight_wf8 --indi_wf 8 --indi_wf_yaw 8 --dur 90 --every 1.0 --seed 1
+    run full_straight_fade --indi_fade rpy --dur 90 --every 1.0 --seed 1
+    run full_straight_quiet --noise_rate 0.0 --noise_att 0.0 --dur 90 --every 1.0 --seed 1
+    ;;
   *) sed -n 2,9p "$0"; exit 1 ;;
 esac
