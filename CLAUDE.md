@@ -2,6 +2,62 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-23 (later): WHY THE REFERENCE IS LOOP-DEPENDENT -- IT IS A VELOCITY-ERROR
+# CONSTANT, NOT THE QUASI-STATIC STIFFNESS I FIRST CLAIMED. THE USER'S BANDWIDTH HYPOTHESIS WAS
+# RIGHT AND MINE WAS THE SMALLER HALF. `scripts/ref_bandwidth_cells.sh`, sim this commit.
+**THE FIRST CLAIM WAS WRONG AND THE DATA SAID SO.** I explained the loop-dependence as quasi-static
+stiffness sharing (the error depends on WHERE the plant is). That predicts the error COLLAPSES when
+binned on airspeed. It does not: at a FIXED airspeed the geometric loop's error spreads **3.87 deg**
+across ramp rates (ttr 6 -> 14), INDI's 0.77 -- and the sign is a LAG signature (fast ramp -> the
+aircraft is BEHIND the command). The error depends on how fast you got there.
+**IT DECOMPOSES AS A TEXTBOOK RAMP-TRACKING ERROR, R^2 = 0.999 ON BOTH LOOPS:**
+`e = bias + k * d(theta_ref)/dt`
+| | velocity-error constant | static bias |
+|---|---|---|
+| geometric | **3.77 s** | +5.03 deg |
+| INDI full | **0.82 s** | -0.04 deg |
+| designed 2 zeta / wn at wn 3.1, zeta 0.70 | 0.45 s | 0 |
+INDI is within 1.8x of its design; the geometric loop misses by **8.4x AT THE SAME NOMINAL wn**
+(3.15 vs 3.1). My stiffness story explained only the INTERCEPT -- and the intercept is exactly the
+term that responds to gain, while the slope does not (below).
+**THE DISCRIMINATOR, four cells, each prediction stated BEFORE the run:**
+| cell | nominal wn | velocity const | static bias |
+|---|---|---|---|
+| geometric kR 3 (shipped) | 3.15 | 3.77 s | +5.03 |
+| geometric kR 9 (3x the inner gain) | 5.45 | **2.79** | +3.79 |
+| geometric pitch_ratio 2 (the gain SCHEDULE on, kR_p ~ qbar) | 7-11 | **2.65** | +3.32 |
+| INDI wn_pitch 2.0 | 2.0 | **1.27** (law: 1.27) | -0.27 |
+| INDI wn_pitch 3.1 (shipped) | 3.1 | 0.82 | -0.04 |
+| INDI wn_pitch 6.0 | 6.0 | **0.35** (law: 0.42) | +0.00 |
+**★ INDI's CONSTANT TRACKS 1/wn IN BOTH DIRECTIONS** (1.27 predicted / 1.27 measured at wn 2; 0.42 /
+0.35 at wn 6) -- a knob that moves it both ways is the difference between a mechanism and a
+coincidence. **★ THE GEOMETRIC LOOP'S DOES NOT:** 3x the gain should buy sqrt(3) = 1.73x and bought
+1.35x; scheduling it up ~10x through the corridor bought 1.42x. It ASYMPTOTES near 2.6 s, and at
+MATCHED nominal bandwidth (geo wn 5.45 vs INDI wn 6.0) it is **8x worse** -- the same 8x at every
+gain. So the geometric loop is not bandwidth-LIMITED, it is bandwidth-DEAF: you cannot buy the
+tracking back by demanding more.
+**WHY, AND THE NODE ALREADY SAID IT** (`nmpc_cascade_node.py`, the `w_q` note): *"the inner loop
+CANNOT damp the short period -- it is slower than the mode and the ~65 ms actuator lag forbids
+speeding it up (see pitch_ratio). The outer NMPC can, because it PREDICTS the mode over its horizon
+instead of reacting to it."* `pitch_ratio` therefore ships at **0.0** -- the gain schedule is
+DISABLED -- in the gate AND in the ROS node (checked; no harness/plant mismatch on this axis). So
+pitch ATTITUDE is effectively closed by the OUTER at 20 Hz behind 49 ms, which is what a 2.6-3.8 s
+velocity-error constant is, and the reference is where that cost is paid.
+**AND THE SUBTLETY THAT MAKES INDI WORK: IT IS NOT FASTER.** Same nominal wn (3.1 vs 3.15). It
+merely ACHIEVES it, because inverting the plant removes the phase-lagged aero and actuator dynamics
+from the loop instead of fighting them. "The model is shifting faster than the loop can handle" is
+NOT the mechanism -- the plant's parameters vary ~8x slower than the loop (at V 8 in the corridor
+the fractional rate of qbar is 0.4-0.67 /s against 3.1 rad/s of loop). The mechanism is that one
+loop fights what the other cancels, and fighting it costs a velocity-error constant no gain removes.
+**★ THE COUPLING THIS EXPOSES, AND IT IS A REAL CONSTRAINT ON BOTH KNOBS:** INDI at wn 6 would need
+almost NO reference compensation (0.35 s, bias 0.00) -- but the 2026-09-22 remedy sweep already
+measured **wn 5 and wn 7 DESTROYING the sustained orbit**. So the shipped wn 3.1 is a compromise,
+and **the flare 15 -> 8 is the price of that compromise**: a gain and a reference term that are not
+independent. Neither should move without the other being re-measured.
+**HONEST LIMITS:** the baseline fits are 4-point (R^2 0.999); the four discriminator cells are
+**2-point slopes** (ttr 6 and 14) at 2 seeds, inheriting linearity from the baseline rather than
+proving it. Still air, one gate, and the reference rate spans only 0.8-1.8 deg/s.
+
 # ★★★★★ 2026-09-23: THE REFERENCE COMES WITH THE LOOP -- `cascade_indi --indi_mode full` NOW
 # INSTALLS ITS OWN REFERENCE SCHEDULE (`nmpc_cascade_indi_ref`, flare 15 -> 8), AND THE SWEEP THAT
 # FOLLOWED IS THE REAL RESULT: A SHAPING TERM IS LOOP-DEPENDENT EXACTLY WHEN ITS STATED REASON IS
