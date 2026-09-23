@@ -2,6 +2,77 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-23: THE REFERENCE COMES WITH THE LOOP -- `cascade_indi --indi_mode full` NOW
+# INSTALLS ITS OWN REFERENCE SCHEDULE (`nmpc_cascade_indi_ref`, flare 15 -> 8), AND THE SWEEP THAT
+# FOLLOWED IS THE REAL RESULT: A SHAPING TERM IS LOOP-DEPENDENT EXACTLY WHEN ITS STATED REASON IS
+# ABOUT THE DELIVERED TRAJECTORY -- WITH A CONTROL TERM THAT CORRECTLY DID NOT MOVE.
+# Controller 7e80ea5 + this commit, sim this commit. The flown identity hashes are UNCHANGED.
+**THE WIRING.** `--indi_mode full` installs BOTH seams -- `base.MOMENT_LAW` (the law) and
+`base.REFS_FN` (the reference) -- and `aug` / `off` install NEITHER, so their identity checks still
+hold (verified: IMU `4a557a30c2b84f927389ae264b83820e`, steso `03d9a349f5ce4db947cf39010692d212`,
+both unchanged). The banner carries `mode=` and a reference line; **`start_slosh_hil.sh` REFUSES
+READY if a full-mode node never announced its reference, or if an aug/off node announced one** --
+a bag that cannot say WHICH reference flew cannot be reproduced, the same reason READY already
+gates on the estimator, the mass, the CG and the airframe digest. `--indi_flare -1` = the flown
+reference = the A/B. **THE BODY IS DELEGATED, NOT COPIED** (the tank node's own argument and this
+project's most expensive recurring failure): the file owns INDI's reference PARAMETERS and says
+when to fork the body -- a structurally different schedule, not merely different numbers.
+**★★ THE SWEEP (`scripts/ref_loop_cells.sh` + `ref_loop_metrics.py`, 40 runs, 2 seeds, each loop on
+its OWN shipped reference). THE QUESTION WAS NOT "does it still fly" BUT "does the OPTIMUM MOVE".**
+| `ttr` (forward speed ramp) | 6 | 8 | 10 | 14 | |
+|---|---|---|---|---|---|
+| geometric, corridor peak | 7.78 | 8.90 | 9.89 | **10.79** | 3.0 deg of sensitivity |
+| INDI full, corridor peak | 7.37 | 7.51 | 7.72 | **7.82** | **0.45 -- flat** |
+| **the COMMANDED peak, both loops** | **8.00** | **8.00** | **8.00** | **8.00** | the outer's plan does NOT move |
+| geometric, delivered - commanded | -0.22 | +0.90 | +1.89 | **+2.79** | its own overshoot, growing |
+| INDI, delivered - commanded | -0.63 | -0.49 | -0.28 | -0.18 | always slightly UNDER |
+**★ THAT IS THE STRONGEST FORM OF THE FINDING: the reference peak is 8.00 deg at EVERY ttr for BOTH
+loops, so the WHOLE of the corridor-peak sensitivity to `ttr` is the INNER LOOP'S OWN TRACKING
+ERROR.** The 2026-09-13 retune of ttr 20 -> 10 "to get the corridor peak under the 10 deg CL peak"
+was buying back the geometric loop's overshoot -- on that criterion the term is FREE for a loop that
+tracks. (z, V max and the solve failures do not move with ttr for either loop, so the claim is clean
+as far as it goes; NOT SHIPPED because ttr's OTHER justifications -- the turbulence envelope, the
+front pair's throttle headroom at the heavy mass -- were measured on the flown loop and in wind.)
+| `decel_rate` (back-transition ramp) | 1.5 | 2.0 | 2.5 |
+|---|---|---|---|
+| geometric, BT peak | 12.25 | 13.42 | **15.62** (slower is better) |
+| INDI full, BT peak | 12.23 | 11.21 | **11.02** (FASTER is better) |
+**The SIGN REVERSES between the loops.** Both stop, neither reverses, z >= 29.9 throughout. The tank
+schedule's documented boundary ("2.5 crashes this schedule", 2026-09-12) was the pre-knife-edge
+schedule; on the current one it crashes neither, costs the geometric loop 3.4 deg and buys INDI 1.2.
+NOT SHIPPED: `decel_rate` is a ROS parameter on the BASE node (the GS owns that surface, not
+REFS_FN), a faster back-transition is safety-relevant, and this is 2 seeds in still air.
+| `th_slew_bt` (reference PITCH ramp rate) -- THE CONTROL | 4 | 8 | 16 |
+|---|---|---|---|
+| geometric BT peak / INDI BT peak | 12.33 / 12.22 | 12.25 / 12.23 | 12.23 / **12.22** |
+**PREDICTED BEFORE THE RUN NOT TO MOVE, AND IT DID NOT** (0.10 deg for the geometric loop and 0.01
+for INDI across FOUR TIMES the rate), because its stated reason is that the OUTER SOLVER overshoots
+a step -- an outer-loop property, not a tracking one. **That control is what makes the other two
+readable:** the claim is not "everything in the reference is loop-dependent".
+**★★★ THE RULE THE THREE CELLS WRITE, and it is falsifiable:** a shaping term is loop-dependent
+**exactly when the reason it was given is about the DELIVERED trajectory**. Terms justified by the
+OUTER's numerics (`th_slew_bt`), by which ACTUATOR can act at all (`w_aft` / `w_flare`: the flare's
+T sin(theta) is nothing at 5-10 N of rotor thrust), or by the AIRFRAME (`aoa_cap` = the trim
+schedule's own corridor AoA; `Schedule.at(V)` = a force and moment balance) are NOT. And the one
+shaping term that needs no per-loop value at all is the one that **identifies the closed loop in
+flight**: kappa re-learned 0.799 -> 0.837 across the swap on its own.
+**THE SIGN OF THE LOOP'S ERROR IS PHASE-DEPENDENT, NOT A BIAS.** The geometric loop OVERSHOOTS in
+the corridor (+2.79 at ttr 14, where q_bar is low and the airframe's spring is 1-9 N.m/rad) and
+UNDERSHOOTS the flare (-2.49, where it is ~16 N.m/rad): at high aero stiffness the airframe's own
+spring resists the commanded change. INDI is the other way round (-0.18 corridor, +1.66 flare) and
+its corridor error correlates with NOTHING (0.22 q_bar, -0.09 theta_ref) -- a control-effectiveness
+error, consistent with the allocation's rotor (67 ms) / elevator (30 ms) split moving with q_bar,
+which is the same mechanism that made the textbook increment k = 1 lose the aircraft on 2026-09-21.
+**THE DEEPEST VERSION, PART-MEASURED AND STATED AS SUCH:** the same argument applies one level up,
+to the OUTER's MODEL rather than its shaping -- `build_ode6` carries `cma`, and INDI removes that
+stiffness from the plant the inner presents, so the outer is strictly planning against a plant that
+no longer exists. The evidence it is real: pitch INDI in the AUGMENTED form crashed the corridor at
+t 9.7 s (2026-09-21, "the outer plans with the stiffness INDI removes"). The evidence it does not
+bite in THIS envelope: with the full form on the corrected elevator path the corridor is INDI's best
+phase (peak 7.66 vs 9.83, tracking 24% tighter). The reconciliation, and the reason the reference is
+where the fix lands: the outer's pitch channel issues a slow trim COMMAND which the inner delivers
+whatever the plant's stiffness -- the stiffness only decides how that command must be SHAPED.
+
 # ★★★★★ 2026-09-22 (later): THE ELEVATOR SIGN -- THE RUDDER'S TRAP, ONE LINE AWAY, FLOWN SINCE
 # THE ALLOCATION WAS WRITTEN; AND THE ANSWER TO "DOES THE REFERENCE HAVE TO CHANGE FOR INDI":
 # YES, AND THE TERM IS THE FLARE, 15 -> 8, BECAUSE THE REFERENCE WAS FITTED TO A LOOP'S ERROR.

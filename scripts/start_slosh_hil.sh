@@ -467,7 +467,25 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6j-indi; then
   if [ "$JAF" != "$AF_DIGEST" ]; then
     echo "[slosh_hil] !! the INDI cascade loaded airframe file ${JAF:-<none>} but this launcher read $AF_DIGEST. Not READY."; exit 1
   fi
-  say "    indi cascade: estimator=$JEST, M $JM kg, CG_X $JCG, standby as cascade_indi (GS: INDI NMPC + Geo)"
+  # ★ THE REFERENCE IS PART OF THE CONTROLLER'S IDENTITY, so READY names it. In `full` mode
+  # the INDI node installs its OWN reference schedule (nmpc_cascade_indi_ref: the flare 15 -> 8,
+  # because the same commanded flare is delivered 83% by the geometric law and 111% by INDI);
+  # in `aug`/`off` it flies the flown reference untouched. A flight whose bag cannot say WHICH
+  # reference flew cannot be reproduced -- the same reason READY already gates on the estimator,
+  # the mass, the CG and the airframe digest.
+  JREF=$(echo "$JPANE" | grep -o "\[cascade+indi\] reference:.*" | tail -1 | cut -c1-200)
+  if echo "$JBANNER" | grep -q "mode=full"; then
+    if [ -z "$JREF" ]; then
+      echo "[slosh_hil] !! the INDI cascade is in FULL mode but never announced its reference schedule."
+      echo "             (nmpc_cascade_indi_ref.install() did not run -- the loop would fly the"
+      echo "              GEOMETRIC loop's flare, which it over-delivers by 34%.) Not READY."; exit 1
+    fi
+    say "    $JREF"
+  elif [ -n "$JREF" ]; then
+    echo "[slosh_hil] !! the INDI cascade announced an INDI reference but is NOT in full mode."
+    echo "             (aug/off must fly the FLOWN reference -- that is their identity check.) Not READY."; exit 1
+  fi
+  say "    indi cascade: estimator=$JEST, M $JM kg, CG_X $JCG, ref=${JREF:+indi}${JREF:-flown}, standby as cascade_indi (GS: INDI NMPC + Geo)"
 fi
 
 # THE STATE SOURCE (2026-09-15): CASC_STATE=px4 flies the cascades on EKF2's odometry; EKF_SOURCE=gps
@@ -560,7 +578,7 @@ say "    recording: $BAG_DIR/$BAG"
 printf '%s  model=%-10s branch=%-18s commit=%-9s dirty=%-3s bag=%s\n' \
   "$(date '+%Y-%m-%d %H:%M:%S')" \
   "$([ "$WANT_SLOSH" = 1 ] && echo VTOLSlosh || echo VTOL)" \
-  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${HW:+ hw=$HW}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}${JBANNER:+  indi: $JBANNER}" >> "$LAUNCH_LOG"
+  "$BRANCH" "$COMMIT" "$DIRTY" "$BAG_DIR/$BAG  cascade=$(basename "${CASC_NODE_PY:-nmpc_cascade_node.py}")  water=${VTOL_TANK_KG}kg tank=${VTOL_TANK} tank_R=${VTOL_TANK_R:-0.0414} tank_dx=${VTOL_TANK_DX} l1=${CASC_L1} state=${CASC_STATE:-mocap}${GEO_STATE:+ geo_state=$GEO_STATE} af=$AF_DIGEST ekf=${EKF_SOURCE:-ev}${VTOL_GPS_HZ:+ gps_hz=$VTOL_GPS_HZ}${VTOL_GPS_SIGMA:+ gps_sigma=$VTOL_GPS_SIGMA} aspd=${CASC_ASPD:-none}${HW:+ hw=$HW}${VTOL_WIND:+ wind=$VTOL_WIND}${VTOL_TURB:+ turb=$VTOL_TURB}${ADAPTIVE_NODE_PY:+ anode=$(basename "$ADAPTIVE_NODE_PY")}${ABANNER:+  adaptive: $ABANNER}${IBANNER:+  $IBANNER}${JBANNER:+  indi: $JBANNER}${JREF:+  indi_ref: $JREF}" >> "$LAUNCH_LOG"
 
 say "READY -- $([ "$WANT_SLOSH" = 1 ] && echo "TANK MODEL (VTOLSlosh, tank $([ -n "$TANK_LINE" ] && echo MOUNTED || echo none))" || echo 'baseline VTOL') confirmed in Isaac."
 say "        bag $BAG_DIR/$BAG   provenance appended to $LAUNCH_LOG"
