@@ -361,6 +361,135 @@ ROBUST_NODE=nmpc_cascade_imu_node.py \
 
 ---
 
+## 2026-09-22 (later) — The elevator sign, and what the reference owes the inner loop
+
+### The defect the audit found
+
+`inner_step`'s `de_damp` divided by `qbarS * C_WING * CMDE * DE_MAX`, and `CMDE` is **negative**:
+`My` flips under FLU→FRD exactly as `Mz` does, so the elevator can no more use `CMDE` directly
+than the rudder can use `CNDR`. The 2026-09-11 rudder fix carries twelve lines about this exact
+trap and stopped at the line above it. Fixed to `(-CMDE)`.
+
+Found by `scripts/audit_inner_loops.py`, not by a flight: four of its six pitch conditions had a
+`+pitch` error producing a `+pitch` **acceleration**, and the live allocation's measured pitch
+effectiveness read **−24.01 N·m/unit where the plant and `model_moment` both give +24.02**.
+
+```bash
+# the audit fails on the old line and passes on the fix
+~/envs/isaac_env/bin/python3 scripts/audit_inner_loops.py
+```
+
+| flown line, 16 seeds, straight mission + BT | before | after |
+|---|---|---|
+| corridor peak | 13.9° | **12.4°** |
+| pitch error rms | 2.69° | **2.33°** |
+| the outer's corridor pitch kick | 4.4° | **1.3°** |
+| back-transition peak / reversals | 12.0° / 8 | **10.9° / 5** |
+| 5 cm CG hover, elevator chatter sd | 0.079 | **0.000** |
+| landed / stop / in-flight solve failures | 16/16, 8.8 s, 0 | 16/16, 8.8 s, 0 |
+
+**New identity references** (md5sum of the `--log` CSV on the flown gate line): IMU
+`4a557a30c2b84f927389ae264b83820e`, steso `03d9a349f5ce4db947cf39010692d212`. Whole headless
+suite: 37 pass, 2 skipped (the two needing a live stack).
+
+### Does the reference have to change for the INDI loop?
+
+The reference is **two kinds of object**. `Schedule.at(V)` — (Tf, Tr, β, de_trim, θ_ref) — is a
+force and moment *balance of the airframe*: invariant, the outer NMPC owns it, no inner loop
+touches it. The **shaping** (flare, aft-tilt gate, speed ramp, `hold_k`) was fitted against a loop
+that does not obey it exactly, so it encodes *that loop's tracking error*.
+
+```bash
+# scratchpad/refprobe.py wraps base.inner_step (the seam) and records theta_ref vs theta per tick
+refprobe.py geo|indi out.csv -- <gate flags>        # the shipped nodes are untouched
+bash scratchpad/refseries.sh                        # 30 runs: full reference, cap, hold_k
+```
+
+| phase | ref θ | geometric e = θ−θ_ref | INDI full |
+|---|---|---|---|
+| hover / engage | 0.00° | **−1.21°** (rms 1.33) | **+0.01°** (rms 0.14) |
+| corridor (V 2–14) | +5.44° | +0.59° | −0.92° |
+| cruise (tilt 90) | +6.80° | +0.24° | +0.00° |
+| back-transition | +8.31° | −0.18° (rms 2.56) | +0.68° (rms 1.60) |
+
+That standing error is **force the reference was getting for free** (`T_total·sin e`): hover
+**1.74 N = 0.44 m/s²**, corridor 1.71 N, back-transition 0.81 N. The hover row *is* the 6.3 m HIL
+hover-hold creep in newtons.
+
+**Why it is loop-dependent, in one number.** At 16 m/s the airframe's own pitch stiffness
+`q̄·S·c·|CMA|` is **16.46 N·m/rad** against the inner loop's own 3.0 — the *wing* supplies 85 % of
+the stiffness the reference is tracked with (74 % at 4 m/s, 42 % at 8, 24 % at 12). INDI inverts
+that away and replaces the total with `J·ωₙ² = 2.91 N·m/rad`: same gains, ~6× less total pitch
+stiffness. (16.5 N·m/rad is exactly the plant's pitch stiffness recorded at the 2026-09-06 aero
+fix — an independent cross-check of the probe.)
+
+The two loops' errors are also physically different kinds — the correlations separate them:
+
+| corridor error vs | d(θ_ref)/dt | q̄ | θ_ref | V |
+|---|---|---|---|---|
+| geometric | −0.11 | **0.61** | **0.88** | **0.74** |
+| INDI | −0.13 | 0.22 | −0.09 | 0.10 |
+
+i.e. the geometric error **scales with the flight condition** (it shares the job with the
+airframe's spring); INDI's is a **constant offset** (a control-effectiveness error in the
+inversion — the pitch axis is not one G).
+
+### The series, and the one term that must change
+
+| straight mission + BT, 6 seeds | corridor pk | cor e rms | BT peak | revs >3° | z min | V end | fails |
+|---|---|---|---|---|---|---|---|
+| geometric (flown law) | 9.83° | 1.26° | **12.26°** | 0 | 30.00 | 0.02 | 7 |
+| INDI full | **7.66°** | **0.96°** | **16.46°** | 0 | 29.80 | 0.01 | 10 |
+
+Both fly the full reference 6/6. **The cap is not the lever** — 8 / 7 / 6 move the delivered peak
+only 0.6° per cap-degree and leave the ~1.5° overshoot untouched (it is additive, not a scale).
+The schedule says why: `th_max = aoa_cap + rel·flare` — the cap sets the floor, the **flare sets
+the peak**.
+
+| INDI, `--flare` | 15 (flown) | 12 | 10 | **8** | geometric at 15 |
+|---|---|---|---|---|---|
+| ref peak / delivered | 14.76 / 16.42 | 13.27 / 14.63 | 12.30 / 13.45 | **11.33 / 12.25** | 14.76 / **12.27** |
+| reference error rms | 1.59 | 1.44 | 1.32 | **1.21** | 2.56 |
+| z min | 29.80 | 29.87 | 29.90 | **29.90** | 30.00 |
+
+**`flare_deg` 15 → 8** puts the INDI back-transition on the flown loop's own trajectory (12.25 vs
+12.27°) with half its reference error, zero reversals and the same stop. *Not applied*: the flare
+is the schedule's parameter (the tank node reads it before the INDI module is imported) and 15 is
+flight-validated for the flown loop. It is a live ROS parameter — set it on the INDI pane; the
+number and its derivation are in the INDI node beside the `MOMENT_LAW` install.
+
+### The term that needed no change is the one that measures itself
+
+The orbit's bank feed-forward `atan(V²/(g·R·κ))` is by construction a model of the **closed loop's**
+turn rate per bank, so it must move with the inner loop — and it does, on its own: the turning
+mission (3 seeds) learns **κ 0.799 under the geometric law and 0.837 under INDI** (+4.8 %, ~19 000
+samples each), RTH stop 6.20 vs 5.67 m, wing-borne pitch tracked 4.6× tighter (e rms 1.046 vs
+0.225). The 2026-09-13 adaptive feed-forward was built to close a 3.4 m radius error; what it
+actually bought is a reference term that survives a change of inner loop.
+
+**A shaping term fitted to one loop's error is a hidden dependency on that loop; one that
+identifies the closed loop in flight is not.**
+
+**CONFIRMED END TO END: INDI at `--flare 8` flies the FULL GUIDANCE reference 3/3** (legs, two
+90 deg fly-by turns, RTH): **1-2 solve failures in 4301**, kappa 0.835-0.838 (the flare retune does
+not perturb it), the RTH stop **4.2 / 4.2 / 4.5 m from home** against the geometric loop's 6.20 and
+un-retuned INDI's 5.67 -- i.e. the reference change costs nothing on the guidance half and the stop
+improves. Tooling persisted (the /tmp rule): `scripts/ref_probe.py`, `ref_metrics.py`, `ref_series.sh`.
+
+### What the gate cannot settle, and one trap
+
+The **hover hold**: on the gate INDI is *better* at every gain (`hold_k` 0.5 / 0.8 / 1.2 → 0.99 /
+0.67 / 0.50 m against the geometric loop's 1.22 / 0.81 / 0.61) — the opposite of the HIL creep, for
+the reason already recorded: `--hover_only` starts at rest with the hold latched while HIL's engage
+hover starts with residual speed. The 0.44 m/s² is real; the `hold_k` retune it implies can only be
+settled on the HIL engage hover.
+
+**The trap** (it cost the probe's first run): `import nmpc_cascade_node` with the package dir *also*
+on `sys.path` gives a **second module object**, so the variant's `base.MOMENT_LAW = …` lands on a
+copy the gate never reads — the INDI mission came back byte-identical to the geometric one and
+looked like a null result. Import package-qualified, the way the nodes import each other, and
+assert the law is installed before trusting a run.
+
 ## 2026-09-17 — The first measured propulsion: MN_4014 + 15×5, and a yaw-gain casualty
 
 **sim `<this commit>` · controller `airframe_id.cfg` · NEW identity references**
