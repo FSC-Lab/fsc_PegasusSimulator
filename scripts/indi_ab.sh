@@ -142,6 +142,12 @@ case "${1:-help}" in
     for sd in 1 2 3; do run fs_turns_s$sd --dur 260 --every 1.0 --seed $sd --guide "$GUIDE"; done
     run fs_turns_cross5 --airspeed --wind 0,5,0 --dur 260 --every 1.0 --seed 1 --guide "$GUIDE"
     ;;
+  turns_full)
+    # 2026-09-23: the turning mission on the CURRENT tree -- the elevator-sign fix (093ad7e) and
+    # INDI full's own flare-8 reference -- before flying it in HIL; the fs_turns rows predate both
+    export VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3
+    for sd in 1 2 3; do run tf_turns_s$sd --indi_mode full --dur 260 --every 1.0 --seed $sd --guide "$GUIDE"; done
+    ;;
   full2)
     # separate the causes of the corridor loss: the pitch axis, the rate-derivative noise (wf),
     # the bandwidth, and the fade

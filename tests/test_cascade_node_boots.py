@@ -185,6 +185,14 @@ n.destroy_node(); rclpy.shutdown()
             txt = open(log, errors="replace").read()
             if "ENGAGE REFUSED" not in txt or "ENGAGED at" in txt:
                 il_ok = False; il_why = "a switch at 3 m/s was not refused"
+            # once engaged, every actuator frame also carries the collective throttle to PX4's land
+            # detector (2026-09-23: without it a still hover at 30 m is declared LANDED, EKF2 freezes
+            # on zero velocity, and COM_DISARM_LAND disarms in the air). The watchdog's safe_hover
+            # publishes through the same pub(), so the setpoint must be there and pointing UP (FRD -z).
+            te = subprocess.Popen(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 14 ros2 topic echo --once "
+                                   f"--qos-reliability best_effort /{NS}/fmu/in/vehicle_thrust_setpoint px4_msgs/msg/VehicleThrustSetpoint"],
+                                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+            time.sleep(1.5)
             subprocess.run(["bash", "-c", mocap(0.0, 0.0)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
             subprocess.run(["bash", "-c", switch], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
             time.sleep(2.0)
@@ -193,6 +201,14 @@ n.destroy_node(); rclpy.shutdown()
                 il_ok = False; il_why = "a switch in hover was not accepted"
             if il_ok and "STATE STALE" not in txt:      # 2 s with no state after the engage: the watchdog
                 il_ok = False; il_why = "no state for 2 s while active did not trip the watchdog"
+            try:
+                thr_out, _ = te.communicate(timeout=15)
+            except subprocess.TimeoutExpired:
+                te.kill(); thr_out = ""
+            zs = re.findall(r"^-\s+([-0-9.e]+)\s*$", thr_out, re.M)
+            if il_ok and (len(zs) < 3 or not float(zs[2]) < -0.05):
+                il_ok = False; il_why = (f"no upward collective throttle on /{NS}/fmu/in/vehicle_thrust_setpoint while engaged "
+                                         f"(PX4's land detector would read 0 and declare a hover LANDED); echo gave {thr_out.strip()[:160]!r}")
         alive = proc.poll() is None
         nl = subprocess.run(["bash", "-c", f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; timeout 15 ros2 node list"],
                             capture_output=True, text=True).stdout.split()
@@ -247,7 +263,7 @@ n.destroy_node(); rclpy.shutdown()
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"
             if not imu_ok:
                 return False, f"{node}: a SensorCombined message on /{NS}/fmu/out/sensor_combined was not logged as FLU (+0.50, -0.20, +9.81) within 10 s"
-        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "") + (", engage refused at 3 m/s, accepted in hover, watchdog tripped" if node == "interlock" else "") + (", v_cap 0 held vcmd at 0.0 for 12 s" if node == "vcap" else "")
+        return True, f"{node}: booted as {want_node}, acked the command on /{NS}/{cid}/status, alive" + (", accelerometer wired FRD->FLU" if node == "imu" else "") + (", pitot wired (TAS logged)" if node == "aspd" else "") + (", engage refused at 3 m/s, accepted in hover, watchdog tripped, collective throttle to PX4" if node == "interlock" else "") + (", v_cap 0 held vcmd at 0.0 for 12 s" if node == "vcap" else "")
 
 
 def main():
