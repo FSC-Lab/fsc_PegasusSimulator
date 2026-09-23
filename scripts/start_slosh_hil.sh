@@ -433,7 +433,7 @@ fi
 # traceback, the process alive, the estimator asked for, mass / CG / airframe digest paired.
 if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6j-indi; then
   JPANE=$(tmux capture-pane -p -J -S -400 -t "$SESSION:6j-indi" 2>/dev/null)
-  JBANNER=$(echo "$JPANE" | grep -o "\[cascade+indi\] INDI inner loop on axes.*" | tail -1 | cut -c1-260)
+  JBANNER=$(echo "$JPANE" | grep -o "\[cascade+indi\] mode=.*" | tail -1 | cut -c1-260)
   if [ -z "$JBANNER" ]; then
     echo "[slosh_hil] !! the INDI cascade window exists but its [cascade+indi] banner never appeared. Not READY."; exit 1
   fi

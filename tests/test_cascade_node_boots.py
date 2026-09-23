@@ -238,8 +238,8 @@ n.destroy_node(); rclpy.shutdown()
             if not aspd_ok:
                 return False, f"{node}: an AirspeedValidated message (CAS 12.4) was not logged as 'first airspeed_validated: CAS 12.40 m/s' within 10 s"
         if node == "indi":
-            if "[cascade+indi] INDI inner loop on axes" not in txt:
-                return False, f"{node}: no '[cascade+indi] INDI inner loop on axes' banner"
+            if "[cascade+indi] mode=" not in txt:
+                return False, f"{node}: no '[cascade+indi] mode=' banner"
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the INDI variant did not inherit the IMU node's sensor_combined subscription"
         if node == "imu":
