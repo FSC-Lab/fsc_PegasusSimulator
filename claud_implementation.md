@@ -361,6 +361,33 @@ ROBUST_NODE=nmpc_cascade_imu_node.py \
 
 ---
 
+## 2026-09-23 (evening) — NMPC + INDI flies the full HIL mission; the first attempt was the harness
+
+### The name
+The GS called the INDI controller "INDI NMPC + Geo". In `full` mode there is no geometric law, so it is
+now **"NMPC + INDI"** (outer + inner, like the other cascades). `controller_id cascade_indi` is unchanged.
+`INDI_MODE` (`aug` keeps the geometric law, `full` replaces it and installs the flare-8 reference) is a
+launch choice, printed as `mode=` on the banner and checked by READY.
+
+### Why the first flight "did not work"
+INDI never flew it. The stack READY certified was torn down during the mission script's EKF settle; the
+script carried on with a second, unverified stack, and two drivers (one orphaned from the killed run)
+flipped `active_controller` 87 times in 47 s. Five fixes in the harness (sim 73c993b): fly only the
+stack whose tmux `session_created` predates READY, re-checked throughout; refuse while any other
+publisher is on `active_controller` or another driver is alive; kill the driver with its children and
+on the script's own signals; `kill_hil.sh` knows the drivers; the wrapper keeps its own log.
+
+### The re-flight (row indi_full_mission2_a1_124609)
+Bag switch history: geometric → cascade_indi (85 s) → geometric, three changes; the INDI status topic
+1064 lines, the other cascades none. Transition 0 → 16.4 m/s in 10 s at z 30.4–31.0; 56 s of cruise at
+16.3 m/s, pitch +6.7, roll ≤ 0.6, 0 solve failures; back-transition pitch peak +11.6 (gate 12.25) at
+z 30.7–30.9, one solve failure at the stall crossing; landed 0.00 m. The cruise tilt wandered
+83.5–89.6° (gate: INDI 89.5 vs geometric 90.0 — the outer backs the tilt off against a small overspeed),
+which is why `night_metrics` reports only 12.7 s wing-borne (its cut is tilt ≥ 88). One flight; the
+turning mission, wind and the hover-hold creep are still unflown on INDI full.
+
+---
+
 ## 2026-09-23 — The reference comes with the loop, and which terms move
 
 ### What was wired

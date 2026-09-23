@@ -2,6 +2,54 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-23 (evening): NMPC + INDI (full mode, flare 8) FLIES THE FULL HIL MISSION -- LANDED
+# 0.00 m -- AND THE FIRST ATTEMPT'S "INDI DOES NOT WORK" WAS THE HARNESS: INDI NEVER FLEW IT.
+# Row indi_full_mission2_a1_124609, bag slosh_20260923_124412; sim 73c993b, GS 7b90943, ctrl f2592a2.
+**THE RENAME.** The GS button / mission dropdown read "INDI NMPC + Geo" -- wrong since `--indi_mode
+full` REMOVES the geometric law. Now **"NMPC + INDI"** (GS 7b90943); `controller_id` stays
+`cascade_indi` (topics, node name, driver `CTRL=`, launch log unchanged). Whether the geometric law
+is kept (`aug`) or replaced (`full`) is a LAUNCH choice (`INDI_MODE`), printed as `mode=` on the
+banner and gated by READY; the tooltip says so.
+**THE FAILED FIRST FLIGHT (indi_full_mission, 12:2x) -- FIVE HARNESS DEFECTS, NOT THE CONTROLLER.**
+From the wrapper, the pane logs and the bag: the stack that passed READY (mode=full + the flare-8
+reference line) NEVER ARMED -- it was torn down at 12:26:04 during the mission script's 25 s EKF
+settle (the perpetrator is unattributable: no log survived); the mission script did not notice,
+kept going and flew a SECOND, never-verified stack; on it `active_controller` flipped
+geometric <-> cascade_indi **87 times in 47 s** (an orphaned `fly_transition.py` from the killed run
++ the new driver, each publishing its phase's controller at 1 Hz), and the aircraft was lost in the
+climb. INDI was never the pilot for more than a second at a time. Fixed (sim 73c993b):
+1. `fly_slosh_mission.sh` flies ONLY the stack READY certified: the tmux session's `#{session_created}`
+   must predate the LAUNCH_LOG READY time, checked at the start, after the EKF sleep, after ARMED and
+   every supervisor tick (`same_stack`); a new session = exit 2, never a flight.
+2. ONE VOICE ON THE SWITCH: before the driver starts it refuses if any `fly_transition.py` is alive
+   and waits for `active_controller` to have ZERO publishers (the GS republishes its selection every
+   ~1 s: two voices is the 2026-09-12 fight), printing the `-v` node list if not.
+3. The driver is killed with its children (`pkill -P`, SIGINT then -9) and on INT/TERM/HUP of the
+   mission script -- `timeout 900 python fly_transition.py &` had left the python orphaned.
+4. `kill_hil.sh` now kills `scripts/fly_transition.py` / `fly_mission.py` (it never did).
+5. `run_slosh_flight.sh` tees its own log (`run_<tag>_HHMMSS.log`): the first attempt's wrapper output
+   was lost to a `| tail -60`.
+**THE RE-FLIGHT (the 1b configuration: EKF2 on GPS 10 Hz + IMU + baro, pitot, imu-mdob + L1, the offset
+100 mm tank; `CTRL=cascade_indi INDI_MODE=full`, the straight mission 800 m, cruise 70 s):**
+READY showed `mode=full` + `reference: flare 8.0`; "flying the stack READY certified"; "active_controller
+has no other publisher". **The bag's switch history: geometric (climb) -> cascade_indi at t+150 s ->
+geometric at t+235 s -- THREE changes in 307 messages; `/uav_0/cascade_indi/status` 1064 lines, the
+other cascades' 0.** From the INDI pane:
+| phase | flown |
+|---|---|
+| transition | 0 -> 16.4 m/s in 10 s, tilt 17 -> 87, pitch -0.6 -> +7.6, **z 30.4-31.0**, 0 fails |
+| cruise (~56 s) | V 16.3-16.5 (Vair 16.1-16.4), **tilt 83.5-89.6**, pitch +6.6..+6.9, roll <= 0.6, z 30.2-30.9, 0/1147 fails |
+| back-transition | 16.3 -> 0.2 m/s in ~11 s, **pitch peak +11.6** (the gate's flare-8 prediction 12.25), **z 30.7-30.9**, tilt aft to -12.4, **1 solve failure (at V 10.1, the stall crossing)** |
+| stop / landing | HOVER HOLD at (876.8, +0.6), the safe controller's leg, **touchdown 0.00 m from (800, 0)** |
+`night_metrics` scores it LANDED with **wb_s 12.7** -- that is its `tilt >= 88` cut, not the flight:
+INDI's cruise tilt wandered 83.5-89.6 while the aircraft stayed at 16.3 m/s with the wing carrying it.
+**The gate shows the same direction, smaller** (seed 1, the same line, no tank offset): geometric
+tilt 90.0 / V 16.05 / pitch +7.0; INDI full tilt 89.4-89.6 / V 16.11 / pitch +6.8. The outer backs the
+tilt off against a slight overspeed (at 90 deg the front pair's thrust IS forward force, and INDI's
+pitch correction moves it); the HIL state (EKF2 on 10 Hz GPS) makes it a 6 deg wander. Named, not
+chased. **ONE FLIGHT.** Not flown yet with INDI full: the turning mission / RTH, any wind, and the
+hover-hold creep (this flight's post-stop hover lasted seconds before the handover).
+
 # ★★★★★ 2026-09-23 (later): WHY THE REFERENCE IS LOOP-DEPENDENT -- IT IS A VELOCITY-ERROR
 # CONSTANT, NOT THE QUASI-STATIC STIFFNESS I FIRST CLAIMED. THE USER'S BANDWIDTH HYPOTHESIS WAS
 # RIGHT AND MINE WAS THE SMALLER HALF. `scripts/ref_bandwidth_cells.sh`, sim this commit.
