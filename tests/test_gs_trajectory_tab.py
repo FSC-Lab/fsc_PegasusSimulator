@@ -354,7 +354,7 @@ assert len(_guide_msgs()) == n1 + 1 and _guide_msgs()[-1].startswith("wp 500.0 0
 assert tab._guide_pubs["cascade_adaptive"] is not None and tab._guide_pubs["cascade"] is not None
 print("adaptive cascade: button, ctrl choice, cascade parameter set, guidance accepted OK")
 
-# ---- THE INDI CASCADE (2026-09-21): a THIRD selectable controller, "INDI NMPC + Geo" -- id
+# ---- THE INDI CASCADE (2026-09-21): a THIRD selectable controller, "NMPC + INDI" -- id
 # cascade_indi, node /nmpc_cascade_control_indi, guidance on /uav_0/cascade_indi/*. Same rule:
 # the GS must treat it as a cascade everywhere, and it must be SEPARATE from the other two (its
 # own button, its own id on active_controller, its own guidance publisher, its own node in the

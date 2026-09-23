@@ -44,6 +44,26 @@ LM=$(grep -o 'model=[A-Za-z_]*' "$HOME/flight_bags/LAUNCH_LOG.txt" 2>/dev/null |
 [ -n "$LM" ] && MODEL=$LM
 say "model in the sim: $MODEL"
 
+# --- 0.4 FLY ONLY THE STACK THAT PASSED READY ------------------------------
+# ★ 2026-09-23: the stack that passed READY (mode=full, its reference announced, mass, CG,
+# airframe digest -- every gate) was torn down during this script's own 25 s EKF settle, a
+# second stack cold-started under it, and this script CARRIED ON: it set auto_arm on the NEW
+# stack's safe controller, saw it arm, and flew it. That stack had passed no gate at all and
+# the flight was a 1 Hz fight over the controller switch. The READY line is the certificate;
+# a stack created after it is not the stack it certifies. The tmux session's creation time
+# is the stack's identity: it must predate the READY line, and it must not change while we fly.
+READY_TS=$(tail -1 "$HOME/flight_bags/LAUNCH_LOG.txt" 2>/dev/null | cut -c1-19)
+READY_EPOCH=$(date -d "$READY_TS" +%s 2>/dev/null || echo 0)
+stack_id(){ tmux display-message -p -t "$SESSION" '#{session_created}' 2>/dev/null; }
+STACK_ID=$(stack_id)
+if [ -z "$STACK_ID" ] || [ "$READY_EPOCH" -eq 0 ] || [ "$STACK_ID" -gt "$READY_EPOCH" ]; then
+  echo "[fly_slosh] !! NOT THE STACK THAT PASSED READY: session ${STACK_ID:+created $(date -d @$STACK_ID +%T)}${STACK_ID:-does not exist},"
+  echo "[fly_slosh]    last READY $READY_TS. Relaunch with start_slosh_hil.sh -- a stack no gate has seen is not flown."
+  exit 1
+fi
+same_stack(){ [ "$(stack_id)" = "$STACK_ID" ]; }
+say "flying the stack READY certified (session $(date -d @$STACK_ID +%T), READY $READY_TS)"
+
 # --- 0.5 IS THE VEHICLE FIT?  (not: is the stack up) ------------------------
 # The stack can be perfectly healthy while the aircraft is inverted, airborne, or
 # a kilometre downrange from a previous flight -- and this driver will then
@@ -85,6 +105,7 @@ done
 say "resetting the EKF"
 tmux send-keys -t "$SESSION:1-px4" "ekf2 stop" Enter 2>/dev/null; sleep 3
 tmux send-keys -t "$SESSION:1-px4" "ekf2 start" Enter 2>/dev/null; sleep 25
+same_stack || { echo "[fly_slosh] !! the stack was replaced during the EKF settle -- not flying it."; exit 2; }
 
 # --- 2. envelope + arming ---------------------------------------------------
 for kv in "radius_max 8000.0" "radius_local 2000.0" "z_max 130.0" "auto_arm true"; do
@@ -121,6 +142,27 @@ if [ "$ARMED" -eq 0 ]; then
   exit 1
 fi
 say "ARMED"
+same_stack || { echo "[fly_slosh] !! the stack was replaced while waiting for ARMED -- not flying it."; exit 2; }
+# ★ ONE VOICE ON THE SWITCH. The driver is about to own /uav_0/ground_station/active_controller.
+# Anything already publishing there -- a ground station, a driver left over from an earlier
+# attempt -- turns the flight into a 1 Hz tug of war (2026-09-12 with the GS; 2026-09-23 with
+# a second publisher: 87 switches geometric <-> cascade_indi in 47 s, INDI never flew). Wait
+# out DDS discovery (a just-closed GS lingers a few seconds), then refuse if anyone is left.
+if pgrep -f "scripts/fly_transition.py" >/dev/null 2>&1; then
+  echo "[fly_slosh] !! another flight driver is already running:"; pgrep -fa "scripts/fly_transition.py" | cut -c1-160
+  exit 1
+fi
+NPUB=1
+for _ in $(seq 1 8); do
+  NPUB=$(timeout 8 ros2 topic info /uav_0/ground_station/active_controller 2>/dev/null | awk '/Publisher count/{print $3}')
+  [ "${NPUB:-0}" = "0" ] && break; sleep 2
+done
+if [ "${NPUB:-0}" != "0" ]; then
+  echo "[fly_slosh] !! $NPUB publisher(s) already on active_controller -- a second voice on the switch:"
+  timeout 8 ros2 topic info -v /uav_0/ground_station/active_controller 2>/dev/null | grep -A1 "Node name" | grep -v "^--" | head -8
+  exit 1
+fi
+say "active_controller has no other publisher -- the driver will be the only voice on the switch"
 
 # --- 3. fly -----------------------------------------------------------------
 say "flying: $CTRL, alt $ALT, dist $DIST, cruise ${CRUISE_T}s, back-transition + land at ($LAND_X, $LAND_Y)${GUIDE:+; guide: $GUIDE}${STAGE:+; STAGED up to $STAGE}"
@@ -130,6 +172,13 @@ timeout 900 "$NODE_PY" "$ROOT/scripts/fly_transition.py" \
     ${GUIDE:+--guide "$GUIDE"} ${STAGE:+--stage "$STAGE"} ${STAGE_HOLD:+--stage-hold "$STAGE_HOLD"} ${DOUBLET:+--doublet "$DOUBLET"} \
     > "$OUT" 2>&1 &
 FPID=$!
+# ★ FPID is `timeout`'s pid, NOT the driver's: `kill -9 $FPID` killed timeout and ORPHANED the
+# python driver, which then lived on with no timeout at all. stop_driver signals timeout's
+# CHILDREN (the driver) first; the trap does the same if this script is interrupted, so a
+# killed mission never leaves a pilot at the controls.
+stop_driver(){ pkill -INT -P "$FPID" 2>/dev/null; kill -INT "$FPID" 2>/dev/null; sleep 2
+               pkill -9 -P "$FPID" 2>/dev/null; kill -9 "$FPID" 2>/dev/null; }
+trap 'stop_driver; exit 130' INT TERM HUP
 # ★ SUPERVISE. The stack has died mid-flight twice today and the driver flew the last
 # mocap sample for minutes each time -- the freeze detector in fly_transition only
 # runs in cruise. Here: every 10 s, is PX4 up, is Isaac up, and has the mocap sample
@@ -145,13 +194,15 @@ while kill -0 "$FPID" 2>/dev/null; do
   if [ -n "$CUR" ] && [ "$CUR" = "$PREV" ]; then SAME=$((SAME+1)); else SAME=0; fi
   PREV="$CUR"
   if [ "$SAME" -ge 3 ]; then say "!! SIMULATOR FROZEN (mocap unchanged for 30 s)"; STACK_DEAD=1; break; fi
+  if ! same_stack; then say "!! THE STACK WAS REPLACED mid-flight (session changed)"; STACK_DEAD=1; break; fi
 done
 if [ "$STACK_DEAD" = "1" ]; then
-  kill -INT "$FPID" 2>/dev/null; sleep 2; kill -9 "$FPID" 2>/dev/null
-  say "flight INVALID -- the stack died or froze. Exit 2 (re-run)."
+  stop_driver
+  say "flight INVALID -- the stack died, froze or was replaced. Exit 2 (re-run)."
   exit 2
 fi
 wait "$FPID"
+trap - INT TERM HUP
 say "flight driver exited; summary:"
 tail -20 "$OUT"
 

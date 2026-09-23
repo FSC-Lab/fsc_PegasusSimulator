@@ -3,6 +3,11 @@
 # sandbox DISABLED -- a `pkill -f <pat>` typed directly into a tool call matches its OWN command
 # line and kills the invoking shell, and `pkill -f`/`tmux kill-server` silently no-op in the sandbox.
 # Gathers pids explicitly and kill -9's each.
+# ★ THE FLIGHT DRIVERS ARE ON THE LIST (2026-09-23). They were not, so every teardown left a
+# running fly_transition.py behind, and it kept publishing `active_controller` and a reference
+# into whatever stack came up next -- the INDI flight of 2026-09-23 was flown on a stack its
+# driver had never verified, with the switch flipping geometric <-> cascade_indi 87 times in
+# 47 s. A teardown that leaves a pilot at the controls is not a teardown.
 PATS=(
   "px4_sitl" "bin/px4" "MicroXRCEAgent" "micrortps"
   "isaac-sim" "isaacsim" "kit/python" "03_vtol_px4_hil"
@@ -11,6 +16,7 @@ PATS=(
   "nmpc6_cruise_node" "nmpc_full_smc_node" "nmpc_cascade_node" "nmpc_cascade_tank_node" "nmpc_cascade_steso_node" "nmpc_cascade_imu_node" "nmpc_cascade_indi_node"
   "mocap_to_px4_ev" "isaacsim_optitrack" "single_drone_ground_control" "fly_trajectory"
   "autopilot_sv_baseline" "ros2 bag record" "pubraw" "pubref.py"
+  "scripts/fly_transition.py" "scripts/fly_mission.py"
 )
 # ★ THE BAG FIRST, WITH SIGINT. A SIGKILLed rosbag has no metadata.yaml and `ros2 bag` will
 # not open it -- every bag in ~/flight_bags before 2026-09-12 is db3-only for exactly this

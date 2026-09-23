@@ -451,7 +451,7 @@ fi
 #      augmentation (nmpc_cascade_indi_node.py: M_des = M_geo + [M_c(u0) - J wdot] on the roll axis
 #      and on yaw while the rotors own it), as its OWN controller (id cascade_indi, node
 #      nmpc_cascade_control_indi, guidance on /uav_0/cascade_indi/*). STANDBY beside 6h and 6i:
-#      the GS's "INDI NMPC + Geo" button / ctrl choice selects it. INDI=0 skips it.
+#      the GS's "NMPC + INDI" button / ctrl choice selects it. INDI=0 skips it.
 #      Starts 15 s after 6i (30 s after 6h): all three load the same nmpc6 JIT cache file and
 #      parallel loads of one cache have core-dumped casadi before.
 INDI_NODE="${INDI_NODE_PY:-${DA_DIR}/nmpc_cascade_indi_node.py}"

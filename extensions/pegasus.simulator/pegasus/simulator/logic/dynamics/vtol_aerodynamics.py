@@ -234,7 +234,7 @@ class VTOLAerodynamics:
         qbar = 0.5 * cfg.rho * v_coeff * v_coeff
 
         elevator = controls["elevator"] * cfg.max_surface_deflection_rad
-        aileron = controls["aileron"] * cfg.max_surface_deflection_rad
+        aileron = controls["aileron"] * cfg.max_surface_deflection_rad  
         rudder = controls["rudder"] * cfg.max_surface_deflection_rad
 
         p_hat = p * cfg.wing_span / (2.0 * v_coeff)

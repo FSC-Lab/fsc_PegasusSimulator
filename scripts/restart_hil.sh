@@ -247,7 +247,7 @@ fi
 # 8d/8 THE INDI CASCADE (2026-09-21): the incremental-nonlinear-dynamic-inversion variant as its
 # OWN controller, controller_id `cascade_indi`, node `nmpc_cascade_control_indi`, guidance on
 # /uav_0/cascade_indi/{cmd,status}. Standby beside the base and adaptive cascades (a standby
-# cascade runs no inner step and no outer solve). The GS's "INDI NMPC + Geo" button / ctrl choice
+# cascade runs no inner step and no outer solve). The GS's "NMPC + INDI" button / ctrl choice
 # select it. INDI_NODE_PY overrides the file; INDI=0 skips the window.
 # ---------------------------------------------------------------------------------------------
 INDI_NODE="${INDI_NODE_PY:-${FSC_CONTROLLER_DIR}/px4_vtol_direct_actuator/nmpc_cascade_indi_node.py}"

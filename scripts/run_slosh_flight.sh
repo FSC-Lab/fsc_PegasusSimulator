@@ -18,6 +18,12 @@ ROOT=/home/pieper/envs/fsc_PegasusSimulator
 ATTEMPTS=${ATTEMPTS:-3}
 TAG=${NAME:-flight}
 say(){ echo "[run_slosh $(date +%H:%M:%S)] $*"; }
+# ★ THE WRAPPER KEEPS ITS OWN LOG. Its timestamped lines are the only record of WHICH attempt
+# tore down or launched a stack and why; on 2026-09-23 they went to a pipe and were lost when
+# the run was interrupted, and a stack torn down mid-flight could not be attributed afterwards.
+RUN_LOG=${RUN_LOG:-$HOME/flight_bags/slosh/run_${TAG}_$(date +%H%M%S).log}
+exec > >(tee -a "$RUN_LOG") 2>&1
+say "wrapper log: $RUN_LOG"
 
 for n in $(seq 1 "$ATTEMPTS"); do
   say "=== attempt $n/$ATTEMPTS ($*) ==="

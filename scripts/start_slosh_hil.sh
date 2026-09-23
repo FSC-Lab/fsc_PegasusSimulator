@@ -126,7 +126,7 @@ else
   say "    adaptive: OFF (ADAPTIVE=0)"
 fi
 if [ "${INDI:-1}" != "0" ]; then
-  say "    indi: $(basename "${INDI_NODE_PY:-nmpc_cascade_indi_node.py}") as cascade_indi (window 6j-indi; GS 'INDI NMPC + Geo'; driver CTRL=cascade_indi)"
+  say "    indi: $(basename "${INDI_NODE_PY:-nmpc_cascade_indi_node.py}") as cascade_indi (window 6j-indi; GS 'NMPC + INDI'; driver CTRL=cascade_indi)"
 else
   say "    indi: OFF (INDI=0)"
 fi
@@ -485,7 +485,7 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6j-indi; then
     echo "[slosh_hil] !! the INDI cascade announced an INDI reference but is NOT in full mode."
     echo "             (aug/off must fly the FLOWN reference -- that is their identity check.) Not READY."; exit 1
   fi
-  say "    indi cascade: estimator=$JEST, M $JM kg, CG_X $JCG, ref=${JREF:+indi}${JREF:-flown}, standby as cascade_indi (GS: INDI NMPC + Geo)"
+  say "    indi cascade: estimator=$JEST, M $JM kg, CG_X $JCG, ref=${JREF:+indi}${JREF:-flown}, standby as cascade_indi (GS: NMPC + INDI)"
 fi
 
 # THE STATE SOURCE (2026-09-15): CASC_STATE=px4 flies the cascades on EKF2's odometry; EKF_SOURCE=gps

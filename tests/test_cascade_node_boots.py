@@ -39,7 +39,7 @@ NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tan
          "imu": ("nmpc_cascade_imu_node.py", "cascade_adaptive"),
          # "indi" = the INDI inner-loop variant of the IMU node (2026-09-21), and it is its OWN
          # controller: id `cascade_indi` -> node /nmpc_cascade_control_indi, guidance on
-         # /uav_0/cascade_indi/* (the launchers' 6j-indi window, the GS's "INDI NMPC + Geo"). It
+         # /uav_0/cascade_indi/* (the launchers' 6j-indi window, the GS's "NMPC + INDI"). It
          # must print its own banner (the axes and filter it runs) AND the IMU node's (it inherits
          # the twin), and ack on ITS OWN status topic under ITS OWN node name.
          "indi": ("nmpc_cascade_indi_node.py", "cascade_indi"),
