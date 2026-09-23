@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # One whole-body observer data point, clean slate to npz.
 #
-#   wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]
+#   wb_l1_tune_cycle.sh <gmo|l1|l1_4d|l1_4d_fused> <run-tag> [machine-config]
+#
+# l1_4d_fused (2026-09-21) is l1_4d with the controller's position/velocity
+# feedback taken from PX4 EKF2's FUSED odometry (indoor_state_estimator_node)
+# instead of the raw mocap message -- the simulation proof of the hardware
+# ..._stack_t650_aerial_manipulator_fused.sh workflow. Same node, same yaml.
 #
 # l1_4d (2026-09-16) is the L1 observer with the working note's
 # FOUR-DIMENSIONAL attribution: same executable as l1, its own stack script
@@ -42,10 +47,10 @@
 # these commands in a terminal.
 set -uo pipefail
 
-WHICH="${1:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]}"
-TAG="${2:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d> <run-tag> [machine-config]}"
+WHICH="${1:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d|l1_4d_fused> <run-tag> [machine-config]}"
+TAG="${2:?usage: wb_l1_tune_cycle.sh <gmo|l1|l1_4d|l1_4d_fused> <run-tag> [machine-config]}"
 CFG="${3:-shiqi_machine}"
-case "$WHICH" in gmo|l1|l1_4d) ;; *) echo "first arg must be gmo, l1 or l1_4d"; exit 2;; esac
+case "$WHICH" in gmo|l1|l1_4d|l1_4d_fused) ;; *) echo "first arg must be gmo, l1, l1_4d or l1_4d_fused"; exit 2;; esac
 MISSION="${WB_L1_MISSION:-standard}"
 case "$MISSION" in standard|ee_circle|ee_figure8) ;; *)
   echo "WB_L1_MISSION must be standard, ee_circle or ee_figure8"; exit 2;; esac
@@ -62,6 +67,10 @@ if [[ "$WHICH" == l1 ]]; then
 elif [[ "$WHICH" == l1_4d ]]; then
   STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
   SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh"
+  NODE="autopilot_whole_body_l1_direct_actuation_node"
+elif [[ "$WHICH" == l1_4d_fused ]]; then
+  STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_fused_direct_actuation_sitl.sh"
   NODE="autopilot_whole_body_l1_direct_actuation_node"
 else
   STACK="$AUT/scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh"
@@ -94,6 +103,18 @@ if [[ "$MISSION" != standard ]]; then
     echo "FAILED: $EE_DRIVER not found -- build fsc_trajectory_planner first." >&2; exit 1; }
 fi
 
+# WB_L1_CLIENT_DDS_PROFILE (2026-09-21): a Fast DDS XML profile applied to THIS
+# script's own ROS clients only -- the readiness echoes and the driver -- never
+# to the stack or Pegasus it launches, so the system under test keeps its
+# default transport. Needed on shiqi-desktop, where a participant started from
+# a shell stopped receiving the ROS nodes' topics over shared memory (PX4's
+# agent-bridged topics still arrived), which strands this script at "waiting
+# for odometry". A UDP-only profile receives everything.
+CLIENT_ENV=()
+if [[ -n "${WB_L1_CLIENT_DDS_PROFILE:-}" ]]; then
+  CLIENT_ENV=(env "FASTRTPS_DEFAULT_PROFILES_FILE=$WB_L1_CLIENT_DDS_PROFILE")
+fi
+
 echo "=== [$WHICH/$TAG] 0. clean slate ==="
 "$AUT/scripts/isaacsim/stop_isaacsim_stack.sh" >/dev/null 2>&1
 "$PEG/scripts/kill_stale_sim_processes.sh" -y  >/dev/null 2>&1
@@ -113,10 +134,14 @@ echo "=== [$WHICH/$TAG] 2. Pegasus / PX4 / arm ==="
 DISPLAY="${DISPLAY:-:0}" setsid nohup "$SITL" --in-terminal "$CFG" \
     > "$LOGS/pegasus_$TAG.log" 2>&1 < /dev/null &
 
+# The readiness checks below run WITHOUT the ROS 2 daemon and with explicit
+# types (2026-09-21): on shiqi-desktop the daemon wedged during stack bring-up
+# (its graph query never returned), and a daemon-backed `ros2 topic echo`
+# then timed out on every poll while the topic was publishing normally.
 echo "=== [$WHICH/$TAG] 3. waiting for odometry ==="
 ok=0
 for _ in $(seq 120); do
-  if timeout 5 ros2 topic echo --once /uav_0/state_estimator/local_position/odom \
+  if "${CLIENT_ENV[@]}" timeout 5 ros2 topic echo --once --no-daemon /uav_0/state_estimator/local_position/odom nav_msgs/msg/Odometry \
        >/dev/null 2>&1; then ok=1; break; fi
   sleep 5
 done
@@ -131,7 +156,7 @@ done
 echo "=== [$WHICH/$TAG] 3b. waiting for EKF yaw/EV alignment ==="
 ok=0
 for _ in $(seq 60); do
-  f=$(timeout 5 ros2 topic echo --once /uav_0/fmu/out/estimator_status_flags 2>/dev/null)
+  f=$("${CLIENT_ENV[@]}" timeout 5 ros2 topic echo --once --no-daemon /uav_0/fmu/out/estimator_status_flags px4_msgs/msg/EstimatorStatusFlags 2>/dev/null)
   if grep -q "cs_yaw_align: true" <<<"$f" && grep -q "cs_ev_pos: true" <<<"$f" \
      && grep -q "cs_ev_yaw: true" <<<"$f"; then ok=1; break; fi
   sleep 5
@@ -145,7 +170,7 @@ done
 echo "=== [$WHICH/$TAG] 3c. waiting for the arm ==="
 ok=0
 for _ in $(seq 60); do
-  if timeout 5 ros2 topic echo --once /uav_0/fsc_open_manipulator/joint_states \
+  if "${CLIENT_ENV[@]}" timeout 5 ros2 topic echo --once --no-daemon /uav_0/fsc_open_manipulator/joint_states sensor_msgs/msg/JointState \
        >/dev/null 2>&1; then ok=1; break; fi
   sleep 5
 done
@@ -154,12 +179,12 @@ sleep 10
 
 echo "=== [$WHICH/$TAG] 4. flying ($MISSION) ==="
 if [[ "$MISSION" == standard ]]; then
-  /usr/bin/python3 "$PEG/application/robotic_arm/utils/wb_l1_campaign_driver.py" \
+  "${CLIENT_ENV[@]}" /usr/bin/python3 "$PEG/application/robotic_arm/utils/wb_l1_campaign_driver.py" \
       --out "$OUT/${WHICH}_${TAG}.npz" ${WB_L1_DRIVER_ARGS:-} \
       > "$LOGS/${WHICH}_${TAG}.log" 2>&1
   rc=$?
 else
-  /usr/bin/python3 "$EE_DRIVER" --shape "${MISSION#ee_}" --scale "${WB_L1_EE_SCALE:-0.8}" \
+  "${CLIENT_ENV[@]}" /usr/bin/python3 "$EE_DRIVER" --shape "${MISSION#ee_}" --scale "${WB_L1_EE_SCALE:-0.8}" \
       --out "$OUT/${WHICH}_${TAG}.npz" ${WB_L1_DRIVER_ARGS:-} \
       > "$LOGS/${WHICH}_${TAG}.log" 2>&1
   rc=$?

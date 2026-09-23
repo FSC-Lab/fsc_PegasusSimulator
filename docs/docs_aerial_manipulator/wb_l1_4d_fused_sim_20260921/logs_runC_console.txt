@@ -1,0 +1,18 @@
+=== [l1_4d_fused/C] 0. clean slate ===
+=== [l1_4d_fused/C] 1. controller stack ===
+=== [l1_4d_fused/C] 2. Pegasus / PX4 / arm ===
+=== [l1_4d_fused/C] 3. waiting for odometry ===
+=== [l1_4d_fused/C] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d_fused/C] 3c. waiting for the arm ===
+=== [l1_4d_fused/C] 4. flying (standard) ===
+=== [l1_4d_fused/C] done (driver rc=0) ===
+[ 186.81s] mode -> SAFETY
+[ 186.81s] planner -> IDLE
+[ 186.83s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 198.83s] PHASE LAND  ref=[-0.067, 0.009, 0.999] mode='SAFETY'
+[ 218.83s] service rc/disarm requested
+[ 218.83s] PHASE DONE  ref=[-0.067, 0.009, 0.35] mode='SAFETY'
+[ 218.85s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+wrote /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_l1_4d_fused_sim_20260921/fb_l1_4d_fused_C.npz {'truth_pose': 31062, 'truth_vel': 31062, 'mocap': 61061, 'odom': 12374, 'flags': 130, 'timesync': 0, 'mode': 3}
+rc=0
