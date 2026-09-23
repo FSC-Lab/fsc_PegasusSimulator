@@ -1,0 +1,115 @@
+<title>0921 - T650-AM Whole-body L1-Adaptive 4-D: Circle Trajectory Attempt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+:root{--surf:#fcfcfb;--panel:#f4f3ef;--ink:#0b0b0b;--ink2:#52514e;--ink3:#8a8985;--rule:#e3e2dd;--accent:#2a78d6;--good:#1baf7a;--warn:#eda100;--crit:#e34948;--good-bg:#e4f6ee;--warn-bg:#fdf3dc;--crit-bg:#fbe6e5;--code:#f1f0eb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--surf:#131312;--panel:#1c1c1a;--ink:#f2f1ec;--ink2:#b9b7b0;--ink3:#8a8985;--rule:#2d2d2a;--accent:#6ea8ef;--good:#3fc48f;--warn:#f0b642;--crit:#ef6b6a;--good-bg:#173126;--warn-bg:#3a2d10;--crit-bg:#3b1c1c;--code:#1f1f1c}}
+:root[data-theme="dark"]{--surf:#131312;--panel:#1c1c1a;--ink:#f2f1ec;--ink2:#b9b7b0;--ink3:#8a8985;--rule:#2d2d2a;--accent:#6ea8ef;--good:#3fc48f;--warn:#f0b642;--crit:#ef6b6a;--good-bg:#173126;--warn-bg:#3a2d10;--crit-bg:#3b1c1c;--code:#1f1f1c}
+body{background:var(--surf);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.55;padding-inline:16px;padding-block:32px 64px}
+main{max-width:960px;margin:0 auto}
+h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:2rem;line-height:1.15;margin:0 0 .35rem;text-wrap:balance}
+h2{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:1.35rem;margin:2.6rem 0 .8rem;padding-top:.8rem;border-top:1px solid var(--rule);text-wrap:balance}
+h3{font-size:1rem;font-weight:600;margin:1.6rem 0 .4rem}
+p{max-width:70ch;margin:.5rem 0}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3)}
+.lede{color:var(--ink2);font-size:1.02rem;max-width:72ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 28px;margin:1rem 0 0;font-family:"IBM Plex Mono",monospace;font-size:.8rem;color:var(--ink2)}
+.meta b{color:var(--ink);font-weight:500}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums;margin:.6rem 0}
+th{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);text-align:left;font-weight:500;padding:6px 10px 6px 0;border-bottom:1px solid var(--rule)}
+td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+td.n{font-family:"IBM Plex Mono",monospace;font-size:.82rem;white-space:nowrap}
+.tw{overflow-x:auto}
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.04em;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.ok{background:var(--good-bg);color:var(--good)}.watch{background:var(--warn-bg);color:var(--warn)}.bad{background:var(--crit-bg);color:var(--crit)}
+.verdict td:first-child{font-weight:600;width:17%}
+figure{margin:1.4rem 0}figure img{width:100%;height:auto;border:1px solid var(--rule);border-radius:2px}
+figcaption{font-size:.85rem;color:var(--ink2);margin-top:.5rem;max-width:80ch}
+.finding{border-left:3px solid var(--rule);padding:2px 0 2px 14px;margin:1.1rem 0}
+.finding.crit{border-color:var(--crit)}.finding.good{border-color:var(--good)}.finding.warn{border-color:var(--warn)}
+.finding h3{margin:.1rem 0 .3rem}
+code,.mono{font-family:"IBM Plex Mono",monospace;font-size:.84em;background:var(--code);padding:1px 4px;border-radius:2px}
+ol,ul{padding-left:1.3rem;max-width:72ch}li{margin:.35rem 0}
+.note{background:var(--panel);padding:12px 16px;border-radius:3px;font-size:.9rem;max-width:80ch}
+</style>
+</head><body><main>
+<div class="eyebrow">AM-T650 · whole-body L1 4-D · hardware · 2026-09-21</div>
+<h1>Circle attempt, flight 3 (12:36:37): the go-to-start transition was tracked, the mocap feed was not trustworthy</h1>
+<p class="lede">The vehicle only ever flew the planner's transition to the circle's start pose, and it tracked that transition to 13/9/4 mm (CoM) and 3.5/4.5/7 mm (EE) for 6.8 s. What made it look unstable were two mocap rigid-body flips (one-sample jumps of 0.18 m and ~110°) that the whole-body law consumed unfiltered, each producing a one-tick −60/+150 N collective command and a 0.1 s motor rail. The operator switched to SAFETY 0.8 s after the second flip. No watchdog tripped. Underneath, the 120 Hz mocap feed raised the law's velocity-feedback noise 2.7x over the morning's 60 Hz flights and drove a 19–21 Hz chatter through the whole law.</p>
+<div class="meta"><span>bag <b>flight_wb_l1_4d_circle_20260921_123637</b></span><span>DIRECT <b>4.13–25.10 s</b> (21.0 s)</span><span>go-to-start <b>13.51 s → (planned 14.85 s, cut at 11.6 s)</b></span><span>revert <b>operator</b> (no watchdog line in /rosout)</span><span>mocap <b>120 Hz</b> (flights 1–2: 60 Hz)</span><span>sensor_combined / vehicle_attitude <b>200 Hz</b></span></div>
+
+<h2>Verdicts</h2>
+<div class="tw"><table class="verdict">
+<tr><td>Controller stability</td><td><span class="pill ok">STABLE</span> No growing mode. Hold: |e_R| mean 0.074, CoM rms 10/14/2 mm (better than 0918's 21/18/4). Transition before the first flip: CoM rms 13/9/4 mm, tilt ≤ 2.7°, 0 saturations, 0 joint clamps, e_R,z 0.0006 ± 0.008 through a 148° yaw at up to 17°/s.</td></tr>
+<tr><td>Planner</td><td><span class="pill ok">CORRECT, but the task it chose is demanding</span> Circle READY in 4 s (defect 8e-5 m). Go-to-start solved in 10.5 ms, defect 6e-17 m, and was tracked. It commanded a 148° heading rotation with the EE nearly pinned (EE moved 4 cm, base 0.49 m), rate-limited at w_max so T = 14.85 s. The rotation carried the vehicle into headings the mocap tracks badly (below).</td></tr>
+<tr><td>Mocap position / velocity</td><td><span class="pill bad">THE CAUSE OF THE VISIBLE EVENTS</span> 18 rigid-body flips in 49 s (8 in DIRECT, 0918: 1, flights 1–2: 0), all at headings ≤ −70°. Odometry velocity is a short-window finite difference of mocap position; at 120 Hz its hold-phase std is 10.8 cm/s vs 2.6 (0918) and 4.0 (flight 1), and a flip becomes a 5–7 m/s velocity sample that the deadbeat observer books as 20 N of disturbance.</td></tr>
+<tr><td>Mocap orientation</td><td><span class="pill watch">DEGRADES WITH HEADING</span> Per-sample orientation step > 3° in 1% of samples at heading 0°, 33–40% at −120..−180°. Not consumed by the law (it reads PX4 attitude, which stayed smooth), but it says the rigid-body solve is marginal there.</td></tr>
+<tr><td>PX4 / SAFETY</td><td><span class="pill watch">SAW THE FLIPS, FILTERED THEM</span> SAFETY's position loop reads the SAME raw-mocap odometry, and at each later flip its tilt setpoint jumped to 23–35° for 2–3 samples. The vehicle moved ≤ 2° because that spike passes through PX4's softened attitude and rate loops and the rotor lag; in DIRECT the law drives the motors directly at 250 Hz. PX4's own EKF position moved ≤ 3 mm at every flip, but nothing in the loop reads it. The post-revert transient (27.8° tilt, 36 cm drop within 0.5 s of the switch) is the handover, not the flips.</td></tr>
+</table></div>
+
+<h2>0. Where the feedback comes from on the hardware stack</h2>
+<p>The hardware launcher (<code>start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh</code>) starts <code>indoor_mocap_feedback_launch.py</code>, whose <code>MocapOdomBridge</code> republishes the <code>mocap</code> message as <code>state_estimator/local_position/odom</code> verbatim. In all four hardware bags (0918 and the three 0921 flights) every odometry sample is bit-identical to a mocap sample: same stamp, same position, same orientation, same twist.</p>
+<div class="tw"><table>
+<tr><th>quantity</th><th>source</th><th>read by</th></tr>
+<tr><td>position</td><td>raw mocap, passthrough</td><td>DIRECT law, SAFETY position loop, trajectory planner</td></tr>
+<tr><td>linear velocity</td><td>raw mocap twist, a finite difference computed upstream by the mocap broadcaster</td><td>DIRECT law, SAFETY position loop</td></tr>
+<tr><td>attitude</td><td>PX4 EKF2 <code>vehicle_attitude</code> (IMU fused with mocap heading)</td><td>DIRECT law, planner</td></tr>
+<tr><td>body rate</td><td>PX4 <code>sensor_combined</code> gyro</td><td>DIRECT law, rate watchdog</td></tr>
+<tr><td>EKF2 fused position / velocity</td><td>PX4 <code>vehicle_odometry</code>; mocap reaches EKF2 via <code>vehicle_visual_odometry</code> at 120 Hz</td><td>only the feedback-loss failsafe landing and the EV-fusion health check</td></tr>
+</table></div>
+<p>The EKF2-fused alternative exists (<code>indoor_estimator_launch.py</code>, <code>Px4FusedOdomBridge</code>, same output topic) but is not what flies. The launcher's reason: in DIRECT the node closes attitude, rate and mixing itself, so feeding it EKF2's estimate would put PX4's estimator inside a loop PX4 no longer closes. Note that the attitude already comes from EKF2, so that argument applies to position and velocity only.</p>
+<h2>1. What actually happened, second by second</h2>
+<div class="tw"><table>
+<tr><th>t [s]</th><th>event</th></tr>
+<tr><td class="n">4.13</td><td>DIRECT entered. Hold captured at base [−0.343, 0.357, 0.974] m, arm home, EE heading −88.5°.</td></tr>
+<tr><td class="n">8.18</td><td>EE circle READY: 2 laps, T = 51.96 s, s = 1.00, defect 8.4e-5 m.</td></tr>
+<tr><td class="n">13.51</td><td>Go To Start: transition planned (T = 14.85 s, limited by w_max), executing. Heading reference −88.5° → −236° (model frame), base 0.49 m, arm fold 40° → 30.7°.</td></tr>
+<tr><td class="n">13.5–20.2</td><td>Clean tracking (figure 5). CoM err rms 13/9/4 mm, EE 3.5/4.5/7.3 mm, EE heading 0.6°, arm q−q_d ≤ 3.1° rms (j3 friction, as on 0918).</td></tr>
+<tr><td class="n">20.28</td><td>Mocap flip #1 (heading −69°): two samples, +0.18 m / −0.18 m, orientation ±110°. Odometry velocity −3.1/−4.7/+5.0 m/s. Law: u1 16 N then 39 N, motors [0.59 0.33 0.35 0.00] for one tick, "Wrench allocator saturated: −42.4 N". Base then holds a −63 mm y offset for 4 s.</td></tr>
+<tr><td class="n">24.27–24.32</td><td>Mocap flip #2 (heading −135°): six alternating samples. Law: u1 −60 N → +50 → +152 N, motors on 0/1 rails for ~0.1 s, j2 torque 2.5 N·m, |e_R| 0.9, estimator bound hit 14 ticks. Vehicle: tilt to 8.9°, z +54 mm, x −45 mm within 0.7 s.</td></tr>
+<tr><td class="n">25.09</td><td>Operator: activate Baseline (Safety). Reference re-seeded at [0.04 0.57 1.08], yaw −146.5°. Arm folded home in 1.7 s.</td></tr>
+<tr><td class="n">25.56</td><td>SAFETY handover transient: tilt 27.8°, altitude 1.08 → 0.72 m, recovered by ~28 s.</td></tr>
+<tr><td class="n">25.8, 32.3, 34.8, 35.6, 39.9</td><td>Five more mocap flips at the parked heading (−146°..−117°). SAFETY's tilt setpoint spikes to 23–35° for 2–3 samples at each; the vehicle moves ≤ 2°.</td></tr>
+</table></div>
+<figure><img src="figures/f1_overview.png" alt="overview"><figcaption>Figure 1. Overview. Light grey = DIRECT, darker = go-to-start executing, red dotted = the two in-DIRECT mocap flips. Heading: PX4 yaw (the law's R), mocap yaw and the planner's reference agree throughout, so the 148° rotation was commanded and tracked, not a divergence. |e_R| chatters at 19–21 Hz the whole time (section 3) while the PX4 tilt stays ≤ 2.7° until the second flip. Bottom: odometry |v| reaches 7–10 m/s at every flip, PX4's own velocity never does.</figcaption></figure>
+
+<h2>2. The flips: what a rigid-body mis-solve does to this law</h2>
+<div class="finding crit"><h3>Every flip has the same signature and the same heading dependence</h3>
+<p>Position offset ≈ [−0.13, +0.03, +0.12] m (|Δp| 0.17–0.19 m) with a simultaneous ~110° orientation flip, for one sample, then back. That is the tracker solving the uav_0 rigid body onto an alternative marker assignment (a different pivot and a rotated frame), not a dropout: mocap_status stayed "mocap_normal", there were no timing gaps (max dt 17 ms), and the 0918 NO-DATA mechanism is absent. All 18 flips occurred at mocap headings between −69° and −153°; none at the 0…+2° heading of the hold, of 0918, or of flights 1–2 (which never rotated). Orientation-only flips (~100°, no position jump) are more frequent still (figure 2, 24.15–24.19 s).</p></div>
+<div class="finding warn"><h3>The whole-body law reads raw odometry and has no innovation gate</h3>
+<p>The client takes position and linear velocity straight from <code>state_estimator/local_position/odom</code>, which on the raw-mocap estimator is the mocap pose plus its finite-difference twist, unfiltered. A 0.18 m sample over 8 ms is a 22 m/s velocity; the published twist showed 5–7 m/s. With k_v = 20 that is 100–140 N of velocity term on one tick, and the deadbeat observer books the momentum step as ~20 N (d̂ hit its ±20 N bound on 14 ticks). PX4's EKF rejected the same samples (its position moved ≤ 3 mm, no reset), but neither mode reads that estimate. SAFETY consumed the flips too: its tilt setpoint spiked to 23–35° for 2–3 samples at each later flip. The difference is the command path. SAFETY's spike is a 20–30 ms attitude setpoint that PX4's softened attitude loop and the rotor lag smooth to ≤ 2° of motion; DIRECT's is a one-tick motor command.</p></div>
+<figure><img src="figures/f2_spike_anatomy.png" alt="spike anatomy"><figcaption>Figure 2. The second flip. Six alternating one-sample jumps (top), the odometry velocity they become (middle), and the collective and motor commands the law issued (bottom). The motors sat on the 0/1 rails for ~0.1 s; the arm torque on j2 reached 2.5 N·m.</figcaption></figure>
+
+<h2>3. The 120 Hz feed: the law's velocity feedback is a differentiated mocap position, and it got 2.7x noisier</h2>
+<div class="tw"><table>
+<tr><th>flight</th><th>mocap</th><th>mocap dt jitter (std)</th><th>mocap per-sample |Δp| median</th><th>odom v std x/y/z [cm/s]</th><th>deadbeat d̂_x std [N]</th><th>|e_R| mean (hold)</th><th>u1 std [N]</th><th>CoM rms hold x/y/z [mm]</th></tr>
+<tr><td class="n">0918</td><td class="n">60 Hz</td><td class="n">0.05 ms</td><td class="n">0.78 mm</td><td class="n">2.6 / 2.1 / 1.6</td><td class="n">13.7</td><td class="n">0.033</td><td class="n">0.65</td><td class="n">21 / 18 / 4</td></tr>
+<tr><td class="n">0921 #1</td><td class="n">60 Hz</td><td class="n">0.06 ms</td><td class="n">1.13 mm</td><td class="n">3.8 / 2.6 / 2.1</td><td class="n">23.6</td><td class="n">0.033</td><td class="n">0.79</td><td class="n">17 / 12 / 3</td></tr>
+<tr><td class="n">0921 #2</td><td class="n">60 Hz</td><td class="n">0.06 ms</td><td class="n">3.88 mm</td><td class="n">12.1 / 10.6 / 6.1</td><td class="n">76.9</td><td class="n">0.097</td><td class="n">1.75</td><td class="n">21 / 24 / 5</td></tr>
+<tr><td class="n">0921 #3</td><td class="n">120 Hz</td><td class="n">1.43 ms</td><td class="n">1.67 mm</td><td class="n">10.8 / 5.0 / 4.2</td><td class="n">91.5</td><td class="n">0.074</td><td class="n">1.15</td><td class="n">10 / 14 / 2</td></tr>
+</table></div>
+<div class="finding warn"><h3>Two separate effects, and the 120 Hz change is only one of them</h3>
+<p>(a) Halving the sample interval doubles the velocity noise for the same per-sample position noise, and the per-sample position noise itself did not halve (1.67 mm at 8 ms vs 1.13 at 16.7 ms, where true motion alone would give 0.56). The published velocity is a short finite-difference window (its spectrum has the 3-sample null at 40 Hz), so at 120 Hz it carries a broadband 19–21 Hz component of 0.11 m/s std. (b) Flight 2, still at 60 Hz, was almost as noisy (3.9 mm per sample, 12 cm/s) and its whole-body hold showed the same 3x rise in |e_R| and d̂ — tracking quality varied between flights this morning independent of the rate. In flight 3 the orientation jitter also grew as the heading rotated (figure 4), consistent with a marginal rigid-body solve away from the calibrated heading.</p>
+<p>What the velocity noise costs: k_v·σ_v = 2.2 / 1.0 / 0.8 N of force chatter, the deadbeat estimate reads 91 N std (its 2 rad/s filter leaves 0.8 N), e_R chatters at 19 Hz with 95% of its power above 5 Hz while PX4's attitude has none there, and the motors chatter at 12–14 Hz. Position hold was not hurt (10/14/2 mm, the best of the four flights), so this is actuator-level chatter, not instability. PX4's own EKF velocity on the same flight had 1.2 cm/s std at 100 Hz, 9x cleaner.</p></div>
+<figure><img src="figures/f3_feedback_quality.png" alt="feedback quality"><figcaption>Figure 3. Left: mocap timestamp intervals; at 60 Hz they are metronomic, at 120 Hz they spread 6–13 ms. Middle: Welch spectrum of the odometry x velocity the law consumes, four flights. Right: hold-phase noise budget.</figcaption></figure>
+<figure><img src="figures/f4_orientation_jitter.png" alt="orientation jitter"><figcaption>Figure 4. Mocap orientation jitter versus heading (flight 3). The flips (red) sit in the bins where a third of all samples already jump by more than 3°.</figcaption></figure>
+
+<h2>4. The transition itself</h2>
+<figure><img src="figures/f5_transition.png" alt="transition"><figcaption>Figure 5. Go-to-start tracking. CoM error stays within ±35 mm until the first flip; EE error within ±16 mm; arm joints follow q_d (dashed) with j3 parking ~3° short from 17 s, the friction behaviour recorded on 0918; arm torques 0.7 N·m nominal, 0.8 N·m peak away from the flips.</figcaption></figure>
+<div class="finding good"><h3>Nothing in the tracked transition suggests a controller or planner defect</h3>
+<p>The base flew 0.49 m and rotated 148° in heading with e_R,z at 0.0006 ± 0.008 (the yaw loop never lagged), EE heading error 0.64° rms, and no saturation. After the first flip the base held a −63 mm y offset for 4 s that the observer states do not explain (d̂_t, ŵ_q unchanged); it is larger than 0918's ±15–35 mm hold wander and is left open.</p></div>
+<div class="finding warn"><h3>Why the transition is a 148° spin</h3>
+<p>The circle's start heading is the tangent at its start point; the hold heading was −88.5°, so the planner rotated the platform most of the way round with the EE pinned, rate-limited at w_max. That is by the planner's definition of the task, not an error, but it took the vehicle through 80° of headings where this mocap setup flips, and it is the slowest part of the flight (T = 14.85 s for 0.49 m). Choosing the circle's start point where the tangent matches the current heading would remove the spin entirely.</p></div>
+
+<h2>5. What to change before the next attempt</h2>
+<ol>
+<li><b>Mocap rigid body first.</b> Re-check the uav_0 marker asset for symmetry / near-duplicate solutions, and test-track the vehicle by hand through a full yaw circle at the flight height before flying: a flip rate of 0.4 s⁻¹ at −130° heading is visible offline. The EE marker cube (obj_0) sits 0.26 m from the base; make sure its markers cannot be absorbed into uav_0's asset.</li>
+<li><b>Gate what the law consumes.</b> The client takes odometry verbatim. Either run the EKF2-fused estimator (indoor_estimator_launch.py) for DIRECT feedback, or add a simple innovation gate in the client (reject a position step > 5 cm / velocity > 2 m/s for one sample, hold the previous state). PX4's EKF position did exactly this: it moved ≤ 3 mm at every flip.</li>
+<li><b>Velocity source.</b> At 120 Hz a short finite-difference is the wrong velocity estimator: use PX4's EKF velocity (1.2 cm/s std) or a longer differentiator with the timestamp jitter removed (the stamps at 120 Hz are 6–13 ms apart while the frames are uniform). Going back to 60 Hz alone is not sufficient: flight 2 was as noisy at 60 Hz.</li>
+<li><b>Task choice.</b> Start the circle at the tangent that matches the current heading, or accept the spin and verify mocap over that heading range first.</li>
+<li><b>Keep the 200 Hz sensor_combined / vehicle_attitude.</b> No adverse sign: PX4 attitude was smooth (0% power above 5 Hz), the gyro's high-frequency fraction was lower than on 0918, and the law's 250 Hz tick had p99 5.5 ms.</li>
+</ol>
+
+<h2>6. Reproduce</h2>
+<p><code>tools/extract_bag.py &lt;bag&gt; out.npz</code> (ROS 2 sourced, /usr/bin/python3), then <code>tools/compare_flights.py</code>, <code>tools/spike_anatomy.py</code>, <code>tools/phase_stats.py</code>, <code>tools/velocity_source.py</code>, <code>tools/transition_and_heading.py</code>, <code>tools/yaw_trace.py</code> on the npz files (they expect c1/c2/c3/f18.npz for flights 1/2/3 and 0918), and <code>PYTHONNOUSERSITE=1 /usr/bin/python3 tools/figures.py &lt;npz dir&gt; figures/</code>.</p>
+</main></body></html>

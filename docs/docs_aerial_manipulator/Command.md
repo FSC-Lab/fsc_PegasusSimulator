@@ -6037,6 +6037,125 @@ apt numpy 1.x that matplotlib needs — `prepare.py` writes a numeric-only npz f
 can exceed `max_effort` because the back-EMF feedforward is added AFTER the clamp by design.
 
 
+#### 7.17.7 CIRCLE ATTEMPT on hardware — the go-to-start transition tracked, two mocap rigid-body flips, and the 120 Hz feed (2026-09-21)
+
+Bag `docs/experimental_data_ros2_bag/0921 - T650-AM whole-body-L1-4D-.../flight_wb_l1_4d_circle_20260921_123637`
+(flights `_112328` and `_115207` the same morning never got past the DIRECT hold: their
+planner stalled on stale odometry, "current_ee (world) withheld", twice each). Report, tools,
+figures: `docs/docs_aerial_manipulator/wb_l1_4d_flight_20260921/report.html`.
+
+- **Timeline.** DIRECT 4.13–25.10 s. Circle READY at 8.2 s. Go To Start at 13.51 s: T = 14.85 s
+  (w_max-limited), base 0.49 m, **heading −88.5° → −236° (148° spin with the EE pinned)**, arm
+  40° → 30.7°. Revert at 25.09 s was the OPERATOR (`activate 'Baseline (Safety)'`; no
+  `DIRECT WATCHDOG TRIPPED` line in /rosout).
+- **The transition was tracked**: 13.5–20.2 s CoM rms 13/9/4 mm, EE 3.5/4.5/7.3 mm, EE heading
+  0.64°, e_R,z 0.0006 ± 0.008 through 17°/s of yaw, tilt ≤ 2.7°, 0 saturation, 0 clamp.
+- **Two mocap RIGID-BODY FLIPS in DIRECT (20.28, 24.27 s): one-sample jumps of 0.18 m + ~110°**,
+  identical offset every time, `mocap_status` normal, no timing gap — an alternative marker
+  solution, not a dropout. 18 flips in 49 s, ALL at headings ≤ −70° (0918: 1; flights 1–2 at a
+  fixed heading: 0). Orientation jitter > 3°/sample: 1% of samples at 0° heading, 33–40% at
+  −120..−180°. The law consumes odometry VERBATIM (no innovation gate): the flip became a
+  5–7 m/s velocity sample → u1 −60/+152 N for one tick, motors on the 0/1 rails ~0.1 s, j2
+  2.5 N·m, d̂ on its bound 14 ticks, "Wrench allocator saturated … −42 N". PX4's EKF gated the
+  same samples (≤ 3 mm) but NOTHING in the loop reads it: SAFETY's position loop is on the same
+  raw odometry, and at each post-revert flip its tilt setpoint spiked to 23–35° for 2–3 samples;
+  the vehicle moved ≤ 2° only because that path runs through PX4's softened attitude loop and
+  the rotor lag. Post-revert handover: 27.8° tilt and a 36 cm drop within 0.5 s.
+- **Feedback sources on the hardware stack (verified in all four bags: odom is bit-identical
+  to mocap)**: position + linear velocity = RAW mocap via `indoor_mocap_feedback_launch.py`'s
+  `MocapOdomBridge` passthrough (velocity finite-differenced upstream by the mocap broadcaster),
+  read by the DIRECT law, the SAFETY position loop and the planner; attitude = EKF2
+  `vehicle_attitude`; body rate = `sensor_combined` gyro. EKF2's fused `vehicle_odometry` is read
+  only by the feedback-loss failsafe landing. The fused alternative is `indoor_estimator_launch.py`.
+- **120 Hz mocap → the law's velocity feedback is a short finite difference of position and got
+  2.7x noisier**: odom v std 2.6 (0918) / 4.0 (#1) / 10.8 cm/s (#3); deadbeat d̂_x std 13.7 /
+  23.6 / 91.5 N; |e_R| mean 0.033 / 0.033 / 0.074 with 95% of its power above 5 Hz at 19–21 Hz;
+  stamps jitter 1.43 ms (0.06 at 60 Hz). BUT flight 2 at 60 Hz was as noisy (3.9 mm/sample,
+  12 cm/s) — tracking quality varied between flights independent of the rate. Position hold was
+  not hurt (10/14/2 mm, best of the four). PX4's EKF velocity: 1.2 cm/s std, 9x cleaner.
+- **200 Hz sensor_combined / vehicle_attitude: no adverse sign.** PX4 attitude 0% power > 5 Hz,
+  gyro high-frequency fraction lower than 0918, law tick p99 5.5 ms.
+- **Before the next attempt**: fix the uav_0 rigid body (hand-track a full yaw circle at flight
+  height; keep obj_0's markers out of its asset); gate or fuse the DIRECT feedback (EKF2-fused
+  estimator, or a one-sample step/velocity rejection in the client); take velocity from PX4's
+  EKF rather than a 120 Hz finite difference; start the circle at the tangent matching the
+  current heading so there is no spin.
+- Open: after flip #1 the base held a −63 mm y offset for 4 s that d̂_t / ŵ_q do not explain.
+
+#### 7.17.8 HARDWARE STACK WITH EKF2-FUSED FEEDBACK — the 2026-09-23 configuration (checked 2026-09-23)
+
+The 7.17.7 findings (mocap rigid-body flips consumed verbatim, a 120 Hz finite-difference
+velocity 2.7x noisier) are both properties of the RAW-MOCAP estimator. Today's experiment
+flies the fused twin, which already exists and was sim-proven on 2026-09-21
+(`docs/docs_aerial_manipulator/wb_l1_4d_fused_sim_20260921/`, 2 fused missions, 0 aborts):
+
+```bash
+# Orin
+~/dev_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator_fused.sh uav_0
+```
+
+**What it changes, verified in code (2026-09-23), nothing else differs from the raw script:**
+the estimator pane runs `indoor_estimator_launch.py` -> `indoor_state_estimator_node`
+(`IndoorStateEstimatorNode` + `Px4MsgBridge` + `Px4FusedOdomBridge`) instead of
+`indoor_mocap_feedback_launch.py`. That is the SAME estimator executable as the X650
+reference `start_autopilot_stack_x650_fused.sh`. Resulting feedback into the whole-body node
+(`pos_feedback_sub_`, `vehicle_attitude_sub_`, `sensor_combined_sub_` in the client):
+
+| quantity | raw script (7.17.6/7.17.7 flights) | FUSED script (today) | read by |
+|---|---|---|---|
+| position | `/mocap` copied verbatim | EKF2 `fmu/out/vehicle_odometry` -> ENU by `Px4FusedOdomBridge` | law (DIRECT + SAFETY), planner, drift watchdog |
+| linear velocity | mocap twist = optitrack processor finite difference | EKF2 velocity (IMU-fused), NED->ENU | law (DIRECT + SAFETY) |
+| attitude | EKF2 `vehicle_attitude` | EKF2 `vehicle_attitude` (unchanged) | law, planner |
+| body rate | `sensor_combined` gyro | unchanged | law, rate watchdog |
+| header stamp | mocap capture time | EKF2 `timestamp_sample` via `timesync_status` offset (arrival time until the first timesync message) | nothing in the law (it uses arrival time for freshness) |
+
+Mocap still reaches EKF2 identically in both variants (`fmu/in/vehicle_visual_odometry`,
+position + velocity + yaw, fixed message variances 1e-4 m^2 / 1e-4 (m/s)^2 / yaw 0.0076 rad^2).
+The bridge publishes world-frame velocity with an empty `child_frame_id`, so the client takes
+its "inertia-frame velocity" branch — the same branch the raw path used. The planner
+(`whole_body_trajectory_planner`) reads the same odom topic + `vehicle_attitude`, so law and
+planner see one estimate.
+
+**Why this addresses 7.17.7 and what it does NOT change.** A mocap flip now meets EKF2's
+innovation gate first (on 0921 EKF2 moved <= 3 mm at every flip). The law's velocity is
+EKF2's, not a finite difference, so the 120 Hz feed no longer sets the velocity noise the
+law sees; on the X650 fused flights EKF2 vs mocap was 11-15 mm RMS with ~10 ms lag and the
+fused topic ran at ~100 Hz (PX4's `vehicle_odometry` cadence, independent of the mocap rate).
+NOT changed: EKF2 still fuses the 120 Hz mocap velocity, so the finite-difference noise is
+still an EKF2 INPUT; how much of it survives depends on the Pixhawk's `EKF2_EV_NOISE_MD` /
+`EKF2_EVV_NOISE` / `EKF2_EVP_NOISE` floors and the `EKF2_EVP_GATE` / `EKF2_EVV_GATE` gates,
+which are Pixhawk parameters this repo does not set. Costs to expect (sim measured at RTF 0.5,
+hardware numbers unknown): a coarser, lagged feedback (sim: 4.4 mm / 7.7 mm/s rms, ~30 ms),
+EKF2 resets arriving as position jumps (the bridge logs `reset_counter` changes), and NO
+staleness on mocap loss — EKF2 dead-reckons at full rate, so only `cs_ev_pos` on
+`estimator_status_flags` reveals it (the node's `feedbackLost()` watches it, 1.0 s).
+
+**Pre-flight checks specific to the fused path (on the Orin, stack up, vehicle seated):**
+
+```bash
+# 1. the RIGHT estimator, and only one publisher on the feedback topic
+tmux list-panes -t fsc_indoor_autopilot_stack -F '#{pane_title}'      # expect estimator[EKF2-fused]
+ros2 topic info /uav_0/state_estimator/local_position/odom             # "Publisher count: 1"
+pgrep -fa indoor_mocap_feedback_node                                   # must print NOTHING
+# 2. timesync is running (the fused bridge and the EV stamps both need it; sim never exercised it)
+ros2 topic hz /uav_0/fmu/out/timesync_status
+# 3. EKF2 is fusing the mocap BEFORE arming
+ros2 topic echo /uav_0/fmu/out/estimator_status_flags --once | grep -E "cs_ev_(pos|hgt|vel|yaw)|cs_yaw_align"   # all true
+# 4. fused feedback sits on the mocap, at EKF2's rate
+ros2 topic hz /uav_0/state_estimator/local_position/odom                # ~100 Hz expected, NOT 120
+ros2 topic echo /uav_0/state_estimator/local_position/odom --once --field pose.pose.position
+ros2 topic echo /uav_0/mocap --once --field pose.pose.position          # agree to ~1-2 cm seated
+# 5. the EKF2 EV settings that decide how much of the 120 Hz velocity noise gets through
+#    (read on the Pixhawk console / QGC): EKF2_EV_CTRL 15, EKF2_EV_DELAY, EKF2_EV_NOISE_MD,
+#    EKF2_EVP_NOISE, EKF2_EVV_NOISE, EKF2_EVP_GATE, EKF2_EVV_GATE. Record them beside the bag.
+```
+
+**First-flight profile with this feedback**: hover in SAFETY first and compare
+`state_estimator/local_position/odom` against `/uav_0/mocap` in the bag (the 7.17.7 tools
+already extract both) before the first DIRECT entry; rotate through the -70..-150 deg headings
+where 0921 flipped and confirm the fused position does not jump. The law, yaml, planner and
+arm stack are the 7.17.6/7.17.7 configuration — this is a feedback change only.
+
 ### 7.18 Flight-test preparation: x-axis settling tune, cruise speeds, and the WHOLE-BODY vs DECOUPLED comparison — 2026-09-18
 
 Four asks the night before the §7.17 flight test, in order. Data directories:

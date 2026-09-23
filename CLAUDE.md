@@ -3330,3 +3330,44 @@ suffix deleted from the planner; test renamed `test_ee_trajectory_origin.py`).
   later spells the target out in plain text (a `ros2 topic pub ...` launch line
   did it); and a `2>&1 | cut` behind `run_in_background` lost a script's entire
   output. NOT flown on hardware; nothing committed.
+
+**0921 HARDWARE CIRCLE ATTEMPT — TRANSITION TRACKED, MOCAP FLIPS, 120 Hz FEED (2026-09-21,
+user request: analyse).** Flight 3 (`flight_wb_l1_4d_circle_20260921_123637`) only flew the
+planner's go-to-start (a 148° heading spin with the EE pinned, T = 14.85 s, w_max-limited)
+and tracked it (CoM 13/9/4 mm, EE 3.5/4.5/7 mm, e_R,z ±0.008) until two **mocap rigid-body
+FLIPS** (one-sample 0.18 m + ~110° jumps, `mocap_status` normal, all 18 flips of the bag at
+headings ≤ −70°) hit the law, which reads odometry VERBATIM with no innovation gate: u1
+−60/+152 N for a tick, motors railed 0.1 s, j2 2.5 N·m; PX4's EKF gated the same samples
+(≤ 3 mm) but no loop reads it: position + velocity for BOTH DIRECT and SAFETY (and the
+planner) are the RAW mocap message via `indoor_mocap_feedback_launch.py` (odom bit-identical
+to mocap in all four hardware bags); attitude is EKF2 `vehicle_attitude`, rate the
+`sensor_combined` gyro. SAFETY's tilt setpoint also spiked 23–35° at each flip; PX4's soft
+attitude loop kept the vehicle within 2°. The revert was the OPERATOR, not the watchdog. The 120 Hz mocap made the law's
+velocity feedback (a short finite difference of mocap position) 2.7x noisier (odom v std
+10.8 vs 4.0 cm/s; deadbeat d̂ 91 vs 24 N; |e_R| 0.074 vs 0.033 at 19–21 Hz) — actuator
+chatter, not instability, and flight 2 at 60 Hz was as noisy, so the rate is not the whole
+story. 200 Hz sensor_combined/vehicle_attitude: no adverse sign. Report + tools:
+`docs/docs_aerial_manipulator/wb_l1_4d_flight_20260921/`; Command.md §7.17.7. Traps: the
+extractor's cursor must not be reused inside its own iteration (only /parameter_events
+prints); `mocap_status` never flags a flip.
+
+**THE 4-D HARDWARE STACK FLIES ON EKF2-FUSED FEEDBACK FROM 2026-09-23 — CHECKED, NOT
+NEWLY BUILT (2026-09-23, user request).** The user's runbook now starts
+`start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator_fused.sh` (created
+2026-09-21, fsc_autopilot_ros2 `df91e52`; sim twin + 2 fused Isaac missions in
+`wb_l1_4d_fused_sim_20260921/`). Verified against the X650 reference
+`start_autopilot_stack_x650_fused.sh` and the client code: the ONLY difference from the raw
+script is the estimator pane (`indoor_estimator_launch.py` -> `indoor_state_estimator_node`,
+whose `Px4FusedOdomBridge` republishes EKF2 `fmu/out/vehicle_odometry` as
+`state_estimator/local_position/odom`), so the law's POSITION + VELOCITY are EKF2's; ATTITUDE
+(`vehicle_attitude`) and RATES (`sensor_combined`) were EKF2/gyro in BOTH variants already.
+The planner reads the same odom topic. The bridge's world-frame velocity takes the client's
+existing inertial-velocity branch (empty `child_frame_id`). The stale-estimator backstop
+lists both estimator executables. **The mocap feed is 120 Hz today**: in the fused path that
+rate only sets EKF2's EV input; the law's velocity is no longer a finite difference and the
+fused topic runs at PX4's ~100 Hz. What the 120 Hz noise still does inside EKF2 is governed
+by Pixhawk `EKF2_EV_NOISE_MD`/`EKF2_EVV_NOISE`/`EKF2_EVP_NOISE` and the EV gates — NOT set by
+this repo, read them before the flight. Two things the sim never exercised: the
+`timesync_status` stamp path (the SITL ran `UXRCE_DDS_SYNCT=0`) and mocap faults (the
+emulated mocap is perfect). NOT yet flown on hardware under the whole-body node; hover in
+SAFETY and diff odom vs `/mocap` first. Runbook + pre-flight commands: Command.md §7.17.8.
