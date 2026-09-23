@@ -132,6 +132,44 @@ def main(src, out):
     ax[0,0].set_title("Arm joints — reference vs measured", loc="left", pad=30); ax[0,1].set_title("Joint error", loc="left", pad=30)
     save(fig, out, "f3_joint_tracking.png")
 
+    # 3b. joint velocity: the servo's own Present Velocity against the planner's reference rate
+    VMAX = 10.0                                   # deg/s, the arm's operational velocity bound
+    SGN = np.array([-1.0, 1.0, 1.0, -1.0])        # wb_arm_sign: hardware -> model convention (as f3)
+    tj = d["t_js"]; vj = np.degrees(d["qdot_meas"]) * SGN
+    ta = d["t_armref"]; va = np.degrees(d["qdot_armref"]) * SGN
+    mj = (tj >= T0) & (tj <= T1); ma = (ta >= T0) & (ta <= T1)
+    Z0, Z1 = 27.4, 32.6                           # zoom: the first arm-out leg
+    fig, ax = plt.subplots(4, 2, figsize=(10, 7.6), sharex="col",
+                           gridspec_kw=dict(hspace=0.22, wspace=0.19, width_ratios=[2.2, 1]))
+    for j in range(4):
+        pk = max(np.abs(vj[mj, j]).max(), np.abs(va[ma, j]).max())
+        lim = max(1.18 * pk, 1.35 * VMAX)
+        for c, (m1, m2, x0, x1) in enumerate([(mj, ma, T0, T1),
+                                              ((tj >= Z0) & (tj <= Z1), (ta >= Z0) & (ta <= Z1), Z0, Z1)]):
+            a = ax[j, c]
+            a.plot(ta[m2], va[m2, j], color=REF, lw=1.5, ls=(0, (4, 2)), label="reference", zorder=3)
+            a.plot(tj[m1], vj[m1, j], color=S1, lw=1.0, label="measured (servo)", zorder=2)
+            for sgn in (1, -1):
+                a.axhline(sgn * VMAX, color=CRIT, lw=1.4, zorder=4,
+                          label="±10 °/s bound" if sgn == 1 else None)
+            if c == 0:
+                frame(a, f"joint {j+1}  [deg/s]", last=(j == 3))
+            else:
+                a.grid(True, linewidth=0.7); a.set_axisbelow(True); a.set_xlim(x0, x1)
+                a.axvspan(27.97, 30.98, color=BAND, zorder=0, lw=0)
+                a.yaxis.set_major_locator(MaxNLocator(4))
+                if j == 3: a.set_xlabel("time from record start  [s]", fontsize=8.5)
+                else: a.tick_params(labelbottom=False)
+            a.set_ylim(-lim, lim)
+            if j == 0 and c == 0:
+                a.legend(loc="upper left", ncol=3, handlelength=1.8)
+    phase_labels(ax[0, 0])
+    ax[0, 1].text((27.97 + 30.98) / 2, 1.04, "arm out", transform=ax[0, 1].get_xaxis_transform(),
+                  ha="center", va="bottom", fontsize=8, color=INK2)
+    ax[0, 0].set_title("Joint velocity — measured vs reference", loc="left", pad=30)
+    ax[0, 1].set_title("Zoom: first arm-out leg", loc="left", pad=30)
+    save(fig, out, "f3b_joint_velocity.png")
+
     # 4. attitude
     to = d["t_odom"]; od_q = d["odom_quat"]; mo = (to>=T0)&(to<=T1); tom = to[mo]; qq = od_q[mo]
     R_act = quat_to_R(qq[:,0],qq[:,1],qq[:,2],qq[:,3])

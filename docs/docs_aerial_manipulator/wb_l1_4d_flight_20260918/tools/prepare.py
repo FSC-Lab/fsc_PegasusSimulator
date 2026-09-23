@@ -47,6 +47,9 @@ def main(src, out):
     o["t_law"] = T("law"); o["law"] = d["law__data"]
     o["tau_duty_nm"] = d["law__data"][:, 13:17] / KPWM
     o["t_armref"] = T("armref"); o["q_armref"] = d["armref__points[0].positions"]
+    o["qdot_armref"] = d["armref__points[0].velocities"]          # the planner's reference rate, rad/s
+    vn = list(d["velobs__name"][0]); vo = [vn.index(f"joint{k}") for k in (1, 2, 3, 4)]
+    o["t_velobs"] = T("velobs"); o["qdot_observer"] = d["velobs__velocity"][:, vo]
     # streamed whole-body reference (model frame)
     o["t_ref"] = T("wbref")
     for k in ["x_cd", "x_cd_dot", "b1_d", "r_ed", "r_ed_dot", "b1_de"]:
