@@ -26,7 +26,9 @@ publish `/fmu/in/vehicle_thrust_setpoint` = the mean motor command (FRD -z up; N
 every actuator frame. The boot test's interlock variant requires it (mutation-checked: FAILS on the old
 controller). **FLOWN:** three flights, the detector never said landed in the air; the INDI full 30 s
 hover stage re-flown: truth x 1.0-1.6 m, y -1.2..-0.2, V 0.02-0.4 m/s for the whole 30 s ("go"), the
-hold's e_s 0.9-1.1 (the known vs-bias offset) -- NO CREEP, and no hold integral needed.
+hold's e_s 0.9-1.1 (the known vs-bias offset) -- NO CREEP, and no hold integral needed. **So the reason INDI shipped `aug` by default is gone: the node's default is now `full`
+(controller 6652824), and the GS's "NMPC + INDI" button flies the INDI law, its flare-8 reference and
+the turn compensation on a default launch; `INDI_MODE=aug` is one env var away.**
 **OPEN, SAFETY-RELEVANT (the flight lead's call):** with the throttle now truthful, the detector also
 does NOT say landed AFTER touchdown -- the driver lands to z 0.15 and the safe controller holds ~37 N
 on the ground (64 s armed on the ground in bag ..152058). Auto-disarm on landing (hardware) needs a
