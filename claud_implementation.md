@@ -361,6 +361,26 @@ ROBUST_NODE=nmpc_cascade_imu_node.py \
 
 ---
 
+## 2026-09-23 (late night) — Adaptive MPC + INDI
+
+Question: with INDI replacing the inner adaptive loop, should adaptation move to the outer MPC? For
+moments, no — INDI already cancels them. For forces, yes — an inner loop that works on moments has
+nowhere to put a lift, thrust or propeller error, and those are the errors that break this aircraft.
+
+The outer now optionally takes the IMU-measured force residual, slowed (3 s), clamped (1.5 m/s²) and
+faded out through the back-transition, as an extra acceleration in its model (controller `7b0c375`,
+knob `CASC_FADAPT`). Off by default; the flown solver is unchanged when off. On the gate, the worst
+mismatch cell (propeller J0 0.71) goes from a 15.5° corridor and 32 solve failures to nominal; the
+other cells are equal or better; with no mismatch it learns zero. Holding the learned value through the
+back-transition added failures at the stall crossing, so it fades there instead.
+
+It is its own ground station controller, "Adaptive MPC + INDI" (id `cascade_aindi`, window
+`6k-aindi`), with readiness checks that it runs full INDI and announced the adaptation. Flown in HIL:
+landed 0.01 m, no solve failures. In HIL the learned bias wandered up to 0.6 m/s² in cruise (probably
+state-estimation error entering the measured residual); it did not change the cruise wander.
+
+---
+
 ## 2026-09-23 (night) — PX4's land detector, turn compensation, and the cruise wander
 
 ### PX4 declared still hovers "landed" at 30 m

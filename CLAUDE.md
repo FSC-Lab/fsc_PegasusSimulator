@@ -2,6 +2,58 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-23 (late night): "ADAPTIVE MPC + INDI" -- THE OUTER's FORCE MODEL ADAPTED IN FLIGHT,
+# ITS OWN GS CONTROLLER (cascade_aindi, window 6k-aindi). FLOWN: LANDED 0.01 m. Controller 7b0c375
+# (+ INDI default full 6652824), GS 12c93e5, sim e8cd3f7 + this commit. Flown identity hashes UNCHANGED.
+**THE QUESTION (the user's): with INDI replacing the inner loop, should the adaptive part move to the
+MPC?** Split by what it estimates. MOMENTS: no -- INDI already cancels the unmodelled moment at 40
+rad/s from the measured w_dot; the outer too would count it twice (the outer's real pitch mismatch
+is structural -- it plans with the stiffness INDI inverts away). FORCES: yes -- the inner loop works
+at the moment level, so a lift / thrust / J0 error has nowhere to go but the outer's tracking error,
+and those are exactly the cells the robustness table fails.
+**BUILT.** `OuterForceBias` (base node): the IMU twin's body-frame residual `F_hat` rotated to the
+world, low-passed (tau 3 s, `CASC_FADAPT_TAU`), clamped (1.5 m/s^2, `CASC_FADAPT_AMAX`), projected on
+the outer's course axis and the vertical, and handed to NMPC6 as an additive (vsdot, vzdot) held over
+the horizon (`n_dist`; 0 = the byte-identical solver under the same cache key) -- the delay
+compensation (predict6) uses the same bias, in the ROS outer thread and in the gate. Knob
+`CASC_FADAPT` / `--outer_fadapt` (import time: it builds a different JIT solver). Status feed / log
+`fb=(a_s,a_z)`. **THROUGH THE BACK-TRANSITION IT FADES TO ZERO (tau 1 s, `CASC_FADAPT_BT`):** the first
+build HELD the cruise value and every extra solve failure sat at the stall crossing (t 61-63, V 12-15:
+thrust 0.80 went 1 -> 8, lift 1.30 1 -> 4) -- a cruise-learned error scales with qbar and the rotors'
+state and does not transfer; "adapt" through it was no better (2 / 4), "fade" 1 / 2.
+**THE GATE (`scripts/fadapt_cells.sh` + `fadapt_metrics.py`, INDI full, 4 seeds, the plant perturbed;
+corridor pk / BT pk / in-flight solve fails / z band, off -> on):**
+| cell | adaptation off | on (fade) | learned (a_s, a_z) |
+|---|---|---|---|
+| nominal | 7.6 / 12.4 / 4 / 29.9-30.2 | 7.6 / 12.3 / 3 / 29.9-30.2 | (+0.000, +0.001) |
+| J0 0.62 | 7.7 / 13.0 / 2 / 29.9-31.2 | 7.7 / 12.5 / 1 / 29.9-30.2 | (+1.01, +0.07) |
+| **J0 0.71** | **15.5 / 18.3 / 32 / 28.2-32.8** | **7.7 / 12.6 / 1 / 29.9-30.2** | (+1.04, +0.04) |
+| lift x1.15 | 7.8 / 12.8 / 3 / 29.9-31.1 | 7.8 / 12.7 / 0 / 29.9-31.0 | (-0.12, +1.26) |
+| lift x1.30 | 8.0 / 14.5 / 1 / 29.7-31.3 | 7.9 / 13.5 / 2 / 29.8-31.1 | (-0.20, +1.50 clamped) |
+| thrust x0.80 | 7.9 / 11.6 / 1 / 29.4-30.0 | 7.9 / 11.8 / 1 / 29.4-30.1 | (-0.27, -0.36) |
+The J0 0.71 cell -- the one the geometric law FAILED at 19.9 (2026-09-21) -- becomes nominal: the plant's
+extra prop thrust at speed is learned as +1.0 m/s^2 along track. Note INDI ALONE already flies the
+lift x1.15 / x1.30 cells the geometric law failed; there the adaptation is neutral.
+**WIRED AS ITS OWN CONTROLLER** (the user: "add Adaptive MPC + INDI to the ground station"): GS button +
+mission choice "Adaptive MPC + INDI", id `cascade_aindi`, node `/nmpc_cascade_control_aindi`, guidance
+`/uav_0/cascade_aindi/*` (CASCADE_IDS in flight_hud); window `6k-aindi` in both launchers = the INDI
+node, INDI_MODE full (`AINDI_MODE` overrides), CASC_FADAPT=1, 15 s after 6j (`AINDI=0` skips);
+`start_slosh_hil.sh` refuses READY unless it is in FULL mode AND announced "OUTER FORCE ADAPTATION on"
+(plus every INDI check); hil_health requires the node; the results row carries `inode=`. Boot test
+variant `aindi`, the GS tab test holds the button, id, node, choice and guidance. "NMPC + INDI" stays
+beside it as the baseline.
+**FLOWN (row aindi_straight_a1_230551, the 1b configuration, the straight mission 800 m):** READY
+certified the 6k window (full, flare 8, the adaptation announced); the switch went geometric ->
+cascade_aindi -> geometric, 3 changes; **0 solve failures in 1364**; the bias faded to 0.00 at the
+decel; **landed 0.01 m**. In cruise the matched HIL did NOT learn ~0 as the gate did: a_s -0.07..-0.19
+and a_z swinging slowly -0.6..+0.1 m/s^2 (~30 s), tracking the cruise tilt wander. PROBABLE cause, not
+verified: the twin's model force is computed on EKF2's state, and at 16 m/s half a degree of AoA
+estimation error is ~2 N of lift -- so on a GPS-fed state the residual carries estimation error too
+(which the outer, planning on the same state, is consistent with). Straight legs unchanged vs INDI
+without it (tilt p5 81.8 -> 83.4, z sd 0.54 -> 0.42): it does not touch the cruise wander -- a damping
+problem, not a bias. The bank's load factor also stays the outer's modelling job (the twin's 3-D model
+gets a turn right; the outer's 2-D trim is what ignores it).
+
 # ★★★★★ 2026-09-23 (night): THREE ITEMS ON INDI FULL -- THE TURNING MISSION FLOWN, THE HOVER "CREEP"
 # WAS PX4's LAND DETECTOR FREEZING EKF2 (A HARDWARE-SAFETY BUG IN EVERY CONTROLLER), THE PITCH DAMPER
 # FOUGHT THE TURN, AND THE CRUISE WANDER IS LOST FLIGHT-PATH DAMPING. Controller 33d0a1f + c3595e6,

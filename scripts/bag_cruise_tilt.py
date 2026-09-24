@@ -22,6 +22,6 @@ m = (V[i] > 14.0) & (np.abs(RP[i, 0]) < 3.0)
 print(f"straight wing-borne samples {m.sum()}: tilt cmd mean {tilt[m].mean():.1f} sd {tilt[m].std():.2f} p5 {np.percentile(tilt[m],5):.1f} min {tilt[m].min():.1f}; "
       f"pitch {RP[i[m],1].mean():+.1f} sd {RP[i[m],1].std():.2f}; V {V[i[m]].mean():.2f}; z sd {Z[i[m]].std():.2f}")
 mb = (V[i] > 14.0) & (np.abs(RP[i, 0]) > 10.0)
-print(f"   banked (|roll| > 10) samples {mb.sum()}: tilt cmd median {np.median(tilt[mb]):.1f} p5 {np.percentile(tilt[mb],5):.1f}; z {Z[i[mb]].min():.1f}-{Z[i[mb]].max():.1f}; V {V[i[mb]].mean():.2f}")
+if mb.any(): print(f"   banked (|roll| > 10) samples {mb.sum()}: tilt cmd median {np.median(tilt[mb]):.1f} p5 {np.percentile(tilt[mb],5):.1f}; z {Z[i[mb]].min():.1f}-{Z[i[mb]].max():.1f}; V {V[i[mb]].mean():.2f}")
 ms = m & (tilt > 45)
 print(f"   straight, tilt > 45 (no back-transition): median {np.median(tilt[ms]):.1f} p5 {np.percentile(tilt[ms],5):.1f}; z sd {Z[i[ms]].std():.2f}; V {V[i[ms]].mean():.2f}")
