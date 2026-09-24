@@ -2,6 +2,68 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+# ★★★★★ 2026-09-23 (night): THREE ITEMS ON INDI FULL -- THE TURNING MISSION FLOWN, THE HOVER "CREEP"
+# WAS PX4's LAND DETECTOR FREEZING EKF2 (A HARDWARE-SAFETY BUG IN EVERY CONTROLLER), THE PITCH DAMPER
+# FOUGHT THE TURN, AND THE CRUISE WANDER IS LOST FLIGHT-PATH DAMPING. Controller 33d0a1f + c3595e6,
+# sim 12e2c67 + 41c407c; rows indi_full_turns_a1_152257, indi_full_turns_tc_a1_191518,
+# R100_dx3_indifull_hover30_ld_a1_192540. Flown identity hashes UNCHANGED (IMU 4a557a30..., steso 03d9a349...).
+**1. ★★ PX4 DECLARED EVERY STILL HOVER "LANDED" AT 30 m -- THE 09-22 "CREEP" WAS A FROZEN ESTIMATE.**
+The INDI full hover stage of 09-22 "crept 6.3 m": the driver's truth (mocap) went x 0.7 -> 8.8 m at up to
+0.69 m/s while the node's own feed read V 0.0-0.1 and a steady hold offset of 1.0 m. EKF2's odometry
+was FROZEN at (1.39, 0.71), v 0.00, for 24 s while the GPS tracked the truth to 0.5 m. Cause, from
+PX4's source (`MulticopterLandDetector.cpp`): the detector reads the collective throttle from
+`vehicle_thrust_setpoint`, and in DIRECT-ACTUATOR offboard nothing publishes it (control allocation is
+off, `control_mode.cpp`), so it reads 0 = "low throttle"; with no climb-rate control and EKF2's velocity
+under LNDMC_XY/Z_VEL_MAX it declares LANDED, then AT REST; EKF2 fuses zero velocity, which pins its
+velocity at 0 and LATCHES the detector -- a slow creep can never break it. EVERY hover in every bag
+since 09-21 shows it (`vehicle_land_detected` landed=1 at_rest=1 at z 30: the safe controller's climb
+hover, the geometric and INDI-aug hover stages, the RTH stop); only INDI full had the small along-track
+force imbalance that turned a blind hold into 8 m. **ON HARDWARE IT IS WORSE: `preflight_hw.cfg`
+REQUIRES `COM_DISARM_LAND > 0`, and the commander disarms after that many seconds of `landed` -- a quiet
+hover would have been DISARMED IN THE AIR.** HIL never showed it only because the HIL airframe bakes
+COM_DISARM_LAND 0. **FIX (33d0a1f):** the safe controller and the cascade base (hence every cascade)
+publish `/fmu/in/vehicle_thrust_setpoint` = the mean motor command (FRD -z up; NaN motor = idle) with
+every actuator frame. The boot test's interlock variant requires it (mutation-checked: FAILS on the old
+controller). **FLOWN:** three flights, the detector never said landed in the air; the INDI full 30 s
+hover stage re-flown: truth x 1.0-1.6 m, y -1.2..-0.2, V 0.02-0.4 m/s for the whole 30 s ("go"), the
+hold's e_s 0.9-1.1 (the known vs-bias offset) -- NO CREEP, and no hold integral needed.
+**OPEN, SAFETY-RELEVANT (the flight lead's call):** with the throttle now truthful, the detector also
+does NOT say landed AFTER touchdown -- the driver lands to z 0.15 and the safe controller holds ~37 N
+on the ground (64 s armed on the ground in bag ..152058). Auto-disarm on landing (hardware) needs a
+touchdown spool-down in the safe controller; before today it "worked" only because the detector read 0
+throttle all the time.
+**2. THE TURNING MISSION ON INDI FULL, AND TURN COMPENSATION.** Gate first (`indi_ab.sh turns_full`, 3
+seeds, the current tree): 3/3, orbit roll -19.1 sd 0.12-0.19 (09-22's -27 sd up to 2.2 is gone with
+the elevator-sign fix), RTH stop 4.2-4.5 m vs 6.1-6.4, but fly-by peak bank 29.5-29.8 vs the 25 limit.
+HIL (..152257): LANDED 0.10 m, orbit 101.0 +- 0.39 -- and in every turn the tilt backed off to 60-77 deg,
+z sank to 27.0, V rose to 18. The gate reproduced it in the orbit (tilt 81.5, z 29.2, V 16.85, pitch
++5.4 vs the geometric law's +7.9). **CAUSE: the shared inner step damps the whole body rate (`eW = w`,
+"the desired body rate is 0"), and a steady banked turn pitches at q = r tan(phi).** The geometric law's
+damper moment is swallowed by the wing's 16.5 N.m/rad; INDI inverts that away (J wn^2 = 2.9), so the
+term is a standing nose-down error 2 zeta q / wn (predicted -1.3 deg). `ref_probe.py` on the SAME outer
+plan (+6.80 in the orbit): geometric delivers +7.90 (+1.10, its own overshoot), INDI +5.35 (-1.45),
+INDI with `q - r tan(phi)` damped +6.78 (-0.02). **`INDI_TURNCOMP` (c3595e6), default on, pitch only**
+(a measured-rate reference on yaw would cancel the yaw damping in a hover); straight + back-transition
+and the hover unchanged to the printed digit; launchers forward it. HIL re-flown (..191518): LANDED 0.00 m;
+wing-borne z 27.0-31.0 -> 28.1-31.5, turn 1 z 27.2-30.1 -> 28.6-29.6 and V 17.9 -> 17.0, banked tilt
+median 74.7 -> 83.8 (p5 59.5 -> 78.2), orbit 100.1 +- 0.81 at roll sd 0.61, RTH stop 29.7 -> 16.3 m,
+cross-track at the stop 24 -> 0.4 m. **What remains in the turns is the OUTER's:** its longitudinal
+trim does not know the bank's load factor 1/cos(phi), and the geometric loop's +1.1 deg overshoot had
+been supplying that lift -- the "reference carries the loop's error" pattern, in the outer's trim.
+**3. THE CRUISE TILT WANDER (straight legs, HIL: INDI tilt p5 82 and z sd 0.6-0.8 vs the geometric
+law's 88-89 and 0.03).** NOT the sim clock, the EKF2-like state or the pitot: the gate matrix
+(`--rtf 0.85`, `--pos/vel_hz 100 --pv_lag 0.035 --noise_vel 0.05`, `--airspeed --aspd_hz 8.5`, all
+together) holds INDI at tilt 89.1-89.5, z sd 0.00. A DISTURBANCE reproduces it: `--turb 0.2 / 0.4`, 2
+seeds -- INDI z sd 0.21-0.39 vs 0.07-0.14, tilt p5 82-88.5 vs 89-90, V sd +50%, pitch sd LOWER (0.3-1.0
+vs 0.7-1.4). My first mechanism ("the AoA takes the whole gust") was WRONG: INDI's AoA sd is lower
+(0.69 vs 0.86). What differs is the FLIGHT PATH: geometric pitch moves AGAINST flight-path excursions
+(corr -0.24 / -0.33) and gamma sd is 0.29 / 0.54; INDI pins pitch to the plan (corr +0.16 / +0.04)
+and gamma sd doubles (0.63 / 1.13). The geometric loop + the airframe's pitch response was giving free,
+fast flight-path damping; with INDI only the outer corrects altitude, at 20 Hz behind its delay, and it
+does so with the tilt. Candidates, NOT built: a flight-path term in INDI's pitch reference
+(theta_ref += k (gamma_ref - gamma)) or an outer retuned for a pitch-rigid inner loop (w_z / w_vz; a
+JIT rebuild). HIL's exciting source is not identified (no turbulence was configured).
+
 # ★★★★★ 2026-09-23 (evening): NMPC + INDI (full mode, flare 8) FLIES THE FULL HIL MISSION -- LANDED
 # 0.00 m -- AND THE FIRST ATTEMPT'S "INDI DOES NOT WORK" WAS THE HARNESS: INDI NEVER FLEW IT.
 # Row indi_full_mission2_a1_124609, bag slosh_20260923_124412; sim 73c993b, GS 7b90943, ctrl f2592a2.
@@ -211,7 +273,7 @@ so the two loops can be read against the SAME reference, same seed:
 **That standing error is FORCE the reference has been getting for free** (T_total sin(e)): hover
 **1.74 N = 0.44 m/s^2**, corridor 1.71 N, back-transition 0.81 N. The hover row IS the 6.3 m HIL
 creep in newtons -- the hold brakes along track through the outer's planned pitch and the geometric
-law's -1.21 deg was supplying 0.44 m/s^2 of it.
+law's -1.21 deg was supplying 0.44 m/s^2 of it. **[CORRECTED 2026-09-23 night: the 6.3 m was a frozen EKF2 estimate (PX4's land detector), not this force; the force is real but was not the creep.]**
 **AND THE TWO LOOPS' ERRORS HAVE DIFFERENT PHYSICS, which the correlations separate:**
 | corridor error vs | d(theta_ref)/dt | qbar | theta_ref | V |
 |---|---|---|---|---|
@@ -353,7 +415,7 @@ build; rows R100_dx3_indi_hover30_a1_122623 and R100_dx3_indifull_hover30_a1_134
 | hover pitch mean / sd | -- | +1.30 / 0.15 deg | **+0.52 / 0.07** (it tracks the plan) |
 | along-track spread in the 30 s hover | ~1.4 m | 1.3 m | **6.3 m, creeping at 0.6 m/s** |
 | inner tick `ims=` median / p95 | 0.83 / 1.34 ms | 0.94 / 1.47 | 1.16 / 1.87 |
-**★ THE CREEP IS THE HOLD'S, NOT THE LOOP'S, AND IT IS A REAL LESSON.** The hover hold brakes along
+**★ THE CREEP IS THE HOLD'S, NOT THE LOOP'S, AND IT IS A REAL LESSON.** **[CORRECTED 2026-09-23 night: the creep was neither -- PX4's land detector declared the hover LANDED (no throttle published in direct-actuator mode), EKF2 froze, and the node flew blind; with the throttle published the same stage holds within 0.6 m. See the night block.]** The hover hold brakes along
 track through the OUTER's planned pitch. The flown geometric law carries a standing pitch ERROR
 (+1.3 deg nose-up where the outer's plan alone gives +0.5) and that error was part of the braking
 all along -- the hold was tuned around it. An inner loop that tracks the plan EXACTLY removes it

@@ -361,6 +361,38 @@ ROBUST_NODE=nmpc_cascade_imu_node.py \
 
 ---
 
+## 2026-09-23 (night) — PX4's land detector, turn compensation, and the cruise wander
+
+### PX4 declared still hovers "landed" at 30 m
+PX4's multicopter land detector reads collective throttle from `vehicle_thrust_setpoint`. In
+direct-actuator offboard mode nothing in PX4 publishes it, so the detector read 0 ("low throttle") and
+declared every still hover landed and at rest. EKF2 then fused zero velocity, which froze its estimate
+and kept the detector latched. The INDI hover "creep" of 09-22 was the aircraft drifting 8 m while the
+controller saw a stationary estimate. On hardware, the preflight's required `COM_DISARM_LAND > 0` would
+have disarmed a quiet hover in the air. Both flown controllers now publish the mean motor command as the
+thrust setpoint (controller `33d0a1f`); the boot test checks it. Flown: the detector never said landed in
+the air, and the INDI 30 s hover held within 0.6 m. Open: with the throttle truthful, PX4 also no longer
+sees "landed" after touchdown, because the safe controller holds hover thrust on the ground — a
+spool-down at touchdown is needed for auto-disarm, and that is the flight lead's decision.
+
+### The pitch damper fought the turn
+The inner step damps the whole body rate as if the desired rate were zero; in a banked turn the body
+pitches steadily at q = r·tan φ. With INDI the airframe's stiffness no longer absorbs that, so INDI flew
+the orbit 1.45° below the outer's plan, lost lift, and the outer backed the tilt off (HIL: tilt 60–77°,
+altitude down to 27 m in every turn). Damping q − r·tan φ instead (controller `c3595e6`, default on,
+pitch only) tracks the plan to 0.02° on the gate. HIL re-flight: altitude in turns 28.6–29.6 m, banked
+tilt median 84° (was 75°), RTH stop 16 m (was 30 m). The rest of the gap is the outer's trim not knowing
+the bank's load factor, which the geometric law's own overshoot used to cover.
+
+### The cruise tilt wander
+HIL-only on the straight legs: tilt dips to ~82° and altitude wanders 0.6–0.8 m under INDI. The sim
+clock, EKF2-like state and pitot do not reproduce it on the gate; light turbulence does. The geometric
+loop lets pitch respond against flight-path excursions, which damps them fast; INDI pins pitch to the
+outer's plan, so only the outer corrects altitude, slowly, through the tilt. Fix candidates (not built):
+a flight-path term in INDI's pitch reference, or an outer retuned for a pitch-rigid inner loop.
+
+---
+
 ## 2026-09-23 (evening) — NMPC + INDI flies the full HIL mission; the first attempt was the harness
 
 ### The name
