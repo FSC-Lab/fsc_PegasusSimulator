@@ -32,6 +32,13 @@ run() {  # name, extra flags...
       "$(grep -o 'worst displacement from the held point [0-9.]* m\|GROUND at t=[0-9.]*\|RTH STOP t=[0-9.]*: [0-9.]* m' "$f" | head -1)" "$turn"
   done
 }
+# ★ THE NODE'S DEFAULT MODE MOVED aug -> full on 2026-09-23 (night). The cases below were measured
+# with a known mode, so each pins it: hover..ship are the AUGMENTED form (2026-09-21), full* and
+# turns_full the FULL replacement. An explicit INDI_MODE in the environment still wins.
+case "${1:-help}" in
+  hover|mission|model|turns|tune|tune2|final|ship) export INDI_MODE=${INDI_MODE:-aug} ;;
+  full|full2|full3|fullship|turns_full) export INDI_MODE=${INDI_MODE:-full} ;;
+esac
 case "${1:-help}" in
   hover)
     run hover_still --hover_only --dur 30 --every 2.0 --seed 3
