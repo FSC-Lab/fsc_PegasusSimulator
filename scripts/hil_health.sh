@@ -22,7 +22,7 @@ PT=$(tmux capture-pane -p -S -20  -t "$SESSION:1-px4"   2>/dev/null | grep -c  "
 # schedule banner and then died in its constructor; this check counted geometric+nmpc_full as
 # "2/2", the launcher saw the banner, and the mission was flown by the geometric controller
 # reporting "cruise" at 1 m/s. If a 6h-cascade window exists the node is required.
-TB=$(for w in 6g-full 6h-cascade 6i-adaptive 6j-indi; do tmux capture-pane -p -S -60 -t "$SESSION:$w" 2>/dev/null; done | grep -ci traceback)
+TB=$(for w in 6g-full 6h-cascade 6i-adaptive 6j-indi 6k-aindi; do tmux capture-pane -p -S -60 -t "$SESSION:$w" 2>/dev/null; done | grep -ci traceback)
 NL=$(ros2 node list 2>/dev/null)
 ND=$(echo "$NL" | grep -cE "geometric_hover_control|nmpc_full_smc_control")
 NDW=2
@@ -36,6 +36,10 @@ fi
 # the INDI cascade (2026-09-21) likewise
 if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6j-indi; then
   NDW=$((NDW + 1)); ND=$((ND + $(echo "$NL" | grep -cx "/nmpc_cascade_control_indi")))
+fi
+# Adaptive MPC + INDI (2026-09-23 night) likewise
+if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6k-aindi; then
+  NDW=$((NDW + 1)); ND=$((ND + $(echo "$NL" | grep -cx "/nmpc_cascade_control_aindi")))
 fi
 IS=$(pgrep -cf "03_vtol_px4_hil" 2>/dev/null | head -1); IS=${IS:-0}
 PX=$(pgrep -cx px4 2>/dev/null | head -1); PX=${PX:-0}

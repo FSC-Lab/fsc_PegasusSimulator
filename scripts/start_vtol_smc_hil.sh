@@ -468,6 +468,26 @@ VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_D
 echo '[6j-indi] exited.'; exec bash
 "
 fi
+# ---- 6k: ADAPTIVE MPC + INDI (2026-09-23 night) -- the INDI node in full mode with the OUTER's
+#      force model adapted in flight (CASC_FADAPT=1: the IMU twin's force residual into the outer's
+#      (vsdot, vzdot), a separate JIT solver), as its OWN controller (id cascade_aindi, node
+#      nmpc_cascade_control_aindi, guidance on /uav_0/cascade_aindi/*). The GS's "Adaptive MPC +
+#      INDI" button / ctrl choice selects it. AINDI=0 skips it; AINDI_MODE overrides full.
+#      Starts 15 s after 6j (its solver is a different cache file, but four loads at once are CPU).
+AINDI_NODE="${INDI_NODE_PY:-${DA_DIR}/nmpc_cascade_indi_node.py}"
+if want cascade && [ "${AINDI:-1}" != "0" ] && [ -f "$AINDI_NODE" ]; then
+tmux new-window -t "$SESSION" -n "6k-aindi" "
+echo '[6k-aindi] waiting $((D_CTRL + 45)) s...'; sleep $((D_CTRL + 45))
+$ROS_PRELUDE
+echo '[6k-aindi] ADAPTIVE MPC + INDI: the INDI cascade with the outer force model adapted (STANDBY; activate: active_controller=cascade_aindi)...'
+VTOL_TANK_KG=$TANK_KG VTOL_TANK_DX=${VTOL_TANK_DX:-0} VTOL_TANK_DZ=${VTOL_TANK_DZ:-0} VTOL_TANK_F1=${VTOL_TANK_F1:-} VTOL_TANK_ZETA=${VTOL_TANK_ZETA:-} CASC_EST=${CASC_EST:-mdob} STESO_L=${STESO_L:-} STESO_LF=${STESO_LF:-} STESO_MODE=${STESO_MODE:-} STESO_EPS=${STESO_EPS:-} LESO_WO=${LESO_WO:-} LESO_WOF=${LESO_WOF:-} MDOB_K=${MDOB_K:-} MDOB_KF=${MDOB_KF:-} IMU_WC=${IMU_WC:-} IMU_DR=${IMU_DR:-} IMU_DELAY=${IMU_DELAY:-} INDI_MODE=${AINDI_MODE:-full} CASC_FADAPT=1 CASC_FADAPT_TAU=${CASC_FADAPT_TAU:-} CASC_FADAPT_AMAX=${CASC_FADAPT_AMAX:-} INDI_WN=${INDI_WN:-} INDI_ZETA=${INDI_ZETA:-} INDI_K=${INDI_K:-} INDI_FADE=${INDI_FADE:-} INDI_MC=${INDI_MC:-} INDI_WDOT=${INDI_WDOT:-} INDI_FLARE_DEG=${INDI_FLARE_DEG:-} INDI_TURNCOMP=${INDI_TURNCOMP:-} INDI_AXES=${INDI_AXES:-} INDI_WF=${INDI_WF:-} INDI_WF_YAW=${INDI_WF_YAW:-} INDI_KW=${INDI_KW:-} INDI_YAW_FADE=${INDI_YAW_FADE:-} INDI_UMAX=${INDI_UMAX:-} INDI_HOLD_FADE_S=${INDI_HOLD_FADE_S:-} INDI_OFF=${INDI_OFF:-} SLOSH_PRED=${SLOSH_PRED:-} SLOSH_PRED_LAG=${SLOSH_PRED_LAG:-} SLOSH_PRED_CANCEL=${SLOSH_PRED_CANCEL:-} SLOSH_PRED_OUTER=${SLOSH_PRED_OUTER:-} SLOSH_PRED_UMAX=${SLOSH_PRED_UMAX:-} SLOSH_PRED_Q=${SLOSH_PRED_Q:-} SLOSH_PRED_RF=${SLOSH_PRED_RF:-} SLOSH_PRED_RM=${SLOSH_PRED_RM:-} SLOSH_PRED_WALL_S=${SLOSH_PRED_WALL_S:-} SLOSH_PRED_F1_SCALE=${SLOSH_PRED_F1_SCALE:-} CASC_SPIN=${CASC_SPIN:-} $AVTOL_ENV\"$NODE_PY\" \"$AINDI_NODE\" --ros-args -p px4_ns:=$PX4_UXRCE_DDS_NS -p auto_arm:=$AUTO_ARM \
+    -p controller_id:=cascade_aindi -p active_at_start:=false \
+    -p vcruise:=$(awk -v v="${CASC_VC:-16.0}" 'BEGIN{printf "%.3f", v}') -p cap_deg:=90.0 -p ttr:=${CASC_TTR:-10.0} \
+    -p cruise_alt:=${CASC_ALT:-30.0} -p outer_hz:=${CASC_OUTER_HZ:-20.0} -p latency_s:=${CASC_LAT:-0.049} -p l1_on:=true -p state_source:=${CASC_STATE:-mocap} -p airspeed_source:=${CASC_ASPD:-none} \
+    -r ${REF_TOPIC}:=${REF_TOPIC}_smc
+echo '[6k-aindi] exited.'; exec bash
+"
+fi
 # ---- 7: inner loop B -- attitude-NMPC + embedded SMC (STANDBY at start) -----
 #         hover_throttle=0.50 (0.70 over-scaled -> climb-away, see diagnosis).
 if want attnmpc; then

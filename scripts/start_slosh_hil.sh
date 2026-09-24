@@ -130,6 +130,11 @@ if [ "${INDI:-1}" != "0" ]; then
 else
   say "    indi: OFF (INDI=0)"
 fi
+if [ "${AINDI:-1}" != "0" ]; then
+  say "    adaptive MPC + INDI: $(basename "${INDI_NODE_PY:-nmpc_cascade_indi_node.py}") as cascade_aindi, CASC_FADAPT=1 (window 6k-aindi; GS 'Adaptive MPC + INDI'; driver CTRL=cascade_aindi)"
+else
+  say "    adaptive MPC + INDI: OFF (AINDI=0)"
+fi
 mkdir -p "$BAG_DIR"
 
 say "2/4 model: $([ "$WANT_SLOSH" = 1 ] && echo "VTOLSlosh (VTOL_TANK=$VTOL_TANK)" || echo 'baseline VTOL')"
@@ -284,7 +289,7 @@ fi
 # to look at: tmux was gone and with it every pane's scrollback, so the cause is
 # still unknown. A pane log costs nothing and is the only forensic trail a dead
 # stack leaves.
-for w in 2-isaac 1-px4 6h-cascade 6i-adaptive 6j-indi; do
+for w in 2-isaac 1-px4 6h-cascade 6i-adaptive 6j-indi 6k-aindi; do
   tmux pipe-pane -o -t "$SESSION:$w" "cat >> $BAG_DIR/pane_${w}_$(date +%H%M%S).log" 2>/dev/null
 done
 say "    pane logs -> $BAG_DIR/pane_*.log"
@@ -488,6 +493,75 @@ if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6j-indi; then
   say "    indi cascade: estimator=$JEST, M $JM kg, CG_X $JCG, ref=${JREF:+indi}${JREF:-flown}, standby as cascade_indi (GS: NMPC + INDI)"
 fi
 
+# ADAPTIVE MPC + INDI (window 6k-aindi, id cascade_aindi; 2026-09-23 night): the INDI block's checks
+# on its own window and node, plus the two things that make it THIS controller -- FULL mode (the INDI
+# law and reference) and the outer force adaptation announced (CASC_FADAPT=1 built the n_dist
+# solver). Generated from the INDI block so the two stay in step.
+if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6k-aindi; then
+  KPANE=$(tmux capture-pane -p -J -S -400 -t "$SESSION:6k-aindi" 2>/dev/null)
+  KBANNER=$(echo "$KPANE" | grep -o "\[cascade+indi\] mode=.*" | tail -1 | cut -c1-260)
+  if [ -z "$KBANNER" ]; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI window exists but its [cascade+indi] banner never appeared. Not READY."; exit 1
+  fi
+  say "    $KBANNER"
+  if echo "$KPANE" | grep -qi traceback; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI printed its banner and then THREW:"; echo "$KPANE" | grep -i -A3 traceback | tail -8; exit 1
+  fi
+  if ! ros2 node list 2>/dev/null | grep -qx "/nmpc_cascade_control_aindi"; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI printed its banner but /nmpc_cascade_control_aindi is not a live node. Not READY."; exit 1
+  fi
+  # the INDI node IS the IMU node underneath: without the accelerometer subscription it flies with
+  # no force channel and no cancellation, silently (the 2026-09-15 lesson, on this copy too)
+  if ! echo "$KPANE" | grep -q "\[cascade+imu\] accelerometer: /"; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI never attached its sensor_combined subscription. Not READY."; exit 1
+  fi
+  KSB=$(echo "$KPANE" | grep -o "\[cascade+steso\] estimator=.*" | tail -1 | cut -c1-260)
+  KEST=$(echo "$KSB" | grep -o "estimator=[a-z]*" | cut -d= -f2)
+  if [ "$KEST" != "${CASC_EST:-mdob}" ]; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI runs estimator=${KEST:-<none>} but CASC_EST=${CASC_EST:-mdob} was asked for. Not READY."; exit 1
+  fi
+  KM=$(echo "$KSB" | grep -o "M=[0-9.]* kg" | grep -o "[0-9.]*")
+  if [ -z "$KM" ] || ! awk -v a="$KM" -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{exit ((a-m-b)<0.002 && (m+b-a)<0.002)?0:1}'; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI models M=${KM:-<none>} kg but VTOL_TANK_KG=$VTOL_TANK_KG asks for $(awk -v b="$VTOL_TANK_KG" -v m="$AF_M" 'BEGIN{printf "%.4f", m+b}'). Not READY."; exit 1
+  fi
+  KCG=$(echo "$KSB" | grep -o "CG_X=[0-9.]* m" | grep -o "[0-9.]*")
+  WANT_CG=$(awk -v dx="${VTOL_TANK_DX:-0}" -v b="$VTOL_TANK_KG" -v m="$AF_M" -v c="$AF_CG" 'BEGIN{printf "%.4f", c + dx*b/(m+b)}')
+  if [ -z "$KCG" ] || ! awk -v a="$KCG" -v w="$WANT_CG" 'BEGIN{exit ((a-w)<0.0015 && (w-a)<0.0015)?0:1}'; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI models CG_X=${KCG:-<none>} but the tank puts it at $WANT_CG. Not READY."; exit 1
+  fi
+  KAF=$(echo "$KSB" | grep -o "af=[0-9a-f]*" | cut -d= -f2)
+  if [ "$KAF" != "$AF_DIGEST" ]; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI loaded airframe file ${KAF:-<none>} but this launcher read $AF_DIGEST. Not READY."; exit 1
+  fi
+  # ★ THE REFERENCE IS PART OF THE CONTROLLER'S IDENTITY, so READY names it. In `full` mode
+  # the INDI node installs its OWN reference schedule (nmpc_cascade_indi_ref: the flare 15 -> 8,
+  # because the same commanded flare is delivered 83% by the geometric law and 111% by INDI);
+  # in `aug`/`off` it flies the flown reference untouched. A flight whose bag cannot say WHICH
+  # reference flew cannot be reproduced -- the same reason READY already gates on the estimator,
+  # the mass, the CG and the airframe digest.
+  KREF=$(echo "$KPANE" | grep -o "\[cascade+indi\] reference:.*" | tail -1 | cut -c1-200)
+  if echo "$KBANNER" | grep -q "mode=full"; then
+    if [ -z "$KREF" ]; then
+      echo "[slosh_hil] !! Adaptive MPC + INDI is in FULL mode but never announced its reference schedule."
+      echo "             (nmpc_cascade_indi_ref.install() did not run -- the loop would fly the"
+      echo "              GEOMETRIC loop's flare, which it over-delivers by 34%.) Not READY."; exit 1
+    fi
+    say "    $KREF"
+  elif [ -n "$KREF" ]; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI announced an INDI reference but is NOT in full mode."
+    echo "             (aug/off must fly the FLOWN reference -- that is their identity check.) Not READY."; exit 1
+  fi
+  if ! echo "$KBANNER" | grep -q "mode=full"; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI is not in FULL mode ($(echo "$KBANNER" | grep -o 'mode=[a-z]*')). Not READY."; exit 1
+  fi
+  KFA=$(echo "$KPANE" | grep -o "OUTER FORCE ADAPTATION on.*" | tail -1 | cut -c1-160)
+  if [ -z "$KFA" ]; then
+    echo "[slosh_hil] !! Adaptive MPC + INDI never announced 'OUTER FORCE ADAPTATION on' -- it would fly as plain NMPC + INDI. Not READY."; exit 1
+  fi
+  say "    $KFA"
+  say "    adaptive MPC + INDI: estimator=$KEST, M $KM kg, CG_X $KCG, ref=${KREF:+indi}${KREF:-flown}, standby as cascade_aindi (GS: Adaptive MPC + INDI)"
+fi
+
 # THE STATE SOURCE (2026-09-15): CASC_STATE=px4 flies the cascades on EKF2's odometry; EKF_SOURCE=gps
 # leaves EKF2 on GPS position/velocity (the airframe defaults) instead of the mocap bridge's full EV;
 # VTOL_GPS_HZ sets the sim GPS's rate. Each is verified on the live stack, not assumed from the env:
@@ -503,7 +577,7 @@ if [ "${CASC_STATE:-mocap}" = px4 ]; then
   if [ -z "$OHZ" ] || ! awk -v a="$OHZ" 'BEGIN{exit (a > 30) ? 0 : 1}'; then
     echo "[slosh_hil] !! CASC_STATE=px4 but EKF2's vehicle_odometry runs at ${OHZ:-<none>} Hz. Not READY."; exit 1
   fi
-  for W in 6h-cascade 6i-adaptive 6j-indi; do
+  for W in 6h-cascade 6i-adaptive 6j-indi 6k-aindi; do
     if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W"; then
       if ! tmux capture-pane -p -J -S -400 -t "$SESSION:$W" 2>/dev/null | grep -q "state source: px4"; then
         echo "[slosh_hil] !! CASC_STATE=px4 but the $W node did not report 'state source: px4'. Not READY."; exit 1
@@ -542,7 +616,7 @@ if [ "${CASC_ASPD:-none}" = px4 ]; then
   if [ -z "$AHZ" ] || ! awk -v a="$AHZ" 'BEGIN{exit (a > 5) ? 0 : 1}'; then
     echo "[slosh_hil] !! CASC_ASPD=px4 but PX4's airspeed_validated runs at ${AHZ:-<none>} Hz (SYS_HAS_NUM_ASPD?). Not READY."; exit 1
   fi
-  for W in 6h-cascade 6i-adaptive 6j-indi; do
+  for W in 6h-cascade 6i-adaptive 6j-indi 6k-aindi; do
     if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W"; then
       if ! tmux capture-pane -p -J -S -400 -t "$SESSION:$W" 2>/dev/null | grep -q "airspeed source: px4"; then
         echo "[slosh_hil] !! CASC_ASPD=px4 but the $W node did not report 'airspeed source: px4'. Not READY."; exit 1

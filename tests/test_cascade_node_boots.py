@@ -43,6 +43,11 @@ NODES = {"base": ("nmpc_cascade_node.py", "cascade"), "tank": ("nmpc_cascade_tan
          # must print its own banner (the axes and filter it runs) AND the IMU node's (it inherits
          # the twin), and ack on ITS OWN status topic under ITS OWN node name.
          "indi": ("nmpc_cascade_indi_node.py", "cascade_indi"),
+         # "aindi" = Adaptive MPC + INDI (2026-09-23 night): the INDI node in full mode with the outer's
+         # force adaptation on (CASC_FADAPT=1, the launchers' 6k-aindi window, the GS's "Adaptive MPC +
+         # INDI"): id `cascade_aindi` -> node /nmpc_cascade_control_aindi. The 4th element is the
+         # environment the launcher puts in front of the node.
+         "aindi": ("nmpc_cascade_indi_node.py", "cascade_aindi", "", "CASC_FADAPT=1 INDI_MODE=full"),
          "px4src": ("nmpc_cascade_node.py", "cascade", "-p state_source:=px4"),
          # "aspd" = the base node with `airspeed_source: px4` (piece 4, 2026-09-15): it must subscribe to
          # PX4's airspeed_validated and log the first TAS it receives
@@ -69,9 +74,10 @@ def stack_is_live():
 
 def run(node, wait_s=60.0):
     fname, cid = NODES[node][:2]; extra = NODES[node][2] if len(NODES[node]) > 2 else ""
+    envp = NODES[node][3] if len(NODES[node]) > 3 else ""
     path = os.path.join(PKG, fname)
     log = os.path.join(os.environ.get("TMPDIR", "/tmp"), f"casc_boot_{node}.log")
-    cmd = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; exec {PY} {path} --ros-args "
+    cmd = (f"source {ROOT}/scripts/rosenv.sh 2>/dev/null; {envp} exec {PY} {path} --ros-args "
            f"-p px4_ns:={NS} -p auto_arm:=false -p controller_id:={cid} -p active_at_start:=false "
            f"-p vcruise:=16.0 -p ttr:=10.0 -p cruise_alt:=30.0 -p latency_s:=0.049 -p l1_on:=true {extra}")
     with open(log, "w") as lf:
@@ -253,11 +259,16 @@ n.destroy_node(); rclpy.shutdown()
                 return False, f"{node}: {want_node} does not subscribe to /{NS}/fmu/out/airspeed_validated"
             if not aspd_ok:
                 return False, f"{node}: an AirspeedValidated message (CAS 12.4) was not logged as 'first airspeed_validated: CAS 12.40 m/s' within 10 s"
-        if node == "indi":
+        if node in ("indi", "aindi"):
             if "[cascade+indi] mode=" not in txt:
                 return False, f"{node}: no '[cascade+indi] mode=' banner"
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the INDI variant did not inherit the IMU node's sensor_combined subscription"
+        if node == "aindi":
+            if "[cascade+indi] mode=full" not in txt:
+                return False, f"{node}: Adaptive MPC + INDI must run the INDI law in FULL mode"
+            if "OUTER FORCE ADAPTATION on" not in txt:
+                return False, f"{node}: no 'OUTER FORCE ADAPTATION on' -- CASC_FADAPT did not reach the outer (it would fly as NMPC + INDI)"
         if node == "imu":
             if "[cascade+imu] accelerometer: /" + NS + "/fmu/out/sensor_combined" not in txt:
                 return False, f"{node}: the sensor_combined subscription was never attached (no '[cascade+imu] accelerometer:' line)"

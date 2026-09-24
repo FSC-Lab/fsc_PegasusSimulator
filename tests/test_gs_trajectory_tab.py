@@ -372,6 +372,21 @@ assert pi_ == pc3, "the INDI cascade must get exactly the cascade's parameter se
 n1 = len(_guide_msgs()); tab.edit_wps.setText("500 0 500 400"); tab._on_guide_wps()
 assert len(_guide_msgs()) == n1 + 1 and _guide_msgs()[-1].startswith("wp 500.0 0.0"), "guidance must be accepted on the INDI cascade"
 assert tab._guide_pubs["cascade_indi"] is not None
+# ---- ADAPTIVE MPC + INDI (2026-09-23 night): a FOURTH cascade, id cascade_aindi -- the INDI node
+# with the outer force adaptation on. Same rule: its own button, id, node, guidance topic.
+assert "cascade_aindi" in tab.CASCADE_IDS and tab.WB_CONTROLLERS["cascade_aindi"] == "/nmpc_cascade_control_aindi"
+assert hasattr(tab, "btn_aindi") and tab.btn_aindi.text().endswith("Adaptive MPC + INDI"), tab.btn_aindi.text()
+tab.btn_aindi.click()
+assert tab._controller == "cascade_aindi" and ros.ctrl.msgs[-1].data == "cascade_aindi", ros.ctrl.msgs[-1].data
+assert "Adaptive MPC + INDI" in tab.lbl_ctrl.text(), tab.lbl_ctrl.text()
+i = tab.cmb_wb.findData("cascade_aindi"); assert i >= 0 and tab.cmb_wb.itemText(i) == "Adaptive MPC + INDI"
+tab.cmb_wb.setCurrentIndex(i); tab._wb_choice = "cascade_aindi"
+assert tab._wb_id() == "cascade_aindi" and tab._wb_node() == "/nmpc_cascade_control_aindi"
+assert tab._wb_params() == pc3, "Adaptive MPC + INDI must get exactly the cascade's parameter set"
+n1 = len(_guide_msgs()); tab._on_guide_wps()
+assert len(_guide_msgs()) == n1 + 1, "guidance must be accepted on Adaptive MPC + INDI"
+assert tab._guide_pubs["cascade_aindi"] is not None
+print("adaptive MPC + INDI: button, ctrl choice, node, cascade parameter set, guidance accepted OK")
 for cid in tab.CASCADE_IDS:
     assert f"/uav_0/{cid}/cmd" in getattr(ros, "pub_topics", []), \
         f"no guidance publisher on /uav_0/{cid}/cmd -- each cascade owns its topic"
