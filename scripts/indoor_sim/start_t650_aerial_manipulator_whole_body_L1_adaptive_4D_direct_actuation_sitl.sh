@@ -488,6 +488,11 @@ echo "MicroXRCEAgent: externally owned and detected"
 # explicit: ROS 2 -> rosdeps overlay (if present) -> arm workspace.
 ARM_ENV="source '$ARM_ROS2_SETUP'; if [ -f '$ARM_ROSDEPS_SETUP' ]; then source '$ARM_ROSDEPS_SETUP'; fi; source '$ARM_WS_SETUP'"
 ARM_DISPLAY="${DISPLAY:-:0}"
+# The gamepad node lives in the AUTOPILOT workspace (px4_offboard_control),
+# not the arm one, so the joy window gets its own environment. Sourcing the
+# wrong overlay here fails with a bare "package not found" several seconds
+# after launch, in a detached window nobody is watching.
+JOY_ENV="source '$ARM_ROS2_SETUP'; source '$FSC_AUTOPILOT_WS/install/setup.bash'"
 
 # The base launcher (exec'd below) recreates the tmux session, so the arm
 # window is added by a detached helper once the new session exists. The stack
@@ -525,6 +530,27 @@ ros2 run utils_custom_ground_station joint_plot_inverted --ros-args -r __ns:=/$A
 echo 'Arm ground station exited.'
 exec bash
 "
+
+  # ── PS4 REMOTE (2026-09-20) ───────────────────────────────────────────────
+  # joy_node + gamepad_input, so the arm station's "PS4 Remote" tab has a
+  # gamepad to read. Gated on the device node existing, and non-fatal: a
+  # missing pad must not stop a flight that was never going to use one, and
+  # the tab is inert until the operator engages it. PEGASUS_JOY_DEVICE is
+  # SDL's joystick INDEX, not a /dev path.
+  if [[ -e "${PEGASUS_JOY_DEV_NODE:-/dev/input/js0}" ]]; then
+    tmux new-window -d -t "$SESSION" -n joy "
+$JOY_ENV
+echo 'PS4 gamepad: joy_node -> /${ARM_NS%%/*}/rc/input (the PS4 Remote tab reads this).'
+echo 'If a stick moves the WRONG pair of numbers on that tab, this connection'
+echo 'orders its axes differently -- set ps4_axis_* / ps4_invert_* on the arm'
+echo 'ground station rather than editing code.'
+ros2 launch px4_offboard_control gamepad_input.launch.py device_id:=${PEGASUS_JOY_DEVICE:-0} ns:=/${ARM_NS%%/*}
+echo 'gamepad_input exited -- PS4 Remote will read no data.'
+exec bash
+"
+  else
+    echo -e "\033[1;33mNo gamepad at ${PEGASUS_JOY_DEV_NODE:-/dev/input/js0}; the PS4 Remote tab will read 'no data'.\033[0m"
+  fi
 ) &
 
 # Apply the wall-clock DDS timestamp and HIL auto-disarm settings after the PX4
