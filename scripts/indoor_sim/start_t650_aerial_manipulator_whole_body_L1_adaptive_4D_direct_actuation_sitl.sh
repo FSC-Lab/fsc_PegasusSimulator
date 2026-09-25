@@ -537,7 +537,14 @@ exec bash
   # missing pad must not stop a flight that was never going to use one, and
   # the tab is inert until the operator engages it. PEGASUS_JOY_DEVICE is
   # SDL's joystick INDEX, not a /dev path.
-  if [[ -e "${PEGASUS_JOY_DEV_NODE:-/dev/input/js0}" ]]; then
+  #
+  # Skipped when a gamepad_input is ALREADY running (the §7.19.1 order starts
+  # the joystick by hand before the stack): a second joy_node on the same pad
+  # would publish every stick sample twice on <ns>/rc/input. The bracket keeps
+  # pgrep from matching this subshell's own command line.
+  if pgrep -f '[l]ib/px4_offboard_control/gamepad_input' >/dev/null 2>&1; then
+    echo -e "\033[1;36mgamepad_input already running (started by hand) -- not opening a second joy window.\033[0m"
+  elif [[ -e "${PEGASUS_JOY_DEV_NODE:-/dev/input/js0}" ]]; then
     tmux new-window -d -t "$SESSION" -n joy "
 $JOY_ENV
 echo 'PS4 gamepad: joy_node -> /${ARM_NS%%/*}/rc/input (the PS4 Remote tab reads this).'

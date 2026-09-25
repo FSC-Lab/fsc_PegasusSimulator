@@ -6195,103 +6195,6 @@ ros2 topic echo /uav_0/mocap --once --field pose.pose.position          # agree 
 already extract both) before the first DIRECT entry; rotate through the -70..-150 deg headings
 where 0921 flipped and confirm the fused position does not jump. The law, yaml, planner and
 arm stack are the 7.17.6/7.17.7 configuration — this is a feedback change only.
-#### 7.17.9 PS4 REMOTE — guiding the end-effector with a gamepad (2026-09-20, user request)
-
-A fourth tab on the ARM ground station, plus a `PS4 REMOTE` toggle beside the
-gripper buttons. Stick deflection is a VELOCITY; the tab integrates it into a
-4-D end-effector setpoint (world x, y, z + inertial heading) and hands it to the
-whole-body trajectory planner through the SAME interface the "EE Whole-Body" tab
-uses — publish `whole_body_planner/ee_target`, wait for `PLANNED`, call
-`whole_body_planner/send`. **The planner, the law and the reference path are
-UNCHANGED** (user's instruction: "the planner should be untouched"); every
-joystick move is an ordinary compatible whole-body transition.
-
-```bash
-# The 4-D launcher now starts joy_node + gamepad_input itself, in a tmux window
-# named `joy`, if a pad is present. Manually, or on any other rig:
-ros2 launch px4_offboard_control gamepad_input.launch.py device_id:=0 ns:=/uav_0
-
-# Engage/disengage (the button does the same; the service exists so a driver
-# can). REFUSED unless the vehicle is in whole-body DIRECT:
-ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/set_engaged \
-  std_srvs/srv/SetBool "{data: true}"
-
-# Loopback test: fake planner + synthetic sticks + the real ground station,
-# no Isaac, no PX4, no gamepad. 12 checks.
-cd $FSC_OM_ARM_WS/src/fsc_open_manipulator/utils_custom_ground_station/test
-/usr/bin/python3 test_ps4_remote_loopback.py
-
-# Synthetic sticks alone, to drive a running station by hand:
-/usr/bin/python3 joy_sim.py --ly 1.0                 # hold +X
-/usr/bin/python3 joy_sim.py --pattern circle         # sweep the left stick
-
-# VERIFY THE MAPPING ON A REAL PAD BEFORE FLYING IT. Push each stick and read
-# the direction it names; nothing here commands the arm:
-/usr/bin/python3 check_ps4_mapping.py
-```
-
-**Mapping VERIFIED on the real pad, 2026-09-20, over USB** — indices and signs
-both, by pushing each stick against `check_ps4_mapping.py` and reading back the
-direction it named. The table above is therefore measured on this hardware, not
-carried over from the Bluetooth notes.
-
-Worth keeping for the next pad, because it cost three attempts: a TIMED capture
-("hold left at t=5-10 s") does not work, since the operator cannot see the
-recorder's clock and the windows never line up — two runs produced extremes
-that could not be attributed to a direction at all. `check_ps4_mapping.py`
-removes the clock from the problem by naming the direction live, which settled
-it in seconds. A wrong index or sign on some other connection is a PARAMETER
-(`ps4_axis_*` / `ps4_invert_*`), never a rebuild.
-
-**Stick mapping** (`sensor_msgs/Joy` on `<vehicle_ns>/rc/input`; on this pad
-LEFT and UP read **+1.0**, confirmed over USB 2026-09-20 — 8 axes, 13 buttons,
-triggers resting at 1.0 on axes 2/5, i.e. the Bluetooth table in
-`fsc_virtual_remote_controller/CLAUDE.md` holds over cable too):
-
-| stick | axis | push | commands |
-|---|---|---|---|
-| left  | `axes[1]` | up / down    | +X / -X world |
-| left  | `axes[0]` | left / right | -Y / +Y world |
-| right | `axes[4]` | up / down    | +Z / -Z world |
-| right | `axes[3]` | left / right | +heading / -heading |
-
-If a stick moves the wrong pair of numbers, the axis order differs on that
-connection: the tab shows the RAW values, and `ps4_axis_lx/ly/rx/ry` +
-`ps4_invert_lx/ly/rx/ry` fix it as ground-station parameters, without a rebuild.
-
-**THE MOVING LAMP IS THE FEATURE, not decoration.** A transition is rest-to-rest
-and the planner floors its duration at `t_min` (3.0 s), so one nudge is one
->= 3 s move; and the planner IGNORES a target that arrives while it is EXECUTING
-(`startPlanning()` returns early, and the target it stashed is WIPED on
-completion — the "EE target queued, replans on completion" log line is
-misleading, there is no queue). So while a move runs the tab FREEZES the
-integrator and says `MOVING — wait, sticks are frozen`, rather than
-accumulating deflection the planner will never see. Push, watch it go, push
-again. Effective travel is roughly 2-4 cm per move at the default 0.040 m/s
-stick gain.
-
-**Workspace saturation** is tested against the planner's OWN published envelope
-(`whole_body_planner/workspace_rz`), per axis, so a setpoint pressed into the
-boundary SLIDES along it; the blocked axis turns red and the (r, z) picture
-shows the setpoint against the reachable region. That envelope is a NECESSARY
-bound only — it is swept at q1 = 0, so it says nothing about arm-yaw or
-wrist-roll range, and the planner can still answer `INFEASIBLE` for a point
-inside it. It does, the reason is shown, and the setpoint ROLLS BACK to the last
-accepted one rather than leaving the operator re-sending something unplannable.
-
-Two implementation notes worth keeping. The (r, z) test uses
-`r = hypot(dx, dy)`, which is invariant under rotation about z, so the base yaw
-— and the `R0_model = R0_actual*Rz(-90)` frame offset every other conversion on
-this rig has to get right — cannot corrupt it; only the base POSITION enters.
-And `PLANNED` counts as BUSY: the Send service returning and the status reading
-`EXECUTING` are different instants, and integrating in that gap would start a
-fresh plan and discard the one just sent.
-
-Files (all additive; `ps4_panel.{hpp,cpp}` are new, the rest are hooks):
-`utils_custom_ground_station/src/ps4_panel.*`, `state_panel.*` (the toggle
-column), `control_panel.*` (the tab), `joint_plot_window.cpp` (the two
-signals), and `test/{test_ps4_remote_loopback,fake_whole_body_planner,joy_sim}.py`.
-NOT yet flown against Isaac or the real planner.
 
 ### 7.18 Flight-test preparation: x-axis settling tune, cruise speeds, and the WHOLE-BODY vs DECOUPLED comparison — 2026-09-18
 
@@ -6537,3 +6440,221 @@ comparison rig, the airframe reference converted from the planner's plan, so a p
 motion is not drift), sharing the same latch and the same `switchMode(kSafety)`. Set to
 **0.75 m** in `..._geometric_l1_direct_actuation_t650_sim.yaml` — 4x the 0.19 m worst base
 error measured on the flown circle.
+
+### 7.19 PS4 REMOTE — guiding the end-effector with a gamepad (2026-09-20, user request; AIM → CONFIRM → MOVE flow 2026-09-24)
+
+A fourth tab on the ARM ground station, plus a `PS4 REMOTE` toggle beside the
+gripper buttons and a `Gamepad: ON/OFF` box in the Status column. The sticks
+move a VIRTUAL end-effector target; nothing is sent while aiming, the vehicle
+hovers. `Confirm Target` hands the target to the whole-body trajectory planner
+through the SAME interface the "EE Whole-Body" tab uses (publish
+`whole_body_planner/ee_target`, read `PLANNED` / `INFEASIBLE`); `Move`
+executes the planned compatible transition (`whole_body_planner/send`); `Go
+Home` asks the planner for the transition to the folded home pose (then Move);
+`Reset Target` puts the target back on the measured end-effector. **The
+planner, the law and the reference path are UNCHANGED** — every joystick move
+is one ordinary rest-to-rest compatible transition.
+
+**Why plan once, not continuously (settled 2026-09-24).** The planner's
+transitions are rest-to-rest and floored at `t_min` (3.0 s), it ignores a
+target that arrives while EXECUTING, and a running transition cannot be
+interrupted short of a SAFETY revert. Re-planning from a moving state would put
+steps into the CoM reference at every join (the §7.15 compatible-trajectory
+guarantee rests on jerk/snap-continuous joins) and would turn every stick
+wiggle into a commitment beside the object. Planning takes ~3–4 ms — the MOTION
+is what takes time — so overlapping plans buys nothing. Aim freely, confirm
+once, watch it go.
+
+**The tab, top to bottom.** `Joystick Input` (the pad, sticks labelled with
+the world direction they command; `Stick Gain` under it — Translation
+**2 cm/s**, Rotation **5 °/s**: hold a stick fully for one second and the
+TARGET moves 2 cm / turns 5°, the vehicle covers that on Move) beside
+`Virtual Aerial Manipulator`, THE key picture (the EE Trajectory tab's 3-D
+view with a 0.1 m grid on the floor and the two far walls, world (x, y, z)
+beside every triad: the MEASURED Drone and EE (FK) triads from `current_base`
+/ `current_ee`, the dashed **EE Target** triad the sticks move — it carries
+the current EE's roll and pitch, only its position and yaw follow the sticks
+— a dashed line for the move it asks for, and — ONLY once a plan exists — the
+planned EE and CoM paths from the planner's latched `viz_path`, cleared when
+the plan is spent, so aiming costs the view three triads and nothing else;
+and a SIMPLIFIED GRIPPER on the EE Target — back frame rectangle, two finger
+wedges with their yellow pad faces, a crosshair on the grasp point — because
+the EE Target IS the grasp point: the model's `r_e`, 108 mm out along the claw
+axis between the finger pads (pads ~68–124 mm, tips 16 mm beyond it),
+dimensions measured from AM_xfwd.usda's meshes 2026-09-25; the fingers follow
+the station's Gripper state, 9.7 mm inward per finger when closed; framing
+0.35 m so the gripper is large enough to aim with) · `End-effector Workspace` (tab 2's side view, bearing dial and
+heading dial, display only) · `End-effector Space` (`Current EE Pose` read-only
+over `Target EE Pose`, which the sticks write and which can be typed) · the
+four buttons · `Status`.
+
+**Status lamp.** `AIMING — sticks move the target` (green, engaged) ·
+`PLANNING…` (amber) · `PLANNED (T=…) — press Move` (green) · `Target changed
+since the plan — Confirm Target again` (amber: a planned target was moved; Move
+is disabled until it is re-confirmed) · `MOVING — sticks frozen until arrival`
+(blue) · `INFEASIBLE — adjust the target and Confirm again` (red, reason
+under it; the target stays where it is) · `Not in whole-body DIRECT` (grey).
+On arrival (EXECUTING → HOLD) the target re-seats on the measured end-effector,
+position AND yaw (`current_ee`'s frame has x = the claw axis, so its yaw is the
+heading `ee_target` carries), and follows it until the sticks or the Target row
+touch it again. **The sticks re-arm on NEUTRAL**: after any freeze (and on
+engage) they take effect only once every axis has read zero, so a stick still
+held when the vehicle arrives does not carry the re-seated target off — release
+it, then push again (the loopback test caught the opposite behaviour, 2026-09-25).
+The 3-D view opens on an oblique orbit with a 0.1 m grid (floor + the two far
+walls), framed 0.6 m wide on the midpoint of airframe and gripper, and prints
+world (x, y, z) beside every triad plus **Δ (dx, dy, dz) m / Δyaw** under EE
+Target — at 2 cm/s a nudge reads there long before it reads as pixels.
+`joy_node` (ros-humble-joy 3.3.0) republishes the pad state at 20 Hz
+(`autorepeat_rate`), verified with a Python subscriber: 74 msgs / 6 s on both
+`/joy` and `/uav_0/rc/input`. Do NOT judge that feed with `ros2 topic hz|echo`
+piped through `timeout` on this box — both printed only "Terminated" and read as
+a dead feed (2026-09-25, cost a needless joy restart).
+
+```bash
+# The 4-D launcher now starts joy_node + gamepad_input itself, in a tmux window
+# named `joy`, if a pad is present. Manually, or on any other rig:
+ros2 launch px4_offboard_control gamepad_input.launch.py device_id:=0 ns:=/uav_0
+
+# Every button is also a service on the SAME code path (scriptable, testable
+# without a display). Engage = the sticks are live; REFUSED unless the vehicle
+# is in whole-body DIRECT:
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/set_engaged   std_srvs/srv/SetBool "{data: true}"
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/confirm_target std_srvs/srv/Trigger {}
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/move           std_srvs/srv/Trigger {}
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/go_home        std_srvs/srv/Trigger {}
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/reset_target   std_srvs/srv/Trigger {}
+
+# Loopback test: fake planner + synthetic sticks + the real ground station,
+# no Isaac, no PX4, no gamepad. 21 checks of the aim/confirm/move flow.
+# ROS_DOMAIN_ID=77 runs it beside a LIVE stack without touching it (the
+# stale-process guard is skipped on a non-default domain).
+cd $FSC_OM_ARM_WS/src/fsc_open_manipulator/utils_custom_ground_station/test
+ROS_DOMAIN_ID=77 /usr/bin/python3 test_ps4_remote_loopback.py
+
+# Synthetic sticks alone, to drive a running station by hand:
+/usr/bin/python3 joy_sim.py --ly 1.0                 # hold +X
+/usr/bin/python3 joy_sim.py --pattern circle         # sweep the left stick
+
+# VERIFY THE MAPPING ON A REAL PAD BEFORE FLYING IT. Push each stick and read
+# the direction it names; nothing here commands the arm:
+/usr/bin/python3 check_ps4_mapping.py
+```
+
+**Mapping VERIFIED on the real pad, 2026-09-20, over USB** — indices and signs
+both, by pushing each stick against `check_ps4_mapping.py` and reading back the
+direction it named. The table above is therefore measured on this hardware, not
+carried over from the Bluetooth notes.
+
+Worth keeping for the next pad, because it cost three attempts: a TIMED capture
+("hold left at t=5-10 s") does not work, since the operator cannot see the
+recorder's clock and the windows never line up — two runs produced extremes
+that could not be attributed to a direction at all. `check_ps4_mapping.py`
+removes the clock from the problem by naming the direction live, which settled
+it in seconds. A wrong index or sign on some other connection is a PARAMETER
+(`ps4_axis_*` / `ps4_invert_*`), never a rebuild.
+
+**Stick mapping** (`sensor_msgs/Joy` on `<vehicle_ns>/rc/input`; on this pad
+LEFT and UP read **+1.0**, confirmed over USB 2026-09-20 — 8 axes, 13 buttons,
+triggers resting at 1.0 on axes 2/5, i.e. the Bluetooth table in
+`fsc_virtual_remote_controller/CLAUDE.md` holds over cable too):
+
+| stick | axis | push | moves the target |
+|---|---|---|---|
+| left  | `axes[1]` | up / down    | +X / -X world |
+| left  | `axes[0]` | left / right | +Y / -Y world |
+| right | `axes[4]` | up / down    | +Z / -Z world |
+| right | `axes[3]` | left / right | +Yaw / -Yaw |
+| L1 | `buttons[4]` | press | gripper OPEN |
+| R1 | `buttons[5]` | press | gripper CLOSE |
+| PS / Home | `buttons[10]` | press | Go Home (plans the home transition — press Move) |
+
+The three buttons act on the PRESS (holding does nothing more), only while PS4
+REMOTE is engaged, through the same requests as the station's OPEN / CLOSE and
+Go Home buttons; L1 + R1 together are ignored. Indices are parameters too
+(`ps4_button_open` / `_close` / `_home`, defaults 4 / 5 / 10).
+
+**The gripper in Isaac (2026-09-25).** The Isaac arm stack has no ros2_control
+gripper interface, so until now every OPEN/CLOSE ended in "Gripper … ignored: no
+action server", and 06 pinned the asset's `gripper_joint` at 0° with a 1e6 drive.
+Now `open_manipulator_x_isaac_bridge`'s `isaac_gripper_action_server.py` (started
+by both Isaac arm launch files, node `isaac_gripper`) serves
+`gripper_controller/gripper_cmd` in the arm namespace — the action the station
+and L1/R1 already call — and drives 06 over a gripper servo bus beside the arm's:
+`/uav_0/isaacsim_manipulator/gripper_command` (Float64, hub angle rad) and
+`…/gripper_state` (JointState, 50 Hz). 06 slews the drive at 0.5 rad/s.
+Mapping: the station's 0.019 m (open) → **0°**, −0.010 m (closed) → **−50°**,
+01's flown pick-and-place convention on the same joint. The asset's linkage
+(hub + two slider-cranks, crank 15 mm, rod 40 mm), solved from its authored
+joint frames: pad separation 74.2 mm at 0°, 54.7 mm at −50°, 100.6 mm at +50°
+(negative closes). Results follow `GripperActionController`: SUCCEEDED on
+arrival, ABORTED + `stalled` when the fingers stop short on an object (the
+station keeps CLOSE lit — a grasp), ABORTED if Isaac publishes no gripper state.
+Needs the sim restarted (06 and the arm launch changed).
+
+If a stick moves the wrong pair of numbers, the axis order differs on that
+connection: the pad picture shows the knob where the pad reports it, and
+`ps4_axis_lx/ly/rx/ry` + `ps4_invert_lx/ly/rx/ry` fix it as ground-station
+parameters, without a rebuild.
+
+**Workspace saturation** is tested against the planner's OWN published envelope
+(`whole_body_planner/workspace_rz`), per axis, so a target pressed into the
+boundary SLIDES along it; the blocked axis turns red in the Target row and the
+side view shows the target against the reachable region. That envelope is a
+NECESSARY bound only — it is swept at q1 = 0, so it says nothing about arm-yaw
+or wrist-roll range, and the planner can still answer `INFEASIBLE` for a point
+inside it. It does, the reason is shown, and the target stays put to be
+adjusted (at the folded home, DOWN is the direction with room — §7.15).
+
+Two implementation notes worth keeping. The (r, z) test uses
+`r = hypot(dx, dy)`, which is invariant under rotation about z, so the base yaw
+— and the `R0_model = R0_actual*Rz(-90)` frame offset every other conversion on
+this rig has to get right — cannot corrupt it; only the base POSITION enters.
+And a `PLANNED` counts as the answer to Confirm/Go Home only if a status
+message arrived AFTER the request (the panel counts them): the previous plan's
+latched `PLANNED` is still on the wire when the next request goes out, and
+without that check it passed as the new one and enabled Move against a plan
+the planner no longer held (caught by the loopback test, 2026-09-24).
+
+Files (all additive; `ps4_panel.{hpp,cpp}` are new, the rest are hooks):
+`utils_custom_ground_station/src/ps4_panel.*`, `state_panel.*` (the toggle
+column + the Gamepad box), `control_panel.*` (the tab), `joint_plot_window.cpp`
+(the signals), `ee_trajectory_panel.*` (`Traj3DView` gained the `EeTarget`
+frame, `setFocus` — a locked framing — and `setEmptyHint`), and
+`test/{test_ps4_remote_loopback,fake_whole_body_planner,joy_sim}.py`.
+NOT yet flown against Isaac or the real planner.
+
+#### 7.19.1 Run sequence — shiqi_machine (`shiqi-desktop`), Isaac simulation only
+
+Each step in its own terminal; never chain step 0 with a launcher. Plug the pad
+in before step 1. The Pegasus launcher sees the running gamepad node and does
+not open a second one.
+
+```bash
+# 0. clean slate            (any terminal — BOTH lines, this order, as TWO separate calls)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. PS4 joystick           (terminal 1 — leave running)
+source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
+ros2 launch px4_offboard_control gamepad_input.launch.py device_id:=0 ns:=/uav_0
+
+# 2. ROS 2 stack            (terminal 2)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+
+# 3. Pegasus / PX4 SITL     (terminal 3 — also the arm stack + arm ground station)
+~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh shiqi_machine
+
+# 4. OFFBOARD, then arm     (terminal 4 — order is mandatory)
+source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash
+ros2 service call /uav_0/rc/offboard std_srvs/srv/Trigger {}
+sleep 2
+ros2 service call /uav_0/rc/arm     std_srvs/srv/Trigger {}
+
+# 5. PS4 remote on / off    (terminal 4 — after take-off and whole-body DIRECT from the drone ground station)
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/set_engaged std_srvs/srv/SetBool "{data: true}"
+ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/set_engaged std_srvs/srv/SetBool "{data: false}"
+
+# 6. abort back to SAFETY   (terminal 4 — have it ready)
+ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
+```
