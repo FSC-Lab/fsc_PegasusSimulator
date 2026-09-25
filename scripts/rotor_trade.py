@@ -414,6 +414,9 @@ def motors():
         Motor("MN4010 KV370", "4010", 370, 0.098, 0.8, 112.0, 20.0, "BENCH (line + lag) + datasheet mass/I0", s_bench=b10["s"]),
         Motor("MN4010 KV475", "4010", 475, 0.098, 0.8, 112.0, 30.0, "datasheet Kv/R/I0/mass + the 4010 bench's system resistance", r_rest=rr10),
         Motor("MN4010 KV580", "4010", 580, 0.042, 1.3, 112.0, 31.0, "datasheet Kv/R/I0/mass + the 4010 bench's system resistance", r_rest=rr10),
+        # smaller 6S frames (T-Motor store: 35 mm stators, 3-6S), for a rear pair that never cruises
+        Motor("MN3510 KV360", "35", 360, 0.188, 0.4, 97.0, 15.0, "datasheet only (4010 bench's system resistance and lag calibration)", r_rest=rr10),
+        Motor("MN3508 KV380", "35", 380, 0.205, 0.4, 82.0, 14.0, "datasheet only (4010 bench's system resistance and lag calibration)", r_rest=rr10),
     ]
     return ms, dict(b14=b14, b10=b10, rr14=rr14, rr10=rr10)
 
@@ -421,7 +424,7 @@ def motors():
 def calibrate_lag(ms, props, bench):
     """Per frame: J_motor from the bell size, c_e so the bench 15x5 reproduces the measured tau."""
     ref = next(p for p in props if p.fam == REF_PROP)
-    Jm = {"4014": 2.4e-5, "4010": 1.9e-5}
+    Jm = {"4014": 2.4e-5, "4010": 1.9e-5, "35": 1.3e-5}
     for fr, b, name in (("4014", bench["b14"], "MN4014 KV400"), ("4010", bench["b10"], "MN4010 KV370")):
         m = next(q for q in ms if q.name == name)
         pt = point(m, ref, 9.69, 0.0)
@@ -429,27 +432,34 @@ def calibrate_lag(ms, props, bench):
         b_need = Jr / b["tau_h"]
         c_e = (b_need - 2 * pt["Q"] / pt["omega"]) * m.s
         for q in ms:
-            if q.frame == fr:
-                q.J_mot, q.c_e = Jm[fr], c_e
+            if q.frame == fr or (fr == "4010" and q.frame == "35"):
+                q.J_mot, q.c_e = Jm[q.frame], c_e
     return
 
 
-def evaluate(m, pf, dem, pr=None):
-    """One motor on all four rotors, `pf` on the front (tilting) pair and `pr` (default: the same) on the
-    rear pair. Only the front pair meets the airflow -- the corridor and the cruise are its job; the
-    rear pair only hovers (and idles in the least-rotor cruise trim)."""
+def evaluate(m, pf, dem, pr=None, mr=None):
+    """Motor `m` + prop `pf` on the front (tilting) pair, motor `mr` + prop `pr` (default: the same) on
+    the rear pair. Only the front pair meets the airflow -- the corridor and the cruise are its job; the
+    rear pair hovers, carries a hover-sized share through the corridor (the schedule's rear trim is
+    8.3-9.7 N at 4-8 m/s), supplies half of every pitch correction, and idles in the least-rotor cruise
+    trim. So the rear is held to the same static-thrust, lag and hover-throttle limits, and its current
+    at 1.46x hover (the corridor's margin ratio) to its own rating."""
     pr = pr or pf
-    dm = 4 * (m.mass_g - REF_MOTOR_G) / 1e3 + 2 * (pf.mass_g + pr.mass_g - 2 * prop_mass_g("cf", 15)) / 1e3
+    mr = mr or m
+    dm = 2 * (m.mass_g + mr.mass_g - 2 * REF_MOTOR_G) / 1e3 + 2 * (pf.mass_g + pr.mass_g - 2 * prop_mass_g("cf", 15)) / 1e3
     M = M0 + dm
     Th = M * G / 4.0
     Tf16 = float(np.interp(M, dem["M"], dem["Tf16"])); Tf18 = float(np.interp(M, dem["M"], dem["Tf18"]))
     Tcorr = dem["corridor_Tf"] * M / dem["so3M"]
     name = pf.fam if pr is pf else f"{pf.fam} / {pr.fam}"
-    r = dict(motor=m.name, prop=name, front=pf.fam, rear=pr.fam, mixed=pr is not pf, D_in=max(pf.D_in, pr.D_in),
+    r = dict(motor=m.name if mr is m else f"{m.name} / {mr.name}", motor_f=m.name, motor_r=mr.name, prop=name,
+             front=pf.fam, rear=pr.fam, mixed=(pr is not pf) or (mr is not m), D_in=max(pf.D_in, pr.D_in),
              P_in=pf.P_in, kind=pf.kind, dm_g=dm * 1e3, M=M, Vstall=V_STALL0 * math.sqrt(M / M0), J0=pf.j0())
-    hf, hr = point(m, pf, Th, 0.0), point(m, pr, Th, 0.0)
+    hf, hr = point(m, pf, Th, 0.0), point(mr, pr, Th, 0.0)
     r["hover"], r["hover_rear"] = hf, hr
-    T0f = forces(pf, omega_full(m, pf, 0.0), 0.0)[0]; T0r = forces(pr, omega_full(m, pr, 0.0), 0.0)[0]
+    T0f = forces(pf, omega_full(m, pf, 0.0), 0.0)[0]; T0r = forces(pr, omega_full(mr, pr, 0.0), 0.0)[0]
+    prr = point(mr, pr, 1.46 * Th, 0.0)
+    r["I_rear_margin"] = prr["I"] if prr else float("nan")
     om0 = omega_full(m, pf, 0.0); _, Q0, _ = forces(pf, om0, 0.0)
     r["Tmax0"], r["Tmax0_rear"], r["I_max0"] = T0f, T0r, Q0 / m.Kt + m.I0
     Tc = forces(pf, omega_full(m, pf, 5.0), 5.0)[0]
@@ -468,7 +478,8 @@ def evaluate(m, pf, dem, pr=None):
     r["cq"] = 0.5 * (hf["Q"] / hf["T"] + hr["Q"] / hr["T"])
     r["yaw_max"] = 2.0 * min(Th, max(T0f - Th, 0.0)) * hf["Q"] / hf["T"] + 2.0 * min(Th, max(T0r - Th, 0.0)) * hr["Q"] / hr["T"]
     r["crosswind"] = math.sqrt(YAW_HEADROOM * r["yaw_max"] / WEATHERCOCK)
-    r["tau"] = max(tau_hover(m, pf, hf, pf.mass_g), tau_hover(m, pr, hr, pr.mass_g))
+    r["tau_f"], r["tau_r"] = tau_hover(m, pf, hf, pf.mass_g), tau_hover(mr, pr, hr, pr.mass_g)
+    r["tau"] = max(r["tau_f"], r["tau_r"])
     r["P_hover"] = 2 * hf["P"] + 2 * hr["P"]
     if r["c16"]:
         # battery energy for the reference mission: all four rotors in hover-class flight, the front pair
@@ -482,6 +493,7 @@ def evaluate(m, pf, dem, pr=None):
         corridor=r["corr_ratio"] >= 1.46,
         cruise16=r["c16_ratio"] >= 2.3,
         current=(r["I_corr"] <= m.imax) if np.isfinite(r["I_corr"]) else False,
+        current_rear=(r["I_rear_margin"] <= mr.imax) if np.isfinite(r["I_rear_margin"]) else False,
         hover_duty=max(hf["duty"], hr["duty"]) <= 0.75,
     )
     r["checks"] = checks
@@ -543,6 +555,8 @@ def main():
     ap.add_argument("--fw_aero", type=float, default=1.0,
                     help="scale the carbon mid-pitch props' borrowed C_P (their aero is the Aero-naut CAM blade's)")
     ap.add_argument("--rank", type=int, default=0, help="print only the N best feasible uniform builds (sensitivity runs)")
+    ap.add_argument("--split", action="store_true",
+                    help="search front (motor, prop) x rear (motor, prop) independently; report against the best uniform build")
     ap.add_argument("--cfg", default=None, help="write an airframe_id.cfg per --pick candidate into this directory")
     ap.add_argument("--pick", default="", help="'tag=motor|prop;tag=motor|prop' for --cfg")
     a = ap.parse_args()
@@ -587,6 +601,46 @@ def main():
            f"{'xwind':>5s} {'tau':>5s} {'Tmax':>5s} {'corr':>5s} {'c16':>5s} {'c18':>5s} {'Icor':>5s} {'cru W':>6s} {'E Wh':>5s}  ok / failed")
     good = sorted([r for r in rows if r.get("E_Wh")], key=lambda r: r["E_Wh"])
     good_mixed = sorted([r for r in mixed if r.get("E_Wh") and r.get("feasible")], key=lambda r: r["E_Wh"])[:12]
+    if a.split:
+        uni = [r for r in rows if r.get("E_Wh") and r["feasible"]]
+        best_u = min(uni, key=lambda r: r["E_Wh"])
+        # fronts worth pairing: the feasible uniform fronts' (motor, prop) -- the front's duty does not
+        # depend on the rear beyond the mass; every (motor, prop) is a rear candidate
+        fronts = sorted({(r["motor_f"], r["front"]) for r in uni})
+        byname_m = {q.name: q for q in ms}; byname_p = {q.fam: q for q in props}
+        split = []
+        for fm, fp in fronts:
+            for mr in ms:
+                for pr in props:
+                    q = evaluate(byname_m[fm], byname_p[fp], dem, pr, mr)
+                    if q.get("E_Wh") and q["feasible"]:
+                        split.append(q)
+        split.sort(key=lambda r: r["E_Wh"])
+        same_m = [q for q in split if q["motor_f"] == q["motor_r"] and q["front"] != q["rear"]]
+        diff_m = [q for q in split if q["motor_f"] != q["motor_r"]]
+        def line(q):
+            return (f"E {q['E_Wh']:5.2f} Wh  hover {q['P_hover']:4.0f} W  cruise {q['P_cruise']:4.0f} W  mass {q['dm_g']:+5.0f} g  "
+                    f"Vstall {q['Vstall']:.2f}  lag f/r {q['tau_f']:.3f}/{q['tau_r']:.3f}  xwind {q['crosswind']:.2f}  "
+                    f"rear Tmax {q['Tmax0_rear']:4.1f} N (2x hover {2 * q['M'] * G / 4:4.1f})  rear I@1.46x {q['I_rear_margin']:4.1f} A")
+        print(f"SPLIT SEARCH ({len(fronts)} fronts x {len(ms)} motors x {len(props)} props on the rear; {len(split)} feasible; "
+              f"hover {T_HOVER_S:.0f} s + cruise {T_CRUISE_S:.0f} s, cf_fm {a.cf_fm or 'bench'})")
+        print(f"  best uniform          {best_u['motor']:26s} {best_u['prop']:27s} " + line(best_u))
+        for tag, lst in (("best, props differ", same_m), ("best, motors differ", diff_m)):
+            for q in lst[:4]:
+                print(f"  {tag:21s} {q['motor']:26s} {q['prop']:27s} " + line(q))
+        mm = [q for q in split if q["motor_r"].startswith("MN35")][:3]
+        for q in mm:
+            print(f"  {'small rear motor':21s} {q['motor']:26s} {q['prop']:27s} " + line(q))
+        fails35 = {}
+        for mr in [q for q in ms if q.frame == "35"]:
+            for pr in props:
+                q = evaluate(byname_m[best_u["motor_f"]], byname_p[best_u["front"]], dem, pr, mr)
+                if q.get("checks"):
+                    for k, v in q["checks"].items():
+                        if not v:
+                            fails35[(mr.name, k)] = fails35.get((mr.name, k), 0) + 1
+        print("  small rear motors, failed checks over all rear props:", dict(sorted(fails35.items())))
+        return 0
     if a.rank:
         ok = [r for r in good if r["feasible"]][:a.rank]
         ref_E = ref["E_Wh"]

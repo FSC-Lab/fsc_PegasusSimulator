@@ -72,6 +72,18 @@ the current build included -- are lost 12-60 s AFTER the RTH stop, the cascade s
 (`ok=0` runs, then a departure). In a real flight the safe controller has the aircraft by then; the cascade's
 post-stop hover in strong turbulence deserves its own look. wind_metrics' "landed" counts these (and its
 Vair column judges every build against the 15.12 m/s stall; the MN4010 builds stall at 14.77).
+**FRONT vs REAR (the user's follow-up, `rotor_trade.py --split`: 82 fronts x 7 motors x 16 props on the rear,
+the rear held to its own static thrust >= 2x hover, lag, throttle, and current at 1.46x hover <= its rating):**
+different PROPS buy nothing (MN4010, APC 13x10E front / carbon 15x8 rear 17.28 vs 17.25 Wh -- the carbon 15x8
+already cruises at eta 0.70 and hovers at FM 0.66, as good as any low-pitch database prop); a smaller REAR
+MOTOR works (MN4010 front / MN3510 or MN3508 rear: 17.0-17.1 Wh, -30..-60 g, the rear 24.5-26.7 N against
+18.2 needed) but buys ~1 % and needs per-pair thrust / cQ / lag parameters in the airframe file and every
+controller (all assume four identical rotors). **The same argument holds for the FRONT:** the 35 mm T-Motor
+frames (MN3510 KV360 97 g, MN3508 KV380 82 g, 6S; datasheet-only, also DERATED until the model matches T-Motor's
+own MN35xx/MN4010 thrust ratio, +22 / +57 mOhm) clear every requirement on ALL FOUR rotors: MN3510 + carbon
+15x8 16.4-16.5 Wh (-5 % vs the pick, -60 g more, corridor 2.5x, cruise 6.3x, 8.9 of 15 A); MN3508 16.5-16.9 Wh
+(-120 g more). Not the recommendation until benched: T-Motor's tables disagree with themselves by 15 % on the
+35 mm frame (MN3510 vs MN4010 at the same rpm on the same prop). Bench one MN3510 beside the MN4010 + 15x8.
 **BEFORE BUYING:** both rotation directions (fixed-wing carbon props are often one-handed; APC 13x10E is the
 fallback -- APC makes pusher Thin Electrics); bench the MN4010 + 15x8 WITH the power sensor and ESC PWM logged,
 to 100 % once; one inflow point (12-16 m/s) for J0; then write the airframe file from THAT session, not from
