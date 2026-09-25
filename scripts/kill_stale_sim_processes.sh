@@ -49,7 +49,8 @@ PATTERNS=(
   'autopilot_sv_baseline_node'              # baseline control node
   'motor_test_node'                         # props-off bench tool
   'apl20_ros/autopilot_node'                # apl20 cascade controller
-  'px4_offboard_control/virtual_remote'     # virtual remote (arm/offboard)
+  'fsc_autopilot_ros2/virtual_rc'           # virtual RC (arm/offboard services)
+  'px4_offboard_control/virtual_remote'     # its retired predecessor
   'single_drone_ground_control\.py'         # ground station GUI
 )
 

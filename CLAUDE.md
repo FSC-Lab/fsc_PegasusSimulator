@@ -2168,10 +2168,15 @@ initial condition matches the mid-flight bags.
   that rootfs is **39 GB** of accumulated logs. Creating a scratch profile cost 39 GB of disk.
   Exclude `log/` — or create only the `etc`/`test_data` symlinks plus `eeprom/`, which is all PX4
   needs to boot.
-- **`virtual_remote` is service-driven, not interactive.** `/uav_0/rc/{arm,disarm,offboard,rtl}`
-  as `std_srvs/Trigger`; there is no `_wait_for_arm_trigger()` and no "press Enter" gate. The
-  safety comment at `start_baseline_t650_stack_fused.sh:31-34` is **stale and overstates the
-  guarantee** — the pane arms whenever anyone calls the service, script included.
+- **The virtual RC is `ros2 run fsc_autopilot_ros2 virtual_rc` (2026-09-25), service-driven, not
+  interactive.** `/uav_0/rc/{arm,disarm,offboard,rtl}` as `std_srvs/Trigger`; no "press Enter"
+  gate — the pane arms whenever anyone calls the service, script included. It was
+  `px4_offboard_control virtual_remote` on fsc_virtual_remote_controller's `dev_robotic_arm`
+  branch (022d1f6/73cc7d1), which is RETIRED: the node moved into fsc_autopilot_ros2
+  (`scripts/nodes/virtual_rc.py`) so the sim stack depends on that package's MAIN branch only —
+  main's `virtual_remote` is the old interactive one-shot and nothing runs it any more. The pad
+  node the PS4 Remote tab reads (`gamepad_input` + its launch) is on main unchanged.
+  `kill_stale_sim_processes.sh` / `stop_isaacsim_stack.sh` match both names.
 - **PX4 autotune needs `MC_AT_EN=1` set at BOOT** (`rc.mc_apps:23` only starts the module if the
   parameter is already >0), and there is no `MC_AT_AXES` in v1.16 — it sequences roll→pitch→yaw
   and rewrites all three. Use `MC_AT_APPLY=0` to identify without writing. Excitation is injected

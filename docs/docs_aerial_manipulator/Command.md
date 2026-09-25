@@ -855,9 +855,12 @@ tmux list-panes -t fsc_direct_actuation_t650_stack:stack -F '#{pane_index} #{pan
 pgrep -x MicroXRCEAgent && ss -lunp | grep 8888                                            # expect a pid + a listener
 ```
 
-**Don't press Enter in the `vrc` pane** — `virtual_remote` arms the vehicle and
-requests OFFBOARD by itself once you do. It exists only because there is no real
-transmitter in the loop; §7.4 is the controlled path.
+**The `vrc` pane is `virtual_rc`** (`ros2 run fsc_autopilot_ros2 virtual_rc`,
+2026-09-25; before that `px4_offboard_control virtual_remote` from
+fsc_virtual_remote_controller's retired `dev_robotic_arm` branch): it does
+nothing on its own — arming, disarming, OFFBOARD and RTL happen only through
+its `/uav_0/rc/{arm,disarm,offboard,rtl}` services, §7.4's path. It exists only
+because there is no real transmitter in the loop; hardware scripts never launch it.
 
 ### 7.3 Pegasus / PX4 SITL — terminal 2
 
@@ -1695,7 +1698,7 @@ ros2 service call /uav_0/rc/disarm std_srvs/srv/Trigger {}
 **The launcher now enters DIRECT for you (2026-08-15) — this rig only.** The
 node still *boots* in SAFETY, which is the right power-on state for a fallback
 controller, but the stack script's `vrc` pane calls `set_direct_mode` as soon
-as the service appears, sequenced before `virtual_remote` starts. So the switch
+as the service appears, sequenced before `virtual_rc` starts. So the switch
 always lands while DISARMED, and step 3's arm command starts the flight already
 in the geometric law — there is no SAFETY takeoff to switch out of, and the
 manual call above is now the recovery path, not the normal one. The tell is
@@ -6556,8 +6559,8 @@ it in seconds. A wrong index or sign on some other connection is a PARAMETER
 
 **Stick mapping** (`sensor_msgs/Joy` on `<vehicle_ns>/rc/input`; on this pad
 LEFT and UP read **+1.0**, confirmed over USB 2026-09-20 — 8 axes, 13 buttons,
-triggers resting at 1.0 on axes 2/5, i.e. the Bluetooth table in
-`fsc_virtual_remote_controller/CLAUDE.md` holds over cable too):
+triggers resting at 1.0 on axes 2/5; the table below is the reference, the pad
+node itself is `gamepad_input` from fsc_virtual_remote_controller's MAIN branch):
 
 | stick | axis | push | moves the target |
 |---|---|---|---|
