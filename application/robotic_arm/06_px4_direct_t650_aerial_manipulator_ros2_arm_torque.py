@@ -210,6 +210,21 @@ ARM_POSITION_TOPIC  = "/uav_0/isaacsim_manipulator/position_commands"
 ARM_POS_KI          = 2.0    # [N·m/(rad·s)] servo-integrator emulation, position mode only
 ARM_POS_I_MAX       = 0.35   # [N·m] anti-windup clamp (below the friction+gravity residual it absorbs)
 
+# --- GRIPPER BUS (2026-09-25) ------------------------------------------------
+# The gripper's simulated servo bus, beside the arm's. The Isaac arm stack runs
+# no ros2_control gripper interface; open_manipulator_x_isaac_bridge's
+# isaac_gripper_action_server serves gripper_controller/gripper_cmd (the action
+# the ground station's OPEN/CLOSE and the PS4 pad's L1/R1 call) and writes the
+# hub-angle target here. This plant slews the gripper_joint drive toward it --
+# 01_aerial_manipulator_track's proven pattern on this same joint (OPEN = the
+# authored rest 0 deg, CLOSED = -50 deg, 0.5 rad/s) -- and publishes the joint
+# back. Before this, the drive was pinned at 0 deg and nothing could move it.
+GRIPPER_CMD_TOPIC   = "/uav_0/isaacsim_manipulator/gripper_command"   # std_msgs/Float64 [rad]
+GRIPPER_STATE_TOPIC = "/uav_0/isaacsim_manipulator/gripper_state"     # sensor_msgs/JointState
+GRIPPER_LIMIT_RAD   = math.radians(50.0)   # the joint's authored limits
+GRIPPER_RATE        = 0.5                  # [rad/s] slew, = 01's open/close ramp
+GRIPPER_STATE_DIV   = 5                    # publish every 5th physics step (50 Hz at 250 Hz)
+
 # --- PLANNED-TRAJECTORY VISUALISATION (2026-09-04, user request) -----------
 # BLUE  = the drone reference path (the system CoM the law tracks) + an arrow
 #         along the vehicle's NOSE.
@@ -669,6 +684,21 @@ class AmT650WholeBodyArmSim:
         self._arm_node = RclpyNode(f"isaac_arm_torque_plant_{VEHICLE_ID}")
         self._arm_state_pub = self._arm_node.create_publisher(
             JointState, ARM_STATE_TOPIC, 10)
+
+        # --- gripper bus ------------------------------------------------------
+        self._grip_cmd = math.radians(GRIPPER_REST_DEG)     # latest command [rad]
+        self._grip_tgt = self._grip_cmd                     # slewed drive target
+        self._grip_tgt_sent = None
+        self._grip_n = 0
+        if self._grip_idx is not None:
+            from std_msgs.msg import Float64
+            self._grip_sub = self._arm_node.create_subscription(
+                Float64, GRIPPER_CMD_TOPIC, self._on_gripper_command, 10)
+            self._grip_state_pub = self._arm_node.create_publisher(
+                JointState, GRIPPER_STATE_TOPIC, 10)
+            print(f"[AM-T650-WB] GRIPPER bus: {GRIPPER_CMD_TOPIC} -> gripper_joint drive "
+                  f"(slew {GRIPPER_RATE} rad/s, +-{math.degrees(GRIPPER_LIMIT_RAD):.0f} deg), "
+                  f"state on {GRIPPER_STATE_TOPIC}", flush=True)
         if ARM_COMMAND_MODE == "position":
             self._q_cmd = Q_HOME.copy()          # latest position command (latched)
             self._i_pos = np.zeros(4)
@@ -835,6 +865,33 @@ class AmT650WholeBodyArmSim:
         self._tau_cmd = tau
         self._cmd_stamp_t = self._t
         self._n_cmds += 1
+
+    def _on_gripper_command(self, msg):
+        v = float(msg.data)
+        if math.isfinite(v):
+            self._grip_cmd = max(-GRIPPER_LIMIT_RAD, min(GRIPPER_LIMIT_RAD, v))
+
+    def _step_gripper(self, dt, q_all, qd_all):
+        """Slew the gripper drive toward the command; publish its state."""
+        if self._grip_idx is None:
+            return
+        step = GRIPPER_RATE * dt
+        self._grip_tgt += max(-step, min(step, self._grip_cmd - self._grip_tgt))
+        if self._grip_tgt_sent is None or abs(self._grip_tgt - self._grip_tgt_sent) > 1e-6:
+            from omni.isaac.core.utils.types import ArticulationAction
+            self._art.get_articulation_controller().apply_action(ArticulationAction(
+                joint_positions=np.array([self._grip_tgt]),
+                joint_indices=np.array([self._grip_idx])))
+            self._grip_tgt_sent = self._grip_tgt
+        self._grip_n += 1
+        if self._grip_n % GRIPPER_STATE_DIV == 0:
+            msg = self._JointState()
+            msg.header.stamp = self._arm_node.get_clock().now().to_msg()
+            msg.name = [GRIPPER_JOINT]
+            msg.position = [float(q_all[self._grip_idx])]
+            msg.velocity = [float(qd_all[self._grip_idx])]
+            msg.effort = [0.0]
+            self._grip_state_pub.publish(msg)
 
     def _publish_arm_state(self, q, qdot, tau):
         msg = self._JointState()
@@ -1285,6 +1342,7 @@ class AmT650WholeBodyArmSim:
         qd_all = np.asarray(self._art.get_joint_velocities(), float)
         q    = q_all[self._arm_idx]
         qdot = qd_all[self._arm_idx]
+        self._step_gripper(dt, q_all, qd_all)
 
         # gravity comp at the CURRENT attitude (the servo integrator's role
         # in the emulation) — model in AM_realign's old frame, adapt.
