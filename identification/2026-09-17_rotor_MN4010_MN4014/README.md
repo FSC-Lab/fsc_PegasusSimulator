@@ -55,3 +55,27 @@ time to 1 ms at this bench's noise and sample rate.
    response, but the stand's `ESC signal (µs)` column is empty, so that number cannot be separated
    from the clock offset between the PX4 logger and the stand. **For the next bench session: log the
    ESC PWM on the stand**, and the dead time becomes a one-clock measurement.
+
+## Correction (2026-09-25): the full-throttle numbers are a straight-line extrapolation, and too high
+
+`fit.txt`'s `omega_max` / `max_thrust` (886 rad/s / 36.3 N for the MN_4014, 784 / 28.3 for the MN_4010)
+extend the affine rpm(throttle) fit from the 10-80 % steps to 100 %. A motor on a voltage-mode ESC is a
+DC machine whose speed DROOPS with load, so the curve bends over: `omega + s*Q = alpha*throttle + beta`
+fits the same settled points to 4-5 rad/s rms (the affine fit: 6), with s = R/Kt^2 the droop.
+
+| | MN_4014 | MN_4010 |
+|---|---|---|
+| droop s [rad/s per N.m] | 340 | 277 |
+| no-load speed at full throttle | 967 rad/s (9234 rpm) | 827 rad/s (7899 rpm) |
+| -> Kv at 22.2 V | 416 rpm/V = **the KV400 variant** | 356 rpm/V = **the KV370 variant** |
+| loaded full throttle with this 15x5, at 22.2 V | 751 rad/s, **26.1 N** | 24.4 N |
+| path resistance s*Kt^2 minus the datasheet motor R | 127 mOhm (ESC + wiring + source) | 86 mOhm |
+
+T-Motor's own table for the MN4014 KV400 with its 15x5 at 22.2 V reads 25.7 N at 100 %, independently.
+Hover (52 %) and every flown operating point sit inside the measured range and are unaffected; the file's
+headroom above ~80 % throttle does not exist. `airframe_id.cfg` still carries 36.3 N (a separate change:
+it moves the flown identity hashes). The fit is `scripts/rotor_trade.py`'s `bench_line()`.
+
+**The stand's power sensor was not connected in either session**: `Voltage (V)` is 0 throughout and
+`Current (A)` a constant ~3.1 A offset, so no efficiency and no Kt/R were measured directly. Wire it
+next time, with the ESC PWM column (see the dead-time note above).
