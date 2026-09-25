@@ -2,6 +2,81 @@
 # Plan: https://claude.ai/code/artifact/7d8de8f4-dde5-4efa-b16e-fc97fb217d78
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
+
+# ★★★★★ 2026-09-25: THE ROTOR TRADE -- PREDICTED BEST MOTOR + PROP: MN4010 KV370 + A CARBON 15x8
+# (MID-PITCH, CW + CCW). -35% REFERENCE-MISSION ENERGY, -181 g, EVERY FLOWN MARGIN KEPT. THE PITCH IS THE
+# LEVER, NOT THE MOTOR. AND THE AIRFRAME FILE'S 36.3 N IS A STRAIGHT-LINE EXTRAPOLATION: THE MOTOR LINE SAYS 26 N.
+# `scripts/rotor_trade.py` (the model + ranking + sensitivity + per-candidate airframe files), `scripts/rotor_gate.sh` +
+# `rotor_gate_metrics.py` (the candidates flown in the gate), results `~/flight_bags/rotor_trade/`, page: https://claude.ai/artifact/LKtXDvQkWqAwDYkJVpHgkv
+**THE ASK (the user's): "based on these results and specifications, predict the best performing rotor and motor
+combination for the system."** Done as a model built only from measurements, scored against thresholds this
+campaign measured, then the finalists flown in the gate.
+**THE MOTOR, FROM THE BENCH LOGS (identification/2026-09-17_...; its README now carries this).** The stand's
+power sensor was NOT wired (V = 0, I = a flat 3.1 A offset: no efficiency was ever measured). What it did log
+-- throttle, speed, shaft torque -- fits a voltage-mode-ESC DC motor `omega + s Q = alpha x + beta` to 4-5 rad/s
+rms: MN4014 s 340 rad/s/Nm, no-load 967 rad/s at full throttle = KV400 at ~22-23 V; MN4010 s 277, 827 rad/s =
+KV370. **Loaded full throttle with the 15x5 at 22.2 V: 26.1 N at 751 rad/s -- NOT the 36.3 N / 886 rad/s the
+airframe file carries** (a linear extrapolation of 10-80 %); T-Motor's own table for the same motor + 15x5 at
+22.2 V: 25.7 N. Flown points sit inside the bench range (unaffected); the file's headroom above ~80 % does not
+exist. NOT CHANGED in airframe_id.cfg (moves the identity hashes; the robustness table passed thrust x0.8).
+The path resistance above the datasheet motor R: 127 / 86 mOhm (ESC + wiring + source).
+**THE PROPELLERS.** UIUC Propeller Data Site re-downloaded to `~/data/uiuc-propDB` (md5 a41e484f... = the
+published). ITS TRAP: each rpm is TWO runs a few rpm apart (a low-J and a high-J segment, 4018 / 4043) --
+treated as two speeds, the interpolation extrapolates garbage; merge runs within 3 % of rpm first. The carbon
+multirotor family (13x4.4-16x5.4) = the bench 15x5's static C_T0 0.0708 / C_P0 0.0222 + J0 0.922 p/D + 0.216 +
+the J-shape of four low-pitch database props: **normalised by J0, C_T/C_T0 and C_P/C_P0 are nearly universal
+across all 21 props of 13-16 in (0.14-0.21 / 0.45-0.55 at J/J0 0.85)**, which is what makes the borrowing safe.
+Carbon mid-pitch (T-Motor FS 15x8 17 g, 16x8 19.8 g) = the measured Aero-naut CAM CARBON blades of that size.
+Masses from the makers (carbon ~ D^2.3, APC glass-nylon ~ D^3.5 and 2x heavier); rotor lag = J_rot / (c/s +
+2Q/omega), c calibrated per frame so the bench 15x5 reproduces its measured lag (0.067 / 0.077 s).
+**THE DEMAND (the controller's own model):** hover M g/4; the corridor's front trim 9.7 N at 8 m/s / 45 deg into
+5 m/s of axial inflow; steady level cruise solved on build_ode with the least rotor use: **~2.4 N per front rotor
+at 16-20 m/s, rear ~0** (the airframe's drag is ~4.8 N, L/D ~8), re-solved at each build's mass. (First pass
+had the pitch rotation nose-DOWN for +theta -- the seventh time; `R = Ry(-theta)` is nose-up in FLU.)
+**THE REQUIREMENTS, each a flown number:** lag <= 0.16 s; static >= 2x hover (the yaw differential); corridor
+>= 1.46x the front trim (the 12x8's); cruise thrust at 16 m/s >= 2.3x trim (the 12x8's, which flew with 22 %
+spare); corridor current <= the 180 s rating; D <= 16 in (the CAD's rear props, 15.9 in, reach the fuselage side
+at the rear hubs); hover duty <= 0.75.
+**THE RESULT (80 builds, 63 feasible; 60 s hover-class + 300 s cruise at 16 m/s, 22.2 V):**
+| build | mass | stall | hover W | cruise W (front pair) | prop eta cruise | mission Wh | lag s |
+|---|---|---|---|---|---|---|---|
+| MN4014 KV400 + carbon 15x5 (current) | 3.95 kg | 15.12 | 457 | 225 | 0.47 (J/J0 0.86) | 26.4 | 0.067 |
+| MN4010 KV370 + carbon 15x5 (motor only) | -152 g | 14.83 | 398 | 201 | 0.46 | 23.4 (-11 %) | 0.078 |
+| MN4014 KV400 + carbon 15x8 (prop only) | -29 g | 15.07 | 421 | 153 | 0.71 | 19.8 (-25 %) | 0.047 |
+| **MN4010 KV370 + carbon 15x8** | **-181 g** | **14.77** | **365** | **134** | **0.70 (J/J0 0.83)** | **17.3 (-35 %)** | **0.054** |
+| MN4010 KV370 + carbon 16x8 | -169 g | 14.79 | 357 | 134 | 0.71 | 17.1 | 0.066 |
+| MN4010 KV370 + APC 14x10E | -104 g | 14.92 | 438 | 128 | 0.76 | 17.9 | 0.094 |
+**WHY: in cruise every prop is lightly loaded and runs near its zero-thrust J, where efficiency scales with J0 --
+the 15x5's 0.52 wastes ~30 % of the front rotors' power there.** Mixed front/rear props buy nothing (the carbon
+16x8 is also a good hover prop, FM 0.66) -- no per-pair prop parameters needed. The MN4014's extra 38 g per motor
+buys thrust margin the aircraft never uses (corridor 3.07x on the 4010 + 15x8 against 1.46 needed).
+**ROBUST (7 sensitivity cases: 21.0 V, the bench under-reading the 15x5 (FM 0.67), a hover-heavy mission, +30 %
+prop inertia, -10 % on the borrowed carbon aero):** MN4010 over MN4014 always; J0 >= ~0.7 over the 15x5 always
+(-19 to -35 %); the 15x5 is never best. Carbon 15x8 / 16x8 / APC 13x10E / 14x10E are within the model's
+uncertainty on energy; carbon wins on mass and lag, **15x8 over 16x8 on clearance** (a 16 in disc's tip sits at
+the fuselage side at the rear rotors, ~1 cm above it; 15 in leaves 13 mm).
+**THE GATE (`scripts/rotor_gate.sh`, each build as ITS OWN airframe file -- plant and controller matched; the flown
+law imu-mdob + L1, the offset 100 mm tank; `rotor_gate_metrics.py` splits the turning cells at the RTH stop):**
+| build | straight 8 seeds: corridor / BT pk, fails | turning 4 cells x 8: completed | front throttle pk still / turb 1.0 / turb 1.0 @18 | stop |
+|---|---|---|---|---|
+| current, CORRECTED thrust (26.1 N) | 10.7 / 12.7, 0 | 32/32 | 0.82 / 0.95 / 0.96 | 6.2 m |
+| MN4014 + carbon 16x8 | 10.7 / 12.6, 0 | 32/32 | 0.64 / 0.79 / 0.77 | 6.3 |
+| MN4010 + APC 14x10E | 10.5 / 12.2, 0 | 32/32 | 0.71 / 0.87 / 0.84 | 6.0 |
+| MN4010 + carbon 16x8 | 10.4 / 12.2, 0 | 32/32 | 0.64 / 0.79 / 0.79 | 5.7 |
+| **MN4010 + carbon 15x8** | **10.4 / 12.0, 0** | **32/32** | **0.76 / 0.82 / 0.82** | **5.9** |
+In-flight solve failures 1-3 per 32 flights for every build; the MN4010 builds cross the corridor and flare
+slightly flatter (lighter). The gate confirms flyability and HEADROOM (the current build reaches 95-96 % front
+throttle in 1 m/s turbulence, the candidates 77-87 %); it cannot confirm the ENERGY (its rotor model has thrust,
+not power). **A SHARED WEAKNESS IT FOUND, NOT A ROTOR ONE:** in 1 m/s turbulence 1-2 of 8 seeds per build --
+the current build included -- are lost 12-60 s AFTER the RTH stop, the cascade still holding a hover at 30 m
+(`ok=0` runs, then a departure). In a real flight the safe controller has the aircraft by then; the cascade's
+post-stop hover in strong turbulence deserves its own look. wind_metrics' "landed" counts these (and its
+Vair column judges every build against the 15.12 m/s stall; the MN4010 builds stall at 14.77).
+**BEFORE BUYING:** both rotation directions (fixed-wing carbon props are often one-handed; APC 13x10E is the
+fallback -- APC makes pusher Thin Electrics); bench the MN4010 + 15x8 WITH the power sensor and ESC PWM logged,
+to 100 % once; one inflow point (12-16 m/s) for J0; then write the airframe file from THAT session, not from
+these predictions.
+
 # ★★★★★ 2026-09-23 (late night): "ADAPTIVE MPC + INDI" -- THE OUTER's FORCE MODEL ADAPTED IN FLIGHT,
 # ITS OWN GS CONTROLLER (cascade_aindi, window 6k-aindi). FLOWN: LANDED 0.01 m. Controller 7b0c375
 # (+ INDI default full 6652824), GS 12c93e5, sim e8cd3f7 + this commit. Flown identity hashes UNCHANGED.

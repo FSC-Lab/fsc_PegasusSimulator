@@ -361,6 +361,30 @@ ROBUST_NODE=nmpc_cascade_imu_node.py \
 
 ---
 
+## 2026-09-25 — The rotor trade: which motor and propeller
+
+Asked to predict the best motor and propeller from the results so far. A model built only from
+measurements: the bench logs give each motor's full-throttle speed-torque line (the stand's power
+sensor was not wired, so speed and torque had to do), the UIUC wind-tunnel database gives every
+13–16 in propeller's thrust and power against advance ratio, and the controller's own model gives
+what the aircraft asks of each rotor in hover, the transition corridor and cruise. Each of 80
+builds was scored against thresholds this project had already measured in flight.
+
+Predicted best: **MN4010 KV370 with a carbon 15×8** (both rotation directions): about 35% less
+battery energy on the reference mission, 181 g lighter, every control margin kept or larger. The
+lever is the prop's pitch: in cruise each front rotor makes only ~2.4 N and runs near its zero-thrust
+point, where the 15×5 is 47% efficient and a 15×8 70%. The lighter motor adds a smaller gain. Seven
+sensitivity cases keep the conclusions; within the mid-pitch group (carbon 15×8/16×8, APC 13×10/14×10)
+the energy is within the model's uncertainty, and the 15×8 wins on mass, rotor lag and fuselage clearance.
+
+Five builds flew in the offline gate as their own airframe files: all complete every straight and
+turning mission, including 1 m/s turbulence at 18 m/s, and the new props keep 13–18% more throttle in
+reserve. Two findings on the way: the airframe file's 36.3 N full-throttle thrust is a straight-line
+extrapolation (the motor model says 26.1 N; T-Motor's table 25.7 N), and the cascade's post-stop hover
+loses 1–2 of 8 seeds in 1 m/s turbulence on every build. Page: https://claude.ai/artifact/LKtXDvQkWqAwDYkJVpHgkv
+
+---
+
 ## 2026-09-23 (late night) — Adaptive MPC + INDI
 
 Question: with INDI replacing the inner adaptive loop, should adaptation move to the outer MPC? For
