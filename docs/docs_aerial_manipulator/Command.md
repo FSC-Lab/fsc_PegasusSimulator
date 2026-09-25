@@ -6633,6 +6633,15 @@ Each step in its own terminal; never chain step 0 with a launcher. Plug the pad
 in before step 1. The Pegasus launcher sees the running gamepad node and does
 not open a second one.
 
+**Step 0 kills the pad too (since 2026-09-25), so step 1 comes AFTER it — every
+time.** Step 0 wipes `/dev/shm/fastrtps_*`, which breaks the shared-memory
+links of any ROS 2 process that survives it; a pad started before the clean
+slate then publishes into the void (`rc/input` reads 0 Hz on the ground station
+while `/joy` looks alive). Never restart the pad, or any other node, while the
+vehicle is in whole-body DIRECT: the 2026-09-25 flip followed a mid-flight pad
+restart by 32 s (the planner's reference stream to the law dropped to ~3 Hz from
+that instant; cause not isolated). Land, or abort to SAFETY (step 6), first.
+
 ```bash
 # 0. clean slate            (any terminal — BOTH lines, this order, as TWO separate calls)
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh

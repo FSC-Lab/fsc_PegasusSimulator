@@ -711,6 +711,14 @@ class AmT650WholeBodyArmSim:
         else:
             self._arm_eff_sub = self._arm_node.create_subscription(
                 JointState, ARM_EFFORT_TOPIC, self._on_arm_effort, 10)
+            # Once, at bring-up. (2026-09-06 to 2026-09-25 this print sat at the
+            # end of _draw_trajectory, i.e. it fired on EVERY viz callback --
+            # ~8-20 lines/s that scrolled the status line out of the pane's
+            # 2000-line history within a minute and hid the pre-flip record
+            # of the 2026-09-25 flip.)
+            print(f"[AM-T650-WB] arm ROS2 bridge up: states -> {ARM_STATE_TOPIC}, "
+                  f"efforts <- {ARM_EFFORT_TOPIC} (names {ARM_ROS_JOINT_NAMES})",
+                  flush=True)
 
         # --- planned-trajectory visualisation -------------------------------
         self._viz_path = None       # (N, 12) world-frame samples of the plan
@@ -825,9 +833,6 @@ class AmT650WholeBodyArmSim:
         except Exception as exc:
             print(f"[AM-T650-WB] trajectory viz disabled: {exc}", flush=True)
             self._draw = None
-        print(f"[AM-T650-WB] arm ROS2 bridge up: states -> {ARM_STATE_TOPIC}, "
-              f"efforts <- {ARM_EFFORT_TOPIC} (names {ARM_ROS_JOINT_NAMES})",
-              flush=True)
 
     def _on_arm_position(self, msg):
         # 05's semantics: match by name, latch what arrives, keep the rest.

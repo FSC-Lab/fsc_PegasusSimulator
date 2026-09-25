@@ -30,6 +30,7 @@ SESSIONS=(
   fsc_baseline_iris_stack
   x650_ros_hover
   x650_torque_test
+  ps4_joy                                   # PS4 gamepad (Command.md 7.19.1 step 1)
 )
 
 # Anchored on the actual executables. An earlier version matched the bare string
@@ -52,6 +53,15 @@ PATTERNS=(
   'fsc_autopilot_ros2/virtual_rc'           # virtual RC (arm/offboard services)
   'px4_offboard_control/virtual_remote'     # its retired predecessor
   'single_drone_ground_control\.py'         # ground station GUI
+  # The PS4 gamepad pair (Command.md 7.19.1 step 1). It is started OUTSIDE the stack
+  # sessions, so it used to survive a clean slate -- and the clean slate wipes
+  # /dev/shm/fastrtps_*, which breaks the Fast-DDS shared-memory links of any ROS 2
+  # process that survives it: the surviving pad then publishes into the void, the
+  # ground station reads 0 Hz on rc/input, and the "fix" (restarting the pad
+  # mid-flight) is exactly what preceded the 2026-09-25 flip. Kill it here; start it
+  # again AFTER step 0, as the run sequence says.
+  'px4_offboard_control/gamepad_input'      # PS4 pad -> rc/input
+  'lib/joy/joy_node'                        # the joystick driver under it
 )
 
 # Collect PIDs, excluding this script and its own subshells so we never kill ourselves.
