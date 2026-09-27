@@ -6446,6 +6446,8 @@ error measured on the flown circle.
 
 ### 7.19 PS4 REMOTE — guiding the end-effector with a gamepad (2026-09-20, user request; AIM → CONFIRM → MOVE flow 2026-09-24)
 
+> **SUPERSEDED 2026-09-27 by §7.21 (real-time teleoperation).** The PS4 Remote tab no longer aims a target and plans a transition; the pad's velocities now drive the whole-body reference directly through the planner. The flow below is kept as a record (fsc_open_manipulator 6a570c1 has the code).
+
 A fourth tab on the ARM ground station, plus a `PS4 REMOTE` toggle beside the
 gripper buttons and a `Gamepad: ON/OFF` box in the Status column. The sticks
 move a VIRTUAL end-effector target; nothing is sent while aiming, the vehicle
@@ -6669,4 +6671,125 @@ ros2 service call /uav_0/fsc_open_manipulator/ps4_remote/set_engaged std_srvs/sr
 
 # 6. abort back to SAFETY   (terminal 4 — have it ready)
 ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode std_srvs/srv/SetBool "{data: false}"
+```
+
+### 7.21 PS4 REAL-TIME TELEOPERATION — the pad drives all eight flat outputs (2026-09-27, user design)
+
+The pad commands **velocities**; the whole-body trajectory planner integrates them into
+setpoints and streams every one as a full, compatible `WholeBodyReference` — no plan, no
+Send, no online trajectory optimisation. It replaces §7.19's aim → confirm → move.
+
+**Mapping** (DualShock 4 on `joy_node` → `gamepad_input` → `/uav_0/rc/input`):
+
+| control | commands | frame |
+|---|---|---|
+| D-pad up / down / left / right | drone (system CoM) forward / back / left / right | vehicle heading |
+| △ / ✕ | drone up / down | world z |
+| □ / ○ | drone yaw left / right | — |
+| left stick | end-effector forward / back / left / right, **relative to the airframe** | body |
+| right stick up / down | end-effector up / down, relative to the airframe | body |
+| right stick left / right | wrist roll q4 | — |
+| PS | fold the arm home (joint space, the drone held) | — |
+| L1 / R1 | gripper open / close (the arm station, as before) | — |
+
+**Why it is compatible by construction.** The flat outputs of this vehicle are the system CoM,
+the platform heading and the four joints `[x_c; ψ; q]` — exactly what the bspline planner
+parameterises. The D-pad/buttons define `x_c, ψ`; the sticks define the grasp point relative to
+the airframe `s = r_0e(q)` (a 3-DOF position IK on q1..q3 — q4 is coaxial with the grasp point
+and cannot move it) plus q4 directly, i.e. joint space. `flatState()` (wb_law, the function every
+planned transition already goes through) then builds the law's reference with no fixed point:
+the thrust axis follows ẍ_c alone and the EE reference is the forward kinematics of the chain.
+
+**Smoothing** (`fsc_trajectory_planner/include/fsc_trajectory_planner/teleop_reference.hpp`).
+Each raw target is filtered by a chain of identical first-order lags, discretised exactly, so
+the output is always a convex combination of past raw targets: it cannot overshoot a wall the
+raw target stopped at, nor leave the joint box. CoM 5 stages (continuous through snap — with 4
+the snap stepped by ω⁴·v·dt every tick), heading and joints 3 stages. Walls act on the RAW
+targets: geofence ±1.5 m about the engage point, CoM z in [0.70, 2.20] m, grasp point z ≥ 0.25 m,
+joint box − 2°, q3 ≥ 0 (the positive-fold branch), the singularity margin, IK convergence, and a
+0.5 m leash between the raw CoM target and the measured CoM (the measurement only ever SCALES
+the input — it is never written into the reference). The last refusal is published on
+`whole_body_planner/teleop/note` and shown in red on the tab.
+
+**Planner interface** (all additive; nothing changes when teleop is not engaged):
+- state `TELEOP` (engaged) / `TELEOP_STOP` (released, settling) — entered only from HOLD
+  (or PENDING/PLANNED/INFEASIBLE, which it clears); every other target, Send, Go Home, EE
+  trajectory service is refused while it runs; leaving DIRECT drops it.
+- `whole_body_planner/teleop/engage` (SetBool), `whole_body_planner/teleop/arm_home` (Trigger).
+- `whole_body_planner/teleop/state` (Float64MultiArray, 20 Hz, 35 values — layout in
+  `publishTeleopState`), `whole_body_planner/teleop/note` (latched String),
+  `whole_body_planner/current_skeleton` (the measured arm as 5 world points, 15 Hz).
+- Inputs go live only after a FRESH, all-centred pad sample; a pad silent for
+  `teleop_joy_timeout_s` (0.3 s) reads zero AND disarms (centre it again to resume).
+- `teleop_*` parameters: rates at full deflection (physical: drone 0.20 m/s xy, 0.15 m/s z,
+  20 °/s yaw; arm 4 cm/s, roll 20 °/s; home 10 °/s per joint), bandwidths, walls, axis/button
+  indices (`teleop_axes` [ee fwd, ee left, ee up, roll, dpad x, dpad y] = [1, 0, 4, 3, 6, 7],
+  `teleop_buttons` [up, down, yaw left, yaw right, home] = [2, 0, 3, 1, 10]),
+  `teleop_time_scale` = the sim's real-time factor (0.48 on shiqi_machine — the planner runs on
+  the wall clock, same rule as `ee_traj_time_scale`), 1.0 on hardware.
+
+**Config**: `..._whole_body_l1_4d_direct_actuation_t650_sim_ps4test.yaml` is now the tuned
+mirror sim yaml (H1b gains, 2026-09-27) VERBATIM + `vehicle_name` + the `teleop_*` block. Its
+previous matched-plant content is in git (fsc_autopilot_ros2 72a6717).
+
+**Arm station tab**: engages the planner and shows what happens — the pad (every control
+labelled, lit while held), the quadrotor (two black links, four black rotor circles), the arm
+(brown links, black joints), the dashed grey target airframe, EE (FK) and the dashed EE Target
+with its gripper, the arm-workspace views, Current/Target rows and the wall. It does NOT read
+the pad for motion: the planner does, so a stalled station cannot stall the vehicle.
+
+**Validated** (2026-09-27): `test_teleop_reference` 7/7 (filter derivatives, bumpless seed,
+EVERY sample FK-compatible to 1e-9, walls, settle), `test_teleop_loopback.py` all 15 steps
+(every pad channel's direction, arm wall at "joint 2 limit" with no jump, dropped pad holds,
+release → HOLD with 0.000 mm step, SAFETY silent), the arm station's
+`test_ps4_remote_loopback.py` 7/7 against the REAL planner, and the planner's existing gtests
+and loopback unchanged. Isaac: see §7.21.1.
+
+**Polish, 2026-09-27 (user review):**
+- **Pad labels are signed axes**: drone x±, y± (heading frame, x = the nose), z±, ψ±;
+  end-effector x_e±, y_e±, z_e± relative to the airframe and ψ_e± — the law's EE heading,
+  which with q1..q3 held IS the wrist roll q4.
+- **Rates are editable boxes** (drone v_xy, v_z, ψ̇; end-effector v_e, ψ̇_e — the arm's homing
+  rate is fixed at 10 °/s and the time scale is a yaml setting, neither is an operator control),
+  loaded from the planner and written back LIVE as its `teleop_*` parameters (the planner
+  re-reads them every tick; a planner restart re-loads the boxes from its yaml).
+- **One 3-D view, two fixed scales**, switched by the View buttons: GRASPING (cube 1.0 m, grid
+  0.1 m, coordinates + gripper drawn) and FLYING (cube 2.5 m, grid 0.5 m); the active scale is
+  printed on the view. `ps4_view_scale` (grasping | flying) picks the one the tab opens on.
+- **Time scale** (`teleop_time_scale`, yaml only; simulation only): the planner integrates the pad on the WALL clock while
+  Isaac runs at ~0.48 real time, so without it every rate reaches the simulated vehicle ~2×
+  too fast (accelerations ~4×). Set to the sim's real-time factor, the rates in the boxes are
+  what the simulated vehicle does. 1.0 on hardware.
+- **20 % joint reserve**: the pad's joint box is each joint's range shrunk about its centre to
+  `teleop_joint_range_frac` = 0.8 — q1 ±28°, q2 −67..37°, q3 −31..41°, q4 ±96° (hardware
+  ±35, −80..50, −40..50, ±120). A target outside the box may only move back toward it.
+  **Consequence: the stowed home [0, 40, 40, 0] is OUTSIDE it (q2 40 > 37) — from there the pad
+  can only move the grasp point DOWN.** PS therefore folds to the PAD's home
+  `teleop_home_pose_deg` = [0, 30, 30, 0] (fold 60°, inside the box), from which it reaches
+  ~9 cm left/right, 9 cm down, 4 cm up, 1.5 cm forward/back (printed by
+  `test_teleop_reference --gtest_filter=*Reach*`). Engage, press PS, then fly the arm.
+- The window fits 2560×1440 maximised (checked offscreen at that size).
+
+#### 7.21.1 Run sequence — shiqi_machine, Isaac
+
+```bash
+# 0. clean slate (TWO separate calls)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. stack + 2. Pegasus -- the PS4 test yaml on BOTH (the Pegasus launcher opens the pad window)
+export WB_SIM_YAML=~/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_ps4test.yaml
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh shiqi_machine
+
+# 3. take off in SAFETY and enter whole-body DIRECT (exits once DIRECT + planner HOLD)
+FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
+  /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up
+
+# 4. arm station "PS4 Remote" tab: Engage Teleoperation (or the state panel's PS4 REMOTE),
+#    centre the pad, fly. Release Teleoperation when done (settles, then HOLD).
+
+# 5. land
+FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
+  /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py land
 ```

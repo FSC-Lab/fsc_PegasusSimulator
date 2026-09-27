@@ -3376,3 +3376,40 @@ this repo, read them before the flight. Two things the sim never exercised: the
 `timesync_status` stamp path (the SITL ran `UXRCE_DDS_SYNCT=0`) and mocap faults (the
 emulated mocap is perfect). NOT yet flown on hardware under the whole-body node; hover in
 SAFETY and diff odom vs `/mocap` first. Runbook + pre-flight commands: Command.md §7.17.8.
+
+**PS4 REAL-TIME TELEOPERATION — THE PAD DRIVES ALL EIGHT FLAT OUTPUTS (2026-09-27, user
+design; replaces §7.19's aim → confirm → move).** Pad velocities → integrated setpoints →
+one full compatible `WholeBodyReference` per planner tick; no plan, no Send. D-pad = drone
+(system CoM) fwd/back/left/right in the HEADING frame, △/✕ up/down, □/○ yaw L/R; left stick =
+grasp point fwd/back/left/right RELATIVE TO THE AIRFRAME (body frame), right stick up/down =
+grasp point up/down, right stick left/right = wrist roll q4; PS = arm home (joint space, drone
+held); L1/R1 gripper (station). Compatible by construction: the flat outputs are `[x_c; ψ; q]`,
+the sticks set `s = r_0e(q)` through a 3-DOF position IK (q4 is coaxial with the grasp point)
+plus q4 directly, and `flatState()` (wb_law) builds the reference. Where:
+`fsc_trajectory_planner` `teleop_reference.{hpp,cpp}` (exact-ZOH chain smoothers — convex
+combinations of past raw targets, so no overshoot past a wall or out of the joint box; walls
+on the RAW targets: geofence, altitude, EE floor, joint box, q3 ≥ 0, σ_nd, IK, 0.5 m leash
+that only SCALES input) + the node's `TELEOP`/`TELEOP_STOP` state, `whole_body_planner/teleop/
+{engage,arm_home,state,note}`, `current_skeleton`; the planner reads `rc/input` ITSELF (the
+station only engages and displays). Arm station `ps4_panel.*` rewritten (labelled pad, black
+quadrotor + brown arm + dashed target airframe in `Traj3DView`). Config: `..._t650_sim_ps4test.yaml`
+= the tuned mirror sim yaml (H1b) verbatim + `vehicle_name` + `teleop_*` (`teleop_time_scale`
+= SIM_RTF 0.48). Bring-up: `application/robotic_arm/utils/ps4_teleop_bringup.py up|land`.
+Commands: Command.md §7.21. Three traps found building it: (a) a SILENT pad read as "centred"
+and armed the inputs — arming now needs a fresh all-centred sample and a stale feed disarms;
+(b) a 4-stage CoM smoother steps the snap by ω⁴·v·dt EVERY tick (the n-th derivative uses the
+held raw target) — 5 stages; (c) the SAFETY reference stream overlapping the DIRECT switch is
+captured by the planner as a PENDING drone target (→ PLANNED, never executed) — the bring-up
+clears it. Validated: gtest 7/7 (every sample FK-compatible to 1e-9), planner loopback 15/15,
+station loopback 7/7 against the real planner, existing planner tests unchanged; Isaac
+hands-off engage on the mirror plant (pad fresh, 1–2 cm hover spread, release → HOLD).
+Operator flight pending (user testing); NOT on hardware; nothing committed (3 repos).
+**Polish same day (user review):** signed-axis pad labels; editable rate boxes that write the
+planner's `teleop_*` parameters live (homing rate fixed, not a box); ONE 3-D view switched
+between two fixed scales, GRASPING (1.0 m cube) / FLYING (2.5 m cube) — not a split view; a 20 %
+joint reserve (`teleop_joint_range_frac` 0.8 → q1 ±28, q2 −67..37, q3 −31..41, q4 ±96 deg; a
+target outside may only move back in). **The stowed home [0, 40, 40, 0] is OUTSIDE that box
+(q2 40 > 37): from it the pad can only move the grasp point down**, so PS folds to the pad's
+home `teleop_home_pose_deg` [0, 30, 30, 0] (reach ~9 cm L/R/down, 4 up, 1.5 fwd/back). The
+tab fits 2560×1440 maximised. Launching on the default `_sim.yaml` gives the planner's
+DEFAULT teleop settings (time scale 1.0) — use `WB_SIM_YAML=..._sim_ps4test.yaml`.
