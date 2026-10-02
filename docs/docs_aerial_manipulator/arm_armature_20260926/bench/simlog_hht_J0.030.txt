@@ -1,0 +1,1 @@
+law J0.030 | plant hht                       ABORT 5.0s

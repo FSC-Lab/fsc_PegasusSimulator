@@ -1,0 +1,62 @@
+<figure class="wide">
+<div class="ee3d" id="errts">
+  <div class="ee3d-bar">
+    <div class="seg tog" role="group" aria-label="Flights shown">
+      <button type="button" data-f="w1" aria-pressed="true"><span class="sw" style="--c:var(--blue)"></span>WB-1</button>
+      <button type="button" data-f="w2" aria-pressed="true"><span class="sw dash" style="--c:var(--blue)"></span>WB-2</button>
+      <button type="button" data-f="d1" aria-pressed="true"><span class="sw" style="--c:var(--orange)"></span>DEC-1</button>
+      <button type="button" data-f="d2" aria-pressed="true"><span class="sw dash" style="--c:var(--orange)"></span>DEC-2</button>
+    </div>
+    <div class="seg" role="group" aria-label="Position rows">
+      <button type="button" data-p="ee" aria-pressed="true">Position rows: end-effector</button>
+      <button type="button" data-p="base" aria-pressed="false">Position rows: airframe</button>
+    </div>
+    <button type="button" id="errts-refit" class="plain">Refit y-axes</button>
+  </div>
+  <div id="errts-plot" class="eeerr-plot" style="height:780px" aria-label="Error in the circle frame over the circle run, four flights"></div>
+  <p id="errts-fallback" hidden>This interactive figure needs the Plotly library, which did not load. Tables 1 and 2 carry the same result in numbers.</p>
+</div>
+<script type="application/json" id="errts-data">__DATA__</script>
+<script>
+(function(){
+  var root=document.getElementById('errts'), plot=document.getElementById('errts-plot');
+  if(typeof window.Plotly==='undefined'){plot.hidden=true;root.querySelector('.ee3d-bar').hidden=true;document.getElementById('errts-fallback').hidden=false;return;}
+  var D=JSON.parse(document.getElementById('errts-data').textContent), KEYS=['w1','w2','d1','d2'];
+  var show={w1:true,w2:true,d1:true,d2:true}, pos='ee';
+  function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function build(){
+    var c={ink:tok('--ink'),ink2:tok('--ink2'),line:tok('--line'),blue:tok('--blue'),orange:tok('--orange')};
+    var ROWS=pos==='ee'?[['rad','EE radial [mm]'],['tan','EE along-track [mm]'],['ver','EE vertical [mm]'],['head','EE heading [deg]']]
+                       :[['brad','airframe radial [mm]'],['btan','airframe along-track [mm]'],['bver','airframe vertical [mm]'],['head','EE heading [deg]']];
+    var gy=0.05, h=(1-3*gy)/4, data=[], L={margin:{l:64,r:12,t:10,b:44},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+      font:{family:"'IBM Plex Sans',system-ui,sans-serif",color:c.ink,size:11},showlegend:false,hovermode:'x unified',
+      hoverlabel:{bgcolor:tok('--panel'),bordercolor:c.line,font:{color:c.ink}}};
+    ROWS.forEach(function(R,r){
+      var i=r+1, xa='xaxis'+(i===1?'':i), ya='yaxis'+(i===1?'':i), xr='x'+(i===1?'':i), yr='y'+(i===1?'':i), y1=1-r*(h+gy);
+      L[xa]={domain:[0,1],anchor:yr,showgrid:true,gridcolor:c.line,zeroline:false,color:c.ink2,tickfont:{size:10},showticklabels:r===3,
+             title:r===3?{text:'time since the circle run started [s]',font:{size:11,color:c.ink2}}:undefined};
+      if(r>0) L[xa].matches='x';
+      L[ya]={domain:[y1-h,y1],anchor:xr,autorange:true,showgrid:true,gridcolor:c.line,zeroline:true,zerolinecolor:c.ink2,zerolinewidth:0.8,color:c.ink2,tickfont:{size:10},
+             title:{text:R[1],font:{size:11,color:c.ink2}}};
+      KEYS.forEach(function(k){
+        var f=D[k], wb=f.rig==='wb';
+        data.push({meta:k,type:'scatter',mode:'lines',x:f.t,y:f[R[0]],xaxis:xr,yaxis:yr,name:f.label,visible:show[k],
+          line:{color:wb?c.blue:c.orange,width:1.6,dash:(k==='w2'||k==='d2')?'dash':'solid'},
+          hovertemplate:'%{y:.1f}'+(R[0]==='head'?'°':' mm')});
+      });
+    });
+    Plotly.react(plot,data,L,{displaylogo:false,responsive:true,displayModeBar:false});
+  }
+  function refit(){var u={};Object.keys(plot.layout).forEach(function(k){if(/^yaxis\d*$/.test(k))u[k+'.autorange']=true;});Plotly.relayout(plot,u);}
+  root.querySelectorAll('button[data-f]').forEach(function(b){b.addEventListener('click',function(){
+    var k=b.dataset.f; show[k]=!show[k]; b.setAttribute('aria-pressed',String(show[k]));
+    var idx=[]; plot.data.forEach(function(t,i){if(t.meta===k)idx.push(i);}); Plotly.restyle(plot,{visible:show[k]},idx).then(refit);
+  });});
+  root.querySelectorAll('button[data-p]').forEach(function(b){b.addEventListener('click',function(){
+    pos=b.dataset.p; root.querySelectorAll('button[data-p]').forEach(function(x){x.setAttribute('aria-pressed',String(x.dataset.p===pos));}); build();
+  });});
+  document.getElementById('errts-refit').addEventListener('click',refit);
+  build();
+})();
+</script>
+<figcaption>Fig. 2 — Error over the circle run in the circle's own frame: radial is outward from the circle centre, along-track is along the direction of travel (positive = ahead of the reference), vertical is up. Whole-body flights are blue, decoupled orange; the second flight of each pair is dashed. The decoupled EE sits 150–200 mm outside the circle and mostly ahead of the reference, with an 11° heading lag; the whole-body error stays within about ±35 mm of zero. On both rigs the along-track error swings with the arm's 6 s sweep. Switch the position rows to the airframe to see where the offset originates. Click a flight to hide it; the y-axes refit to what is shown, so hiding the two decoupled flights zooms in on the whole-body error.</figcaption></figure>

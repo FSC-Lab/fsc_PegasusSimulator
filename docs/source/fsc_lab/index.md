@@ -11,15 +11,15 @@ The FSC Lab fork ships a set of launch scripts under `scripts/` at the repositor
 For example, to launch the single-drone slung-load payload SITL simulation on Longhao's machine:
 
 ```bash
-./scripts/indoor_sim/start_single_drone_sitl_payload.sh longhao_machine
+./scripts/indoor_sim/archive/start_single_drone_sitl_payload.sh longhao_machine
 ```
 
 Standard indoor PX4-controlled single drones have dedicated persistent
 external-vision profiles:
 
 ```bash
-./scripts/indoor_sim/start_single_drone_iris.sh fsc_lab_machine
-./scripts/indoor_sim/start_single_drone_x650.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_single_drone_iris.sh fsc_lab_machine
+./scripts/indoor_sim/lib/start_single_drone_x650.sh fsc_lab_machine
 ```
 
 `longhao_machine` is not a placeholder — it is the name (without `.conf`) of a file under `scripts/config/`. Every script takes exactly one argument: your machine config name.

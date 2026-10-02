@@ -90,7 +90,7 @@ lag are SITL numbers at RTF 0.5.
 Manual launch (Command.md 7.17.1 procedure):
 
     fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh shiqi_machine
-    fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_fused_direct_actuation_sitl.sh shiqi_machine
+    fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_fused_sitl.sh shiqi_machine
 
 The Pegasus launcher refuses unless `indoor_state_estimator_node` (fused) is
 the running estimator, then hands over to the unchanged 4-D launcher.

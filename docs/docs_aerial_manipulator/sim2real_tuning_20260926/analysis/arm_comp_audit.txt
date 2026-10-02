@@ -1,0 +1,56 @@
+
+===== 0918 mission (f18) DIRECT 9.7..92.6 s
+  j1: moving  55% | applied-intended mean -0.004 rms 0.019 N.m | FF applied rms 0.001 (|FF| when moving 0.000) | static residual (holds) mean -0.010 std 0.008 p90|.| 0.020 | d_hat_q mean -0.004 std 0.002 | u3_est rms 0.013
+       kinetic level median -0.003 (p25/75 -0.013/+0.007) vs FF level 0.017 at load 0.01 N.m, |v| 3.3 deg/s, n 2270 | fit fc -0.003 mu +0.219 visc -0.034 bias -0.008 | mu fixed: fc -0.001 visc -0.029 bias -0.008 | breakaway median -0.004 (n 4)
+  j2: moving  34% | applied-intended mean +0.004 rms 0.082 N.m | FF applied rms 0.084 (|FF| when moving 0.029) | static residual (holds) mean -0.010 std 0.120 p90|.| 0.195 | d_hat_q mean +0.018 std 0.096 | u3_est rms 0.091
+       kinetic level median +0.010 (p25/75 -0.053/+0.072) vs FF level 0.187 at load 0.64 N.m, |v| 2.4 deg/s, n 1388 | fit fc -0.898 mu +1.408 visc +0.450 bias -0.014 | mu fixed: fc -0.171 visc +0.737 bias -0.016 | breakaway median +0.003 (n 16)
+  j3: moving  33% | applied-intended mean +0.003 rms 0.037 N.m | FF applied rms 0.041 (|FF| when moving 0.023) | static residual (holds) mean -0.024 std 0.044 p90|.| 0.091 | d_hat_q mean +0.026 std 0.028 | u3_est rms 0.033
+       kinetic level median +0.006 (p25/75 -0.014/+0.038) vs FF level 0.093 at load 0.23 N.m, |v| 4.0 deg/s, n 1357 | fit fc -0.139 mu +0.655 visc +0.044 bias -0.008 | mu fixed: fc -0.027 visc +0.087 bias -0.008 | breakaway median -0.017 (n 9)
+  j4: moving  50% | applied-intended mean +0.008 rms 0.030 N.m | FF applied rms 0.027 (|FF| when moving 0.004) | static residual (holds) mean -0.004 std 0.022 p90|.| 0.039 | d_hat_q mean +0.004 std 0.010 | u3_est rms 0.009
+       kinetic level median +0.001 (p25/75 -0.008/+0.011) vs FF level 0.052 at load 0.00 N.m, |v| 2.4 deg/s, n 2061 | fit fc +0.004 mu -1.536 visc +0.139 bias +0.006 | mu fixed: fc -0.003 visc +0.139 bias +0.006 | breakaway median +0.004 (n 10)
+
+===== 0924 F1 (a1) DIRECT 11.7..78.1 s
+  j1: moving  54% | applied-intended mean -0.003 rms 0.022 N.m | FF applied rms 0.000 (|FF| when moving 0.000) | static residual (holds) mean -0.011 std 0.009 p90|.| 0.022 | d_hat_q mean -0.003 std 0.002 | u3_est rms 0.012
+       kinetic level median -0.003 (p25/75 -0.014/+0.008) vs FF level 0.017 at load 0.01 N.m, |v| 3.0 deg/s, n 1763 | fit fc +0.002 mu +0.022 visc -0.094 bias -0.008 | mu fixed: fc +0.002 visc -0.095 bias -0.008 | breakaway median -0.003 (n 3)
+  j2: moving  48% | applied-intended mean -0.102 rms 0.163 N.m | FF applied rms 0.152 (|FF| when moving 0.084) | static residual (holds) mean -0.069 std 0.121 p90|.| 0.215 | d_hat_q mean +0.054 std 0.042 | u3_est rms 0.045
+       kinetic level median +0.045 (p25/75 -0.062/+0.162) vs FF level 0.199 at load 0.67 N.m, |v| 2.4 deg/s, n 1578 | fit fc -0.438 mu +0.673 visc +0.566 bias -0.069 | mu fixed: fc -0.154 visc +0.657 bias -0.070 | breakaway median +0.085 (n 8)
+  j3: moving  32% | applied-intended mean -0.048 rms 0.075 N.m | FF applied rms 0.099 (|FF| when moving 0.047) | static residual (holds) mean -0.046 std 0.055 p90|.| 0.118 | d_hat_q mean +0.054 std 0.049 | u3_est rms 0.036
+       kinetic level median +0.004 (p25/75 -0.030/+0.044) vs FF level 0.111 at load 0.30 N.m, |v| 2.7 deg/s, n 1052 | fit fc +0.018 mu -0.029 visc -0.048 bias -0.029 | mu fixed: fc -0.040 visc -0.029 bias -0.030 | breakaway median +0.021 (n 15)
+  j4: moving  60% | applied-intended mean +0.000 rms 0.016 N.m | FF applied rms 0.006 (|FF| when moving 0.001) | static residual (holds) mean +0.006 std 0.011 p90|.| 0.019 | d_hat_q mean -0.007 std 0.003 | u3_est rms 0.007
+       kinetic level median +0.002 (p25/75 -0.007/+0.012) vs FF level 0.052 at load 0.00 N.m, |v| 2.3 deg/s, n 1963 | fit fc +0.005 mu -0.738 visc -0.025 bias +0.008 | mu fixed: fc +0.003 visc -0.024 bias +0.008
+
+===== 0924 F2 (a2) DIRECT 7.0..57.8 s
+  j1: moving  53% | applied-intended mean -0.003 rms 0.025 N.m | FF applied rms 0.000 (|FF| when moving 0.000) | static residual (holds) mean -0.014 std 0.008 p90|.| 0.023 | d_hat_q mean -0.003 std 0.002 | u3_est rms 0.014
+       kinetic level median -0.003 (p25/75 -0.016/+0.010) vs FF level 0.017 at load 0.01 N.m, |v| 3.2 deg/s, n 1333 | fit fc +0.002 mu +0.006 visc -0.087 bias -0.011 | mu fixed: fc +0.002 visc -0.087 bias -0.011 | breakaway median -0.008 (n 1)
+  j2: moving  31% | applied-intended mean +0.095 rms 0.168 N.m | FF applied rms 0.184 (|FF| when moving 0.144) | static residual (holds) mean -0.023 std 0.115 p90|.| 0.199 | d_hat_q mean +0.081 std 0.048 | u3_est rms 0.069
+       kinetic level median +0.105 (p25/75 -0.048/+0.208) vs FF level 0.202 at load 0.68 N.m, |v| 2.8 deg/s, n 780 | fit fc -0.082 mu +0.174 visc +0.781 bias -0.016 | mu fixed: fc -0.131 visc +0.779 bias -0.017 | breakaway median +0.044 (n 13)
+  j3: moving  20% | applied-intended mean +0.049 rms 0.083 N.m | FF applied rms 0.094 (|FF| when moving 0.066) | static residual (holds) mean -0.058 std 0.045 p90|.| 0.120 | d_hat_q mean +0.082 std 0.064 | u3_est rms 0.051
+       kinetic level median +0.028 (p25/75 -0.065/+0.071) vs FF level 0.109 at load 0.29 N.m, |v| 3.5 deg/s, n 486 | fit fc -0.004 mu +0.016 visc -0.064 bias -0.063 | mu fixed: fc -0.046 visc -0.058 bias -0.064 | breakaway median -0.029 (n 16)
+  j4: moving  33% | applied-intended mean -0.010 rms 0.018 N.m | FF applied rms 0.005 (|FF| when moving 0.001) | static residual (holds) mean -0.004 std 0.010 p90|.| 0.016 | d_hat_q mean -0.009 std 0.004 | u3_est rms 0.009
+       kinetic level median +0.002 (p25/75 -0.005/+0.011) vs FF level 0.052 at load 0.00 N.m, |v| 2.3 deg/s, n 826 | fit fc +0.011 mu -2.669 visc +0.022 bias +0.003 | mu fixed: fc +0.002 visc +0.026 bias +0.003 | breakaway median +0.008 (n 4)
+
+===== 0924 F3 (12 s) (a3) DIRECT 6.0..52.2 s
+  j1: moving  56% | applied-intended mean -0.002 rms 0.024 N.m | FF applied rms 0.000 (|FF| when moving 0.000) | static residual (holds) mean -0.013 std 0.009 p90|.| 0.024 | d_hat_q mean -0.004 std 0.002 | u3_est rms 0.015
+       kinetic level median -0.002 (p25/75 -0.014/+0.009) vs FF level 0.017 at load 0.01 N.m, |v| 2.9 deg/s, n 1271 | fit fc +0.001 mu +0.160 visc -0.089 bias -0.009 | mu fixed: fc +0.003 visc -0.089 bias -0.009 | breakaway median +0.011 (n 1)
+  j2: moving  57% | applied-intended mean -0.006 rms 0.140 N.m | FF applied rms 0.169 (|FF| when moving 0.135) | static residual (holds) mean -0.066 std 0.144 p90|.| 0.263 | d_hat_q mean +0.037 std 0.030 | u3_est rms 0.048
+       kinetic level median +0.169 (p25/75 +0.015/+0.242) vs FF level 0.195 at load 0.67 N.m, |v| 5.2 deg/s, n 1280 | fit fc -0.151 mu +0.390 visc +0.181 bias -0.032 | mu fixed: fc -0.055 visc +0.182 bias -0.033
+  j3: moving  40% | applied-intended mean +0.002 rms 0.067 N.m | FF applied rms 0.099 (|FF| when moving 0.077) | static residual (holds) mean -0.016 std 0.090 p90|.| 0.132 | d_hat_q mean +0.010 std 0.030 | u3_est rms 0.025
+       kinetic level median +0.057 (p25/75 -0.005/+0.098) vs FF level 0.114 at load 0.32 N.m, |v| 7.3 deg/s, n 912 | fit fc -0.036 mu +0.224 visc +0.049 bias -0.006 | mu fixed: fc -0.016 visc +0.052 bias -0.005 | breakaway median +0.075 (n 10)
+  j4: moving  51% | applied-intended mean -0.004 rms 0.018 N.m | FF applied rms 0.008 (|FF| when moving 0.002) | static residual (holds) mean -0.000 std 0.012 p90|.| 0.018 | d_hat_q mean -0.007 std 0.003 | u3_est rms 0.008
+       kinetic level median +0.003 (p25/75 -0.006/+0.011) vs FF level 0.052 at load 0.00 N.m, |v| 2.2 deg/s, n 1162 | fit fc +0.000 mu -0.385 visc +0.068 bias +0.006 | mu fixed: fc -0.001 visc +0.068 bias +0.006
+
+===== 0924 F4 (6 s) (a4) DIRECT 5.7..73.9 s
+  j1: moving  55% | applied-intended mean -0.003 rms 0.024 N.m | FF applied rms 0.000 (|FF| when moving 0.000) | static residual (holds) mean -0.013 std 0.008 p90|.| 0.022 | d_hat_q mean -0.004 std 0.002 | u3_est rms 0.015
+       kinetic level median -0.004 (p25/75 -0.014/+0.007) vs FF level 0.017 at load 0.01 N.m, |v| 3.2 deg/s, n 1843 | fit fc +0.000 mu +0.090 visc -0.079 bias -0.008 | mu fixed: fc +0.001 visc -0.080 bias -0.008 | breakaway median +0.008 (n 1)
+  j2: moving  60% | applied-intended mean -0.010 rms 0.100 N.m | FF applied rms 0.144 (|FF| when moving 0.111) | static residual (holds) mean -0.042 std 0.116 p90|.| 0.195 | d_hat_q mean +0.077 std 0.048 | u3_est rms 0.061
+       kinetic level median +0.130 (p25/75 +0.005/+0.219) vs FF level 0.194 at load 0.65 N.m, |v| 8.4 deg/s, n 2024 | fit fc -0.188 mu +0.427 visc +0.145 bias -0.009 | mu fixed: fc -0.071 visc +0.152 bias -0.011 | breakaway median -0.028 (n 3)
+  j3: moving  31% | applied-intended mean -0.015 rms 0.059 N.m | FF applied rms 0.081 (|FF| when moving 0.102) | static residual (holds) mean +0.007 std 0.080 p90|.| 0.141 | d_hat_q mean +0.012 std 0.039 | u3_est rms 0.099
+       kinetic level median +0.092 (p25/75 +0.058/+0.119) vs FF level 0.114 at load 0.33 N.m, |v| 17.2 deg/s, n 1050 | fit fc -0.050 mu +0.354 visc +0.029 bias -0.008 | mu fixed: fc +0.013 visc +0.036 bias -0.007 | breakaway median +0.011 (n 14)
+  j4: moving  19% | applied-intended mean -0.017 rms 0.022 N.m | FF applied rms 0.011 (|FF| when moving 0.003) | static residual (holds) mean -0.007 std 0.008 p90|.| 0.016 | d_hat_q mean -0.009 std 0.005 | u3_est rms 0.010
+       kinetic level median +0.004 (p25/75 -0.004/+0.010) vs FF level 0.052 at load 0.00 N.m, |v| 2.2 deg/s, n 649 | fit fc -0.003 mu +1.767 visc -0.003 bias -0.003 | mu fixed: fc +0.003 visc -0.009 bias -0.004 | breakaway median +0.003 (n 11)
+
+===== POOLED (moving samples, all flights weighted by n) =====
+  j1: fc (mu fixed 0.0) +0.0013 N.m [as flown 0.0171] | viscous -0.072 N.m/(rad/s) | free-fit mu +0.108 [as flown 0.0] | breakaway -0.003
+  j2: fc (mu fixed 0.246) -0.1132 N.m [as flown 0.0314] | viscous +0.455 N.m/(rad/s) | free-fit mu +0.640 [as flown 0.246] | breakaway +0.024
+  j3: fc (mu fixed 0.161) -0.0210 N.m [as flown 0.0575] | viscous +0.030 N.m/(rad/s) | free-fit mu +0.297 [as flown 0.161] | breakaway +0.011
+  j4: fc (mu fixed 0.0) +0.0002 N.m [as flown 0.0524] | viscous +0.050 N.m/(rad/s) | free-fit mu -0.919 [as flown 0.0] | breakaway +0.004

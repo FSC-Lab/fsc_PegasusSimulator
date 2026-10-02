@@ -14,7 +14,7 @@ PEG="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 export AM_CMP_OUT="$PEG/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918"
 CFGDIR="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config"
 if [[ "$RIG" == wb ]]; then
-  YAML="$CFGDIR/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml"
+  YAML="$CFGDIR/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_robustness.yaml"
 else
   YAML="$CFGDIR/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim.yaml"
 fi

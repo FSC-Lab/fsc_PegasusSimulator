@@ -212,15 +212,15 @@ so it is the one to re-verify on the next flight.
 ## 7. Scope
 
 Three launchers have an arm ROS interface: the geometric and geometric+L1
-pair (`start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh` /
-`start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh`, both running
+pair (`start_t650_aerial_manipulator_geometric_direct_actuation_sitl.sh` /
+`start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh`, both running
 `05_…_ros2_arm_hold.py` with the POSITION-mode stack) and the whole-body
-launcher (`start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh`,
-running `06_…_ros2_arm_torque.py` with the TORQUE-mode stack —
+launcher (`start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh`,
+running `06_px4_t650_aerial_manipulator_free_flight.py` with the TORQUE-mode stack —
 `IsaacTopicEffortSystem` + `ExternalTorqueController`, effort on
 `isaacsim_manipulator/effort_commands`, all N·m; Command.md §7.14).
 
-`start_t650_aerial_manipulator_direct_actuator_sitl.sh` and
+`start_t650_aerial_manipulator_direct_actuation_sitl.sh` and
 `start_t650_aerial_manipulator_baseline_sitl.sh` both run
 `04_px4_direct_t650_aerial_manipulator_hold.py`, which holds the arm entirely
 in-process and publishes **no arm topics**. Nothing here affects them.

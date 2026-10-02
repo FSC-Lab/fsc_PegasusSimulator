@@ -1,0 +1,377 @@
+<title>Interaction Feasibility, AM-T650</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root {
+  --bg: #f6f7f6;
+  --surface: #ffffff;
+  --ink: #15202a;
+  --ink-2: #4b5864;
+  --ink-3: #75828d;
+  --rule: #d8dedd;
+  --rule-soft: #e8ecea;
+  --accent: #0e6a70;
+  --accent-soft: #e2f0ef;
+  --good: #1d7a3a;
+  --warn: #9a6400;
+  --bad: #b3261e;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --ref: #6c7780;
+  --grid: #e3e7e6;
+  --tip-bg: #15202a; --tip-ink: #f3f6f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11171a; --surface: #182024; --ink: #e8eef0; --ink-2: #aab6bd; --ink-3: #85939b;
+    --rule: #2c373c; --rule-soft: #222c30; --accent: #56b8bc; --accent-soft: #173438;
+    --good: #5cc07d; --warn: #e0a93a; --bad: #f07a72;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --ref: #9aa6ad; --grid: #253034; --tip-bg: #e8eef0; --tip-ink: #11171a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11171a; --surface: #182024; --ink: #e8eef0; --ink-2: #aab6bd; --ink-3: #85939b;
+  --rule: #2c373c; --rule-soft: #222c30; --accent: #56b8bc; --accent-soft: #173438;
+  --good: #5cc07d; --warn: #e0a93a; --bad: #f07a72;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --ref: #9aa6ad; --grid: #253034; --tip-bg: #e8eef0; --tip-ink: #11171a;
+}
+body { background: var(--bg); color: var(--ink); font: 15.5px/1.6 "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.page { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 72px; display: flex; flex-direction: column; gap: 28px; }
+h1, h2, h3 { font-family: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.005em; }
+h2 { font-size: 24px; font-weight: 600; }
+h3 { font-size: 18px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.mono, code { font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 0.9em; }
+code { background: var(--rule-soft); padding: 1px 5px; border-radius: 4px; }
+.eyebrow { font: 500 12px/1.3 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 17px; color: var(--ink-2); }
+header.top { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--rule); padding-bottom: 22px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-3); font-size: 13px; }
+section { display: flex; flex-direction: column; gap: 14px; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.answer { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.answer .q { font: 500 12px/1.3 "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.verdict { font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 21px; font-weight: 600; line-height: 1.25; }
+.answer ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.answer li { color: var(--ink-2); }
+.answer li b { color: var(--ink); font-weight: 600; }
+.pill { display: inline-block; font: 500 12px/1 "IBM Plex Mono", monospace; padding: 4px 7px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.good { color: var(--good); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.figure .ftitle { font-weight: 600; font-size: 15px; }
+.figure .fnote { color: var(--ink-3); font-size: 13px; max-width: none; }
+.figrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; }
+.legend i.dash { border-top-style: dashed; }
+.tip { position: absolute; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink); font: 12px/1.45 "IBM Plex Mono", monospace; padding: 6px 8px; border-radius: 5px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); z-index: 2; }
+.tscroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12.5px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td.num, th.num { text-align: right; }
+.tag { font: 500 12px/1 "IBM Plex Mono", monospace; }
+.ok { color: var(--good); } .edge { color: var(--warn); } .no { color: var(--bad); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 6px 6px 0; display: flex; flex-direction: column; gap: 8px; }
+ol.steps, ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+pre { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; overflow-x: auto; font: 13px/1.5 "IBM Plex Mono", monospace; color: var(--ink); }
+.small { font-size: 13px; color: var(--ink-3); }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px) { h1 { font-size: 27px; } .page { padding-inline: 16px; } }
+</style>
+
+<div class="page">
+<header class="top">
+  <div class="eyebrow">AM-T650 · whole-body 4-D L1 · physical interaction</div>
+  <h1>Can the 4-D switch carry pick-and-place and box pushing?</h1>
+  <p class="lede">Feasibility of the phase flag &chi; (<code>wb_l1_contact</code> and its threshold fallback) for the two final interaction experiments, and the payload and push-force limits of the H1b tune. Offline bench on the exact law, five hardware flights for noise, three Isaac flights on the real C++ node.</p>
+  <div class="meta"><span>2026-09-27</span><span>Plant: 4-D mirror (0918/0921/0924 identified)</span><span>Gains: H1b, unchanged</span><span>Arm limits: hardware servo caps 0.34 / 2.44 / 1.42 / 0.39 N·m</span></div>
+</header>
+
+<section>
+  <div class="answers">
+    <div class="answer">
+      <div class="q">Q1 · Is the switching logic feasible? What triggers it?</div>
+      <div class="verdict">Yes, the attribution and the switch work. It is not usable as shipped: three things need changing first.</div>
+      <ul>
+        <li><b>&chi; cannot be switched in flight today.</b> The C++ node reads <code>wb_l1_contact</code> once at startup. A gripper trigger needs a small hook in the node; the threshold is the only runtime path that exists.</li>
+        <li><b>The rendered force is 5 s stale.</b> It shares H1b's <code>wb_l1_omega_x</code> 0.207 rad/s with the free-flight feed-forward. Config fix: reading 2.0 rad/s, feed-forward kept at 0.207 per block. Free flight is unchanged by construction.</li>
+        <li><b>Use the gripper signal for grasping, a 2 N threshold only as a fallback.</b> The hardware reading's noise floor is 1.3 N (p99.9 at 2 rad/s), so a threshold can never see a 100 g cube (0.98 N). It does catch pushes of about 3 N or more within 0.6–0.8 s.</li>
+      </ul>
+    </div>
+    <div class="answer">
+      <div class="q">Q2 · How much can it carry and push?</div>
+      <div class="verdict">About 0.3 kg of payload and 6 N of box friction along the arm, with margin.</div>
+      <ul>
+        <li><b>Payload:</b> 100 g uses 53 % of the servo cap. The recommended limit is 0.3 kg (76 %); 0.4 kg is the edge (92 %). From 0.5 kg, joints 2 and 3 saturate and the arm droops.</li>
+        <li><b>Box push along the arm:</b> up to 6 N kinetic friction (tilt 11°). From 8 to 10 N the push still completes but tilt reaches 15–19° against the 20° watchdog; 12 N aborts. Tilt is the limit, not the arm.</li>
+        <li><b>Across the arm:</b> about 1 N at most. Joint 1's 0.34 N·m cap and the yaw budget bind first.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <h2>How &chi; works, and the three problems</h2>
+  <p>In the 4-D attribution the task force is read off the four joint rows of the momentum residual, <span class="mono">F̂ = J<sub>yq</sub><sup>−T</sup>([ŵ<sub>Σ</sub>]<sub>q</sub> − ŵ<sub>q</sub>)</span>. The phase flag decides what happens to it. In free flight (&chi; = 1) the trim <span class="mono">ŵ<sub>q</sub></span> keeps learning the joint rows at 0.2 rad/s, the rendered force is gated to zero, and u3's feed-forward cancels the whole residual. The arm therefore rejects any contact slowly and stiffly. In contact (&chi; = 0) the trim freezes, the force is rendered into the impedance, and it is removed from the feed-forward. The end-effector then yields by F/K<sub>y</sub>, which is 4.7 mm per newton at K<sub>y</sub> = 211.9.</p>
+  <ol class="steps">
+    <li><b>No runtime input.</b> <code>gains.l1.contact = wb_l1_cfg_.contact.value</code> is set once in the client; there is no subscription and no parameter callback. The observer does re-read the flag every tick, so exposing a setter is all that is missing.</li>
+    <li><b>One scalar serves two jobs.</b> H1b tuned <code>wb_l1_omega_x</code> down to 0.2072 for the u3 feed-forward, because faster rings the 0.94 Hz attitude mode. The same scalar filters <span class="mono">F̂<sup>f</sup></span>, the force the impedance renders in contact. The shaped task inertia M<sub>y</sub> = 1 kg sits against a natural vertical end-effector inertia of only 0.31–0.41 kg, so a stale F̂ is amplified 2.4–3.3× in vertical contact. The per-block keys <code>wb_l1_omega_x_t/r/q</code> already exist and fix this without touching free flight.</li>
+    <li><b>The threshold sits on a noisy, trimmed signal.</b> Before it latches, the free-flight trim absorbs part of the contact. At the shipped 0.207 rad/s it latches 1.5–3.2 s late with 30–50 % already absorbed, and that part is then rejected stiffly instead of rendered.</li>
+  </ol>
+</section>
+
+<section id="switch">
+  <h2>What the switch does to a push and to a placement</h2>
+  <div class="figure">
+    <div class="ftitle">A 3 N push along the arm, four ways of setting &chi;</div>
+    <div class="legend" id="lg-push"></div>
+    <div class="figrow">
+      <div class="chart" id="ch-push-F"></div>
+      <div class="chart" id="ch-push-e"></div>
+    </div>
+    <p class="fnote">Offline bench, exact law, mirror plant, hardware servo caps. Force ramps in over 1 s at t = 3 s and out at t = 19 s. Left: the task force the impedance actually consumes (F̂<sub>y</sub>, along the push); dashed is the applied force. Right: end-effector task error along the push; the dashed line is F/K<sub>y</sub> = 14.2 mm, what an ideal contact rendering gives.</p>
+  </div>
+  <div class="figure">
+    <div class="ftitle">Pressing a 100 g cube onto desk 2, reference 1 cm below the surface</div>
+    <div class="legend" id="lg-place"></div>
+    <div class="chart" id="ch-place"></div>
+    <p class="fnote">Desk normal force during a 25 s press. The dashed line at 3.1 N is what the impedance should command: the cube's weight plus K<sub>y</sub> × 1 cm. With the 2 rad/s reading and the gripper flag, the force reaches that value about 7 s after the cube touches the desk, then holds it. The shipped reading renders a stale force: over the first 8 s it delivers about half, and it settles near 2.4 N. In free flight the feed-forward integrates the desk reaction as a disturbance, so the force passes 3.1 N after about 22 s and keeps rising. That wind-up is why a rigid contact needs &chi; = 0.</p>
+  </div>
+</section>
+
+<section id="noise">
+  <h2>Where a threshold can sit on the real vehicle</h2>
+  <div class="figure">
+    <div class="ftitle">Free-flight noise of the wrench reading, five hardware flights (0918, 0924 × 4)</div>
+    <div class="legend" id="lg-noise"></div>
+    <div class="chart" id="ch-noise"></div>
+    <p class="fnote">|C<sub>x</sub> F̂| over 1,720 s of DIRECT flight, re-filtered from the recorded unfiltered F̂ (<span class="mono">wb_control_debug[97..99]</span>) at each candidate bandwidth. The bench's simulated noise is 10–20× lower, so the threshold was sized on these numbers, not the simulator's. The arm was moving on circles in four of the five flights, which is the harder case: arm stick-slip reads as force.</p>
+  </div>
+</section>
+
+<section id="capacity">
+  <h2>Payload and push limits</h2>
+  <div class="figrow">
+    <div class="figure">
+      <div class="ftitle">Peak tilt against a constant end-effector force</div>
+      <div class="legend" id="lg-tilt"></div>
+      <div class="chart" id="ch-tilt"></div>
+      <p class="fnote">1 s ramp, 15 s hold, &chi; by task flag, reading 2 rad/s. Crosses mark aborts on the 20° tilt watchdog. Down stops at 5 N because joints 2 and 3 saturate, not on tilt.</p>
+    </div>
+    <div class="figure">
+      <div class="ftitle">Arm torque against payload mass</div>
+      <div class="chart" id="ch-pay"></div>
+      <p class="fnote">Highest joint torque as a share of its hardware cap, full pick-and-place mission, &chi; by gripper. Joints 2 and 3 bind together; 100 % means the arm can no longer hold the pose.</p>
+    </div>
+  </div>
+  <div class="tscroll"><table id="tb-pay"></table></div>
+  <div class="tscroll"><table id="tb-box"></table></div>
+  <p class="small">Box: the vehicle translates 0.3 m along the arm (or across it) into a box behind a contact spring, Coulomb friction with static = 1.25 × kinetic. CoM excursion is the peak during the push. All rows use the hardware servo caps.</p>
+</section>
+
+<section id="isaac">
+  <h2>Isaac, on the real C++ node</h2>
+  <p>Three flights on the 4-D mirror plant, same hover and the same force profile, applied at the grasp point by a new injector (script 07). The profile is 4 N along the arm, 3 N down (a 300 g payload's weight), 1 N across the arm, then 7 N along the arm. The node, PX4, the arm stack and the planner are the real ones. Only the yaml differs between flights.</p>
+  <div class="tscroll"><table id="tb-isaac"></table></div>
+  <p class="small" id="isaac-note"></p>
+  <ul class="plain">
+    <li><b>The bench's predictions held on the real node.</b> With the 2 N threshold, &chi; latched 0.6–0.8 s after each push of 3 N or more and rendered 89–94 % of it. The shortfall is what the free-flight trim absorbed before the latch. With static contact the rendering was 96–103 %, and the deflection matched F/K<sub>y</sub> within about 1 mm.</li>
+    <li><b>Free mode is the risky one for sustained pushes.</b> On the shipped yaml the arm holds the end-effector stiffly while the vehicle pitches up to 12° into the push. It does that by counter-rotating, and joint 3 reached its +50° stop on every push of 3 N or more. After the 7 N push was removed, the arm oscillated for several seconds with joint 3 held on its stop and joint 2 swinging between 24° and 49°. Joint 2's torque reached the law's 3.0 N·m clamp. That is above the real servo's 2.44 N·m, a limit Isaac does not model. With contact rendering, joint 3 stayed at or below 47° and joint 2 at or below 2.05 N·m.</li>
+    <li><b>Static contact costs a small phantom force.</b> With the trim never running, the arm's calibration residual is rendered as up to 0.46 N while hovering, about 2 mm of end-effector offset. That is why the flag should follow the gripper or the task rather than stay on for the whole flight.</li>
+  </ul>
+</section>
+
+<section id="design">
+  <h2>Recommended configuration and task design</h2>
+  <div class="callout">
+    <b>Controller (new yaml, free flight unchanged)</b>
+    <pre>wb_l1_omega_x: 2.0          # wrench reading + contact rendering (was 0.2072)
+wb_l1_omega_x_t: 0.2072     # u3 feed-forward keeps H1b explicitly
+wb_l1_omega_x_r: 0.2072
+wb_l1_omega_x_q: 0.2072
+wb_l1_collision_threshold_n: 2.0   # fallback for unannounced collisions</pre>
+    <p>Already written as <code>..._t650_sim_interaction_thr2.yaml</code>. The hardware yaml needs the same five lines in a new copy. Nothing existing was edited.</p>
+  </div>
+  <ul class="plain">
+    <li><b>Pick-and-place:</b> set &chi; = contact from the gripper-close command until the gripper opens. Carrying the cube in contact mode renders its weight (4.6 mm sag at 100 g) and keeps the pre-grasp trim. Placing then regulates the desk force to weight + K<sub>y</sub> × press instead of winding up.</li>
+    <li><b>Unload before you open.</b> Lift the reference back to the desk surface over about 1.5 s, then open. At 0.3 kg this cuts the release excursion from 88 to 71 mm.</li>
+    <li><b>Box push:</b> the task flag for the push window, with the threshold as backup. Pushing a sliding box also works in free mode because the box yields, but a stuck box then winds up the same way the desk does.</li>
+    <li><b>Ramp every force change over at least 1 s.</b> Base excursions come from the pitch moment of an end-effector force 0.24 m ahead of the CoM, and the rotational observer (0.74 rad/s) is what has to absorb it.</li>
+    <li><b>Geometry check before the flight.</b> At the home pose the grasp point is only 6 cm below the body origin, while the legs reach about 30 cm below it. Grasping on a desk top needs an unfolded arm pose, or an approach from the desk edge.</li>
+  </ul>
+  <h3>The gripper hook (not implemented)</h3>
+  <p>A runtime flag needs three small additions in the whole-body fork: a setter on <code>WholeBodyController</code> that forwards to <code>l1_.setGains()</code> with <code>contact</code> changed, a <code>std_msgs/Bool</code> subscription such as <code>whole_body_direct_actuation/interaction_phase</code> (published by the planner or the arm ground station when the gripper closes), and a debug field for the task flag next to [105]. The Python reference already flips <code>contact</code> live, and the parity test would need one more rollout with a flag edge.</p>
+  <h3>A law change worth testing next (not adopted)</h3>
+  <p>Vertical loads move the base because the moment of the end-effector force waits for the lumped rotational estimate at 0.74 rad/s. The 4-D reading already knows that moment at 2 rad/s. Feeding the attributed contact moment to u2 in contact, and only there, is bit-identical in free flight. Offline it cuts the base excursion at placement 2–3×, with a small cost on horizontal pushing:</p>
+  <div class="tscroll"><table id="tb-baseff"></table></div>
+</section>
+
+<section id="limits">
+  <h2>What these results do not cover</h2>
+  <ul class="plain">
+    <li>No PhysX contact. The payload and the box are force models at the grasp point, and in Isaac the payload is its weight only. The bench has an exact rigid attachment, but friction and grip slip on real hardware are not modelled.</li>
+    <li>The bench arm has smooth friction. Hardware stick-slip makes the frozen trim drift in contact, which the 1.3 N noise floor only partly reflects.</li>
+    <li>Isaac runs at RTF 0.48 on the wall-clock law, with the known L1 artefact. One Isaac flight per configuration.</li>
+    <li>Hardware servo caps are applied in the bench only. Isaac's arm clamps at 3.0 N·m, so Isaac cannot show arm saturation below that.</li>
+  </ul>
+</section>
+
+<section id="files">
+  <h2>Files</h2>
+  <ul class="plain small">
+    <li><code>docs/docs_aerial_manipulator/interaction_20260927/</code> bench (<code>tools/interaction_bench.py</code>), sweeps, hardware noise extraction, Isaac cycle and scorer, raw data.</li>
+    <li><code>application/robotic_arm/07_px4_direct_t650_aerial_manipulator_interaction.py</code> 06 plus the end-effector force injector (06 untouched).</li>
+    <li><code>scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_interaction_sitl.sh</code> launcher copy pointing at 07.</li>
+    <li><code>fsc_autopilot_ros2/config/..._4d_direct_actuation_t650_sim_interaction_{thr2,contact}.yaml</code> the two test yamls.</li>
+  </ul>
+</section>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function niceTicks(lo, hi, n) {
+  const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => span / s <= n) || 10 * mag;
+  const t = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) t.push(+v.toFixed(6)); return t;
+}
+function legend(id, items) {
+  const L = document.getElementById(id); if (!L) return;
+  L.innerHTML = items.map(it => `<span><i class="${it.dash ? "dash" : ""}" style="border-color:var(${it.color})"></i>${it.name}</span>`).join("");
+}
+// Line chart: series [{name,color,data:[[x,y]],dash}], refs [{y,label}], opts {xLabel,yLabel,xMin,xMax,yMin,yMax,unit,xUnit,markers,cross}
+function lineChart(id, series, opts) {
+  const root = document.getElementById(id); if (!root) return;
+  const W = 460, H = opts.h || 260, m = { l: 46, r: 14, t: 12, b: 38 };
+  const all = series.flatMap(s => s.data);
+  const xMin = opts.xMin ?? Math.min(...all.map(p => p[0])), xMax = opts.xMax ?? Math.max(...all.map(p => p[0]));
+  let yMin = opts.yMin ?? Math.min(0, ...all.map(p => p[1])), yMax = opts.yMax ?? Math.max(...all.map(p => p[1]), ...(opts.refs || []).map(r => r.y)) * 1.08;
+  const X = x => m.l + (x - xMin) / (xMax - xMin) * (W - m.l - m.r), Y = y => H - m.b - (y - yMin) / (yMax - yMin) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opts.aria || "" }, root);
+  const g = el("g", {}, svg);
+  for (const v of niceTicks(yMin, yMax, 5)) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: css("--grid"), "stroke-width": 1 }, g);
+    const t = el("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 11, fill: css("--ink-3"), "font-family": "IBM Plex Mono, monospace" }, g); t.textContent = v;
+  }
+  for (const v of (opts.xTicks || niceTicks(xMin, xMax, 6))) {
+    const t = el("text", { x: X(v), y: H - m.b + 16, "text-anchor": "middle", "font-size": 11, fill: css("--ink-3"), "font-family": "IBM Plex Mono, monospace" }, g); t.textContent = opts.xFmt ? opts.xFmt(v) : v;
+  }
+  el("line", { x1: m.l, x2: W - m.r, y1: Y(yMin), y2: Y(yMin), stroke: css("--rule"), "stroke-width": 1 }, g);
+  const xl = el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle", "font-size": 11.5, fill: css("--ink-2") }, g); xl.textContent = opts.xLabel || "";
+  const yl = el("text", { x: 12, y: (m.t + H - m.b) / 2, "text-anchor": "middle", "font-size": 11.5, fill: css("--ink-2"), transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})` }, g); yl.textContent = opts.yLabel || "";
+  for (const r of (opts.refs || [])) {
+    el("line", { x1: m.l, x2: W - m.r, y1: Y(r.y), y2: Y(r.y), stroke: css("--ref"), "stroke-width": 1.25, "stroke-dasharray": "5 4" }, g);
+    const left = r.at === "left", dy = r.below ? 14 : -5;
+    const t = el("text", { x: left ? m.l + 4 : (r.x != null ? X(r.x) : W - m.r - 2), y: Y(r.y) + dy, "text-anchor": left ? "start" : "end", "font-size": 11, fill: css("--ink-2") }, g); t.textContent = r.label;
+  }
+  for (const s of series) {
+    const d = s.data.map((p, i) => `${i ? "L" : "M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
+    el("path", { d, fill: "none", stroke: s.color.startsWith("--") ? css(s.color) : s.color, "stroke-width": s.w || 2, "stroke-dasharray": s.dash ? "5 4" : "none", "stroke-linejoin": "round" }, g);
+    if (opts.markers) for (const p of s.data) {
+      if (p[2] === "x") {
+        const cx = X(p[0]), cy = Y(p[1]);
+        el("path", { d: `M${cx - 5},${cy - 5}L${cx + 5},${cy + 5}M${cx - 5},${cy + 5}L${cx + 5},${cy - 5}`, stroke: css(s.color), "stroke-width": 2, fill: "none" }, g);
+      } else el("circle", { cx: X(p[0]), cy: Y(p[1]), r: 4, fill: css(s.color), stroke: css("--surface"), "stroke-width": 2 }, g);
+    }
+  }
+  // hover: nearest x crosshair
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; root.appendChild(tip);
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--ink-3"), "stroke-width": 1, visibility: "hidden" }, g);
+  const dots = series.map(s => el("circle", { r: 4, fill: css(s.color), stroke: css("--surface"), "stroke-width": 2, visibility: "hidden" }, g));
+  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+  const move = ev => {
+    const b = svg.getBoundingClientRect(), sx = (ev.clientX - b.left) / b.width * W;
+    const xv = xMin + (sx - m.l) / (W - m.l - m.r) * (xMax - xMin);
+    const rows = series.map((s, i) => {
+      let best = s.data[0]; for (const p of s.data) if (Math.abs(p[0] - xv) < Math.abs(best[0] - xv)) best = p;
+      dots[i].setAttribute("cx", X(best[0])); dots[i].setAttribute("cy", Y(best[1])); dots[i].setAttribute("visibility", "visible");
+      return { s, p: best };
+    });
+    const xs = rows[0].p[0];
+    cross.setAttribute("x1", X(xs)); cross.setAttribute("x2", X(xs)); cross.setAttribute("visibility", "visible");
+    tip.innerHTML = `<div>${opts.xFmt ? opts.xFmt(xs) : xs} ${opts.xUnit || ""}</div>` + rows.map(r => `<div>${r.s.short || r.s.name}: ${(+r.p[1]).toFixed(opts.dp ?? 2)} ${opts.unit || ""}${r.p[2] === "x" ? " (abort)" : ""}</div>`).join("");
+    tip.hidden = false; tip.style.left = (X(xs) / W * b.width) + "px"; tip.style.top = (Math.min(...rows.map(r => Y(r.p[1]))) / H * b.height) + "px";
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); });
+}
+function table(id, head, rows, numCols) {
+  const T = document.getElementById(id); if (!T) return;
+  T.innerHTML = "<thead><tr>" + head.map((h, i) => `<th class="${numCols.includes(i) ? "num" : ""}">${h}</th>`).join("") + "</tr></thead><tbody>" +
+    rows.map(r => "<tr>" + r.map((c, i) => `<td class="${numCols.includes(i) ? "num" : ""}">${c}</td>`).join("") + "</tr>").join("") + "</tbody>";
+}
+function render() {
+  document.querySelectorAll(".chart").forEach(c => c.innerHTML = "");
+  const D = DATA; if (!D) return;
+  // ---- push
+  const P = D.push3, cfg = [["shipped, free", "--s1", "Shipped, χ free"], ["shipped, 1 N threshold", "--s2", "Shipped, 1 N threshold"],
+    ["reading 2 rad/s, 2 N threshold", "--s3", "Reading 2 rad/s, 2 N threshold"], ["reading 2 rad/s, task flag", "--s4", "Reading 2 rad/s, task flag"]];
+  legend("lg-push", [...cfg.map(c => ({ name: c[2], color: c[1] })), { name: "Applied force / F/K<sub>y</sub>", color: "--ref", dash: true }]);
+  lineChart("ch-push-F", [...cfg.map(c => ({ name: c[2], short: c[2], color: c[1], data: P[c[0]].F })), { name: "applied", short: "Applied", color: "--ref", dash: true, w: 1.5, data: P._true }],
+    { xLabel: "time since contact [s]", yLabel: "rendered force F̂y [N]", unit: "N", xUnit: "s", yMin: -0.2, yMax: 3.4, aria: "rendered force during a 3 N push" });
+  const ideal = P["shipped, free"].ey.map(p => [p[0], 0]);
+  lineChart("ch-push-e", cfg.map(c => ({ name: c[2], short: c[2], color: c[1], data: P[c[0]].ey })),
+    { xLabel: "time since contact [s]", yLabel: "EE task error along push [mm]", unit: "mm", xUnit: "s", refs: [{ y: 14.16, label: "F/Ky 14.2 mm" }], dp: 1, aria: "end-effector deflection during a 3 N push" });
+  // ---- place
+  const Q = D.place100, pc = [["shipped, free", "--s1", "Shipped, χ free"], ["shipped reading, gripper flag", "--s2", "Shipped reading, gripper flag"], ["reading 2 rad/s, gripper flag", "--s3", "Reading 2 rad/s, gripper flag"]];
+  legend("lg-place", [...pc.map(c => ({ name: c[2], color: c[1] })), { name: "Commanded by the impedance", color: "--ref", dash: true }]);
+  lineChart("ch-place", pc.map(c => ({ name: c[2], short: c[2], color: c[1], data: Q[c[0]] })),
+    { xLabel: "time since descent start [s]", yLabel: "desk normal force [N]", unit: "N", xUnit: "s", yMin: 0, yMax: 4.6, refs: [{ y: D.place100_target, label: "3.1 N", at: "left" }], h: 240, aria: "desk force during placement" });
+  // ---- noise
+  const ws = ["0.207", "0.5", "1.0", "2.0", "5.0"], xi = ws.map((w, i) => i);
+  legend("lg-noise", [{ name: "p99.9", color: "--s1" }, { name: "maximum", color: "--s2" }, { name: "100 g weight / 2 N threshold", color: "--ref", dash: true }]);
+  lineChart("ch-noise", [{ name: "p99.9", color: "--s1", data: ws.map((w, i) => [i, D.noise[w].p999]) }, { name: "max", color: "--s2", data: ws.map((w, i) => [i, D.noise[w].max]) }],
+    { xLabel: "reading bandwidth ωx [rad/s]", yLabel: "|Cx F̂| in free flight [N]", unit: "N", xTicks: xi, xFmt: i => ws[Math.round(i)], xUnit: "rad/s", yMin: 0, yMax: 4, markers: true, refs: [{ y: 0.981, label: "100 g = 0.98 N", below: true }, { y: 2.0, label: "threshold 2 N", at: "left" }], h: 240, aria: "hardware noise floor" });
+  // ---- tilt vs force
+  const FC = D.force_cap, dirs = [["radial", "--s1", "Push along arm"], ["-radial", "--s2", "Pull along arm"], ["up", "--s3", "Up"], ["down", "--s4", "Down"]];
+  legend("lg-tilt", [...dirs.map(d => ({ name: d[2], color: d[1] })), { name: "20° watchdog", color: "--ref", dash: true }]);
+  lineChart("ch-tilt", dirs.map(d => ({ name: d[2], short: d[2], color: d[1], data: FC[d[0]].map(r => r.ok ? [r.F, r.tilt] : [r.F, Math.min(r.tilt, 20.3), "x"]) })),
+    { xLabel: "end-effector force [N]", yLabel: "peak tilt [deg]", unit: "°", xUnit: "N", xMin: 0, xMax: 16, yMin: 0, yMax: 22, refs: [{ y: 20, label: "20°" }], markers: true, dp: 1, aria: "tilt against force" });
+  const PC = D.payload_cap.filter(r => r.hw).sort((a, b) => a.m - b.m);
+  lineChart("ch-pay", [{ name: "arm torque / cap", short: "Arm torque / cap", color: "--s1", data: PC.map(r => [r.m * 1000, r.util * 100]) }],
+    { xLabel: "payload [g]", yLabel: "highest joint torque [% of cap]", unit: "%", xUnit: "g", xMin: 0, xMax: 850, yMin: 0, yMax: 110, refs: [{ y: 100, label: "hardware cap" }], markers: true, dp: 0, aria: "arm torque against payload" });
+  // ---- tables
+  const cls = (u) => u < 0.8 ? "ok" : u < 0.99 ? "edge" : "no";
+  table("tb-pay", ["payload", "arm torque / cap", "carry EE error rms", "carry sag", "peak CoM excursion", "placing force", "verdict"],
+    PC.map(r => [`${Math.round(r.m * 1000)} g`, `<span class="${cls(r.util)}">${Math.round(r.util * 100)} %</span>`, `${r.carry_rms} mm`, `${r.sag} mm`, `${r.ex} mm`, `${r.place} N`,
+      r.util < 0.8 ? `<span class="tag ok">recommended</span>` : r.util < 0.99 ? `<span class="tag edge">edge</span>` : `<span class="tag no">arm saturates</span>`]), [1, 2, 3, 4, 5]);
+  const BC = D.box_cap;
+  table("tb-box", ["box friction", "direction", "moved", "peak tilt", "CoM excursion", "arm torque / cap", "verdict"],
+    BC.map(r => [`${r.F} N`, r.dir === "radial" ? "along arm" : "across arm", r.ok ? `${r.moved} mm` : "—", `${r.tilt}°`, r.ex != null ? `${r.ex} mm` : "—", `${Math.round(r.util * 100)} %`,
+      !r.ok ? `<span class="tag no">abort</span>` : (r.tilt > 14 || r.util >= 0.99) ? `<span class="tag edge">completes, near limit</span>` : `<span class="tag ok">recommended</span>`]), [2, 3, 4, 5]);
+  const B = D.baseff, ms = ["0.1", "0.3", "0.4", "0.5"];
+  table("tb-baseff", ["payload", "lift: now → with it", "placing: now → with it", "release: now → with it"],
+    ms.map(m => [`${Math.round(+m * 1000)} g`, ...["ex_lift_pk", "ex_place_pk", "ex_release_pk"].map(k => `${B.off[m][k]} → <b>${B.rot[m][k]}</b> mm`)]), [1, 2, 3]);
+  // ---- isaac
+  if (D.isaac) {
+    const rows = [];
+    for (const f of D.isaac) for (const s of f.segs) {
+      const [t0, hold, dir, F] = s.seg.split(":");
+      if (s.latch_after_s === 0 && f.tag === "T3") s.latch_after_s = null;
+      const nm = { radial: "along arm", down: "down", lateral: "across arm", "-radial": "pull" }[dir] || dir;
+      rows.push([f.name, `${F} N ${nm}`, f.tag === "T3" ? "always" : s.latch_after_s == null ? "never" : `${s.latch_after_s.toFixed(2)} s`,
+        s.F_hat_consumed == null ? "—" : `${s.F_hat_consumed.toFixed(2)} N`, s.ee_def_mm == null ? "—" : `${s.ee_def_mm.toFixed(1)} mm (${s.pred_def_mm.toFixed(1)})`,
+        `${s.tilt_pk_deg.toFixed(1)}°`, `${Math.round(s.com_err_pk_mm)} mm`,
+        `<span class="${s.q_range_deg[2][1] >= 49.5 ? "no" : "ok"}">${s.q_range_deg[2][1].toFixed(1)}°</span>`,
+        `<span class="${Math.max(s.tau_pk[1], s.j2_pk_post || 0) > 2.437 ? "no" : "ok"}">${Math.max(s.tau_pk[1], s.j2_pk_post || 0).toFixed(2)} N·m</span>`]);
+    }
+    table("tb-isaac", ["yaml", "force", "χ latch after", "rendered F̂", "EE deflection (F/Ky)", "peak tilt", "CoM excursion", "joint 3 max", "joint 2 peak"], rows, [2, 3, 4, 5, 6, 7, 8]);
+    document.getElementById("isaac-note").innerHTML = D.isaac_note || "";
+  }
+}
+render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>

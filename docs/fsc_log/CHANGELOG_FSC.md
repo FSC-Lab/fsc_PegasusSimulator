@@ -2,11 +2,11 @@
 
 ## Added
 - Controller-neutral X650 direct-actuator SITL launcher at
-  `scripts/indoor_sim/start_x650_direct_actuator_sitl.sh`; it reuses the calibrated indoor X650
+  `scripts/indoor_sim/archive/start_x650_direct_actuator_sitl.sh`; it reuses the calibrated indoor X650
   stack, disables Pegasus lockstep, and applies the per-run PX4 wall-clock DDS settings while
   leaving Micro XRCE-DDS and motor-command ownership to the external controller.
 - Indoor PX4-controlled X650 launcher at
-  `scripts/indoor_sim/start_single_drone_x650.sh`.
+  `scripts/indoor_sim/lib/start_single_drone_x650.sh`.
 - Isolated persistent indoor X650 PX4 profile combining OptiTrack estimator
   settings with the validated X650 controller gains.
 - Automatic ROS 2 ground-truth topic verification for the indoor X650.
@@ -17,7 +17,7 @@
   corrected the standalone allocation model to the new asset's PX4 Quad-X
   rotor-to-corner order.
 - Bare-T650 geometric+L1 direct-actuator SITL launcher at
-  `scripts/indoor_sim/start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh`
+  `scripts/indoor_sim/archive/start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh`
   — the no-arm parallel of the AM geometric+L1 rig: identical bare-T650 plant
   to the geometric launcher (lockstep off), requiring the paired
   fsc_autopilot_ros2 single-drone L1 stack (which carries the same +20%

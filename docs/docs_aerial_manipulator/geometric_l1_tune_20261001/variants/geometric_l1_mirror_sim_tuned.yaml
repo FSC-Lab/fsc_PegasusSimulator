@@ -1,0 +1,572 @@
+# ============================================================================
+# GENERATED -- do not hand-edit. fsc_PegasusSimulator
+#   docs/docs_aerial_manipulator/geometric_l1_tune_20261001/tools/make_tuned_yaml.py
+# = rtf_profile_20261001/variants/geometric_l1_mirror_sim.yaml with the geometric+L1
+#   law's GAINS replaced by the 2026-10-01 bench tune (geo_final_gains.json).
+#   Plant, guards, allocator, SAFETY loop, arm model and limits are untouched.
+#   SIMULATION ONLY -- never flown on hardware.
+# ============================================================================
+
+# ============================================================================
+# GENERATED -- do not hand-edit. fsc_PegasusSimulator
+#   docs/docs_aerial_manipulator/rtf_profile_20261001/tools/make_geometric_mirror_yaml.py
+# The geometric+L1 controller on the whole-body MIRROR plant, for the RTF-1
+# same-condition comparison: geometric HARDWARE controller values, the mirror's
+# guards and sim_* plant. Sources:
+#   params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim.yaml (topology)
+#   params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml (controller values)
+#   params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml (plant + guards)
+# ============================================================================
+
+# FSC AM-T650 tune for the GEOMETRIC + L1-ADAPTIVE direct-actuation node
+# (fsc_autopilot_ros2_node/single_aerial_manipulator_geometric_l1_direct_actuation).
+#
+# THE CONTROL LAW IS THE ONE OF
+#   K. Cai, H. Yu, Z. Zhang, X. Liang, Y. Fang, J. Han, "An experiment study
+#   for unmanned aerial manipulator systems with L1 adaptive augmentation of
+#   geometric control", Control Engineering Practice 164 (2025) 106418.
+# u = u_b + u_L1:
+#   u_b  (eqs 17/18): ONE geometric SE(3) law computing collective thrust [N]
+#        and body torque [N.m] directly from the position reference, with the
+#        manipulator's measurable wrench compensated through r_os (the
+#        bare-vehicle-CoM O -> system-CoM S vector, live from the encoders).
+#   u_L1 (eqs 19-23): state predictor on zeta = [v; omega], piecewise-constant
+#        adaptation, low-pass filter. Only the MATCHED estimate (thrust-axis
+#        force + body moment) enters the control channel.
+# This node implements the paper's CONSTANT-POSITION/CONSTANT-YAW hover
+# specialization: omega_d = omega_d_dot = 0. The current position-reference
+# message has no jerk/snap/yaw-rate fields, so this is not the paper's full
+# time-varying-trajectory torque law.
+#
+# THE PLANT IS THE SAME AS params_single_aerial_manipulator_geometric_direct_actuation_t650.yaml:
+# fsc_PegasusSimulator's aerial manipulator (AM_xfwd.usda, T650 MN4010 motor
+# calibration, TOTAL mass 3.746 kg, arm at home [0, 40, 40, 0] deg). Pair with
+# fsc_PegasusSimulator's
+#   scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh
+# (the section-7.9 ros2-arm rig, so the live arm state flows).
+#
+# The node runs two modes, switched at runtime by the ROS service
+# `<ns>/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode`
+# (std_srvs/SetBool, data=true -> DIRECT). It always STARTS in SAFETY:
+#
+#   SAFETY : robust position ctrl + UDE -> VehicleAttitudeSetpoint -> PX4 runs
+#            attitude + rate + mixer. Behaviourally the baseline controller.
+#            (posctl_*/ude_* below serve ONLY this mode and the abort path.)
+#   DIRECT : the paper's u_b + u_L1 -> physical wrench allocation [N, N.m]
+#            -> rotor speeds [rad/s] -> normalized throttle (MN4010 bench
+#            curve) -> ActuatorMotors. PX4 runs nothing at all.
+#
+# WHAT IS DIFFERENT FROM THE SIBLING GEOMETRIC NODE:
+#   * The DIRECT position loop is the paper's virtual force F_d (Kp/Kv in
+#     NEWTONS), not the robust controller -- the robust controller keeps
+#     running only so the SAFETY abort path resumes bumplessly.
+#   * NO attitude integral and NO UDE on the DIRECT path: the L1 augmentation
+#     is the paper's replacement for both. Watch debug [16..19] (u_L1) where
+#     you would have watched the integral.
+#   * The arm's measurable wrench is compensated INSIDE the law (r_os terms of
+#     eqs 17/18) -- at the home pose this reproduces exactly the sibling's
+#     flight-validated static feedforward (tau_y = -0.0195*T = -0.717 N.m at
+#     hover). There is no system_ff_tau_* pair on this node.
+#
+# STATUS: SIM-SWEPT 2026-08-21 against a deliberate +20% controller-side
+# thrust-coefficient mismatch while the Pegasus plant stayed unchanged. The
+# existing r_os-model mismatch was also active, so this is a combined
+# worst-case robustness test. The selected L1 tune is A_s,v=A_s,omega=2 1/s,
+# omega_c=6 rad/s and, AT THAT TIME, a 10 N thrust-correction bound (raised to
+# 18 on 2026-08-24 -- see the l1adapt_* block). With the original stable
+# geometric position pair retained, the full 0.5 m X / 0.25 m Z trial settled
+# at about 3 cm X and 7 mm Z error; no adaptive/motor rail or watchdog event.
+# A higher geometric position pair (Kp_xy/Kv_xy=6/8, Kp_z/Kv_z=10/12) was
+# rejected after 12-13% X overshoot and a later lateral flight-bound breach.
+#
+# STATUS 2: RE-TUNED 2026-08-24 at the RE-ANCHORED plant (kf 4.041283e-05, see the
+# MOTOR MODEL block) with the +20% kf injection and the +10 mm r_os injection both
+# active. Four flights of the Command.md 7.13.2 mission, driven by
+# fsc_PegasusSimulator/docs/sim_to_real_t650/tools/am_l1_tune_cycle.sh and scored by
+# am_l1_transition_metrics.py; data in docs/sim_to_real_t650/am_l1_tuning_20260824/.
+#
+#   metric (mission mean)        baseline   SHIPPED    change
+#   SAFETY->DIRECT tilt peak      6.43 deg   3.81 deg   -41%
+#   SAFETY->DIRECT xy excursion    511 mm     296 mm    -42%
+#   SAFETY->DIRECT settle         18.7 s      8.9 s     -52%
+#   DIRECT->SAFETY balloon         560 mm     138 mm    -75%
+#   DIRECT->SAFETY peak vz       0.642 m/s  0.177 m/s   -72%
+#   steady hold |e| rms           32.9 mm    10.6 mm    -68%
+#   X step overshoot / final err  15.6% /-58.5mm  2.6% /-14.2mm
+#   u_L1 thrust                   7.289 N    7.269 N    unchanged (the injection)
+#
+# WHAT ACTUALLY DROVE EACH FIX -- both were misdiagnosed first, so read this before
+# re-tuning:
+#
+#  * THE ENTRY TRANSIENT IS THE ATTITUDE LOOP, NOT A SLOW L1. Measured at entry, u_L1
+#    reaches 7.1 of its 7.35 N inside 0.73 s -- the augmentation is not the limiter.
+#    What tilts the vehicle is the +10 mm r_os over-compensation: ~0.37 N.m of pitch
+#    moment, uncancelled for the first few hundred ms, acting on an attitude loop soft
+#    enough (kr = 1.0) to park at 0.37 rad if it were never cancelled. Peak tilt 9.3 deg
+#    followed, and the 511 mm xy excursion is purely downstream of that tilt.
+#    Fix: l1geo_kr_x/y 1.0 -> 1.5, l1geo_komega_x/y 0.55 -> 0.70. Raising omega_c does
+#    NOT help and is actively dangerous (below).
+#
+#  * THE ABORT BALLOON IS THE SAFETY UDE BOOKING A PHANTOM. In DIRECT the UDE is fed the
+#    allocator's BELIEVED achieved collective (client .cpp, "Keep the UDE's notion of
+#    what was applied honest"), which under a +20% kf injection is 44.1 N while the plant
+#    delivers 36.75. It therefore converges to a phantom -7.35 N and hands it to SAFETY
+#    on the abort edge. On HARDWARE this is correct -- a real kf error lives in the SAFETY
+#    thrust model too -- but in sim SAFETY's model is honest, so the estimate is pure
+#    fiction. Fix, config-only: ude_disturbance_lbz/ubz +-10 -> +-2, which caps the
+#    phantom. Predicted balloon 560*(2/7.35) = 152 mm, measured 136 and 138 mm on two
+#    flights -- the mechanism is confirmed, not inferred. The z bound alone is clamped;
+#    x/y stay at +-10 because only the thrust channel carries the injection.
+#
+# REJECTED, WITH THE MEASUREMENT (do not retry these):
+#   l1adapt_omega_c 6 -> 8 (with kr 1.9/komega 0.80): GREW a 0.62 Hz mode -- steady tilt
+#   0.25 -> 8.81 deg, oscillation 2nd-half/1st-half 2.59, abort tilt 38.6 deg, and the
+#   run could not disarm. The driver is the AUGMENTATION, not the baseline: u_L1 tau_y
+#   rms rose 14x (0.011 -> 0.157 N.m, peak 1.13 of the 1.5 clamp) while the attitude
+#   error itself rose only 1.75x. At omega_c 8 the L1 torque channel sits close enough to
+#   the MN4010 rotor-lag pole (10.0265 1/s) that its injection fights the attitude loop
+#   instead of augmenting it. KEEP omega_c AT 6. kr 1.9 alone at omega_c 6 is untested --
+#   that run's entry numbers were better, so there may be headroom, but it needs its own
+#   repeat-tested flight.
+#
+# ─── MOTOR MODEL: MN_4010_15x5 BENCH REPORT ────────────────────────────────────
+# Identical to the sibling geometric yaml -- see its header for the full
+# derivation. Shipped values are the SIM-PLANT EFFECTIVE ones (bench x fit
+# factors from t650_params.py): plant kf = 4.041283e-05, km = 0.052867.
+#
+# !! PLANT RE-ANCHORED 2026-08-24 -- kf 4.679931202e-05 -> 4.041283e-05. !!
+# t650_params.THRUST_FIT_FACTOR went 1.030724 -> 0.890066, measured from the
+# 0820 stepped-payload flight log_252 (+719 g, the ARM-EQUIVALENT payload:
+# 3.753 kg against the AM's 3.746, hovering at the same 0.6159 collective).
+# The old factor was a hover-command match to flight C's nearly-fresh pack, so
+# it encoded ~25.3 V as if it were a propeller property and made the simulated
+# vehicle 15.8% stronger than the real one -- which is precisely the standing
+# thrust compensation the augmentation was always seen carrying here. See
+# t650_params.py for the seven-flight table and the kf ~ V^2 regression.
+# PREVIOUS VALUES, for reversion:
+#     plant kf 4.679931202e-05 / alloc_thrust_coeff 5.6159172e-05
+#     vehicle_thrust_scaling 0.036206 / vehicle_idle_thrust 0.236457
+#
+# THIS ROBUSTNESS CONFIG deliberately sets alloc_thrust_coeff to
+# 4.8495396e-05 = 4.041283e-05 x 1.20 (+20% against the NEW plant, so the
+# stress level is unchanged); restore 4.041283e-05 for a matched sim. FOR
+# HARDWARE swap in the bench pair (kf 4.540431e-05, km 0.018164); km is NOT
+# inert here (no column re-normalization in this allocator).
+# Hover chain check (mass 3.746170 kg): T_hover = 36.7499 N, omega_h =
+# 476.786 rad/s, u_hover = 0.61974 -- against log_252's flown 0.6159.
+
+/**/fsc_autopilot_ros2:
+  ros__parameters: 
+    # ══════════════════════════════════════════════════════════════════════
+    # 1. REALITY MODEL (added 2026-09-18, user request: "for fair comparison
+    #    make sure all the realistic factors have been integrated")
+    # ══════════════════════════════════════════════════════════════════════
+    # Byte-for-byte the plant block of
+    # params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+    # (section 1 there carries the full rationale and the measured numbers).
+    # READ BY THE PEGASUS LAUNCHER
+    # (scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh
+    # via scripts/indoor_sim/lib/am_plant_from_yaml.sh), NOT BY THIS NODE --
+    # rclcpp ignores undeclared keys. The decoupled rig flies the SAME Isaac
+    # plant script as the whole-body rig (06, with the arm in POSITION-command
+    # mode), so every factor below lands in the physics identically:
+    #   * thrust mismatch      alloc_thrust_coeff +17.6 % (section 4)
+    #   * body mass/inertia    x1.10, CoM shift 10/10/5 mm (plant side)
+    #   * rotor motor delay    lambda = 10.0265 1/s (t650_params, always on)
+    #   * arm current residual [9.6, 6.2, 9.6, 9.6] mA rms, 5 Hz, through Kt
+    #   * arm gearbox friction x1.05 the calibration report's model
+    #   * arm gravity mismatch arm link masses x1.05, every model nominal
+    # The arm is a POSITION servo here (Dynamixel position mode on the real
+    # arm): the plant's PD+gravity servo emulation tracks the streamed joint
+    # trajectory and the friction / residual / mass mismatch act on it exactly
+    # as they act on the whole-body rig's torque-mode arm.
+    # ── PLANT = the whole-body MIRROR's sim_* keys, verbatim (rationale and per-flight numbers: section 1 of
+    # params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml) ──
+    sim_plant_kf_scale: 1.037
+    sim_plant_kf_sag_per_min: 0.036
+    sim_plant_km_scale: 0.2333
+    sim_plant_rotor_lambda: 10.0265
+    sim_wall_clock_compensation: true
+    sim_plant_mass_scale: 1.0
+    sim_plant_inertia_scale: 1.0
+    sim_plant_com_shift_x: -0.017854
+    sim_plant_com_shift_y: 0.0
+    sim_plant_com_shift_z: 0.0
+    sim_plant_force_bias_x: 0.55
+    sim_plant_force_bias_y: -0.50
+    sim_plant_force_bias_z: 0.0
+    sim_plant_torque_bias_x: 0.0
+    sim_plant_torque_bias_y: 0.0
+    sim_plant_torque_bias_z: -0.095
+    sim_arm_current_noise_enable: true
+    sim_arm_current_noise_a_j1: 0.0096
+    sim_arm_current_noise_a_j2: 0.0062
+    sim_arm_current_noise_a_j3: 0.0096
+    sim_arm_current_noise_a_j4: 0.0096
+    sim_arm_current_noise_bw_hz: 5.0
+    sim_arm_current_noise_seed: 0
+    sim_arm_friction_scale_j1: 1.0
+    sim_arm_friction_scale_j2: 0.70
+    sim_arm_friction_scale_j3: 0.65
+    sim_arm_friction_scale_j4: 1.5
+    sim_arm_friction_width: 0.015
+    sim_arm_mass_scale: 1.0
+    sim_arm_vel_lag_s: 0.048
+    sim_arm_vel_quant_rad_s: 0.024
+    sim_ee_marker_cube: false
+    sim_ee_marker_cube_mass_kg: 0.03
+    sim_feedback_mocap_rate_hz: 60.0
+    sim_feedback_pos_noise_m: 0.0005
+    sim_feedback_vel_noise_mps: 0.022
+    sim_feedback_noise_seed: 0
+
+    system_posctl_type: robust_controller
+    system_posctl_rate: 100.0
+    # Wall-clock publication rate of the DIRECT law + allocation for PX4. L1
+    # adaptation advances separately, only when a distinct feedback capture
+    # stamp arrives (see l1adapt_fixed_sample_time_s below).
+    system_attctl_rate: 250.0
+    system_ude_type: velocity_based
+    # DIRECT-mode fallback watchdog: automatically reverts to SAFETY (PX4
+    # regains attitude+rate+mixing) when the vehicle exceeds either limit.
+    # Keep wd_max_tilt above l1geo_max_tilt_deg (30) so the law's own clamp
+    # engages first.
+    system_wd_max_tilt_deg: 20.0  # 2026-09-18: same abort envelope as the WB 4-D sim yaml
+    system_wd_max_rate_dps: 360.0
+    # 2026-09-18: the whole-body rig's sideways-drift guard, now in this node
+    # too (default 0.0 = off elsewhere). Same 0.75 m limit, measured against
+    # the reference this node tracks -- on the comparison rig that is the
+    # airframe reference converted from the trajectory planner's plan, whose
+    # worst tracking error on the flown circle was 0.19 m, so this sits at 4x
+    # the nominal. A vehicle walking away LEVEL trips neither tilt nor rate.
+    system_wd_max_drift_m: 0.75
+    # Position-feedback loss failsafe -- identical mechanism to the sibling
+    # nodes. Set fb_timeout_s: 0.0 to disable.
+    system_fb_timeout_s: 1.0
+    system_fb_land_speed: 0.2
+
+    # ─── LIVE ARM STATE (armff_*) ──────────────────────────────────────────
+    # On this node the arm model feeds r_os -- a term OF THE CONTROL LAW (eqs
+    # 17/18), not a separate feedforward. Subscribes to the arm's encoder
+    # angles (sensor_msgs/JointState, names joint1..joint4) and runs the
+    # 4-link serial FK each message; when the joint stream is absent or stale
+    # the law falls back to the HOME-POSE r_os (the flown static behaviour).
+    # FORCE level: a quasi-static arm adds exactly its weight, which
+    # vehicle_mass already carries -- the node cross-checks base+links ==
+    # vehicle_mass at startup.
+    #
+    # THE NUMBERS BELOW ARE NOT TUNABLE. They are the AM_realign.usda
+    # extraction re-registered by fsc_PegasusSimulator's
+    # fsc_aerial_manipulation/robotic_arm/utils_controller/controller.py
+    # (make_params(); T650 base = 2.95 body + 0.15955 rotors), the exact
+    # pipeline whose home-pose output was flight-validated to 0.1%. Identical
+    # to the sibling geometric yaml's table -- keep them in lockstep.
+    armff_enable: true
+    # SUBSCRIBE ONLY TO THE ros2_control BROADCASTER (resolves under the node
+    # namespace -> /uav_0/fsc_open_manipulator/joint_states). Do NOT point
+    # this at /uav_0/isaacsim_manipulator/joint_states -- that topic is the
+    # emulated servo wire, sim-only, and its name ordering differs; see the
+    # sibling yaml for the full story.
+    armff_joint_topic: "fsc_open_manipulator/joint_states"
+    armff_timeout_s: 0.5
+    armff_max_com_offset_m: 0.15
+    armff_base_mass: 3.10955
+    # Bare T650 (2.95 kg body + the four AM-asset rotor bodies) CoM relative
+    # to AM_xfwd's model base origin. r_os in the paper starts at this point,
+    # not at the geometric/model origin.
+    armff_base_com_x: 0.00001019
+    armff_base_com_y: -0.00030900
+    armff_base_com_z: 0.04178889
+    armff_link1_mass: 0.1048326
+    armff_link2_mass: 0.1423463
+    armff_link3_mass: 0.1399273
+    armff_link4_mass: 0.2495176
+    armff_link1_l_x: -0.0185
+    armff_link1_l_y: 0.00207
+    armff_link1_l_z: -0.0825
+    armff_link2_l_x: 0.000089
+    armff_link2_l_y: 0.024
+    armff_link2_l_z: -0.128
+    armff_link3_l_x: 0.019976
+    armff_link3_l_y: 0.128927
+    armff_link3_l_z: -0.02175
+    armff_link4_l_x: 0.0
+    armff_link4_l_y: 0.0
+    armff_link4_l_z: 0.0
+    armff_link1_com_x: 0.00096
+    armff_link1_com_y: 0.00152
+    armff_link1_com_z: -0.073027
+    armff_link2_com_x: 0.01932
+    armff_link2_com_y: 0.010093
+    armff_link2_com_z: -0.097295
+    armff_link3_com_x: 0.019391
+    armff_link3_com_y: 0.083164
+    armff_link3_com_z: -0.000866
+    armff_link4_com_x: -0.001698
+    armff_link4_com_y: -0.005467
+    armff_link4_com_z: -0.039619
+    armff_home_q1_deg: 0.0
+    armff_home_q2_deg: 40.0
+    armff_home_q3_deg: 40.0
+    armff_home_q4_deg: 0.0
+
+    # ─── MODEL-MISMATCH INJECTION (armff_mismatch_*) — SIM ROBUSTNESS TEST ─
+    # A constant FLU offset ADDED to every r_os the arm model emits, making
+    # the controller's CoM model deliberately WRONG while the USDA plant keeps
+    # the truth. The corrupted value feeds the baseline law AND the L1
+    # predictor identically, so the controller is structurally blind to it —
+    # exactly the hardware situation, where the CAD model cannot match the
+    # real vehicle.
+    #
+    # WHY, and WHY THIS VALUE. In sim, r_os is otherwise EXACT (the armff
+    # table IS the plant's own USDA extraction), so a clean hover proves the
+    # plumbing but exercises nothing the paper is actually for. On hardware
+    # the mismatch is real and large: the model says dx = +19.5 mm at home,
+    # while the 2026-08-19 flights say the TRUE offset is far smaller —
+    # ~11 mm from the geometric rig's over-feedforward (+0.33 N.m / ~36 N =
+    # 9 mm error), ~5 mm back-solved from the baseline ulog's hover rotor
+    # split (log_244, that estimate contaminated by per-motor thrust-constant
+    # spread — the same asymmetry behind the km/2.9 yaw story). The model
+    # OVER-reads dx by roughly 2x, i.e. an 8–14 mm error. Shipped injection:
+    # +10 mm forward — the ROUND TOP OF THAT MEASURED BAND (2026-08-24, user
+    # request), replacing the earlier 8.5 mm "19.5-vs-11" datum so the sim
+    # exercises the worst case hardware plausibly presents rather than its
+    # mid-point. On the sim plant it reproduces the hardware relationship
+    # (controller dx = truth + 10 mm) at 1.18x the previous severity.
+    #
+    # WHAT TO EXPECT with this active: the baseline over-compensates pitch by
+    # 0.010 * 36.75 = 0.37 N.m; the L1 must estimate it (gamma_My, debug
+    # [22], -> about -0.36 N.m after the PWC one-sample attenuation) and
+    # cancel it (u_L1 pitch, debug [18], settling near +0.37 N.m — NOT near
+    # zero as an honest-model hover would). Position hold should be unchanged
+    # — that IS the robustness claim under test. For the paper's own A/B, fly
+    # the same injection with l1adapt_enable: false: the baseline alone has
+    # no integrator, so the 0.37 N.m becomes a standing attitude/position
+    # offset instead.
+    #
+    # NOTE the synthetic bench harness CANNOT see this injection (its faked
+    # plant has no physics, and predictor and law share the corrupted model
+    # consistently) — only a real Isaac flight exposes it. Debug [41..43]
+    # publish the injected value so analysis can recover the true r_os.
+    #
+    # MUST BE 0.0 IN ANY HARDWARE CONFIG: hardware already carries its own
+    # real mismatch; injecting more would compound, not emulate. Set all
+    # three to 0.0 for a clean-model sim baseline run.
+    # 2026-09-18: 0.010 -> 0.0. The CoM error is injected on the PLANT SIDE
+    # instead (sim_plant_com_shift_* in section 1 below, 10/10/5 mm on the
+    # body, unknown to every model), exactly as the whole-body 4-D sim rig
+    # carries it -- so the two controllers meet the same unknown, and neither
+    # gets a controller-side injection the other does not.
+    armff_mismatch_x: 0.0
+    armff_mismatch_y: 0.0
+    armff_mismatch_z: 0.0
+
+    # Flight-calibrated CoM trim — HARDWARE ONLY, and explicitly 0 here.
+    # In simulation the plant IS this model (the asset's own bare-airframe
+    # offset is 0.3 mm horizontally), so there is nothing to correct; the
+    # hardware file carries -0.0148 m from the 2026-08-25 flight. Listed
+    # rather than omitted so the difference between the two files is visible
+    # at a glance -- the 0819 lesson.
+    armff_com_trim_x: -0.0148
+    armff_com_trim_y: 0.0
+    armff_com_trim_z: 0.0
+
+    # Vehicle model. vehicle_mass is THE mass of the whole stack: the SAFETY
+    # position loop's gravity feedforward, the paper law's m, and the L1
+    # predictor's m all read this one number. thrust_scaling/idle_thrust serve
+    # ONLY the SAFETY path.
+    #
+    # thrust_scaling/idle_thrust RE-DERIVED 2026-08-24 at the re-anchored plant
+    # (kf 4.041283e-05), NOT copied: they are the tangent linearization of the
+    # thrust curve at THIS mass's hover point, so a plant change invalidates
+    # them and a stale pair mis-scales every SAFETY thrust command -- the
+    # takeoff and abort path. PREVIOUS: 0.036206 / 0.236457 (kf 4.679931e-05).
+    # These two now DIFFER from the sibling AM-T650 configs, which are still on
+    # the old plant; re-derive them before flying those.
+    vehicle_name: "AM-T650-L1-MIRROR-TUNED"
+    vehicle_thrust_scaling: 0.036758
+    vehicle_idle_thrust: 0.241528
+    vehicle_num_rotors: 4
+    vehicle_mass: 3.746170
+
+    # ─── SAFETY-mode position controller + UDE ─────────────────────────────
+    # Same code and numbers as the sibling geometric yaml's (2026-08-19
+    # sim-validated retune) -- this is the takeoff and abort path, so it must
+    # stay behaviourally identical to what has already flown this plant.
+    posctl_pid_form: "nested"
+    posctl_apply_pos_err_saturation: true
+    posctl_apply_vel_err_saturation: true
+    posctl_k_pos_x: 0.45
+    posctl_k_pos_y: 0.45
+    posctl_k_pos_z: 1.0
+    posctl_k_vel_x: 7.0
+    posctl_k_vel_y: 7.0
+    posctl_k_vel_z: 7.0
+    # SIM-ONLY VALUE -- RESTORE 2.0 FOR HARDWARE (wall-clock dt vs RTF 0.38;
+    # see the sibling yaml). SAFETY mode only on this node.
+    ude_gain: 0.45
+    ude_height_threshold: 0.4
+    ude_disturbance_lbx: -10.0
+    ude_disturbance_lby: -10.0
+    # z bound TIGHTENED 2026-08-24, +-10 -> +-2, and x/y deliberately left at +-10.
+    # In DIRECT the UDE books a phantom -7.35 N (it is fed the allocator's believed
+    # collective, which the +20% kf injection inflates) and dumps it into SAFETY on the
+    # abort edge: a 560 mm balloon. Capping the z estimate caps the balloon -- measured
+    # 138 mm. The SAFETY thrust model here is honest, so the genuine z disturbance is
+    # near zero and 2 N is ample; RESTORE +-10 if the SAFETY model is ever made to carry
+    # the same kf error as DIRECT (which is the hardware situation).
+    ude_disturbance_lbz: -10.0  # 2026-09-18: the plant now carries +10 % mass; +-2 N could not lift it (stalled at z = 0.94 m)
+    ude_disturbance_ubx: 10.0
+    ude_disturbance_uby: 10.0
+    ude_disturbance_ubz: 10.0  # 2026-09-18: = the WB 4-D sim yaml
+
+    # ─── Paper baseline u_b: geometric SE(3) law (DIRECT mode only) ────────
+    # POSITION PAIR (paper eq. 17, newtons): the paper flew Kp diag(6,6,7.8),
+    # Kv diag(8,8,16) on a 3.01 kg hexrotor -> wn_xy 1.41 rad/s, zeta 0.94.
+    # Shipped values keep roughly that shape at this plant's 3.746 kg but
+    # SOFTENED toward the sibling's flown outer-loop bandwidth (0.92 rad/s):
+    #   xy: wn = sqrt(4.0/3.746) = 1.03 rad/s, zeta = 6.0/(2*sqrt(4.0*3.746)) = 0.78
+    #   z : wn = sqrt(8.0/3.746) = 1.46 rad/s, zeta = 10.0/(2*sqrt(8.0*3.746)) = 0.91
+    # The paper values (mass-scaled: Kp 7.5/7.5/9.7, Kv 10/10/20) are the
+    # hardware starting point once the hover test passes.
+    l1geo_kp_x: 20.11  # TUNED 2026-10-01 (was 4.0; geometric_l1_tune_20261001)
+    l1geo_kp_y: 20.11  # TUNED 2026-10-01 (was 4.0; geometric_l1_tune_20261001)
+    l1geo_kp_z: 13.5  # TUNED 2026-10-01 (was 8.0; geometric_l1_tune_20261001)
+    l1geo_kv_x: 11.05  # TUNED 2026-10-01 (was 6.0; geometric_l1_tune_20261001)
+    l1geo_kv_y: 11.05  # TUNED 2026-10-01 (was 6.0; geometric_l1_tune_20261001)
+    l1geo_kv_z: 10.82  # TUNED 2026-10-01 (was 10.0; geometric_l1_tune_20261001)
+    # ATTITUDE PAIR: carried VERBATIM from the sibling geometric node's
+    # 2026-08-19 sim-validated retune (kR 1.0 / kOmega 0.55 xy) -- the value
+    # that respects the MN4010 rotor-lag pole (lambda = 10.0265 1/s) on this
+    # rig at RTF 0.38: pair wn 4.86 rad/s, zeta 0.661. The paper's own scalar
+    # pair (KR 1.92, Kw 0.3) gives zeta ~0.2 against the lag pole -- exactly
+    # the ~1 Hz whirl the 2026-08-18 campaign chased; do not "restore the
+    # paper values" on this plant. FOR HARDWARE start from 1.2/0.75 (see the
+    # sibling yaml's RTF discussion). Yaw pair unchanged from the sibling.
+    # RETUNED 2026-08-24: kr 1.0 -> 1.5, komega 0.55 -> 0.70 (xy only). The soft pair
+    # let the +10 mm r_os over-compensation tilt the vehicle 9.3 deg at DIRECT entry;
+    # this halves that and cuts the downstream xy excursion 42%. It ALSO cuts the steady
+    # hold error, because a pure-P attitude loop parks at e_R = residual/kr and the pure-P
+    # position loop then parks at T*e_R/Kp. Do not raise these WITH omega_c -- see the
+    # rejected case in the header.
+    l1geo_kr_x: 3.337  # TUNED 2026-10-01 (was 1.0; geometric_l1_tune_20261001)
+    l1geo_kr_y: 3.337  # TUNED 2026-10-01 (was 1.0; geometric_l1_tune_20261001)
+    l1geo_kr_z: 1.737  # TUNED 2026-10-01 (was 0.49; geometric_l1_tune_20261001)
+    l1geo_komega_x: 0.9505  # TUNED 2026-10-01 (was 0.55; geometric_l1_tune_20261001)
+    l1geo_komega_y: 0.9505  # TUNED 2026-10-01 (was 0.55; geometric_l1_tune_20261001)
+    l1geo_komega_z: 0.4105  # TUNED 2026-10-01 (was 0.35; geometric_l1_tune_20261001)
+    # Fixed nominal home-pose inertia of the arm-laden plant (identical to the
+    # sibling geometric yaml): bare-T650 tensor raised by measured response
+    # factors. The true articulated inertia varies with q and its residual is
+    # intentionally an L1 model uncertainty. Do not describe this tensor as an
+    # exact asset-derived or configuration-dependent inertia.
+    l1geo_inertia_xx: 0.118
+    l1geo_inertia_yy: 0.119
+    l1geo_inertia_zz: 0.131
+    l1geo_inertia_xy: 0.0089
+    l1geo_inertia_xz: 0.0
+    l1geo_inertia_yz: 0.0
+    # Safety shaping. Error saturations bound the acceleration a step or a bad
+    # estimate can command; the tilt clamp (30 deg) sits below the watchdog's
+    # revert threshold (40) so the law limits itself before the watchdog acts.
+    l1geo_max_pos_err_m: 1.0
+    l1geo_max_vel_err_mps: 2.0
+    l1geo_max_tilt_deg: 30.0
+    # Per-axis clamp on the baseline torque, below the physical peaks
+    # (11.4 N.m roll/pitch, 2.6 N.m yaw at full differential).
+    l1geo_max_torque_xy: 8.0
+    l1geo_max_torque_z: 0.40
+
+    # ─── Paper augmentation u_L1 (DIRECT mode only) ────────────────────────
+    # A_s = -diag(as_v x3, as_omega x3). The actuator publisher remains a
+    # 250 Hz wall timer for PX4, but the predictor/adaptation advances once per
+    # DISTINCT mocap capture stamp. Isaac's stamp is wall-clock-valued even
+    # while the plant runs below real time, so this simulator config supplies
+    # its exact physics step T=0.004 s. Hardware should set this to 0.0 and use
+    # consecutive capture-stamp differences.
+    # The paper flew A_s = -diag(65,65,65,80,80,80), T = 0.01 s, wc = 6 rad/s
+    # ON HARDWARE. This SIM-ONLY robustness tune uses 2/2 and wc=6. At the
+    # exact 4 ms physics step its PWC one-sample factor is exp(-2*0.004)=0.992,
+    # avoiding the large constant-disturbance under-read measured at 25/30.
+    # Do not transfer these slow predictor poles to hardware without retuning.
+    l1adapt_enable: true
+    l1adapt_as_v: 4.334  # TUNED 2026-10-01 (was 2.0; geometric_l1_tune_20261001)
+    l1adapt_as_omega: 2.791  # TUNED 2026-10-01 (was 2.0; geometric_l1_tune_20261001)
+    l1adapt_omega_c: 1.0  # TUNED 2026-10-01 (was 6.0; geometric_l1_tune_20261001)
+    l1adapt_fixed_sample_time_s: 0.0
+    # Physical bounds on what the augmentation may inject -- NOT in the paper
+    # (its hardware needed none); a first sim flight does.
+    #
+    # 18 N, RAISED FROM 10 ON 2026-08-24, matching this file's hardware twin
+    # and both bare-drone L1 yamls. The +20% kf injection makes the demand a
+    # computable 0.20 * m * g = 7.35 N, and it is MULTIPLICATIVE IN COMMANDED
+    # COLLECTIVE (u_L1_req = 0.20 * T_cmd), so it grows on every climb: the
+    # 2026-08-24 runs measured 7.285 / 7.270 N mean but PEAKED AT 8.47 N on the
+    # 0.25 m Z step -- 85% of the old 10 N bound. At 10 N the clamp binds at
+    # only 1.36x hover, which a larger step, an arm move commanded in DIRECT,
+    # or a worse DIRECT-entry condition would reach; at 18 N it binds at 2.45x.
+    # Matching hardware is the point of the raise: the saturation
+    # configuration eventually flown there is then the one the sim exercised.
+    # A raised bound is behaviourally inert while it does not bind -- the
+    # bare-drone campaign's run D at 18 N measured 7.415 N, identical to its
+    # runs A/B at the lower bound.
+    #
+    # Two accepted costs. The ESTIMATE bound scales with this
+    # (2 * max_thrust_n -> 36 N, about mg; gamma_f already peaked at 11.1 N on
+    # DIRECT entry at the old bound). And the clamp is SYMMETRIC, so the
+    # worst-case DOWNWARD injection takes the vertical floor from 0.73 g to
+    # 0.51 g -- reachable in about 0.5 s through the wc = 6 LPF, faster than
+    # system_fb_timeout_s, and neither watchdog watches vertical acceleration.
+    # Allocator headroom is NOT among the costs: railed at 18 N the collective
+    # is 54.75 N of a 99.77 N ceiling and the motors sit at 0.645 (they peak
+    # at 0.62 as flown).
+    #
+    # Torque bounds are unchanged and stay sized above the arm residual while
+    # far under baseline authority -- measured on the flown runs, u_L1 pitch
+    # is 0.235 N.m mean / 0.347 peak of 1.5, yaw 0.003 / 0.014 of 0.8. A bound
+    # pinned outside this named stress test still indicates a broken model or
+    # an out-of-scope fault.
+    l1adapt_max_thrust_n: 18.0
+    l1adapt_max_torque_xy: 1.5
+    l1adapt_max_torque_z: 0.25
+    l1adapt_max_unmatched_n: 8.0
+
+    # ─── Wrench allocation (DIRECT mode only) ──────────────────────────────
+    # Identical to the sibling geometric yaml: PX4 FRD CA_ROTOR order, the
+    # x650_new.usd / PX4 Quad-X channel convention the AM_xfwd asset + spawn
+    # remap present, and the SIM-EFFECTIVE motor constants (see header).
+    # km = c_plant/kf_plant = 2.474152e-06/4.041283e-05. It MUST track the plant kf:
+    # the allocator commands tau_z = km*f, so this ratio is what makes the deliberate
+    # alloc_thrust_coeff injection scale thrust AND yaw by the SAME factor (both go as
+    # omega^2). PREVIOUS 0.052867 = c/kf at the old plant. Left at 0.052867 against the
+    # new plant, yaw would be delivered at 0.965 of command while thrust is at 0.833.
+    alloc_rotor0_px: 0.22990663
+    alloc_rotor0_py: 0.22990663
+    alloc_rotor0_km: 0.018164
+    alloc_rotor1_px: -0.22990663
+    alloc_rotor1_py: -0.22990663
+    alloc_rotor1_km: 0.018164
+    alloc_rotor2_px: 0.22990663
+    alloc_rotor2_py: -0.22990663
+    alloc_rotor2_km: -0.018164
+    alloc_rotor3_px: -0.22990663
+    alloc_rotor3_py: 0.22990663
+    alloc_rotor3_km: -0.018164
+    # = 4.041283e-05 (plant) x 1.20. PREVIOUS 5.6159172e-05 (old plant x 1.20).
+    # 2026-09-18 (fair comparison against the whole-body L1 4-D rig, user
+    # request): the SAME thrust mismatch as
+    # params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+    # -- allocator believes 4.7544506e-05 against the plant's 4.041283e-05,
+    # i.e. +17.6 %, not the +20 % this file carried before. Both rigs now fly
+    # the same plant (section 1 below) with the same allocator error; only
+    # the control law differs. Previous value: 4.8495396e-05.
+    alloc_thrust_coeff: 4.260431e-05
+    alloc_omega_idle: 64.0603
+    alloc_omega_max: 730.0507
+    alloc_motor_idle: 0.0
+    alloc_motor_max: 1.0
+
+    # Kept at the repo-wide 150.0 N for consistency, above this airframe's
+    # physical ceiling (99.77 N), so the clamp never binds.
+    safety_min_thrust_setpoint: 0.0
+    safety_max_thrust_setpoint: 150.0

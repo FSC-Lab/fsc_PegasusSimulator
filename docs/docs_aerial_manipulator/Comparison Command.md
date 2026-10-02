@@ -19,7 +19,7 @@ way to lose that.
 | control node | `autopilot_whole_body_direct_actuation_node` | `autopilot_geometric_l1_direct_actuation_node` |
 | law in DIRECT | coupled airframe+arm Cartesian impedance + GMO; commands 4 rotors **and** 4 joint torques | geometric SE(3) + L1 adaptive augmentation; commands 4 rotors only |
 | arm actuation | torque, from the same law | position servo (`05`'s Dynamixel emulation, PD + gravity comp) |
-| Isaac entrypoint | `06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py` | `05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py` |
+| Isaac entrypoint | `06_px4_t650_aerial_manipulator_free_flight.py` | `05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py` |
 | config | `params_single_aerial_manipulator_whole_body_direct_actuation_t650_comparison.yaml` | `params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_comparison.yaml` |
 
 Held identical, and checked rather than assumed:

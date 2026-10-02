@@ -1,0 +1,1 @@
+law D120_36    | plant diag    | qdot present  | dly 8+8   | j2 rms 18.7 max 83.8 span  333% stuck   2% v99 374.6 over +58.2 | j3 rms 26.7 max 64.5 span  291% stuck   3% v99 452.5 over +55.9 | tilt 10.8 CoM   163 mm EE 113.9 mm | tau j2/j3 2.44/1.42 cap 96.5%

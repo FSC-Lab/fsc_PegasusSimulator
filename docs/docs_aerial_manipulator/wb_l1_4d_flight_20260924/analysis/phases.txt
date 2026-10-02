@@ -1,0 +1,53 @@
+
+################ a1  DIRECT 11.72-78.09; exec [(24.8, 'EXECUTING T=6.0s'), (35.9, 'EXECUTING T=52.0s')]
+EV timestamp_sample during freeze: monotone increasing? True, unique 162/162, mean step 16.7 ms; mocap hdr during freeze unique 162/162, mocap recv rate 60 Hz
+run started 35.90; at 75.51 s (39.6 s of 52.0) the reference heading had advanced 565 deg = 1.57 laps; mocap yaw at freeze 135.2
+phase                  | metrics
+DIRECT hold            | CoM err rms [11.14  13.145  5.217] peak    29 mm | EE rel err rms [0.523 2.443 3.469] max [1.018 6.813 5.375] mm | hd err rms 0.72 max  1.3 deg | |e_R| mean 0.021 max 0.049 | tilt max  1.4 mean  1.1 | u1  37.1+-0.27 | mot min/max 0.38/0.78 | arm q-qd rms deg [0.681 0.077 0.044 0.071] | tau max [0.079 0.848 0.275 0.033]
+go-to-start            | CoM err rms [29.14  20.622  3.712] peak    60 mm | EE rel err rms [5.762 4.278 9.17 ] max [13.865  7.035 20.979] mm | hd err rms 0.61 max  1.5 deg | |e_R| mean 0.034 max 0.071 | tilt max  1.8 mean  1.1 | u1  37.6+-0.23 | mot min/max 0.44/0.75 | arm q-qd rms deg [0.278 1.231 4.931 0.118] | tau max [0.077 0.976 0.478 0.036]
+start hold             | CoM err rms [23.263 25.831  4.848] peak    51 mm | EE rel err rms [3.118 4.318 1.118] max [5.389 5.465 2.75 ] mm | hd err rms 0.33 max  0.8 deg | |e_R| mean 0.027 max 0.065 | tilt max  1.4 mean  1.1 | u1  37.9+-0.27 | mot min/max 0.43/0.76 | arm q-qd rms deg [0.576 0.271 1.888 0.155] | tau max [0.079 0.816 0.445 0.035]
+run ramp+lap1 (0-28s)  | CoM err rms [43.454 40.819  4.288] peak   104 mm | EE rel err rms [2.668 3.781 3.218] max [6.945 8.568 8.624] mm | hd err rms 0.77 max  1.8 deg | |e_R| mean 0.045 max 0.113 | tilt max  1.6 mean  1.0 | u1  38.4+-0.35 | mot min/max 0.36/0.80 | arm q-qd rms deg [0.555 2.803 3.663 0.117] | tau max [0.092 1.031 0.444 0.04 ]
+run lap2 to freeze     | CoM err rms [37.066 47.708  4.777] peak   108 mm | EE rel err rms [10.218 11.386  6.872] max [14.145 18.225  9.416] mm | hd err rms 0.69 max  1.8 deg | |e_R| mean 0.041 max 0.100 | tilt max  1.7 mean  1.1 | u1  38.6+-0.26 | mot min/max 0.36/0.80 | arm q-qd rms deg [ 0.694  6.345 12.172  0.088] | tau max [0.11  0.936 0.482 0.034]
+run freeze 75.5-78.1   | CoM err rms [ 81.807 113.114   5.094] peak   273 mm | EE rel err rms [10.736  9.592 11.825] max [12.496 14.988 14.661] mm | hd err rms 0.91 max  2.0 deg | |e_R| mean 0.093 max 0.205 | tilt max  1.6 mean  0.9 | u1  38.6+-2.15 | mot min/max 0.00/0.77 | arm q-qd rms deg [ 0.636  6.876 13.102  0.086] | tau max [0.084 0.914 1.02  0.029]
+run all to freeze      | CoM err rms [41.684 42.952  4.437] peak   108 mm | EE rel err rms [5.968 6.935 4.599] max [14.145 18.225  9.416] mm | hd err rms 0.75 max  1.8 deg | |e_R| mean 0.044 max 0.113 | tilt max  1.7 mean  1.0 | u1  38.5+-0.34 | mot min/max 0.36/0.80 | arm q-qd rms deg [0.599 4.165 7.272 0.109] | tau max [0.11  1.031 0.482 0.04 ]
+base error during run: world-frame mean [-24.935  -3.104   2.832] mm std [33.404 42.839  3.416]; in BODY-yaw frame mean [10 12] std [46 35] mm  (a body-fixed offset shows as constant here)
+   d_hat_t world std [0.389 0.478 0.272] N; body-yaw frame mean [0.41 -0.47] std [0.10 0.08] N ; d_hat_r world mean [ 0.101 -0.013 -0.091] std [0.084 0.047 0.007]
+   d_hat_r body-yaw frame mean [0.020 -0.022] std [0.097 0.097] N.m
+   corr(e_p_x, e_R_y) -0.30, corr(e_p_y, e_R_x) 0.16; e_R x/y std [0.037 0.032] ; yaw err (e_R_z) mean -0.0004 std 0.0039
+   velocity err (odom - ref) rms [2.671 2.291 0.915] cm/s; ref |v| max 0.149 m/s
+   EE (FK of measured) radius about origin: mean 0.490 std 34 mm min/max 0.425/0.577; z mean 0.913 std 6 mm | reference r_ed radius mean 0.500 std 0 mm z 0.912
+   ABSOLUTE EE error (FK - planned) rms [42.57  47.703  6.005] mm, |e| mean 58 max 115 mm  (this includes the base error; e_y above is CoM-anchored)
+   mocap health per yaw sector (all bag): sector | samples | frozen% | orient step>3deg%
+      [-180,-135)    372   1.1%   0.3%
+      [-135, -90)    362   0.0%   0.0%
+      [ -90, -45)   1695   0.0%   0.0%
+      [ -45,   0)   5550   0.0%   0.4%
+      [   0,  45)    721   0.0%   0.0%
+      [  45,  90)    719   0.0%   0.1%
+      [  90, 135)    721   0.0%   0.0%
+      [ 135, 180)   1429  39.1%   2.7%
+
+################ a2  DIRECT 6.97-57.81; exec [(16.2, 'EXECUTING T=4.1s'), (22.9, 'EXECUTING T=28.0s')]
+phase                  | metrics
+DIRECT hold            | CoM err rms [36.851 11.511  8.941] peak    63 mm | EE rel err rms [0.738 3.47  3.641] max [1.092 7.196 5.766] mm | hd err rms 0.86 max  1.3 deg | |e_R| mean 0.040 max 0.076 | tilt max  1.6 mean  1.3 | u1  39.0+-0.23 | mot min/max 0.41/0.80 | arm q-qd rms deg [1.636 0.081 0.034 0.032] | tau max [0.115 0.827 0.264 0.03 ]
+go-to-start            | CoM err rms [27.292 28.45   6.165] peak    48 mm | EE rel err rms [ 6.962  3.435 12.394] max [15.497  6.322 24.   ] mm | hd err rms 1.04 max  1.6 deg | |e_R| mean 0.034 max 0.077 | tilt max  2.4 mean  1.5 | u1  39.2+-0.20 | mot min/max 0.38/0.79 | arm q-qd rms deg [0.437 0.938 5.729 0.033] | tau max [0.074 0.947 0.499 0.035]
+start hold             | CoM err rms [24.356 11.489  3.32 ] peak    39 mm | EE rel err rms [0.726 4.227 8.831] max [ 1.637  5.47  10.544] mm | hd err rms 0.78 max  1.1 deg | |e_R| mean 0.020 max 0.050 | tilt max  1.8 mean  1.4 | u1  39.3+-0.15 | mot min/max 0.40/0.80 | arm q-qd rms deg [0.188 0.995 3.019 0.035] | tau max [0.084 0.845 0.463 0.028]
+run (1 lap, 28 s)      | CoM err rms [41.337 37.289  5.357] peak    92 mm | EE rel err rms [3.104 2.958 5.553] max [ 7.039  6.772 10.385] mm | hd err rms 1.13 max  2.2 deg | |e_R| mean 0.042 max 0.088 | tilt max  2.1 mean  1.3 | u1  39.7+-0.37 | mot min/max 0.36/0.82 | arm q-qd rms deg [0.593 2.603 3.552 0.233] | tau max [0.087 1.026 0.476 0.036]
+post-run hold          | CoM err rms [26.843 13.998  3.077] peak    58 mm | EE rel err rms [5.712 5.917 2.563] max [9.157 7.863 4.093] mm | hd err rms 1.22 max  1.9 deg | |e_R| mean 0.022 max 0.059 | tilt max  1.7 mean  1.4 | u1  40.0+-0.24 | mot min/max 0.36/0.83 | arm q-qd rms deg [0.86  3.573 5.653 0.028] | tau max [0.097 0.951 0.325 0.04 ]
+a2 37.24 s episode: mocap yaw 139.1, identical consecutive samples in 36.5-38.5: 4, max dt 45 ms
+base error during run: world-frame mean [-30.206  -4.579   3.129] mm std [28.219 37.006  4.35 ]; in BODY-yaw frame mean [3 10] std [40 38] mm  (a body-fixed offset shows as constant here)
+   d_hat_t world std [0.513 0.607 0.305] N; body-yaw frame mean [0.48 -0.65] std [0.10 0.08] N ; d_hat_r world mean [ 0.071  0.011 -0.148] std [0.058 0.065 0.006]
+   d_hat_r body-yaw frame mean [-0.024 0.035] std [0.075 0.072] N.m
+   corr(e_p_x, e_R_y) -0.17, corr(e_p_y, e_R_x) 0.18; e_R x/y std [0.034 0.03 ] ; yaw err (e_R_z) mean -0.0005 std 0.0037
+   velocity err (odom - ref) rms [2.45  2.426 1.002] cm/s; ref |v| max 0.149 m/s
+   EE (FK of measured) radius about origin: mean 0.480 std 34 mm min/max 0.438/0.589; z mean 0.897 std 5 mm | reference r_ed radius mean 0.500 std 0 mm z 0.891
+   ABSOLUTE EE error (FK - planned) rms [43.603 35.081  7.672] mm, |e| mean 53 max 92 mm  (this includes the base error; e_y above is CoM-anchored)
+   mocap health per yaw sector (all bag): sector | samples | frozen% | orient step>3deg%
+      [-180,-135)    358   0.0%   0.0%
+      [-135, -90)    360   0.0%   0.0%
+      [ -90, -45)   1907   8.3%   0.0%
+      [ -45,   0)   3036   0.1%   0.0%
+      [   0,  45)   2030   0.1%   0.0%
+      [  45,  90)    361   0.0%   0.0%
+      [  90, 135)    360   0.0%   0.0%
+      [ 135, 180)    356   1.1%   0.0%

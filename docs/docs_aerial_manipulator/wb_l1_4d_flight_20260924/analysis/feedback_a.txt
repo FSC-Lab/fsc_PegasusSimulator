@@ -1,0 +1,62 @@
+
+################ a1: 0924#1 FUSED (2 laps)  DIRECT 11.72-78.09 s (66.4 s)
+hold window 12.2-24.6; executing: [(24.8, 'EXECUTING T=6.0s'), (35.9, 'EXECUTING T=52.0s')]
+mocap: 124 Hz | hdr dt max 45 ms, gaps>50ms 0 (DIRECT 0) | identical-pos repeats 4.9% | |dp|>0.05 spikes 60 (DIRECT 0) | orient step>3deg 62 (DIRECT 1)
+   frozen-pose runs >=5 samples: 3 -> [(75.51, 169, 2.84), (78.36, 5, 0.11), (80.66, 381, 6.37)]
+   NOTE odom header stamps are on another clock (hdr-recv median -2504702059.664 s) -> using receive time
+odom: 100 Hz (hdr), recv-rate 100 Hz | hdr dt max 43 ms | frac samples bit-identical to a mocap sample 0% | odom-mocap pos diff in DIRECT rms [7.826 9.053 2.677] mm max [45.07  56.015  6.585] mm | odom lags mocap by (ms, corr) x/y/z [(20.0, 1.0), (0.0, 1.0), (50.0, 0.998)]
+   hold: odom vel std [1.38  1.493 0.955] cm/s | mocap twist std [1.601 1.991 1.118] cm/s | odom identical-consecutive-pos 0.0%
+   hold: FD-of-mocap vel std [3.23  2.799 1.682] cm/s | peak freq/frac>5Hz odom vx (38.16870464329142, 0.6488325326154448) vy (0.2420848074627363, 0.09178740767138621)
+EV input (fmu/in/vehicle_visual_odometry): 122 Hz, gaps>50ms 0 -> []
+   esf cs_ev_pos: initial 1, changes at []
+   esf cs_in_air: initial 1, changes at [(81.67, 0)]
+   esf cs_vehicle_at_rest: initial 0, changes at [(87.42, 1)]
+   PX4 vehicle_odometry reset_counter changes: [(79.67, 14), (82.5, 15)]
+   PX4 EKF pos variance in DIRECT: median [0. 0. 0.] max [0. 0. 0.]; vel std hold [1.493 1.38  0.955] cm/s
+   timesync: n=101, estimated_offset us median -1790265236333851 span 253, rtt us median 479 max 1147
+law tick (wb_control_debug recv) in DIRECT: 250 Hz, dt p50/p99/max 4.00/5.16/12.2 ms, ticks>8ms 3
+   sensor_combined           400.1 Hz  dt p99   4.18 ms max   22.7 ms
+   vehicle_attitude          401.3 Hz  dt p99   4.16 ms max   22.8 ms
+   imu/data                  402.2 Hz  dt p99   4.23 ms max   12.2 ms
+   motors_debug              250.1 Hz  dt p99   5.17 ms max   12.2 ms
+   fmu/in/actuator_motors    250.1 Hz  dt p99   5.24 ms max   12.4 ms
+   joint_states              250.1 Hz  dt p99   5.52 ms max   21.2 ms
+   wb reference              100.0 Hz  dt p99  11.74 ms max   25.0 ms
+PX4 attitude 401 Hz: hold roll/pitch std [0.248 0.15 ] deg, yaw std 0.68; frac>5Hz roll/pitch 0.001/0.006; tilt max DIRECT 1.79 deg; quat_reset_counter uniq [1.]
+   gyro (imu/data 395 Hz) hold std [3.986 5.219 3.439] deg/s, frac>5Hz 0.86/0.95/0.98
+   accel std hold [6.369 2.812 1.512] m/s2 ; gyro_clipping any False
+LAW hold: |e_R| mean 0.0207 p99 0.0450 | e_R_x peak f/frac>5 (0.08069722401549387, 0.5037749050775587) | u1 mean 37.14 std 0.27 | motors std [0.047 0.048 0.042 0.043] | e_p rms [11.14  13.145  5.217] mm | e_y pos rms [0.523 2.443 3.469] mm | heading err rms 0.72 deg
+   d_hat filt t std [0.082 0.059 0.113] N mean [ 0.455 -0.503 -0.359] | d_hat filt r mean [ 0.043 -0.028 -0.07 ] std [0.011 0.012 0.016] | deadbeat d^c t std [9.822 4.212 2.169] N | Fraw std [3.318 2.44  7.747] mean [-0.015 -0.008  0.063] | tau_j std [0.024 0.058 0.029 0.008] max [0.079 0.848 0.275 0.033] | w_hat_q late [-0.006  0.042  0.029  0.004]
+   whole DIRECT: |e_R| max 0.205 mean 0.0391, u1 min/max 36.3/39.5, motor min/max 0.360/0.802, n_sat ticks 0, tau clamp ticks 0, est-bound ticks 0, chi free frac 1.000, stream fresh frac 1.000, |e_p| max 267 mm
+   battery 23.88 -> 23.67 V, current mean 19.9 A
+
+################ a2: 0924#2 FUSED (1 lap)  DIRECT 6.97-57.81 s (50.8 s)
+hold window 7.5-16.0; executing: [(16.2, 'EXECUTING T=4.1s'), (22.9, 'EXECUTING T=28.0s')]
+mocap: 124 Hz | hdr dt max 49 ms, gaps>50ms 0 (DIRECT 0) | identical-pos repeats 1.9% | |dp|>0.05 spikes 1 (DIRECT 0) | orient step>3deg 0 (DIRECT 0)
+   frozen-pose runs >=5 samples: 1 -> [(66.92, 158, 2.66)]
+   NOTE odom header stamps are on another clock (hdr-recv median -2504702059.665 s) -> using receive time
+odom: 100 Hz (hdr), recv-rate 100 Hz | hdr dt max 37 ms | frac samples bit-identical to a mocap sample 0% | odom-mocap pos diff in DIRECT rms [3.935 4.595 3.149] mm max [11.12  17.819  7.672] mm | odom lags mocap by (ms, corr) x/y/z [(0.0, 1.0), (10.0, 1.0), (90.0, 0.998)]
+   hold: odom vel std [2.192 1.263 1.406] cm/s | mocap twist std [2.336 1.688 1.475] cm/s | odom identical-consecutive-pos 0.0%
+   hold: FD-of-mocap vel std [3.253 2.405 1.795] cm/s | peak freq/frac>5Hz odom vx (0.11764156142848127, 0.29722956831708286) vy (0.3529246842854438, 0.21098552469113835)
+EV input (fmu/in/vehicle_visual_odometry): 122 Hz, gaps>50ms 0 -> []
+   esf cs_ev_pos: initial 1, changes at []
+   esf cs_in_air: initial 1, changes at [(69.77, 0)]
+   esf cs_vehicle_at_rest: initial 0, changes at [(71.33, 1)]
+   PX4 vehicle_odometry reset_counter changes: []
+   PX4 EKF pos variance in DIRECT: median [0. 0. 0.] max [0. 0. 0.]; vel std hold [1.263 2.192 1.406] cm/s
+   timesync: n=74, estimated_offset us median -1790265236335678 span 1098, rtt us median 453 max 891
+law tick (wb_control_debug recv) in DIRECT: 250 Hz, dt p50/p99/max 4.00/5.27/15.2 ms, ticks>8ms 3
+   sensor_combined           398.2 Hz  dt p99   4.14 ms max   13.9 ms
+   vehicle_attitude          398.8 Hz  dt p99   4.14 ms max   14.2 ms
+   imu/data                  401.5 Hz  dt p99   4.24 ms max   14.9 ms
+   motors_debug              249.7 Hz  dt p99   5.28 ms max   15.9 ms
+   fmu/in/actuator_motors    249.4 Hz  dt p99   5.34 ms max   16.0 ms
+   joint_states              249.7 Hz  dt p99   5.49 ms max   15.9 ms
+   wb reference              100.0 Hz  dt p99  11.89 ms max   22.7 ms
+PX4 attitude 398 Hz: hold roll/pitch std [0.181 0.21 ] deg, yaw std 1.13; frac>5Hz roll/pitch 0.002/0.003; tilt max DIRECT 2.37 deg; quat_reset_counter uniq [1.]
+   gyro (imu/data 400 Hz) hold std [3.799 5.055 3.161] deg/s, frac>5Hz 0.90/0.97/0.96
+   accel std hold [6.322 2.997 1.548] m/s2 ; gyro_clipping any False
+LAW hold: |e_R| mean 0.0404 p99 0.0740 | e_R_x peak f/frac>5 (0.11764705882352941, 0.26226187359709335) | u1 mean 39.00 std 0.23 | motors std [0.042 0.043 0.036 0.035] | e_p rms [36.851 11.511  8.941] mm | e_y pos rms [0.738 3.47  3.641] mm | heading err rms 0.86 deg
+   d_hat filt t std [0.094 0.071 0.293] N mean [ 0.589 -0.592 -2.12 ] | d_hat filt r mean [-0.081 -0.023 -0.111] std [0.047 0.006 0.03 ] | deadbeat d^c t std [9.155 4.622 2.362] N | Fraw std [3.402 2.178 7.666] mean [ 0.121 -0.009  0.244] | tau_j std [0.023 0.06  0.029 0.008] max [0.115 0.827 0.264 0.03 ] | w_hat_q late [-0.006  0.093  0.038  0.003]
+   whole DIRECT: |e_R| max 0.088 mean 0.0377, u1 min/max 36.6/40.9, motor min/max 0.357/0.827, n_sat ticks 0, tau clamp ticks 0, est-bound ticks 0, chi free frac 1.000, stream fresh frac 1.000, |e_p| max 92 mm
+   battery 23.13 -> 23.29 V, current mean 20.3 A

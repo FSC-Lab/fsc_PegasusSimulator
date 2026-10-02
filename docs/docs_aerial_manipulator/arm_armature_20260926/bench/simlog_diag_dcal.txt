@@ -1,0 +1,1 @@
+law dcal   | plant diag                      | j2 rms  3.1 max  5.0 span  112% stuck   0% v99 11.7 over  +2.1 | j3 rms  7.1 max 10.5 span  134% stuck   2% v99 24.1 over  +6.5 | tilt  0.2 CoM    15 mm EE 10.8 mm | tau j2/j3 1.08/0.52 cap 0.0%

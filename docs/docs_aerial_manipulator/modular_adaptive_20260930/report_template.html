@@ -1,0 +1,266 @@
+<title>Simulation: Free-flight Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f7f8f9;
+  --surface: #ffffff;
+  --fg: #16191d;
+  --fg-2: #4a5059;
+  --fg-3: #737a85;
+  --rule: #dde1e6;
+  --grid: #e8ebef;
+  --accent: #1f4e79;
+  --wb: #2a78d6;
+  --mod: #eb6834;
+  --geo: #1baf7a;
+  --ref: #9aa1ab;
+  --good: #1a7f4b;
+  --display: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111418; --surface: #181c21; --fg: #e8ebef; --fg-2: #b4bac3; --fg-3: #8a919b;
+    --rule: #2b3139; --grid: #232830; --accent: #8db8e6; --wb: #3987e5; --mod: #d95926; --geo: #2fbf8a; --ref: #6c737d;
+    --good: #4cc38a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111418; --surface: #181c21; --fg: #e8ebef; --fg-2: #b4bac3; --fg-3: #8a919b;
+  --rule: #2b3139; --grid: #232830; --accent: #8db8e6; --wb: #3987e5; --mod: #d95926; --geo: #2fbf8a; --ref: #6c737d;
+  --good: #4cc38a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); margin: 0; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 30px; }
+header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.eyebrow { font: 500 12px/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
+h1 { font: 600 clamp(26px, 3.8vw, 36px)/1.2 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 600 21px/1.3 var(--display); margin: 0; text-wrap: balance; }
+h2 .n { font: 400 13px var(--body); color: var(--fg-3); margin-left: 4px; }
+h3 { font: 600 15px/1.4 var(--body); margin: 0; color: var(--fg); }
+h3 .sw { margin-right: 6px; }
+p { margin: 0; max-width: 72ch; }
+.lede { font-size: 16px; color: var(--fg-2); max-width: 74ch; }
+section { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+.sw.wb { background: var(--wb); } .sw.mod { background: var(--mod); } .sw.geo { background: var(--geo); }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 14px 10px; display: grid; gap: 8px; }
+figure img { width: 100%; height: auto; display: block; background: #fff; border-radius: 6px; }
+figcaption { font-size: 13px; color: var(--fg-2); }
+figcaption b { color: var(--fg); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--fg-2); }
+.tbl { overflow-x: auto; min-width: 0; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); }
+figure, section, .two > div { min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { white-space: normal; min-width: 11em; text-align: left; }
+thead th { font: 600 12px/1.3 var(--body); color: var(--fg-2); background: var(--bg); position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--body); color: var(--fg-2); }
+tr.mean td { font-weight: 600; color: var(--fg); background: var(--bg); }
+tr.grp td { background: var(--bg); font: 600 12px/1.3 var(--body); color: var(--fg-3); text-align: left; }
+td.note, th.note { text-align: left; white-space: normal; font-family: var(--body); color: var(--fg-3); font-size: 12.5px; max-width: 30ch; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+.two > div { display: grid; gap: 10px; align-content: start; min-width: 0; }
+footer { font-size: 13px; color: var(--fg-3); border-top: 1px solid var(--rule); padding-top: 14px; display: grid; gap: 6px; }
+footer code { font: 12.5px var(--mono); overflow-wrap: anywhere; }
+footer div { min-width: 0; }
+@media (max-width: 760px) {
+  .two { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding-inline: 16px; padding-block: 28px 48px; }
+}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">AM-T650 simulation comparison · Isaac at real time (RTF 1)</div>
+  <h1>Whole-body L1 impedance vs geometric L1 adaptive vs modular adaptive control</h1>
+  <p class="lede">Three controllers flew the same end-effector circle — radius 0.5 m, 24 s lap, the arm's second joint swinging 25 ± 15° on a 6 s period — on one Isaac plant built from identified flight disturbances, one trajectory planner and one SAFETY takeoff/landing loop: our whole-body L1 impedance law; the geometric controller with L1 adaptive augmentation of Cai et al. (CEP 2025); and the modular adaptive law of Yadav et al. (TMECH 2025). Only the DIRECT control law differed, plus, for the geometric law, how the arm is driven: its paper treats the arm separately, so the arm runs a position-mode stack tracking the planner's joint reference, where the other two command arm torques. All results are from Isaac running at real time (RTF 1). The whole-body law flew its shipped configuration, which was tuned on this plant's offline bench; the geometric and modular laws were implemented from their papers and tuned for this plant on the same bench with the same search.</p>
+</header>
+
+<section aria-label="Tracking performance comparison">
+  <h2>1. Tracking performance comparison</h2>
+  <div class="legend"><span><span class="sw wb"></span>Whole-body L1 (shipped)</span><span><span class="sw geo"></span>Geometric L1 adaptive (tuned)</span><span><span class="sw mod"></span>Modular adaptive (tuned)</span></div>
+
+  <figure>
+    <img src="data:image/png;base64,__FIG3D__" alt="3-D end-effector and base trajectories with claw-direction arrows, whole-body L1, geometric L1 adaptive and modular adaptive, two flights each">
+    <figcaption><b>End-effector and base trajectories, RTF 1, two flights per controller (whole-body top row, geometric L1 middle row, modular bottom row).</b> Dashed black: the end-effector reference circle. Dashed grey: the base (CoM) reference. Solid blue/green/orange: the measured end-effector path. Solid dark grey: the measured base path. <b>Arrows: where the claw points</b> (horizontal projection), black = reference, red = measured, at 12 points around the lap. They are tangent to the circle and point along the direction of travel (counter-clockwise); the angle between a black and a red arrow is the EE heading error in the table, and the offset between their bases is the position error. The claw also tilts 35–40° down, which is not drawn. The whole-body path and arrows sit on their reference. The geometric L1 path runs 40 mm wide (0.54 m) and about 24 mm ahead along the path, with its claw arrows turned about 3° behind the reference. The modular path runs slightly wide (0.535 m) and 60 mm low.</figcaption>
+  </figure>
+
+  <div class="tbl"><table>
+    <thead><tr><th>flight</th><th>EE position [mm]</th><th>EE heading [deg]</th><th>base position [mm]</th><th>base heading / yaw [deg]</th><th>joints q1 / q2 / q3 / q4 [deg]</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="6"><span class="sw wb"></span>Whole-body L1</td></tr>
+      <tr><td>WB-1</td><td>14.95</td><td>0.64</td><td>13.40</td><td>0.58</td><td>0.57 / 1.22 / 0.51 / 0.60</td></tr>
+      <tr><td>WB-2</td><td>15.45</td><td>0.45</td><td>13.52</td><td>0.50</td><td>0.59 / 1.15 / 0.48 / 0.76</td></tr>
+      <tr><td>WB-3</td><td>14.50</td><td>0.42</td><td>13.30</td><td>0.49</td><td>0.57 / 1.11 / 0.43 / 0.84</td></tr>
+      <tr class="mean"><td>mean</td><td>14.97</td><td>0.50</td><td>13.40</td><td>0.52</td><td>0.57 / 1.16 / 0.47 / 0.73</td></tr>
+      <tr class="grp"><td colspan="6"><span class="sw geo"></span>Geometric L1 adaptive</td></tr>
+      <tr><td>GEO-1</td><td>49.55</td><td>2.96</td><td>33.97</td><td>2.95</td><td>0.16 / 3.00 / 1.94 / 0.12</td></tr>
+      <tr><td>GEO-2</td><td>48.03</td><td>3.00</td><td>32.63</td><td>2.99</td><td>0.14 / 3.11 / 2.02 / 0.10</td></tr>
+      <tr><td>GEO-3</td><td>49.08</td><td>2.94</td><td>33.66</td><td>2.94</td><td>0.14 / 2.97 / 1.86 / 0.11</td></tr>
+      <tr class="mean"><td>mean</td><td>48.88</td><td>2.97</td><td>33.42</td><td>2.96</td><td>0.15 / 3.03 / 1.94 / 0.11</td></tr>
+      <tr class="grp"><td colspan="6"><span class="sw mod"></span>Modular adaptive</td></tr>
+      <tr><td>MOD-1</td><td>76.94</td><td>3.43</td><td>52.24</td><td>3.50</td><td>0.14 / 3.30 / 3.60 / 0.10</td></tr>
+      <tr><td>MOD-2</td><td>76.96</td><td>3.53</td><td>52.08</td><td>3.59</td><td>0.13 / 3.29 / 3.60 / 0.10</td></tr>
+      <tr><td>MOD-3</td><td>77.12</td><td>3.43</td><td>52.46</td><td>3.50</td><td>0.13 / 3.29 / 3.59 / 0.09</td></tr>
+      <tr class="mean"><td>mean</td><td>77.01</td><td>3.46</td><td>52.26</td><td>3.53</td><td>0.13 / 3.29 / 3.60 / 0.10</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:13px;color:var(--fg-2)">RMS over the EXECUTING window of each flight (one lap, 24 s of plan time). All nine flights ran under one condition: headless Isaac, the real-time pacer holding RTF 1.000, Isaac pinned to the performance cores from launch, the same plant and controller files. EE/base position and EE/base heading are tracking error against the planner's reference; joints are measured minus the streamed joint reference. All nine flights completed the lap without rotor saturation (the geometric law's motor commands stayed within 0.49–0.73); the whole-body and modular flights also had no joint-torque clamp. All nine started the lap through the planner's standard 0.10 m Start gate. The geometric law flew gains tuned for this plant (section 2.3). With its hardware flight configuration it scored 206 mm / 9.60° on the same mission (EE path 0.69–0.70 m), matching its hardware flights of 2026-09-28, and needed the Start gate widened to 0.25 m. The error that remains is structural to the paper's law. Its L1 augmentation acts only on the matched channel (thrust and body torque), so it estimates the body-fixed lateral force, (0.46, −0.45) N, but does not cancel it. The pure-P position loop therefore leaves the airframe F/K<sub>p</sub> ≈ 0.74 N / 20.1 ≈ 37 mm off, turning with the heading (measured hover offset 38 mm). With ω<sub>d</sub> = 0 its attitude damping opposes the circle's 15°/s yaw rate, a (K<sub>ω</sub>/K<sub>R</sub>)·rate ≈ (0.41/1.74)·15°/s ≈ 3.5° heading lag that the position-mode arm carries to the gripper, so its EE heading error equals its base yaw error. The whole-body law's own q1/q4 carry the end-effector heading redundancy — it tracks the end effector, not a fixed joint split — so its small per-joint numbers are not directly comparable to the modular law's, which has no such redundancy to spend.</p>
+</section>
+
+<section aria-label="Simulation settings">
+  <h2>2. Simulation settings</h2>
+
+  <div>
+    <h3>2.1 Uncertainties, rotor motor delay and robustness injections</h3>
+    <p style="margin-bottom:8px;color:var(--fg-2);font-size:13.5px;max-width:80ch">The Isaac plant carries the disturbances identified from three real T650 indoor flights (2026‑09‑18/21/24) rather than an idealised model — all three controllers fly the identical injected plant below. The modular and geometric configuration files are generated from the whole-body one and checked against it key by key: the same plant, allocator beliefs, SAFETY loop and guards.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>injection</th><th>value</th><th class="note">represents</th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="3">rotor / thrust</td></tr>
+        <tr><td>thrust-constant scale (k<sub>f</sub>)</td><td>× 1.037</td><td class="note">the real airframe delivers ~4&nbsp;% more thrust per command than the bench motor calibration</td></tr>
+        <tr><td>thrust decay (battery sag)</td><td>−3.6&nbsp;%/min from lift-off</td><td class="note">k<sub>f</sub> falls as the pack drains over a flight-length sortie</td></tr>
+        <tr><td>yaw torque-constant scale (k<sub>m</sub>)</td><td>× 0.233 of plant (0.70 × bench)</td><td class="note">the vehicle delivers only ~70&nbsp;% of the commanded yaw torque — the unmodelled rotor-inertia reaction torque</td></tr>
+        <tr><td><b>rotor spin-up lag (motor delay)</b></td><td><b>λ = 10.03 s⁻¹ (τ ≈ 99.7 ms)</b></td><td class="note">first-order motor/propeller response, identified from the roll/pitch step response, exact-ZOH integrated</td></tr>
+        <tr class="grp"><td colspan="3">airframe</td></tr>
+        <tr><td>body-fixed force bias</td><td>(+0.55, −0.50, 0.0) N</td><td class="note">a constant lateral force from the real thrust axis sitting ≈1.1° off true vertical</td></tr>
+        <tr><td>body-fixed torque bias</td><td>(0, 0, −0.095) N·m</td><td class="note">a standing yaw moment from propeller/motor drag asymmetry</td></tr>
+        <tr><td>mass / inertia scale</td><td>× 1.0 / × 1.0</td><td class="note">no mass or inertia mismatch injected — the uncertainty is carried entirely in k<sub>f</sub></td></tr>
+        <tr><td>centre-of-mass offset</td><td>−17.9 mm, body x</td><td class="note">forward CoM shift measured on the real airframe (arm-side asymmetry)</td></tr>
+        <tr class="grp"><td colspan="3">arm actuators</td></tr>
+        <tr><td>gearbox friction scale, j1 / j2 / j3 / j4</td><td>1.00 / 0.70 / 0.65 / 1.50</td><td class="note">per-joint scale on the calibrated OM‑X gearbox friction model, fit to flight data</td></tr>
+        <tr><td>current-loop residual noise, j1 / j2 / j3 / j4</td><td>9.6 / 6.2 / 9.6 / 9.6 mA rms</td><td class="note">bench-measured torque ripple from the Dynamixel current loop, 5 Hz bandwidth</td></tr>
+        <tr><td>joint-velocity feedback</td><td>48 ms lag + 0.024 rad/s quantum</td><td class="note">emulates the Present-Velocity field the real arm controller reports, not the true rate</td></tr>
+        <tr class="grp"><td colspan="3">feedback (mocap) noise</td></tr>
+        <tr><td>position / velocity noise</td><td>0.5 mm / 22 mm/s, 60 Hz</td><td class="note">the real OptiTrack feed's measured noise floor</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <p style="color:var(--fg-2);font-size:13.5px;max-width:80ch"><b>Arm drive.</b> The whole-body and modular laws command joint torques. The geometric law's arm is position-commanded, as in its paper; Isaac emulates the position servo as PD (3.0 N·m/rad, 0.25 N·m·s/rad) plus an integral term (2.0 N·m/(rad·s), clamped at 0.35 N·m) plus gravity compensation, through the same servo model. So the gearbox-friction and current-noise injections reach all three arms. The joint-velocity feedback lag matters only to the two laws that read joint velocity.</p>
+
+  <div>
+    <h3>2.2 Control parameters</h3>
+
+    <div style="display:grid;gap:10px">
+      <h3><span class="sw wb"></span>Whole-body L1 impedance law</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>parameter</th><th>value</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="2">base position loop</td></tr>
+          <tr><td>k<sub>x</sub> / k<sub>v</sub></td><td>50.03 / 12.58</td></tr>
+          <tr class="grp"><td colspan="2">attitude loop</td></tr>
+          <tr><td>k<sub>R</sub> / k<sub>ω</sub></td><td>2.134 / 1.567</td></tr>
+          <tr><td>imposed inertia M<sub>r,d</sub> (x/y/z)</td><td>0.140 / 0.146 / 0.144 kg·m²</td></tr>
+          <tr class="grp"><td colspan="2">end-effector impedance (task space)</td></tr>
+          <tr><td>K<sub>y</sub> (x/y/z) / K<sub>y,ψ</sub></td><td>211.9 / 0.248</td></tr>
+          <tr><td>D<sub>y</sub> (x/y/z) / D<sub>y,ψ</sub></td><td>26.82 / 0.290</td></tr>
+          <tr><td>M<sub>y</sub> (x/y/z) / M<sub>y,ψ</sub></td><td>1.0 / 0.05</td></tr>
+          <tr><td>damped least-squares λ</td><td>0.30</td></tr>
+          <tr class="grp"><td colspan="2">L1 adaptive disturbance observer (4-D joint-row attribution)</td></tr>
+          <tr><td>predictor pole a<sub>t</sub> / a<sub>r</sub> / a<sub>q</sub></td><td>2.0 / 2.0 / 2.0</td></tr>
+          <tr><td>filter bandwidth ω<sub>c,t</sub> / ω<sub>c,r</sub> / ω<sub>c,q</sub></td><td>2.927 / 0.743 / 0.848 rad/s</td></tr>
+          <tr><td>feedforward filter ω<sub>x</sub></td><td>0.207 rad/s</td></tr>
+          <tr class="grp"><td colspan="2">arm / common</td></tr>
+          <tr><td>joint-diagonal armature, j1..j4</td><td>0.010 / 0.0194 / 0.0097 / 0.0097 kg·m²</td></tr>
+          <tr><td>joint torque clamp τ<sub>max</sub></td><td>3.0 N·m</td></tr>
+          <tr><td>base CoM belief (model y)</td><td>−17.854 mm</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><span class="sw geo"></span>Geometric L1 adaptive law (Cai et al.)</h3>
+      <p style="font-size:13px;color:var(--fg-2)">A geometric SE(3) controller (position loop plus attitude error on SO(3)) with the arm's centre-of-mass offset r<sub>os</sub> compensated live from the arm encoders, augmented by an L1 adaptive term on the matched channel (thrust and body torque). The gains below were tuned for this plant (section 2.3); its hardware flight configuration of 2026-09-28 is given in brackets. Model terms, limits and the arm compensation are as flown. Our implementation runs the paper's constant-position/constant-yaw specialization, because the position reference it receives carries no yaw-rate field: the desired angular velocity ω<sub>d</sub> = 0, so the circle's turning yaw reference enters only through the attitude error. The planner's whole-body reference is converted to a base position/velocity/acceleration/yaw reference for it by the reference bridge, with the planner's own base CoM.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>parameter</th><th>value</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="2">position loop</td></tr>
+          <tr><td>K<sub>p</sub> (x / y / z)</td><td>20.11 / 20.11 / 13.50 [4.0 / 4.0 / 8.0]</td></tr>
+          <tr><td>K<sub>v</sub> (x / y / z)</td><td>11.05 / 11.05 / 10.82 [6.0 / 6.0 / 10.0]</td></tr>
+          <tr><td>error saturation (position / velocity)</td><td>1.0 m / 2.0 m/s</td></tr>
+          <tr class="grp"><td colspan="2">attitude loop</td></tr>
+          <tr><td>K<sub>R</sub> (x / y / z)</td><td>3.337 / 3.337 / 1.737 [1.0 / 1.0 / 0.49]</td></tr>
+          <tr><td>K<sub>ω</sub> (x / y / z)</td><td>0.951 / 0.951 / 0.411 [0.55 / 0.55 / 0.35]</td></tr>
+          <tr><td>inertia J (xx / yy / zz, xy)</td><td>0.118 / 0.119 / 0.131, 0.0089 kg·m²</td></tr>
+          <tr><td>desired angular velocity ω<sub>d</sub></td><td>0 (constant-yaw form)</td></tr>
+          <tr><td>limits: tilt / torque xy / torque z</td><td>30° / 8.0 / 0.40 N·m</td></tr>
+          <tr class="grp"><td colspan="2">L1 adaptive augmentation (matched channel)</td></tr>
+          <tr><td>predictor A<sub>s</sub> (velocity / angular rate)</td><td>−4.33 / −2.79 [−2.0 / −2.0]</td></tr>
+          <tr><td>low-pass bandwidth ω<sub>c</sub></td><td>1.0 rad/s [6.0]</td></tr>
+          <tr><td>sample time</td><td>measured feedback stamps</td></tr>
+          <tr><td>bounds: thrust / torque xy / torque z</td><td>18 N / 1.5 / 0.25 N·m</td></tr>
+          <tr><td>unmatched (lateral) estimate</td><td>bounded 8 N, estimated but not compensated</td></tr>
+          <tr class="grp"><td colspan="2">arm compensation and arm</td></tr>
+          <tr><td>r<sub>os</sub> from arm encoders / base mass</td><td>live / 3.110 kg</td></tr>
+          <tr><td>centre-of-mass trim (body x) / model mismatch</td><td>−14.8 mm / 0</td></tr>
+          <tr><td>arm</td><td>position-mode stack, tracks the planner's joint reference</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3><span class="sw mod"></span>Modular adaptive law (Yadav et al., three modules)</h3>
+      <p style="font-size:13px;color:var(--fg-2)">Each module: τ = M̄(−Λ(λ₁e + λ₂ė) − Δτ + ff), switching gain ρ = K̂₀ + K̂₁‖ξ‖ + K̂₂‖ξ‖² + K̂₃‖χ̈‖ + ζ inside a boundary layer ϖ, Q = diag(q<sub>e</sub>, q<sub>v</sub>) and the paper's leakage adaptive laws on K̂. One structural addition beyond the paper: τ<sub>p</sub> += m g e₃ (nominal weight feedforward — without it Table II's literal gains cannot hover). The leakage on K̂₁₋₃ is 10× the value the paper's constants would otherwise give in each module; the untuned, literal Table II gains abort in 1.7 s on this plant.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>parameter</th><th>value</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="2">base position module</td></tr>
+          <tr><td>M̄ (xy / z)</td><td>3.746 / 3.746 kg</td></tr>
+          <tr><td>λ₁ (xy / z)</td><td>11.78 / 14.67</td></tr>
+          <tr><td>λ₂ (xy / z)</td><td>9.48 / 3.53</td></tr>
+          <tr><td>Q = (q<sub>e</sub>, q<sub>v</sub>)</td><td>1.353, 0.081</td></tr>
+          <tr><td>ν₀, ν₁₋₃ (leakage)</td><td>0.148, 1.677</td></tr>
+          <tr><td>ϖ (boundary layer)</td><td>0.207</td></tr>
+          <tr><td>K̂(0)</td><td>0.00229</td></tr>
+          <tr class="grp"><td colspan="2">attitude module</td></tr>
+          <tr><td>M̄ (roll/pitch / yaw)</td><td>0.095 / 0.095 kg·m²</td></tr>
+          <tr><td>λ₁ (roll/pitch / yaw)</td><td>81.52 / 25.04</td></tr>
+          <tr><td>λ₂ (roll/pitch / yaw)</td><td>22.31 / 3.90</td></tr>
+          <tr><td>Q = (q<sub>e</sub>, q<sub>v</sub>)</td><td>1.640, 0.141</td></tr>
+          <tr><td>ν₀, ν₁₋₃ (leakage)</td><td>1.605, 3.996</td></tr>
+          <tr><td>ϖ (boundary layer)</td><td>1.552</td></tr>
+          <tr><td>K̂(0)</td><td>0.00100</td></tr>
+          <tr class="grp"><td colspan="2">arm joint module</td></tr>
+          <tr><td>M̄ (j1 / j2 / j3 / j4)</td><td>0.022 / 0.033 / 0.016 / 0.010 kg·m²</td></tr>
+          <tr><td>λ₁ / λ₂</td><td>394.5 / 23.80</td></tr>
+          <tr><td>Q = (q<sub>e</sub>, q<sub>v</sub>)</td><td>1.411, 0.027</td></tr>
+          <tr><td>ν₀, ν₁₋₃ (leakage)</td><td>0.357, 13.20</td></tr>
+          <tr><td>ϖ (boundary layer)</td><td>0.0550</td></tr>
+          <tr><td>K̂(0)</td><td>2.69 × 10⁻⁵</td></tr>
+          <tr class="grp"><td colspan="2">common</td></tr>
+          <tr><td>acceleration filter (χ̈)</td><td>7.02 Hz</td></tr>
+          <tr><td>joint-acceleration filter</td><td>10.0 Hz</td></tr>
+          <tr><td>joint torque clamp</td><td>3.0 N·m</td></tr>
+          <tr><td>base CoM belief (model y)</td><td>−17.854 mm</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div style="display:grid;gap:10px">
+    <h3>2.3 How the geometric law was tuned</h3>
+    <p style="font-size:13.5px;color:var(--fg-2);max-width:80ch">The geometric law was tuned the way the modular law was, on the same offline bench the whole-body tune came from. The bench runs an exact Python port of the C++ node (geometric law, L1 augmentation, r<sub>os</sub> from the encoders), the reference bridge and Isaac's position-mode arm servo, flying the comparison circle against the mirror plant with hardware-like feedback noise and lag. CMA-ES searched all 11 gains: K<sub>p</sub>, K<sub>v</sub>, K<sub>R</sub> and K<sub>ω</sub> for the horizontal and vertical axes, the two predictor poles and ω<sub>c</sub>. Each candidate flew the circle at the nominal 16 ms transport delay, at a longer delay it had to survive, and on the stress plant (mass and inertia × 1.10, arm mass and gearbox friction × 1.05, CoM shifted 10/10/5 mm, allocator thrust belief +17.6 %).</p>
+    <div class="tbl"><table>
+      <thead><tr><th>geometric gain set</th><th>bench EE / heading, 3 noise seeds</th><th>survives delay up to</th><th>stress plant EE</th><th>Isaac at RTF 1</th></tr></thead>
+      <tbody>
+        <tr><td>hardware configuration (2026-09-28)</td><td>241 mm / 10.3°</td><td>44 ms (aborts at 60)</td><td>aborts</td><td>206 mm / 9.60°, 3 of 3 completed</td></tr>
+        <tr><td>stage 1: must survive 28 ms</td><td>43 mm / 2.0°</td><td>28 ms (aborts at 30)</td><td>53 mm</td><td>diverged before the lap, 1 of 1</td></tr>
+        <tr class="mean"><td>stage 2: must survive 44 ms (flown above)</td><td>58 mm / 3.4°</td><td>52 ms (highest tested)</td><td>70 mm</td><td>48.9 mm / 2.97°, 3 of 3 completed</td></tr>
+      </tbody>
+    </table></div>
+    <p style="font-size:13.5px;color:var(--fg-2);max-width:80ch">Stage 1 used the 28 ms bar the other two laws meet on this bench: the whole-body tune survives 28 ms and aborts at 30, the modular tune survives 34 ms and aborts at 36. Its best set diverged in Isaac. A 1.53 Hz attitude oscillation grew from the switch into DIRECT until the vehicle passed 40° of tilt 19 s later, before the lap began. The bench reproduces that same mode at 30 ms of delay (and for the hardware set at 60 ms), so Isaac puts more effective delay around this law than 28 ms. Stage 2 therefore required 44 ms. The search met it mainly by lowering the L1 filter bandwidth ω<sub>c</sub> from 6 to 1 rad/s, which keeps the L1 torque correction out of the rotor-lag band near 1.5 Hz; the position and attitude gains stayed close to stage 1. At ω<sub>c</sub> = 1 rad/s the augmentation compensates disturbances slower than about 0.16 Hz and leaves faster ones to the geometric loop. The tuned set has not been flown on hardware.</p>
+  </div>
+</section>
+
+<footer>
+  <div>Campaigns: <code>docs/docs_aerial_manipulator/modular_adaptive_20260930/</code> (the comparison), <code>…/rtf_profile_20261001/</code> (real-time flights, pose RMSE, 3-D figure) and <code>…/geometric_l1_tune_20261001/</code> (geometric law bench port, CMA-ES tuning, its Isaac flights) · Commands: Command.md §7.22, §7.23</div>
+  <div>Launch, geometric L1: <code>scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh</code> + <code>fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh</code>, with <code>WB_SIM_YAML=…/geometric_l1_tune_20261001/variants/geometric_l1_mirror_sim_tuned.yaml</code> (generated by <code>tools/make_tuned_yaml.py</code> from <code>…/rtf_profile_20261001/variants/geometric_l1_mirror_sim.yaml</code>, gains only)</div>
+  <div>Launch, modular: <code>scripts/indoor_sim/start_t650_aerial_manipulator_modular_adaptive_direct_actuation_sitl.sh</code> + <code>fsc_autopilot_ros2/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh</code></div>
+  <div>Papers: Cai et al., "An experiment study for unmanned aerial manipulator systems with L1 adaptive augmentation of geometric control", Control Engineering Practice 164:106418, 2025.</div>
+  <div>R. D. Yadav, S. Dantu, W. Pan, S. Sun, S. Roy, S. Baldi, "Modular Adaptive Aerial Manipulation Under Unknown Dynamic Coupling Forces", IEEE/ASME Trans. Mechatronics 30(4):2688–2698, 2025.</div>
+</footer>
+</div>

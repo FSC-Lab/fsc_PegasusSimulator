@@ -1,0 +1,100 @@
+[AM-T650-WB] PROFILE (rendering, 1000 world.step() calls per window)
+  window A (plain):    wall 33.05 s, sim 16.00 s -> RTF 0.484; 4000 physics steps (250.0 Hz sim), 8.26 ms wall per physics step, of which this app's callback 3.98 ms
+  window B (cProfile): wall 37.13 s, sim 16.00 s -> RTF 0.431
+
+         30782397 function calls (30781865 primitive calls) in 37.123 seconds
+
+   Ordered by: cumulative time
+   List reduced from 794 to 45 due to restriction <45>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1000    0.008    0.000   37.100    0.037 /home/shiqi/isaacsim/exts/isaacsim.core.api/isaacsim/core/api/world/world.py:511(step)
+     1000    0.005    0.000   37.090    0.037 /home/shiqi/isaacsim/exts/isaacsim.core.api/isaacsim/core/api/simulation_context/simulation_context.py:672(step)
+     1000    7.786    0.008   36.980    0.037 {built-in method omni.kit.app._app.update}
+     4000    0.030    0.000   19.045    0.005 /home/shiqi/fsc_PegasusSimulator/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py:1442(_control_step)
+     4000    0.409    0.000   19.012    0.005 /home/shiqi/fsc_PegasusSimulator/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py:1452(_control_step_inner)
+     4000    3.612    0.001   14.142    0.004 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller.py:288(dynamics)
+   232000    2.783    0.000    8.271    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1468(cross)
+   696000    1.692    0.000    4.884    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1393(moveaxis)
+     8000    0.021    0.000    2.836    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/__init__.py:188(spin_once)
+     8000    0.005    0.000    2.601    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:750(spin_once)
+     8000    0.059    0.000    2.596    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:735(_spin_once_impl)
+  1412000    1.809    0.000    2.583    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1330(normalize_axis_tuple)
+     4000    0.016    0.000    2.410    0.001 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/vehicles/vehicle.py:438(update_sim_state)
+     4000    0.174    0.000    1.999    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/backends/ros2_backend.py:207(update_state)
+     4000    0.080    0.000    1.988    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_vehicle/x650_multirotor.py:105(update)
+     4000    0.513    0.000    1.973    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_vehicle/x650_vehicle.py:91(update_state)
+     4000    0.045    0.000    1.902    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/vehicles/vehicle.py:400(update_sensors)
+    45000    0.014    0.000    1.849    0.000 {built-in method builtins.next}
+     8000    0.027    0.000    1.838    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:705(wait_for_ready_callbacks)
+    16000    0.031    0.000    1.804    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/sensors/sensor.py:90(wrapper)
+     8000    0.417    0.000    1.804    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:469(_wait_for_ready_callbacks)
+   500000    1.387    0.000    1.387    0.000 {built-in method numpy.array}
+     4000    0.019    0.000    1.027    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/backends/px4_mavlink_backend.py:581(update)
+    24800    0.161    0.000    0.922    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/publisher.py:60(publish)
+     4000    0.328    0.000    0.872    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/sensors/magnetometer.py:59(update)
+    24800    0.711    0.000    0.754    0.000 {built-in method rclpy._rclpy_pybind11.publish}
+     4000    0.038    0.000    0.701    0.000 /home/shiqi/fsc_PegasusSimulator/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py:997(_publish_arm_state)
+     4000    0.023    0.000    0.697    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/task.py:231(__call__)
+     4000    0.007    0.000    0.650    0.000 {method 'send' of 'coroutine' objects}
+     4000    0.022    0.000    0.643    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:433(handler)
+     1000    0.003    0.000    0.619    0.001 /home/shiqi/isaacsim/kit/extscore/omni.kit.async_engine/omni/kit/async_engine/async_engine.py:296(<lambda>)
+     1000    0.008    0.000    0.616    0.001 /home/shiqi/isaacsim/kit/extscore/omni.kit.async_engine/omni/kit/async_engine/async_engine.py:200(run_once)
+     1072    0.022    0.000    0.601    0.001 /home/shiqi/isaacsim/kit/python/lib/python3.11/asyncio/base_events.py:1859(_run_once)
+     4144    0.005    0.000    0.562    0.000 /home/shiqi/isaacsim/kit/python/lib/python3.11/asyncio/events.py:82(_run)
+     4144    0.012    0.000    0.557    0.000 {method 'run' of '_contextvars.Context' objects}
+     4000    0.015    0.000    0.546    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/backends/px4_mavlink_backend.py:618(poll_mavlink_messages)
+     4000    0.399    0.000    0.503    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/sensors/imu.py:83(update)
+  1412000    0.297    0.000    0.497    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1380(<listcomp>)
+   216000    0.223    0.000    0.474    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller.py:115(hat)
+    12000    0.088    0.000    0.444    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/sensors/geo_mag_utils.py:87(get_table_data)
+     1000    0.030    0.000    0.443    0.000 /home/shiqi/isaacsim/extscache/omni.kit.widget.viewport-107.1.3+69cbf6ad/omni/kit/widget/viewport/impl/texture.py:337(on_drawable_changed)
+     4000    0.029    0.000    0.434    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:363(_take_subscription)
+     4000    0.163    0.000    0.404    0.000 {built-in method rclpy._rclpy_pybind11.take_message}
+     4000    0.046    0.000    0.395    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/backends/px4_mavlink_backend.py:432(update_state)
+     4000    0.013    0.000    0.387    0.000 /home/shiqi/isaacsim/kit/python/lib/python3.11/site-packages/pymavlink/mavutil.py:505(recv_match)
+
+
+         30782397 function calls (30781865 primitive calls) in 37.123 seconds
+
+   Ordered by: internal time
+   List reduced from 794 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1000    7.786    0.008   36.980    0.037 {built-in method omni.kit.app._app.update}
+     4000    3.612    0.001   14.142    0.004 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller.py:288(dynamics)
+   232000    2.783    0.000    8.271    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1468(cross)
+  1412000    1.809    0.000    2.583    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1330(normalize_axis_tuple)
+   696000    1.692    0.000    4.884    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1393(moveaxis)
+   500000    1.387    0.000    1.387    0.000 {built-in method numpy.array}
+    24800    0.711    0.000    0.754    0.000 {built-in method rclpy._rclpy_pybind11.publish}
+     4000    0.513    0.000    1.973    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_vehicle/x650_vehicle.py:91(update_state)
+     8000    0.417    0.000    1.804    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/executors.py:469(_wait_for_ready_callbacks)
+     4000    0.409    0.000   19.012    0.005 /home/shiqi/fsc_PegasusSimulator/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py:1452(_control_step_inner)
+     4000    0.399    0.000    0.503    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/sensors/imu.py:83(update)
+     4000    0.328    0.000    0.872    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/sensors/magnetometer.py:59(update)
+  2108000    0.297    0.000    0.297    0.000 {built-in method numpy.core._multiarray_umath.normalize_axis_index}
+  1412000    0.297    0.000    0.497    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/core/numeric.py:1380(<listcomp>)
+  4634605    0.275    0.000    0.275    0.000 {built-in method builtins.len}
+   696000    0.260    0.000    0.260    0.000 {built-in method builtins.sorted}
+   216000    0.223    0.000    0.474    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller.py:115(hat)
+   488000    0.221    0.000    0.221    0.000 {method 'astype' of 'numpy.ndarray' objects}
+   100000    0.212    0.000    0.266    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/lib/twodim_base.py:158(eye)
+   696000    0.193    0.000    0.193    0.000 {method 'transpose' of 'numpy.ndarray' objects}
+    16000    0.187    0.000    0.364    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_controller/controller.py:125(joint_rotation)
+     4000    0.185    0.000    0.185    0.000 /home/shiqi/isaacsim/extscache/omni.usd-1.13.10+69cbf6ad.lx64.r.cp311/omni/usd/_impl/utils.py:703(get_world_transform_matrix)
+     4000    0.184    0.000    0.184    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/lagged_thrust_curve.py:62(update)
+     4000    0.174    0.000    1.999    0.000 /home/shiqi/fsc_PegasusSimulator/extensions/pegasus.simulator/pegasus/simulator/logic/backends/ros2_backend.py:207(update_state)
+   416000    0.172    0.000    0.172    0.000 {built-in method numpy.zeros}
+   364000    0.166    0.000    0.228    0.000 <frozen importlib._bootstrap>:1207(_handle_fromlist)
+     4000    0.163    0.000    0.404    0.000 {built-in method rclpy._rclpy_pybind11.take_message}
+    24800    0.161    0.000    0.922    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/publisher.py:60(publish)
+    12041    0.161    0.000    0.161    0.000 {built-in method carb._carb.log}
+    16000    0.154    0.000    0.262    0.000 /home/shiqi/isaacsim/extscache/omni.kit.pip_archive-0.0.0+69cbf6ad.lx64.cp311/pip_prebundle/numpy/linalg/linalg.py:329(solve)
+    24000    0.153    0.000    0.203    0.000 /home/shiqi/isaacsim/exts/isaacsim.ros2.bridge/humble/rclpy/rclpy/guard_condition.py:32(trigger)
+     4000    0.153    0.000    0.225    0.000 /home/shiqi/isaacsim/kit/python/lib/python3.11/contextlib.py:558(__exit__)
+    44000    0.143    0.000    0.143    0.000 {built-in method numpy.core._multiarray_umath.c_einsum}
+    80000    0.137    0.000    0.294    0.000 /home/shiqi/isaacsim/kit/python/lib/python3.11/contextlib.py:502(enter_context)
+     1000    0.136    0.000    0.160    0.000 /home/shiqi/isaacsim/extscache/omni.kit.widget.viewport-107.1.3+69cbf6ad/omni/kit/widget/viewport/widget.py:264(scene_changed)
+
+

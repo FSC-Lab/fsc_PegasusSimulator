@@ -1,0 +1,1 @@
+law flown      | plant diag    | qdot observer | j2 rms  5.4 max  8.0 span  124% stuck   1% v99 23.1 over  +4.4 | j3 rms  8.9 max 13.2 span  144% stuck   3% v99 29.4 over  +8.3 | tilt  0.9 CoM    49 mm EE 11.0 mm | tau j2/j3 1.14/0.51 cap 0.0%

@@ -1,0 +1,80 @@
+
+WB-1 17:11     circle 26.36-54.53
+  CoM pos   mm  xyz   15.4   19.9    3.5 | norm   25.4  mean xyz   -2.3    1.5    1.4
+  base pos  mm  xyz   15.3   19.8    3.6 | norm   25.3  mean xyz   -2.3    1.5    1.8
+  base vel mm/s xyz   22.1   22.2   13.2 | norm   34.0
+  attitude deg rpy    0.8    1.2    0.2  mean   -0.7   -1.1   -0.1 | rate deg/s    3.7    4.6    2.8 | yaw(world) 0.19 mean -0.08
+  joints deg     0.6    2.0    1.4    0.1  mean    0.4   -1.6    0.3    0.1 | joint vel deg/s    2.1    5.3    8.1    0.4
+  EE pos    mm  xyz   15.8   20.5    4.6 | norm   26.2 mean|e| 23.8 max 55.5 | lag 0.00s resid 23.8
+  EE heading deg rms 0.48 mean +0.39 max 1.28 (3d 0.98) | radius 0.493 | tilt max 2.37
+  law |e_R| rms 0.0312 max 0.0741 | sat 0 | u1 36.45 | odom max gap 20 ms | obs 1.0
+
+WB-2 17:22     circle 20.19-48.37
+  CoM pos   mm  xyz   15.4   17.5    2.8 | norm   23.5  mean xyz   -4.3   -2.8    1.3
+  base pos  mm  xyz   15.4   17.4    2.9 | norm   23.4  mean xyz   -4.2   -2.8    1.6
+  base vel mm/s xyz   24.2   26.3   11.1 | norm   37.4
+  attitude deg rpy    0.8    1.0    0.2  mean   -0.7   -0.8   -0.1 | rate deg/s    2.7    2.9    3.0 | yaw(world) 0.19 mean -0.11
+  joints deg     0.5    1.7    1.4    0.2  mean    0.5   -1.2    0.2    0.1 | joint vel deg/s    1.6    5.3    8.4    0.5
+  EE pos    mm  xyz   15.9   18.0    4.1 | norm   24.4 mean|e| 21.8 max 48.0 | lag 0.00s resid 21.8
+  EE heading deg rms 0.44 mean +0.39 max 1.28 (3d 0.98) | radius 0.495 | tilt max 2.20
+  law |e_R| rms 0.0266 max 0.0718 | sat 0 | u1 39.32 | odom max gap 90 ms | obs 1.0
+
+DEC-1 18:28    circle 23.15-51.32
+  CoM pos   mm  xyz   96.8  117.5    4.8 | norm  152.3  mean xyz    4.6  -18.2   -0.3
+  base pos  mm  xyz   96.1  116.7    4.7 | norm  151.3  mean xyz    4.5  -18.1   -0.4
+  base vel mm/s xyz   37.9   40.0    9.0 | norm   55.8
+  attitude deg rpy    0.8    0.8   10.5  mean   -0.8   -0.7   -9.9 | rate deg/s    3.0    3.2    2.6 | yaw(world) 10.47 mean -9.93
+  joints deg     0.2    1.1    0.8    0.1  mean    0.2   -0.1   -0.1    0.0 | joint vel deg/s    0.9    1.6    1.1    0.4
+  EE pos    mm  xyz  125.2  145.4    6.6 | norm  192.0 mean|e| 190.5 max 242.6 | lag 0.00s resid 190.5
+  EE heading deg rms 10.31 mean -9.77 max 11.72 (3d 10.34) | radius 0.679 | tilt max 2.19
+  law |e_R| rms 0.1801 max 0.2058 | sat 0 | u1 36.80 | odom max gap 20 ms | obs None
+
+DEC-2 18:36    circle 21.21-49.38
+  CoM pos   mm  xyz  122.1  129.0   10.6 | norm  177.9  mean xyz   25.7  -15.9    9.6
+  base pos  mm  xyz  121.3  128.2   10.6 | norm  176.8  mean xyz   25.6  -15.9    9.5
+  base vel mm/s xyz   43.2   46.6    8.5 | norm   64.1
+  attitude deg rpy    1.0    0.9   10.5  mean   -0.9   -0.8   -9.9 | rate deg/s    3.1    3.6    2.8 | yaw(world) 10.48 mean -9.93
+  joints deg     0.2    1.1    0.8    0.1  mean    0.2   -0.1   -0.1    0.1 | joint vel deg/s    0.8    1.7    1.2    0.4
+  EE pos    mm  xyz  150.1  158.1   14.1 | norm  218.4 mean|e| 217.5 max 269.7 | lag 0.00s resid 217.5
+  EE heading deg rms 10.31 mean -9.75 max 11.99 (3d 10.35) | radius 0.702 | tilt max 2.12
+  law |e_R| rms 0.1804 max 0.2105 | sat 0 | u1 36.72 | odom max gap 23 ms | obs None
+
+0924 F1 12:02  circle 35.93-75.51
+  CoM pos   mm  xyz   41.8   43.0    4.4 | norm   60.1  mean xyz  -25.1   -3.1    2.8
+  base pos  mm  xyz   41.8   42.4    4.5 | norm   59.7  mean xyz  -25.4   -3.3    2.9
+  base vel mm/s xyz   25.6   22.1    8.9 | norm   35.0
+  attitude deg rpy    0.7    0.7    0.2  mean   -0.6   -0.7   -0.1 | rate deg/s    2.9    3.1    2.4 | yaw(world) 0.23 mean -0.07
+  joints deg     0.6    4.2    7.3    0.1  mean    0.1    0.9   -2.6    0.1 | joint vel deg/s    1.7    0.7    0.9    0.4
+  EE pos    mm  xyz   41.9   46.6    5.8 | norm   62.9 mean|e| 56.6 max 115.8 | lag 0.00s resid 56.6
+  EE heading deg rms 0.58 mean +0.03 max 1.67 (3d 0.92) | radius 0.492 | tilt max 1.72
+  law |e_R| rms 0.0500 max 0.1132 | sat 0 | u1 38.47 | odom max gap 18 ms | obs None
+
+0924 F2 12:05  circle 23.03-51.02
+  CoM pos   mm  xyz   41.4   37.4    5.3 | norm   56.0  mean xyz  -30.2   -4.8    3.1
+  base pos  mm  xyz   41.5   37.3    5.4 | norm   56.1  mean xyz  -30.5   -4.4    3.3
+  base vel mm/s xyz   23.6   23.7    9.8 | norm   34.9
+  attitude deg rpy    0.9    0.8    0.2  mean   -0.8   -0.8   -0.1 | rate deg/s    2.8    3.4    2.4 | yaw(world) 0.24 mean -0.10
+  joints deg     0.6    2.6    3.5    0.2  mean    0.3   -1.2    1.1    0.2 | joint vel deg/s    1.8    0.7    0.9    0.4
+  EE pos    mm  xyz   40.6   37.6    8.3 | norm   55.9 mean|e| 51.8 max 92.5 | lag 0.00s resid 51.8
+  EE heading deg rms 0.54 mean +0.30 max 1.65 (3d 1.18) | radius 0.493 | tilt max 2.06
+  law |e_R| rms 0.0459 max 0.0875 | sat 0 | u1 39.71 | odom max gap 18 ms | obs None
+
+0924 F3 16:56  circle 20.76-48.76
+  CoM pos   mm  xyz   32.5   29.2    5.0 | norm   44.0  mean xyz  -10.7   -5.1    3.4
+  base pos  mm  xyz   31.8   28.5    5.2 | norm   43.0  mean xyz  -10.7   -5.5    3.5
+  base vel mm/s xyz   32.2   21.3    9.6 | norm   39.8
+  attitude deg rpy    0.8    1.0    0.1  mean   -0.8   -0.9   -0.1 | rate deg/s    2.8    3.4    2.4 | yaw(world) 0.14 mean -0.06
+  joints deg     0.6    5.0    8.3    0.3  mean    0.2    0.9   -2.9    0.2 | joint vel deg/s    1.7    6.9   10.1    0.4
+  EE pos    mm  xyz   36.8   33.7    8.5 | norm   50.7 mean|e| 45.3 max 98.9 | lag 0.00s resid 45.3
+  EE heading deg rms 0.58 mean +0.26 max 1.47 (3d 1.15) | radius 0.494 | tilt max 2.96
+  law |e_R| rms 0.0406 max 0.1065 | sat 0 | u1 37.18 | odom max gap 15 ms | obs None
+
+0924 F4 17:21  circle 20.09-48.08
+  CoM pos   mm  xyz   33.1   35.4    5.3 | norm   48.8  mean xyz  -16.2   -3.5    3.3
+  base pos  mm  xyz   32.9   35.0    5.3 | norm   48.3  mean xyz  -15.9   -3.7    3.4
+  base vel mm/s xyz   38.1   40.0   11.5 | norm   56.4
+  attitude deg rpy    0.8    1.3    0.2  mean   -0.7   -1.0   -0.1 | rate deg/s    3.1    4.6    2.6 | yaw(world) 0.22 mean -0.10
+  joints deg     0.9    5.1    7.7    0.3  mean    0.3    0.9   -2.9    0.2 | joint vel deg/s    2.2   13.8   18.4    0.3
+  EE pos    mm  xyz   34.9   37.9    8.7 | norm   52.2 mean|e| 46.0 max 108.0 | lag 0.00s resid 46.0
+  EE heading deg rms 0.80 mean +0.33 max 2.84 (3d 1.22) | radius 0.489 | tilt max 4.10
+  law |e_R| rms 0.0435 max 0.1135 | sat 0 | u1 39.42 | odom max gap 22 ms | obs None

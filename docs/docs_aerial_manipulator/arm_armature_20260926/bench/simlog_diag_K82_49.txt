@@ -1,0 +1,1 @@
+law K82_49 | plant diag                      | j2 rms 36.6 max 74.7 span  288% stuck   4% v99 354.3 over +66.2 | j3 rms 20.4 max 45.3 span  223% stuck   4% v99 280.8 over +31.7 | tilt 33.9 CoM   714 mm EE 178.2 mm | tau j2/j3 2.44/1.42 cap 97.3%

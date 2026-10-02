@@ -1,0 +1,8 @@
+0924 F3 16:56  CoM xy (detrended) rms  39.2 mm | <0.1 Hz  10.4 | 0.1-0.6 Hz  37.7 | >0.6 Hz   2.8 | peak 0.125 Hz | mean xy [-10.7  -5.1]
+0924 F4 17:21  CoM xy (detrended) rms  38.2 mm | <0.1 Hz   7.7 | 0.1-0.6 Hz  37.0 | >0.6 Hz   6.0 | peak 0.125 Hz | mean xy [-16.2  -3.5]
+WB-1 17:11     CoM xy (detrended) rms  25.3 mm | <0.1 Hz   7.3 | 0.1-0.6 Hz  23.8 | >0.6 Hz   4.1 | peak 0.125 Hz | mean xy [-2.3  1.5]
+WB-2 17:22     CoM xy (detrended) rms  20.7 mm | <0.1 Hz   6.4 | 0.1-0.6 Hz  19.3 | >0.6 Hz   3.7 | peak 0.125 Hz | mean xy [-4.3 -2.8]
+DEC-1 18:28    CoM xy (detrended) rms  62.8 mm | <0.1 Hz  20.3 | 0.1-0.6 Hz  59.4 | >0.6 Hz   2.3 | peak 0.125 Hz | mean xy [  4.6 -18.2]
+DEC-2 18:36    CoM xy (detrended) rms  67.4 mm | <0.1 Hz  25.3 | 0.1-0.6 Hz  62.5 | >0.6 Hz   2.9 | peak 0.125 Hz | mean xy [ 25.7 -15.9]
+0924 gains: wn 2.92 rad/s (0.47 Hz), zeta 0.91
+H1b (today): wn 3.65 rad/s (0.58 Hz), zeta 0.46

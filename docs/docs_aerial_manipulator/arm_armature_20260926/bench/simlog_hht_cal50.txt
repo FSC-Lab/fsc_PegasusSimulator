@@ -1,0 +1,1 @@
+law cal50  | plant hht                       | j2 rms 18.0 max 74.0 span  283% stuck  25% v99 401.1 over +44.3 | j3 rms 30.0 max 63.1 span  306% stuck  35% v99 384.9 over +56.7 | tilt 30.5 CoM   354 mm EE 63.6 mm | tau j2/j3 2.44/1.42 cap 32.1%

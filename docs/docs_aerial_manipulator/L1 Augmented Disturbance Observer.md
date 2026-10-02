@@ -78,7 +78,7 @@ still passes.
 | Second executable | `autopilot_whole_body_l1_direct_actuation_node` |
 | Simulation yaml | `params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml` |
 | ROS2 stack | `scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh` |
-| Pegasus launcher | `scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_direct_actuation_sitl.sh` |
+| Pegasus launcher | `scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_6D_direct_actuation_sitl.sh` |
 | Campaign harness | `application/robotic_arm/utils/wb_l1_{tune_cycle.sh,campaign.sh,campaign_driver.py,metrics.py,set_gains.py}` |
 
 **One client, two executables.** The older forks in this repo are full copies

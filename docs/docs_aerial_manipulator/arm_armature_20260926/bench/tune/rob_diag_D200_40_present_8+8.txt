@@ -1,0 +1,1 @@
+law D200_40    | plant diag    | qdot present  | dly 8+8   | j2 rms 26.6 max 118.2 span  439% stuck  47% v99 424.6 over +90.6 | j3 rms 53.0 max 85.4 span  304% stuck  49% v99 501.4 over +55.6 | tilt 24.1 CoM   198 mm EE 109.6 mm | tau j2/j3 2.44/1.42 cap 99.1%

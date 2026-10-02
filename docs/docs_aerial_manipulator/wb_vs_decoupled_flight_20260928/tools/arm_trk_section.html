@@ -1,0 +1,103 @@
+<figure class="wide">
+<div class="ee3d" id="armtrk">
+  <div class="ee3d-bar">
+    <div class="seg tog" role="group" aria-label="Lines shown">
+      <button type="button" data-s="qd" aria-pressed="true"><span class="sw dash" style="--c:var(--ink2)"></span>q reference</button>
+      <button type="button" data-s="q" aria-pressed="true"><span class="sw" style="--c:var(--blue)"></span>q measured</button>
+      <button type="button" data-s="stop" aria-pressed="true"><span class="sw dot" style="--c:var(--red)"></span>+50° joint stop</button>
+      <button type="button" data-s="law" aria-pressed="true"><span class="sw" style="--c:var(--ink2)"></span>τ computed by the whole-body law</button>
+      <button type="button" data-s="intended" aria-pressed="true"><span class="sw" style="--c:var(--orange)"></span>τ intended by the arm controller</button>
+      <button type="button" data-s="applied" aria-pressed="true"><span class="sw" style="--c:var(--blue)"></span>τ applied (measured current)</button>
+    </div>
+    <div class="seg" role="group" aria-label="Y scale" id="armtrk-yscale">
+      <button type="button" data-y="row" aria-pressed="true">Same y-scale across flights</button>
+      <button type="button" data-y="each" aria-pressed="false">Each plot its own y-scale</button>
+    </div>
+    <div class="seg" role="group" aria-label="Flight" id="armtrk-flights" hidden>
+      <button type="button" data-f="0" aria-pressed="true">0924 F3</button>
+      <button type="button" data-f="1" aria-pressed="false">0924 F4</button>
+      <button type="button" data-f="2" aria-pressed="false">WB-1</button>
+      <button type="button" data-f="3" aria-pressed="false">WB-2</button>
+    </div>
+    <button type="button" id="armtrk-refit" class="plain">Refit y-axes</button>
+  </div>
+  <div id="armtrk-plot" class="eeerr-plot" aria-label="q2 and q3 tracking and joint torques, last week and today"></div>
+  <p id="armtrk-fallback" hidden>This interactive figure needs the Plotly library, which did not load. Table 5 carries the same result in numbers.</p>
+</div>
+<script type="application/json" id="armtrk-data">__DATA__</script>
+<script>
+(function(){
+  var root=document.getElementById('armtrk'), plot=document.getElementById('armtrk-plot');
+  if(typeof window.Plotly==='undefined'){
+    plot.hidden=true; root.querySelector('.ee3d-bar').hidden=true; document.getElementById('armtrk-fallback').hidden=false; return;
+  }
+  var F=JSON.parse(document.getElementById('armtrk-data').textContent);
+  var show={qd:true,q:true,stop:true,law:true,intended:true,applied:true}, ymode='row', one=0, narrow=null;
+  var ROWS=[{k:0,kind:'q',lab:'q2 [deg]'},{k:1,kind:'q',lab:'q3 [deg]'},{k:0,kind:'tau',lab:'τ2 [N·m]'},{k:1,kind:'tau',lab:'τ3 [N·m]'}];
+  function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function ax(i,p){return p+(i===1?'':i);}          // axis ids: x, x2, x3 ...
+  function build(){
+    var c={ink:tok('--ink'),ink2:tok('--ink2'),line:tok('--line'),blue:tok('--blue'),orange:tok('--orange'),red:tok('--red')};
+    var cols=narrow?[one]:[0,1,2,3], nc=cols.length, each=(ymode==='each');
+    var gx=nc===1?0:(each?0.05:0.03), gy=0.05, w=(1-(nc-1)*gx)/nc, h=(1-3*gy)/4;
+    var data=[], L={margin:{l:64,r:10,t:nc===1?52:76,b:44},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+      font:{family:"'IBM Plex Sans',system-ui,sans-serif",color:c.ink,size:11},showlegend:false,hovermode:'x unified',
+      hoverlabel:{bgcolor:tok('--panel'),bordercolor:c.line,font:{color:c.ink}},shapes:[],annotations:[]};
+    ROWS.forEach(function(R,r){
+      cols.forEach(function(fi,ci){
+        var f=F[fi], i=r*nc+ci+1, xa='xaxis'+(i===1?'':i), ya='yaxis'+(i===1?'':i), xr=ax(i,'x'), yr=ax(i,'y');
+        var x0=ci*(w+gx), y1=1-r*(h+gy);
+        L[xa]={domain:[x0,x0+w],anchor:yr,showgrid:true,gridcolor:c.line,zeroline:false,color:c.ink2,tickfont:{size:10},
+               showticklabels:r===3,title:r===3?{text:'time since bag start [s]',font:{size:11,color:c.ink2}}:undefined};
+        if(r>0) L[xa].matches=ax(ci+1,'x');
+        L[ya]={domain:[y1-h,y1],anchor:xr,autorange:true,showgrid:true,gridcolor:c.line,zeroline:R.kind==='tau',zerolinecolor:c.ink2,zerolinewidth:0.8,
+               color:c.ink2,tickfont:{size:10},showticklabels:each||ci===0,
+               title:ci===0?{text:R.lab,font:{size:11,color:c.ink2}}:undefined};
+        if(!each&&ci>0) L[ya].matches=ax(r*nc+1,'y');
+        f.phases.forEach(function(p){
+          if(p[3]==='run') return;
+          var fill=p[3]==='frozen'?'rgba(230,103,103,0.24)':(p[3]==='goto'?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.05)');
+          L.shapes.push({type:'rect',xref:xr,yref:yr+' domain',x0:p[1],x1:p[2],y0:0,y1:1,fillcolor:fill,line:{width:0},layer:'below'});
+          if(r===0&&p[0]) L.annotations.push({xref:xr,yref:yr+' domain',x:(p[1]+p[2])/2,y:1,yanchor:'bottom',yshift:1,text:p[0],showarrow:false,
+            font:{size:10,color:p[3]==='frozen'?c.red:c.ink2}});
+        });
+        if(r===0){
+          var fr=f.phases.filter(function(p){return p[3]==='run';})[0];
+          L.annotations.push({xref:xr,yref:yr+' domain',x:(fr[1]+fr[2])/2,y:1,yanchor:'bottom',yshift:1,text:'circle run',showarrow:false,font:{size:10,color:c.ink2}});
+          var t=f.title.split(' · '), l2=t.pop();
+          L.annotations.push({xref:'paper',yref:'paper',x:x0,y:1,yshift:20,xanchor:'left',yanchor:'bottom',align:'left',showarrow:false,
+            text:'<b>'+t.join(' · ')+'</b>'+(nc===1?' · ':'<br>')+l2,font:{size:11.5,color:c.ink}});
+        }
+        function tr(meta,name,y,line,fmt,extra){var o={meta:meta,type:'scatter',mode:'lines',x:f.t,y:y,xaxis:xr,yaxis:yr,name:name,visible:show[meta],
+          line:line,connectgaps:false,hovertemplate:fmt};for(var k in extra)o[k]=extra[k];data.push(o);}
+        if(R.kind==='q'){
+          var t0=f.t[0], t1=f.t[f.t.length-1];
+          data.push({meta:'stop',type:'scatter',mode:'lines',x:[t0,t1],y:[50,50],xaxis:xr,yaxis:yr,name:'+50° stop',visible:show.stop,
+            line:{color:c.red,width:1,dash:'dot'},hoverinfo:'skip'});
+          tr('qd','q reference',f.qd[R.k],{color:c.ink2,width:1.4,dash:'dash'},'%{y:.1f}°');
+          tr('q','q measured',f.q[R.k],{color:c.blue,width:1.8},'%{y:.1f}°');
+        } else {
+          tr('law','τ law',f.law[R.k],{color:c.ink2,width:1.3},'%{y:.3f} N·m');
+          tr('applied','τ applied',f.applied[R.k],{color:c.blue,width:1.6},'%{y:.3f} N·m');
+          tr('intended','τ intended',f.intended[R.k],{color:c.orange,width:1.1},'%{y:.3f} N·m');
+        }
+      });
+    });
+    plot.style.height=(nc===1?760:840)+'px';
+    Plotly.react(plot,data,L,{displaylogo:false,responsive:true,displayModeBar:false});
+  }
+  function refit(){var u={};Object.keys(plot.layout).forEach(function(k){if(/^yaxis\d*$/.test(k))u[k+'.autorange']=true;});Plotly.relayout(plot,u);}
+  function press(attr,val){root.querySelectorAll('button['+attr+']').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute(attr)===val));});}
+  root.querySelectorAll('button[data-s]').forEach(function(b){b.addEventListener('click',function(){
+    var s=b.dataset.s; show[s]=!show[s]; b.setAttribute('aria-pressed',String(show[s]));
+    var idx=[]; plot.data.forEach(function(t,i){if(t.meta===s)idx.push(i);});
+    Plotly.restyle(plot,{visible:show[s]},idx).then(refit);      // hidden lines drop out of the fit
+  });});
+  root.querySelectorAll('button[data-y]').forEach(function(b){b.addEventListener('click',function(){ymode=b.dataset.y;press('data-y',ymode);build();});});
+  root.querySelectorAll('button[data-f]').forEach(function(b){b.addEventListener('click',function(){one=+b.dataset.f;press('data-f',b.dataset.f);build();});});
+  document.getElementById('armtrk-refit').addEventListener('click',refit);
+  function mode(){var n=root.clientWidth<720; if(n!==narrow){narrow=n;document.getElementById('armtrk-flights').hidden=!n;document.getElementById('armtrk-yscale').hidden=n;build();}}
+  mode(); window.addEventListener('resize',function(){clearTimeout(mode.t);mode.t=setTimeout(mode,150);});
+})();
+</script>
+<figcaption>Fig. 3 — q2 and q3 against their reference, and the joint 2 and joint 3 torques, from go-to-start to a few seconds after the circle run. Left two columns: last week's flights on the old tune (F3 with a 12 s arm sweep, F4 with the same 6 s sweep as today). Right two: today's whole-body flights on the new tune. Grey is the whole-body law: its joint reference (dashed) and the torque it computed. Orange is the torque the arm controller intended, which adds the gravity-scale correction and the friction feed-forward to the law's command. Blue is measured: the joint angle, and the torque the servo applied, read from its current. The dotted red line is the +50° joint stop. All torques carry a 0.1 s moving average, which removes the 100 Hz dither, and are then binned to 25 Hz means. The buttons switch each line on or off in every plot and the y-axes refit to what is shown. Drag in a plot to zoom; double-click or press "Refit y-axes" to return. On a narrow screen one flight is shown at a time. Darker shading is the go-to-start, lighter the holds.</figcaption></figure>

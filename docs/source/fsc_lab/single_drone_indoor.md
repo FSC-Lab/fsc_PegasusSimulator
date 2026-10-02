@@ -5,8 +5,8 @@ OptiTrack/external-vision estimator profile and the Isaac Sim GUI:
 
 ```bash
 cd "$HOME/Source/fsc_PegasusSimulator"
-./scripts/indoor_sim/start_single_drone_iris.sh fsc_lab_machine
-./scripts/indoor_sim/start_single_drone_x650.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_single_drone_iris.sh fsc_lab_machine
+./scripts/indoor_sim/lib/start_single_drone_x650.sh fsc_lab_machine
 ```
 
 Run only one at a time because both use PX4 instance 0, TCP port 4560,
@@ -25,7 +25,7 @@ permit arming without GPS. Override `EKF2_EV_DELAY` when necessary with:
 
 ```bash
 PX4_INDOOR_EV_DELAY_MS=20 \
-  ./scripts/indoor_sim/start_single_drone_x650.sh fsc_lab_machine
+  ./scripts/indoor_sim/lib/start_single_drone_x650.sh fsc_lab_machine
 ```
 
 The X650 profile additionally applies its validated PX4 rate and attitude gains.

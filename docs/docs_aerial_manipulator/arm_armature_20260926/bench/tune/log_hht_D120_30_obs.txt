@@ -1,0 +1,1 @@
+law D120_30    | plant hht     | qdot observer | j2 rms  0.5 max  1.0 span  100% stuck   0% v99  8.6 over  +0.0 | j3 rms  1.2 max  2.1 span  103% stuck   0% v99  8.4 over  +0.7 | tilt  0.1 CoM    13 mm EE  1.9 mm | tau j2/j3 1.11/0.49 cap 0.0%

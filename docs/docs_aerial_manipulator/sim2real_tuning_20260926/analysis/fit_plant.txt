@@ -1,0 +1,84 @@
+
+===== f18: 0918 mission (raw mocap 60 Hz)  DIRECT 9.7..92.7 s
+  hold   13.7-  23.5: u1  36.42 N  dhat_z  +0.39 N  -> kf_true 4.2990e-05 (x1.0638 of sim plant)  motors [0.557 0.541 0.646 0.64 ]  V 24.04
+        dhat_t [ 0.565 -0.366  0.39 ] N  dhat_r [ 0.04   0.033 -0.095] N.m  dhat_q [0.003 0.004 0.022 0.003]  eR [-0.011   0.0135  0.0009]
+  hold   62.2-  68.9: u1  37.82 N  dhat_z  -1.05 N  -> kf_true 4.1397e-05 (x1.0243 of sim plant)  motors [0.556 0.55  0.656 0.672]  V 23.74
+        dhat_t [ 0.569 -0.503 -1.046] N  dhat_r [ 0.331  0.105 -0.122] N.m  dhat_q [ 0.005 -0.11  -0.002 -0.018]  eR [0.0301 0.0169 0.0051]
+  hold   78.9-  83.7: u1  37.68 N  dhat_z  -0.93 N  -> kf_true 4.1553e-05 (x1.0282 of sim plant)  motors [0.574 0.557 0.658 0.643]  V 23.67
+        dhat_t [ 0.594 -0.435 -0.926] N  dhat_r [ 0.054 -0.004 -0.085] N.m  dhat_q [ 0.005  0.021  0.076 -0.008]  eR [-0.0321 -0.0104  0.0002]
+  kf drift: 4.3117e-05 at entry, -3.42 %/min over 83 s, battery 24.11 -> 23.60 V
+  same-command (81 s @ 267 Hz, I_home [0.1118 0.1323 0.1157]):
+    roll : gain 0.757 corr 0.231 (meas rms 1.110, pred 0.339 rad/s^2) | best delay 0 ms corr 0.231 gain 0.757
+    pitch: gain 0.588 corr 0.146 (meas rms 1.115, pred 0.276 rad/s^2) | best delay 0 ms corr 0.146 gain 0.588
+    yaw  : gain 0.144 corr 0.027 (meas rms 0.751, pred 0.142 rad/s^2) | best delay 0 ms corr 0.027 gain 0.144
+    yaw gain with BENCH c: 0.432
+    thrust: DC gain 1.0412 (kf 4.2077e-05), AC gain 0.500 corr 0.513
+    standing trim the symmetric model implies: [-0.003  0.082 -0.324] N.m (FRD)
+  arm joint_states 250 Hz, velocity quantum [0.024 0.024 0.024 0.024] rad/s, lag vs FD(position): {'j2': {'lag_s': np.float64(0.048030853271484375), 'corr': 0.4284077771375966, 'ratio_std': 0.31321736355502044}, 'j3': {'lag_s': np.float64(0.044028282165527344), 'corr': 0.868730558340055, 'ratio_std': 0.6249596770708141}}
+  odom 60 Hz; hold velocity std (cm/s) [[2.68, 2.07, 1.54], [2.89, 1.93, 1.6], [2.88, 2.35, 1.91]]
+
+===== c3: 0921 #3 go-to-start (raw mocap 120 Hz)  DIRECT 4.1..25.1 s
+  hold    8.1-  13.0: u1  36.66 N  dhat_z  +0.10 N  -> kf_true 4.2715e-05 (x1.0570 of sim plant)  motors [0.565 0.557 0.64  0.632]  V 23.70
+        dhat_t [ 0.573 -0.415  0.104] N  dhat_r [ 0.059 -0.015 -0.072] N.m  dhat_q [0.003 0.017 0.029 0.002]  eR [-0.0057  0.0101 -0.0048]
+  kf drift: 4.2566e-05 at entry, +3.33 %/min over 21 s, battery 23.77 -> 23.59 V
+  same-command (18 s @ 200 Hz, I_home [0.1118 0.1323 0.1157]):
+    roll : gain 1.112 corr 0.714 (meas rms 1.497, pred 0.961 rad/s^2) | best delay 10 ms corr 0.723 gain 1.129
+    pitch: gain 1.028 corr 0.816 (meas rms 1.426, pred 1.131 rad/s^2) | best delay 10 ms corr 0.830 gain 1.050
+    yaw  : gain 0.260 corr 0.161 (meas rms 0.598, pred 0.369 rad/s^2) | best delay 0 ms corr 0.161 gain 0.260
+    yaw gain with BENCH c: 0.779
+    thrust: DC gain 1.0631 (kf 4.2963e-05), AC gain 0.817 corr 0.769
+    standing trim the symmetric model implies: [ 0.033  0.161 -0.208] N.m (FRD)
+  arm joint_states 250 Hz, velocity quantum [0.024 0.024 0.024 0.024] rad/s, lag vs FD(position): {'j2': {'lag_s': np.float64(0.048027992248535156), 'corr': 0.9826443352814023, 'ratio_std': 0.8804237356594429}, 'j3': {'lag_s': np.float64(0.052030324935913086), 'corr': 0.8006067175033275, 'ratio_std': 0.7078868343121703}}
+  odom 124 Hz; hold velocity std (cm/s) [[11.0, 4.8, 4.03]]
+
+===== a1: 0924 F1 circle (fused)  DIRECT 11.7..78.1 s
+  hold   15.7-  24.3: u1  37.14 N  dhat_z  -0.38 N  -> kf_true 4.2155e-05 (x1.0431 of sim plant)  motors [0.565 0.559 0.646 0.638]  V 23.45
+        dhat_t [ 0.474 -0.504 -0.378] N  dhat_r [ 0.041 -0.027 -0.078] N.m  dhat_q [0.003 0.045 0.037 0.003]  eR [-0.0023  0.0082 -0.0021]
+  kf drift: 4.2157e-05 at entry, -4.46 %/min over 66 s, battery 23.54 -> 23.07 V
+  same-command (64 s @ 400 Hz, I_home [0.1118 0.1323 0.1157]):
+    roll : gain 1.319 corr 0.229 (meas rms 1.391, pred 0.241 rad/s^2) | best delay 0 ms corr 0.229 gain 1.319
+    pitch: gain 1.346 corr 0.226 (meas rms 1.533, pred 0.256 rad/s^2) | best delay 0 ms corr 0.226 gain 1.346
+    yaw  : gain 0.823 corr 0.092 (meas rms 0.999, pred 0.109 rad/s^2) | best delay 0 ms corr 0.092 gain 0.823
+    yaw gain with BENCH c: 2.470
+    thrust: DC gain 1.0194 (kf 4.1196e-05), AC gain 0.763 corr 0.510
+    standing trim the symmetric model implies: [ 0.02   0.107 -0.269] N.m (FRD)
+  arm joint_states 250 Hz, velocity quantum [0.024 0.024 0.024 0.   ] rad/s, lag vs FD(position): {'j2': {'lag_s': np.float64(0.05598258972167969), 'corr': 0.49903200866801595, 'ratio_std': 0.33576030536984564}, 'j3': {'lag_s': np.float64(0.047985076904296875), 'corr': 0.8672187789924966, 'ratio_std': 0.7641178952728849}}
+  odom 100 Hz; hold velocity std (cm/s) [[1.21, 1.62, 1.01]]
+
+===== a2: 0924 F2 circle (fused)  DIRECT 7.0..57.8 s
+  hold   11.0-  15.7: u1  38.96 N  dhat_z  -2.20 N  -> kf_true 4.0183e-05 (x0.9943 of sim plant)  motors [0.554 0.543 0.692 0.68 ]  V 22.99
+        dhat_t [ 0.622 -0.596 -2.196] N  dhat_r [-0.114 -0.02  -0.131] N.m  dhat_q [0.004 0.145 0.063 0.003]  eR [-0.0248 -0.0051 -0.0085]
+  kf drift: 4.0294e-05 at entry, -3.96 %/min over 51 s, battery 23.04 -> 22.79 V
+  same-command (48 s @ 400 Hz, I_home [0.1118 0.1323 0.1157]):
+    roll : gain 1.185 corr 0.123 (meas rms 1.655, pred 0.172 rad/s^2) | best delay 0 ms corr 0.123 gain 1.185
+    pitch: gain 5.389 corr 0.395 (meas rms 2.480, pred 0.182 rad/s^2) | best delay 0 ms corr 0.395 gain 5.389
+    yaw  : gain 0.200 corr 0.033 (meas rms 0.881, pred 0.142 rad/s^2) | best delay 0 ms corr 0.033 gain 0.200
+    yaw gain with BENCH c: 0.600
+    thrust: DC gain 0.9809 (kf 3.9640e-05), AC gain 0.929 corr 0.476
+    standing trim the symmetric model implies: [-0.017  0.136 -0.458] N.m (FRD)
+  arm joint_states 250 Hz, velocity quantum [0.024 0.024 0.024 0.   ] rad/s, lag vs FD(position): {'j2': {'lag_s': np.float64(0.04805946350097656), 'corr': 0.832683908072412, 'ratio_std': 0.6623555915550475}, 'j3': {'lag_s': np.float64(0.05206441879272461), 'corr': 0.9332961356721663, 'ratio_std': 0.8324758570342229}}
+  odom 100 Hz; hold velocity std (cm/s) [[1.23, 1.33, 0.61]]
+
+===== a3: 0924 F3 circle 12 s (fused)  DIRECT 6.0..52.2 s
+  kf drift: 4.2925e-05 at entry, -3.74 %/min over 46 s, battery 23.82 -> 23.50 V
+  same-command (44 s @ 400 Hz, I_home [0.1118 0.1323 0.1157]):
+    roll : gain 1.245 corr 0.273 (meas rms 0.861, pred 0.190 rad/s^2) | best delay 0 ms corr 0.273 gain 1.245
+    pitch: gain 1.038 corr 0.408 (meas rms 0.605, pred 0.238 rad/s^2) | best delay 0 ms corr 0.408 gain 1.038
+    yaw  : gain -4.286 corr -0.457 (meas rms 1.721, pred 0.184 rad/s^2) | best delay 155 ms corr -0.349 gain -2.766
+    yaw gain with BENCH c: -12.857
+    thrust: DC gain 1.0486 (kf 4.2378e-05), AC gain 0.729 corr 0.382
+    standing trim the symmetric model implies: [ 0.019  0.118 -0.33 ] N.m (FRD)
+  arm joint_states 250 Hz, velocity quantum [0.024 0.024 0.024 0.   ] rad/s, lag vs FD(position): {'j2': {'lag_s': np.float64(0.04403877258300781), 'corr': 0.9509234638879265, 'ratio_std': 0.8887334277764327}, 'j3': {'lag_s': np.float64(0.05204582214355469), 'corr': 0.9723443645762622, 'ratio_std': 0.8997587202805958}}
+  odom 100 Hz; hold velocity std (cm/s) []
+
+===== a4: 0924 F4 circle 6 s (fused)  DIRECT 5.7..76.6 s
+  kf drift: 4.0340e-05 at entry, -2.61 %/min over 68 s, battery 23.15 -> 22.78 V
+  same-command (66 s @ 400 Hz, I_home [0.1118 0.1323 0.1157]):
+    roll : gain 1.634 corr 0.115 (meas rms 2.819, pred 0.199 rad/s^2) | best delay 0 ms corr 0.115 gain 1.634
+    pitch: gain 0.574 corr 0.152 (meas rms 1.194, pred 0.315 rad/s^2) | best delay 0 ms corr 0.152 gain 0.574
+    yaw  : gain 0.177 corr 0.142 (meas rms 0.246, pred 0.197 rad/s^2) | best delay 125 ms corr 0.147 gain 0.177
+    yaw gain with BENCH c: 0.532
+    thrust: DC gain 0.9841 (kf 3.9772e-05), AC gain 0.807 corr 0.527
+    standing trim the symmetric model implies: [-0.027  0.104 -0.376] N.m (FRD)
+  arm joint_states 250 Hz, velocity quantum [0.024 0.024 0.024 0.   ] rad/s, lag vs FD(position): {'j2': {'lag_s': np.float64(0.04403352737426758), 'corr': 0.8962611273566164, 'ratio_std': 0.7495538369677317}, 'j3': {'lag_s': np.float64(0.04803657531738281), 'corr': 0.8881465721520511, 'ratio_std': 0.7440346336706691}}
+  odom 100 Hz; hold velocity std (cm/s) []

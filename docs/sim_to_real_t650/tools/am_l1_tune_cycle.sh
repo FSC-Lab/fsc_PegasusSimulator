@@ -36,7 +36,7 @@ sleep 8
 
 echo "=== [$TAG] 2. Pegasus / PX4 / arm ==="
 DISPLAY=${DISPLAY:-:0} setsid nohup \
-    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh" \
+    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh" \
     --in-terminal fsc_lab_machine > "$SCRATCH/pegasus_$TAG.log" 2>&1 < /dev/null &
 
 echo "=== [$TAG] 3. waiting for odometry ==="

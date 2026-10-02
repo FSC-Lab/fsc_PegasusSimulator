@@ -1,0 +1,28 @@
+
+#### F1 [a1] circle: check duty == cmd+aux+gc: rms [0.058 0.09  0.058 0.056]
+  joint | cmd rms | after 10 Hz LP: applied-cmd mean/rms | applied-(cmd+gravcorr) mean/rms | applied-INTENDED(cmd+gc+fricFF) mean/rms | corr(app,intended) | raw applied-duty rms (dither+noise) | back-EMF/trim duty-equivalent rms | dither amp
+  j1   | 0.008 | -0.002/0.007 | -0.002/0.007 | -0.002/0.007 | 0.562 | 0.062 | 0.031 | 0.000
+  j2   | 0.764 | -0.118/0.178 | -0.039/0.138 | +0.001/0.013 | 0.996 | 0.242 | 0.035 | 0.321
+  j3   | 0.294 | +0.008/0.068 | +0.019/0.070 | +0.001/0.008 | 0.993 | 0.122 | 0.015 | 0.142
+  j4   | 0.013 | -0.001/0.008 | -0.001/0.008 | -0.001/0.008 | 0.127 | 0.065 | 0.005 | 0.097
+
+#### F2 [a2] circle: check duty == cmd+aux+gc: rms [0.059 0.091 0.056 0.045]
+  joint | cmd rms | after 10 Hz LP: applied-cmd mean/rms | applied-(cmd+gravcorr) mean/rms | applied-INTENDED(cmd+gc+fricFF) mean/rms | corr(app,intended) | raw applied-duty rms (dither+noise) | back-EMF/trim duty-equivalent rms | dither amp
+  j1   | 0.009 | -0.003/0.007 | -0.003/0.007 | -0.003/0.007 | 0.555 | 0.063 | 0.032 | 0.000
+  j2   | 0.792 | -0.081/0.161 | -0.001/0.138 | -0.000/0.011 | 0.997 | 0.239 | 0.024 | 0.321
+  j3   | 0.278 | -0.014/0.069 | -0.003/0.067 | +0.001/0.006 | 0.990 | 0.120 | 0.009 | 0.142
+  j4   | 0.015 | -0.011/0.014 | -0.011/0.014 | -0.011/0.014 | 0.099 | 0.052 | 0.004 | 0.097
+
+#### F3 [a3] circle: check duty == cmd+aux+gc: rms [0.058 0.199 0.277 0.049]
+  joint | cmd rms | after 10 Hz LP: applied-cmd mean/rms | applied-(cmd+gravcorr) mean/rms | applied-INTENDED(cmd+gc+fricFF) mean/rms | corr(app,intended) | raw applied-duty rms (dither+noise) | back-EMF/trim duty-equivalent rms | dither amp
+  j1   | 0.008 | -0.003/0.008 | -0.003/0.008 | -0.003/0.008 | 0.476 | 0.063 | 0.031 | 0.000
+  j2   | 0.709 | -0.055/0.178 | +0.020/0.171 | +0.001/0.020 | 0.996 | 0.292 | 0.179 | 0.321
+  j3   | 0.364 | -0.021/0.107 | -0.010/0.105 | -0.000/0.019 | 0.983 | 0.287 | 0.268 | 0.142
+  j4   | 0.013 | -0.008/0.011 | -0.008/0.011 | -0.008/0.012 | 0.087 | 0.056 | 0.004 | 0.097
+
+#### F4 [a4] circle: check duty == cmd+aux+gc: rms [0.064 0.397 0.537 0.037]
+  joint | cmd rms | after 10 Hz LP: applied-cmd mean/rms | applied-(cmd+gravcorr) mean/rms | applied-INTENDED(cmd+gc+fricFF) mean/rms | corr(app,intended) | raw applied-duty rms (dither+noise) | back-EMF/trim duty-equivalent rms | dither amp
+  j1   | 0.011 | -0.003/0.009 | -0.003/0.009 | -0.003/0.009 | 0.592 | 0.067 | 0.040 | 0.000
+  j2   | 0.734 | -0.056/0.193 | +0.019/0.186 | +0.001/0.029 | 0.991 | 0.424 | 0.382 | 0.321
+  j3   | 0.374 | -0.025/0.114 | -0.014/0.112 | -0.004/0.041 | 0.934 | 0.526 | 0.527 | 0.142
+  j4   | 0.013 | -0.013/0.015 | -0.013/0.015 | -0.013/0.015 | 0.310 | 0.045 | 0.004 | 0.097

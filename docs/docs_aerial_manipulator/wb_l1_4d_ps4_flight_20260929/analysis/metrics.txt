@@ -1,0 +1,71 @@
+
+=== 1. Timeline
+DIRECT 10.65 - 118.90 s (108.2 s); TELEOP 14.50 - 112.95 s (98.4 s); exit = operator 'activate Baseline (Safety)'
+  wbmode [(0.0, 'SAFETY'), (10.65, 'DIRECT'), (118.9, 'SAFETY')]
+  pl_status [(0.38, 'IDLE'), (10.65, 'HOLD'), (14.5, 'TELEOP'), (112.95, 'TELEOP_STOP'), (112.95, 'HOLD'), (118.9, 'IDLE')]
+  actlaw [(0.22, 'LOCAL_PD_PLUS_HOLD'), (10.66, 'EXTERNAL_WHOLE_BODY'), (119.19, 'LOCAL_PD_PLUS_HOLD')]
+
+=== 2. Pad feed and usage (TELEOP window)
+rc/input: median rate 25.1 Hz, max gap 45.5 ms (timeout 300 ms); stale/disarmed samples in teleop/state: 0
+  ee_fwd    active   1.6 s in  6 presses
+  ee_left   active   0.2 s in  2 presses
+  ee_up     active   1.3 s in  5 presses
+  roll      active   0.2 s in  1 presses
+  com_left  active   2.2 s in 13 presses
+  com_fwd   active   2.2 s in 10 presses
+  com_up    active   0.0 s in  0 presses
+  yaw       active   0.0 s in  0 presses
+  home      active   0.1 s in  1 presses
+  any input 7.5 s of 98.4 s
+  rates (teleop/state): com_xy 0.20 m/s, com_z 0.15 m/s, yaw 20 deg/s, ee 0.040 m/s, roll 20 deg/s, time scale 1.00
+  CoM target span xyz [m] [0.3312 0.2339 0.    ]  yaw target span [deg] 0.0
+  walls: arm_blocked bits [0, 1, 3, 8] com_blocked [0] ; leash active 0.0 %; sigma_nd min 0.298
+  notes: [(63.32, "joint 2 at the pad's inner bound [-67, 37] deg"), (67.54, "joint 2 at the pad's inner bound [-67, 37] deg"), (72.19, "joint 2 at the pad's inner bound [-67, 37] deg"), (72.34, "joint 2 at the pad's inner bound [-67, 37] deg"), (81.93, "joint 2 at the pad's inner bound [-67, 37] deg"), (82.04, "joint 2 at the pad's inner bound [-67, 37] deg"), (83.72, "joint 2 at the pad's inner bound [-67, 37] deg"), (85.48, "joint 2 at the pad's inner bound [-67, 37] deg")]
+
+=== 3. Stability over DIRECT
+law ticks 27072 at 250.1 Hz, max gap 16.9 ms; reference stream fresh 99.996 %; arm-reference fresh 100.0 %; observer qdot 100.0 %; chi free 100.0 %
+WholeBodyReference 100.0 Hz, max gap 23.7 ms; peak |x_cd_dot| [0.114 0.062 0.   ] m/s, peak |qdot_d| [0.5 8.3 7.7 0.1] deg/s
+rotor saturation ticks 0, unallocated wrench max [0. 0. 0. 0.]; motors min [0.369 0.355 0.512 0.515] max [0.684 0.689 0.789 0.787]
+arm torque |max| [0.195 1.042 0.504 0.049] N.m (clamp 3.0), L1 clamped ticks 0
+|e_R| rms 0.023 max 0.075; tilt max 2.40 deg; |gyro| max 18.6 deg/s; watchdog/abort messages: none (rosout)
+
+=== 4. Tracking by phase (law's own errors; EE abs = e_y + e_x, the CoM-anchored EE)
+hold before teleop   3.4s | CoM rms  10.0 max  16.8 mm | EE task rms  3.6 mm, heading rms 0.63 deg | EE abs rms  12.4 max  20.4 mm | joint err rms [1.65 0.36 0.09 0.08] deg | tilt max 1.49
+teleop              98.4s | CoM rms  18.3 max  49.3 mm | EE task rms  2.7 mm, heading rms 0.70 deg | EE abs rms  18.8 max  50.6 mm | joint err rms [0.26 1.8  1.18 0.11] deg | tilt max 2.40
+hold after teleop    5.9s | CoM rms  13.2 max  27.4 mm | EE task rms  3.4 mm, heading rms 0.70 deg | EE abs rms  13.7 max  28.3 mm | joint err rms [0.42 2.32 2.46 0.17] deg | tilt max 1.55
+  CoM error x: spectral peak 0.125 Hz; rms by band <0.05 2.3 | 0.05-0.3 12.4 | 0.3-1 4.8 | >1 Hz 0.3 mm
+  CoM error y: spectral peak 0.031 Hz; rms by band <0.05 3.6 | 0.05-0.3 6.9 | 0.3-1 4.7 | >1 Hz 0.4 mm
+  CoM error z: spectral peak 0.469 Hz; rms by band <0.05 0.2 | 0.05-0.3 0.9 | 0.3-1 2.4 | >1 Hz 0.5 mm
+
+=== 5. Pad -> reference -> vehicle (D-pad window 16-62 s)
+  axis x: lag target->reference 0.59 s, reference->measured 0.00 s
+  axis y: lag target->reference 0.61 s, reference->measured -0.01 s
+  per tap: 0.11-0.49 s presses at 0.20 m/s -> 28-96 mm target steps; measured - reference rms [10.8  9.8  3.2] mm
+
+=== 6. Arm channel, gripper, observer
+EE target (body FLU, mm) span fwd 14.7, left 1.6, up 74.2; q target range min [ 0.  30.  30.  -0.1] max [ 0.4 40.1 40.6  0. ] deg
+  t= 62.0  measured [ 0.4 38.3 40.7 -0.2]  law reference [ 0.3 40.1 40.  -0.1] deg
+  t= 91.0  measured [ 0.5 35.1 32.5 -0.2]  law reference [ 0.3 37.  31.1 -0.1] deg
+  t=112.0  measured [ 0.4 27.6 30.5 -0.2]  law reference [ 0. 30. 30. -0.] deg
+  t=118.0  measured [ 0.4 27.7 32.7 -0.2]  law reference [ 0. 30. 30.  0.] deg
+  gripper t=107.0: pos -0.0082 rad, effort +0
+  gripper t=108.5: pos +0.0190 rad, effort +0
+  gripper t=110.5: pos -0.0099 rad, effort +37
+  CoM error around the gripper presses (106-112 s): max 35.8 mm
+  11-14s: d_hat_z +0.82 N, u1 35.78 N, battery 24.10 V
+  60-63s: d_hat_z -0.65 N, u1 37.41 N, battery 23.76 V
+  113-118s: d_hat_z -1.35 N, u1 38.13 N, battery 23.47 V
+  raw F_hat (collision reading) low-passed at 2.0 rad/s: p99 2.43 N, max 2.80 N
+  raw F_hat (collision reading) low-passed at 0.25 rad/s: p99 1.26 N, max 1.29 N
+  consumed F_hat_y max 0.0000 N (free flight: must be 0)
+
+=== 7. Feedback
+VRPN 124.3 Hz, max gap 28.5 ms, repeated poses 0; EKF cs_ev_pos/vel/yaw always [1.]/[1.]/[1.]
+
+=== 8. DIRECT -> SAFETY revert, every 4-D hardware flight
+  x_20260918_144828  dip  -215 mm at +2.6 s | motor mean DIRECT 0.609 -> SAFETY 0.590 | UDE z change by +6 s -2.15 N (predicted -2.33)
+  x_20260921_112328  dip  -208 mm at +2.2 s | motor mean DIRECT 0.602 -> SAFETY 0.579 | UDE z change by +6 s -1.55 N (predicted -2.28)
+  x_20260921_115207  dip  -200 mm at +2.0 s | motor mean DIRECT 0.623 -> SAFETY 0.608 | UDE z change by +6 s -1.97 N (predicted -2.42)
+  x_20260924_120546  dip  -201 mm at +2.8 s | motor mean DIRECT 0.625 -> SAFETY 0.609 | UDE z change by +6 s -2.46 N (predicted -2.47)
+  x_20260924_165654  dip  -225 mm at +3.0 s | motor mean DIRECT 0.604 -> SAFETY 0.586 | UDE z change by +6 s -2.13 N (predicted -2.31)
+  p1                 dip  -186 mm at +3.0 s | motor mean DIRECT 0.611 -> SAFETY 0.592 | UDE z change by +6 s -1.69 N (predicted -2.35)

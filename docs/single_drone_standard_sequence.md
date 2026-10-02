@@ -35,7 +35,7 @@ This starts:
 
 ```bash
 cd "$HOME/Source/fsc_PegasusSimulator"
-./scripts/indoor_sim/start_single_drone_iris.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_single_drone_iris.sh fsc_lab_machine
 ```
 
 This uses an isolated `rootfs_fsc_indoor` PX4 parameter database with external
@@ -46,7 +46,7 @@ are disabled for the indoor OptiTrack configuration.
 
 ```bash
 cd "$HOME/Source/fsc_PegasusSimulator"
-./scripts/indoor_sim/start_single_drone_x650.sh fsc_lab_machine
+./scripts/indoor_sim/lib/start_single_drone_x650.sh fsc_lab_machine
 ```
 
 This runs `application/px4_base/03_px4_single_drone_x650.py` with corrected

@@ -1,0 +1,87 @@
+/tmp/claude-1000/-home-shiqi-fsc-PegasusSimulator/7dd2b67f-37e8-4043-a785-1a763d80f217/scratchpad/feedback.py:36: RuntimeWarning: Mean of empty slice.
+  x=x-x.mean(); y=y-y.mean(); best=(0,-2)
+/usr/lib/python3/dist-packages/numpy/core/_methods.py:189: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+/usr/lib/python3/dist-packages/numpy/lib/function_base.py:380: RuntimeWarning: Mean of empty slice.
+  avg = a.mean(axis)
+/usr/lib/python3/dist-packages/numpy/core/_methods.py:181: RuntimeWarning: invalid value encountered in true_divide
+  ret = um.true_divide(
+/usr/lib/python3/dist-packages/numpy/lib/function_base.py:2683: RuntimeWarning: Degrees of freedom <= 0 for slice
+  c = cov(x, y, rowvar, dtype=dtype)
+/usr/lib/python3/dist-packages/numpy/lib/function_base.py:2542: RuntimeWarning: divide by zero encountered in true_divide
+  c *= np.true_divide(1, fact)
+/usr/lib/python3/dist-packages/numpy/lib/function_base.py:2542: RuntimeWarning: invalid value encountered in multiply
+  c *= np.true_divide(1, fact)
+/tmp/claude-1000/-home-shiqi-fsc-PegasusSimulator/7dd2b67f-37e8-4043-a785-1a763d80f217/scratchpad/feedback.py:43: RuntimeWarning: Mean of empty slice.
+  print(f"odom: {fo:.0f} Hz (hdr), recv-rate {1/np.median(np.diff(tor)):.0f} Hz | hdr dt max {dto.max()*1000:.0f} ms | frac samples bit-identical to a mocap sample {same*100:.0f}% | odom-mocap pos diff in DIRECT rms {np.sqrt((diff[mD]**2).mean(0))*1000} mm max {np.abs(diff[mD]).max(0)*1000} mm | odom lags mocap by (ms, corr) x/y/z {[(round(l,0),round(c,3)) for l,c in lg]}")
+
+################ f18: 0918 raw-mocap 60Hz  DIRECT 9.65-92.66 s (83.0 s)
+hold window 10.2-27.8; executing: [(28.0, 'EXECUTING T=3.0s'), (39.7, 'EXECUTING T=3.0s'), (52.5, 'EXECUTING T=5.6s'), (71.9, 'EXECUTING T=3.0s'), (86.0, 'EXECUTING T=3.0s')]
+mocap: 60 Hz | hdr dt max 17 ms, gaps>50ms 0 (DIRECT 0) | identical-pos repeats 2.5% | |dp|>0.05 spikes 1 (DIRECT 1) | orient step>3deg 1 (DIRECT 1)
+   frozen-pose runs >=5 samples: 3 -> [(27.91, 6, 0.1), (44.61, 134, 2.23), (60.46, 11, 0.18)]
+odom: 60 Hz (hdr), recv-rate 60 Hz | hdr dt max 150 ms | frac samples bit-identical to a mocap sample 97% | odom-mocap pos diff in DIRECT rms [0. 0. 0.] mm max [0. 0. 0.] mm | odom lags mocap by (ms, corr) x/y/z [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)]
+   hold: odom vel std [2.599 2.064 1.615] cm/s | mocap twist std [2.599 2.064 1.615] cm/s | odom identical-consecutive-pos 3.1%
+   hold: FD-of-mocap vel std [4.128 2.803 2.514] cm/s | peak freq/frac>5Hz odom vx (0.05676691793433093, 0.6419023264622448) vy (0.28383458967165465, 0.28404613483344276)
+EV input (fmu/in/vehicle_visual_odometry): 60 Hz, gaps>50ms 1 -> [(2.7, 342)]
+   esf cs_ev_pos: initial 1, changes at []
+   esf cs_in_air: initial 1, changes at [(105.32, 0)]
+   esf cs_vehicle_at_rest: initial 0, changes at [(106.9, 1)]
+   PX4 vehicle_odometry reset_counter changes: []
+   PX4 EKF pos variance in DIRECT: median [0. 0. 0.] max [0. 0. 0.]; vel std hold [1.813 1.765 1.117] cm/s
+   timesync: n=106, estimated_offset us median -1789756256758898 span 39023, rtt us median 3667 max 5996
+law tick (wb_control_debug recv) in DIRECT: 250 Hz, dt p50/p99/max 4.00/5.33/16.9 ms, ticks>8ms 17
+   sensor_combined           257.3 Hz  dt p99   8.09 ms max   16.5 ms
+   vehicle_attitude          256.8 Hz  dt p99   8.35 ms max   17.1 ms
+   imu/data                  256.6 Hz  dt p99   8.17 ms max   17.3 ms
+   motors_debug              249.9 Hz  dt p99   5.39 ms max   16.9 ms
+   fmu/in/actuator_motors    250.0 Hz  dt p99   5.45 ms max   16.9 ms
+   joint_states              249.8 Hz  dt p99   5.51 ms max   15.0 ms
+   wb reference              100.0 Hz  dt p99  11.50 ms max   18.7 ms
+PX4 attitude 257 Hz: hold roll/pitch std [0.243 0.2  ] deg, yaw std 0.99; frac>5Hz roll/pitch 0.001/0.003; tilt max DIRECT 3.68 deg; quat_reset_counter uniq [1.]
+   gyro (imu/data 262 Hz) hold std [3.259 3.53  2.112] deg/s, frac>5Hz 0.77/0.87/0.95
+   accel std hold [4.842 2.505 1.104] m/s2 ; gyro_clipping any False
+LAW hold: |e_R| mean 0.0331 p99 0.0780 | e_R_x peak f/frac>5 (0.05677946854417442, 0.3929602235858345) | u1 mean 36.44 std 0.65 | motors std [0.032 0.03  0.026 0.024] | e_p rms [20.697 17.758  4.161] mm | e_y pos rms [0.697 2.142 3.688] mm | heading err rms 0.75 deg
+   d_hat filt t std [0.162 0.094 0.464] N mean [ 0.554 -0.382  0.341] | d_hat filt r mean [ 0.045  0.031 -0.09 ] std [0.033 0.043 0.013] | deadbeat d^c t std [13.676  7.57   7.917] N | Fraw std [2.848 1.607 5.447] mean [ 0.003 -0.006  0.064] | tau_j std [0.016 0.053 0.022 0.007] max [0.078 0.827 0.258 0.037] | w_hat_q late [-0.004  0.054  0.033  0.005]
+   whole DIRECT: |e_R| max 0.999 mean 0.0522, u1 min/max 9.0/41.2, motor min/max 0.032/0.772, n_sat ticks 0, tau clamp ticks 0, est-bound ticks 0, chi free frac 1.000, stream fresh frac 1.000, |e_p| max 232 mm
+   battery 24.22 -> 24.07 V, current mean 19.7 A
+
+################ c3: 0921#3 raw-mocap 120Hz  DIRECT 4.13-25.10 s (21.0 s)
+hold window 4.6-13.3; executing: [(13.5, 'EXECUTING T=14.8s')]
+mocap: 125 Hz | hdr dt max 17 ms, gaps>50ms 0 (DIRECT 0) | identical-pos repeats 0.0% | |dp|>0.05 spikes 18 (DIRECT 8) | orient step>3deg 831 (DIRECT 203)
+   frozen-pose runs >=5 samples: 0 -> []
+odom: 125 Hz (hdr), recv-rate 124 Hz | hdr dt max 17 ms | frac samples bit-identical to a mocap sample 100% | odom-mocap pos diff in DIRECT rms [0. 0. 0.] mm max [0. 0. 0.] mm | odom lags mocap by (ms, corr) x/y/z [(0.0, 1.0), (0.0, 1.0), (0.0, 1.0)]
+   hold: odom vel std [10.836  5.023  4.229] cm/s | mocap twist std [10.836  5.023  4.229] cm/s | odom identical-consecutive-pos 0.0%
+   hold: FD-of-mocap vel std [30.263 13.449 11.116] cm/s | peak freq/frac>5Hz odom vx (19.755650695421238, 0.9551651516933966) vy (21.31215650778776, 0.9370740602646997)
+EV input (fmu/in/vehicle_visual_odometry): 124 Hz, gaps>50ms 0 -> []
+   esf cs_ev_pos: initial 1, changes at []
+   esf cs_in_air: initial 1, changes at [(45.36, 0)]
+   esf cs_vehicle_at_rest: initial 0, changes at [(47.17, 1)]
+   PX4 vehicle_odometry reset_counter changes: []
+   PX4 EKF pos variance in DIRECT: median [0. 0. 0.] max [0. 0. 0.]; vel std hold [1.198 2.422 1.17 ] cm/s
+   timesync: n=49, estimated_offset us median -1790006154455575 span 357, rtt us median 3709 max 6525
+law tick (wb_control_debug recv) in DIRECT: 250 Hz, dt p50/p99/max 4.00/5.81/12.6 ms, ticks>8ms 5
+   sensor_combined           199.7 Hz  dt p99   6.88 ms max   10.3 ms
+   vehicle_attitude          199.6 Hz  dt p99   7.08 ms max   10.2 ms
+   imu/data                  199.9 Hz  dt p99   6.97 ms max   10.2 ms
+   motors_debug              249.8 Hz  dt p99   5.73 ms max   12.7 ms
+   fmu/in/actuator_motors    249.8 Hz  dt p99   5.66 ms max   12.6 ms
+   joint_states              249.9 Hz  dt p99   5.56 ms max    8.9 ms
+   wb reference              100.0 Hz  dt p99  11.44 ms max   20.5 ms
+PX4 attitude 200 Hz: hold roll/pitch std [0.226 0.294] deg, yaw std 0.68; frac>5Hz roll/pitch 0.002/0.002; tilt max DIRECT 8.86 deg; quat_reset_counter uniq [1.]
+   gyro (imu/data 200 Hz) hold std [2.972 3.426 1.824] deg/s, frac>5Hz 0.33/0.50/0.94
+   accel std hold [2.79  1.451 0.801] m/s2 ; gyro_clipping any False
+LAW hold: |e_R| mean 0.0742 p99 0.2502 | e_R_x peak f/frac>5 (19.000460617227084, 0.9524781022856605) | u1 mean 36.64 std 1.15 | motors std [0.033 0.032 0.025 0.031] | e_p rms [10.102 13.737  2.058] mm | e_y pos rms [0.659 2.95  4.352] mm | heading err rms 0.68 deg
+   d_hat filt t std [0.813 0.365 0.331] N mean [ 0.534 -0.394  0.138] | d_hat filt r mean [ 0.059 -0.022 -0.063] std [0.01  0.015 0.014] | deadbeat d^c t std [91.476 40.203 32.66 ] N | Fraw std [12.17   3.277  4.735] mean [-0.052 -0.006  0.053] | tau_j std [0.019 0.045 0.019 0.006] max [0.112 0.815 0.245 0.026] | w_hat_q late [-0.004  0.021  0.021  0.002]
+   whole DIRECT: |e_R| max 0.920 mean 0.1125, u1 min/max -83.8/174.0, motor min/max 0.000/1.000, n_sat ticks 0, tau clamp ticks 0, est-bound ticks 14, chi free frac 1.000, stream fresh frac 1.000, |e_p| max 205 mm
+   battery 23.82 -> 24.16 V, current mean 19.6 A
+
+################ a1: 0924#1 FUSED (2 laps)  DIRECT 11.72-78.09 s (66.4 s)
+hold window 12.2-24.6; executing: [(24.8, 'EXECUTING T=6.0s'), (35.9, 'EXECUTING T=52.0s')]
+mocap: 124 Hz | hdr dt max 45 ms, gaps>50ms 0 (DIRECT 0) | identical-pos repeats 4.9% | |dp|>0.05 spikes 60 (DIRECT 0) | orient step>3deg 62 (DIRECT 1)
+   frozen-pose runs >=5 samples: 3 -> [(75.51, 169, 2.84), (78.36, 5, 0.11), (80.66, 381, 6.37)]
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-shiqi-fsc-PegasusSimulator/7dd2b67f-37e8-4043-a785-1a763d80f217/scratchpad/feedback.py", line 43, in <module>
+    print(f"odom: {fo:.0f} Hz (hdr), recv-rate {1/np.median(np.diff(tor)):.0f} Hz | hdr dt max {dto.max()*1000:.0f} ms | frac samples bit-identical to a mocap sample {same*100:.0f}% | odom-mocap pos diff in DIRECT rms {np.sqrt((diff[mD]**2).mean(0))*1000} mm max {np.abs(diff[mD]).max(0)*1000} mm | odom lags mocap by (ms, corr) x/y/z {[(round(l,0),round(c,3)) for l,c in lg]}")
+  File "/usr/lib/python3/dist-packages/numpy/core/_methods.py", line 40, in _amax
+    return umr_maximum(a, axis, None, out, keepdims, initial, where)
+ValueError: zero-size array to reduction operation maximum which has no identity

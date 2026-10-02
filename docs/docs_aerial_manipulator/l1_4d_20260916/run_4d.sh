@@ -30,7 +30,7 @@ SETG="$PEG/application/robotic_arm/utils/wb_l1_set_gains.py"
 export WB_L1_OUT="$PEG/docs/docs_aerial_manipulator/l1_4d_20260916"
 export WB_L1_DRIVER_ARGS="${WB_L1_DRIVER_ARGS:---hold-between 16}"
 
-YAML4D="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml"
+YAML4D="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_robustness.yaml"
 cp "$YAML4D" "$WB_L1_OUT/.yaml4d_backup"
 trap 'cp "$WB_L1_OUT/.yaml4d_backup" "$YAML4D"; echo "restored $YAML4D"' EXIT
 

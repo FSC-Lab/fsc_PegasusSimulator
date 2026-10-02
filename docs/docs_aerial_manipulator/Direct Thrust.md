@@ -50,8 +50,8 @@ back to PX4's EKF, and vehicle state back to the controller (used closed-loop on
 
 | Scenario | Launcher | Isaac fixture | Controller |
 |---|---|---|---|
-| Pinned torque test | `scripts/start_x650_pinned_direct_actuator_test.sh` | `application/px4_base/04_x650_pinned_direct_actuator_test.py` (translation-clamped, writes `/tmp/x650_pinned_torque.csv`) | `~/ros2_ws/src/x650_direct_actuator_test_node.py` (equal/roll/pitch/yaw pulse sequence) |
-| Free-flight hover | `scripts/start_x650_ros_offboard_hover_test.sh` | `application/px4_base/03_px4_single_drone_x650.py` | `apl20_ros autopilot_node` (PX4-style cascade) + persistent 1.5 m setpoint pub |
+| Pinned torque test | `scripts/indoor_sim/archive/start_x650_pinned_direct_actuator_test.sh` | `application/px4_base/04_x650_pinned_direct_actuator_test.py` (translation-clamped, writes `/tmp/x650_pinned_torque.csv`) | `~/ros2_ws/src/x650_direct_actuator_test_node.py` (equal/roll/pitch/yaw pulse sequence) |
+| Free-flight hover | `scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh` | `application/px4_base/03_px4_single_drone_x650.py` | `apl20_ros autopilot_node` (PX4-style cascade) + persistent 1.5 m setpoint pub |
 
 **What question does each answer?**
 
@@ -208,8 +208,8 @@ $$
 
 ```bash
 cd ~/fsc_PegasusSimulator
-./scripts/start_x650_pinned_direct_actuator_test.sh shiqi_machine     # pinned torque test
-./scripts/start_x650_ros_offboard_hover_test.sh shiqi_machine         # free-flight hover
+./scripts/indoor_sim/archive/start_x650_pinned_direct_actuator_test.sh shiqi_machine     # pinned torque test
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh shiqi_machine         # free-flight hover
 ```
 
 Watch: `tail -f /tmp/x650_pinned_isaac.log` (or `x650_ros_hover_*.log`). Success markers:

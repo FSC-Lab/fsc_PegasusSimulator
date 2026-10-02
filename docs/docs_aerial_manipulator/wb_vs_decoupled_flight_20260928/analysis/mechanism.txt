@@ -1,0 +1,4 @@
+WB-1 17:11 {'force_body_N': [0.628, -0.516], 'airframe_err_body_mm': [1.783, 6.254], 'yaw_err_mean_deg': -0.11, 'yaw_rate_ref_deg_s': 14.57, 'hold_offset_mm': 6.86}
+WB-2 17:22 {'force_body_N': [0.487, -0.514], 'airframe_err_body_mm': [4.983, 6.23], 'yaw_err_mean_deg': -0.14, 'yaw_rate_ref_deg_s': 14.56, 'hold_offset_mm': 5.4}
+DEC-1 18:28 {'force_body_N': [0.463, -0.423], 'kp_ep_kv_ev_body_N': [0.476, -0.388], 'airframe_err_body_mm': [75.125, -117.45], 'yaw_err_mean_deg': -11.14, 'yaw_rate_ref_deg_s': 14.57, 'hold_offset_mm': 155.72}
+DEC-2 18:36 {'force_body_N': [0.573, -0.504], 'kp_ep_kv_ev_body_N': [0.565, -0.453], 'airframe_err_body_mm': [90.942, -140.461], 'yaw_err_mean_deg': -11.15, 'yaw_rate_ref_deg_s': 14.57, 'hold_offset_mm': 221.6}

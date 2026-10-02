@@ -1,0 +1,66 @@
+
+================ zero-phase low-pass 8 Hz ================
+
+--- F1 fold 60, 48 s (a1): 16217 samples, DIRECT, |qdd| p95 j2/j3 0.51/0.43 rad/s^2
+  j2: DIAG fit J = 0.0004 +/- 0.0298 kg m^2 (R2 0.151, N 250) | 2x2 row: A_22 = -0.0011+/-0.0319, A_23 = +0.0134+/-0.0812 (R2 0.185) | fc -0.034 mu 0.500 b 0.054 | resid std w/ J fixed: none 21.1, diag 0.020 26.8, model hh^T 0.020 40.9 mN.m
+  j3: DIAG fit J = 0.0009 +/- 0.0176 kg m^2 (R2 0.552, N 145) | 2x2 row: A_32 = +0.0156+/-0.1183, A_33 = +0.0010+/-0.0192 (R2 0.579) | fc 0.094 mu -0.444 b -0.050 | resid std w/ J fixed: none 18.8, diag 0.020 39.2, model hh^T 0.020 38.7 mN.m
+
+--- F2 fold 60, 48 s (a2): 12334 samples, DIRECT, |qdd| p95 j2/j3 0.49/0.38 rad/s^2
+  j2: DIAG fit J = 0.0044 +/- 0.0278 kg m^2 (R2 0.896, N 303) | 2x2 row: A_22 = +0.0043+/-0.0289, A_23 = -0.0021+/-0.0790 (R2 0.896) | fc -0.110 mu 0.521 b -0.015 | resid std w/ J fixed: none 26.1, diag 0.020 29.9, model hh^T 0.020 43.5 mN.m
+  j3: DIAG fit J = 0.0076 +/- 0.0184 kg m^2 (R2 0.533, N 151) | 2x2 row: A_32 = -0.0161+/-0.1016, A_33 = +0.0075+/-0.0197 (R2 0.573) | fc 0.016 mu 0.285 b -0.110 | resid std w/ J fixed: none 31.5, diag 0.020 39.5, model hh^T 0.020 42.1 mN.m
+
+--- F3 fold 55, 12 s (a3): 11171 samples, DIRECT, |qdd| p95 j2/j3 1.84/1.62 rad/s^2
+  j2: DIAG fit J = 0.0039 +/- 0.0105 kg m^2 (R2 0.953, N 1722) | 2x2 row: A_22 = +0.0045+/-0.0118, A_23 = +0.0016+/-0.0127 (R2 0.953) | fc 0.145 mu 0.184 b -0.167 | resid std w/ J fixed: none 52.9, diag 0.020 60.8, model hh^T 0.020 80.2 mN.m
+  j3: DIAG fit J = 0.0073 +/- 0.0067 kg m^2 (R2 0.870, N 1113) | 2x2 row: A_32 = +0.0038+/-0.0100, A_33 = +0.0087+/-0.0077 (R2 0.874) | fc 0.022 mu 0.231 b -0.033 | resid std w/ J fixed: none 38.8, diag 0.020 46.7, model hh^T 0.020 44.7 mN.m
+
+--- F4 fold 55, 6 s (a4): 17354 samples, DIRECT, |qdd| p95 j2/j3 2.80/3.65 rad/s^2
+  j2: DIAG fit J = 0.0215 +/- 0.0066 kg m^2 (R2 0.863, N 3959) | 2x2 row: A_22 = +0.0229+/-0.0060, A_23 = +0.0133+/-0.0068 (R2 0.889) | fc 0.122 mu 0.191 b -0.121 | resid std w/ J fixed: none 115.8, diag 0.020 89.9, model hh^T 0.020 100.0 mN.m
+  j3: DIAG fit J = 0.0107 +/- 0.0048 kg m^2 (R2 0.778, N 2982) | 2x2 row: A_32 = +0.0079+/-0.0041, A_33 = +0.0111+/-0.0042 (R2 0.831) | fc -0.039 mu 0.453 b -0.037 | resid std w/ J fixed: none 65.7, diag 0.020 63.3, model hh^T 0.020 69.2 mN.m
+
+================ zero-phase low-pass 12 Hz ================
+
+--- F1 fold 60, 48 s (a1): 16217 samples, DIRECT, |qdd| p95 j2/j3 1.06/0.96 rad/s^2
+  j2: DIAG fit J = -0.0082 +/- 0.0187 kg m^2 (R2 0.398, N 289) | 2x2 row: A_22 = -0.0103+/-0.0183, A_23 = +0.0194+/-0.0360 (R2 0.472) | fc -0.203 mu 0.995 b 0.071 | resid std w/ J fixed: none 31.7, diag 0.020 43.4, model hh^T 0.020 62.2 mN.m
+  j3: DIAG fit J = 0.0037 +/- 0.0142 kg m^2 (R2 0.312, N 146) | 2x2 row: A_32 = -0.0049+/-0.0539, A_33 = +0.0035+/-0.0151 (R2 0.319) | fc 0.038 mu 0.046 b -0.093 | resid std w/ J fixed: none 29.3, diag 0.020 44.8, model hh^T 0.020 45.9 mN.m
+  current-vs-encoder delay scan (-20..+40 ms): best R2 j2 at -4 ms (J -0.0093), j3 at -20 ms (J 0.0025)
+
+--- F2 fold 60, 48 s (a2): 12334 samples, DIRECT, |qdd| p95 j2/j3 1.05/0.80 rad/s^2
+  j2: DIAG fit J = -0.0077 +/- 0.0185 kg m^2 (R2 0.948, N 344) | 2x2 row: A_22 = -0.0074+/-0.0185, A_23 = -0.0095+/-0.0295 (R2 0.950) | fc -0.209 mu 0.667 b -0.051 | resid std w/ J fixed: none 37.1, diag 0.020 48.6, model hh^T 0.020 70.4 mN.m
+  j3: DIAG fit J = 0.0062 +/- 0.0121 kg m^2 (R2 0.541, N 161) | 2x2 row: A_32 = -0.0040+/-0.0328, A_33 = +0.0064+/-0.0127 (R2 0.548) | fc -0.007 mu 0.522 b -0.141 | resid std w/ J fixed: none 35.5, diag 0.020 47.7, model hh^T 0.020 54.9 mN.m
+  current-vs-encoder delay scan (-20..+40 ms): best R2 j2 at +8 ms (J -0.0050), j3 at +4 ms (J 0.0059)
+
+--- F3 fold 55, 12 s (a3): 11171 samples, DIRECT, |qdd| p95 j2/j3 2.05/1.84 rad/s^2
+  j2: DIAG fit J = -0.0041 +/- 0.0077 kg m^2 (R2 0.927, N 1790) | 2x2 row: A_22 = -0.0054+/-0.0081, A_23 = -0.0047+/-0.0093 (R2 0.928) | fc 0.171 mu 0.151 b -0.171 | resid std w/ J fixed: none 67.4, diag 0.020 84.7, model hh^T 0.020 115.7 mN.m
+  j3: DIAG fit J = 0.0035 +/- 0.0062 kg m^2 (R2 0.756, N 1130) | 2x2 row: A_32 = -0.0036+/-0.0082, A_33 = +0.0024+/-0.0066 (R2 0.761) | fc 0.073 mu 0.087 b -0.034 | resid std w/ J fixed: none 51.7, diag 0.020 66.7, model hh^T 0.020 73.8 mN.m
+  current-vs-encoder delay scan (-20..+40 ms): best R2 j2 at +4 ms (J -0.0034), j3 at +40 ms (J 0.0089)
+
+--- F4 fold 55, 6 s (a4): 17354 samples, DIRECT, |qdd| p95 j2/j3 3.06/3.66 rad/s^2
+  j2: DIAG fit J = 0.0205 +/- 0.0049 kg m^2 (R2 0.791, N 3998) | 2x2 row: A_22 = +0.0217+/-0.0045, A_23 = +0.0120+/-0.0044 (R2 0.827) | fc 0.097 mu 0.227 b -0.110 | resid std w/ J fixed: none 144.5, diag 0.020 118.5, model hh^T 0.020 132.8 mN.m
+  j3: DIAG fit J = 0.0124 +/- 0.0032 kg m^2 (R2 0.708, N 3006) | 2x2 row: A_32 = +0.0088+/-0.0030, A_33 = +0.0128+/-0.0028 (R2 0.780) | fc -0.064 mu 0.553 b -0.053 | resid std w/ J fixed: none 93.1, diag 0.020 82.1, model hh^T 0.020 85.5 mN.m
+  current-vs-encoder delay scan (-20..+40 ms): best R2 j2 at -4 ms (J 0.0191), j3 at -8 ms (J 0.0133)
+
+================ zero-phase low-pass 20 Hz ================
+
+--- F1 fold 60, 48 s (a1): 16217 samples, DIRECT, |qdd| p95 j2/j3 3.04/2.59 rad/s^2
+  j2: DIAG fit J = -0.0164 +/- 0.0122 kg m^2 (R2 0.807, N 501) | 2x2 row: A_22 = -0.0165+/-0.0124, A_23 = +0.0023+/-0.0193 (R2 0.807) | fc -0.331 mu 0.716 b 0.537 | resid std w/ J fixed: none 75.2, diag 0.020 92.4, model hh^T 0.020 120.1 mN.m
+  j3: DIAG fit J = -0.0001 +/- 0.0090 kg m^2 (R2 0.375, N 198) | 2x2 row: A_32 = -0.0036+/-0.0173, A_33 = -0.0003+/-0.0091 (R2 0.382) | fc -0.002 mu 0.266 b -0.120 | resid std w/ J fixed: none 44.8, diag 0.020 66.0, model hh^T 0.020 70.6 mN.m
+
+--- F2 fold 60, 48 s (a2): 12334 samples, DIRECT, |qdd| p95 j2/j3 2.69/2.21 rad/s^2
+  j2: DIAG fit J = -0.0115 +/- 0.0102 kg m^2 (R2 0.926, N 490) | 2x2 row: A_22 = -0.0113+/-0.0102, A_23 = -0.0041+/-0.0137 (R2 0.927) | fc -0.106 mu 0.493 b 0.054 | resid std w/ J fixed: none 62.7, diag 0.020 80.2, model hh^T 0.020 111.8 mN.m
+  j3: DIAG fit J = 0.0021 +/- 0.0065 kg m^2 (R2 0.546, N 205) | 2x2 row: A_32 = -0.0033+/-0.0107, A_33 = +0.0023+/-0.0066 (R2 0.556) | fc -0.088 mu 0.559 b -0.135 | resid std w/ J fixed: none 37.8, diag 0.020 61.7, model hh^T 0.020 75.0 mN.m
+
+--- F3 fold 55, 12 s (a3): 11171 samples, DIRECT, |qdd| p95 j2/j3 3.53/3.33 rad/s^2
+  j2: DIAG fit J = -0.0101 +/- 0.0042 kg m^2 (R2 0.902, N 2008) | 2x2 row: A_22 = -0.0109+/-0.0042, A_23 = -0.0070+/-0.0049 (R2 0.905) | fc 0.138 mu 0.190 b -0.158 | resid std w/ J fixed: none 83.0, diag 0.020 111.7, model hh^T 0.020 158.9 mN.m
+  j3: DIAG fit J = 0.0000 +/- 0.0038 kg m^2 (R2 0.699, N 1243) | 2x2 row: A_32 = -0.0064+/-0.0041, A_33 = -0.0010+/-0.0037 (R2 0.721) | fc 0.041 mu 0.205 b -0.051 | resid std w/ J fixed: none 61.4, diag 0.020 84.3, model hh^T 0.020 102.6 mN.m
+
+--- F4 fold 55, 6 s (a4): 17354 samples, DIRECT, |qdd| p95 j2/j3 4.02/4.15 rad/s^2
+  j2: DIAG fit J = 0.0094 +/- 0.0026 kg m^2 (R2 0.756, N 4135) | 2x2 row: A_22 = +0.0097+/-0.0026, A_23 = +0.0021+/-0.0024 (R2 0.758) | fc -0.029 mu 0.406 b -0.088 | resid std w/ J fixed: none 136.1, diag 0.020 138.2, model hh^T 0.020 206.8 mN.m
+  j3: DIAG fit J = 0.0081 +/- 0.0016 kg m^2 (R2 0.629, N 3117) | 2x2 row: A_32 = +0.0045+/-0.0019, A_33 = +0.0087+/-0.0015 (R2 0.654) | fc -0.029 mu 0.476 b -0.066 | resid std w/ J fixed: none 103.4, diag 0.020 117.5, model hh^T 0.020 132.7 mN.m
+
+================ summary: diagonal J per joint [kg m^2], per flight ================
+     8 Hz j2: a1 0.0004  a2 0.0044  a3 0.0039  a4 0.0215   mean 0.0075
+     8 Hz j3: a1 0.0009  a2 0.0076  a3 0.0073  a4 0.0107   mean 0.0066
+    12 Hz j2: a1 -0.0082  a2 -0.0077  a3 -0.0041  a4 0.0205   mean 0.0001
+    12 Hz j3: a1 0.0037  a2 0.0062  a3 0.0035  a4 0.0124   mean 0.0065
+    20 Hz j2: a1 -0.0164  a2 -0.0115  a3 -0.0101  a4 0.0094   mean -0.0071
+    20 Hz j3: a1 -0.0001  a2 0.0021  a3 0.0000  a4 0.0081   mean 0.0025

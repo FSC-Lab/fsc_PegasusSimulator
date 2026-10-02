@@ -1208,7 +1208,7 @@ section 3. Parameter services are omitted — every node has the standard six.</
     <div><span class="wl">serves</span> <span class="muted">—</span></div>
     <div><span class="wl">calls</span> <span class="muted">—</span></div></div></article><h3 class="grp">Simulator — Isaac Sim / Pegasus <span class="gc">4</span></h3><p class="lede">The plant. On hardware these three vanish and are replaced by the real vehicle, Motive and the Dynamixel bus.</p><article class="card ncard" id="n-isaac_arm_torque_plant_0">
   <div class="c-head"><code class="c-path">/isaac_arm_torque_plant_0</code><span class="tier t-situ">Simulator</span></div>
-  <div class="c-type">application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py &middot; started by step 3</div>
+  <div class="c-type">application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py &middot; started by step 3</div>
   <p class="c-desc"><b>The simulated arm.</b> Applies the commanded efforts to the Isaac articulation and publishes
       the measured joint state back. Since 2026-09-03 the efforts go through the
       <b>PWM-mode servo model</b> first — <code>τ = clip(τ_cmd) − (K<sub>t</sub>²/R)·q̇</code> on joints 2

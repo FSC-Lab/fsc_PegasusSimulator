@@ -1,0 +1,94 @@
+<figure class="wide">
+<div class="ee3d" id="eeerr">
+  <div class="ee3d-bar">
+    <div class="seg tog" role="group" aria-label="Error signals shown">
+      <button type="button" data-s="base" aria-pressed="true"><span class="sw thin" style="--c:var(--ink2)"></span>Base CoM error</button>
+      <button type="button" data-s="task" aria-pressed="true"><span class="sw" style="--c:var(--orange)"></span>EE task error (CoM-anchored)</button>
+      <button type="button" data-s="abs" aria-pressed="true"><span class="sw" style="--c:var(--blue)"></span>EE absolute error</button>
+    </div>
+    <div class="seg" role="group" aria-label="Y scale" id="eeerr-yscale">
+      <button type="button" data-y="row" aria-pressed="true">Same y-scale across flights</button>
+      <button type="button" data-y="each" aria-pressed="false">Each plot its own y-scale</button>
+    </div>
+    <div class="seg" role="group" aria-label="Flight" id="eeerr-flights" hidden>
+      <button type="button" data-f="0" aria-pressed="true">Flight 1</button>
+      <button type="button" data-f="1" aria-pressed="false">Flight 2</button>
+      <button type="button" data-f="2" aria-pressed="false">Flight 3</button>
+      <button type="button" data-f="3" aria-pressed="false">Flight 4</button>
+    </div>
+    <button type="button" id="eeerr-refit" class="plain">Refit y-axes</button>
+  </div>
+  <div id="eeerr-plot" class="eeerr-plot" aria-label="EE error in x, y, z and heading for the four flights"></div>
+  <img id="eeerr-fallback" src="figures/f_ee_errors.png" alt="End-effector errors in x, y, z and yaw for all four flights" hidden>
+</div>
+<script type="application/json" id="eeerr-data">__DATA__</script>
+<script>
+(function(){
+  var root=document.getElementById('eeerr'), plot=document.getElementById('eeerr-plot');
+  if(typeof window.Plotly==='undefined'){
+    plot.hidden=true; root.querySelector('.ee3d-bar').hidden=true; document.getElementById('eeerr-fallback').hidden=false; return;
+  }
+  var F=JSON.parse(document.getElementById('eeerr-data').textContent);
+  var show={base:true,task:true,abs:true}, ymode='row', one=0, narrow=null;
+  var ROWS=[{k:0,lab:'x error [mm]',u:'mm'},{k:1,lab:'y error [mm]',u:'mm'},{k:2,lab:'z error [mm]',u:'mm'},{k:'h',lab:'EE yaw error [deg]',u:'°'}];
+  function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function ax(i,p){return p+(i===1?'':i);}          // axis ids: x, x2, x3 ...
+  function build(){
+    var c={ink:tok('--ink'),ink2:tok('--ink2'),line:tok('--line'),blue:tok('--blue'),orange:tok('--orange'),red:tok('--red')};
+    var cols=narrow?[one]:[0,1,2,3], nc=cols.length, each=(ymode==='each');
+    var gx=nc===1?0:(each?0.05:0.03), gy=0.05, w=(1-(nc-1)*gx)/nc, h=(1-3*gy)/4;
+    var data=[], L={margin:{l:64,r:10,t:nc===1?34:58,b:44},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+      font:{family:"'IBM Plex Sans',system-ui,sans-serif",color:c.ink,size:11},showlegend:false,hovermode:'x unified',
+      hoverlabel:{bgcolor:tok('--panel'),bordercolor:c.line,font:{color:c.ink}},shapes:[],annotations:[]};
+    ROWS.forEach(function(R,r){
+      cols.forEach(function(fi,ci){
+        var f=F[fi], i=r*nc+ci+1, xa='xaxis'+(i===1?'':i), ya='yaxis'+(i===1?'':i), xr=ax(i,'x'), yr=ax(i,'y');
+        var x0=ci*(w+gx), y1=1-r*(h+gy);
+        L[xa]={domain:[x0,x0+w],anchor:yr,showgrid:true,gridcolor:c.line,zeroline:false,color:c.ink2,tickfont:{size:10},
+               showticklabels:r===3,title:r===3?{text:'time since bag start [s]',font:{size:11,color:c.ink2}}:undefined};
+        if(r>0) L[xa].matches=ax(ci+1,'x');
+        L[ya]={domain:[y1-h,y1],anchor:xr,autorange:true,showgrid:true,gridcolor:c.line,zeroline:true,zerolinecolor:c.ink2,zerolinewidth:0.8,
+               color:c.ink2,tickfont:{size:10},showticklabels:each||ci===0,
+               title:ci===0?{text:R.lab,font:{size:11,color:c.ink2}}:undefined};
+        if(!each&&ci>0) L[ya].matches=ax(r*nc+1,'y');
+        f.phases.forEach(function(p){
+          if(p[3]==='run') return;
+          var fill=p[3]==='frozen'?'rgba(230,103,103,0.24)':(p[3]==='goto'?'rgba(255,255,255,0.10)':'rgba(255,255,255,0.05)');
+          L.shapes.push({type:'rect',xref:xr,yref:yr+' domain',x0:p[1],x1:p[2],y0:0,y1:1,fillcolor:fill,line:{width:0},layer:'below'});
+          if(r===0&&p[0]) L.annotations.push({xref:xr,yref:yr+' domain',x:(p[1]+p[2])/2,y:0.98,yanchor:'top',text:p[0].replace(' ','<br>'),showarrow:false,
+            font:{size:10,color:p[3]==='frozen'?c.red:c.ink2}});
+        });
+        if(r===0){
+          var fr=f.phases.filter(function(p){return p[3]==='run';})[0];
+          L.annotations.push({xref:xr,yref:yr+' domain',x:(fr[1]+fr[2])/2,y:0.98,yanchor:'top',text:'circle run',showarrow:false,font:{size:10,color:c.ink2}});
+          var t=f.title.split(' · '), l2=t.pop();
+          L.annotations.push({xref:'paper',yref:'paper',x:x0,y:1,yshift:8,xanchor:'left',yanchor:'bottom',align:'left',showarrow:false,
+            text:'<b>'+t.join(' · ')+'</b>'+(nc===1?' · ':'<br>')+l2,font:{size:11.5,color:c.ink}});
+        }
+        if(R.k==='h'){
+          data.push({type:'scatter',mode:'lines',x:f.t,y:f.hdg,xaxis:xr,yaxis:yr,name:'EE heading error',line:{color:c.blue,width:1.4},hovertemplate:'%{y:.2f}°'});
+        } else {
+          data.push({meta:'base',type:'scatter',mode:'lines',x:f.t,y:f.base[R.k],xaxis:xr,yaxis:yr,name:'base CoM',visible:show.base,line:{color:c.ink2,width:1.1},opacity:0.85,hovertemplate:'%{y:.1f} mm'});
+          data.push({meta:'abs',type:'scatter',mode:'lines',x:f.t,y:f.abs[R.k],xaxis:xr,yaxis:yr,name:'EE absolute',visible:show.abs,line:{color:c.blue,width:1.6},hovertemplate:'%{y:.1f} mm'});
+          data.push({meta:'task',type:'scatter',mode:'lines',x:f.t,y:f.task[R.k],xaxis:xr,yaxis:yr,name:'EE task',visible:show.task,line:{color:c.orange,width:1.5},hovertemplate:'%{y:.1f} mm'});
+        }
+      });
+    });
+    plot.style.height=(nc===1?760:840)+'px';
+    Plotly.react(plot,data,L,{displaylogo:false,responsive:true,displayModeBar:false});
+  }
+  function refit(){var u={};Object.keys(plot.layout).forEach(function(k){if(/^yaxis\d*$/.test(k))u[k+'.autorange']=true;});Plotly.relayout(plot,u);}
+  function press(attr,val){root.querySelectorAll('button['+attr+']').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute(attr)===val));});}
+  root.querySelectorAll('button[data-s]').forEach(function(b){b.addEventListener('click',function(){
+    var s=b.dataset.s; show[s]=!show[s]; b.setAttribute('aria-pressed',String(show[s]));
+    var idx=[]; plot.data.forEach(function(t,i){if(t.meta===s)idx.push(i);});
+    Plotly.restyle(plot,{visible:show[s]},idx).then(refit);      // hidden lines drop out of the fit
+  });});
+  root.querySelectorAll('button[data-y]').forEach(function(b){b.addEventListener('click',function(){ymode=b.dataset.y;press('data-y',ymode);build();});});
+  root.querySelectorAll('button[data-f]').forEach(function(b){b.addEventListener('click',function(){one=+b.dataset.f;press('data-f',b.dataset.f);build();});});
+  document.getElementById('eeerr-refit').addEventListener('click',refit);
+  function mode(){var n=root.clientWidth<720; if(n!==narrow){narrow=n;document.getElementById('eeerr-flights').hidden=!n;document.getElementById('eeerr-yscale').hidden=n;build();}}
+  mode(); window.addEventListener('resize',function(){clearTimeout(mode.t);mode.t=setTimeout(mode,150);});
+})();
+</script>
+<figcaption>Fig. 2 — EE error in x, y, z (world frame) and heading, for each flight from go-to-start to the end of DIRECT (flight 4 to the end of its post-run hold), 25 Hz bin means. Blue is the absolute error, orange the task error the law tracks, thin grey the base CoM error; the heading row shows the EE heading error. The buttons switch each error on or off in every plot, and the y-axes refit to the lines that are shown: hide the absolute and base errors to read the task error at its own scale. With "Same y-scale across flights" each row shares one scale; "Each plot its own y-scale" fits every plot separately. On a narrow screen one flight is shown at a time. Drag in a plot to zoom a region, drag along a y-axis to stretch it, and double-click or press "Refit y-axes" to return. Darker shading is the go-to-start, lighter the holds. In the red band of flight 1 the feedback was frozen, so the error shown there is against the frozen estimate and understates the true error.</figcaption></figure>
