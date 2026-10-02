@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# AERIAL-MANIPULATOR direct-actuator simulation on the T650 parameter set for
+# AERIAL-MANIPULATOR direct-actuation simulation on the T650 parameter set for
 # the GEOMETRIC + L1-ADAPTIVE controller (Cai et al., Control Engineering
 # Practice 164 (2025) 106418: geometric SE(3) baseline with CoM-offset
 # compensation + L1 adaptive augmentation), with the ARM COMMANDED OVER ROS 2
 # by the fsc_open_manipulator POSITION-MODE stack.
 #
-# Incremental sibling of start_t650_aerial_manipulator_geometric_direct_actuator_sitl.sh
+# Incremental sibling of start_t650_aerial_manipulator_geometric_direct_actuation_sitl.sh
 # (which keeps working unchanged): THE PEGASUS/PX4/ARM SIDE IS IDENTICAL —
 # same AM_xfwd plant on T650 motors (05's Isaac entrypoint), same PX4 profile,
 # same fsc_open_manipulator ros2_control stack + arm ground station — and the
@@ -39,6 +39,14 @@ set -euo pipefail
 # The PX4 profile is SHARED with the 04/05 launchers on purpose: same plant,
 # same saved tune (the per-vehicle-profile rule separates different vehicles,
 # and this is the same vehicle).
+#
+# PS4 REAL-TIME TELEOPERATION (2026-10-01, user request; Command.md 7.24): the
+# same pad, planner and arm-station tab as the whole-body rig (7.21). The
+# paired stack's trajectory planner reads /uav_0/rc/input in its TELEOP state
+# and streams compatible WholeBodyReference samples; on THIS rig the reference
+# bridge converts them for the geometric+L1 law and the position-mode arm
+# tracks their joint half. This launcher opens a `joy` window (joy_node +
+# gamepad_input) when a pad is plugged in, exactly as the 4-D launcher does.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
@@ -68,7 +76,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/lib/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
@@ -107,7 +115,7 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 # (current residual, gearbox friction, arm mass x1.05, body x1.10 + CoM shift,
 # rotor lag). The knobs are read from THIS rig's own yaml, whose section 1 is a
 # byte copy of the whole-body 4-D sim yaml's, by the shared lib below.
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py"
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
 export INDOOR_SIM_VEHICLE_LABEL="AM-T650-L1"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 export PEGASUS_ARM_COMMAND_MODE="${PEGASUS_ARM_COMMAND_MODE:-position}"
@@ -182,7 +190,7 @@ else
   echo "Pegasus PX4 lockstep: no tmux server yet; the new session will inherit the export"
 fi
 
-echo "Starting AM-T650 GEOMETRIC+L1 direct-actuator SITL with the ROS2 position-mode arm stack."
+echo "Starting AM-T650 GEOMETRIC+L1 direct-actuation SITL with the ROS2 position-mode arm stack."
 echo "Plant: AM_xfwd on T650 motors (06, the whole-body rig's plant, arm in $PEGASUS_ARM_COMMAND_MODE-command mode);"
 echo "  controller: L1-augmented geometric SE(3)"
 echo "  (Cai et al., CEP 2025) from the paired fsc_autopilot_ros2 L1 stack;"
@@ -198,6 +206,11 @@ echo "MicroXRCEAgent: externally owned and detected"
 # explicit: ROS 2 -> rosdeps overlay (if present) -> arm workspace.
 ARM_ENV="source '$ARM_ROS2_SETUP'; if [ -f '$ARM_ROSDEPS_SETUP' ]; then source '$ARM_ROSDEPS_SETUP'; fi; source '$ARM_WS_SETUP'"
 ARM_DISPLAY="${DISPLAY:-:0}"
+# The gamepad node lives in the AUTOPILOT workspace (px4_offboard_control),
+# not the arm one, so the joy window gets its own environment (the 4-D
+# launcher's reasoning: the wrong overlay fails with a bare "package not
+# found" in a detached window nobody is watching).
+JOY_ENV="source '$ARM_ROS2_SETUP'; source '$FSC_AUTOPILOT_WS/install/setup.bash'"
 
 # The base launcher (exec'd below) recreates the tmux session, so the arm
 # window is added by a detached helper once the new session exists. The stack
@@ -234,6 +247,31 @@ ros2 run utils_custom_ground_station joint_plot_inverted --ros-args -r __ns:=/$A
 echo 'Arm ground station exited.'
 exec bash
 "
+
+  # ── PS4 REMOTE (2026-10-01, copied from the whole-body 4-D launcher) ──────
+  # joy_node + gamepad_input -> /uav_0/rc/input, which the paired stack's
+  # trajectory planner reads in TELEOP (the arm station's "PS4 Remote" tab
+  # engages it and shows the result). Gated on the device node existing and
+  # non-fatal: the tab is inert until engaged. PEGASUS_JOY_DEVICE is SDL's
+  # joystick INDEX, not a /dev path. Skipped when a gamepad_input is ALREADY
+  # running (started by hand before the stack): a second joy_node on the same
+  # pad would publish every sample twice. The bracket keeps pgrep from
+  # matching this subshell's own command line.
+  if pgrep -f '[l]ib/px4_offboard_control/gamepad_input' >/dev/null 2>&1; then
+    echo -e "\033[1;36mgamepad_input already running (started by hand) -- not opening a second joy window.\033[0m"
+  elif [[ -e "${PEGASUS_JOY_DEV_NODE:-/dev/input/js0}" ]]; then
+    tmux new-window -d -t "$SESSION" -n joy "
+$JOY_ENV
+echo 'PS4 gamepad: joy_node -> /${ARM_NS%%/*}/rc/input (the trajectory planner reads it in TELEOP;'
+echo 'the arm station PS4 Remote tab engages it). If a stick moves the WRONG channel,'
+echo 'set teleop_axes / teleop_buttons on the planner rather than editing code.'
+ros2 launch px4_offboard_control gamepad_input.launch.py device_id:=${PEGASUS_JOY_DEVICE:-0} ns:=/${ARM_NS%%/*}
+echo 'gamepad_input exited -- PS4 teleoperation will read no pad.'
+exec bash
+"
+  else
+    echo -e "\033[1;33mNo gamepad at ${PEGASUS_JOY_DEV_NODE:-/dev/input/js0}; the PS4 Remote tab will read 'no data'.\033[0m"
+  fi
 ) &
 
 # Apply the wall-clock DDS timestamp and HIL auto-disarm settings after the PX4

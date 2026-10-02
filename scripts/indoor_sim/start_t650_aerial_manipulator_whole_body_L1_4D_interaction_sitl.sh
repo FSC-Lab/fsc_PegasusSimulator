@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# PHYSICAL-INTERACTION VARIANT (2026-09-27) of
+# start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh.
+# A COPY with exactly two lines changed: the Isaac entrypoint is
+# 07_px4_direct_t650_aerial_manipulator_interaction.py (06's plant + an
+# end-effector force injector on /uav_0/isaacsim_manipulator/ee_force_cmd,
+# ground truth on .../ee_force_state) and the vehicle label. Everything else --
+# plant knobs from the paired yaml (WB_SIM_YAML / WB_SIM_PROFILE), the 4-D node
+# check, the arm stack, the ground stations -- is the parent's, verbatim.
+# Campaign: docs/docs_aerial_manipulator/interaction_20260927/.
+#
+# ---- the parent's header follows -------------------------------------------
+
 # AERIAL-MANIPULATOR WHOLE-BODY direct-actuation simulation on the T650, flown
 # with the L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER and the FOUR-DIMENSIONAL
 # attribution of the working note's September 2026 revision ("the
@@ -146,15 +158,8 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
-# AM_ISAAC_SCENE_SCRIPT / AM_ISAAC_SCENE_LABEL (2026-10-01) swap in another
-# Isaac app built on 06's plant -- the pick-and-place scene's wrapper,
-# start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh, sets
-# them. Unset (every other run) = 06, the free-flight plant, exactly as before.
-export INDOOR_SIM_PEGASUS_SCRIPT="${AM_ISAAC_SCENE_SCRIPT:-$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py}"
-export INDOOR_SIM_VEHICLE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-WB-L1-4D}"
-if [[ -n "${AM_ISAAC_SCENE_SCRIPT:-}" ]]; then
-  echo -e "\033[1;35mISAAC SCENE: $(basename "$INDOOR_SIM_PEGASUS_SCRIPT") ($INDOOR_SIM_VEHICLE_LABEL), not the free-flight 06.\033[0m"
-fi
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/07_px4_direct_t650_aerial_manipulator_interaction.py"
+export INDOOR_SIM_VEHICLE_LABEL="AM-T650-WB-L1-4D-INT"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # Fail before physics starts if this plant ever drifts from the mass used by
 # the paired whole-body controller YAML.

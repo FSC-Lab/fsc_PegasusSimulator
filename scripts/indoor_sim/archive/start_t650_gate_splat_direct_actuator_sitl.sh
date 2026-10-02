@@ -17,7 +17,7 @@ set -euo pipefail
 # exactly as in the stock launcher. See that script for the T650 plant numbers
 # (hover ~0.503, rotor tau 99.7 ms) and for the lockstep rationale copied below.
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -44,7 +44,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_t650_gate_splat.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/archive/start_single_drone_t650_gate_splat.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_DIRECT_ACTUATOR_PARAM_DELAY:-8}"

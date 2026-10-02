@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -81,7 +81,7 @@ if [[ -n "$PAYLOAD_MASS" ]] &&
   exit 2
 fi
 
-# Arm SERVO MODEL, read by application/robotic_arm/06_*_arm_torque.py only (the
+# Arm SERVO MODEL, read by application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py only (the
 # whole-body TORQUE plant). This is a PLANT property, not a controller gain --
 # the arm controller closes a 1.5 Hz software CURRENT LOOP around Dynamixel
 # Mode 16, and what it leaves behind is a zero-mean residual current error --
@@ -143,6 +143,33 @@ fi
 # 06 already does world.step(render=not HEADLESS), so this actually removes the
 # render pass rather than just hiding the window.
 # Check it during any run with docs/.../tools or a sensor_combined timestamp probe.
+# RTF PROFILER (2026-10-01, 06 only; other apps ignore it). Baked into the pane
+# command line like everything else here (the tmux-server environment trap).
+PROFILE_START="${PEGASUS_PROFILE_START:-0}"
+PROFILE_STEPS="${PEGASUS_PROFILE_STEPS:-1500}"
+PROFILE_OUT="${PEGASUS_PROFILE_OUT:-}"
+# REAL-TIME PACER (2026-10-01, 06 only): hold simulated time to the wall clock.
+REALTIME_ARG="${PEGASUS_REALTIME:-${SIM_REALTIME:-0}}"
+# With a window, 06 steps physics one 4 ms step at a time and draws a frame every
+# RENDER_EVERY steps (default 8 under the pacer; 0 = the old 4-steps-per-frame burst).
+RENDER_EVERY_ARG="${PEGASUS_RENDER_EVERY:-}"
+# CPU PINNING (2026-10-01): PEGASUS_ISAAC_CPUS > the machine config's ISAAC_CPUS >
+# unpinned. On a hybrid CPU (shiqi-desktop's i9-14900KF: P-cores = CPUs 0-15,
+# E-cores = 16-31) the scheduler parks Isaac's main thread on an E-core part of the
+# time, and since that thread IS the frame (physics fetch + every Python callback)
+# RTF drops from ~1.01 to ~0.76. Measured: main thread on CPU 19 -> RTF 0.758,
+# taskset to 0-15 mid-run -> back to real time. Every Isaac thread is pinned
+# (taskset -a); the controller/planner/PX4 processes stay unpinned.
+ISAAC_CPUS_ARG="${PEGASUS_ISAAC_CPUS:-${ISAAC_CPUS:-}}"
+ISAAC_TASKSET=""
+if [[ -n "$ISAAC_CPUS_ARG" ]]; then
+  if [[ ! "$ISAAC_CPUS_ARG" =~ ^[0-9]+([-,][0-9]+)*$ ]]; then
+    echo "ERROR: PEGASUS_ISAAC_CPUS / ISAAC_CPUS must be a CPU list like 0-15 (got '$ISAAC_CPUS_ARG')." >&2
+    exit 2
+  fi
+  ISAAC_TASKSET="taskset -c $ISAAC_CPUS_ARG"
+  echo "Isaac pinned to CPUs $ISAAC_CPUS_ARG (PEGASUS_ISAAC_CPUS / ISAAC_CPUS)."
+fi
 PEGASUS_HEADLESS_ARG="${PEGASUS_HEADLESS:-0}"
 if [[ ! "$PEGASUS_HEADLESS_ARG" =~ ^[01]$ ]]; then
   echo "ERROR: PEGASUS_HEADLESS must be 0 or 1 (got '$PEGASUS_HEADLESS_ARG')." >&2
@@ -209,9 +236,42 @@ case "$ARM_COMMAND_MODE" in
   effort|position) ;;
   *) echo "ERROR: PEGASUS_ARM_COMMAND_MODE must be effort or position (got '$ARM_COMMAND_MODE')." >&2; exit 2 ;;
 esac
-for _NV in "$ARM_FRICTION_SCALE" "$ARM_FRICTION_WIDTH" "$ARM_MASS_SCALE"; do
+# The friction scale may be one number or four ("j1,j2,j3,j4", 2026-09-26).
+if [[ -n "$ARM_FRICTION_SCALE" && ! "$ARM_FRICTION_SCALE" =~ ^${_NUM_RE}(,${_NUM_RE}){0,3}$ ]]; then
+  echo "ERROR: PEGASUS_ARM_FRICTION_SCALE must be one non-negative decimal or four as 'a,b,c,d' (got '$ARM_FRICTION_SCALE')." >&2
+  exit 2
+fi
+for _NV in "$ARM_FRICTION_WIDTH" "$ARM_MASS_SCALE"; do
   if [[ -n "$_NV" && ! "$_NV" =~ ^${_NUM_RE}$ ]]; then
-    echo "ERROR: PEGASUS_ARM_FRICTION_SCALE / _FRICTION_WIDTH / PEGASUS_ARM_MASS_SCALE must be a non-negative decimal (got '$_NV')." >&2
+    echo "ERROR: PEGASUS_ARM_FRICTION_WIDTH / PEGASUS_ARM_MASS_SCALE must be a non-negative decimal (got '$_NV')." >&2
+    exit 2
+  fi
+done
+# SIM-TO-REAL MIRROR KNOBS (2026-09-26, sim2real_tuning_20260926): validated
+# here and BAKED into the Isaac pane like every other knob (the tmux-server
+# env trap). Empty = 06's built-in default = off.
+PLANT_KM_SCALE="${PEGASUS_PLANT_KM_SCALE:-}"
+PLANT_ROTOR_LAMBDA="${PEGASUS_PLANT_ROTOR_LAMBDA:-}"
+PLANT_KF_SAG="${PEGASUS_PLANT_KF_SAG_PER_MIN:-}"
+PLANT_FORCE_BIAS="${PEGASUS_PLANT_FORCE_BIAS:-}"
+PLANT_TORQUE_BIAS="${PEGASUS_PLANT_TORQUE_BIAS:-}"
+ARM_VEL_LAG_S="${PEGASUS_ARM_VEL_LAG_S:-}"
+ARM_VEL_QUANT="${PEGASUS_ARM_VEL_QUANT:-}"
+for _NV in "$PLANT_KM_SCALE" "$PLANT_ROTOR_LAMBDA" "$PLANT_KF_SAG" "$ARM_VEL_LAG_S" "$ARM_VEL_QUANT"; do
+  if [[ -n "$_NV" && ! "$_NV" =~ ^${_NUM_RE}$ ]]; then
+    echo "ERROR: PEGASUS_PLANT_KM_SCALE / _ROTOR_LAMBDA / _KF_SAG_PER_MIN / PEGASUS_ARM_VEL_LAG_S / _VEL_QUANT must be a non-negative decimal (got '$_NV')." >&2
+    exit 2
+  fi
+done
+ARM_ARMATURE="${PEGASUS_ARM_ARMATURE:-}"
+if [[ -n "$ARM_ARMATURE" && ! "$ARM_ARMATURE" =~ ^${_NUM_RE}(,${_NUM_RE}){0,3}$ ]]; then
+  echo "ERROR: PEGASUS_ARM_ARMATURE must be one non-negative decimal or four as 'a,b,c,d' (got '$ARM_ARMATURE')." >&2
+  exit 2
+fi
+_SNUM_RE="-?${_NUM_RE}"
+for _NV in "$PLANT_FORCE_BIAS" "$PLANT_TORQUE_BIAS"; do
+  if [[ -n "$_NV" && ! "$_NV" =~ ^${_SNUM_RE},${_SNUM_RE},${_SNUM_RE}$ ]]; then
+    echo "ERROR: PEGASUS_PLANT_FORCE_BIAS / _TORQUE_BIAS must be three decimals 'x,y,z' (got '$_NV')." >&2
     exit 2
   fi
 done
@@ -289,9 +349,16 @@ PEGASUS_ARM_COUNTS_TRUE=$ARM_COUNTS_TRUE \
 PEGASUS_ARM_FRICTION_SCALE=$ARM_FRICTION_SCALE \
 PEGASUS_ARM_FRICTION_WIDTH=$ARM_FRICTION_WIDTH \
 PEGASUS_ARM_MASS_SCALE=$ARM_MASS_SCALE \
+PEGASUS_PLANT_KM_SCALE=$PLANT_KM_SCALE PEGASUS_PLANT_ROTOR_LAMBDA=$PLANT_ROTOR_LAMBDA \
+PEGASUS_PLANT_KF_SAG_PER_MIN=$PLANT_KF_SAG \
+PEGASUS_PLANT_FORCE_BIAS=$PLANT_FORCE_BIAS PEGASUS_PLANT_TORQUE_BIAS=$PLANT_TORQUE_BIAS \
+PEGASUS_ARM_VEL_LAG_S=$ARM_VEL_LAG_S PEGASUS_ARM_VEL_QUANT=$ARM_VEL_QUANT \
+PEGASUS_ARM_ARMATURE=$ARM_ARMATURE \
 PEGASUS_ARM_COMMAND_MODE=$ARM_COMMAND_MODE \
 PEGASUS_EE_MARKER_CUBE=$EE_MARKER_CUBE PEGASUS_EE_MARKER_CUBE_MASS=$EE_MARKER_CUBE_MASS \
-  \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PEGASUS_PROFILE_START=$PROFILE_START PEGASUS_PROFILE_STEPS=$PROFILE_STEPS PEGASUS_PROFILE_OUT=$PROFILE_OUT \
+PEGASUS_REALTIME=$REALTIME_ARG PEGASUS_RENDER_EVERY=$RENDER_EVERY_ARG \
+  $ISAAC_TASKSET \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true
 tmux kill-pane -t \"$SESSION:0.2\" 2>/dev/null || true

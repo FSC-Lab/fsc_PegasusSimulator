@@ -1,94 +1,58 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# AERIAL-MANIPULATOR WHOLE-BODY direct-actuation simulation on the T650, flown
-# with the L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER and the FOUR-DIMENSIONAL
-# attribution of the working note's September 2026 revision ("the
-# four-dimensional interaction wrench", disturbance_observer_draft.tex).
-# Added 2026-09-16; Command.md 7.17.
+# AERIAL-MANIPULATOR direct-actuation simulation on the T650, flown by the
+# MODULAR ADAPTIVE law of Yadav, Dantu, Pan, Sun, Roy, Baldi, "Modular Adaptive
+# Aerial Manipulation Under Unknown Dynamic Coupling Forces", IEEE/ASME
+# Trans. Mechatronics 30(4), 2025 (docs/comparison references/). Added
+# 2026-09-30 for the SIMULATION comparison against the whole-body L1 impedance
+# law; there is no hardware twin and none is planned. Command.md 7.22.
 #
-# THE PLANT IS IDENTICAL to start_t650_aerial_manipulator_whole_body_L1_adaptive_6D_direct_actuation_sitl.sh
-# (the six-dimensional rig), which is itself identical to the GMO rig's: same
-# Isaac entrypoint (06_px4_t650_aerial_manipulator_free_flight.py),
+# THE PLANT IS IDENTICAL to the 4-D whole-body rig's
+# (start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh):
+# same Isaac entrypoint (06_px4_t650_aerial_manipulator_free_flight.py),
 # same AM_xfwd asset on T650 motors, same PX4 profile, same 3.746170 kg mass
-# gate, same arm servo model, same plant-uncertainty injection (the standing
-# config A: +15 % allocator kf, body mass/inertia x1.10 + 10/10/5 mm CoM shift,
-# MN4010 rotor lag, current-loop residual, gearbox friction x1.05, arm mass
-# x1.05). The same TORQUE-mode fsc_open_manipulator stack and the same two
-# ground stations come up. Only two things differ, both on the CONTROLLER side:
+# gate, same TORQUE-mode fsc_open_manipulator stack (the paper's arm module
+# commands joint TORQUES, tau_alpha, eq. 25a), same two ground stations. The
+# plant knobs come from the modular yaml, whose section 1 is generated as a
+# BYTE COPY of the whole-body yaml's (make_modular_yaml.py checks it), so the
+# two rigs differ only in the DIRECT law. WB_SIM_PROFILE=mirror|robustness
+# selects the same profile pair as the whole-body launchers.
 #
-#   * it waits for autopilot_whole_body_l1_direct_actuation_node -- the SAME
-#     executable as the 6-D rig, because the attribution is a yaml switch --
-#     and then READS wb_l1_four_d OFF THE RUNNING NODE, refusing to start
-#     against the 6-D stack (a process-name gate cannot tell them apart);
-#   * it reads its plant knobs out of the 4-D yaml
-#     (params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml),
-#     which is the 6-D yaml verbatim plus the wb_l1_four_d block.
-#
-# WHAT THE 4-D ATTRIBUTION IS. The 6-D design separated the contact wrench from
-# the internal disturbance with a metric-weighted projector and a dynamic
-# identifier on the four wrench-free directions; in free flight it reported a
-# phantom F_hat_y of 0.04-0.13 N. The 4-D design reads the task force off the
-# JOINT ROWS of the residual: a platform wrench (thrust deficit, CoM moment,
-# gust) has [w]_q = 0 EXACTLY, so
-#     F_hat = J_yq^-T ([w_Sigma]_q - w_hat_q),   F_hat_y = (1 - chi) C_x F_hat,
-# with w_hat_q the joint-row residual trimmed in free flight and frozen in
-# contact, and chi the task's phase flag. In free flight F_hat_y = 0 by
-# construction; u3's feedforward becomes C_x T^-T w_hat_int (eq. u3_4). The
-# whole change is inside wb_l1_observer.cpp's `four_d` branch, parity-locked
-# to l1_observer.py by WbL1ParityTest (8 rollouts, 1e-8).
-#
-# WHY THE RIG EXISTS. The whole-body law consumes the disturbance estimate in
-# three places: -d_hat_t in f_d, -d_hat_r in u_2, and F_hat_y in u_3. The GMO
-# supplies all three from one proportional law d_hat = K_o (p - p_hat), and
-# that costs two things this rig measures:
-#
-#   1. ONE GAIN FOR TWO JOBS. K_o sets estimate accuracy AND robustness at
-#      once, so it is pinned at 0.5/0.1/0.1 -- raising the body channels to
-#      1.0 crashed the rig, the observer booking the 99.7 ms rotor lag as a
-#      phantom disturbance. The L1 law separates them: a deadbeat inversion
-#      whose accuracy is set by the sample period alone, then an explicit
-#      filter C(s) = omega_c/(s+omega_c) that alone decides robustness.
-#      omega_c is the direct analogue of K_o -- start matched, then raise.
-#   2. NO ATTRIBUTION. A momentum residual measures only the SUM of the
-#      internal disturbance and the contact wrench, so the GMO hands u_3 a
-#      task force carrying the internal disturbance as a PHANTOM CONTACT
-#      FORCE: the controller renders compliance against a force nothing
-#      applied. The L1 path separates them on the four directions no wrench
-#      can reach. In free flight the true contact wrench is exactly zero, so
-#      the reported F_hat_y is an honest, direct measurement of the idea.
-#
-# Working note: "Decompose the lumped disturbances into end-effector and
-# orthogonal components" (2026-08-27). Implementation: the fork's
-# wb_l1_observer.{hpp,cpp}; Python reference and every measured number quoted
-# in the yaml: extensions/.../robotic_arm/utils_controller/l1_observer.py
-# (run it for its self-test). Parity-locked to 1e-8 by WbL1ParityTest.
+# THE CONTROLLER SIDE differs in two checks:
+#   * it waits for autopilot_modular_adaptive_direct_actuation_node and refuses
+#     to start against a whole-body node (all three share the
+#     whole_body_direct_actuation namespace, so a process-name gate is the
+#     only thing that tells them apart);
+#   * it reads mod_arm_lambda1 OFF THE RUNNING NODE -- a key only the modular
+#     node declares -- so a flight is never mislabelled.
 #
 # PAIR WITH (started FIRST -- it owns MicroXRCEAgent):
-#   fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh
+#   fsc_autopilot_ros2/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh
 #
-# Operating procedure is UNCHANGED from the GMO rig (same node name, same
-# namespace, same service, same gates):
+# Operating procedure is the whole-body rig's (same namespace, same service,
+# same gates, same planner):
 #   1. SAFETY takeoff to z = 1.2 m from the drone ground station, settle.
-#   2. Confirm the autopilot pane shows the magenta "DISTURBANCE OBSERVER:
-#      L1 ADAPTIVE" banner AND "ATTRIBUTION: FOUR-DIMENSIONAL" -- without the
-#      first you are flying the GMO, without the second the 6-D rig.
+#   2. Confirm the autopilot pane shows the magenta "DIRECT LAW: MODULAR
+#      ADAPTIVE" banner and the cyan LAW CHECK line (the seven places the paper
+#      leaves a choice open, and what this run does at each).
 #   3. Enter DIRECT from the Controller tab, or:
 #        ros2 service call /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode \
 #          std_srvs/srv/SetBool "{data: true}"
 #      Entry is GATED on a settled hover; the refusal names every red gate.
-#   4. wb_control_debug: [57] = 1 (L1 live), [88] = 0 (nothing on a bound),
-#      [58..61] F_hat_y = 0 in free flight BY CONSTRUCTION, [97..100] the RAW
-#      F_hat the collision test reads (the honest phantom number on this
-#      rig), [101..104] the joint-row trim w_hat_q, [105] chi (1 = free).
-#   5. Abort with data: false. The watchdog reverts at 40 deg / 360 dps.
+#   4. Fly the EE trajectory from the arm GS's End-Effector Trajectory tab (or
+#      application/robotic_arm/utils/am_compare_cycle.sh modular <tag> -- ...).
+#      Internals: <ns>/fsc_autopilot_ros2/whole_body_direct_actuation/modular_control_debug
+#      (layout in the client header); once a second the autopilot pane prints
+#      rho, |r|, K_hat_0 and zeta of the three modules.
 #
-# NEVER step a reference at the instant the arm's torque source switches --
-# the sequencing rule; see Command.md 7.14.
+# Usage:
+#   ./start_t650_aerial_manipulator_modular_adaptive_direct_actuation_sitl.sh <config_name>
 #
-# The PX4 profile is SHARED with 04/05 and the GMO rig on purpose: same plant,
-# same saved tune (the per-vehicle-profile rule separates different VEHICLES,
-# and this is the same vehicle).
+# Optional:
+#   WB_SIM_PROFILE=robustness   the stress plant (default mirror)
+#   WB_SIM_YAML=<path>          a different modular yaml (plant knobs read from it)
+#   T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY=8
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
@@ -146,19 +110,18 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
-# AM_ISAAC_SCENE_SCRIPT / AM_ISAAC_SCENE_LABEL (2026-10-01) swap in another
-# Isaac app built on 06's plant -- the pick-and-place scene's wrapper,
-# start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh, sets
-# them. Unset (every other run) = 06, the free-flight plant, exactly as before.
-export INDOOR_SIM_PEGASUS_SCRIPT="${AM_ISAAC_SCENE_SCRIPT:-$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py}"
-export INDOOR_SIM_VEHICLE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-WB-L1-4D}"
-if [[ -n "${AM_ISAAC_SCENE_SCRIPT:-}" ]]; then
-  echo -e "\033[1;35mISAAC SCENE: $(basename "$INDOOR_SIM_PEGASUS_SCRIPT") ($INDOOR_SIM_VEHICLE_LABEL), not the free-flight 06.\033[0m"
-fi
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
+export INDOOR_SIM_VEHICLE_LABEL="AM-T650-MODULAR"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # Fail before physics starts if this plant ever drifts from the mass used by
 # the paired whole-body controller YAML.
 export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
+case "${WB_SIM_PROFILE:-mirror}" in
+  mirror)     _MOD_SUFFIX="_sim.yaml" ;;
+  robustness) _MOD_SUFFIX="_sim_robustness.yaml" ;;
+  *) echo "ERROR: WB_SIM_PROFILE must be 'mirror' or 'robustness' (got '${WB_SIM_PROFILE}')" >&2; exit 2 ;;
+esac
+export WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_modular_adaptive_direct_actuation_t650${_MOD_SUFFIX}}"
 
 # -- THE PLANT KNOBS (arm servo model, model-uncertainty injections, gearbox
 # friction, arm gravity mismatch and the 2026-09-26 sim-to-real mirror terms)
@@ -217,7 +180,7 @@ fi
 if ! pgrep -x MicroXRCEAgent >/dev/null 2>&1; then
   echo "ERROR: MicroXRCEAgent is not running." >&2
   echo "Start the agent from the external controller stack before this launcher:" >&2
-  echo "  fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh" >&2
+  echo "  fsc_autopilot_ros2/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh" >&2
   exit 1
 fi
 
@@ -227,69 +190,49 @@ fi
 # The two whole-body executables differ ONLY in this name -- neither is a
 # substring of the other -- so this is what keeps the L1 rig and the GMO rig
 # from being flown against each other by accident.
+for other in autopilot_whole_body_l1_direct_actuation_node autopilot_whole_body_direct_actuation_node; do
+  if pgrep -f "$other" >/dev/null 2>&1; then
+    echo "ERROR: '$other' is running -- that is a WHOLE-BODY rig on the same namespace." >&2
+    echo "       Stop its stack and start the modular one:" >&2
+    echo "  fsc_autopilot_ros2/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh $CFG_NAME" >&2
+    exit 1
+  fi
+done
 controller_ready=0
 for _ in $(seq 30); do
-  if pgrep -f "autopilot_whole_body_l1_direct_actuation_node" >/dev/null 2>&1; then
+  if pgrep -f "autopilot_modular_adaptive_direct_actuation_node" >/dev/null 2>&1; then
     controller_ready=1
     break
   fi
   sleep 1
 done
 if [[ $controller_ready -ne 1 ]]; then
-  echo "ERROR: the whole-body L1 aerial-manipulator controller is not running." >&2
-  if pgrep -f "autopilot_whole_body_direct_actuation_node" >/dev/null 2>&1; then
-    echo "       The GMO whole-body node IS running -- that is the OTHER rig." >&2
-    echo "       Use start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh" >&2
-    echo "       for it, or stop it and start the L1 4-D stack instead." >&2
-  fi
+  echo "ERROR: the modular adaptive aerial-manipulator controller is not running." >&2
   echo "Start its external stack first:" >&2
-  echo "  fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh $CFG_NAME" >&2
+  echo "  fsc_autopilot_ros2/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh $CFG_NAME" >&2
   exit 1
 fi
-
-# THE 6-D AND 4-D RIGS SHARE ONE EXECUTABLE, so the process name above cannot
-# tell them apart. Ask the running node which attribution it loaded: the
-# parameter is read at node startup from the yaml the stack script chose, so
-# this is exactly "which yaml is flying". A wrong answer is a hard refusal --
-# every number this launcher's yaml describes (plant knobs, injections) would
-# otherwise be attributed to the wrong design. ros2 needs the autopilot
-# workspace sourced, which the launcher itself does not carry; do it in a
-# subshell so nothing leaks into the panes below.
-ATTRIB_UAV_NS="${INDOOR_SIM_UAV_NS:-uav_0}"
-FOUR_D_ANSWER="$(
+# POSITIVE confirmation off the running node: mod_arm_lambda1 exists only on the
+# modular node, so a readable value proves which law is flying.
+MOD_UAV_NS="${INDOOR_SIM_UAV_NS:-uav_0}"
+MOD_ANSWER="$(
   set +u
-  # shellcheck source=/dev/null
   source "/opt/ros/${ROS_DISTRO:-humble}/setup.bash" >/dev/null 2>&1
-  # shellcheck source=/dev/null
   source "$FSC_AUTOPILOT_WS/install/setup.bash" >/dev/null 2>&1
   for _ in $(seq 20); do
-    ans="$(timeout 8 ros2 param get "/$ATTRIB_UAV_NS/fsc_autopilot_ros2" wb_l1_four_d 2>/dev/null | tr -d '\r')"
-    case "$ans" in *True*|*true*) echo true; exit 0 ;; *False*|*false*) echo false; exit 0 ;; esac
+    ans="$(timeout 8 ros2 param get "/$MOD_UAV_NS/fsc_autopilot_ros2" mod_arm_lambda1 2>/dev/null | tr -d '\r')"
+    case "$ans" in *"Double value is"*) echo "$ans" | sed 's/.*is: //'; exit 0 ;; esac
     sleep 1
   done
   echo unknown
 )"
-case "$FOUR_D_ANSWER" in
-  true)
-    echo -e "\033[1;35mRunning node confirms wb_l1_four_d = true: the FOUR-DIMENSIONAL attribution is flying.\033[0m" ;;
-  false)
-    echo "ERROR: the running whole-body L1 node reports wb_l1_four_d = false -- that is the" >&2
-    echo "       SIX-dimensional rig (start_whole_body_l1_direct_actuation_..._stack.sh)." >&2
-    echo "       This launcher's yaml and label describe the 4-D design; refusing to mislabel" >&2
-    echo "       a flight. Stop that stack and start:" >&2
-    echo "  fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh $CFG_NAME" >&2
-    exit 1 ;;
-  *)
-    echo "ERROR: could not read wb_l1_four_d from /$ATTRIB_UAV_NS/fsc_autopilot_ros2 (is the" >&2
-    echo "       autopilot workspace at \$FSC_AUTOPILOT_WS=$FSC_AUTOPILOT_WS built, and the node" >&2
-    echo "       running under that namespace?). Refusing to guess which design is flying." >&2
-    exit 1 ;;
-esac
-
-# A wall-clock DDS controller can pause PX4 actuator output during OFFBOARD
-# transitions. Disabling Pegasus lockstep prevents both sides waiting forever.
-# The tmux-server push mirrors the 04 launcher — see its comment for why the
-# export alone is discarded whenever a tmux server already exists.
+if [[ "$MOD_ANSWER" == unknown ]]; then
+  echo "ERROR: could not read mod_arm_lambda1 from /$MOD_UAV_NS/fsc_autopilot_ros2 (is the" >&2
+  echo "       autopilot workspace at \$FSC_AUTOPILOT_WS=$FSC_AUTOPILOT_WS built, and the node" >&2
+  echo "       running under that namespace?). Refusing to guess which law is flying." >&2
+  exit 1
+fi
+echo -e "\033[1;35mRunning node confirms the MODULAR ADAPTIVE law (mod_arm_lambda1 = $MOD_ANSWER).\033[0m"
 export PEGASUS_PX4_LOCKSTEP=0
 if tmux setenv -g PEGASUS_PX4_LOCKSTEP 0 2>/dev/null; then
   echo "Pegasus PX4 lockstep: pushed to the tmux server environment"
@@ -303,15 +246,14 @@ case "$PEGASUS_ARM_SERVO_MODEL" in
      echo "  counts/N.m: calibrated 2026-09-11 [162.4, 154.0, 150.5, 153.4] (was [160.0, 173.8, 146.7, 160.0])" ;;
 esac
 
-echo "Starting AM-T650 WHOLE-BODY + L1 ADAPTIVE (4-D attribution) direct-actuator SITL with the ROS2 TORQUE-mode arm stack."
-echo -e "\033[1;35mDisturbance observer: L1 ADAPTIVE with the FOUR-DIMENSIONAL attribution on the joint rows. Same law, same gains, same plant as the 6-D rig.\033[0m"
-echo "Plant: AM_xfwd on T650 motors; controller: whole-body impedance + L1 augmentation"
-if [[ "$WB_SIM_PROFILE" == robustness ]]; then
-  echo -e "\033[1;33mNOTICE: robustness profile -- the paired controller carries a simulation-only +17.6% kf mismatch and the config-A plant injections.\033[0m"
+echo "Starting AM-T650 MODULAR ADAPTIVE direct-actuator SITL with the ROS2 TORQUE-mode arm stack."
+echo -e "\033[1;35mDIRECT law: Yadav et al. (IEEE/ASME TMECH 2025) -- three model-free adaptive sliding-mode modules (base position, attitude, arm joints).\033[0m"
+echo "Plant: AM_xfwd on T650 motors -- the 4-D whole-body rig's plant, section 1 of $(basename "$WB_SIM_YAML")"
+if [[ "${WB_SIM_PROFILE:-mirror}" == robustness ]]; then
+  echo -e "\033[1;33mNOTICE: robustness profile -- the controller carries a simulation-only +17.6% kf mismatch and the config-A plant injections.\033[0m"
 else
-  echo -e "\033[1;36mNOTICE: mirror profile -- the controller flies the HARDWARE config; the plant is the one identified from the 0918/0921/0924 flights.\033[0m"
+  echo -e "\033[1;36mNOTICE: mirror profile -- the plant is the one identified from the 0918/0921/0924 flights.\033[0m"
 fi
-echo "  (controller.py's law, C++ port) from the paired fsc_autopilot_ros2 stack;"
 echo "  arm torques via fsc_open_manipulator ExternalTorqueController"
 echo "  (torque bring-up) through open_manipulator_x_isaac_bridge's effort system;"
 echo "  arm ground station: joint_plot_inverted (WB-TORQUE; controller:=external_torque_controller)"

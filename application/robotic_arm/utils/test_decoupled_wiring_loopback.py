@@ -57,6 +57,10 @@ class Rig(Node):
         self.js = self.create_publisher(JointState, "fsc_open_manipulator/joint_states", 10)
         self.select = self.create_publisher(String, "whole_body_planner/ee_trajectory/select", 10)
         self.status = ""; self.ee_status = ""; self.refs = []; self.armrefs = []; self.start_rest = None
+        # the bridge's diagnostic vector: [23] = same-motion residual |r_ed - (x_b + R0 r_0e)| [m]
+        self.ee_res = []
+        self.create_subscription(Float64MultiArray, "decoupled_bridge/base_reference_vector",
+                                 lambda m: self.ee_res.append(m.data[23]) if len(m.data) > 23 else None, 10)
         self.create_subscription(String, "whole_body_planner/status", lambda m: setattr(self, "status", m.data), LATCHED)
         self.create_subscription(String, "whole_body_planner/ee_trajectory/status", lambda m: setattr(self, "ee_status", m.data), LATCHED)
         self.gs_pub = self.create_publisher(PositionControllerReference, "fsc_autopilot_ros2/position_controller/reference", 10)
@@ -164,6 +168,12 @@ def main():
             v = np.array([x[6:9] for x in rig.refs])
             check("velocity feedforward non-trivial during the move", np.linalg.norm(v, axis=1).max() > 0.02,
                   f"peak |v_b| {np.linalg.norm(v, axis=1).max():.3f} m/s")
+        # SAME MOTION (2026-09-26): the converted base pose must put the planner's own EE
+        # reference where the planner says it is, through hold, go-to-start and rest.
+        res = np.array(rig.ee_res)
+        check("bridge reproduces the planner's EE reference (same-motion residual < 1 mm)",
+              res.size > 100 and float(res.max()) < 1e-3,
+              f"(n={res.size}, max {res.max()*1e3:.4f} mm)" if res.size else "(no vector samples)")
         rig.refs.clear(); rig.mode.publish(String(data="SAFETY")); time.sleep(2.0)
         n0 = len(rig.refs); time.sleep(2.0)
         check("bridge converts nothing after SAFETY revert", len(rig.refs) == n0, f"({len(rig.refs)-n0} refs in 2 s)")

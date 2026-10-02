@@ -6,8 +6,12 @@
 #
 #   wb         the whole-body + L1 4-D rig (start_whole_body_l1_4d_..._stack.sh +
 #              start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh)
+#   modular    the modular adaptive rig of Yadav et al. (TMECH 2025, 2026-09-30):
+#              start_modular_adaptive_direct_actuation_..._stack.sh +
+#              start_t650_aerial_manipulator_modular_adaptive_direct_actuation_sitl.sh --
+#              the 4-D whole-body rig's plant, planner and arm stack, DIRECT law swapped.
 #   decoupled  the geometric+L1 rig of Cai et al. (start_geometric_l1_..._stack.sh +
-#              start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh), which since
+#              start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh), which since
 #              2026-09-18 flies the SAME Isaac plant (06, arm in position-command mode),
 #              the SAME planner (fsc_trajectory_planner, one yaml section) and the
 #              SAME EE task, converted for it by decoupled_reference_bridge.py.
@@ -17,13 +21,13 @@
 # run -> SAFETY -> land. Everything after `--` goes to the driver (shape, radius,
 # lap time, laps, time scale, yaw ...). Output: $AM_CMP_OUT/<which>_<tag>.npz.
 set -uo pipefail
-WHICH="${1:?usage: am_compare_cycle.sh <wb|decoupled> <run-tag> [machine-config] -- <driver args>}"
+WHICH="${1:?usage: am_compare_cycle.sh <wb|decoupled|modular> <run-tag> [machine-config] -- <driver args>}"
 TAG="${2:?usage}"
 shift 2
 CFG="shiqi_machine"
 if [[ "${1:-}" != "--" && $# -gt 0 ]]; then CFG="$1"; shift; fi
 [[ "${1:-}" == "--" ]] && shift
-case "$WHICH" in wb|decoupled) ;; *) echo "first arg must be wb or decoupled"; exit 2;; esac
+case "$WHICH" in wb|decoupled|modular) ;; *) echo "first arg must be wb, decoupled or modular"; exit 2;; esac
 
 PEG="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 # shellcheck source=/dev/null
@@ -33,9 +37,13 @@ if [[ "$WHICH" == wb ]]; then
   STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
   SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh"
   NODE="autopilot_whole_body_l1_direct_actuation_node"
+elif [[ "$WHICH" == modular ]]; then
+  STACK="$AUT/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_modular_adaptive_direct_actuation_sitl.sh"
+  NODE="autopilot_modular_adaptive_direct_actuation_node"
 else
   STACK="$AUT/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh"
-  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh"
   NODE="autopilot_geometric_l1_direct_actuation_node"
 fi
 OUT="${AM_CMP_OUT:-$PEG/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918}"
@@ -57,6 +65,12 @@ echo "=== [$WHICH/$TAG] 0. clean slate ==="
 "$PEG/scripts/kill_stale_sim_processes.sh" -y  >/dev/null 2>&1
 pkill -f "[w]hole_body_trajectory_planner" 2>/dev/null; pkill -f "[d]ecoupled_reference_bridge" 2>/dev/null
 sleep 5
+# The clean slate wedges the ros2 DAEMON on shiqi-desktop (2026-09-26, 2 of 2 cycles): the
+# daemon-backed `ros2 topic echo --once` polls below then crash while a `--no-daemon` client
+# receives the topic fine, and the cycle sits at "waiting for odometry" until its budget runs
+# out. A stop/start here is cheap and makes the polls honest.
+ros2 daemon stop >/dev/null 2>&1 || true
+ros2 daemon start >/dev/null 2>&1 || true
 
 echo "=== [$WHICH/$TAG] 1. controller stack ==="
 setsid nohup "$STACK" "$CFG" uav_0 > "$LOGS/stack_$TAG.log" 2>&1 < /dev/null &

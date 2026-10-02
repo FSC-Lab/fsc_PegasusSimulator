@@ -78,6 +78,7 @@ AM_XFWD_BODY_DIAG_INERTIA = np.diag([0.06334175, 0.06301228, 0.09868092])
 # that the C++ t650Defaults mirrors — the thing this fixture exists to lock.
 from fsc_aerial_manipulation.robotic_arm.utils_planner.transition_planner import (  # noqa: E402
     make_params_t650,
+    BENCH_ARMATURE_T650,
 )
 
 
@@ -170,10 +171,18 @@ def mass_identity_residual(dyn):
 
 
 def main():
-    out_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_HERE, "wb_truth_t650.json")
+    # --armature-diag (2026-09-26): the same cases on the joint-DIAGONAL armature
+    # at the bench calibration (make_params_t650(armature_diag=BENCH_ARMATURE_T650))
+    # -> wb_truth_t650_jointdiag.json, locking the C++ useJointDiagonalArmature()
+    # and computeDynamics' armature_diag terms. Without the flag: unchanged.
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    joint_diag = "--armature-diag" in sys.argv[1:]
+    default_name = "wb_truth_t650_jointdiag.json" if joint_diag else "wb_truth_t650.json"
+    out_path = args[0] if args else os.path.join(_HERE, default_name)
     rng = np.random.default_rng(SEED)
 
-    params = make_params_t650()
+    params = (make_params_t650(armature_diag=BENCH_ARMATURE_T650) if joint_diag
+              else make_params_t650())
     n = params["n"]
     cfg = CP.load("px4_direct_free")
 
@@ -201,6 +210,8 @@ def main():
             "com_i": _jsonify(params["com_i"]),
             "h_i_im1": _jsonify(params["h_i_im1"]),
             "I_i_i": _jsonify(params["I_i_i"]),
+            # absent = the link armature (the original fixture's schema)
+            **({"armature_diag": _jsonify(params["armature_diag"])} if joint_diag else {}),
             "g": params["g"],
         },
         "gains": {

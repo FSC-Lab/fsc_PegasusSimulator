@@ -1,62 +1,46 @@
 #!/usr/bin/env python
 """
-04_px4_direct_t650_aerial_manipulator_hold.py
+05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py
 
 Author: Shiqi Gao (shiqi.gao907@gmail.com)
 
-AERIAL MANIPULATOR plant for the fsc_autopilot_ros2 T650 DIRECT-actuation
-stack: the X-FORWARD aerial-manipulator asset (AM_xfwd.usda — AM_realign
-re-authored by utils_model/make_x_forward_asset.py so the arm side is BODY +X
-and the rotor channels present the PX4 Quad-X convention) flown as a
-PX4-PRIMARY quadrotor with the **T650 motor and drone parameters** (MN4010 +
-15x5" bench calibration, 2.95 kg body, rotor lag lambda = 10.0265 1/s), while
-this process does exactly ONE thing in-process — hold the arm at its home pose
-with joint torque commands.
+AM-T650 DIRECT-actuation plant with the arm commanded OVER ROS 2 by the
+fsc_open_manipulator position-mode stack, instead of 04's in-process hold.
+The drone side is byte-for-byte 04's rig (AM_xfwd.usda, T650 motor model,
+PX4-primary, /uav_0/state/* to the external fsc_autopilot_ros2 DIRECT stack).
+What changed is ONLY who owns the arm reference:
 
-    fsc_autopilot_ros2 node (T650 DIRECT law, params_..._t650_aerial_manipulator.yaml)
-        → fmu/in/actuator_motors → PX4 gate → HIL_ACTUATOR_CONTROLS
-        → PX4MavlinkBackend (PRIMARY, T650 map: omega = u*665.99 + 64.06)
-        → LaggedQuadraticThrustCurve (T650 k, c, lambda)  → AM_realign rotors
+    fsc_open_manipulator PositionController        (the REAL plugin — the same
+        (arm_position_controller, aerial config,    .so the Gazebo and hardware
+         home [0, 40, 40, 0] deg, min-jerk moves)   bring-ups load)
+        ↕ position command/state interfaces
+    open_manipulator_x_isaac_bridge/IsaacTopicSystem   (ros2_control hardware)
+        → /uav_0/isaacsim_manipulator/position_commands  (sensor_msgs/JointState)
+        ← /uav_0/isaacsim_manipulator/joint_states
     THIS process (physics callback, 250 Hz):
-        arm PD + gravity comp at Q_HOME = [0, 40, 40, 0] deg  → set_joint_efforts
-    Pegasus ROS2 backend → /uav_0/state/{pose,twist,twist_inertial}
-        → isaacsim_optitrack_ros2_emulator → estimator → controller feedback
+        Dynamixel-servo EMULATION: PD + gravity comp TRACKING the streamed
+        position reference (04's flight-validated hold law and gains — the
+        reference source changed from a fixed Q_HOME to the ROS 2 command)
+        → set_joint_efforts
 
-There is NO whole-body law here, NO mixer, NO rotor publishing and NO flight
-machine: PX4 (gated by the external fsc_autopilot node) owns the rotors from
-the first step, exactly as in the bare-T650 DIRECT rig
-(05_px4_single_drone_t650.py + start_t650_direct_actuator_sitl.sh). This is
-the safe-fallback integration step for the whole-body controller: the proven
-quadrotor-only DIRECT law flies the coupled airframe+arm plant while the arm
-is parked, so the back-to-safety path exists before the whole-body law ever
-enters fsc_autopilot_ros2.
+Position mode on the real inverted arm runs each servo's internal position
+loop while the software streams min-jerk references; here the PD + gravity
+comp + clamp stands in for that internal loop (the gravity comp plays the
+servo integrator's role of absorbing the load torque — same emulation pattern
+as the AK40-10 winch emulator). Until the first command arrives — and if the
+ROS 2 stack ever dies — the reference LATCHES (initially at the spawn pose,
+which IS home), so this process alone behaves exactly like 04.
 
-WHY T650 PARAMETERS ON THE AM ASSET: T650 is the airframe the real aerial
-manipulator will be built on, so the plant carries its motor calibration and
-body mass now. The asset authors the X650 CAD body (2.4760795 kg); at
-spawn /body is re-authored to t650_params.BODY_MASS (2.95 kg) and the T650
-inertia on the LIVE stage (the 255 MB .usda is never touched), giving
+The PositionController homes on activation and holds; with the plant spawned
+at home that activation move is a no-op, giving this integration step's goal:
+the home pose commanded and held over ROS 2 for the whole flight.
 
-    total = 2.95 (body) + 0.159548 (4 authored AM rotors) + 0.636624 (arm)
-          = 3.746172 kg      → hover command ≈ 0.569, static T/W 2.71
-
-The paired controller config (fsc_autopilot_ros2
-config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml) carries this exact
-mass and the tangent-line thrust map re-derived about this hover point — if
-the TOTAL printed by the mass override below ever disagrees with that yaml's
-vehicle_mass, fix the yaml.
-
-ARM HOLD: software joint-space PD + gravity comp through the true effort path
-(same gains and structure as the flight-validated holds in 02/03:
-KP 3.0, KD 0.25, slew 0.5 rad/s, clamp 3.0 N·m). The arm SPAWNS at home and
-the hold runs unconditionally every physics step — on the ground, in SAFETY
-hover, and in DIRECT. Gravity comp uses the shared control model
-(utils_controller.controller: make_params + dynamics), NOT the whole-body law.
-
-Run with:  scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuator_sitl.sh <config>
-(pairs with fsc_autopilot_ros2 scripts/isaacsim/
-start_direct_actuation_t650_aerial_manipulator_stack.sh, which must be started FIRST — it
-owns MicroXRCEAgent, and the SITL launcher refuses to run without it).
+Run with:
+  scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuation_sitl.sh <config>
+(starts this plant, the arm ros2_control stack and the arm ground station;
+pairs with fsc_autopilot_ros2's
+start_direct_actuation_t650_aerial_manipulator_stack.sh, started FIRST — it
+owns MicroXRCEAgent).
 """
 
 import os
@@ -65,7 +49,7 @@ import math
 import carb
 from isaacsim import SimulationApp
 
-# Indoor-launcher env conventions (same as 03/05_px4_single_drone_*):
+# Indoor-launcher env conventions (same as 03/04):
 #   PEGASUS_HEADLESS=1       run without a window
 #   PEGASUS_STEPS=N          stop after N physics steps (smoke tests)
 #   PEGASUS_PX4_LOCKSTEP=0   disable lockstep — REQUIRED for the DIRECT
@@ -75,6 +59,7 @@ from isaacsim import SimulationApp
 HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
+EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
 simulation_app = SimulationApp({"headless": HEADLESS})
 
 # ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
@@ -99,9 +84,6 @@ from fsc_aerial_manipulation.rotorcraft.x650_rotorcraft_utils import (
     print_mass_inertia_properties,
     print_rotor_positions,
 )
-# T650 motor + mass model — SINGLE SOURCE OF TRUTH, shared with the bare-T650
-# scenarios (05_px4_single_drone_t650.py). MN4010 bench fit incl. the flight-C
-# fit factors, and the 2.95 kg body / X650-CAD-derived inertia.
 from fsc_aerial_manipulation.rotorcraft import t650_params
 from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
 from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_multirotor import (
@@ -109,77 +91,68 @@ from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_multirotor import (
 from fsc_aerial_manipulation.robotic_arm.utils_controller import controller as C
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  CONFIG                                                                  ║
+# ║  CONFIG (identical to 04 unless marked ARM-ROS2)                         ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-# Vehicle USD — the X-FORWARD aerial-manipulator asset, generated from
-# AM_realign.usda by utils_model/make_x_forward_asset.py (re-run that script if
-# this file is missing; AM_realign itself is untouched and still serves every
-# whole-body demo). In AM_xfwd the mechanical front (arm side) is BODY +X,
-# matching the T650/X650 bare frames and PX4's x-forward assumption — this is
-# what lets PX4's own SAFETY-mode mixer and the standard Quad-X allocation fly
-# this vehicle at all. AM_realign's +y front / mirrored channel indexing
-# negated the ROLL row of the standard allocation and flipped the vehicle on
-# lift-off (diagnosed 2026-08-10, first flight of this rig).
 import fsc_aerial_manipulation.rotorcraft as _fsc_rotorcraft
 ASSETS_DIR = os.path.join(os.path.dirname(_fsc_rotorcraft.__file__), "assets")
 USD_FILE   = os.path.join(ASSETS_DIR, "AM_xfwd.usda")
 USD_PRIM_PATH     = "/gripper_bat"
 BODY_PATH         = "/body"
-# CHANNEL REMAP, load-bearing: in AM_xfwd the prim layout is rotor0 front-right
-# (CCW), rotor1 rear-left (CCW), rotor2 REAR-RIGHT (CW), rotor3 FRONT-LEFT (CW).
-# PX4 Quad-X channel order is FR, RL, FL, RR — so channels 2 and 3 map to prims
-# rotor3 and rotor2 respectively. With this ordering the plant presents the
-# EXACT x650_new.usd convention to PX4 and to the controller yaml's allocation.
+# CHANNEL REMAP, load-bearing — see 04's header comment.
 ROTOR_PATHS       = ["/rotor0", "/rotor1", "/rotor3", "/rotor2"]
 ROTOR_JOINT_NAMES = ["joint0", "joint1", "joint3", "joint2"]
 ARM_JOINT_NAMES   = ["manip_joint1", "manip_joint2", "manip_joint3", "manip_joint4"]
 GRIPPER_JOINT     = "gripper_joint"
-GRIPPER_REST_DEG  = 0.0     # authored rest target (jaws open)
+GRIPPER_REST_DEG  = 0.0
 
-SPAWN_POS   = (0.0, 0.0, 0.5)   # pre-seat placement only; the ground seat overrides z
+SPAWN_POS   = (0.0, 0.0, 0.5)
 SPAWN_EULER = (0.0, 0.0, 0.0)
 VEHICLE_ID  = 0
-GROUND_BODY_Z = 0.305   # [m] measured resting body height on the legs (02/03)
+GROUND_BODY_Z = 0.305
 
-# ── Arm home pose (user-specified for this integration step) ─────────────────
-# q_home = [0, 40, 40, 0] deg. beta = q2+q3 = 80 deg — the folded, ground-safe,
-# best-conditioned fold direction (at q = 0 the gripper reaches 0.282 m below
-# the base, BELOW the legs at the 0.305 m resting height; folded, the elbow
-# keeps ~0.14 m of clearance). Hardcoded — this rig has no planner dependency.
+# Spawn pose = the aerial home every fsc_open_manipulator aerial config uses
+# ([0, 40, 40, 0] deg). The PositionController's activation homing is then a
+# no-op, and until ROS 2 commands flow this process holds exactly like 04.
 Q_HOME = np.radians([0.0, 40.0, 40.0, 0.0])
 
-# ── T650 body mass + inertia override (RUNTIME ONLY — the .usda is untouched) ─
-# AM_realign.usda authors /body at 2.4760795 kg (raw CAD frame, no batteries).
-# Re-authored on the live stage to the T650 flight values. The rotors
-# (4 x 0.039887, authored in AM_realign — NOT the 0.083921 kg of x650_new.usd)
-# and the arm/gripper (0.636624 kg) add on top.
-T650_BODY_MASS    = float(t650_params.BODY_MASS)          # 2.95 kg
+# ── ARM-ROS2: the SIMULATED SERVO BUS (must match the IsaacTopicSystem params
+# in open_manipulator_x_isaac_bridge/urdf/open_manipulator_x_isaac_aerial.urdf).
+# These two topics stand in for the Dynamixel/U2D2 serial link and exist ONLY
+# in simulation — hence the `isaacsim_manipulator` prefix, which marks
+# everything the SIMULATOR owns. On real hardware the bus is the wire and
+# nothing under it is published. Everything the REAL ARM STACK owns lives under
+# `/uav_0/fsc_open_manipulator/...` (joint_states from joint_state_broadcaster,
+# the controller's own topics) and is identical in sim and on hardware; that is
+# the whole point of the split, so do NOT let an application subscribe here.
+# States/commands are matched BY NAME using the controller-side joint names,
+# so neither side depends on the other's ordering.
+# NOTE: `effort` below is the applied joint torque in N*m. The hardware
+# backend reports raw Dynamixel counts on the same field — see
+# docs/docs_aerial_manipulator/Arm Topic Naming.md.
+ARM_ROS_JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
+ARM_STATE_TOPIC     = "/uav_0/isaacsim_manipulator/joint_states"
+ARM_CMD_TOPIC       = "/uav_0/isaacsim_manipulator/position_commands"
+
+T650_BODY_MASS    = float(t650_params.BODY_MASS)
 # Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
 # store as diagonalInertia + principalAxes (see utils.author_inertia_tensor).
 T650_BODY_INERTIA = np.asarray(t650_params.INERTIA_TENSOR, float)
 
-# ── Arm hold (same numbers as the flight-validated 02/03 holds) ──────────────
-ARM_HOLD_KP   = 3.0    # [N·m/rad]   wn = sqrt(3/0.02) ≈ 12 rad/s per joint
-ARM_HOLD_KD   = 0.25   # [N·m·s/rad] zeta ≈ 0.5
-ARM_HOLD_RATE = 0.5    # [rad/s] hold-target slew — a no-op when spawned at home,
-                       # kept as protection for any spawn-pose variant
-TAU_MAX       = 3.0    # [N·m] torque clamp (config/px4_direct_free.yaml's value)
-ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7   # ≈ 0.02 kg·m² reflected rotor inertia
+# ── Servo-emulation law: 04's flight-validated hold, reference now streamed ──
+ARM_HOLD_KP   = 3.0    # [N·m/rad]
+ARM_HOLD_KD   = 0.25   # [N·m·s/rad]
+ARM_HOLD_RATE = 0.5    # [rad/s] reference slew — transparent to the position
+                       # controller's <= 0.2 rad/s min-jerk moves; caps the step
+                       # if something publishes a raw far-away target directly
+TAU_MAX       = 3.0    # [N·m]
+ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7
 
-# FRAME ADAPTER for the gravity comp. The shared control model (make_params /
-# dynamics) describes the arm in AM_realign's OLD body frame (front on +y);
-# AM_xfwd's content is that geometry rotated by Rz(-90) with the body frame
-# kept. The same physical configuration therefore satisfies
-#     R0_model = R0_actual @ Rz(-90),   v_model = Rz(-90)^T v_actual
-# (exact for any attitude, since only the frame label changed). Joint angles
-# and joint torques are scalars and carry over unchanged. Only g[6:] is
-# consumed here, but the whole state is transformed for consistency.
 R_MODEL = np.array([[0.0, 1.0, 0.0],
                     [-1.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0]])   # Rz(-90): maps old +y (arm) onto +x
+                    [0.0, 0.0, 1.0]])   # frame adapter, see 04
 
-STATUS_PERIOD_S = 5.0   # one status line roughly this often (physics time)
+STATUS_PERIOD_S = 5.0
 
 
 def _rot_to_quat_wxyz(R):
@@ -205,8 +178,8 @@ def _rot_to_quat_wxyz(R):
     return q / np.linalg.norm(q)
 
 
-class AmT650HoldSim:
-    """AM_realign plant, T650 parameters, PX4-primary rotors, in-process arm hold."""
+class AmT650Ros2ArmSim:
+    """04's plant with the arm reference owned by the ROS 2 position stack."""
 
     def __init__(self):
         self.timeline = omni.timeline.get_timeline_interface()
@@ -222,16 +195,14 @@ class AmT650HoldSim:
         add_dome_lighting(stage=stage, dome_path="/World/DomeLight",
                           intensity=2500.0, exposure=0.0, color=(1.0, 1.0, 1.0))
 
-        # --- Spawn (PX4-PRIMARY: PX4MavlinkBackend is backend[0] = the sole
-        # motor authority; the ROS2 backend publishes state only) ------------
+        # --- Spawn (PX4-PRIMARY) --------------------------------------------
         self.drone_path = self._spawn_am_px4_primary()
 
         self._wait_for_prim(self.drone_path, max_frames=300)
-        # --- Model/physics fixes (same set as 02/03) ------------------------
         self._dedupe_physics_scenes()
         self._disable_self_collisions()
         self._disable_rotor_colliders()
-        self._apply_t650_body_override()   # mass + inertia, pre-reset (live stage)
+        self._apply_t650_body_override()
         self._setup_gripper_drive()
         self.world.reset()
         self.stage = omni.usd.get_context().get_stage()
@@ -248,13 +219,10 @@ class AmT650HoldSim:
         names = list(self._art.dof_names)
         self._arm_idx  = [names.index(nm) for nm in ARM_JOINT_NAMES]
         self._grip_idx = names.index(GRIPPER_JOINT) if GRIPPER_JOINT in names else None
-        print(f"[AM-T650] core Articulation API active; arm dof indices "
+        print(f"[AM-T650-ARM] core Articulation API active; arm dof indices "
               f"{self._arm_idx}, gripper dof {self._grip_idx}", flush=True)
 
-        # --- Control model (gravity comp only — no whole-body law here) -----
-        # Mirror the /body override into the model so its printed totals match
-        # the plant. The arm gravity torque g[6:] itself depends only on the
-        # arm link masses and the attitude, but a consistent model costs nothing.
+        # --- Control model (gravity comp only) ------------------------------
         self.params = C.make_params()
         if getattr(self, "_body_dm", 0.0):
             self.params["m_i"][0] += self._body_dm
@@ -262,19 +230,15 @@ class AmT650HoldSim:
                 # _body_dI is already a 3x3 tensor delta — do NOT np.diag() it (on a 2-D
                 # input that EXTRACTS the diagonal instead of building a matrix).
                 self.params["I_i_i"][0] = self.params["I_i_i"][0] + self._body_dI
-            print(f"[AM-T650] control model mirrored: m0="
+            print(f"[AM-T650-ARM] control model mirrored: m0="
                   f"{self.params['m_i'][0]:.6f} kg, m_total="
                   f"{sum(self.params['m_i']):.6f} kg (hover thrust "
                   f"{sum(self.params['m_i']) * self.params['g']:.2f} N)", flush=True)
 
-        # --- Arm spawn at HOME + rigid re-seat + ground seat -----------------
-        # (02/03's sequence, verbatim rationale: the joint write must happen
-        # post-reset pre-stepping; PhysX roots this asset's tree at an ARM
-        # link, so the teleport swings the BODY and must be undone by a rigid
-        # re-seat; then the whole vehicle is seated on its legs.)
+        # --- Arm spawn at HOME + rigid re-seat + ground seat (04's sequence) -
         beta_spawn = float(Q_HOME[1] + Q_HOME[2])
         if beta_spawn < math.radians(40.0):
-            print(f"[AM-T650] WARNING: spawn fold beta = "
+            print(f"[AM-T650-ARM] WARNING: spawn fold beta = "
                   f"{math.degrees(beta_spawn):.1f} deg is SHALLOW — a "
                   f"ground-seated vehicle with an unfolded arm rests on its "
                   f"gripper and tips over.", flush=True)
@@ -293,7 +257,7 @@ class AmT650HoldSim:
         self._art.set_world_pose(
             position=R_corr @ np.asarray(pr, float) + p_corr,
             orientation=_rot_to_quat_wxyz(R_corr @ C.quat_to_rot(*np.asarray(qr, float))))
-        print(f"[AM-T650] arm spawned at HOME q = "
+        print(f"[AM-T650-ARM] arm spawned at HOME q = "
               f"{np.degrees(Q_HOME).round(1)} deg (body re-seated: teleport "
               f"moved it {np.linalg.norm(pb - pa):.3f} m)", flush=True)
 
@@ -302,7 +266,7 @@ class AmT650HoldSim:
         pr, qr = self._art.get_world_pose()
         self._art.set_world_pose(
             position=np.asarray(pr, float) + np.array([0.0, 0.0, dz]))
-        print(f"[AM-T650] ground-seated: body z {pose_g.p.z:.3f} -> "
+        print(f"[AM-T650-ARM] ground-seated: body z {pose_g.p.z:.3f} -> "
               f"{GROUND_BODY_Z:.3f} m (dz={dz:+.3f})", flush=True)
 
         # --- Arm actuation: TRUE effort control from the start ---------------
@@ -310,28 +274,82 @@ class AmT650HoldSim:
         actrl = self._art.get_articulation_controller()
         for i in self._arm_idx:
             actrl.switch_dof_control_mode(dof_index=i, mode="effort")
-        print("[AM-T650] arm dofs in effort mode; hold "
-              f"KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} clamp={TAU_MAX} N·m — the "
-              f"hold runs UNCONDITIONALLY (ground, SAFETY hover, DIRECT)",
+        print("[AM-T650-ARM] arm dofs in effort mode; servo emulation "
+              f"KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} clamp={TAU_MAX} N·m — runs "
+              f"UNCONDITIONALLY, reference latches when no command flows",
               flush=True)
 
-        self._hold_ref = None
+        # --- ARM-ROS2: bridge node (position commands in, joint states out) --
+        self._setup_arm_ros2_bridge()
+
+        self._hold_ref = None       # slewed reference actually tracked
+        self._q_cmd = Q_HOME.copy()   # latest ROS 2 command (latched)
+        self._cmd_stamp_t = None    # sim time the last command arrived
+        self._n_cmds = 0
+        self._tau_applied = np.zeros(len(self._arm_idx))
         self._t = 0.0
         self._status_t = -1e9
         self.stop_sim = False
-        carb.log_info("[AM-T650] ready")
+        carb.log_info("[AM-T650-ARM] ready")
 
-    # ── spawn ───────────────────────────────────────────────────────────────
+    # ── ARM-ROS2 bridge ─────────────────────────────────────────────────────
+
+    def _setup_arm_ros2_bridge(self):
+        """rclpy pub/sub for the arm — the Isaac side of IsaacTopicSystem.
+
+        The Pegasus ROS2Backend already initialised rclpy (its own node
+        publishes /uav_0/state/*); this node is separate and uniquely named,
+        per the one-node-per-instance rule.
+        """
+        import rclpy
+        from rclpy.node import Node as RclpyNode
+        from sensor_msgs.msg import JointState
+
+        try:
+            rclpy.init()
+        except Exception:
+            pass  # already initialised is not an error
+
+        self._JointState = JointState
+        self._rclpy = rclpy
+        self._arm_node = RclpyNode(f"isaac_arm_servo_bridge_{VEHICLE_ID}")
+        self._arm_state_pub = self._arm_node.create_publisher(
+            JointState, ARM_STATE_TOPIC, 10)
+        self._arm_cmd_sub = self._arm_node.create_subscription(
+            JointState, ARM_CMD_TOPIC, self._on_arm_command, 10)
+        print(f"[AM-T650-ARM] arm ROS2 bridge up: states -> {ARM_STATE_TOPIC}, "
+              f"commands <- {ARM_CMD_TOPIC} (names {ARM_ROS_JOINT_NAMES})",
+              flush=True)
+
+    def _on_arm_command(self, msg):
+        q = self._q_cmd.copy()
+        matched = 0
+        for j, nm in enumerate(ARM_ROS_JOINT_NAMES):
+            try:
+                k = list(msg.name).index(nm)
+            except ValueError:
+                continue
+            if k < len(msg.position) and math.isfinite(msg.position[k]):
+                q[j] = float(msg.position[k])
+                matched += 1
+        if matched:
+            self._q_cmd = q
+            self._cmd_stamp_t = self._t
+            self._n_cmds += 1
+
+    def _publish_arm_state(self, q, qdot, tau):
+        msg = self._JointState()
+        msg.header.stamp = self._arm_node.get_clock().now().to_msg()
+        msg.name = list(ARM_ROS_JOINT_NAMES)
+        msg.position = [float(v) for v in q]
+        msg.velocity = [float(v) for v in qdot]
+        msg.effort = [float(v) for v in tau]
+        self._arm_state_pub.publish(msg)
+
+    # ── spawn (04's, unchanged) ─────────────────────────────────────────────
 
     def _spawn_am_px4_primary(self):
-        """Spawn AM_realign with PX4 primary and the T650 motor calibration.
-
-        Inline parallel of t650_bare_frame_utils.spawn_t650_with_mavlink, but on
-        MultirotorMod (the AM asset's custom prim structure) — combined here so
-        neither shared helper is modified. The u→omega map and the lagged thrust
-        curve are EXACTLY the bare-T650 rig's; the paired controller yaml's
-        thrust map inverts this same calibration.
-        """
+        """Spawn AM_xfwd with PX4 primary and the T650 motor calibration."""
         quat_xyzw = Rotation.from_euler("XYZ", SPAWN_EULER, degrees=True).as_quat()
 
         input_scaling = float(t650_params.MAX_ROTOR_VEL - t650_params.ZERO_POSITION_ARMED)
@@ -340,11 +358,8 @@ class AmT650HoldSim:
             "connection_type": "tcpin",
             "connection_ip": "127.0.0.1",
             "connection_baseport": 4560,
-            # DIRECT runs wall-clock (external DDS controller): the launcher
-            # pushes PEGASUS_PX4_LOCKSTEP=0. Default 1 keeps stock behaviour if
-            # this script is ever run standalone against a lockstep PX4.
             "enable_lockstep": PX4_LOCKSTEP,
-            "px4_autolaunch": False,      # the launcher starts PX4 SITL itself
+            "px4_autolaunch": False,
             "px4_dir": self.pg.px4_path,
             "px4_vehicle_model": self.pg.px4_default_airframe,
             "input_offset": [0.0] * 4,
@@ -363,13 +378,11 @@ class AmT650HoldSim:
                 "pub_accel": True,
                 "pub_twist_inertial": True,
                 "pub_tf": True,
-                "sub_control": False,     # PX4 owns the motors in this rig
+                "sub_control": False,
             },
         )
 
         config = MultirotorConfig()
-        # backend[0].input_reference() is the sole motor-command source — PX4
-        # (via HIL_ACTUATOR_CONTROLS) must be backend[0].
         config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
         self._px4_backend = config.backends[0]
         config.thrust_curve = LaggedQuadraticThrustCurve(config={
@@ -396,7 +409,7 @@ class AmT650HoldSim:
             config=config,
             usd_prim_path=USD_PRIM_PATH,
         )
-        print(f"[AM-T650] spawned PX4-PRIMARY AM at {drone_prim_path}: MN4010 "
+        print(f"[AM-T650-ARM] spawned PX4-PRIMARY AM at {drone_prim_path}: MN4010 "
               f"k_f={t650_params.ROTOR_CONSTANT:.4e} "
               f"k_m={t650_params.ROLLING_MOMENT_COEFFICIENT:.4e} "
               f"lambda={t650_params.ROTOR_LAMBDA} "
@@ -406,7 +419,7 @@ class AmT650HoldSim:
               f"{'ON' if PX4_LOCKSTEP else 'OFF'}", flush=True)
         return drone_prim_path
 
-    # ── physics/model fixes (02/03's, unchanged) ────────────────────────────
+    # ── physics/model fixes (04's, unchanged) ───────────────────────────────
 
     def _raise_physx_gpu_capacity(self):
         stage = omni.usd.get_context().get_stage()
@@ -427,7 +440,7 @@ class AmT650HoldSim:
             if p and p.IsValid():
                 return p
             self.world.step(render=False)
-        carb.log_error(f"[AM-T650] prim never appeared: {prim_path}")
+        carb.log_error(f"[AM-T650-ARM] prim never appeared: {prim_path}")
         return None
 
     def _dedupe_physics_scenes(self):
@@ -445,7 +458,7 @@ class AmT650HoldSim:
             still = stage.GetPrimAtPath(path)
             if still and still.IsValid():
                 still.SetActive(False)
-        print(f"[AM-T650] kept one PhysicsScene: {keep.GetPath()}", flush=True)
+        print(f"[AM-T650-ARM] kept one PhysicsScene: {keep.GetPath()}", flush=True)
 
     def _disable_self_collisions(self):
         stage = omni.usd.get_context().get_stage()
@@ -453,7 +466,7 @@ class AmT650HoldSim:
         target = next((pr for pr in Usd.PrimRange(root)
                        if pr.HasAPI(UsdPhysics.ArticulationRootAPI)), root)
         PhysxSchema.PhysxArticulationAPI.Apply(target).CreateEnabledSelfCollisionsAttr().Set(False)
-        print(f"[AM-T650] self-collision disabled on {target.GetPath()}", flush=True)
+        print(f"[AM-T650-ARM] self-collision disabled on {target.GetPath()}", flush=True)
 
     def _disable_rotor_colliders(self):
         stage = omni.usd.get_context().get_stage()
@@ -466,21 +479,10 @@ class AmT650HoldSim:
                 if prim.HasAPI(UsdPhysics.CollisionAPI):
                     UsdPhysics.CollisionAPI(prim).CreateCollisionEnabledAttr().Set(False)
                     n += 1
-        print(f"[AM-T650] disabled {n} rotor collider(s).", flush=True)
+        print(f"[AM-T650-ARM] disabled {n} rotor collider(s).", flush=True)
 
     def _apply_t650_body_override(self):
-        """Re-author /body's mass AND diagonal inertia to the T650 values on the
-        LIVE stage (session-layer opinion over the referenced asset — the .usda
-        on disk is never written; nothing here calls stage.Save()).
-
-        Must run BEFORE world.reset(): PhysX snapshots mass properties when the
-        articulation is created, so a later write is silently ignored.
-
-        Records self._body_dm / self._body_dI so the control model (used only
-        for the arm gravity comp here) can be mirrored, and PRINTS THE TOTAL —
-        the number config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml's
-        vehicle_mass must equal.
-        """
+        """T650 mass + inertia onto /body, live stage — see 04's docstring."""
         self._body_dm = 0.0
         self._body_dI = None
 
@@ -488,11 +490,10 @@ class AmT650HoldSim:
         body_path = self.drone_path + BODY_PATH
         prim = stage.GetPrimAtPath(body_path)
         if not prim or not prim.IsValid():
-            print(f"[AM-T650] WARNING: body prim {body_path} not found — "
+            print(f"[AM-T650-ARM] WARNING: body prim {body_path} not found — "
                   f"T650 override SKIPPED", flush=True)
             return
 
-        # every OTHER rigid body (4 rotors + arm links + gripper assembly)
         m_rest = 0.0
         for p in Usd.PrimRange(stage.GetPrimAtPath(self.drone_path)):
             if p.GetPath() == prim.GetPath() or not p.HasAPI(UsdPhysics.RigidBodyAPI):
@@ -514,7 +515,7 @@ class AmT650HoldSim:
         moments, quat = author_inertia_tensor(mass_api, T650_BODY_INERTIA)
         if I_old is not None:
             self._body_dI = T650_BODY_INERTIA - np.diag(I_old)
-            print(f"[AM-T650] body inertia diag {I_old.round(6)} -> "
+            print(f"[AM-T650-ARM] body inertia diag {I_old.round(6)} -> "
                   f"{np.diag(T650_BODY_INERTIA).round(6)} kg·m² (T650), "
                   f"Ixy {T650_BODY_INERTIA[0, 1]:+.6f}; authored as principal moments "
                   f"{moments.round(6)} + principalAxes (w,x,y,z) {quat.round(4)}",
@@ -523,26 +524,36 @@ class AmT650HoldSim:
         I_stage = read_inertia_tensor(prim)
         err = (np.abs(I_stage - T650_BODY_INERTIA).max()
                if I_stage is not None else float("nan"))
-        print(f"[AM-T650] inertia round-trip off the stage: max err {err:.2e} kg·m²",
+        print(f"[AM-T650-ARM] inertia round-trip off the stage: max err {err:.2e} kg·m²",
               flush=True)
 
-        print(f"[AM-T650] T650 MASS OVERRIDE: {body_path} {m_old:.6f} -> "
+        total_mass = T650_BODY_MASS + m_rest
+        if EXPECTED_TOTAL_MASS:
+            expected_total_mass = float(EXPECTED_TOTAL_MASS)
+            if not math.isclose(total_mass, expected_total_mass, rel_tol=0.0,
+                                abs_tol=5e-4):
+                raise RuntimeError(
+                    "AM-T650 plant/controller mass mismatch: Isaac authored "
+                    f"{total_mass:.6f} kg, but the launcher expects "
+                    f"{expected_total_mass:.6f} kg. Fix t650_params.py and the "
+                    "paired controller YAML before flight."
+                )
+
+        print(f"[AM-T650-ARM] T650 MASS OVERRIDE: {body_path} {m_old:.6f} -> "
               f"{T650_BODY_MASS:.6f} kg (delta {self._body_dm:+.6f}); "
               f"other bodies {m_rest:.6f} kg; "
-              f"TOTAL {m_old + m_rest:.6f} -> {T650_BODY_MASS + m_rest:.6f} kg "
-              f"(weight {(T650_BODY_MASS + m_rest) * 9.81:.2f} N). "
+              f"TOTAL {m_old + m_rest:.6f} -> {total_mass:.6f} kg "
+              f"(weight {total_mass * 9.81:.2f} N). "
               f"vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. "
               f"The .usda is untouched.", flush=True)
 
     def _setup_gripper_drive(self):
-        """Stiff position drive pinning the hub at its authored rest (jaws
-        open) — the model's link-4 lump was extracted at this pose."""
         stage = omni.usd.get_context().get_stage()
         root = stage.GetPrimAtPath(self.drone_path)
         prim = next((p for p in Usd.PrimRange(root)
                      if p.GetName() == GRIPPER_JOINT and p.IsA(UsdPhysics.RevoluteJoint)), None)
         if prim is None:
-            print(f"[AM-T650] WARNING: gripper joint '{GRIPPER_JOINT}' not found",
+            print(f"[AM-T650-ARM] WARNING: gripper joint '{GRIPPER_JOINT}' not found",
                   flush=True)
             return
         drive = UsdPhysics.DriveAPI.Apply(prim, "angular")
@@ -550,7 +561,7 @@ class AmT650HoldSim:
         drive.GetDampingAttr().Set(1e4)
         drive.GetMaxForceAttr().Set(1000.0)
         drive.GetTargetPositionAttr().Set(GRIPPER_REST_DEG)
-        print(f"[AM-T650] gripper drive stiffened on {prim.GetPath()}", flush=True)
+        print(f"[AM-T650-ARM] gripper drive stiffened on {prim.GetPath()}", flush=True)
 
     def _arm_prims(self):
         root = self.stage.GetPrimAtPath(self.drone_path)
@@ -561,18 +572,21 @@ class AmT650HoldSim:
     def _set_arm_armature(self):
         for name, prim in self._arm_prims():
             PhysxSchema.PhysxJointAPI(prim).CreateArmatureAttr().Set(float(ARM_ARMATURE))
-        print(f"[AM-T650] arm armature = {ARM_ARMATURE:.4f} kg·m²", flush=True)
+        print(f"[AM-T650-ARM] arm armature = {ARM_ARMATURE:.4f} kg·m²", flush=True)
 
-    # ── control step (physics callback): the arm hold, nothing else ─────────
+    # ── control step: servo emulation tracking the ROS 2 reference ──────────
 
     def _control_step(self, step_size):
         try:
             self._control_step_inner(step_size)
         except Exception as exc:
-            carb.log_error(f"[AM-T650] control step: {exc}")
+            carb.log_error(f"[AM-T650-ARM] control step: {exc}")
 
     def _control_step_inner(self, dt):
         self._t += dt
+
+        # Pump the arm bridge callbacks (non-blocking).
+        self._rclpy.spin_once(self._arm_node, timeout_sec=0.0)
 
         pose = self._dc.get_rigid_body_pose(self._body)
         p0 = np.array([pose.p.x, pose.p.y, pose.p.z])
@@ -586,50 +600,55 @@ class AmT650HoldSim:
         q    = q_all[self._arm_idx]
         qdot = qd_all[self._arm_idx]
 
-        # gravity comp: arm rows of the model's gravity vector at the CURRENT
-        # attitude (the whole point of using dynamics() instead of a constant).
-        # The model lives in AM_realign's old body frame — adapt (see R_MODEL).
+        # gravity comp at the CURRENT attitude (the servo integrator's role
+        # in the emulation) — model in AM_realign's old frame, adapt.
         R0_m = R0 @ R_MODEL
         v0_m = R_MODEL.T @ v0
         om_m = R_MODEL.T @ omega0
         X = np.concatenate([p0, R0_m.flatten(order="F"), q, v0_m, om_m, qdot])
         g_arm = C.dynamics(X, self.params)["g"][6:]
 
-        # PD + gravity comp toward Q_HOME, slewed reference, clamped
+        # PD + gravity comp toward the LATCHED ROS 2 command, slewed, clamped.
         if self._hold_ref is None:
             self._hold_ref = np.asarray(q, float).copy()
-        d_ref = np.clip(Q_HOME - self._hold_ref,
+        d_ref = np.clip(self._q_cmd - self._hold_ref,
                         -ARM_HOLD_RATE * dt, ARM_HOLD_RATE * dt)
         self._hold_ref = self._hold_ref + d_ref
         tau = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm
         tau = np.clip(tau, -TAU_MAX, TAU_MAX)
         self._art.set_joint_efforts(np.asarray(tau, float),
                                     joint_indices=self._arm_idx)
+        self._tau_applied = tau
+
+        # Joint states out — this is what IsaacTopicSystem.read() latches and
+        # what /joint_states (broadcaster) and the arm ground station show.
+        self._publish_arm_state(q, qdot, tau)
 
         if self._t - self._status_t >= STATUS_PERIOD_S:
             self._status_t = self._t
-            # realized (lagged) rotor speed — 0 = disarmed, ~64 = armed idle,
-            # ~443 = hover for this mass
             try:
                 omega_real = np.asarray(self._thrust_curve.velocity, float)
-                omega_txt = np.array2string(omega_real.round(0),
-                                            separator=",")
+                omega_txt = np.array2string(omega_real.round(0), separator=",")
             except Exception:
                 omega_txt = "n/a"
-            print(f"[AM-T650] t={self._t:7.1f}s  z={p0[2]:6.3f} m  "
+            if self._cmd_stamp_t is None:
+                cmd_txt = "none yet (holding spawn pose)"
+            else:
+                cmd_txt = (f"n={self._n_cmds}, age "
+                           f"{self._t - self._cmd_stamp_t:4.1f}s")
+            print(f"[AM-T650-ARM] t={self._t:7.1f}s  z={p0[2]:6.3f} m  "
                   f"|v|={np.linalg.norm(v0):5.2f} m/s  "
-                  f"q_err={np.degrees(q - Q_HOME).round(1)} deg  "
+                  f"q_err={np.degrees(q - self._q_cmd).round(1)} deg  "
                   f"|tau|max={np.abs(tau).max():4.2f} N·m  "
-                  f"omega={omega_txt} rad/s", flush=True)
+                  f"cmds: {cmd_txt}  omega={omega_txt} rad/s", flush=True)
 
     # ── main loop ───────────────────────────────────────────────────────────
 
     def run(self):
-        self.world.add_physics_callback("am_hold", self._control_step)
-        # No START_PAUSED here: the ROS2 stack needs /uav_0/state/* flowing to
-        # feed the mocap emulator/estimator, and nothing publishes while the
-        # timeline is paused. PX4 (gated by the external node) owns the rotors,
-        # so playing immediately just seats the vehicle at idle.
+        self.world.add_physics_callback("am_ros2_arm", self._control_step)
+        # No START_PAUSED (04's rationale): /uav_0/state/* must flow for the
+        # mocap emulator, and /uav_0/isaacsim_manipulator/joint_states must flow for
+        # the arm stack's hardware activation.
         self.timeline.play()
         steps = 0
         while (simulation_app.is_running()
@@ -637,13 +656,17 @@ class AmT650HoldSim:
                and (not STEP_LIMIT or steps < STEP_LIMIT)):
             self.world.step(render=not HEADLESS)
             steps += 1
-        carb.log_warn("[AM-T650] Simulation App is closing.")
+        carb.log_warn("[AM-T650-ARM] Simulation App is closing.")
+        try:
+            self._arm_node.destroy_node()
+        except Exception:
+            pass
         self.timeline.stop()
         simulation_app.close()
 
 
 def main():
-    AmT650HoldSim().run()
+    AmT650Ros2ArmSim().run()
 
 
 if __name__ == "__main__":

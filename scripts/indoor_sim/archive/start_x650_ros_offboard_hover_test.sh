@@ -6,7 +6,7 @@ set -euo pipefail
 #   apl20 ROS cascade -> PX4 ActuatorMotors gate -> HIL_ACTUATOR_CONTROLS
 #       -> calibrated X650 rotor lag model -> free Isaac vehicle
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null

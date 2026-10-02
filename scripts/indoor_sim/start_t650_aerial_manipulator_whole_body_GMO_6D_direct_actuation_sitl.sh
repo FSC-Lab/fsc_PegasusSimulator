@@ -8,10 +8,10 @@ set -euo pipefail
 # the four rotor commands and the four arm joint torques, with the arm in
 # TORQUE mode through the fsc_open_manipulator stack.
 #
-# Incremental sibling of start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh
+# Incremental sibling of start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh
 # (which keeps working unchanged). Three things differ:
 #
-#   * Isaac entrypoint: 06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py
+#   * Isaac entrypoint: 06_px4_t650_aerial_manipulator_free_flight.py
 #     (05's plant with the servo emulation replaced by external-effort
 #     application + a PD+gravity stale fallback).
 #   * The arm ros2_control stack runs the TORQUE bring-up
@@ -80,7 +80,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/lib/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
@@ -108,7 +108,7 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py"
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
 export INDOOR_SIM_VEHICLE_LABEL="AM-T650-WB"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # Fail before physics starts if this plant ever drifts from the mass used by

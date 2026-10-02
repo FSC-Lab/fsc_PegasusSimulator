@@ -1,28 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Controller-neutral T650 direct-actuator simulation:
+# Controller-neutral T650 direct-actuator simulation, GEOMETRIC-stack pairing:
 #
-#   external ROS 2 controller -> PX4 ActuatorMotors gate
+#   external ROS 2 GEOMETRIC controller -> PX4 ActuatorMotors gate
 #       -> HIL_ACTUATOR_CONTROLS -> calibrated T650 Isaac plant
 #
 # The external controller owns MicroXRCEAgent and all OFFBOARD/actuator topics.
 # This launcher only configures and starts PX4 SITL plus the simulated plant.
 #
-# Identical in every respect to start_x650_direct_actuator_sitl.sh except that it
-# launches the T650 plant: MN4010 + 15x5" motors
-# (docs/propeller_testing/MN_4010_15x5_report.pdf) and 2.95 kg total mass,
-# against the X650's MN4014 and 3.5 kg. Pair with fsc_autopilot_ros2's T650
-# config.
+# THE PLANT IS IDENTICAL to start_t650_direct_actuator_sitl.sh's -- same
+# x650_new.usd asset, same MN4010 + 15x5" calibration, same 2.95 kg body mass,
+# same lockstep-off configuration. This script exists as a named parallel so
+# the GEOMETRIC ROS 2 stack (fsc_autopilot_ros2's
+# scripts/isaacsim/start_geometric_direct_actuation_t650_stack.sh, which runs
+# the geometric SO(3) direct-actuation node) has an unambiguous Pegasus
+# counterpart, mirroring how every other rig pairs 1:1. Pair it with that
+# stack; the classic launcher pairs with start_direct_actuation_t650_stack.sh.
+# Keep the two scripts functionally in lockstep -- a plant change in one
+# belongs in both.
 #
 # Two T650-specific numbers worth having in hand before flying it:
-#   * Expected hover command is ~0.503, not the X650's ~0.480. The MN4010's top
-#     rotor speed is lower (730.05 vs 817.59 rad/s) at a nearly identical thrust
-#     constant, so the same weight sits higher on the stick.
-#   * Rotor lag is LARGER: lambda 10.0265 vs 10.51 1/s, i.e. tau 99.7 vs 95.1 ms.
-#     That costs phase margin in every inner loop, PX4's and this repo's alike.
+#   * Expected hover command is ~0.503. In a settled geometric DIRECT hover all
+#     four motor commands should sit near 0.5025 (symmetric plant).
+#   * Rotor lag is LARGER than the X650's: lambda 10.0265 vs 10.51 1/s, i.e.
+#     tau 99.7 vs 95.1 ms. The geometric attitude loop's crossover (~8 rad/s)
+#     sits below that pole with ~20 deg of phase margin -- do not stiffen
+#     geoctl_kr_*/ki_* casually; see the config's gain-split warning.
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -49,15 +55,15 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_t650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/archive/start_single_drone_t650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
-PARAM_DELAY="${T650_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
+PARAM_DELAY="${T650_GEOMETRIC_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
 
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
 if [[ ! "$PARAM_DELAY" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: T650_DIRECT_ACTUATOR_PARAM_DELAY must be a non-negative integer." >&2
+  echo "ERROR: T650_GEOMETRIC_DIRECT_ACTUATOR_PARAM_DELAY must be a non-negative integer." >&2
   exit 2
 fi
 
@@ -91,7 +97,7 @@ else
   echo "Pegasus PX4 lockstep: no tmux server yet; the new session will inherit the export"
 fi
 
-echo "Starting controller-neutral T650 direct-actuator SITL."
+echo "Starting controller-neutral T650 direct-actuator SITL (GEOMETRIC-stack pairing)."
 echo "Plant: MN4010 + 15x5\" motors, 2.95 kg (expected hover command ~0.503)"
 echo "Pegasus PX4 lockstep: disabled"
 echo "MicroXRCEAgent: externally owned and detected"

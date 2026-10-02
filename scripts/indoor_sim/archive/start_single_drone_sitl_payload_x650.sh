@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -31,11 +31,8 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-# Hard-coded relative path (same on all machines). X650 airframe + variable-length winch
-# cable - see application/slungload/px4_single_drone_payload_variable_length_cable_x650.py.
-# Does not touch the Iris variant (02_px4_single_drone_payload_variable_length_cable.py) or
-# its own launch script (start_single_drone_sitl_payload_variable_cable.sh) this mirrors.
-PEGASUS_SCRIPT_REL="application/slungload/px4_single_drone_payload_variable_length_cable_x650.py"
+# Hard-coded relative path (same on all machines)
+PEGASUS_SCRIPT_REL="application/slungload/px4_single_drone_payload_x650.py"
 
 # Compose the full path (machine-dependent base + fixed tail)
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
@@ -63,21 +60,15 @@ PX4_UXRCE_DDS_NS=$PX4_UXRCE_DDS_NS make px4_sitl $PX4_TARGET \
   mavlink_udp_remote:=$MAVLINK_REMOTE \
   mavlink_udp_port:=$MAVLINK_PORT
 echo 'PX4 SITL exited.'
-# PX4 has no way to know Isaac Sim is gone (or vice versa) - without this, whichever
-# side is still alive lingers indefinitely burning CPU. Kill the sibling pane so a dead
-# half never outlives the other; this pane's own shell (exec bash below) stays up so you
-# can still read PX4's final output.
-tmux kill-pane -t \"$SESSION:0.1\" 2>/dev/null
 exec bash
 "
 
 tmux split-window -h -t "$SESSION":0 "
 echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
-echo 'Launching Isaac Sim (X650, variable-length cable, PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0}, PEGASUS_PROFILE=${PEGASUS_PROFILE:-0})...'
-PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0} PEGASUS_PROFILE=${PEGASUS_PROFILE:-0} \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+echo 'Launching Isaac Sim...'
+\"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
-tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash
 "
 

@@ -4,7 +4,7 @@ set -euo pipefail
 # BARE-T650 direct-actuator simulation for the GEOMETRIC + L1-ADAPTIVE
 # controller (Cai et al., Control Engineering Practice 164 (2025) 106418:
 # geometric SE(3) baseline + L1 adaptive augmentation) -- the NO-ARM parallel
-# of start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh.
+# of start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh.
 #
 #   external ROS 2 GEOMETRIC+L1 controller -> PX4 ActuatorMotors gate
 #       -> HIL_ACTUATOR_CONTROLS -> calibrated bare-T650 Isaac plant
@@ -44,7 +44,7 @@ set -euo pipefail
 # service is /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode
 # (same name as the AM L1 rig -- frozen-runbook convention).
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -71,7 +71,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_t650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/archive/start_single_drone_t650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_GEOMETRIC_L1_DIRECT_ACTUATOR_PARAM_DELAY:-8}"

@@ -58,3 +58,10 @@ application/robotic_arm/assets/
 # because they are what the write-ups cite; the raw arrays are regenerable by
 # re-flying, and are distributed out-of-band like the USD assets above.
 *.npz
+# Same policy for the other raw arrays the campaigns write: prepared .npy
+# arrays (up to ~480 MB each) and the SIMULATION rosbags under the campaign
+# directories (50-300 MB each; their metadata.yaml stays tracked). Hardware
+# flight bags under docs/experimental_data_ros2_bag/ are NOT covered by this
+# rule -- those under GitHub's 100 MB file limit are committed deliberately.
+*.npy
+docs/docs_aerial_manipulator/**/*.db3

@@ -47,8 +47,11 @@ def main():
     ap.add_argument("assignments", nargs="*", metavar="key=value")
     ap.add_argument("--file", default=DEFAULT)
     ap.add_argument("--four-d", action="store_true",
-                    help="edit the 4-D attribution yaml instead (same as "
-                         "--file <..._l1_4d_..._sim.yaml>)")
+                    help="edit the 4-D attribution ROBUSTNESS yaml instead (same as "
+                         "--file <..._l1_4d_..._sim_robustness.yaml>; that file "
+                         "was named ..._sim.yaml before 2026-09-26, when "
+                         "..._sim.yaml became the experiment MIRROR -- use "
+                         "--file to edit the mirror deliberately)")
     ap.add_argument("--show", action="store_true")
     a = ap.parse_args()
     if a.four_d and a.file == DEFAULT:

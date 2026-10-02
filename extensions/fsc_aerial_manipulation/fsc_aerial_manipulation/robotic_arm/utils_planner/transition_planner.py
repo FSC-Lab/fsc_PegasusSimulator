@@ -107,9 +107,26 @@ def _load_t650_params_module():
     return mod
 
 
-def make_params_t650(base_com=None):
+# Servo armature (2026-09-26). make_params() folds LINK_ARMATURE * h h^T into
+# every arm link's body inertia (the flown structure). BENCH_ARMATURE_T650 is
+# the ground-bench calibration, joint order j1..j4 [kg m^2]: one J 0.0097 fitted
+# in the link structure, placed on the joint DIAGONAL as the rows it reproduces
+# (j1 1.03 J, j2 2 J, j3 J, j4 J) -- docs/docs_aerial_manipulator/
+# arm_armature_20260926/bench/README.md. Mirrored by the C++
+# WholeBodyParams::kLinkArmature / kBenchArmatureT650 and
+# useJointDiagonalArmature(); wb_truth_t650_jointdiag.json locks the pair.
+LINK_ARMATURE = 353.5 ** 2 * 1.6e-7
+BENCH_ARMATURE_T650 = np.array([0.010, 0.0194, 0.0097, 0.0097])
+
+
+def make_params_t650(base_com=None, armature_diag=None):
     """controller.make_params() with the T650 body override applied CORRECTLY
     (rotated into the model frame — swaps xx<->yy, flips Ixy).
+
+    armature_diag: None keeps make_params()' LINK armature (LINK_ARMATURE h h^T
+    on each arm link — the flown model, bit-identical). A 4-vector replaces it
+    with a joint-DIAGONAL armature (controller.dynamics' armature_diag hook);
+    BENCH_ARMATURE_T650 is the calibrated one.
 
     base_com: bare-airframe CoM relative to the body origin, MODEL frame [m].
     None/zeros is the asset's own answer and what every simulation run uses.
@@ -131,6 +148,12 @@ def make_params_t650(base_com=None):
     p["l_i"][3] = p["l_i"][3] + GRIPPER_OFF_WRIST
     p["base_com"] = (np.zeros(3) if base_com is None
                      else np.asarray(base_com, dtype=float))
+    if armature_diag is not None:
+        # same operations, same order as the C++ useJointDiagonalArmature()
+        for i in range(p["n"]):
+            h = np.asarray(p["h_i_im1"][i], dtype=float)
+            p["I_i_i"][i + 1] = p["I_i_i"][i + 1] - LINK_ARMATURE * np.outer(h, h)
+        p["armature_diag"] = np.asarray(armature_diag, dtype=float).copy()
     return p
 
 

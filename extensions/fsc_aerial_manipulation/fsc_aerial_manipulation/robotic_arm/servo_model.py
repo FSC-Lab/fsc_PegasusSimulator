@@ -365,9 +365,11 @@ class DynamixelPwmServo:
             self.gain_error, 1.0, rtol=0.0, atol=0.0)
 
         # ── gearbox friction (module docstring) ─────────────────────────────
-        self.friction_scale = float(friction_scale)
+        # One scale for all four joints, or four (the 0924 flights identified
+        # j2 and j3 at different fractions of the report's model).
+        self.friction_scale = _four(friction_scale, "friction_scale", False)
         self.friction_width = float(friction_width)
-        if (not np.isfinite(self.friction_scale) or self.friction_scale < 0.0
+        if (not np.all(np.isfinite(self.friction_scale)) or np.any(self.friction_scale < 0.0)
                 or not np.isfinite(self.friction_width) or self.friction_width <= 0.0):
             raise ValueError(f"friction_scale must be >= 0 and friction_width > 0, "
                              f"got {friction_scale}, {friction_width}")
@@ -403,7 +405,7 @@ class DynamixelPwmServo:
         else:
             tau_e = tau
         out = tau_e + self.kt_true * self.step_noise(dt)
-        if self.friction_scale > 0.0:
+        if self.has_friction:
             if qdot is None:
                 raise ValueError("applied(): qdot is required when friction_scale > 0")
             out = out - self.friction_torque(tau, qdot, dt)
@@ -423,6 +425,11 @@ class DynamixelPwmServo:
                                    + self.friction_fv * qd)
         cap = self.inertia_min * np.abs(qd) / float(dt)
         return np.clip(f, -cap, cap)
+
+    @property
+    def has_friction(self):
+        """True if any joint loses torque in the gearbox."""
+        return bool(np.any(self.friction_scale > 0.0))
 
     def friction_coulomb_nm(self, tau_transmitted=0.0):
         """Full-speed friction level per joint at a given load, N.m (diagnostic)."""
@@ -503,10 +510,10 @@ class DynamixelPwmServo:
                 f"tau_cap={np.round(self.tau_cap, 3).tolist()} N.m, "
                 f"quantize={self.quantize}, "
                 f"gain_error={np.round(self.gain_error, 4).tolist()}, "
-                f"friction x{self.friction_scale:g}"
+                f"friction x{np.round(self.friction_scale, 3).tolist()}"
                 + (f" [fc {np.round(self.friction_fc * 1e3, 1).tolist()} mN.m, "
                    f"mu {self.friction_mu.tolist()}, w {self.friction_width:g} rad/s]"
-                   if self.friction_scale > 0.0 else "") + ")")
+                   if self.has_friction else "") + ")")
 
 
 # ── self-test ───────────────────────────────────────────────────────────────
@@ -697,9 +704,17 @@ def _self_test():
         assert not reversed_, f"velocity reversed under friction at I={I}"
         assert np.all(np.abs(v) < 1e-9), f"did not come to rest: {v}"
     print("spin-down at the 3 N.m clamp: stops, never reverses, I = armature and 3x")
+    # (m2) a PER-JOINT scale (the 0924 identification: j2/j3 at different
+    # fractions of the report's model) applies elementwise
+    pj = DynamixelPwmServo(current_noise_a=0.0, friction_scale=[1.0, 0.95, 0.75, 1.5])
+    lvl = pj.friction_torque(np.full(4, 0.7), np.full(4, 0.5), dt)
+    exp = np.array([1.0, 0.95, 0.75, 1.5]) * (FRICTION_FC_NM + FRICTION_MU * 0.7)
+    assert np.allclose(lvl, exp, rtol=1e-6), f"per-joint level {lvl} vs {exp}"
+    assert pj.has_friction
+    print(f"per-joint scale [1, 0.95, 0.75, 1.5]: {np.round(lvl * 1e3, 2).tolist()} mN.m OK")
     # (n) scale 0 is the frictionless plant, bit for bit
     z0 = DynamixelPwmServo(current_noise_a=0.0)
-    assert z0.friction_scale == 0.0
+    assert np.all(z0.friction_scale == 0.0) and not z0.has_friction
     assert np.array_equal(z0.applied(tau, dt, qdot=np.ones(4)), tau), "scale 0 = no friction"
     try:
         fr.applied(tau, dt)

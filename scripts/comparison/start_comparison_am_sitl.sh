@@ -7,8 +7,8 @@ set -euo pipefail
 #
 # NOTHING IN THE FLIGHT-VALIDATION PATH IS TOUCHED BY THIS CAMPAIGN.  The two
 # production launchers
-#   indoor_sim/start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh
-#   indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_sitl.sh
+#   indoor_sim/start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh
+#   indoor_sim/start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh
 # keep working exactly as they are; this is a third, parallel launcher that
 # reuses their Isaac entrypoints (06 and 05) unmodified.  Reusing rather than
 # copying them is deliberate: the plant is the one thing that MUST be identical
@@ -60,7 +60,7 @@ WHICH="$2"
 
 case "$WHICH" in
   wb)
-    PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py"
+    PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
     LABEL="AM-T650-WB-CMP"
     CONTROLLER_NODE="autopilot_whole_body_direct_actuation_node"
     DESC="whole-body coupled impedance + GMO (arm in TORQUE mode)"
@@ -68,7 +68,7 @@ case "$WHICH" in
   wb_l1)
     # IDENTICAL plant to `wb` -- same Isaac entrypoint, same asset, same
     # injections. Only the controller node differs, which is the point.
-    PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py"
+    PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
     LABEL="AM-T650-WBL1-CMP"
     CONTROLLER_NODE="autopilot_whole_body_l1_direct_actuation_node"
     ;;
@@ -91,7 +91,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/lib/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"

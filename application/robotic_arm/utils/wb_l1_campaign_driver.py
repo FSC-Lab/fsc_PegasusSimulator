@@ -185,6 +185,11 @@ class Driver(Node):
         self.cli_dir = self.create_client(SetBool, f"{da}/set_direct_mode")
         self.cli_send = self.create_client(
             Trigger, f"{ns}/whole_body_planner/send")
+        # the planner's own Go Home: a compatible transition to the folded home
+        # pose from wherever base and arm are (what the arm GS button and the
+        # 0918 flight used), not an EE target
+        self.cli_home = self.create_client(
+            Trigger, f"{ns}/whole_body_planner/go_home")
 
         self.create_timer(1.0 / a.rate, self.tick)
 
@@ -414,6 +419,32 @@ class Driver(Node):
                     "compatible-trajectory leg")
         return legs
 
+    def parse_mission(self, spec):
+        """--mission "leg;leg;..." with legs
+             base:dx,dy,dz,dyaw_deg      drone-GS target = entry hold + delta
+             ee:dx,dy,dz,dyaw_deg        EE target relative to the CURRENT EE
+             home                        the planner's folded home (EE leg back
+                                         to the entry EE pose)
+        Deltas are WORLD metres / degrees. Written for the 0918 hardware
+        replay (sim2real_tuning_20260926); the standard mission is unchanged.
+        """
+        h, psi = self.home_p, self.home_psi
+        legs = []
+        for i, item in enumerate([x.strip() for x in spec.split(";") if x.strip()]):
+            kind, _, rest = item.partition(":")
+            vals = [float(v) for v in rest.split(",")] if rest else []
+            if kind == "base":
+                dx, dy, dz, dyaw = (vals + [0.0] * 4)[:4]
+                legs.append((f"base{i+1}", "base", (h + [dx, dy, dz], psi + np.deg2rad(dyaw))))
+            elif kind == "ee":
+                dx, dy, dz, dyaw = (vals + [0.0] * 4)[:4]
+                legs.append((f"ee{i+1}", "ee_rel", (np.array([dx, dy, dz]), np.deg2rad(dyaw))))
+            elif kind == "home":
+                legs.append((f"home{i+1}", "ee_home", None))
+            else:
+                self.ev(f"!! unknown mission leg '{item}' -- skipped")
+        return legs
+
     def start_leg(self):
         name, kind, payload = self.legs[self.leg_i]
         self.sent = False
@@ -436,6 +467,20 @@ class Driver(Node):
             self.send_ref()
             time.sleep(0.4)          # let the planner latch it as PENDING
             self.send_ee_target(ee_p, ee_yaw)
+        elif kind == "ee_home":
+            # the planner's Go Home service plans the fold-back itself
+            self.call(self.cli_home, Trigger.Request(), "go_home")
+        elif kind == "ee_rel":
+            # RELATIVE TO THE EE THE PLANNER HOLDS NOW (not the DIRECT-entry
+            # one): the 0918 hardware mission moved the arm again after a
+            # base step, so an entry-anchored target would be unreachable.
+            if self.cur_ee is None:
+                self.ev("!! ee_rel leg with no current_ee -- skipping")
+                self.next_leg()
+                return
+            dp, dyaw = payload
+            self.send_ee_target(self.cur_ee[:3] + np.asarray(dp, float),
+                                self.cur_ee[3] + dyaw)
         else:
             self.send_ee_target(payload[0], payload[1])
         self.leg_marks.append((self.now(), name))
@@ -597,6 +642,9 @@ class Driver(Node):
                     self.goto("ABORT_SETTLE")
                 else:
                     self.legs = self.build_legs()
+                    if self.a.mission:
+                        self.legs = self.parse_mission(self.a.mission)
+                        self.ev(f"mission replaced by --mission: {[l[0] for l in self.legs]}")
                     if self.a.legs:
                         keep = [x.strip() for x in self.a.legs.split(",") if x.strip()]
                         unknown = [k for k in keep if k not in [l[0] for l in self.legs]]
@@ -764,6 +812,10 @@ def main():
                     help="settle time after each leg completes [s]")
     ap.add_argument("--no-steps", action="store_true",
                     help="hover-only mission (what the 2026-09-06 sweep flew)")
+    ap.add_argument("--mission", default="",
+                    help="replace the standard mission by an explicit leg list "
+                         "'base:dx,dy,dz,dyaw;ee:dx,dy,dz,dyaw;home;...' "
+                         "(world m / deg, ee relative to the current EE)")
     ap.add_argument("--legs", default="",
                     help="comma list of leg names to fly, in the mission's own "
                          "order (default: all). E.g. step_x+,step_x-,step_y+,"

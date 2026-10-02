@@ -62,7 +62,7 @@ AUT="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2"
 
 if [[ "$WHICH" == l1 ]]; then
   STACK="$AUT/scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh"
-  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_direct_actuation_sitl.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_6D_direct_actuation_sitl.sh"
   NODE="autopilot_whole_body_l1_direct_actuation_node"
 elif [[ "$WHICH" == l1_4d ]]; then
   STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
@@ -70,11 +70,11 @@ elif [[ "$WHICH" == l1_4d ]]; then
   NODE="autopilot_whole_body_l1_direct_actuation_node"
 elif [[ "$WHICH" == l1_4d_fused ]]; then
   STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh"
-  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_fused_direct_actuation_sitl.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_fused_sitl.sh"
   NODE="autopilot_whole_body_l1_direct_actuation_node"
 else
   STACK="$AUT/scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh"
-  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh"
+  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh"
   NODE="autopilot_whole_body_direct_actuation_node"
 fi
 

@@ -3,7 +3,7 @@
 aerial-manipulator rig and record everything both controllers can be scored
 on (2026-09-18, the whole-body-vs-decoupled comparison).
 
-    /usr/bin/python3 am_ee_compare_driver.py --rig wb|decoupled --shape circle|figure8 \
+    /usr/bin/python3 am_ee_compare_driver.py --rig wb|decoupled|modular --shape circle|figure8 \
         [--radius 0.75] [--fig8-a 0.75 --fig8-b 0.375] [--lap-time 30] [--laps 2] \
         [--time-scale 1.0 | --scale 0.8] --out run.npz
 
@@ -25,7 +25,8 @@ WHAT IS RECORDED (npz), all on the driver's clock:
           decoupled bridge's conversion, computed here for BOTH rigs)
   ee      [t cur_ee(3) ref_ee(3)] from the planner's current_ee / reference_pose
           (the format ee_run_score.py reads)
-  dbg     the rig's control debug array [t ...] (wb_control_debug 107 / l1_control_debug 44)
+  dbg     the rig's control debug array [t ...] (wb_control_debug 107 / l1_control_debug 44 /
+          modular_control_debug 98)
   armref  the arm reference stream actually consumed [t q1..q4 qd1..qd4]
   events, info (planner info at READY), marks {run_start, run_end, direct_enter}
 The EE HEADING is not on any topic (current_ee carries no orientation): the
@@ -62,6 +63,11 @@ RIGS = {
     "wb": dict(da="fsc_autopilot_ros2/whole_body_direct_actuation",
                dbg="fsc_autopilot_ros2/whole_body_direct_actuation/wb_control_debug",
                armref="fsc_open_manipulator/external_torque_controller/reference_joint_trajectory"),
+    # The modular adaptive rig (Yadav et al. TMECH 2025, 2026-09-30) answers under the
+    # whole-body namespace on purpose; only its debug array differs.
+    "modular": dict(da="fsc_autopilot_ros2/whole_body_direct_actuation",
+                    dbg="fsc_autopilot_ros2/whole_body_direct_actuation/modular_control_debug",
+                    armref="fsc_open_manipulator/external_torque_controller/reference_joint_trajectory"),
     "decoupled": dict(da="fsc_autopilot_ros2/geometric_l1_direct_actuation",
                       dbg="fsc_autopilot_ros2/geometric_l1_direct_actuation/l1_control_debug",
                       armref="fsc_open_manipulator/position_controller/reference_joint_trajectory"),
@@ -70,9 +76,13 @@ G = 9.80665
 JOINTS = ["joint1", "joint2", "joint3", "joint4"]
 
 
-def _bridge_helpers():
-    """The decoupled bridge's conversion (one implementation, imported)."""
-    here = os.path.dirname(os.path.abspath(__file__))
+def _bridge_helpers(base_com):
+    """The base-reference conversion's pieces: the bridge's build_r0 (one
+    implementation, imported) and the planner's own kinematic model from
+    THIS repo's utils_planner. (Until 2026-09-28 the model came from the
+    bridge's _load_model(); the bridge embeds its model since then and that
+    helper is gone -- fixed 2026-09-30.) base_com MUST be the planner's
+    base_com, or x_b_ref is off by (m_0/m) base_com."""
     cand = [os.path.join(os.path.expanduser(os.environ.get("FSC_AUTOPILOT_WS", "~/ros2_ws")),
                          "src", "fsc_autopilot_ros2", "scripts", "tools")]
     for c in cand:
@@ -80,8 +90,11 @@ def _bridge_helpers():
             sys.path.insert(0, c)
             break
     import decoupled_reference_bridge as B
-    peg = os.path.abspath(os.path.join(here, "..", "..", ".."))
-    TP, params = B._load_model(peg)
+    peg = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+    sys.path.insert(0, os.path.join(peg, "extensions", "fsc_aerial_manipulation"))
+    from fsc_aerial_manipulation.robotic_arm.utils_planner import transition_planner as TP
+    params = TP.make_params_t650()
+    params["base_com"] = np.asarray(base_com, float)
     return B, TP, params
 
 
@@ -91,7 +104,8 @@ class Driver(Node):
         self.a = a
         self.rig = RIGS[a.rig]
         ns = a.namespace.rstrip("/")
-        self.B, self.TP, self.params = _bridge_helpers()
+        self.base_com = [float(v) for v in a.base_com.split(",")]
+        self.B, self.TP, self.params = _bridge_helpers(self.base_com)
         self.Rz90 = self.TP._Rz(0.5 * math.pi)
         self.t0 = time.time()
         self.phase = "WAIT"; self.tp = self.t0
@@ -303,6 +317,18 @@ class Driver(Node):
         # 32 s-lap circle against the yaml's 48 s period). Default: one cycle.
         q2p = a.q2_period if a.q2_period is not None else a.laps * a.lap_time
         req.parameters.append(dbl("ee_traj_q2_period_s", q2p))
+        # The arm's redundancy sinusoid (2026-09-30): fold, q2 centre and amplitude,
+        # set only when given so older command lines keep the yaml's values.
+        for flag, name in (("fold_deg", "ee_traj_fold_deg"), ("q2_center_deg", "ee_traj_q2_center_deg"),
+                           ("q2_amp_deg", "ee_traj_q2_amp_deg")):
+            if getattr(a, flag) is not None:
+                req.parameters.append(dbl(name, getattr(a, flag)))
+        # The Start button's gate (a workflow gate, not a performance metric): a
+        # controller with no integral action parks a few cm off its hover
+        # reference, which the default 5 cm refuses. Set the SAME value on every
+        # rig of a comparison.
+        if a.start_pos_tol is not None:
+            req.parameters.append(dbl("ee_traj_start_pos_tol", a.start_pos_tol))
         if not self.params_cli.service_is_ready():
             return False
         self.params_future = self.params_cli.call_async(req)
@@ -449,7 +475,13 @@ class Driver(Node):
                  marks=np.array([f"{k}={v}" for k, v in self.marks.items()]),
                  rig=self.a.rig, shape=self.a.shape, radius=self.a.radius, fig8_a=self.a.fig8_a,
                  fig8_b=self.a.fig8_b, lap_time=self.a.lap_time, laps=self.a.laps,
-                 time_scale=getattr(self, "req_s", 0.0), aborted=self.aborted, reason=self.reason)
+                 time_scale=getattr(self, "req_s", 0.0), aborted=self.aborted, reason=self.reason,
+                 base_com=np.array(self.base_com),
+                 q2_period=np.nan if self.a.q2_period is None else self.a.q2_period,
+                 fold_deg=np.nan if self.a.fold_deg is None else self.a.fold_deg,
+                 q2_center_deg=np.nan if self.a.q2_center_deg is None else self.a.q2_center_deg,
+                 q2_amp_deg=np.nan if self.a.q2_amp_deg is None else self.a.q2_amp_deg,
+                 start_pos_tol=np.nan if self.a.start_pos_tol is None else self.a.start_pos_tol)
         ee = arr(self.ee_log, 7)
         if ee.shape[0] > 10:
             err = np.linalg.norm(ee[:, 1:4] - ee[:, 4:7], axis=1)
@@ -477,6 +509,13 @@ def main():
     ap.add_argument("--lap-time", type=float, default=30.0, help="one lap at time scale 1 [s]")
     ap.add_argument("--laps", type=int, default=2)
     ap.add_argument("--q2-period", type=float, default=None, help="ee_traj_q2_period_s (must divide laps*lap_time)")
+    ap.add_argument("--fold-deg", type=float, default=None, help="ee_traj_fold_deg (q2+q3 at rest)")
+    ap.add_argument("--start-pos-tol", type=float, default=None,
+                    help="ee_traj_start_pos_tol [m] (the Start gate; default = the yaml's 0.05)")
+    ap.add_argument("--base-com", default="0,-0.017854,0",
+                    help="the PLANNER's base_com, MODEL frame [m] (default: the 4-D mirror yaml's)")
+    ap.add_argument("--q2-center-deg", type=float, default=None, help="ee_traj_q2_center_deg")
+    ap.add_argument("--q2-amp-deg", type=float, default=None, help="ee_traj_q2_amp_deg")
     ap.add_argument("--time-scale", type=float, default=None, help="absolute time scale (clamped to s_max)")
     ap.add_argument("--scale", type=float, default=1.0, help="fraction of s_max when --time-scale is not given")
     ap.add_argument("--direct-settle", type=float, default=20.0, help="minimum seconds in DIRECT before the gate")

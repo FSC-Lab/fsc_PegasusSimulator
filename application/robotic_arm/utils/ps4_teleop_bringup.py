@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Bring the Isaac AM-T650 whole-body rig to whole-body DIRECT for a PS4
-teleoperation session -- and land it afterwards (2026-09-27).
+"""Bring an Isaac AM-T650 rig to DIRECT for a PS4 teleoperation session -- and
+land it afterwards (2026-09-27; the decoupled rig since 2026-10-01).
 
     /usr/bin/python3 ps4_teleop_bringup.py up     # offboard -> arm -> climb -> DIRECT
     /usr/bin/python3 ps4_teleop_bringup.py land   # SAFETY -> descend -> disarm
+
+Works on every rig whose stack runs the whole-body trajectory planner, i.e.
+whose DIRECT reference the pad can own: the whole-body 4-D rig (and the
+modular one, which answers in the same namespace) and the DECOUPLED
+geometric+L1 rig. --da names the controller's direct-actuation namespace (its
+/mode topic and set_direct_mode service); the default `auto` takes whichever of
+the known ones is publishing a mode, and refuses when none or more than one is.
 
 `up` streams the SAFETY position reference (full rate, the controller needs
 it) at the vehicle's own x/y, climbs to --hover-z, waits for it to settle,
@@ -37,14 +44,46 @@ PX4_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,
                      history=HistoryPolicy.KEEP_LAST, depth=10)
 LATCHED = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                      durability=DurabilityPolicy.TRANSIENT_LOCAL)
-DA = "fsc_autopilot_ros2/whole_body_direct_actuation"
+# Direct-actuation namespaces whose stacks run the trajectory planner (the
+# modular rig answers under the whole-body one on purpose).
+KNOWN_DA = ("whole_body_direct_actuation", "geometric_l1_direct_actuation")
+
+
+def detect_da(namespace, timeout=20.0):
+    """The one KNOWN_DA whose /mode topic has a publisher (the controller latches
+    it at startup). None when zero or several do."""
+    ns = namespace.rstrip("/")
+    probe = Node("ps4_teleop_bringup_probe")
+    found = []
+    t_end = time.time() + timeout
+    try:
+        while time.time() < t_end:
+            found = [da for da in KNOWN_DA
+                     if probe.count_publishers(f"{ns}/fsc_autopilot_ros2/{da}/mode") > 0]
+            if found:
+                # a moment longer, so a second stack is not missed by discovery order
+                rclpy.spin_once(probe, timeout_sec=1.0)
+                found = [da for da in KNOWN_DA
+                         if probe.count_publishers(f"{ns}/fsc_autopilot_ros2/{da}/mode") > 0]
+                break
+            rclpy.spin_once(probe, timeout_sec=0.5)
+    finally:
+        probe.destroy_node()
+    if len(found) != 1:
+        print(f"--da auto: {len(found)} controller mode topics found under {ns} "
+              f"({', '.join(found) or 'none'}) -- pass --da explicitly", flush=True)
+        return None
+    print(f"--da auto: {found[0]}", flush=True)
+    return found[0]
 
 
 class Bringup(Node):
-    def __init__(self, a):
+    def __init__(self, a, da):
         super().__init__("ps4_teleop_bringup")
         self.a = a
         ns = a.namespace.rstrip("/")
+        DA = f"fsc_autopilot_ros2/{da}"
+        self.da = da
         self.odom = None
         self.mode = ""
         self.armed = None
@@ -162,7 +201,22 @@ class Bringup(Node):
         if not self.plan.startswith("HOLD"):
             self.call(self.clear, Trigger.Request(), "whole_body_planner/clear")
         self.wait(lambda: self.plan.startswith("HOLD"), 10, "planner HOLD", stream=False)
-        self.log(f"whole-body DIRECT, planner {self.plan} -- ready for the PS4 Remote tab")
+        # The SAFETY -> DIRECT handover has its own transient (the DIRECT law's
+        # observer starts from zero: 0.2-0.4 m and a few degrees on the
+        # geometric+L1 rig, measured 2026-10-01). Do not hand the vehicle to the
+        # pad in the middle of it: report ready once the airframe is still again.
+        t_sw, still = time.time(), None
+        while time.time() - t_sw < a.settle_direct:
+            rclpy.spin_once(self, timeout_sec=1.0 / a.rate)
+            if self.odom is None:
+                continue
+            slow = np.linalg.norm(self.odom[3:6]) < 0.10   # above the mirror plant's mocap velocity noise
+            still = (still or time.time()) if slow else None
+            if still is not None and time.time() - still > 2.0:
+                break
+        self.log(f"DIRECT-entry transient {'settled' if still else 'NOT settled'} after "
+                 f"{time.time() - t_sw:.1f} s (|v| {np.linalg.norm(self.odom[3:6]):.3f} m/s)")
+        self.log(f"{self.da} DIRECT, planner {self.plan} -- ready for the PS4 Remote tab")
         return 0
 
     def land(self):
@@ -190,14 +244,22 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("action", choices=["up", "land"])
     ap.add_argument("--namespace", default="/uav_0")
+    ap.add_argument("--da", default="auto", choices=("auto",) + KNOWN_DA,
+                    help="the controller's direct-actuation namespace (auto = the one publishing a mode)")
     ap.add_argument("--rate", type=float, default=50.0)
     ap.add_argument("--hover-z", type=float, default=1.2)
     ap.add_argument("--settle", type=float, default=8.0)
+    ap.add_argument("--settle-direct", type=float, default=20.0,
+                    help="max seconds to wait for the DIRECT-entry transient to settle before 'ready'")
     ap.add_argument("--land-z", type=float, default=0.35)
     ap.add_argument("--land-wait", type=float, default=15.0)
     a = ap.parse_args()
     rclpy.init()
-    node = Bringup(a)
+    da = detect_da(a.namespace) if a.da == "auto" else a.da
+    if da is None:
+        rclpy.shutdown()
+        return 1
+    node = Bringup(a, da)
     try:
         rc = node.up() if a.action == "up" else node.land()
     finally:

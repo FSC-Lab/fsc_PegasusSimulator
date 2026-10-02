@@ -4,8 +4,8 @@ set -euo pipefail
 # AERIAL-MANIPULATOR WHOLE-BODY direct-actuation simulation on the T650, flown
 # with the L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER instead of the GMO.
 #
-# THE PLANT IS IDENTICAL to start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh:
-# same Isaac entrypoint (06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py),
+# THE PLANT IS IDENTICAL to start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh:
+# same Isaac entrypoint (06_px4_t650_aerial_manipulator_free_flight.py),
 # same AM_xfwd asset on T650 motors, same PX4 profile, same 3.746170 kg mass
 # gate, same arm servo model, same plant-uncertainty injection. The same
 # TORQUE-mode fsc_open_manipulator stack and the same two ground stations come
@@ -96,7 +96,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/lib/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
@@ -124,7 +124,7 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py"
+export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
 export INDOOR_SIM_VEHICLE_LABEL="AM-T650-WB-L1"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # Fail before physics starts if this plant ever drifts from the mass used by
@@ -385,7 +385,7 @@ if [[ $controller_ready -ne 1 ]]; then
   echo "ERROR: the whole-body L1 aerial-manipulator controller is not running." >&2
   if pgrep -f "autopilot_whole_body_direct_actuation_node" >/dev/null 2>&1; then
     echo "       The GMO whole-body node IS running -- that is the OTHER rig." >&2
-    echo "       Use start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh" >&2
+    echo "       Use start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh" >&2
     echo "       for it, or stop it and start the L1 stack instead." >&2
   fi
   echo "Start its external stack first:" >&2

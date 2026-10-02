@@ -1,34 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Controller-neutral T650 direct-actuator simulation, GEOMETRIC-stack pairing:
+# Controller-neutral X650 direct-actuator simulation:
 #
-#   external ROS 2 GEOMETRIC controller -> PX4 ActuatorMotors gate
-#       -> HIL_ACTUATOR_CONTROLS -> calibrated T650 Isaac plant
+#   external ROS 2 controller -> PX4 ActuatorMotors gate
+#       -> HIL_ACTUATOR_CONTROLS -> calibrated X650 Isaac plant
 #
 # The external controller owns MicroXRCEAgent and all OFFBOARD/actuator topics.
 # This launcher only configures and starts PX4 SITL plus the simulated plant.
-#
-# THE PLANT IS IDENTICAL to start_t650_direct_actuator_sitl.sh's -- same
-# x650_new.usd asset, same MN4010 + 15x5" calibration, same 2.95 kg body mass,
-# same lockstep-off configuration. This script exists as a named parallel so
-# the GEOMETRIC ROS 2 stack (fsc_autopilot_ros2's
-# scripts/isaacsim/start_geometric_direct_actuation_t650_stack.sh, which runs
-# the geometric SO(3) direct-actuation node) has an unambiguous Pegasus
-# counterpart, mirroring how every other rig pairs 1:1. Pair it with that
-# stack; the classic launcher pairs with start_direct_actuation_t650_stack.sh.
-# Keep the two scripts functionally in lockstep -- a plant change in one
-# belongs in both.
-#
-# Two T650-specific numbers worth having in hand before flying it:
-#   * Expected hover command is ~0.503. In a settled geometric DIRECT hover all
-#     four motor commands should sit near 0.5025 (symmetric plant).
-#   * Rotor lag is LARGER than the X650's: lambda 10.0265 vs 10.51 1/s, i.e.
-#     tau 99.7 vs 95.1 ms. The geometric attitude loop's crossover (~8 rad/s)
-#     sits below that pole with ~20 deg of phase margin -- do not stiffen
-#     geoctl_kr_*/ki_* casually; see the config's gain-split warning.
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -55,15 +36,15 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_t650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/lib/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
-PARAM_DELAY="${T650_GEOMETRIC_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
+PARAM_DELAY="${X650_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
 
 [[ -x "$BASE_LAUNCHER" ]] || { echo "ERROR: missing executable $BASE_LAUNCHER" >&2; exit 1; }
 [[ -x "$PARAM_SCRIPT" ]] || { echo "ERROR: missing executable $PARAM_SCRIPT" >&2; exit 1; }
 if [[ ! "$PARAM_DELAY" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: T650_GEOMETRIC_DIRECT_ACTUATOR_PARAM_DELAY must be a non-negative integer." >&2
+  echo "ERROR: X650_DIRECT_ACTUATOR_PARAM_DELAY must be a non-negative integer." >&2
   exit 2
 fi
 
@@ -97,8 +78,7 @@ else
   echo "Pegasus PX4 lockstep: no tmux server yet; the new session will inherit the export"
 fi
 
-echo "Starting controller-neutral T650 direct-actuator SITL (GEOMETRIC-stack pairing)."
-echo "Plant: MN4010 + 15x5\" motors, 2.95 kg (expected hover command ~0.503)"
+echo "Starting controller-neutral X650 direct-actuator SITL."
 echo "Pegasus PX4 lockstep: disabled"
 echo "MicroXRCEAgent: externally owned and detected"
 echo "No controller or actuator publisher will be started by this launcher."
@@ -107,6 +87,6 @@ echo "No controller or actuator publisher will be started by this launcher."
 # shell is ready. These changes intentionally remain per-run and are not saved.
 "$PARAM_SCRIPT" "$SESSION" "0.0" "$PARAM_DELAY" &
 
-# Reuse the validated indoor T650 PX4/Isaac orchestration and cleanup. Passing
+# Reuse the validated indoor X650 PX4/Isaac orchestration and cleanup. Passing
 # --in-terminal prevents the base launcher from opening a second terminal.
 exec "$BASE_LAUNCHER" --in-terminal "$CFG_NAME"

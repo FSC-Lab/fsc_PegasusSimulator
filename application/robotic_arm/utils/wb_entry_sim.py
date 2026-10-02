@@ -159,6 +159,9 @@ class Case:
         self.t_end = 30.0
         self.dt = 1.0 / 250.0
         self.seed_t = False         # seed d_t from the exact deficit (UDE handover)
+        self.dhat_rate_ff = False   # WHAT-IF (not in the flown law): carry the filtered estimate's
+                                    # own rate d(d_t_hat)/dt into f_d_dot, so the thrust-direction
+                                    # rate feed-forward sees a disturbance that rotates in world
         self.seed_r = False         # seed d_r from the exact CoM moment
         self.z0 = 1.0
         for k, val in kw.items():
@@ -304,6 +307,11 @@ class Law:
         xc_ddot = (u1 / m) * (R_0 @ e3) - gg * e3 + (1.0 / m) * d_t_hat
         e_ax = xc_ddot - ref["x_cd_ddot"]
         f_d_dot = -g.k_x * e_vx - g.k_v * e_ax + m * ref["x_cd_d3"]
+        if case.dhat_rate_ff:
+            prev = getattr(self, "_dth_prev", None)
+            dth_dot = np.zeros(3) if prev is None else (d_t_hat - prev) / dt
+            self._dth_prev = d_t_hat.copy()
+            f_d_dot = f_d_dot - dth_dot
         u1_dot = float(f_d_dot.T @ (R_0 @ e3) + f_d.T @ (R_0 @ om_hat @ e3))
         xc_d3 = (u1_dot / m) * (R_0 @ e3) + (u1 / m) * (R_0 @ om_hat @ e3)
         e_jx = xc_d3 - ref["x_cd_d3"]
@@ -477,7 +485,7 @@ class Law:
         return {"u1": u1, "tau_body": tau[3:6], "tau_joint": tau_joint,
                 "e_x": e_x, "e_y": e_y, "e_R": e_R, "n_sat": n_sat,
                 "d_t_hat": d_t_hat, "d_r_hat": d_r_hat, "F_hat_y": F_hat_y,
-                "u3": u3}
+                "u3": u3, "R0c": R0c, "omega_0c": omega_0c, "f_d": f_d}
 
 
 # ================================================================ simulation

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common_config.sh"
 # shellcheck source=/dev/null
@@ -32,7 +32,7 @@ fi
 load_machine_config "$0" "$CFG_NAME"
 
 # Hard-coded relative path (same on all machines)
-PEGASUS_SCRIPT_REL="application/slungload/02_px4_single_drone_payload_variable_length_cable.py"
+PEGASUS_SCRIPT_REL="application/slungload/01_px4_single_drone_payload.py"
 
 # Compose the full path (machine-dependent base + fixed tail)
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
@@ -71,8 +71,8 @@ exec bash
 tmux split-window -h -t "$SESSION":0 "
 echo 'Waiting $DELAY sec for PX4...'
 sleep $DELAY
-echo 'Launching Isaac Sim (PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0}, PEGASUS_PROFILE=${PEGASUS_PROFILE:-0})...'
-PEGASUS_HEADLESS=${PEGASUS_HEADLESS:-0} PEGASUS_PROFILE=${PEGASUS_PROFILE:-0} \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+echo 'Launching Isaac Sim...'
+\"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null
 exec bash

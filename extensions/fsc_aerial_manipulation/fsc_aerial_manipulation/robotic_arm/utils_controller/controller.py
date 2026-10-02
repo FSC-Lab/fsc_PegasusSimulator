@@ -400,6 +400,17 @@ def dynamics(X, params):
                       + Jq[i].T @ I_i_0[i] @ Jqd[i])
         B_dot += (-mi[i] * (A_til_dot[i].T @ hat(d[i]) + A_til[i].T @ hat(d_dot[i]))
                   + Jqd[i].T @ I_i_0[i] + Jq[i].T @ I_dot_0[i])
+    # Optional JOINT-SPACE armature (2026-09-26 study hook, default absent =
+    # the flown model). The rotor spins at N*qdot relative to its housing, so
+    # its reflected inertia N^2*J_r belongs on the joint diagonal, not on the
+    # child link's body (make_params' J_arm*h h^T). As a pseudo-body with
+    # velocity qdot = rho - N1*omega and constant inertia D it adds D to
+    # M_rho, N1^T D N1 to M_r, N1^T D N1_dot to C_r, D to the untransformed
+    # joint block, and nothing else (its C_rp and C_p blocks are zero).
+    D_arm = params.get("armature_diag")
+    if D_arm is not None:
+        D_arm = np.diag(np.asarray(D_arm, dtype=float))
+        M_rho = M_rho + D_arm
     N1 = np.linalg.solve(M_rho, B)
     N1_dot = np.linalg.solve(M_rho, B_dot - M_rho_dot @ N1)
 
@@ -424,6 +435,9 @@ def dynamics(X, params):
                  + W[i].T @ I_i_0[i] @ Jqd[i] + W[i].T @ Xi[i] @ Jq[i])
         C_p += (mi[i] * A_til[i].T @ (W0 @ A_til[i] + A_til_dot[i])
                 + Jq[i].T @ I_i_0[i] @ Jqd[i] + Jq[i].T @ Xi[i] @ Jq[i])
+    if D_arm is not None:
+        M_r += N1.T @ D_arm @ N1
+        C_r += N1.T @ D_arm @ N1_dot
     g_tilde = np.concatenate([m_total * g_const * E3, np.zeros(3), np.zeros(n)])
     # Full transformed Coriolis C̃ (block layout from dynamics.m): the
     # translation row/col is zero, and the arm↔rotation coupling is
@@ -474,6 +488,8 @@ def dynamics(X, params):
         M += mi[i] * (Jvi_p.T @ Jvi_p) + Jwi.T @ I_i_0[i] @ Jwi
         C += mi[i] * (Jvi_p.T @ Jvi_p_dot) + Jwi.T @ I_i_0[i] @ Jwi_dot + Jwi.T @ Xi[i] @ Jwi
         g += Jvi.T @ (mi[i] * g_const * E3)
+    if D_arm is not None:
+        M[6:, 6:] += D_arm
 
     return {
         "M_r": M_r, "C_r": C_r, "C_rp": C_rp, "C_p": C_p,

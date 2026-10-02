@@ -9,8 +9,8 @@ X650 scenarios intended for the outdoor GPS/magnetometer parameter profile.
 ```
 
 For external-vision flight indoors, use the isolated profiles provided by
-`scripts/indoor_sim/start_single_drone_iris.sh` and
-`scripts/indoor_sim/start_single_drone_x650.sh` instead.
+`scripts/indoor_sim/archive/start_single_drone_iris.sh` and
+`scripts/indoor_sim/lib/start_single_drone_x650.sh` instead.
 
 Shared configuration and helper scripts remain in the parent `scripts/`
 directory.

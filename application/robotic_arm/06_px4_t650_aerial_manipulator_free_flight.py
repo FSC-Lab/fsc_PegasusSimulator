@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py
+06_px4_t650_aerial_manipulator_free_flight.py
 
 Author: Shiqi Gao (shiqi.gao907@gmail.com)
 
@@ -35,7 +35,7 @@ own hold -> ExternalTorqueController's PD fallback -> this); it is what holds
 the arm before the stacks come up and after they die.
 
 Run with:
-  scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_direct_actuation_sitl.sh <config>
+  scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh <config>
 (starts this plant, the arm ros2_control TORQUE stack and the arm ground
 station; pairs with fsc_autopilot_ros2's
 start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh, started
@@ -44,6 +44,7 @@ FIRST — it owns MicroXRCEAgent).
 
 import os
 import math
+import time
 
 import carb
 from isaacsim import SimulationApp
@@ -63,7 +64,33 @@ from isaacsim import SimulationApp
 #   PEGASUS_EE_MARKER_CUBE=1     weld a 200 g mocap-marker cube into the gripper
 #                                (obj_0 -> /obj_0/mocap = the MEASURED EE pose)
 #   PEGASUS_EE_MARKER_CUBE_MASS  its mass, kg (default 0.2)
+#   PEGASUS_PROFILE_START=S      (2026-10-01) S wall seconds after play, measure
+#                                the real-time factor over PEGASUS_PROFILE_STEPS
+#                                world.step() calls (default 1500), then repeat
+#                                the window under cProfile; writes
+#                                PEGASUS_PROFILE_OUT(.prof/.txt). 0/unset = off.
+#   PEGASUS_REALTIME=1           (2026-10-01) pace the loop so simulated time never
+#                                runs AHEAD of the wall clock (RTF capped at 1),
+#                                and print the achieved RTF every 10 s. For the
+#                                wall-clock controllers, a sim that can keep up
+#                                (headless runs at ~1.01 on shiqi-desktop since the
+#                                lazy g_arm below) is then exactly real time.
 HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
+REALTIME = os.environ.get("PEGASUS_REALTIME", "0") == "1"
+#   PEGASUS_RENDER_EVERY=N       (2026-10-01, windowed runs only) step physics ONE 4 ms
+#                                step at a time and draw a frame every N steps, instead of
+#                                world.step(render=True), which advances 4 physics steps per
+#                                frame in one burst (16 ms of plant time per call, so the
+#                                pacer can only hold the wall clock at that granularity). The
+#                                one windowed RTF-1 flight on the burst step crashed (a 1.55 Hz
+#                                roll mode grew in hover); the single-step re-flight completed --
+#                                n=1 each, the cause is NOT isolated (Command.md 7.23). Default 8
+#                                (30 Hz drawing) when PEGASUS_REALTIME=1, else 0 (the burst step).
+RENDER_EVERY = int(os.environ.get("PEGASUS_RENDER_EVERY", "") or (8 if REALTIME else 0))
+PROFILE_START = float(os.environ.get("PEGASUS_PROFILE_START", "0") or 0.0)
+PROFILE_STEPS = int(os.environ.get("PEGASUS_PROFILE_STEPS", "1500") or 1500)
+PROFILE_OUT = (os.environ.get("PEGASUS_PROFILE_OUT", "") or
+               os.path.expanduser("~/.cache/pegasus_profile/06_profile"))
 STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
 EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
@@ -322,6 +349,67 @@ PLANT_COM_SHIFT = np.array([_envf("PEGASUS_PLANT_COM_SHIFT_X", 0.0),
 # the error symmetric and representative of hardware.
 PLANT_KF_SCALE = _envf("PEGASUS_PLANT_KF_SCALE", 1.0)
 
+# ── SIM-TO-REAL MIRROR KNOBS (2026-09-26, sim2real_tuning_20260926) ─────────
+# Every one of these defaults to "off" = the plant exactly as before. They
+# exist so the mirror config (..._l1_4d_..._sim.yaml) can carry what the
+# 0918/0921/0924 flights identified and the older knobs could not express.
+#   PEGASUS_PLANT_KM_SCALE        x on the rotors' yaw (rolling-moment)
+#                                 coefficient ALONE. kf and c are one number
+#                                 each in t650_params, and the flown yaw
+#                                 authority is a different fraction of its
+#                                 calibration than the thrust is.
+#   PEGASUS_PLANT_ROTOR_LAMBDA    rotor spin-up bandwidth [1/s], replaces the
+#                                 MN4010 bench value (an effective lag that
+#                                 also stands in for unmodelled dead time).
+#   PEGASUS_PLANT_KF_SAG_PER_MIN  battery sag: fractional kf loss per MINUTE
+#                                 airborne, kf(t) = kf0 (1 - r t/60); the
+#                                 flights measured -2.6..-4.5 %/min at ~20 A.
+#   PEGASUS_PLANT_FORCE_BIAS      "fx,fy,fz"  body-fixed FLU force  [N]   and
+#   PEGASUS_PLANT_TORQUE_BIAS     "tx,ty,tz"  body-fixed FLU torque [N.m]
+#                                 applied to the body every physics step: the
+#                                 standing wrench the real airframe carries
+#                                 (thrust-axis tilt, prop/motor asymmetry)
+#                                 that a symmetric rotor model cannot make.
+#   PEGASUS_ARM_VEL_LAG_S         first-order lag on the joint velocity 06
+#                                 REPORTS (not on the physics): the Dynamixel
+#                                 Present Velocity the flight law consumes is
+#                                 ~48 ms behind the encoder.
+#   PEGASUS_ARM_VEL_QUANT         its quantum [rad/s] (0.024 = 0.229 rpm).
+#   PEGASUS_ARM_ARMATURE          the servos' reflected rotor inertia, PhysX joint
+#                                 armature [kg m^2], one number or "j1,j2,j3,j4".
+#                                 Unset = 0.020 on every joint (the MATLAB guess
+#                                 every run before 2026-09-26 flew); the mirror
+#                                 yaml carries the ground-bench calibration
+#                                 0.010,0.0194,0.0097,0.0097 (sim_arm_armature_j*).
+PLANT_KM_SCALE = _envf("PEGASUS_PLANT_KM_SCALE", 1.0)
+PLANT_ROTOR_LAMBDA = _envf("PEGASUS_PLANT_ROTOR_LAMBDA", float(t650_params.ROTOR_LAMBDA))
+PLANT_KF_SAG_PER_MIN = _envf("PEGASUS_PLANT_KF_SAG_PER_MIN", 0.0)
+
+
+def _env3(name):
+    v = (os.environ.get(name) or "").strip()
+    if not v:
+        return np.zeros(3)
+    parts = [x.strip() for x in v.split(",")]
+    if len(parts) != 3:
+        raise SystemExit(f"[AM-T650-WB] {name} must be three numbers 'x,y,z' (got {v!r})")
+    try:
+        return np.array([float(x) for x in parts], float)
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] {name} must be three numbers 'x,y,z' (got {v!r})")
+
+
+PLANT_FORCE_BIAS = _env3("PEGASUS_PLANT_FORCE_BIAS")
+PLANT_TORQUE_BIAS = _env3("PEGASUS_PLANT_TORQUE_BIAS")
+ARM_VEL_LAG_S = _envf("PEGASUS_ARM_VEL_LAG_S", 0.0)
+ARM_VEL_QUANT = _envf("PEGASUS_ARM_VEL_QUANT", 0.0)
+for _nm, _v in (("PEGASUS_PLANT_KM_SCALE", PLANT_KM_SCALE), ("PEGASUS_PLANT_ROTOR_LAMBDA", PLANT_ROTOR_LAMBDA)):
+    if _v <= 0.0:
+        raise SystemExit(f"[AM-T650-WB] {_nm} must be > 0")
+if PLANT_KF_SAG_PER_MIN < 0.0 or ARM_VEL_LAG_S < 0.0 or ARM_VEL_QUANT < 0.0:
+    raise SystemExit("[AM-T650-WB] PEGASUS_PLANT_KF_SAG_PER_MIN, PEGASUS_ARM_VEL_LAG_S and "
+                     "PEGASUS_ARM_VEL_QUANT must be >= 0")
+
 T650_BODY_MASS    = float(t650_params.BODY_MASS)
 # Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
 # store as diagonalInertia + principalAxes (see utils.author_inertia_tensor).
@@ -336,7 +424,24 @@ ARM_HOLD_RATE = 0.5    # [rad/s] reference slew — transparent to the position
 TAU_MAX       = 3.0    # [N·m] — one number with the wb yaml, the
                        # ExternalTorqueController and servo_model.py's
                        # TAU_CAP_CURRENT; keep the four together
-ARM_ARMATURE  = 353.5 ** 2 * 1.6e-7
+ARM_ARMATURE_DEFAULT = 353.5 ** 2 * 1.6e-7
+_arm_armature_raw = (os.environ.get("PEGASUS_ARM_ARMATURE") or "").strip()
+if _arm_armature_raw:
+    try:
+        _aa = [float(x) for x in _arm_armature_raw.split(",")]
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_ARMATURE must be one number or four "
+                         f"'j1,j2,j3,j4' (got {_arm_armature_raw!r})")
+    if len(_aa) == 1:
+        _aa = _aa * 4
+    if len(_aa) != 4 or min(_aa) <= 0.0:
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_ARMATURE needs 1 or 4 values > 0 "
+                         f"(got {_arm_armature_raw!r})")
+    ARM_ARMATURE_J = np.array(_aa, float)
+else:
+    ARM_ARMATURE_J = np.full(4, ARM_ARMATURE_DEFAULT)
+# the smallest a joint can present (the friction model's momentum clamp)
+ARM_ARMATURE = float(ARM_ARMATURE_J.min())
 
 # ── ARM SERVO: the plant between the commanded torque and the applied one ───
 # Isaac applies a commanded effort exactly; the real XM430s do not, even with
@@ -402,7 +507,12 @@ def _scalar_env(raw, name, default):
     return float(v)
 
 
-_FRICTION_SCALE = _scalar_env(ARM_FRICTION_SCALE, "PEGASUS_ARM_FRICTION_SCALE", 0.0)
+# One scale or four ("j1,j2,j3,j4"): the 0924 flights identified j2 and j3 at
+# different fractions of the report's model (sim2real_tuning_20260926).
+_FRICTION_SCALE = _float_env(ARM_FRICTION_SCALE, "PEGASUS_ARM_FRICTION_SCALE")
+_FRICTION_SCALE = 0.0 if _FRICTION_SCALE is None else _FRICTION_SCALE
+if np.any(np.asarray(_FRICTION_SCALE) < 0.0):
+    raise SystemExit("[AM-T650-WB] PEGASUS_ARM_FRICTION_SCALE must be >= 0")
 _FRICTION_WIDTH = _float_env(ARM_FRICTION_WIDTH, "PEGASUS_ARM_FRICTION_WIDTH")
 if _FRICTION_WIDTH is not None and (not np.isscalar(_FRICTION_WIDTH) or _FRICTION_WIDTH <= 0.0):
     raise SystemExit("[AM-T650-WB] PEGASUS_ARM_FRICTION_WIDTH must be ONE number > 0")
@@ -625,14 +735,16 @@ class AmT650WholeBodyArmSim:
                   "continuous torque (perfect calibration, no register)",
                   flush=True)
         # GEARBOX FRICTION. Print the verdict either way, like the count path.
-        if ARM_SERVO.friction_scale > 0.0:
+        if ARM_SERVO.has_friction:
             lvl_home = ARM_SERVO.friction_coulomb_nm(np.array([0.0, 0.70, 0.24, 0.0]))
-            print(f"\033[1;31m[AM-T650-WB] GEARBOX FRICTION ACTIVE x{ARM_SERVO.friction_scale:g}: "
+            fs_txt = (f"{ARM_SERVO.friction_scale[0]:g}" if np.ptp(ARM_SERVO.friction_scale) == 0.0
+                      else f"{np.round(ARM_SERVO.friction_scale, 3).tolist()} per joint")
+            print(f"\033[1;31m[AM-T650-WB] GEARBOX FRICTION ACTIVE x{fs_txt}: "
                   f"[fc + mu|tau|] tanh(qd/{ARM_SERVO.friction_width:g}) with fc "
                   f"{np.round(ARM_SERVO.friction_fc * 1e3, 1).tolist()} mN·m, mu "
                   f"{ARM_SERVO.friction_mu.tolist()} -- at the home hold load that is "
                   f"{np.round(lvl_home * 1e3, 1).tolist()} mN·m per joint, of which the "
-                  f"arm controller's feed-forward pays 1/{ARM_SERVO.friction_scale:g}. "
+                  f"arm controller's feed-forward pays 1.00x the report's model. "
                   f"Momentum-clamped at I_min {ARM_SERVO.inertia_min:.4f} kg·m².\033[0m",
                   flush=True)
         else:
@@ -656,6 +768,7 @@ class AmT650WholeBodyArmSim:
         self._fresh_count = 0            # consecutive fresh commands (re-arm)
         self._tau_applied = np.zeros(len(self._arm_idx))
         self._tau_cmd_applied = np.zeros(len(self._arm_idx))
+        self._qd_rep = np.zeros(len(self._arm_idx))   # reported-velocity lag state
         self._t = 0.0
         self._status_t = -1e9
         self.stop_sim = False
@@ -947,16 +1060,18 @@ class AmT650WholeBodyArmSim:
         config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
         self._px4_backend = config.backends[0]
         plant_kf = float(t650_params.ROTOR_CONSTANT) * PLANT_KF_SCALE
+        plant_km = float(t650_params.ROLLING_MOMENT_COEFFICIENT) * PLANT_KM_SCALE
         config.thrust_curve = LaggedQuadraticThrustCurve(config={
             "rotor_constant": [plant_kf] * 4,
-            "rolling_moment_coefficient":
-                [float(t650_params.ROLLING_MOMENT_COEFFICIENT)] * 4,
+            "rolling_moment_coefficient": [plant_km] * 4,
             "min_rotor_velocity": [float(t650_params.MIN_ROTOR_VEL)] * 4,
             "max_rotor_velocity": [float(t650_params.MAX_ROTOR_VEL)] * 4,
             "rot_dir": [int(d) for d in t650_params.ROT_DIR],
-            "rotor_lambda": [float(t650_params.ROTOR_LAMBDA)] * 4,
+            "rotor_lambda": [float(PLANT_ROTOR_LAMBDA)] * 4,
         })
         self._thrust_curve = config.thrust_curve
+        self._plant_kf0 = plant_kf          # battery-sag reference (kf at lift-off)
+        self._t_airborne0 = None            # set when the rotors first spin up
 
         drone_prim_path = f"/World/quadrotor_{VEHICLE_ID}"
         MultirotorMod(
@@ -973,14 +1088,28 @@ class AmT650WholeBodyArmSim:
         )
         print(f"[AM-T650-WB] spawned PX4-PRIMARY AM at {drone_prim_path}: MN4010 "
               f"k_f={plant_kf:.4e}"
-              + (f" (x{PLANT_KF_SCALE:.4f} PLANT-SIDE INJECTION)" if PLANT_KF_SCALE != 1.0 else "")
+              + (f" (x{PLANT_KF_SCALE:.4f} PLANT-SIDE)" if PLANT_KF_SCALE != 1.0 else "")
               + f" "
-              f"k_m={t650_params.ROLLING_MOMENT_COEFFICIENT:.4e} "
-              f"lambda={t650_params.ROTOR_LAMBDA} "
+              f"k_m={plant_km:.4e}"
+              + (f" (x{PLANT_KM_SCALE:.4f} PLANT-SIDE)" if PLANT_KM_SCALE != 1.0 else "")
+              + f" lambda={PLANT_ROTOR_LAMBDA:g}"
+              + (f" (bench {t650_params.ROTOR_LAMBDA})" if PLANT_ROTOR_LAMBDA != float(t650_params.ROTOR_LAMBDA) else "")
+              + " "
               f"omega=[{t650_params.MIN_ROTOR_VEL}, {t650_params.MAX_ROTOR_VEL}] "
               f"map u->omega: x{input_scaling:.4f} "
               f"+{t650_params.ZERO_POSITION_ARMED} | lockstep="
               f"{'ON' if PX4_LOCKSTEP else 'OFF'}", flush=True)
+        if PLANT_KF_SAG_PER_MIN > 0.0:
+            print(f"\033[1;35m[AM-T650-WB] BATTERY SAG: k_f falls {PLANT_KF_SAG_PER_MIN*100:.2f} %/min "
+                  f"from lift-off (the 0918/0924 packs measured -2.6..-4.5 %/min).\033[0m", flush=True)
+        if np.any(PLANT_FORCE_BIAS) or np.any(PLANT_TORQUE_BIAS):
+            print(f"\033[1;35m[AM-T650-WB] STANDING WRENCH BIAS on the body (FLU): force "
+                  f"{PLANT_FORCE_BIAS.round(3).tolist()} N, torque {PLANT_TORQUE_BIAS.round(3).tolist()} N.m "
+                  f"-- the airframe asymmetry the flights' observer found.\033[0m", flush=True)
+        if ARM_VEL_LAG_S > 0.0 or ARM_VEL_QUANT > 0.0:
+            print(f"\033[1;35m[AM-T650-WB] ARM VELOCITY FEEDBACK emulates Present Velocity: "
+                  f"lag {ARM_VEL_LAG_S*1000:.0f} ms, quantum {ARM_VEL_QUANT:g} rad/s "
+                  f"(reported only; the physics and the friction model use the true rate).\033[0m", flush=True)
         return drone_prim_path
 
     # ── physics/model fixes (04's, unchanged) ───────────────────────────────
@@ -1319,16 +1448,23 @@ class AmT650WholeBodyArmSim:
 
     def _set_arm_armature(self):
         for name, prim in self._arm_prims():
-            PhysxSchema.PhysxJointAPI(prim).CreateArmatureAttr().Set(float(ARM_ARMATURE))
-        print(f"[AM-T650-WB] arm armature = {ARM_ARMATURE:.4f} kg·m²", flush=True)
+            j = ARM_JOINT_NAMES.index(name)
+            PhysxSchema.PhysxJointAPI(prim).CreateArmatureAttr().Set(float(ARM_ARMATURE_J[j]))
+        src = "PEGASUS_ARM_ARMATURE" if _arm_armature_raw else "default"
+        print(f"[AM-T650-WB] arm armature (joint-diagonal, {src}) = "
+              f"[{', '.join(f'{v:.4f}' for v in ARM_ARMATURE_J)}] kg·m²", flush=True)
 
     # ── control step: servo emulation tracking the ROS 2 reference ──────────
 
     def _control_step(self, step_size):
+        t0 = time.perf_counter() if PROFILE_START > 0 else 0.0
         try:
             self._control_step_inner(step_size)
         except Exception as exc:
             carb.log_error(f"[AM-T650-WB] control step: {exc}")
+        if PROFILE_START > 0:
+            self._prof_cb_s += time.perf_counter() - t0
+            self._prof_cb_n += 1
 
     def _control_step_inner(self, dt):
         self._t += dt
@@ -1349,13 +1485,58 @@ class AmT650WholeBodyArmSim:
         qdot = qd_all[self._arm_idx]
         self._step_gripper(dt, q_all, qd_all)
 
+        # ── sim-to-real mirror terms (all default off) ────────────────────
+        if PLANT_KF_SAG_PER_MIN > 0.0:
+            # lift-off = the rotors first clearly above the armed idle
+            if self._t_airborne0 is None:
+                try:
+                    if np.mean(self._thrust_curve.velocity) > t650_params.ZERO_POSITION_ARMED + 50.0:
+                        self._t_airborne0 = self._t
+                except Exception:
+                    pass
+            if self._t_airborne0 is not None:
+                kf_now = self._plant_kf0 * max(0.5, 1.0 - PLANT_KF_SAG_PER_MIN
+                                                * (self._t - self._t_airborne0) / 60.0)
+                self._thrust_curve._rotor_constant = [kf_now] * 4
+        if np.any(PLANT_FORCE_BIAS):
+            self._dc.apply_body_force(self._body, carb._carb.Float3(*PLANT_FORCE_BIAS.tolist()),
+                                      carb._carb.Float3(0.0, 0.0, 0.0), False)
+        if np.any(PLANT_TORQUE_BIAS):
+            self._dc.apply_body_torque(self._body, carb._carb.Float3(*PLANT_TORQUE_BIAS.tolist()), False)
+        # the joint velocity the ARM STACK sees (Present Velocity emulation)
+        qdot_rep = qdot
+        if ARM_VEL_LAG_S > 0.0:
+            a = math.exp(-dt / ARM_VEL_LAG_S)
+            self._qd_rep = a * self._qd_rep + (1.0 - a) * qdot
+            qdot_rep = self._qd_rep
+        if ARM_VEL_QUANT > 0.0:
+            qdot_rep = np.round(qdot_rep / ARM_VEL_QUANT) * ARM_VEL_QUANT
+
         # gravity comp at the CURRENT attitude (the servo integrator's role
         # in the emulation) — model in AM_realign's old frame, adapt.
-        R0_m = R0 @ R_MODEL
-        v0_m = R_MODEL.T @ v0
-        om_m = R_MODEL.T @ omega0
-        X = np.concatenate([p0, R0_m.flatten(order="F"), q, v0_m, om_m, qdot])
-        g_arm = C.dynamics(X, self.params)["g"][6:]
+        # LAZY (2026-10-01, the RTF profile): only the PD-hold branch below
+        # uses it, and the full Python dynamics() was ~3 ms of the 8.3 ms a
+        # 4 ms physics step cost -- computed and discarded every step while the
+        # external torque stream is live (the torque rigs stream in SAFETY too).
+        # Same expression, evaluated only when needed, so the values are
+        # unchanged wherever they are used.
+        # 2026-10-01: in POSITION mode the servo emulation needs this EVERY step,
+        # and the full dynamics() call alone held the decoupled rig at RTF ~0.72.
+        # _arm_gravity() is exactly dynamics(X)["g"][6:] (same sum, nothing else),
+        # checked against it on the first call.
+        def g_arm_now():
+            R0_m = R0 @ R_MODEL
+            g_fast = _arm_gravity(q, R0_m, self.params)
+            if not getattr(self, "_g_checked", False):
+                v0_m = R_MODEL.T @ v0
+                om_m = R_MODEL.T @ omega0
+                X = np.concatenate([p0, R0_m.flatten(order="F"), q, v0_m, om_m, qdot])
+                err = float(np.abs(C.dynamics(X, self.params)["g"][6:] - g_fast).max())
+                if err > 1e-9:
+                    raise SystemExit(f"_arm_gravity disagrees with controller.dynamics by {err:.3e} N.m")
+                print(f"[AM-T650-WB] arm gravity: fast path == dynamics() to {err:.1e} N.m", flush=True)
+                self._g_checked = True
+            return g_fast
 
         # ── Torque source arbitration (hysteresis, mirrors the controller) ─
         fresh = (self._cmd_stamp_t is not None
@@ -1396,7 +1577,7 @@ class AmT650WholeBodyArmSim:
             d_ref = np.clip(self._q_hold_target - self._hold_ref,
                             -ARM_HOLD_RATE * dt, ARM_HOLD_RATE * dt)
             self._hold_ref = self._hold_ref + d_ref
-            tau_cmd = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm
+            tau_cmd = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm_now()
             if ARM_COMMAND_MODE == "position":
                 # the servo's integrator (position mode only)
                 self._i_pos = np.clip(self._i_pos - ARM_POS_KI * (q - self._hold_ref) * dt,
@@ -1420,7 +1601,7 @@ class AmT650WholeBodyArmSim:
         # `effort` carries the APPLIED torque, which is what the hardware
         # backend reports there (the servo's Present Current); before the servo
         # model existed the two were the same number.
-        self._publish_arm_state(q, qdot, tau)
+        self._publish_arm_state(q, qdot_rep, tau)
 
         if self._t - self._status_t >= STATUS_PERIOD_S:
             self._status_t = self._t
@@ -1453,15 +1634,30 @@ class AmT650WholeBodyArmSim:
         # the arm stack's hardware activation.
         self.timeline.play()
         steps = 0
+        prof = _RtfProfiler(self) if PROFILE_START > 0 else None
+        pacer = _RealTimePacer(self) if REALTIME else None
         while (simulation_app.is_running()
                and not self.stop_sim
                and (not STEP_LIMIT or steps < STEP_LIMIT)):
-            self.world.step(render=not HEADLESS)
+            if prof is not None:
+                prof.before_step()
+            if HEADLESS or RENDER_EVERY > 0:
+                # one physics step; with a window, draw every RENDER_EVERY steps
+                # (render() redraws without advancing physics)
+                self.world.step(render=False)
+                if not HEADLESS and steps % RENDER_EVERY == 0:
+                    self.world.render()
+            else:
+                self.world.step(render=True)
             steps += 1
+            if prof is not None:
+                prof.after_step()
+            if pacer is not None:
+                pacer.after_step()
             # Drawn from the RENDER loop, not the physics callback: the lines
             # only need to keep up with the eye, and clear+rebuild at 250 Hz
             # would be pure waste.
-            if self._draw is not None and steps % VIZ_REDRAW_STEPS == 0:
+            if self._draw is not None and steps % (VIZ_REDRAW_STEPS * max(1, RENDER_EVERY)) == 0:
                 self._draw_trajectory()
         carb.log_warn("[AM-T650-WB] Simulation App is closing.")
         try:
@@ -1470,6 +1666,146 @@ class AmT650WholeBodyArmSim:
             pass
         self.timeline.stop()
         simulation_app.close()
+
+
+def _arm_gravity(q, R0_m, p):
+    """controller.dynamics(X, p)["g"][6:] -- the arm joints' gravity torques -- without
+    the rest of dynamics() (mass matrix, Coriolis, task Jacobian): the same sum
+    g_q = sum_i A_i^T R0^T (m_i g e3), A_i[:, k] = h_k x (r_0i - O_{k-1}). Depends
+    only on q and the MODEL-frame base attitude. 3e-16 N.m from dynamics() over 500
+    random states (2026-10-01); the base link (i = 0) and any armature do not enter."""
+    n, mi, l_i, h_im1, g = p["n"], p["m_i"], p["l_i"], p["h_i_im1"], p["g"]
+    com_i = p.get("com_i") or [l_i[k] / 2.0 for k in range(n)]
+    R = [np.eye(3)]
+    for i in range(n):
+        R.append(R[i] @ C.joint_rotation(h_im1[i], q[i]))
+    O = [np.zeros(3)]
+    for i in range(1, n + 1):
+        O.append(O[i - 1] + R[i] @ l_i[i - 1])
+    f = R0_m.T @ (g * C.E3)
+    out = np.zeros(n)
+    for i in range(1, n + 1):
+        ri = O[i - 1] + R[i] @ com_i[i - 1]
+        for k in range(1, i + 1):
+            out[k - 1] += mi[i] * (np.cross(R[k - 1] @ h_im1[k - 1], ri - O[k - 1]) @ f)
+    return out
+
+
+class _RealTimePacer:
+    """PEGASUS_REALTIME (2026-10-01): keep simulated time from running ahead of
+    the wall clock, so the wall-clock control stack sees a real-time plant.
+    Anchored on absolute time (sim - sim0 <= wall - wall0); when the sim falls
+    more than MAX_LAG_S BEHIND (a stall it cannot catch up from at RTF ~1.01),
+    the anchor is moved rather than letting it sprint, and the event counted.
+    Every REPORT_S of wall time it prints the achieved RTF and the worst lag."""
+
+    MAX_LAG_S = 0.05
+    REPORT_S = 10.0
+
+    def __init__(self, sim):
+        self.sim = sim
+        self.w0 = time.perf_counter()
+        self.s0 = float(sim.world.current_time)
+        self.rep_w = self.w0
+        self.rep_s = self.s0
+        self.worst_lag = 0.0
+        self.reanchors = 0
+        self.slept = 0.0
+        mode = "headless" if HEADLESS else (f"window, 4 ms physics steps, a frame every {RENDER_EVERY}"
+                                             if RENDER_EVERY > 0 else "window, 4 physics steps per frame")
+        print(f"[AM-T650-WB] REAL-TIME PACER on ({mode}): "
+              f"simulated time is held to the wall clock (RTF <= 1).", flush=True)
+
+    def after_step(self):
+        now = time.perf_counter()
+        st = float(self.sim.world.current_time)
+        ahead = (st - self.s0) - (now - self.w0)
+        if ahead > 0.0:
+            time.sleep(ahead)
+            self.slept += ahead
+            now = time.perf_counter()
+        elif -ahead > self.MAX_LAG_S:
+            self.worst_lag = max(self.worst_lag, -ahead)
+            self.reanchors += 1
+            self.w0, self.s0 = now, st
+        else:
+            self.worst_lag = max(self.worst_lag, -ahead)
+        if now - self.rep_w >= self.REPORT_S:
+            rtf = (st - self.rep_s) / (now - self.rep_w)
+            print(f"[AM-T650-WB] RTF {rtf:.3f} over the last {now - self.rep_w:.1f} s "
+                  f"(worst lag {1e3 * self.worst_lag:.1f} ms, {self.reanchors} re-anchor(s), "
+                  f"slept {self.slept:.2f} s)", flush=True)
+            self.rep_w, self.rep_s = now, st
+            self.worst_lag = 0.0
+            self.reanchors = 0
+            self.slept = 0.0
+
+
+class _RtfProfiler:
+    """PEGASUS_PROFILE_START (2026-10-01): where the wall time of a physics step
+    goes. Window A (plain): real-time factor = simulated / wall seconds over
+    PROFILE_STEPS world.step() calls, and the share spent in THIS app's own
+    physics callback. Window B (cProfile, same length): the Python call tree of
+    everything else on the main thread -- Pegasus sensors, MAVLink, the ROS 2
+    backends, PhysX (as the time inside the step call itself). cProfile slows
+    Python-heavy code, so read B as a breakdown, A as the speed."""
+
+    def __init__(self, sim):
+        import cProfile
+        self.sim = sim
+        self.cprofile = cProfile.Profile()
+        self.t_play = time.perf_counter()
+        self.phase = "wait"
+        self.n = 0
+        sim._prof_cb_s = 0.0
+        sim._prof_cb_n = 0
+        os.makedirs(os.path.dirname(PROFILE_OUT) or ".", exist_ok=True)
+
+    def _sim_t(self):
+        return float(self.sim.world.current_time)
+
+    def before_step(self):
+        now = time.perf_counter()
+        if self.phase == "wait" and now - self.t_play >= PROFILE_START:
+            self.phase, self.n = "A", 0
+            self.a0 = (now, self._sim_t())
+            self.sim._prof_cb_s, self.sim._prof_cb_n = 0.0, 0
+        elif self.phase == "A" and self.n >= PROFILE_STEPS:
+            self.a1 = (now, self._sim_t())
+            self.cb = (self.sim._prof_cb_s, self.sim._prof_cb_n)
+            self.phase, self.n = "B", 0
+            self.b0 = (now, self._sim_t())
+            self.cprofile.enable()
+        elif self.phase == "B" and self.n >= PROFILE_STEPS:
+            self.cprofile.disable()
+            self.b1 = (now, self._sim_t())
+            self.phase = "done"
+            self._report()
+
+    def after_step(self):
+        if self.phase in ("A", "B"):
+            self.n += 1
+
+    def _report(self):
+        import io
+        import pstats
+        wa = self.a1[0] - self.a0[0]; sa = self.a1[1] - self.a0[1]
+        wb = self.b1[0] - self.b0[0]; sb = self.b1[1] - self.b0[1]
+        lines = [f"[AM-T650-WB] PROFILE ({'headless' if HEADLESS else 'rendering'}, "
+                 f"{PROFILE_STEPS} world.step() calls per window)",
+                 f"  window A (plain):    wall {wa:.2f} s, sim {sa:.2f} s -> RTF {sa / wa:.3f}; "
+                 f"{self.cb[1]} physics steps ({self.cb[1] / max(sa, 1e-9):.1f} Hz sim), "
+                 f"{1e3 * wa / max(self.cb[1], 1):.2f} ms wall per physics step, of which this app's "
+                 f"callback {1e3 * self.cb[0] / max(self.cb[1], 1):.2f} ms",
+                 f"  window B (cProfile): wall {wb:.2f} s, sim {sb:.2f} s -> RTF {sb / wb:.3f}"]
+        buf = io.StringIO()
+        st = pstats.Stats(self.cprofile, stream=buf)
+        st.sort_stats("cumulative").print_stats(45)
+        st.sort_stats("tottime").print_stats(35)
+        self.cprofile.dump_stats(PROFILE_OUT + ".prof")
+        with open(PROFILE_OUT + ".txt", "w") as f:
+            f.write("\n".join(lines) + "\n\n" + buf.getvalue())
+        print("\n".join(lines) + f"\n  -> {PROFILE_OUT}.txt / .prof", flush=True)
 
 
 def main():

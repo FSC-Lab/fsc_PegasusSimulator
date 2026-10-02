@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Outdoor (GPS/magnetometer, standard none_iris PX4 profile) launcher for the T650
 # inside the reconstructed gate-splat scene. Unlike
-# scripts/indoor_sim/start_single_drone_t650_gate_splat.sh, this does NOT require an
+# scripts/indoor_sim/archive/start_single_drone_t650_gate_splat.sh, this does NOT require an
 # external flight stack for position estimation - PX4's stock GPS-based EKF2 is
 # enough to arm and take off from QGroundControl alone. Useful for a quick manual
 # test flight through the gate without standing up the indoor external-vision stack.

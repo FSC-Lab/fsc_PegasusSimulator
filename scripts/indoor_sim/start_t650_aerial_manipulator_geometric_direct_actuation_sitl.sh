@@ -5,7 +5,7 @@ set -euo pipefail
 # with the ARM COMMANDED OVER ROS 2 by the fsc_open_manipulator POSITION-MODE
 # stack (aerial/inverted configuration) instead of 04's in-process hold.
 #
-# Incremental sibling of start_t650_aerial_manipulator_direct_actuator_sitl.sh
+# Incremental sibling of start_t650_aerial_manipulator_direct_actuation_sitl.sh
 # (which keeps working unchanged): the drone side is identical — external
 # fsc_autopilot_ros2 DIRECT law -> PX4 gate -> AM_xfwd plant on T650 motors —
 # and what changes is who owns the arm reference:
@@ -57,7 +57,7 @@ fi
 
 load_machine_config "$0" "$CFG_NAME"
 
-BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/start_single_drone_x650.sh"
+BASE_LAUNCHER="$SCRIPT_DIR/indoor_sim/lib/start_single_drone_x650.sh"
 PARAM_SCRIPT="$SCRIPT_DIR/apply_aerial_manipulator_px4_offboard_params.sh"
 SESSION="px4_isaac"
 PARAM_DELAY="${T650_AERIAL_MANIPULATOR_DIRECT_ACTUATOR_PARAM_DELAY:-8}"
