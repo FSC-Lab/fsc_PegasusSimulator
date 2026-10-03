@@ -3819,6 +3819,23 @@ the plan stream; cross-checked against the WB law's debug to 0.05°/0.6 mm/0.3 m
   MAX over receive stamps is one spike (percentile); npz object arrays from the numpy-2 extractor need `np1_compat.py`
   before the numpy-1.21 plotting python can read them.
 
+**1002 HARDWARE: THE DECOUPLED RIG ON ITS 2026-10-01 TUNE (2026-10-02, user request: analyse + add to the 0928
+report).** Same circle flown twice in one engagement + a PS4 teleop flight; analysis in
+`docs/docs_aerial_manipulator/decoupled_flight_20261002/` (reuses the 0928 tools), report = the same artifact
+(LhpXomd3ooNuKquPoQ9Joq; since 2026-10-03 ONE section on the user's request -- the six circle runs of 09-28/10-02, flight tags +
+flown gains, 3D, one error table on a common 27.2 s window, built by `tools/build_summary_report.py`), Command.md §7.24.4. EE 192/218 → **77.7/72.6 mm**, heading 10.3 → 3.5/3.9°;
+both structural errors shrank as predicted (offset |F|/K_p 33 mm vs 32–37 measured; lag (k_ω,z/k_R,z)ψ̇ 3.5° vs
+3.9–4.2°); WB still ~3× better. Teleop EE 51 mm, mostly the 41 mm standing offset. **Run 2 looked worse for two
+measured reasons (kept OUT of the report by request):** (1) the Orin clock stepped +0.6 s at 73.6 s; 11 s later the
+PX4 timesync moved the fused-odometry stamps +0.65 s, the L1 client read a 0.65 s sample interval (> 50 ms) and
+`reset()` ZEROED u_L1 (1.7 N thrust, 0.27/0.20 N·m) — with ω_c = 1 rad/s it took ~3 s to rebuild, 93 mm sink, 6° tilt;
+(2) the new gains leave a ζ ≈ 0.1 roll/pitch sway at ~0.6 Hz (model `tools/lateral_mode_model.py`: 0.53–0.58 Hz,
+ζ 0.06–0.12; old set 0.26 Hz, ζ 0.17, flown without it) that rang ~2× harder in run 2. Header stamps are therefore
+not trustworthy across that bag — score on receive time. **(1) fixed in code 2026-10-03** (fsc_autopilot_ros2
+`dev_robotic_arm`, uncommitted): `L1AdaptiveAugmentation::reseedPredictor()` at the two feedback-timing sites keeps
+u_L1; `reset()` only at re-engagement; gtest `L1AdaptiveReseedTest`; Command.md §7.24.4. The Orin clock is the
+user's fix on the Orin; no gain tuning for tracking (user's call — tune later for pick-and-place).
+
 **MODULAR ADAPTIVE (Yadav et al., TMECH 2025) — A THIRD DIRECT LAW, SIMULATION-ONLY COMPARISON RIG
 (2026-09-30/10-01, user request).** The paper (`docs/comparison references/`) implemented the way the
 Cai et al. L1 paper was: Python reference `extensions/.../utils_controller/modular_adaptive.py` (self-test)

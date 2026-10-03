@@ -8183,12 +8183,20 @@ Checked on shiqi-desktop before the flight, nothing committed:
   whole-body yaml), fixed sample 0.0, live arm r_os + the −14.8 mm CoM trim, guards 40° / 360 dps /
   drift off; planner bspline, circle r 0.5 m / 24.17 s / 1 lap CCW, fold 55°, q2 25 ± 15° / 6.04 s,
   teleop defaults (0.20 / 0.15 m/s, 20 °/s, 4 cm/s, 20 °/s, time scale 1.0).
-- **The 2026-10-01 tune is NOT in the hardware yaml** — it exists only as the sim variant
-  `geometric_l1_tune_20261001/variants/geometric_l1_mirror_sim_tuned.yaml`, which equals the hardware
-  yaml except the 15 gain lines (+ the WB mirror's 20° / 0.75 m guards). Writing it into the hardware
-  file was refused by this session's permission classifier (never-flown gains into a flight config);
-  that is the operator's edit. Both stacks now print a **GAIN SET** line (09-28 flown / 2026-10-01 tune
-  / neither) so the pane says which set is about to fly.
+- **The 2026-10-01 tune is NOW the hardware gain set (applied 2026-10-02 on the user's instruction).**
+  Checked first: the previous hardware set was the SIMULATION set — all 15 gains identical to the
+  `_sim.yaml` at the 08-24 hardware/sim split (430c14a), unchanged on hardware 08-21 → 09-29 and flown
+  on 09-28; only the sim's 08-25 attitude retune (K_R 1.0 → 1.5, K_ω 0.55 → 0.70) never reached
+  hardware. So hardware has always flown sim-derived gains, and the tune follows that practice. The
+  safety watchdog followed the same day (user request): tilt 40° → **20°** and the **0.75 m drift
+  trip** added, the simulation's guard. The hardware yaml now equals the Isaac-flown
+  `geometric_l1_tune_20261001/variants/geometric_l1_mirror_sim_tuned.yaml` in every controller key
+  except `vehicle_name`; each changed line keeps its previous value in its comment. Read back from the
+  live node: the 15 tuned gains, tilt 20, drift 0.75, rate 360, no errors. At 20° the trip sits BELOW
+  the law's own 30° tilt clamp, so a tilt the law would merely saturate now hands over to SAFETY
+  (hold station, arm folds home 1 s later); nominal flight peaked at 3.5° in the rehearsal. Both stacks print a **GAIN SET** line (09-28
+  flown / 2026-10-01 tune / neither) — expect "2026-10-01 TUNE (… first hardware flight of this set)".
+  First hover on this set: hold the abort ready; revert = the 15 previous values.
 - **Isaac rehearsal of the PS4 session on the flight-identified (mirror) plant, RTF 1, headless**
   (`run_check.sh`, synthetic pad through the arm station's own engage service):
 
@@ -8228,3 +8236,73 @@ window the bridge's `EE consistency max` well under 2 mm. PS4 session: hover →
 arm GS "PS4 Remote" → Engage → centre the pad → **PS first** → fly; Release before leaving DIRECT.
 Abort: `ros2 service call /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode
 std_srvs/srv/SetBool "{data: false}"` (arm_planner folds the arm home 1 s after the revert).
+
+#### 7.24.4 HARDWARE RESULT — the 2026-10-01 tune on the circle (twice) and under PS4 teleop (flown 2026-10-02, analysed same day)
+
+Bags `docs/experimental_data_ros2_bag/1002 - T650-AM geometric L1 adaptive Circle and Gamepad-*/`:
+`flight_decoupled_l1_circle_20261002_134247` (13:42, the circle flown TWICE in one DIRECT engagement: run 1
+28.56 s, run 2 69.48 s → operator SAFETY at 96.86 s, 0.8 s before its end) and `..._ps420261002_134830`
+(13:48, PS4 teleop only, 77.8 s). Campaign + tools: `decoupled_flight_20261002/` (README lists the run
+order; it reuses the 0928 `metrics.py`/`common.py` definitions, reproduced to 0.1 mm on DEC-1/DEC-2).
+Report: the "Experiment: Free-flight Comparison 0928 + 1002" artifact
+(https://claude.ai/artifact/LhpXomd3ooNuKquPoQ9Joq, new section 3), built by `decoupled_flight_20261002/tools/build_report.py`.
+
+| (rms, scored on the first 27.2 s of each run) | DEC 09-28 (old gains) | run 1 10-02 | run 2 10-02 | WB 09-28 |
+|---|---|---|---|---|
+| EE position | 192 / 218 mm | **77.7 mm** | **72.6 mm** | 24–26 mm |
+| EE heading | 10.3° | 3.53° | 3.85° | 0.44–0.48° |
+| airframe position | 151 / 177 mm | 66.2 mm | 58.5 mm | 23–25 mm |
+| EE vertical | 6.6 / 14.1 mm | 10.0 mm | 25.5 mm | 4.3 mm |
+| roll / pitch | 0.8–1.0° | 1.01 / 1.04° | 1.56 / 1.96° | 0.8–1.1° |
+| worst tilt | 2.1–2.2° | 3.1° | 6.1° | 2.2–2.4° |
+
+- **The tune did what the structure predicts**: offset |F|/K_p ≈ 33–34 mm (|F| 0.67–0.69 N, K_p 20.11)
+  vs measured 32–37 mm body-frame mean (was 139–167); heading lag (k_ω,z/k_R,z)·14.7°/s = 3.5° vs
+  3.9–4.2° (was 10.4 / 11.1°). Isaac predicted 49 mm / 3.0° on the mirror plant; hardware is 73–78 mm.
+  Arm (position servo) unchanged: q2/q3 1.1/0.8°. Watchdog (20° / 0.75 m) never tripped; 0 saturation.
+- **PS4 teleop**: airframe moved 14 × 19 cm, gripper 7 cm down, no altitude/yaw; EE 50.9 mm rms = a
+  41 mm standing offset (+29, −29 mm world) + 30 mm around it; heading 0.19°, worst tilt 4.1°.
+- **WHY RUN 2 LOOKS WORSE (user question, deliberately NOT in the report).** Horizontally it is not
+  worse (EE xy 68 vs 77 mm); the vertical and the roll/pitch are. Two separate causes, both measured
+  (`tools/run2_diagnosis.py`, `tools/lateral_mode_model.py`):
+  1. **An L1 reset mid-run from a clock step.** At 73.57 s every Orin-stamped topic's header stamp
+     jumped +0.59 s (joint_states, planner stream, bridge output, arm reference; recv−stamp −1.125 →
+     −1.723 s) while the recorder received them continuously — the Orin's system clock stepped. The arm
+     controller logged a 0.58 s "stale reference" freeze and the law one tick of static r_os (harmless).
+     11 s later (84.58 s) the PX4→ROS timesync adopted the new offset, so the EKF2-fused odometry stamps
+     jumped +0.65 s; the L1 client measures its sample interval from those stamps, saw 0.65 s > 50 ms and
+     by design called `l1_adapt_.reset()`, which ZEROES u_L1. It was carrying 1.70 N of thrust (the pack
+     had sagged; run 1 averaged 0.35 N), 0.27 N·m pitch and 0.20 N·m yaw. With the tune's ω_c = 1 rad/s
+     (was 6) it took ~3 s to rebuild: airframe sank 93 mm, |e_R| 0.07 → 0.17, heading kicked 3 → 9°.
+     EKF2 vs raw mocap stayed 6–10 mm in every window, so the estimate was not disturbed.
+  2. **A lightly damped ~0.6 Hz roll/pitch sway that the new gains created.** 0.4–1 Hz |e_R|: 6–7 mrad
+     in the first holds, 10–17 in run 1, a burst to 37 between the runs (static hold, arm still), 27–43
+     in run 2. Burst decay gives ζ ≈ 0.13 at 0.62 Hz; the lateral-axis model (position loop → tilt →
+     attitude → MN4010 lag → L1 torque path, feedback delays) gives 0.53–0.58 Hz / ζ 0.06–0.12 for the
+     10-01 gains vs 0.26 Hz / ζ 0.16–0.19 for the 09-28 set, whose flights stay at 3–9 mrad with no
+     growth. Cause: K_p ×5 while attitude bandwidth only ×1.8 and ω_d = 0, so the two loops are no
+     longer separated. The arm carries none of it (≤ 0.2° in the band). Pack sag explains only a little
+     (−4 % torque effectiveness → ζ −15 % in the model; slower rotors RAISE ζ), and the disturbance
+     proxies outside the band are the same in both runs; a 2× amplitude difference between 15 s windows
+     under identical random excitation happens ~2 % of the time, so run 2 rang more for a reason the bag
+     does not isolate. The teleop flight (lower voltage, mostly hover) stayed at 7–17 mrad.
+- **Fixes**: (a) the Orin clock must not step in flight (chrony `makestep` only at boot, slew otherwise)
+  — the user is fixing that ON THE ORIN; (b) damp the sway: soften K_p or add a ω_d feed-forward / more
+  attitude bandwidth, checking the model's ζ (tools/lateral_mode_model.py) and the bench delay margin
+  together — NOT planned: the user judged the circle tracking good enough and will tune for
+  pick-and-place instead.
+- **L1 RE-SEED FIX — APPLIED 2026-10-03 (fsc_autopilot_ros2 `dev_robotic_arm`, uncommitted).** New
+  `L1AdaptiveAugmentation::reseedPredictor()` re-seeds ONLY the predictor; u_L1 (the low-pass state, the
+  only memory of the disturbance) is held. The client calls it at the two FEEDBACK-TIMING sites (the
+  > 50 ms interval guard in the inner loop; the non-monotonic / > 1 s stamp in the odometry callback);
+  `reset()` stays at the three re-engagement sites (DIRECT entry, arming edge, DIRECT while not in
+  flight). `adapt()`'s seeding sample now zeroes the estimates (the PWC law rebuilds γ from ζ̃ alone, so
+  the next interval must run without them to re-encode the whole disturbance) and SKIPS the filter
+  update; after `reset()` u_L1 is already 0, so that path is bit-identical. New gtest
+  `L1AdaptiveReseedTest` (3) drives the real class with the flight's event (hardware L1 gains, 1.7 N /
+  0.27 / 0.2 N·m disturbance, 10 ms samples, one 0.6526 s stamp interval): u_L1 change over the next 3 s
+  0.000 %, toy-plant vertical-velocity change 0.000 m/s vs 0.106 m/s with the old `reset()`; full suite
+  98 pass + the 3 pre-existing math failures. Node smoke-started on the hardware yaml. Isaac cannot
+  exercise it (sim uses `l1adapt_fixed_sample_time_s` 0.004, so stamp gaps never reach the guard). The
+  bare-drone L1 fork (`single_drone_geometric_l1_direct_actuation`, client lines 349/935) still has the
+  old `reset()` at both sites. Orin: pull + rebuild `fsc_autopilot_ros2` once committed.
