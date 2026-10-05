@@ -234,7 +234,8 @@ class L1Gains:
                  max_wrench_force_n=25.0, max_wrench_torque_nm=5.0, n=4,
                  four_d=False, omega_q=0.2, contact=False,
                  collision_threshold_n=0.0,
-                 omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0):
+                 omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0,
+                 contact_hold_translation=False):
         self.n = int(n)
         # per-block C_x on d_int^f (4-D only); <= 0 falls back to omega_x, the
         # note's scalar form. F_hat^f always uses the scalar.
@@ -246,6 +247,12 @@ class L1Gains:
         self.omega_q = float(omega_q)
         self.contact = bool(contact)
         self.collision_threshold_n = float(collision_threshold_n)
+        # 2026-10-04 (push-and-pull's first flights; wb_l1_observer.hpp,
+        # contact_hold_translation): in contact the three TRANSLATIONAL rows of
+        # the Layer-2 filter hold, so f_d does not integrate a contact force
+        # held by static friction; the rotational rows keep adapting (they
+        # carry the force's moment). 4-D only; False = the note's Layer 1.
+        self.contact_hold_translation = bool(contact_hold_translation)
         if self.omega_q < 0.0 or self.collision_threshold_n < 0.0:
             raise ValueError("omega_q and collision_threshold_n must be >= 0")
         self.a = np.concatenate([np.full(3, float(a_t)),
@@ -365,7 +372,14 @@ class L1DisturbanceObserver:
 
         # ---- Layer 2: the low-pass filter that sets robustness --------------
         alpha = np.exp(-g.omega_c * dt)
-        self._d_f = alpha * self._d_f + (1.0 - alpha) * self._d_c
+        d_f_new = alpha * self._d_f + (1.0 - alpha) * self._d_c
+        # contact_hold_translation: the translational rows hold while the phase
+        # flag says contact (the collision latch is the previous tick's, as in
+        # the C++).
+        if g.four_d and g.contact_hold_translation and (
+                g.contact or self._collision_latched):
+            d_f_new[0:3] = self._d_f[0:3]
+        self._d_f = d_f_new
 
         out = self.attribute(dyn, R_0, dt)
         out["p_tilde"] = p_tilde
