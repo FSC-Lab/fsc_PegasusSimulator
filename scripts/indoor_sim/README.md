@@ -57,11 +57,6 @@ MicroXRCEAgent) and, where one exists, the real-hardware flight stack in
 - `start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_fused_sitl.sh`
   - Sim stack: `start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh` (EKF2-fused)
   - Hardware stack: `start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator_fused.sh` (EKF2-fused)
-- `start_t650_aerial_manipulator_whole_body_L1_4D_interaction_sitl.sh`
-  - Sim stack: `start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh`,
-    run with `WB_SIM_YAML` set to an interaction yaml
-    (`..._whole_body_l1_4d_direct_actuation_t650_sim_interaction_{contact,thr2}.yaml`)
-  - Hardware stack: none (simulation-only contact campaign)
 
 ## Archived launchers (`archive/`)
 

@@ -6,7 +6,9 @@ what should trigger it, and what payload / push force does the H1b tune carry?
 Report (artifact "Interaction Feasibility, AM-T650"): `report.html`
 (built from `report_src.html` + `analysis/report_data.json` by `tools/build_report.py`).
 
-Nothing existing was edited. New files only:
+Nothing existing was edited. New files only (the 07 script and its launcher were
+REMOVED 2026-10-03 as test-only -- restore with
+`git checkout 8960081 -- <path>`; `tools/interaction_cycle.sh` needs them):
 - `application/robotic_arm/07_px4_direct_t650_aerial_manipulator_interaction.py`
   -- loads 06 as a module and adds an EE force injector
   (`/uav_0/isaacsim_manipulator/ee_force_cmd`, world N, latched 0.5 s sim;
