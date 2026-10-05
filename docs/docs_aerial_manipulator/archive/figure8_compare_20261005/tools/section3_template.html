@@ -1,0 +1,49 @@
+<section aria-label="Figure-8 tracking performance comparison">
+  <h2>3. Figure-8: tracking performance comparison</h2>
+  <div class="legend"><span><span class="sw wb"></span>Whole-body L1 (shipped)</span><span><span class="sw geo"></span>Geometric L1 adaptive (tuned)</span></div>
+  <p class="sub">The whole-body and geometric L1 laws then flew a faster figure-8 under the launch condition of section 2: headless Isaac, the real-time pacer holding RTF 1.000 in every 10 s window, Isaac pinned to the performance cores from launch, the same plant and controller files, and the geometric law on its tuned gains. The modular law was not flown on this shape. Each flight took off in SAFETY to 1.2 m at a 45° heading, switched to DIRECT, passed the same stability gate, flew to the run's start rest, then flew one lap at time scale 1.</p>
+
+  <div style="display:grid;gap:10px">
+    <h3>3.1 Choosing the figure-8</h3>
+    <p class="sub">The brief was a mean end-effector speed of about 0.20 m/s (the circle's is 0.131 m/s); a figure-8 "radius" of 0.60–0.75 m to fit the flight area, taken as the half-length A (the planner's counterpart of the circle radius, 0.5 m in earlier figure-8 runs); and the arm's q<sub>2</sub> swinging on a period that divides the lap, four periods per lap as on the circle. The half-width is B = A/2, the planner's default proportion, which makes each lobe as wide as it is long. At a fixed mean speed a smaller 8 turns harder. The planner's own numbers for each candidate, at 0.20 m/s and time scale 1:</p>
+    {SIZING}
+    <p class="sub">Where the path turns fastest (the top and bottom of each lobe) the airframe swings around the end effector, so the CoM speed peaks above the end effector's 0.29 m/s. The planner's CoM speed bound of 0.30 m/s therefore rules out A = 0.60 and 0.65 m at this speed (s<sub>max</sub> below 1). A = 0.75 m is the largest size in the range and has the most margin (s<sub>max</sub> 1.07), with the lowest yaw rate and CoM acceleration. A thinner 8 (B = 0.30 or 0.225 m) would lower the peak yaw rate by only 6–12 %. <b>Chosen: A = 0.75 m, B = 0.375 m, T<sub>lap</sub> = 22.865 s (0.200 m/s mean), q<sub>2</sub> = 25 ± 15° on a 5.716 s period, fold 55°</b>, the circle's arm amplitude, centre and fold.</p>
+    <p class="sub">The planner's shared bounds (CoM acceleration 0.15 m/s², yaw rate 0.30 rad/s) would cap this shape at s = 0.34, i.e. 0.068 m/s. Those bounds also size every transition (go-to-start, back-to-origin, ground-station targets). Rather than raise them, the planner gained bounds for the end-effector run only: <code>ee_traj_a_max</code> = 0.40 m/s² and <code>ee_traj_w_max</code> = 1.0 rad/s (0 = inherit, so every other mode is unchanged). With them s<sub>max</sub> = 1.06, set by the shared 0.30 m/s CoM speed, and every flight below ran at s = 1.00.</p>
+  </div>
+
+  <div style="display:grid;gap:10px">
+    <h3>3.2 Results</h3>
+    <figure>
+      <img src="data:image/png;base64,{TOP}" alt="Top views of the figure-8 flights: end-effector and base reference and measured paths with claw-direction arrows, whole-body L1 and geometric L1 adaptive">
+      <figcaption><b>Top view of the figure-8 flights, RTF 1, two per controller (whole-body top row, geometric L1 bottom row).</b> Dashed black: the end-effector reference. Dashed grey: the base (CoM) reference. Solid blue/green: the measured end-effector path. Solid dark grey: the measured base path. <b>Arrows: where the claw points</b> (horizontal projection), black = reference, red = measured. The run starts and ends at the circle marker, where the lobes cross, and flies the right lobe clockwise first. The whole-body path sits on its reference except at the lobe ends, where it cuts slightly inside. The geometric path is displaced ahead of and to the right of the direction of travel, and its claw arrows turn late, by up to {geo_headmax}° where the yaw rate peaks.</figcaption>
+    </figure>
+    {RESULTS}
+    <p class="note">RMS over the EXECUTING window of each flight (one lap, 22.9 s of plan time plus the 4 s ramps), with the definitions of section 2's table; "EE position peak" is the largest end-effector position error in the window. All {n_wb} + {n_geo} flights completed the lap at RTF 1.000 without rotor saturation (the geometric law's motor commands stayed within {geo_mot_lo}–{geo_mot_hi}). The whole-body law's peak joint torque was {wb_tau} of 3.0 N·m, with no joint-torque clamp. All started the lap through the planner's standard 0.10 m Start gate.</p>
+  </div>
+
+  <div style="display:grid;gap:10px">
+    <h3>3.3 What the figure-8 changes</h3>
+    <figure>
+      <img src="data:image/png;base64,{SERIES}" alt="Reference yaw rate, end-effector position error and end-effector heading error against time, one figure-8 flight per controller">
+      <figcaption><b>One figure-8 flight per controller against time since Start.</b> Top: the reference base yaw rate, which peaks at ±51°/s at the top and bottom of each lobe and reverses sign at the crossing (13.4 s). Middle: end-effector position error. Bottom: end-effector heading error. The geometric law's heading error is the mirror image of the yaw rate; the whole-body law's stays within ±2°.</figcaption>
+    </figure>
+    <div class="tbl"><table>
+      <thead><tr><th>mean of three flights</th><th>whole-body, circle</th><th>whole-body, figure-8</th><th>geometric, circle</th><th>geometric, figure-8</th></tr></thead>
+      <tbody>
+        <tr><td>EE position RMS [mm]</td><td>14.97</td><td>{wb_ee}</td><td>48.88</td><td>{geo_ee}</td></tr>
+        <tr><td>EE heading RMS [deg]</td><td>0.50</td><td>{wb_head}</td><td>2.97</td><td>{geo_head}</td></tr>
+        <tr><td>EE position RMS where |yaw rate| &gt; 35°/s / &lt; 20°/s [mm]</td><td>—</td><td>{wb_hi} / {wb_lo}</td><td>—</td><td>{geo_hi} / {geo_lo}</td></tr>
+        <tr><td>slope of EE heading error on reference yaw rate [s]</td><td>{wbc_slope}</td><td>{wb_slope}</td><td>−{geoc_slope}</td><td>−{geo_slope} (R² {geo_r2})</td></tr>
+        <tr><td>mean EE offset along / across the path [mm] (+ ahead / + left)</td><td>—</td><td>{wb_along} / {wb_crossm}</td><td>—</td><td>{geo_along} / {geo_crossm}</td></tr>
+        <tr class="grp"><td colspan="5">EE error split [mm RMS]: r<sub>e</sub> − r<sub>ed</sub> = airframe position + airframe attitude · r<sub>0e</sub>(q<sub>d</sub>) + joints</td></tr>
+        <tr><td>from the airframe position</td><td>{wbc_af}</td><td>{wb_af}</td><td>{geoc_af}</td><td>{geo_af}</td></tr>
+        <tr><td>from the airframe attitude (yaw lag acts here)</td><td>{wbc_att}</td><td>{wb_att}</td><td>{geoc_att}</td><td>{geo_att}</td></tr>
+        <tr><td>from the arm joints</td><td>{wbc_j}</td><td>{wb_j}</td><td>{geoc_j}</td><td>{geo_j}</td></tr>
+      </tbody>
+    </table></div>
+    <p class="sub"><b>Whole-body L1.</b> The end-effector error rises from 15.0 mm on the circle to {wb_ee} mm, and the rise sits where the yaw rate is high: {wb_hi} mm RMS where |ψ̇| exceeds 35°/s against {wb_lo} mm where it is below 20°/s. The heading error stays at {wb_head}° RMS (peak {wb_headmax}°), and its dependence on the yaw rate is weak ({wb_slope} s), because the law receives the full reference chain, yaw rate and acceleration included, and feeds it forward. Most of its end-effector error is airframe position ({wb_af} mm of the split); the attitude and joint terms grow only from {wbc_att} / {wbc_j} mm on the circle to {wb_att} / {wb_j} mm.</p>
+    <p class="sub"><b>Geometric L1 adaptive.</b> The heading error grows from 2.97° to {geo_head}° RMS (peak {geo_headmax}°), and it is almost entirely the constant-yaw specialization's lag. A least-squares fit of the end-effector heading error on the reference yaw rate gives −{geo_slope} s (R² {geo_r2}), against the predicted K<sub>ω,z</sub>/K<sub>R,z</sub> = 0.411/1.737 = 0.237 s for ω<sub>d</sub> = 0; on the circle the same fit gives −{geoc_slope} s. At the figure-8's 51°/s that lag is 12–15°, and the position-mode arm carries it to the gripper. Through the arm's 0.23–0.28 m horizontal reach the same lag also moves the end-effector position: the airframe-attitude term of the split doubles from {geoc_att} mm on the circle to {geo_att} mm, about reach × heading error (0.25 m × {geo_head}° ≈ {geo_att_pred} mm). The end-effector position error rises from 48.9 to {geo_ee} mm, concentrated at the high yaw rates ({geo_hi} against {geo_lo} mm).</p>
+    <p class="sub">The rest of the geometric law's error is the offset section 2 already showed. Its L1 augmentation estimates the body-fixed lateral force (+0.55, −0.50) N but cannot cancel it, so the pure-P position loop parks the airframe F/K<sub>p</sub> = (+27, −25) mm off in the body frame ({geo_off} mm before Start). Because the nose follows the path tangent, the body frame is the path frame, and the end effector rides {geo_along_r} mm ahead of and {geo_crossm_abs} mm to the right of its reference on average. On the circle the same offset showed as a wider, leading circle; on the figure-8 it shifts each lobe differently, since the right lobe turns clockwise and the left counter-clockwise.</p>
+    <p class="sub">On the circle the whole-body law tracked the end effector 3.3× better than the geometric law in position and 5.9× in heading; on the figure-8 the margins are {ratio_ee}× and {ratio_head}×.</p>
+  </div>
+</section>

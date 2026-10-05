@@ -329,6 +329,13 @@ class Driver(Node):
         # rig of a comparison.
         if a.start_pos_tol is not None:
             req.parameters.append(dbl("ee_traj_start_pos_tol", a.start_pos_tol))
+        # EE-trajectory-only rate bounds (2026-10-05, the 0.2 m/s figure-8): the
+        # planner's shared v/a/w_max also size every transition, so a faster
+        # shape gets its own; set only when given (planner default 0 = inherit).
+        for flag, name in (("ee_v_max", "ee_traj_v_max"), ("ee_a_max", "ee_traj_a_max"),
+                           ("ee_w_max", "ee_traj_w_max")):
+            if getattr(a, flag) is not None:
+                req.parameters.append(dbl(name, getattr(a, flag)))
         if not self.params_cli.service_is_ready():
             return False
         self.params_future = self.params_cli.call_async(req)
@@ -516,6 +523,9 @@ def main():
                     help="the PLANNER's base_com, MODEL frame [m] (default: the 4-D mirror yaml's)")
     ap.add_argument("--q2-center-deg", type=float, default=None, help="ee_traj_q2_center_deg")
     ap.add_argument("--q2-amp-deg", type=float, default=None, help="ee_traj_q2_amp_deg")
+    ap.add_argument("--ee-v-max", type=float, default=None, help="ee_traj_v_max: CoM speed bound for the EE run only [m/s]")
+    ap.add_argument("--ee-a-max", type=float, default=None, help="ee_traj_a_max: CoM acceleration bound for the EE run only [m/s^2]")
+    ap.add_argument("--ee-w-max", type=float, default=None, help="ee_traj_w_max: yaw-rate bound for the EE run only [rad/s]")
     ap.add_argument("--time-scale", type=float, default=None, help="absolute time scale (clamped to s_max)")
     ap.add_argument("--scale", type=float, default=1.0, help="fraction of s_max when --time-scale is not given")
     ap.add_argument("--direct-settle", type=float, default=20.0, help="minimum seconds in DIRECT before the gate")

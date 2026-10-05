@@ -1,0 +1,6 @@
+0.60 0.300 L 3.658 T 18.292 P 4.5729 vc 0.329 ac 0.465 yaw 64.6 qd 22.2 tau 0.836 smax 0.890 bind CoM speed 0.302 > 0.300 m/s
+0.65 0.325 L 3.963 T 19.816 P 4.9540 vc 0.310 ac 0.413 yaw 59.5 qd 20.4 tau 0.838 smax 0.965 bind CoM speed 0.308 > 0.300 m/s
+0.70 0.350 L 4.268 T 21.340 P 5.3351 vc 0.294 ac 0.366 yaw 55.2 qd 18.8 tau 0.839 smax 1.019 bind CoM speed 0.308 > 0.300 m/s
+0.75 0.375 L 4.573 T 22.865 P 5.7161 vc 0.280 ac 0.327 yaw 51.3 qd 17.5 tau 0.840 smax 1.066 bind CoM speed 0.306 > 0.300 m/s
+0.75 0.300 L 4.139 T 20.695 P 5.1737 vc 0.275 ac 0.310 yaw 48.0 qd 19.0 tau 0.838 smax 1.084 bind CoM speed 0.307 > 0.300 m/s
+0.75 0.225 L 3.744 T 18.721 P 4.6801 vc 0.266 ac 0.296 yaw 45.1 qd 20.6 tau 0.836 smax 1.122 bind CoM speed 0.307 > 0.300 m/s

@@ -12,7 +12,7 @@
 # settles F/K_p ~ 0.185 m off the start point (2026-10-01) and flies with 0.25.
 set -uo pipefail
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PEG="$(cd -- "$HERE/../../.." && pwd)"
+PEG="$(cd -- "$HERE/../../../.." && pwd)"
 export DISPLAY="${DISPLAY:-:1}" PEGASUS_HEADLESS="${PEGASUS_HEADLESS:-1}" PEGASUS_REALTIME=1 PEGASUS_SIM_RTF=1.0
 export AM_CMP_OUT="$HERE/data"
 mkdir -p "$HERE/logs"

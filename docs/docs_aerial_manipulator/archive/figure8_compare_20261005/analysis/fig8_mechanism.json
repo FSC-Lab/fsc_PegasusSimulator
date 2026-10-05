@@ -1,0 +1,98 @@
+{
+ "WB-1": {
+  "head_slope_s": 0.024641278251570118,
+  "head_bias_deg": -0.06276422458392095,
+  "head_r2": 0.6150064312790502,
+  "ee_rms_highrate_mm": 29.09144014216654,
+  "ee_rms_lowrate_mm": 20.383871234096645,
+  "hover_offset_mm": 2.2870038939304393
+ },
+ "WB-2": {
+  "head_slope_s": 0.02224346954235004,
+  "head_bias_deg": -0.2683590497582546,
+  "head_r2": 0.6229642053950213,
+  "ee_rms_highrate_mm": 29.141981926819142,
+  "ee_rms_lowrate_mm": 19.139182452610562,
+  "hover_offset_mm": 3.787335397906985
+ },
+ "WB-3": {
+  "head_slope_s": 0.02159407047649942,
+  "head_bias_deg": -0.15177480817399017,
+  "head_r2": 0.6264329500274286,
+  "ee_rms_highrate_mm": 27.44550114127622,
+  "ee_rms_lowrate_mm": 18.78921445528476,
+  "hover_offset_mm": 3.311259669127902
+ },
+ "GEO-1": {
+  "head_slope_s": -0.25363074671682984,
+  "head_bias_deg": -0.07217491194020942,
+  "head_r2": 0.9498072215284282,
+  "ee_rms_highrate_mm": 77.5181308271153,
+  "ee_rms_lowrate_mm": 46.839409602322846,
+  "hover_offset_mm": 36.54861599185952
+ },
+ "GEO-2": {
+  "head_slope_s": -0.261615866157815,
+  "head_bias_deg": -0.29847797591944425,
+  "head_r2": 0.9518864104969083,
+  "ee_rms_highrate_mm": 78.31612969869037,
+  "ee_rms_lowrate_mm": 48.42558479251225,
+  "hover_offset_mm": 37.8894860121893
+ },
+ "GEO-3": {
+  "head_slope_s": -0.2544339479340118,
+  "head_bias_deg": -0.24929813335888262,
+  "head_r2": 0.9498170976624397,
+  "ee_rms_highrate_mm": 78.5115966800915,
+  "ee_rms_lowrate_mm": 49.83487184000483,
+  "hover_offset_mm": 37.11126993721152
+ },
+ "c-WB-1": {
+  "head_slope_s": 0.012191878211779555,
+  "head_bias_deg": 0.3650125463804909,
+  "head_r2": 0.01729977281275663,
+  "ee_rms_highrate_mm": NaN,
+  "ee_rms_lowrate_mm": 15.143648543520762,
+  "hover_offset_mm": 3.61637791673877
+ },
+ "c-WB-2": {
+  "head_slope_s": 0.008274364165039455,
+  "head_bias_deg": 0.23397631997954835,
+  "head_r2": 0.013157381568103421,
+  "ee_rms_highrate_mm": NaN,
+  "ee_rms_lowrate_mm": 15.664723545809089,
+  "hover_offset_mm": 3.6961289000025603
+ },
+ "c-WB-3": {
+  "head_slope_s": 0.018341140537612648,
+  "head_bias_deg": 0.019900257177777957,
+  "head_r2": 0.052556575646266146,
+  "ee_rms_highrate_mm": NaN,
+  "ee_rms_lowrate_mm": 14.694386544912026,
+  "hover_offset_mm": 5.325168049224348
+ },
+ "c-GEO-1": {
+  "head_slope_s": -0.25876740692626216,
+  "head_bias_deg": 0.6572708971707674,
+  "head_r2": 0.8799362098422435,
+  "ee_rms_highrate_mm": NaN,
+  "ee_rms_lowrate_mm": 49.89254658670347,
+  "hover_offset_mm": 37.39287313538742
+ },
+ "c-GEO-2": {
+  "head_slope_s": -0.24737650626726687,
+  "head_bias_deg": 0.43438071707274445,
+  "head_r2": 0.8768162302432236,
+  "ee_rms_highrate_mm": NaN,
+  "ee_rms_lowrate_mm": 48.370523623623846,
+  "hover_offset_mm": 35.43947212238973
+ },
+ "c-GEO-3": {
+  "head_slope_s": -0.24741721775100534,
+  "head_bias_deg": 0.49523807414431015,
+  "head_r2": 0.893377435454093,
+  "ee_rms_highrate_mm": NaN,
+  "ee_rms_lowrate_mm": 49.51695462763853,
+  "hover_offset_mm": 35.02473546242103
+ }
+}
