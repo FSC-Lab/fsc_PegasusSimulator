@@ -1,0 +1,289 @@
+<title>Pick-and-Place Controller Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: one full-width column on black (the lab's report style); numbers in Plex Mono;
+   blue = whole-body 4-D L1, orange = decoupled geometric + L1, everywhere on the page. */
+:root{
+  color-scheme:dark;
+  --bg:#000000; --panel:#141413; --ink:#f5f5f2; --ink2:#b9b8ae; --ink3:#8a897f; --line:#2f2f2d;
+  --wb:#3987e5; --dec:#d95926;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1,h2,h3{text-wrap:balance;line-height:1.25}
+h1{font-size:1.85rem;margin:8px 0 6px;letter-spacing:-0.01em}
+h2{font-size:1.35rem;margin:44px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:1.05rem;margin:28px 0 8px}
+p{margin:8px 0}
+.sub{color:var(--ink2);margin:0 0 14px}
+a{color:var(--ink);text-decoration-color:var(--ink3);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--wb);outline-offset:2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--ink2);font-size:13.5px;margin:6px 0 4px}
+.key::before,.wbv::before,.geov::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:7px;vertical-align:0}
+.key.wb::before,.wbv::before{background:var(--wb)}
+.key.geo::before,.geov::before{background:var(--dec)}
+nav.toc{border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:18px 0 6px;font-size:14px}
+nav.toc ol{margin:4px 0 0;padding-left:22px}nav.toc ol ol{padding-left:22px;margin:2px 0}
+nav.toc li{margin:2px 0}
+.verdict{background:var(--panel);border-left:3px solid var(--ink2);padding:10px 14px;margin:14px 0;border-radius:0 6px 6px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;margin:14px 0 6px}
+.kpi{border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:0}
+.kl{color:var(--ink2);font-size:13px}
+.kv{font-family:var(--mono);font-size:21px;display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;margin-top:4px;font-variant-numeric:tabular-nums}
+.kv .sep{font-family:var(--sans);font-size:12px;color:var(--ink3)}
+.kn{color:var(--ink3);font-size:12.5px;margin-top:2px}
+.eq{font-family:var(--mono);font-size:14px;background:var(--panel);border-radius:6px;padding:10px 14px;margin:10px 0;overflow-x:auto;white-space:nowrap}
+ul{padding-left:22px;margin:8px 0}li{margin:5px 0}
+.tscroll{overflow-x:auto;margin:10px 0 18px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+thead th{color:var(--ink2);font-weight:600;border-bottom:1px solid var(--ink3);white-space:nowrap}
+tr.grp th{background:var(--panel);color:var(--ink);font-weight:600;font-size:12.8px;padding:5px 10px;border-bottom:0}
+.n{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.8px;white-space:nowrap}
+.rho,.dim{color:var(--ink3);font-family:var(--mono);font-size:12px;white-space:nowrap}
+table.cmp td:nth-child(n+2){white-space:nowrap}
+table.par td:first-child{color:var(--ink2);width:19%}
+table.par td:nth-child(3){width:27%}
+code{font-family:var(--mono);font-size:12px;background:var(--panel);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+.chip{display:inline-block;font-size:11.5px;line-height:1.5;color:var(--ink);border:1px solid var(--ink3);border-radius:10px;padding:0 8px;margin-left:8px;white-space:nowrap;font-family:var(--sans);font-weight:400}
+figure{margin:20px 0 26px}
+.plot{width:100%;min-height:200px}
+#fig1{height:360px}#fig2{height:380px}#fig3{height:540px}
+figcaption{color:var(--ink2);font-size:13.5px;margin-top:6px}
+figcaption b{color:var(--ink)}
+.nolib{color:var(--ink3);font-size:13px;border:1px dashed var(--line);border-radius:6px;padding:20px;text-align:center}
+.note{color:var(--ink2);font-size:13.5px}
+@media (max-width:640px){#fig2{height:620px}#fig3{height:600px}h1{font-size:1.5rem}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Pick-and-Place Controller Comparison</h1>
+  <p class="sub">Whole-body 4-D L1 against decoupled geometric + L1 on the same autonomous pick-and-place task in Isaac Sim: 5 missions per controller, interleaved, headless at real time (RTF 0.995–1.000), 200 g payload. Campaign of 2026-10-04.</p>
+  <div class="legend"><span class="key wb">Whole-body 4-D L1 (torque-mode arm)</span><span class="key geo">Decoupled geometric + L1 (position-mode arm)</span></div>
+  <nav class="toc" aria-label="Contents"><b>Contents</b>
+    <ol>
+      <li><a href="#perf">Performance comparison</a>
+        <ol><li><a href="#metric">Metric and protocol</a></li><li><a href="#bench">Benchmark results</a></li><li><a href="#figs">Where the airframe error comes from</a></li><li><a href="#task">Task accuracy and attitude</a></li><li><a href="#findings">Findings</a></li></ol></li>
+      <li><a href="#params">Control gains and parameters</a>
+        <ol><li><a href="#shared">Shared by both controllers</a></li><li><a href="#pwb">Whole-body 4-D L1</a></li><li><a href="#pgeo">Decoupled geometric + L1</a></li><li><a href="#files">Configuration files</a></li></ol></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="perf">
+<h2>1. Performance comparison</h2>
+<div class="verdict">Both controllers completed 5 of 5 missions and set the payload upright on the place cap. On the Suarez et al. benchmark metric the whole-body controller kept the airframe <b>%%GRAB_X%%× closer</b> to its planned position during the grab (max ε<sub>UAV</sub> %%GRAB_W%% vs %%GRAB_G%% mm) and <b>%%PLACE_X%%× closer</b> during the place (%%PLACE_W%% vs %%PLACE_G%% mm). The decoupled controller reaches comparable accuracy at the gripper by moving the airframe more and taking longer.</div>
+<div class="kpis">%%KPIS%%</div>
+
+<h3 id="metric">1.1 Metric and protocol</h3>
+<p>Suarez et al., "Benchmarks for Aerial Manipulation", IEEE RA-L 5(2), 2020, Eq. 9:</p>
+<div class="eq">‖ε<sub>UAV</sub>‖ = ‖r<sub>UAV</sub><sup>ref</sup> − r<sub>UAV</sub>‖ ,&nbsp;&nbsp;&nbsp; ρ<sub>UAV</sub> = ‖ε<sub>UAV</sub>‖ / L ,&nbsp;&nbsp;&nbsp; L = L<sub>1</sub> + L<sub>2</sub> = 0.370 m</div>
+<ul>
+  <li><b>r<sub>UAV</sub></b> is the airframe (body origin) position in the Earth frame, from odometry. <b>r<sub>UAV</sub><sup>ref</sup></b> is the planned airframe position, rebuilt from the planner's stream as x<sub>cd</sub> − R<sub>z</sub>(ψ<sub>d</sub>) r<sub>0c</sub>(q<sub>d</sub>) on the planner's own model. It is the same for both controllers, which fly one planner. In hover the CoM error and the airframe error agree to 0.4 mm.</li>
+  <li><b>L</b> is the arm's maximum reach: shoulder to elbow 0.130 m, elbow to claw 0.132 + 0.108 m. So 0.1 L = 37 mm and 0.25 L = 93 mm.</li>
+  <li><b>Protocol</b> (the paper's grasping benchmark, Sec. IV-B): N = 5 missions per controller, interleaved (whole-body, decoupled, whole-body, …), each from a clean simulator. A mission is the arm ground station's Pick &amp; Place steps, scripted: Go To Start, Ready To Pick, Pick, Exit To Pick, Go To Place Start, Ready To Place, Place, Exit To Place, Go To Land Start, Execute To Land.</li>
+  <li><b>Phases</b>: approach = Go To Start to Ready To Pick; grab = Pick to Exit To Pick (descent, close, lift-off); carry = Go To Place Start to Ready To Place; place = Place to Exit To Place; return = Go To Land Start to Execute To Land.</li>
+  <li><b>Success</b>: the mission is not aborted and the payload ends upright (&lt; 5°) on the place cap, its centre within 80 mm of the pillar axis. <b>Way-point condition</b>: ε &lt; 0.25 L, averaged over ±0.2 s at each of the 8 leg ends. <b>t<sub>10%</sub></b>: time from the lift-off (payload 5 mm off its cap) or from the release (gripper open command) until ε ≤ 0.1 L and stays there for 1 s.</li>
+  <li>Scene, planner block, plant and feedback are identical for both rigs; only the controller and its arm mode differ. One decoupled attempt aborted 3 s into DIRECT because of a race in the test driver at bring-up: a takeoff setpoint reached the planner after the mode switch. The driver was fixed and the run re-flown; the aborted attempt is not counted.</li>
+</ul>
+
+<h3 id="bench">1.2 Benchmark results</h3>
+<p class="note">Table 1. The paper's metrics over the five missions of each controller. Max ε per phase is the largest airframe deviation inside that phase; ρ is the same number divided by L.</p>
+%%T1%%
+
+<h3 id="figs">1.3 Where the airframe error comes from</h3>
+<figure>
+  <div id="fig1" class="plot" role="img" aria-label="Bar chart of the maximum rho UAV per mission phase for both controllers"></div>
+  <figcaption><b>Figure 1.</b> Maximum ρ<sub>UAV</sub> in each phase, the mean of five missions; whiskers span the lowest to the highest run. Dotted line 0.1 L (37 mm), dashed line 0.25 L (93 mm, the way-point limit). Hover a bar for the values in millimetres.</figcaption>
+</figure>
+<figure>
+  <div id="fig2" class="plot" role="img" aria-label="Rho UAV against time around the lift-off and around the release, five runs per controller"></div>
+  <figcaption><b>Figure 2.</b> ρ<sub>UAV</sub> around the two moments the payload's weight changes, all five runs of each controller. Left: aligned at the lift-off (t = 0 when the payload leaves its cap). Right: aligned at the release (t = 0 at the gripper open command). The decoupled airframe swings %%LIFT_G%% after the lift-off against %%LIFT_W%% for the whole-body airframe, and %%REL_G%% against %%REL_W%% after the release.</figcaption>
+</figure>
+<figure>
+  <div id="fig3" class="plot" role="img" aria-label="Rho UAV over the whole mission, one panel per controller"></div>
+  <figcaption><b>Figure 3.</b> ρ<sub>UAV</sub> over the whole mission, time from the switch to DIRECT, one panel per controller on the same scale. Shaded spans are the grab and place phases (mean timing of the five runs). The decoupled baseline sits near ρ ≈ 0.13 when nothing is happening.</figcaption>
+</figure>
+
+<h3 id="task">1.4 Task accuracy and attitude</h3>
+<p class="note">Table 2. What happens at the gripper and to the payload, and how much the airframe tilts, for the same ten missions.</p>
+%%T2%%
+
+<h3 id="findings">1.5 Findings</h3>
+<ul>
+  <li><b>The large errors are horizontal and follow the payload's weight change.</b> In the 12 s after the lift-off the decoupled airframe peaks at %%LIFT_G%% from its reference, against %%LIFT_W%% for the whole-body airframe; in the 10 s after the release it peaks at %%REL_G%% against %%REL_W%%. Neither law models the 200 g payload. The whole-body law's coupled model and L1 observer bring the airframe back inside 0.1 L within about 2 s; the decoupled law takes 7.5 s on average.</li>
+  <li><b>The decoupled airframe sits about 50 mm off its reference at rest</b> (approach RMS %%APP_G%% mm against %%APP_W%% mm). Its position loop is pure P/D. The plant carries a body-fixed lateral force of (0.55, −0.50) N that its L1 estimates but does not cancel, because that force is outside the matched channel. The loop therefore parks the airframe at |F| / K<sub>p</sub> = 0.74 N / 15 N/m ≈ 50 mm. That is above 0.1 L, so its t<sub>10%</sub> is reached only where the payload's weight happens to shift the offset; after the release 2 of 5 runs never got inside 0.1 L.</li>
+  <li><b>Accuracy at the gripper is comparable.</b> The jaws closed with the claw %%CLOSE_W%% (whole-body) against %%CLOSE_G%% (decoupled) from the target, and the payload was set down %%OFF_W%% against %%OFF_G%% off the pillar axis. The decoupled rig gets there through the planner's descent trim, which measures its %%HOVER_G%% hover offset and shifts the descent by it, and through the centring wait before the jaws close. That makes its grab and place phases about 6 s and 4 s longer and its mission about 11 s longer (%%MIS_G%% against %%MIS_W%% s).</li>
+  <li><b>The whole-body pick is world-anchored by design.</b> During the pick descent the claw is held in the world frame and the airframe absorbs the hover wander, so part of the whole-body grab-phase ε is intended.</li>
+  <li><b>Attitude.</b> Peak tilt was %%TILT_W%% for the whole-body controller against %%TILT_G%% for the decoupled one. The worst decoupled run (bench_geo_1) swung %%LIFTPK_G1%% mm at the lift-off and tilted %%TILT_G1%%°, just above the planner's 15° guard but for less than its 0.1 s persistence.</li>
+  <li><b>Scope.</b> Simulation only: Isaac Sim with the plant identified from hardware flights, raw motion capture, one payload mass, five runs per controller. Neither pick-and-place configuration has flown on hardware.</li>
+</ul>
+</section>
+
+<section id="params">
+<h2>2. Control gains and parameters</h2>
+<p>The values the ten benchmark missions flew, read by the page builder from the two controller yamls and the planner block they share. Both yamls are generated, not hand-edited. A <span class="chip" style="margin-left:0">pick-and-place</span> tag marks the two places where this configuration departs from the controllers' free-flight tunes.</p>
+
+<h3 id="shared">2.1 Shared by both controllers</h3>
+%%TSHARED%%
+
+<h3 id="pwb">2.2 Whole-body 4-D L1</h3>
+<p class="note">One coupled law for airframe and arm at 250 Hz: impedance on the end-effector task, the L1 disturbance observer with 4-D joint-row attribution, and joint torques streamed to the arm. k<sub>R</sub> / k<sub>ω</sub> are lowered from the free-flight pair because, with the claw pointing down, its lightly damped 1.5 Hz pitch mode grew to 8–12° in 2 of 8 hovers.</p>
+%%TWB%%
+
+<h3 id="pgeo">2.3 Decoupled geometric + L1</h3>
+<p class="note">Geometric SE(3) control of the airframe with L1 augmentation (Cai et al., 2025), and the arm in position mode tracking the joint half of the same plan. The horizontal K<sub>p</sub> / K<sub>v</sub> are softened from the free-flight 20.11 / 11.05 because, carrying the payload, that pair left a lightly damped ~0.6 Hz roll and pitch sway that grew to the tilt guard; a damping screen picked 15 / 10. The vertical pair is raised for the lift.</p>
+%%TGEO%%
+
+<h3 id="files">2.4 Configuration files</h3>
+<ul>
+  <li>Whole-body: <code>fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_place.yaml</code>, generated by <code>docs/docs_aerial_manipulator/archive/pick_place_tune_20261001/tools/make_pick_place_yaml.py</code> from the mirror <code>_sim.yaml</code> (adds k<sub>R</sub> / k<sub>ω</sub> 1.6 / 1.2 and the 2.2 m fence).</li>
+  <li>Decoupled: <code>fsc_autopilot_ros2/config/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_place.yaml</code>, generated by <code>docs/docs_aerial_manipulator/archive/pick_place_controllers_20261003/tools/make_geo_pick_place_yaml.py</code> from the 2026-10-01 tuned mirror yaml (adds K<sub>p</sub> / K<sub>v</sub>).</li>
+  <li>Arm controllers: <code>open_manipulator_x_isaac_bridge/config/torque_controller_isaac_aerial.yaml</code> (whole-body) and <code>position_controller_isaac_aerial.yaml</code> (decoupled).</li>
+  <li>Scene: <code>application/robotic_arm/07_px4_t650_aerial_manipulator_pick_and_place.py</code>. Launch: Command.md section 16, with <code>WB_SIM_PROFILE=pick_place</code> on either stack.</li>
+  <li>Campaign: <code>docs/docs_aerial_manipulator/archive/pick_place_controllers_20261003/</code>. Runs <code>runs/bench_{wb,geo}_1..5</code>; metrics <code>tools/bench_metrics.py</code>; this page <code>tools/report_data.py</code> and <code>tools/build_report.py</code>.</li>
+</ul>
+</section>
+</div>
+
+<script type="application/json" id="report-data">%%DATA%%</script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js"></script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('report-data').textContent);
+  const L = D.L, Lmm = L * 1000;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const C = {wb: css('--wb'), geo: css('--dec'), ink: css('--ink'), ink2: css('--ink2'), ink3: css('--ink3'),
+             line: css('--line'), bg: css('--bg')};
+  const NAME = {wb: 'Whole-body 4-D L1', geo: 'Decoupled geometric + L1'};
+  const PH = ['approach', 'grab', 'carry', 'place', 'return'];
+  const runs = rig => D.runs.filter(r => r.rig === rig);
+  const mean = v => v.reduce((a, b) => a + b, 0) / v.length;
+  const CFG = {responsive: true, displayModeBar: false};
+  const FONT = {family: "'IBM Plex Sans', system-ui, sans-serif", size: 12, color: C.ink2};
+  const ax = extra => Object.assign({gridcolor: C.line, zeroline: false, linecolor: C.line, ticks: 'outside',
+    tickcolor: C.line, tickfont: {color: C.ink2, family: "'IBM Plex Mono', ui-monospace, monospace", size: 11}}, extra);
+  const base = extra => Object.assign({paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: FONT,
+    hoverlabel: {bgcolor: '#141413', bordercolor: C.line, font: {color: C.ink, family: FONT.family, size: 12}},
+    legend: {orientation: 'h', x: 0, y: 1.12, font: {color: C.ink2, size: 12.5}}}, extra);
+  function thresholds(xd, yr) {   // 0.1 L dotted, 0.25 L dashed, across one panel
+    return [
+      {type: 'line', xref: xd, x0: 0, x1: 1, yref: yr, y0: 0.1, y1: 0.1, line: {color: C.ink3, width: 1, dash: 'dot'}},
+      {type: 'line', xref: xd, x0: 0, x1: 1, yref: yr, y0: 0.25, y1: 0.25, line: {color: C.ink3, width: 1, dash: 'dash'}}];
+  }
+  function thrLabels(xd, yr) {
+    return [[0.1, '0.1 L'], [0.25, '0.25 L']].map(([y, t]) => ({xref: xd, x: 1, xshift: 4, yref: yr, y: y,
+      text: t, showarrow: false, xanchor: 'left', yanchor: 'middle', font: {color: C.ink3, size: 11}}));
+  }
+  const title = (xd, yd, text) => ({xref: xd, x: 0, yref: yd, y: 1.0, yanchor: 'bottom', xanchor: 'left',
+    text: text, showarrow: false, font: {color: C.ink, size: 13}});
+
+  function fig1() {
+    const tr = ['wb', 'geo'].map(rig => {
+      const st = PH.map(ph => {
+        const v = runs(rig).map(r => r.phase_stats[ph].max_mm);
+        return {m: mean(v), lo: Math.min(...v), hi: Math.max(...v)};
+      });
+      return {type: 'bar', name: NAME[rig], x: PH, y: st.map(s => s.m / Lmm),
+        customdata: st.map(s => [s.m, s.lo, s.hi, s.lo / Lmm, s.hi / Lmm]),
+        marker: {color: C[rig], line: {color: C.bg, width: 2}},
+        error_y: {type: 'data', symmetric: false, array: st.map(s => (s.hi - s.m) / Lmm),
+                  arrayminus: st.map(s => (s.m - s.lo) / Lmm), color: C.ink2, thickness: 1.5, width: 5},
+        hovertemplate: '<b>%{x}</b> · ' + NAME[rig] + '<br>max ρ %{y:.3f}, ε %{customdata[0]:.0f} mm (mean of 5)' +
+          '<br>runs ρ %{customdata[3]:.3f}–%{customdata[4]:.3f}, %{customdata[1]:.0f}–%{customdata[2]:.0f} mm<extra></extra>'};
+    });
+    Plotly.newPlot('fig1', tr, base({barmode: 'group', bargap: 0.38, bargroupgap: 0.1, barcornerradius: 4,
+      margin: {l: 56, r: 50, t: 40, b: 40},
+      xaxis: ax({tickfont: {color: C.ink, size: 12.5, family: FONT.family}, gridcolor: 'rgba(0,0,0,0)'}),
+      yaxis: ax({range: [0, 0.85], title: {text: 'max ρ<sub>UAV</sub>', font: {color: C.ink2}}}),
+      shapes: thresholds('paper', 'y'), annotations: thrLabels('paper', 'y')}), CFG);
+  }
+
+  let narrow2 = null;
+  function fig2() {
+    const el = document.getElementById('fig2');
+    const narrow = el.clientWidth < 640;
+    if (narrow === narrow2) return;
+    narrow2 = narrow;
+    const tr = [];
+    ['geo', 'wb'].forEach(rig => runs(rig).forEach((r, i) => {
+      [['lift', 'x', 'y'], ['release', 'x2', 'y2']].forEach(([ev, xa, ya], j) => {
+        const s = r[ev];
+        tr.push({type: 'scatter', mode: 'lines', x: s.t, y: s.rho, customdata: s.rho.map(v => v * Lmm),
+          xaxis: xa, yaxis: ya, name: NAME[rig], legendgroup: rig, showlegend: i === 0 && j === 0,
+          line: {color: C[rig], width: 1.4}, opacity: 0.85,
+          hovertemplate: r.run.replace('bench_', '') + '<br>t %{x:.1f} s<br>ρ %{y:.3f}, ε %{customdata:.0f} mm<extra></extra>'});
+      });
+    }));
+    const yax = {range: [0, 0.85], title: {text: 'ρ<sub>UAV</sub>', font: {color: C.ink2}}};
+    const lay = base({margin: {l: 56, r: 50, t: 64, b: 46}, hovermode: 'closest',
+      legend: {orientation: 'h', x: 0, y: narrow ? 1.09 : 1.2, font: {color: C.ink2, size: 12.5}},
+      xaxis: ax({range: [-3, 12], title: {text: 's from the lift-off', font: {color: C.ink2}}, anchor: 'y'}),
+      xaxis2: ax({range: [-3, 10], title: {text: 's from the release', font: {color: C.ink2}}, anchor: 'y2'}),
+      yaxis: ax(Object.assign({anchor: 'x'}, yax)),
+      yaxis2: ax(Object.assign({anchor: 'x2'}, yax)),
+      shapes: [].concat(thresholds('x domain', 'y'), thresholds('x2 domain', 'y2'),
+        [['x', 'y'], ['x2', 'y2']].map(([xa, ya]) => ({type: 'line', xref: xa, x0: 0, x1: 0, yref: ya + ' domain', y0: 0, y1: 1,
+          line: {color: C.ink2, width: 1}}))),
+      annotations: [].concat(thrLabels('x domain', 'y'), thrLabels('x2 domain', 'y2'),
+        [title('x domain', 'y domain', 'Lift-off'), title('x2 domain', 'y2 domain', 'Release')])});
+    if (narrow) {
+      lay.xaxis.domain = [0, 1]; lay.xaxis2.domain = [0, 1];
+      lay.yaxis.domain = [0.58, 1]; lay.yaxis2.domain = [0, 0.4];
+    } else {
+      lay.xaxis.domain = [0, 0.45]; lay.xaxis2.domain = [0.55, 1];
+      lay.yaxis.domain = [0, 1]; lay.yaxis2.domain = [0, 1];
+    }
+    Plotly.react('fig2', tr, lay, CFG);
+  }
+
+  function fig3() {
+    const tmax = Math.max(...D.runs.map(r => r.mission.t[r.mission.t.length - 1]));
+    const tr = [], shapes = [], ann = [];
+    [['wb', 'x', 'y'], ['geo', 'x2', 'y2']].forEach(([rig, xa, ya]) => {
+      runs(rig).forEach((r, i) => tr.push({type: 'scatter', mode: 'lines', x: r.mission.t, y: r.mission.rho,
+        customdata: r.mission.rho.map(v => v * Lmm), xaxis: xa, yaxis: ya, name: NAME[rig], legendgroup: rig,
+        showlegend: false, line: {color: C[rig], width: 1.2}, opacity: 0.8,
+        hovertemplate: r.run.replace('bench_', '') + '<br>t %{x:.1f} s<br>ρ %{y:.3f}, ε %{customdata:.0f} mm<extra></extra>'}));
+      const R = runs(rig);
+      PH.forEach(ph => {
+        const sp = R.map(r => r.phases.find(p => p[0] === ph)).filter(Boolean);
+        const a = mean(sp.map(p => p[1])), b = mean(sp.map(p => p[2]));
+        if (ph === 'grab' || ph === 'place')
+          shapes.push({type: 'rect', xref: xa, x0: a, x1: b, yref: ya + ' domain', y0: 0, y1: 1, layer: 'below',
+            fillcolor: 'rgba(245,245,242,0.07)', line: {width: 0}});
+        ann.push({xref: xa, x: (a + b) / 2, yref: ya + ' domain', y: 0.97, yanchor: 'top', text: ph, showarrow: false,
+          font: {color: C.ink3, size: 11}});
+      });
+      shapes.push(...thresholds(xa + ' domain', ya));
+      ann.push(...thrLabels(xa + ' domain', ya));
+      ann.push(title(xa + ' domain', ya + ' domain', NAME[rig] + ' · 5 runs'));
+    });
+    const yax = {range: [0, 0.85], title: {text: 'ρ<sub>UAV</sub>', font: {color: C.ink2}}};
+    Plotly.newPlot('fig3', tr, base({margin: {l: 56, r: 50, t: 30, b: 46}, hovermode: 'closest', showlegend: false,
+      xaxis: ax({range: [0, tmax], anchor: 'y', domain: [0, 1], showticklabels: true}),
+      xaxis2: ax({range: [0, tmax], anchor: 'y2', domain: [0, 1], title: {text: 's in DIRECT', font: {color: C.ink2}}}),
+      yaxis: ax(Object.assign({domain: [0.56, 1], anchor: 'x'}, yax)),
+      yaxis2: ax(Object.assign({domain: [0, 0.44], anchor: 'x2'}, yax)),
+      shapes: shapes, annotations: ann}), CFG);
+  }
+
+  if (!window.Plotly) {
+    ['fig1', 'fig2', 'fig3'].forEach(id => {
+      const el = document.getElementById(id);
+      el.style.height = 'auto';
+      el.innerHTML = '<div class="nolib">The chart library did not load. Tables 1 and 2 carry the same numbers.</div>';
+    });
+    return;
+  }
+  fig1(); fig2(); fig3();
+  let tm = null;
+  window.addEventListener('resize', () => { clearTimeout(tm); tm = setTimeout(fig2, 150); });
+})();
+</script>

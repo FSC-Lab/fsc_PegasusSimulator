@@ -27,13 +27,16 @@ the scene and the two mocap bodies the planner captures:
             the middle of its top, 200 mm tall, for the gripper to grasp from
             above. PhysX spreads the 200 g over both colliders (uniform density).
 
-  mocap     obj_0  = the PICK pillar's top centre, fixed
-            once it is carried); the handle top is 32.5 + 200 mm above it
-            drop_0 = the PLACE pillar's top centre, fixed
-            (2026-10-01, user's call: both claw points are pillar tops -- on
-            hardware, markers on the pillars, no rigid body on the payload)
+  mocap     obj_0  = the payload's BOTTOM BOX: its centre (CG) and yaw, live
+            (2026-10-03, user: on hardware the markers sit around the box, so
+            the rigid body is the box). Get captures its position AND yaw; the
+            planner adds pick_place_ee_offset in that object frame. The
+            box centre rests 32.5 mm above the pillar top, the handle top 200 mm
+            above the box top.
+            drop_0 = the PLACE pillar's top centre, fixed (the planner types the
+            place point by default, so it only matters with a place topic set)
             payload_0 = the payload body (BOX centre), live: Isaac ground
-            truth for the carry, NOT given to the emulator or the planner
+            truth for the carry (the same pose obj_0 carries)
             Published as <body>/state/{pose,twist,twist_inertial}; the
             OptiTrack emulator turns them into /obj_0/mocap and /drop_0/mocap
             when its body list carries them (the 4-D stack scripts do).
@@ -55,9 +58,9 @@ GRASPING is real PhysX contact, no attachment:
 
 Knobs (environment):
   PEGASUS_PNP_PAYLOAD_MASS   total payload mass [kg], default 0.200
-  PEGASUS_PNP_HANDLE_YAW_DEG the handle plate's yaw [deg]: its THIN axis
-                             (the one the jaws must close along) points along
-                             this world azimuth; default HANDLE_YAW_DEG
+  PEGASUS_PNP_PAYLOAD_YAW_DEG the payload's yaw [deg] = obj_0's; the handle's
+                             THIN axis (the jaws close along it) is the payload's
+                             y, so a drone at this yaw picks it; default 0
   PEGASUS_PNP_HANDLE_THICKNESS the handle plate's thickness [m] (along the
                              jaws' closing axis), default 0.020
   PEGASUS_PNP_GRIP_TORQUE    gripper drive torque cap [N.m], default 0.3
@@ -66,19 +69,24 @@ Knobs (environment):
   PEGASUS_PNP_SPAWN_XY       where the vehicle starts, "x,y" [m], default "0.10,-0.07"
   PEGASUS_PNP_SPAWN_YAW_DEG  its heading [deg], default 0 (+x)
 
-WAYPOINT VIEW: blue ball = a drone-body goal (Start, Place Start, Land
-Start, Land; its yaw is in the label); orange sphere = a claw target (Pick, Place); grey
-sphere = where the body will be at the pick / place (after Plan only). Each
+WAYPOINT VIEW: blue ball = a drone-body goal ("Start drone", "Place Start
+drone", "Land Start drone", "Land drone"; its yaw is in the label); orange
+sphere = an end-effector (claw) target ("Pick EE", "Place EE"); grey sphere =
+where the drone body will be at the pick / place ("Pick drone", "Place drone",
+after Plan only). Each
 carries a label with its coordinates and yaw; the same table, with each value's
-source ([nominal], [captured], [live, not captured], [planned]), prints here
+source ([typed], [captured], [live, not captured], [planned]), prints here
 whenever it changes.
 
-Planner offsets for this payload, both from a pillar top (2026-10-02, the
-pick-and-place yaml, ..._sim_pick_place.yaml): pick_ee_offset z = +0.250 m
-(65 mm box + 200 mm handle - 15 mm: the claw point 15 mm below the handle top,
-5 mm short of where the open jaws pinch the handle), place_ee_offset z =
-+0.260 m (the same + 10 mm: the box bottom 10 mm above the place pillar on
-release -- never set down while clamped, see PLACE_DROP).
+Planner offset for this payload (the pick-and-place yaml,
+..._sim_pick_place.yaml): ONE EE offset for the pick AND the place (2026-10-03,
+user decision), pick_place_ee_offset z = +0.22 m from the BOX CENTRE (32.5 mm
+half box + 200 mm handle - 12.5 mm: the claw 12.5 mm below the handle top,
+7.5 mm short of where the open jaws pinch it; was pick 0.250 / place 0.260
+from the pillar tops), in the box's frame. The typed place point is therefore
+in the same reference -- where the box CG is released: the place pillar top +
+32.5 mm + PLACE_DROP = 1.04 m, so the box bottom stops 7.5 mm above the pillar
+(never set down while clamped, see PLACE_DROP).
 The planner reaches both from 0.10 m straight above (pick_place_approach_dz),
 with the claw held in the world for those descents (pick_place_world_anchor).
 
@@ -115,8 +123,16 @@ except (ValueError, AssertionError):
     raise SystemExit(f"PEGASUS_PNP_SPAWN_XY must be 'x,y' in metres, got {_SPAWN_XY_RAW!r}")
 SPAWN_YAW_DEG = am06._envf("PEGASUS_PNP_SPAWN_YAW_DEG", 0.0)   # 0 = +x, the field's forward
 
-PILLAR_HEIGHT   = 1.0                   # [m]
+PILLAR_HEIGHT   = 1.0                   # [m] to the top of the cap
 PILLAR_DIAMETER = 0.10                  # [m]
+# THE CAP (2026-10-03, user request: a flat cylinder on each pillar so the
+# payload is not dropped off it): 160 mm across -- the 110 mm box's whole
+# footprint at ANY yaw (its diagonal is 155.6 mm), so a box set down up to
+# ~80 mm off the pillar axis still rests on it with its centre supported
+# (the 2026-10-02 places landed 18-30 mm off axis, on a 100 mm pillar). 10 mm
+# thick, its top at PILLAR_HEIGHT: every point and offset is unchanged.
+CAP_DIAMETER    = am06._envf("PEGASUS_PNP_CAP_DIAMETER", 0.16)   # [m]
+CAP_THICKNESS   = 0.010                 # [m]
 PICK_PILLAR_XY  = (1.0, 1.0)            # [m] front-left, on the 1 m grid
 PLACE_PILLAR_XY = (-1.0, -1.0)          # [m] back-right
 
@@ -125,7 +141,9 @@ PAYLOAD_MASS = am06._envf("PEGASUS_PNP_PAYLOAD_MASS", 0.200)   # [kg] box + hand
 PAYLOAD_DROP_GAP = 0.0005               # [m] spawned this far above the pillar top
 
 # The handle: a vertical plate in the middle of the box top. THICKNESS is along
-# the payload's x axis (the jaws close along it), WIDTH along its y axis.
+# the payload's y axis (the jaws close along it), WIDTH along its x axis -- so
+# the payload's yaw IS the yaw of a drone whose jaws meet the handle square
+# (2026-10-03, user design: the planner aligns the drone's yaw with obj_0's).
 #
 # THICKNESS is set by the gripper, measured by this script's probe (2026-10-01):
 # the pads' inner faces are 43.3 mm apart at the ground station's OPEN (0 deg)
@@ -135,11 +153,12 @@ PAYLOAD_DROP_GAP = 0.0005               # [m] spawned this far above the pillar 
 # about -34 deg with 6.6 mm a side -- SUPERSEDED below by the fingertip gap.)
 #
 # YAW: the jaws close along the vehicle's LATERAL axis (body +y, probe), and on
-# Execute To Pick the nose faces the object along the line from the leg-1 goal
-# (the start, = the spawn point after Adjust) to it. So the handle's thin axis
-# defaults to that bearing + 90 deg -- 139.9 deg for the default spawn (0.10,
-# -0.07) -- and the jaws meet it square. A different approach needs another
-# yaw (PEGASUS_PNP_HANDLE_YAW_DEG) or wrist roll q4.
+# Execute To Pick the planner turns the drone to the captured obj_0 yaw
+# (pick_place_align_yaw). With the thin axis on the payload's y the two agree,
+# so the payload sits at yaw 0 by default (PEGASUS_PNP_PAYLOAD_YAW_DEG): the
+# plate's width along +x, "vertical" in the top view, and a drone at yaw 0
+# picks it. (Until 2026-10-03 the drone faced the bearing start -> object and
+# the thin axis sat at that bearing + 90 deg, 139.9 deg.)
 HANDLE_HEIGHT    = 0.200                # [m]
 HANDLE_WIDTH     = 0.060                # [m]
 # 2026-10-02 MEASURED, flying the six legs (pick_place_tune_20261001): the OPEN
@@ -151,9 +170,10 @@ HANDLE_WIDTH     = 0.060                # [m]
 # clamp it well short of their limit (-37 deg, measured). The PHYSICAL
 # payload's handle is a design decision this number only informs.
 HANDLE_THICKNESS = am06._envf("PEGASUS_PNP_HANDLE_THICKNESS", 0.020)   # [m]
-HANDLE_YAW_DEG   = am06._envf(
-    "PEGASUS_PNP_HANDLE_YAW_DEG",
-    math.degrees(math.atan2(PICK_PILLAR_XY[1] - SPAWN_XY[1], PICK_PILLAR_XY[0] - SPAWN_XY[0])) + 90.0)
+if (os.environ.get("PEGASUS_PNP_HANDLE_YAW_DEG") or "").strip():
+    raise SystemExit("PEGASUS_PNP_HANDLE_YAW_DEG was replaced by PEGASUS_PNP_PAYLOAD_YAW_DEG "
+                     "(2026-10-03): the payload's yaw, its handle's thin axis on the payload's y")
+PAYLOAD_YAW_DEG  = am06._envf("PEGASUS_PNP_PAYLOAD_YAW_DEG", 0.0)   # [deg]
 # Where the claw point (the model's grasp point) sits below the handle top at
 # the grasp. MEASURED 2026-10-02: the handle enters the open jaws only ~20 mm
 # before they pinch it (two pick flights stalled 20-22 mm in; the gripper then
@@ -161,7 +181,12 @@ HANDLE_YAW_DEG   = am06._envf(
 # / HANDLE CEILING) show 37-44 mm of gap and 44 mm of headroom -- the pinch is
 # off the centre line. 15 mm keeps 5 mm off it.
 GRASP_BELOW_TOP  = 0.015                # [m]
-PLACE_DROP       = 0.010                # [m] box bottom above the place pillar on release (a
+# The pick yaml's pick_place_ee_offset z, from the BOX CENTRE (obj_0) -- for
+# this banner only. 0.22, not 0.2175 = GRASP_BELOW_TOP from the top: the arm GS
+# edits every field to 1 cm (user, 2026-10-03), so the default is one it can
+# show exactly; the claw then sits 12.5 mm below the handle top.
+PICK_EE_OFFSET_Z = 0.22                 # [m]
+PLACE_DROP       = 0.0075               # [m] box bottom above the place pillar on release (a
                                         # box SET DOWN while still clamped closes the chain
                                         # vehicle-arm-payload-pillar and the base drags it off)
 
@@ -188,7 +213,13 @@ WP_POLL_S       = 2.0                   # [s] planner parameter poll
 WP_REFRESH_S    = 0.5                   # [s, sim] marker refresh
 WP_BASE_PARAMS  = {0: "pick_place_start", 2: "pick_place_place_start",
                    4: "pick_place_land_start", 5: "pick_place_land"}
-WP_CLAW_PARAMS  = {1: "pick_place_pick_ee_offset", 3: "pick_place_place_ee_offset"}
+# ONE EE offset for both claw legs (planner 2026-10-03)
+WP_CLAW_PARAMS  = {1: "pick_place_ee_offset", 3: "pick_place_ee_offset"}
+# the TYPED place pose [x, y, z, yaw_deg] (2026-10-02 planner: only Pick is
+# measured; Place is typed -- read off mocap before the flight -- and, unlike
+# the base poses, NOT shifted by the Adjust offset (2026-10-03); its yaw turns
+# the EE offset there (2026-10-03))
+WP_PLACE_POINT_PARAM = "pick_place_place_point"
 WP_NAMES        = ["Start", "Pick", "Place Start", "Place", "Land Start", "Land"]
 WP_BODY_RGB     = (0.20, 0.55, 1.00)
 WP_CLAW_RGB     = (1.00, 0.60, 0.10)
@@ -206,7 +237,7 @@ GRIP_TORQUE_MAX = am06._envf("PEGASUS_PNP_GRIP_TORQUE", 0.3)   # [N.m] gripper d
 SCENE_ROOT   = "/World/pick_place"
 PAYLOAD_PRIM = SCENE_ROOT + "/payload"
 WP_ROOT      = SCENE_ROOT + "/waypoints"
-PICK_BODY    = "obj_0"                  # the PICK pillar top: the planner's pick_place_pick_topic body
+PICK_BODY    = "obj_0"                  # the payload box (CG + yaw), live: the planner's pick_place_pick_topic body
 DROP_BODY    = "drop_0"                 # the PLACE pillar top: its pick_place_place_topic body
 PAYLOAD_TRUTH_BODY = "payload_0"        # the payload, live: ground truth only (not mocap)
 CLAW_TRUTH_BODY = "claw_0"              # the real claw point, ground truth only (not mocap)
@@ -222,7 +253,7 @@ CAMERA_TARGET = [0.3, 0.0, 0.6]
 am06.SPAWN_POS = (float(SPAWN_XY[0]), float(SPAWN_XY[1]), float(am06.SPAWN_POS[2]))
 am06.SPAWN_EULER = (0.0, 0.0, SPAWN_YAW_DEG)
 if am06.EE_MARKER_CUBE:
-    print("\033[1;33m[AM-T650-PNP] PEGASUS_EE_MARKER_CUBE=1 ignored: obj_0 is the pick pillar "
+    print("\033[1;33m[AM-T650-PNP] PEGASUS_EE_MARKER_CUBE=1 ignored: obj_0 is the payload box "
           "in this scene, and the marker cube would publish the same body.\033[0m", flush=True)
 am06.EE_MARKER_CUBE = False
 
@@ -277,13 +308,24 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         for name, (x, y), rgb in (("pick_pillar", PICK_PILLAR_XY, (0.30, 0.50, 0.80)),
                                   ("place_pillar", PLACE_PILLAR_XY, (0.30, 0.70, 0.40))):
             cyl = UsdGeom.Cylinder.Define(stage, f"{SCENE_ROOT}/{name}")
+            h = PILLAR_HEIGHT - CAP_THICKNESS
             cyl.CreateRadiusAttr(0.5 * PILLAR_DIAMETER)
-            cyl.CreateHeightAttr(PILLAR_HEIGHT)
+            cyl.CreateHeightAttr(h)
             cyl.CreateAxisAttr("Z")
-            UsdGeom.Xformable(cyl).AddTranslateOp().Set(Gf.Vec3d(x, y, 0.5 * PILLAR_HEIGHT))
+            UsdGeom.Xformable(cyl).AddTranslateOp().Set(Gf.Vec3d(x, y, 0.5 * h))
             _color(cyl, rgb)
             UsdPhysics.CollisionAPI.Apply(cyl.GetPrim())
             _bind_physics(cyl.GetPrim(), pillar_mat)
+            # the cap: a flat disc, its top at PILLAR_HEIGHT
+            cap = UsdGeom.Cylinder.Define(stage, f"{SCENE_ROOT}/{name}_cap")
+            cap.CreateRadiusAttr(0.5 * CAP_DIAMETER)
+            cap.CreateHeightAttr(CAP_THICKNESS)
+            cap.CreateAxisAttr("Z")
+            UsdGeom.Xformable(cap).AddTranslateOp().Set(
+                Gf.Vec3d(x, y, PILLAR_HEIGHT - 0.5 * CAP_THICKNESS))
+            _color(cap, tuple(0.6 * c for c in rgb))
+            UsdPhysics.CollisionAPI.Apply(cap.GetPrim())
+            _bind_physics(cap.GetPrim(), pillar_mat)
 
         # payload: ONE dynamic body, an UNSCALED Xform at the box centre (the
         # mocap backend reads orientation with ExtractRotation, exact only on
@@ -293,12 +335,12 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         body = UsdGeom.Xform.Define(stage, PAYLOAD_PRIM)
         xf = UsdGeom.Xformable(body)
         xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p0)))
-        xf.AddRotateZOp().Set(float(HANDLE_YAW_DEG))
+        xf.AddRotateZOp().Set(float(PAYLOAD_YAW_DEG))
         prim = body.GetPrim()
         box = _box(stage, PAYLOAD_PRIM + "/box", (0.0, 0.0, 0.0), PAYLOAD_SIZE, (0.95, 0.50, 0.12))
         handle = _box(stage, PAYLOAD_PRIM + "/handle",
                       (0.0, 0.0, 0.5 * sz + 0.5 * HANDLE_HEIGHT),
-                      (HANDLE_THICKNESS, HANDLE_WIDTH, HANDLE_HEIGHT), (0.85, 0.85, 0.30))
+                      (HANDLE_WIDTH, HANDLE_THICKNESS, HANDLE_HEIGHT), (0.85, 0.85, 0.30))
         for part in (box, handle):
             UsdPhysics.CollisionAPI.Apply(part.GetPrim())
             _bind_physics(part.GetPrim(), grip_mat)
@@ -351,16 +393,17 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         sz = PAYLOAD_SIZE[2]
         print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE: vehicle at "
               f"({SPAWN_XY[0]:.2f}, {SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward); pillars {PILLAR_HEIGHT} m tall, "
-              f"{PILLAR_DIAMETER * 1e3:.0f} mm diameter, PICK at {PICK_PILLAR_XY} (top -> mocap "
+              f"{PILLAR_DIAMETER * 1e3:.0f} mm diameter under a {CAP_DIAMETER * 1e3:.0f} x {CAP_THICKNESS * 1e3:.0f} mm cap, PICK at {PICK_PILLAR_XY} (payload box -> mocap "
               f"{PICK_BODY}), PLACE at {PLACE_PILLAR_XY} (top -> mocap {DROP_BODY}); payload "
               f"{PAYLOAD_MASS * 1e3:.0f} g = box "
               f"{PAYLOAD_SIZE[0] * 1e3:.0f} x {PAYLOAD_SIZE[1] * 1e3:.0f} x {sz * 1e3:.0f} mm + "
               f"handle {HANDLE_THICKNESS * 1e3:.0f} x {HANDLE_WIDTH * 1e3:.0f} x "
-              f"{HANDLE_HEIGHT * 1e3:.0f} mm (thin axis at {HANDLE_YAW_DEG:.1f} deg), box centre "
+              f"{HANDLE_HEIGHT * 1e3:.0f} mm (payload yaw {PAYLOAD_YAW_DEG:.1f} deg, thin axis = its y), box centre "
               f"{np.round(self._payload_p0, 4).tolist()} m (ground truth {PAYLOAD_TRUTH_BODY}/state), "
-              f"handle top {self._payload_p0[2] + 0.5 * sz + HANDLE_HEIGHT:.4f} m. Claw offsets "
-              f"from the pillar tops: pick [0, 0, {sz + HANDLE_HEIGHT - GRASP_BELOW_TOP:.3f}], place "
-              f"[0, 0, {sz + HANDLE_HEIGHT - GRASP_BELOW_TOP + PLACE_DROP:.3f}]. Friction "
+              f"handle top {self._payload_p0[2] + 0.5 * sz + HANDLE_HEIGHT:.4f} m. EE offset (pick AND "
+              f"place) [0, 0, {PICK_EE_OFFSET_Z:.2f}] from the box centre (claw "
+              f"{(0.5 * sz + HANDLE_HEIGHT - PICK_EE_OFFSET_Z) * 1e3:.1f} mm below the handle top); place "
+              f"point = the place pillar top + {(0.5 * sz + PLACE_DROP) * 1e3:.1f} mm (the box CG at release). Friction "
               f"{GRIP_FRICTION_STATIC}/{GRIP_FRICTION_DYNAMIC} (combine max). Unmodelled by "
               f"every controller.\033[0m", flush=True)
 
@@ -369,8 +412,10 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         from geometry_msgs.msg import PoseStamped, TwistStamped
         from rclpy.qos import qos_profile_sensor_data
         node = self._arm_node
-        # the two pillar tops as fixed mocap bodies, the emulator's input format
+        # the mocap bodies, the emulator's input format: obj_0 = the payload box
+        # (live, below), drop_0 = the PLACE pillar top (fixed)
         self._fixed_bodies = []
+        self._payload_h = None
         for body, (x, y) in ((PICK_BODY, PICK_PILLAR_XY), (DROP_BODY, PLACE_PILLAR_XY)):
             pose = PoseStamped()
             pose.header.frame_id = "map"
@@ -396,6 +441,14 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         self._fixed_step = 0
         if WAYPOINTS_VIZ:
             self._wp_setup_ros()
+
+    def _payload_pose(self):
+        """The payload body's raw dc pose (its origin = the BOX centre), or None."""
+        if not self._payload_h:
+            self._payload_h = self._dc.get_rigid_body(PAYLOAD_PRIM)
+            if not self._payload_h:
+                return None
+        return self._dc.get_rigid_body_pose(self._payload_h)
 
     def _pose(self, h):
         P = self._dc.get_rigid_body_pose(h)
@@ -593,7 +646,16 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         if self._fixed_step % FIXED_PUB_DIV == 0:
             stamp = self._arm_node.get_clock().now().to_msg()
             self._fixed_twist.header.stamp = stamp
-            for pose_pub, twist_pubs, pose in self._fixed_bodies:
+            for i, (pose_pub, twist_pubs, pose) in enumerate(self._fixed_bodies):
+                if i == 0:                    # obj_0: the payload box's live pose
+                    pb = self._payload_pose()
+                    if pb is None:
+                        continue              # PhysX has not seen it yet
+                    P = pb
+                    pose.pose.position.x, pose.pose.position.y, pose.pose.position.z = \
+                        float(P.p.x), float(P.p.y), float(P.p.z)
+                    o = pose.pose.orientation
+                    o.x, o.y, o.z, o.w = float(P.r.x), float(P.r.y), float(P.r.z), float(P.r.w)
                 pose.header.stamp = stamp
                 pose_pub.publish(pose)
                 for pub in twist_pubs:
@@ -665,8 +727,9 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                 print(f"[AM-T650-PNP] waypoint labels off ({exc}); markers and the "
                       f"printed table remain", flush=True)
         self._wp_ready = True
-        print("[AM-T650-PNP] waypoint view on: blue = body goal (yaw in the label), orange = claw "
-              "target, grey = body at the pick/place once planned", flush=True)
+        print("[AM-T650-PNP] waypoint view on: blue = '<point> drone' body goal (yaw in the label), "
+              "orange = '<point> EE' claw target, grey = 'Pick/Place drone' body once planned",
+              flush=True)
 
     def _wp_poll(self):
         """Fetch the planner's nominal poses and claw offsets every WP_POLL_S."""
@@ -682,7 +745,8 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         if (self._wp_future is None and time.monotonic() - self._wp_poll_t >= WP_POLL_S
                 and self._wp_client.service_is_ready()):
             req = self._wp_GetParameters.Request()
-            req.names = list(WP_BASE_PARAMS.values()) + list(WP_CLAW_PARAMS.values())
+            req.names = list(dict.fromkeys(list(WP_BASE_PARAMS.values())
+                                           + list(WP_CLAW_PARAMS.values()) + [WP_PLACE_POINT_PARAM]))
             self._wp_req_names = list(req.names)
             self._wp_future = self._wp_client.call_async(req)
             self._wp_poll_t = time.monotonic()
@@ -690,45 +754,63 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
     def _wp_entries(self):
         """key -> (kind, position, yaw_deg or None, name, source), the
         planner's own goals once planned, else what Plan would start from
-        (its ppTargets logic: nominal + offset, a captured base point's x, y)."""
+        (its ppTargets logic: the base-pose parameters as they stand -- Adjust has
+        already written its shift into them --, a captured base point's x, y)."""
         info = self._wp_info if self._wp_info is not None and len(self._wp_info) >= 80 else None
 
         def fin(i):
             return info is not None and math.isfinite(info[i])
 
         planned = info is not None and info[4] > 0.5
-        off = np.array([info[i] if fin(i) else 0.0 for i in range(3)]) if info else np.zeros(3)
-        yaw_off = info[3] if info is not None and fin(3) else 0.0
         out = {}
         for k in range(6):
             g, c = 14 + 7 * k, 56 + 4 * k
             name = f"{k + 1} {WP_NAMES[k]}"
             if planned and fin(g):
                 if k in WP_CLAW_PARAMS:
-                    out[f"{k}c"] = ("claw", np.array(info[g + 4:g + 7]), None, name + " claw", "planned")
+                    out[f"{k}c"] = ("claw", np.array(info[g + 4:g + 7]), None, name + " EE", "planned")
                     out[f"{k}b"] = ("planbody", np.array(info[g:g + 3]), info[g + 3],
-                                    name + " body", "planned")
+                                    name + " drone", "planned")
                 else:
-                    out[f"{k}"] = ("body", np.array(info[g:g + 3]), info[g + 3], name, "planned")
+                    out[f"{k}"] = ("body", np.array(info[g:g + 3]), info[g + 3], name + " drone",
+                                   "planned")
                 continue
             captured = info is not None and fin(c + 3) and info[c + 3] > 0.5
             if k in WP_BASE_PARAMS:
                 v = self._wp_params.get(WP_BASE_PARAMS[k])
                 if v is None or len(v) != 4:
                     continue
-                p, src = np.array(v[:3], float) + off, "nominal"
+                p, src = np.array(v[:3], float), "typed"   # Adjust already wrote its shift in
                 if captured:
                     p[:2], src = info[c:c + 2], "captured"
-                out[f"{k}"] = ("body", p, v[3] + yaw_off, name, src)
+                out[f"{k}"] = ("body", p, v[3], name + " drone", src)
             else:
                 o = self._wp_params.get(WP_CLAW_PARAMS[k])
                 o = np.array(o, float) if o is not None and len(o) == 3 else np.zeros(3)
                 if captured:
                     p, src = np.array(info[c:c + 3], float), "captured"
-                else:                     # the live mocap point = that pillar's top
-                    xy = PICK_PILLAR_XY if k == 1 else PLACE_PILLAR_XY
-                    p, src = np.array([*xy, PILLAR_HEIGHT], float), "live, not captured"
-                out[f"{k}c"] = ("claw", p + o, None, name + " claw", src)
+                    if k == 1:            # the pick offset is in the captured OBJECT frame
+                        yw = math.radians(info[80]) if len(info) > 80 and fin(80) else 0.0
+                        o = np.array([math.cos(yw) * o[0] - math.sin(yw) * o[1],
+                                      math.sin(yw) * o[0] + math.cos(yw) * o[1], o[2]])
+                elif k == 1:              # Pick, not captured: the live box pose (what Get would give)
+                    pb = self._payload_pose()
+                    if pb is None:
+                        continue
+                    p, src = np.array([pb.p.x, pb.p.y, pb.p.z], float), "live, not captured"
+                    yw = math.atan2(2.0 * (pb.r.w * pb.r.z + pb.r.x * pb.r.y),
+                                    1.0 - 2.0 * (pb.r.y ** 2 + pb.r.z ** 2))
+                    o = np.array([math.cos(yw) * o[0] - math.sin(yw) * o[1],
+                                  math.sin(yw) * o[0] + math.cos(yw) * o[1], o[2]])
+                elif k == 3:              # Place: the typed POSE, NOT shifted by Adjust (ppTargets)
+                    v = self._wp_params.get(WP_PLACE_POINT_PARAM)
+                    if v is None or len(v) not in (3, 4):
+                        continue
+                    p, src = np.array(v[:3], float), "typed"
+                    yw = math.radians(v[3]) if len(v) == 4 else 0.0   # the offset turns with it
+                    o = np.array([math.cos(yw) * o[0] - math.sin(yw) * o[1],
+                                  math.sin(yw) * o[0] + math.cos(yw) * o[1], o[2]])
+                out[f"{k}c"] = ("claw", p + o, None, name + " EE", src)
         return out
 
     def _wp_make(self, key, kind):
@@ -824,16 +906,16 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             if not self._gt_h or g is None:
                 raise RuntimeError("payload or pad bodies not found")
             cl, cr, mid, u, p_w, R_w = g
-            # payload frame: x = the closing axis (the handle's thin axis),
-            # z = up, y = z x x (the handle's width, ~ along the claw)
+            # payload frame: y = the closing axis (the handle's thin axis),
+            # z = up, x = y x z (the handle's width, ~ along the claw)
             ez = np.array([0.0, 0.0, 1.0])
             z_p = ez - (ez @ u) * u
             z_p /= np.linalg.norm(z_p)
-            y_p = np.cross(z_p, u)
-            R_p = np.column_stack([u, y_p, z_p])
-            s = 1.0 if (p_w - mid) @ y_p > 0.0 else -1.0     # the wrist's side
-            y_c = s * (GRASP_TEST_EDGE - 0.5 * HANDLE_WIDTH)  # handle centre vs pads, along y_p
-            m_local = np.array([0.0, -y_c, 0.5 * PAYLOAD_SIZE[2] + GRASP_TEST_GRIP_H])
+            x_p = np.cross(u, z_p)
+            R_p = np.column_stack([x_p, u, z_p])
+            s = 1.0 if (p_w - mid) @ x_p < 0.0 else -1.0     # the wrist's side (was y_p = -x_p)
+            y_c = s * (GRASP_TEST_EDGE - 0.5 * HANDLE_WIDTH)  # handle centre vs pads, along -x_p
+            m_local = np.array([y_c, 0.0, 0.5 * PAYLOAD_SIZE[2] + GRASP_TEST_GRIP_H])
             p_body = mid - R_p @ m_local
             self._gt_pose = (p_body, am06._rot_to_quat_wxyz(R_p))
             self._gt_hold_payload()

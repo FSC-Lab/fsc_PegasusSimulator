@@ -115,8 +115,11 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 # (current residual, gearbox friction, arm mass x1.05, body x1.10 + CoM shift,
 # rotor lag). The knobs are read from THIS rig's own yaml, whose section 1 is a
 # byte copy of the whole-body 4-D sim yaml's, by the shared lib below.
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
-export INDOOR_SIM_VEHICLE_LABEL="AM-T650-L1"
+# AM_ISAAC_SCENE_SCRIPT / AM_ISAAC_SCENE_LABEL (2026-10-03) swap in another
+# Isaac app built on 06 -- the pick-and-place scene 07 -- exactly as on the
+# whole-body 4-D launcher. Unset = 06, unchanged.
+export INDOOR_SIM_PEGASUS_SCRIPT="${AM_ISAAC_SCENE_SCRIPT:-$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py}"
+export INDOOR_SIM_VEHICLE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-L1}"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 export PEGASUS_ARM_COMMAND_MODE="${PEGASUS_ARM_COMMAND_MODE:-position}"
 # Fail before physics starts if this plant ever drifts from the mass used by

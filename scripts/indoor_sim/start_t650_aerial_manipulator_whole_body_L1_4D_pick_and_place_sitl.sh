@@ -40,7 +40,7 @@ export WB_SIM_PROFILE="${WB_SIM_PROFILE:-pick_place}"
 # (list-sessions, not `tmux info`: info needs an attached client, and a
 # background launch has none -- the knobs then silently never arrive)
 if tmux list-sessions >/dev/null 2>&1; then
-  for v in PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_HANDLE_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
+  for v in PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
     if [[ -n "${!v:-}" ]]; then
       tmux setenv -g "$v" "${!v}"
       echo -e "\033[1;33m  scene knob $v=${!v}\033[0m"
@@ -51,17 +51,25 @@ if tmux list-sessions >/dev/null 2>&1; then
 fi
 
 # The planner reads its pick-and-place block once, at start: a stack started
-# without WB_SIM_PROFILE=pick_place flies the node defaults (every arm pose
-# [0, 0, 0, 0], zero claw offsets, no approach from above). Warn, do not refuse.
-if [[ "$WB_SIM_PROFILE" == pick_place ]] && command -v ros2 >/dev/null 2>&1; then
-  _dz=$(timeout 15 ros2 param get /uav_0/whole_body_trajectory_planner pick_place_approach_dz --no-daemon 2>/dev/null \
-        | sed -nE 's/.*value is: *([-0-9.eE+]+).*/\1/p' || true)
-  if [[ -z "$_dz" ]]; then
-    echo -e "\033[1;33mWARNING: could not read pick_place_approach_dz off /uav_0/whole_body_trajectory_planner (stack not up yet, or an older planner build).\033[0m"
-  elif awk -v v="$_dz" 'BEGIN{exit !(v <= 0)}'; then
-    echo -e "\033[1;31mWARNING: the running planner has pick_place_approach_dz = $_dz -- the stack was NOT started with WB_SIM_PROFILE=pick_place. Restart it with that profile before flying the pick-and-place legs.\033[0m"
+# without WB_SIM_PROFILE=pick_place flies the node defaults (pick / place pose
+# [0, 0, 0, 0], carry = the folded home pose, every yaw 0 -- no clockwise
+# turns). Compare the running planner with the pick-and-place yaml and REFUSE
+# on a mismatch (2026-10-03: the old check on approach_dz <= 0 stopped seeing
+# anything once that default became 0.20 m, and a stack without the profile
+# was reported as loaded). PP_CHECK=0 skips it.
+PP_PLANNER_YAML="${WB_SIM_YAML:-${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_place.yaml}"
+if [[ "${PP_CHECK:-1}" != 0 && "$WB_SIM_PROFILE" == pick_place ]] && command -v ros2 >/dev/null 2>&1; then
+  source "$SCRIPT_DIR/lib/pick_place_planner_check.sh"
+  set +e; _pp_out=$(pick_place_planner_check "$PP_PLANNER_YAML" "$PP_PLANNER_YAML"); _pp_rc=$?; set -e
+  if [[ $_pp_rc == 0 ]]; then
+    echo -e "\033[1;32mplanner: pick-and-place block loaded (planner poses and waypoints + controller match the pick-and-place yamls)\033[0m"
+  elif [[ $_pp_rc == 1 ]]; then
+    echo -e "\033[1;31m$_pp_out\033[0m"
+    echo -e "\033[1;31mREFUSED: the running planner does not carry the pick-and-place block -- the stack was started without\033[0m"
+    echo -e "\033[1;31mWB_SIM_PROFILE=pick_place. Clean slate, then start the stack with it (Command.md section 16, step 1).\033[0m"
+    exit 1
   else
-    echo -e "\033[1;32mplanner: pick-and-place block loaded (approach_dz $_dz m)\033[0m"
+    echo -e "\033[1;33mWARNING: could not verify the planner's pick-and-place block ($_pp_out) -- start the stack with WB_SIM_PROFILE=pick_place first.\033[0m"
   fi
 fi
 
@@ -72,5 +80,5 @@ case "${PNP_FEEDBACK:-fused}" in
 esac
 [[ -x "$LAUNCHER" ]] || { echo "ERROR: missing executable $LAUNCHER" >&2; exit 1; }
 
-echo -e "\033[1;35mPICK-AND-PLACE SCENE ($AM_ISAAC_SCENE_LABEL, ${PNP_FEEDBACK:-fused} feedback): field 4.5 x 4.2 m (x by y), vehicle at ${PEGASUS_PNP_SPAWN_XY:-0.10,-0.07} facing +x, pillars at (1.0, 1.0) PICK and (-1.0, -1.0) PLACE, 200 g payload (box + 30 mm handle) on the PICK pillar. Mocap: /obj_0/mocap = payload, /drop_0/mocap = PLACE pillar top.\033[0m"
+echo -e "\033[1;35mPICK-AND-PLACE SCENE ($AM_ISAAC_SCENE_LABEL, ${PNP_FEEDBACK:-fused} feedback): field 4.5 x 4.2 m (x by y), vehicle at ${PEGASUS_PNP_SPAWN_XY:-0.10,-0.07} facing +x, pillars at (1.0, 1.0) PICK and (-1.0, -1.0) PLACE, 200 g payload (box + 20 mm handle) on the PICK pillar, 160 mm caps on both pillars. Mocap: /obj_0/mocap = the payload box (CG + yaw), /drop_0/mocap = PLACE pillar top.\033[0m"
 exec "$LAUNCHER" "$@"
