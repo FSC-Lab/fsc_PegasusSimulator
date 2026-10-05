@@ -915,8 +915,12 @@ WB_SIM_YAML=$PWD/variants/geometric_l1_mirror_sim_tuned.yaml ./run_isaac.sh deco
 cd ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/figure8_compare_20261005
 ./run_fig8.sh wb:<tag> decoupled:<tag>       # A 0.75 / B 0.375 m, lap 22.865 s, q2 25±15° @ 5.716 s, yaw 45°
 # Hardware: rebuild fsc_trajectory_planner on the Orin (the stacks refuse an older build); the 4-D
-# hardware yaml carries the figure-8. Take off at yaw 45°, arm GS Figure-8: Mean Velocity 0.20, Laps 1.
+# hardware yaml carries the figure-8 (long axis on world x at any takeoff yaw, ee_traj_fig8_world_axis).
+# Arm GS Figure-8 opens on the first-flight setting: Half-Length 0.70, Half-Width 0.35, Mean Velocity 0.10, Laps 1.
+# The 8 is centred on the EE hover point, 0.25 m ahead of the base. Tilt watchdog: 15° on both rigs.
 ROS_DOMAIN_ID=77 /usr/bin/python3 tools/hw_planner_check.py   # what the hardware yaml plans (ROS sourced)
+ROS_DOMAIN_ID=77 /usr/bin/python3 tools/hw_fig8_workflow_check.py --rig wb|decoupled --harness <gs_fig8_harness>
+                                                              # planner + bridge + real arm-GS panel, no vehicle
 ```
 
 ## 15. PS4 teleoperation on the decoupled rig (geometric + L1, position-mode arm)

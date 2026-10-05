@@ -52,8 +52,14 @@ math { font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", serif;
 .wraptbl td, .wraptbl th { white-space: normal; text-align: left; }
 .wraptbl td:not(:first-child) { font-family: var(--body); font-size: 13px; }
 .wraptbl td:first-child { min-width: 9em; }
+:root { --bad: #b42318; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bad: #f97066; } }
+:root[data-theme="dark"] { --bad: #f97066; }
+.bad { color: var(--bad); } .okc { color: var(--good); }
+tr.rec td { background: var(--bg); font-weight: 600; color: var(--fg); }
 .wraphead th { white-space: normal; vertical-align: bottom; }
 .wraphead th:first-child, .wraphead td:first-child { min-width: 4em; }
+.wraphead td.nw { white-space: nowrap; }
 """
 
 
@@ -166,6 +172,43 @@ def sizing_table():
   </table></div>"""
 
 
+def sweep_table(sizing, env, recommend):
+    """The 3.1 table: every candidate (A, v) -- planner numbers, the simulated tracking of both
+    controllers, the flight prediction (/ ratio) and the 2 x 2 m footprint check."""
+    g = {(e["rig"], round(float(e["shape"][1:]), 2), round(e["speed"], 2)): e for e in env}
+    def mm(e, k):
+        return f"{e[k]:.0f}"
+    def marg(e):
+        v = e["margin_m"] * 1e3
+        return f'<span class="{"okc" if v >= 0 else "bad"}">{v:+.0f}</span>'
+    rows = []
+    for r in sizing:
+        key = (round(r["A"], 2), round(r["v"], 2))
+        w, d = g.get(("wb",) + key), g.get(("decoupled",) + key)
+        cls = ' class="rec"' if key == recommend else ""
+        bs = f"{r['B']:.3f}".rstrip("0")
+        bs = bs if len(bs.split(".")[1]) >= 2 else f"{r['B']:.2f}"
+        head = (f"<td class=\"nw\">{r['A']:.2f} × {bs}</td><td>{r['v']:.2f}</td><td>{r['lap']:.1f} / {r['q2_period']:.2f}</td>"
+                f"<td>{r['peak_yaw_degs']:.0f} / {r['peak_a']:.2f}</td><td>{r['s_max']:.2f}</td>")
+        if r["s_max"] < 1.0:
+            rows.append(f"      <tr{cls}>{head}<td colspan=\"5\" class=\"note\">not plannable at s = 1: peak CoM speed "
+                        f"{r['peak_v']:.2f} m/s &gt; v<sub>max</sub> 0.30</td></tr>")
+        elif w is None or d is None:
+            rows.append(f"      <tr{cls}>{head}<td colspan=\"5\" class=\"note\">not flown</td></tr>")
+        else:
+            rows.append(f"      <tr{cls}>{head}<td>{w['ee_rms']:.1f} / {mm(w, 'ee_peak')}</td><td>{d['ee_rms']:.1f} / {mm(d, 'ee_peak')}</td>"
+                        f"<td>{mm(w, 'ee_peak_flight')} / {mm(d, 'ee_peak_flight')}</td>"
+                        f"<td>{w['pred_box'][0]:.2f} × {w['pred_box'][1]:.2f} / {d['pred_box'][0]:.2f} × {d['pred_box'][1]:.2f}</td>"
+                        f"<td>{marg(w)} / {marg(d)}</td></tr>")
+    body = "\n".join(rows)
+    return f"""<div class="tbl wraphead"><table>
+    <thead><tr><th>A × B [m]</th><th>mean EE speed [m/s]</th><th>lap / q<sub>2</sub> period [s]</th><th>peak yaw rate [°/s] / CoM accel. [m/s²]</th><th>s<sub>max</sub></th><th>simulated EE rms / peak, whole-body [mm]</th><th>simulated EE rms / peak, geometric [mm]</th><th>predicted flight EE peak (÷ 0.6), WB / geo [mm]</th><th>predicted footprint, WB / geo [m]</th><th>margin per side in 2 × 2 m, WB / geo [mm]</th></tr></thead>
+    <tbody>
+{body}
+    </tbody>
+  </table></div>"""
+
+
 def fmt(x, n=2):
     return f"{x:.{n}f}"
 
@@ -206,6 +249,11 @@ def main():
     ap.add_argument("--top", required=True)
     ap.add_argument("--series", required=True)
     ap.add_argument("--budget", required=True, help="fig8_budget.py json: figure-8 labels + circle labels prefixed c-")
+    ap.add_argument("--sizing", required=True, help="../analysis/sizing_sweep.json (planner numbers per candidate)")
+    ap.add_argument("--envelope", required=True, help="fig8_envelope.py json (all flown candidates)")
+    ap.add_argument("--recommend", nargs=2, type=float, metavar=("A", "V"), required=True)
+    ap.add_argument("--findings", required=True, help="HTML fragment: the sweep findings + recommendation")
+    ap.add_argument("--trips", default="", help="one sentence on flights that tripped before their run")
     ap.add_argument("--section3", required=True, help="the section-3 prose template (HTML with {placeholders})")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -253,7 +301,10 @@ def main():
     mean = lambda labs, k: float(np.mean([sc[l][k] for l in labs]))  # noqa: E731
     mmean = lambda labs, k: float(np.mean([mech[l][k] for l in labs]))  # noqa: E731
     vals = dict(
-        SIZING=sizing_table(), RESULTS=results_table(sc, labels),
+        SIZING=sweep_table(json.load(open(a.sizing)), json.load(open(a.envelope)),
+                           (round(a.recommend[0], 2), round(a.recommend[1], 2))),
+        RESULTS=results_table(sc, labels),
+        SWEEP_FINDINGS=open(a.findings).read(), TRIPS=a.trips,
         TOP=img64(a.top), SERIES=img64(a.series),
         n_wb=len(wb), n_geo=len(geo),
         wb_ee=fmt(mean(wb, "ee_pos_rms_mm"), 1), geo_ee=fmt(mean(geo, "ee_pos_rms_mm"), 1),

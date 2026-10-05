@@ -19,12 +19,20 @@ GEO_YAML="$HERE/../geometric_l1_tune_20261001/variants/geometric_l1_mirror_sim_t
 export DISPLAY="${DISPLAY:-:1}" PEGASUS_HEADLESS="${PEGASUS_HEADLESS:-1}" PEGASUS_REALTIME=1 PEGASUS_SIM_RTF=1.0
 export AM_CMP_OUT="$HERE/data"
 mkdir -p "$HERE/logs"
+# Shape and speed (2026-10-05 sweep): FIG8_A half-length [m], FIG8_B half-width (default A/2),
+# FIG8_V mean EE speed [m/s]; the lap = path / FIG8_V and the q2 period = lap / 4.
+FIG8_A="${FIG8_A:-0.75}"; FIG8_B="${FIG8_B:-$(python3 -c "print($FIG8_A/2)")}"; FIG8_V="${FIG8_V:-0.20}"
+read -r LAP Q2P < <(python3 -c "
+import numpy as np
+th=np.linspace(0,2*np.pi,400001); A,B,v=$FIG8_A,$FIG8_B,$FIG8_V
+L=np.trapezoid(np.hypot(A*np.cos(th),2*B*np.cos(2*th)),th); print(f'{L/v:.4f} {L/v/4:.5f}')")
+echo "figure-8 A $FIG8_A B $FIG8_B v $FIG8_V -> lap $LAP s, q2 period $Q2P s"
 for spec in "$@"; do
   rig="${spec%%:*}"; tag="${spec#*:}"
   if [[ "$rig" == decoupled ]]; then export WB_SIM_YAML="${GEO_YAML_OVERRIDE:-$GEO_YAML}"; else unset WB_SIM_YAML; fi
   echo "=== $rig $tag (headless=$PEGASUS_HEADLESS, yaml=${WB_SIM_YAML:-default}) $(date +%T) ==="
   "$PEG/application/robotic_arm/utils/am_compare_cycle.sh" "$rig" "$tag" shiqi_machine -- \
-    --shape figure8 --fig8-a 0.75 --fig8-b 0.375 --lap-time 22.8646 --laps 1 --q2-period 5.71615 \
+    --shape figure8 --fig8-a "$FIG8_A" --fig8-b "$FIG8_B" --lap-time "$LAP" --laps 1 --q2-period "$Q2P" \
     --fold-deg 55 --q2-center-deg 25 --q2-amp-deg 15 --yaw-deg 45 \
     --ee-a-max 0.40 --ee-w-max 1.0 \
     --time-scale 1.0 --start-pos-tol "${START_POS_TOL:-0.10}" --gate-speed 0.10 \

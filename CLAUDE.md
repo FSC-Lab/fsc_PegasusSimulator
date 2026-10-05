@@ -4202,6 +4202,39 @@ expressions (section 1); circle = section 2, figure-8 = section 3, settings = se
   unchanged at s = 1 (s_max 1.13 -> 1.78 -- the GS slider now allows a faster circle), figure-8 at
   the 22.865 s lap READY at s = 1, cycles 0 -> refused. On the Orin: pull + rebuild the planner,
   take off at yaw 45°, arm GS Figure-8 Mean Velocity 0.20 (shows 0.189 until edited), Laps 1.
+- **CONSERVATIVE SWEEP same day (user: the geometric 12 cm peak is ~20 cm in flight at the
+  sim/flight rmse ratio 0.6).** A 0.60/0.70 (B = A/2) at 0.10/0.15/0.20 m/s + a 2 x 2 m footprint
+  check (planned paths grown by peak/0.6): all fit; geometric margin 169 mm/side (0.60, 0.10) down
+  to 19 mm (0.75, 0.20). **Recommended first flight A 0.70 / B 0.35 at 0.10 m/s**: lowest error
+  for both (geo 44/73 mm sim, WB 14/31), margin 110 mm, peak yaw 27°/s. The geometric peak follows
+  the peak YAW RATE, so a smaller 8 at the same speed is WORSE (0.70 at 0.20: 128 mm). Report v10
+  section 3.1 table (v11). Two WB flights tripped IN HOVER before their run (the 1.5 Hz pitch mode, RTF 1; both points re-flown clean)
+  -- 2 of 10 WB flights today; hover config identical to the 3 clean morning flights.
+- **LONG AXIS ON WORLD x (same day, user: "it is diagonal").** The planner anchored the 8 by its
+  start TANGENT along the nose (long axis atan2(2B,A) = 45 deg off it). New keys
+  `ee_traj_fig8_world_axis` + `ee_traj_fig8_axis_deg` (world azimuth, 0 = x; crossing stays at the
+  hovering EE; the closest of the 4 equivalent start tangents is flown, go-to-start yaw <= 45 deg).
+  Default off in code, SET true / 0.0 in both 4-D yamls. gtest EeTrajectoryWorldAxis; planner
+  22/22. Hardware stacks now probe `ee_traj_fig8_axis_deg` (Orin rebuild needed).
+- **FLIGHT-TEST READINESS (same afternoon, user request; committed + pushed in all four repos).**
+  Defaults = the recommended first flight: both 4-D yamls `ee_traj_fig8_a/b` 0.70 / 0.35; arm GS
+  Figure-8 page 0.70 / 0.35 / 0.10 m/s / 1 lap. **The panel used to derive BOTH pages' speeds
+  from the planner's ONE shared `ee_traj_lap_time`** (the circle's 24.17 s on hardware -> this 8
+  at 0.177 m/s); now the shared lap + laps go only to the page of the planner's selected shape
+  (circle when none). **Tilt watchdog `system_wd_max_tilt_deg` 20 -> 15 on both rigs** (hardware
+  yamls + WB mirror `_sim` + geometric `_sim`; scenario sim yamls untouched); the WB stack
+  scripts' config check expected 20.0 (now 15.0), the decoupled ones gained a check. Checked
+  WITHOUT a vehicle by `tools/hw_fig8_workflow_check.py` + `tools/gs_harness/` (the REAL arm-GS
+  panel offscreen, linked from libjoint_plot_core.a, pressing its own buttons only when
+  enabled): WB 13/13, decoupled 14/14 (bridge in the loop, residual 0.001 mm) -- lap 42.681 s,
+  q2 period 10.670 s, READY s = 1 (s_max 2.02), EE extents 1.400 x 0.700 along world x centred
+  on the EE hover point, Back To Origin flown. **The 8's crossing is the EE hover point, 0.25 m
+  ahead of the base**: footprint 1.61 x 0.89 m centred (+0.25, +0.02) from a yaw-0 base hover at
+  the origin, so hover the base ~0.25 m behind the grid centre; Go To Start yaws exactly 45 deg.
+  **Trap hit: extracting a stack script's "pre-launch part" with `head -n $((n-1))` when the
+  grep for the cut line FAILED gave `head -n -1` = the whole script, and BOTH hardware stacks
+  launched on this desktop** (domain 77 only, no PX4, killed at once). Check the cut index
+  before running a truncated launcher.
 - Fixed: the archived `run_rt1.sh` / `run_isaac.sh` resolved the repo root one level short since
   the move into `archive/`.
 - Traps: a LaTeX template in a non-raw Python string turns `\tau`/`\beta` into control characters;
