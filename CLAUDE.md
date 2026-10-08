@@ -84,6 +84,11 @@ own MN35xx/MN4010 thrust ratio, +22 / +57 mOhm) clear every requirement on ALL F
 15x8 16.4-16.5 Wh (-5 % vs the pick, -60 g more, corridor 2.5x, cruise 6.3x, 8.9 of 15 A); MN3508 16.5-16.9 Wh
 (-120 g more). Not the recommendation until benched: T-Motor's tables disagree with themselves by 15 % on the
 35 mm frame (MN3510 vs MN4010 at the same rpm on the same prop). Bench one MN3510 beside the MN4010 + 15x8.
+**THE MN3510 FLOWN (2026-10-07, `rotor_trade.py --extra_r "MN3510 KV360=0.022"` = the derate as a knob; cfg
+e3510d: 25.4 N, tau 0.069, M 3.711 kg, stall 14.65):** straight 8/8, corridor 10.2 / BT 12.3, 0 in-flight fails;
+turning 32/32, 0 in-flight fails; front throttle peak 0.73 still / 0.89 turb 1.0 / 0.90 turb 1.0 @18 (the
+MN4010 + 15x8: 0.76 / 0.82 / 0.82; the current build 0.82 / 0.95 / 0.96); 2 post-stop losses at 18 m/s (the
+shared weakness). It flies; it trades ~8 points of turbulence throttle reserve for 5 % energy and 60 g.
 **BEFORE BUYING:** both rotation directions (fixed-wing carbon props are often one-handed; APC 13x10E is the
 fallback -- APC makes pusher Thin Electrics); bench the MN4010 + 15x8 WITH the power sensor and ESC PWM logged,
 to 100 % once; one inflow point (12-16 m/s) for J0; then write the airframe file from THAT session, not from

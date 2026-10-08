@@ -559,6 +559,9 @@ def main():
                     help="search front (motor, prop) x rear (motor, prop) independently; report against the best uniform build")
     ap.add_argument("--cfg", default=None, help="write an airframe_id.cfg per --pick candidate into this directory")
     ap.add_argument("--pick", default="", help="'tag=motor|prop;tag=motor|prop' for --cfg")
+    ap.add_argument("--extra_r", default="",
+                    help="'motor=ohm,motor=ohm': extra path resistance on a datasheet-only motor (a DERATE: "
+                         "MN3510 KV360=0.022 / MN3508 KV380=0.057 reproduce T-Motor's own thrust ratio to the MN4010)")
     a = ap.parse_args()
 
     T_HOVER_S, T_CRUISE_S, K_BLADE = a.t_hover, a.t_cruise, a.k_blade
@@ -570,6 +573,13 @@ def main():
             p.s_cp = p.s_cp * a.fw_aero
             p.sweeps = [(q[0], q[1], q[2], q[3] * a.fw_aero) for q in p.sweeps]
     ms, bench = motors()
+    for item in [q for q in a.extra_r.split(",") if q.strip()]:
+        mn, ohm = item.rsplit("=", 1)
+        m = next(q for q in ms if q.name == mn.strip())
+        m.s += float(ohm) * m.kv_si ** 2
+        m.R_sys = m.s * m.Kt ** 2
+        m.src += f" + {1e3 * float(ohm):.0f} mOhm derate"
+        print(f"DERATE {m.name}: +{1e3 * float(ohm):.0f} mOhm -> path resistance {1e3 * m.R_sys:.0f} mOhm")
     for m in ms:
         m.V = a.volts
     calibrate_lag(ms, props, bench)
