@@ -34,6 +34,21 @@ setsid nohup /usr/bin/python3 results/utils/run_tracking_campaign.py \
 /usr/bin/python3 results/utils/make_latex_table.py
 ```
 
+### Campaign outcome (flown 2026-10-07 21:49 to 2026-10-08 01:02)
+
+All 54 table runs completed: 3 per setting for each method. No trajectory failed after Start. Some attempts
+failed while hovering in DIRECT before their trajectory started; the runner re-flew those, and they are kept
+under `failed/`:
+
+| method | attempts | completed | hover trips | what the trips were |
+|---|---|---|---|---|
+| whole_body_l1 | 25 | 18 | 7 | a growing roll oscillation at about 1.55 Hz, 6 to 28 s into the hover (a known simulator-only mode near the rotor-lag pole) |
+| geometric_l1 | 18 | 18 | 0 | |
+| modular_adaptive | 24 | 18 | 6 | a roll and pitch divergence at about 2 Hz within 9 s of entering DIRECT |
+
+Every trajectory ran at RTF 1.000. The only readings below 1 were the first 10 s window, while Isaac was
+starting.
+
 ### Layout
 
 ```

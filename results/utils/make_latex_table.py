@@ -105,10 +105,11 @@ def exp_table(cells, sep="5pt"):
 def splice(paper, tex, label, anchor=None):
     """Replace the table carrying `label` in `paper`; if absent, insert it right after the `anchor` line."""
     s = open(paper).read()
-    if s.count(label) > 1:
-        raise SystemExit(f"{label} appears more than once in {paper}")
-    if label in s:
-        i = s.index(label)
+    tag = rf"\label{{{label}}}"
+    if s.count(tag) > 1:
+        raise SystemExit(f"{tag} appears more than once in {paper}")
+    if tag in s:
+        i = s.index(tag)
         a = s.rindex(r"\begin{table}", 0, i)
         b = s.index(r"\end{table}", i) + len(r"\end{table}")
         s = s[:a] + tex.rstrip("\n") + s[b:]
