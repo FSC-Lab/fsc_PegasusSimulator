@@ -9,6 +9,8 @@ the gains as flown, 3D trajectories, one full-state error table, every run score
 (`tools/summary_data.py` -> `tools/build_summary_report.py`). The earlier multi-section version (0928 report + a
 section 3, artifact version 3) is rebuilt by `tools/build_report.py` into `report_v3_sections.html`; published as the artifact "Experiment: Free-flight Comparison 0928 + 1002"
 (https://claude.ai/artifact/LhpXomd3ooNuKquPoQ9Joq). Command.md §7.24.4 has the summary and the run-2 diagnosis.
+Since 2026-10-05 the page has a section 2: the six figure-8 runs of 10-05 in the same layout (Tables 6-9, Fig. 2), data
+from `../wb_vs_decoupled_figure8_flight_20261005/` (its `tools/summary_data.py`; see its README), title "... 0928 + 1002 + 1005".
 
 ## Run order
 

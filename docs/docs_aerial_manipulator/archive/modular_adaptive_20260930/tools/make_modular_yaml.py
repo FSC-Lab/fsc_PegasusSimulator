@@ -28,7 +28,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CFG = os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2/config")
 SRC = "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650{suffix}"
 DST = "params_single_aerial_manipulator_modular_adaptive_direct_actuation_t650{suffix}"
-SUFFIX = {"mirror": "_sim.yaml", "robustness": "_sim_robustness.yaml"}
+SUFFIX = {"mirror": "_sim.yaml", "robustness": "_sim_robustness.yaml",
+          "pick_and_place": "_sim_pick_and_place.yaml"}   # 2026-10-08: the mirror + the pick-and-place task block
 IFACE = ["tau_max", "arm_state_timeout_s", "arm_reference_timeout_s", "arm_hold_kp", "arm_hold_kd",
          "arm_hold_stream", "gate_pos_m", "gate_vel_mps", "gate_arm_rad", "arm_joint_topic",
          "arm_reference_topic", "arm_torque_topic", "arm_sign_j1", "arm_sign_j2", "arm_sign_j3",
@@ -152,7 +153,7 @@ def main():
     i_node = lines.index("/**/fsc_autopilot_ros2:")
     body = lines[i_node:]
 
-    if a.profile == "mirror":
+    if a.profile in ("mirror", "pick_and_place"):
         i24 = next(i for i, l in enumerate(body) if l.startswith("    # ── 2.4 "))
         i27 = next(i for i, l in enumerate(body) if l.startswith("    # ── 2.7 "))
         keep = [l for l in body[i24:i27] if re.match(r"^\s+wb_(\w+):", l)

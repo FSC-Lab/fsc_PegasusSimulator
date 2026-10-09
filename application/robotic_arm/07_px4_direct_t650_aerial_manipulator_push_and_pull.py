@@ -23,13 +23,13 @@ bridge are the free-flight ones) and subclasses its sim class to add the scene:
             IN FRONT of the vehicle, its length along y: centred on (1.20, 0)
             -- x 1.125..1.275, y -0.50..0.50, top at 0.800 m. A 18 mm top, four
             25 mm legs and a lower shelf, all static colliders.
-  box       ONE dynamic rigid body, 200 g in total, on the table near its LEFT
+  box       ONE dynamic rigid body, 400 g in total, on the table near its LEFT
             (+y) end: a 200 (y, along the push) x 100 (x) x 60 mm box, centre
             (1.20, 0.25, 0.83), and on its +y face (the LEFT side, toward the
             start) a vertical FIN HANDLE -- 20 mm thick along x (the jaws close
             along it), 90 mm out along +y, 20..110 mm above the table top (50 mm
             above the box top) -- for the gripper to grasp from above.
-            PhysX spreads the 200 g over both colliders (uniform density).
+            PhysX spreads the 400 g over both colliders (uniform density).
 
 THE TASK (the Push & Pull tab): Go To Start flies to the table's LEFT end and
 yaws rightward to -90 deg (the nose along -y, the length of the table), the claw
@@ -40,8 +40,11 @@ and folds the arm home; Go To Land turns on clockwise to -360 deg and hovers ove
 the landing spot 0.5 m behind the start.
 
 FRICTION, SIZED FOR A SAFE DEMONSTRATION (2026-10-03):
-  * box on table: static 0.6 = dynamic 0.6 on BOTH surfaces (default average
-    combine) -> 1.18 N to break the box loose AND to keep it sliding (200 g).
+  * box on table: static 0.29 = dynamic 0.29 on BOTH surfaces (default average
+    combine) -> 1.14 N to break the box loose AND to keep it sliding (400 g).
+    2026-10-05: 0.29 is the user's MEASURED friction of the experiment table and
+    400 g the trial box -- the same force as the first design (200 g at 0.6,
+    1.18 N), which is why the 10-04 numbers below still apply.
     EQUAL ON PURPOSE (2026-10-04, flights pl_5 / pl_6, otherwise identical): at
     0.7 / 0.6 the force dropped 14 % at break-away while the law's observers
     still carried the stuck box's reaction and its moment -- the base surged
@@ -55,7 +58,7 @@ FRICTION, SIZED FOR A SAFE DEMONSTRATION (2026-10-03):
     rad/s reading), so the push READS as a contact.
   * TIPPING is mass-independent: the box tips about its leading bottom edge when
     mu_s * h > L / 2 (h the grasp height above the table, L the box length along
-    the push). Here 0.6 x 0.095 = 0.057 m vs 0.100 m: a 1.75x margin before the
+    the push). Here 0.29 x 0.095 = 0.028 m vs 0.100 m: a 3.6x margin before the
     grip's own moment helps. For the REAL box: keep mu_s * h < L / 3, i.e. pick
     the box length, then the payload / surface for the friction.
   * fin: the pick-and-place grip material (static 1.2 / dynamic 1.0, combine
@@ -83,16 +86,26 @@ checks every step against the table (push_pull_table, 5 cm clearance).
 06's EE marker cube is forced OFF here: it would publish obj_0 too.
 
 Knobs (environment):
-  PEGASUS_PUSH_BOX_MASS          total box mass [kg], default 0.200
-  PEGASUS_PUSH_FRICTION_STATIC   box / table static friction, default 0.6
-  PEGASUS_PUSH_FRICTION_DYNAMIC  box / table dynamic friction, default 0.6
+  PEGASUS_PUSH_BOX_MASS          total box mass [kg], default 0.400 (was 0.200 until 2026-10-05)
+  PEGASUS_PUSH_FRICTION_STATIC   box / table static friction, default 0.29 (measured; was 0.6)
+  PEGASUS_PUSH_FRICTION_DYNAMIC  box / table dynamic friction, default 0.29 (measured; was 0.6)
   PEGASUS_PUSH_BOX_XY            the box centre "x,y" [m], default "1.20,0.25"
   PEGASUS_PUSH_BOX_YAW_DEG       the box's yaw [deg], default 0
-  PEGASUS_PUSH_HANDLE_THICKNESS  the fin's thickness [m], default 0.020
+  PEGASUS_PUSH_HANDLE            cad (default, 2026-10-07: the user's CAD box + clamp bracket + fin,
+                                 assets/Box_Push.usda), post (2026-10-06: a post on the box's top centre) or fin
+  PEGASUS_PUSH_BOX_USD           the CAD box asset, default assets/Box_Push.usda (handle cad)
+  PEGASUS_PUSH_FIN_GRIP_MM       handle cad: the fin's clamped width in the sim [mm], default 20 -- the CAD
+                                 fin is 5 mm and the sim claw's pads stop ~14 mm apart; 0 = the bare CAD fin
+  PEGASUS_PUSH_POST_TOP          the post's top above the table [m], default 0.298 (grasp 25 mm below; 0.255 for the 60 deg fold)
+  PEGASUS_PUSH_HANDLE_THICKNESS  the handle's thickness across the jaws [m], default 0.020
   PEGASUS_PUSH_GRIP_TORQUE       gripper drive torque cap [N.m], default 0.3
   PEGASUS_PUSH_SPAWN_XY          where the vehicle starts, "x,y" [m], default "0.10,-0.07"
   PEGASUS_PUSH_SPAWN_YAW_DEG     its heading [deg], default 0 (+x)
   PEGASUS_PUSH_WAYPOINTS=0       hide the waypoint markers and labels
+  PEGASUS_PUSH_AM_ASSET          airframe asset, default AM_T650.usda (the T650's 7 cm shorter gear)
+  PEGASUS_PUSH_GROUND_BODY_Z     resting body height [m], default 0.235 with AM_T650 (0.305 with AM_xfwd)
+  PEGASUS_PUSH_Q2_LIMIT_DEG      q2's hard stops "lo,hi" [deg], default "-20,45" (the real arm's range, user
+                                 2026-10-06; the asset authors -90,50); "asset" keeps -90,50
 
 WAYPOINT VIEW: blue ball = a drone-body goal (Go To Start's hover above the
 handle, the Land hover), orange = an end-effector (claw) target (the grasp
@@ -117,7 +130,7 @@ _spec.loader.exec_module(am06)          # starts the SimulationApp, defines the 
 
 import numpy as np                      # noqa: E402  (after SimulationApp, see memory note)
 import omni.usd                         # noqa: E402
-from pxr import Gf, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade  # noqa: E402
+from pxr import Gf, PhysicsSchemaTools, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade  # noqa: E402
 
 
 def _xy(env, default):
@@ -146,11 +159,14 @@ TABLE_LEG       = 0.025                 # [m] square metal legs
 TABLE_SHELF_Z   = 0.250                 # [m] the lower shelf's top
 TABLE_SHELF_THICK = 0.015               # [m]
 
-# THE BOX: 200 (y, along the push) x 100 (x, across the table) x 60 mm, 200 g with
+# THE BOX: 200 (y, along the push) x 100 (x, across the table) x 60 mm, 400 g with
 # its handle. 200 mm along the push for the tipping margin (header); 100 mm wide
 # on the 150 mm deep table leaves 25 mm a side.
-BOX_SIZE  = (0.100, 0.200, 0.060)       # [m] x, y, z
-BOX_MASS  = am06._envf("PEGASUS_PUSH_BOX_MASS", 0.200)       # [kg] box + handle
+# 2026-10-06: the user's REAL box, 240 (along the push) x 160 (across) x 95 mm
+# (was 100 x 200 x 60). 160 mm across overhangs the 150 mm-deep console table by
+# 5 mm a side -- it still rests on it.
+BOX_SIZE  = (0.160, 0.240, 0.095)       # [m] x, y, z
+BOX_MASS  = am06._envf("PEGASUS_PUSH_BOX_MASS", 0.400)       # [kg] box + handle (2026-10-05; was 0.200)
 BOX_XY    = _xy("PEGASUS_PUSH_BOX_XY", "1.20,0.25")
 BOX_YAW_DEG = am06._envf("PEGASUS_PUSH_BOX_YAW_DEG", 0.0)
 BOX_DROP_GAP = 0.0005                   # [m] spawned this far above the table
@@ -166,13 +182,70 @@ HANDLE_TOP       = 0.110                # [m] above the table top
 GRASP_BELOW_TOP  = 0.015                # [m] the claw point under the fin top (the pick's)
 GRASP_FROM_FACE  = 0.055                # [m] the claw point out from the box face: the ~50 mm
                                         # wide pads span 30..80 mm, inside the 90 mm fin
+# THE HANDLE (2026-10-06, user: "adjust the handle ... the interaction should be
+# the force parallel to the table, not too much torque"): a vertical POST on the
+# box's top CENTRE -- the push line through the box's friction centre (no yaw
+# lever; the fin sat 0.155 m behind it) -- tall enough that the push pose can fold
+# the arm forward ([0, 20, 40, 0] deg: the claw 0.13 m below the system CoM, not
+# 0.28 m, so a 1.14 N push is 0.14 N.m of pitch, not 0.32) while the gear clears
+# the table by ~6.5 cm. The jaws (closing across the table, the box's x) clamp its
+# 20 mm faces; the claw, pitched 60 deg forward, slides onto it from behind
+# (planner push_pull_approach_back) so the push presses the post into the palm.
+# Tipping: mu * h / (L / 2) = 0.29 x 0.23 / 0.12 = 0.56 (L/3 rule: 0.067 < 0.080).
+# PEGASUS_PUSH_HANDLE=fin keeps the 2026-10-03 side fin;
+# PEGASUS_PUSH_HANDLE=post keeps the 2026-10-06 post.
+#
+# THE CAD BOX (2026-10-07, user: "This is the CAD model for our box with the
+# handle for push and pull task", total 400 g): assets/Box_Push.usda, generated
+# from Box_Push.stl by docs/docs_aerial_manipulator/archive/
+# push_pull_cad_box_20261007/tools/stl_to_usda_push.py. A box 240 (y, along the
+# push) x 160 (x) x 100 mm (the CAD's 100, not the 95 measured) with a printed
+# clamp bracket on its top centre: two framed side plates down its long faces, a
+# strip across the top, a screw pad, a 10 mm rib, and a FIN 60 mm along the push
+# x 5 mm across, its top 258 mm above the table -- the jaws close across the 5 mm,
+# the claw point 25 mm under the fin top (233 mm above the table). The asset's
+# frame IS the box frame here (origin = box centre = obj_0, +y along the push);
+# its colliders are the box and the bracket as exact blocks, its mass properties
+# the CAD solid's.
+# THE GRIP SHIM: the sim claw cannot clamp 5 mm -- its slider-crank stops the
+# pads ~19 mm apart (~14 mm at the fingertips; measured, pick-and-place
+# 2026-10-07), where the real gripper's foam pads close fully. So the fin's bare
+# part (above the rib) gets an INVISIBLE collider PEGASUS_PUSH_FIN_GRIP_MM wide
+# (default 20, the clamped width that flew 2026-10-04..06), standing in for the
+# foam the sim claw lacks. 0 = the bare CAD fin (the claw closes on air).
+HANDLE = (os.environ.get("PEGASUS_PUSH_HANDLE", "") or "cad").strip()
+if HANDLE not in ("cad", "post", "fin"):
+    raise SystemExit(f"PEGASUS_PUSH_HANDLE must be cad, post or fin, got {HANDLE!r}")
+BOX_USD = (os.environ.get("PEGASUS_PUSH_BOX_USD", "") or os.path.join(am06.ASSETS_DIR, "Box_Push.usda")).strip()
+FIN_GRIP_MM = am06._envf("PEGASUS_PUSH_FIN_GRIP_MM", 20.0)
+CAD_GRASP_BELOW_TOP = 0.025             # [m] the claw point under the fin top (the post's rule)
+CAD = {}
+if HANDLE == "cad":
+    if not os.path.isfile(BOX_USD):
+        raise SystemExit(f"[AM-T650-PUSH] handle 'cad' needs {BOX_USD} (generate it with "
+                         f"push_pull_cad_box_20261007/tools/stl_to_usda_push.py), or set PEGASUS_PUSH_HANDLE=post")
+    _cad_stage = Usd.Stage.Open(BOX_USD)        # kept alive: a prim of a dropped stage expires
+    _root = _cad_stage.GetDefaultPrim()
+    CAD = {k: float(_root.GetAttribute(f"fsc:{k}").Get()) for k in (
+        "box_size_x_m", "box_size_y_m", "box_size_z_m", "fin_thickness_m", "fin_length_m",
+        "fin_centre_x_m", "fin_centre_y_m", "fin_top_z_m", "fin_exposed_bottom_z_m")}
+    BOX_SIZE = (CAD["box_size_x_m"], CAD["box_size_y_m"], CAD["box_size_z_m"])
+    del _root, _cad_stage
+POST_DEPTH_Y   = 0.030                  # [m] along the push (the jaws' pads are ~50 mm wide)
+POST_TOP       = am06._envf("PEGASUS_PUSH_POST_TOP", 0.298)   # [m] above the table top (grasp 0.273 m; 0.255 for the 60 deg fold)
+POST_GRASP_BELOW_TOP = 0.025            # [m] the claw point under the post top -> 0.230 m above the table
 # the planner's push_pull_ee_offset for this box (box frame, from its centre)
-EE_OFFSET = (0.0,
-             0.5 * BOX_SIZE[1] + GRASP_FROM_FACE,
-             HANDLE_TOP - GRASP_BELOW_TOP - 0.5 * BOX_SIZE[2])
+if HANDLE == "cad":
+    EE_OFFSET = (CAD["fin_centre_x_m"], CAD["fin_centre_y_m"], CAD["fin_top_z_m"] - CAD_GRASP_BELOW_TOP)
+elif HANDLE == "post":
+    EE_OFFSET = (0.0, 0.0, POST_TOP - POST_GRASP_BELOW_TOP - 0.5 * BOX_SIZE[2])
+else:
+    EE_OFFSET = (0.0,
+                 0.5 * BOX_SIZE[1] + GRASP_FROM_FACE,
+                 HANDLE_TOP - GRASP_BELOW_TOP - 0.5 * BOX_SIZE[2])
 
-FRICTION_STATIC  = am06._envf("PEGASUS_PUSH_FRICTION_STATIC", 0.6)
-FRICTION_DYNAMIC = am06._envf("PEGASUS_PUSH_FRICTION_DYNAMIC", 0.6)
+FRICTION_STATIC  = am06._envf("PEGASUS_PUSH_FRICTION_STATIC", 0.29)    # measured table, 2026-10-05
+FRICTION_DYNAMIC = am06._envf("PEGASUS_PUSH_FRICTION_DYNAMIC", 0.29)
 GRIP_FRICTION_STATIC  = 1.2             # the fin: wins every pad contact (combine max)
 GRIP_FRICTION_DYNAMIC = 1.0
 GRIP_TORQUE_MAX = am06._envf("PEGASUS_PUSH_GRIP_TORQUE", 0.3)   # [N.m] gripper drive cap
@@ -184,6 +257,17 @@ BOX_BODY   = "obj_0"                    # the box, live: the planner's push_pull
 CLAW_TRUTH_BODY = "claw_0"              # the real claw point, ground truth only
 CLAW_BEYOND_PADS = 0.039                # [m] claw point beyond the pad CoM midpoint (07 pick-and-place's probe)
 FIXED_PUB_DIV = 4                       # publish every 4th physics step (62.5 Hz)
+# CONTACT TRUTH (2026-10-05): the PhysX full contact report on the box, summed per
+# publish interval and divided by its duration -> mean force. Published RAW, as
+# reported but normalised to "the box is actor0" (the impulse sign convention is
+# unverified in Isaac 5.1 -- the analysis calibrates it on the table, whose normal
+# force must hold the box's weight up):
+#   [0:3]  vehicle-box normal force    [3:6]  vehicle-box friction-anchor force
+#   [6:9]  table-box normal force      [9:12] table-box friction-anchor force
+#   [12:15] sum p x f, vehicle-box normal   [15:18] sum p x f, vehicle-box friction
+#   (moments about the WORLD origin; the analysis moves them to the claw point)
+#   [18] interval [s]   [19] number of vehicle-box contact points in the interval
+CONTACT_TRUTH_TOPIC = "/push_pull_truth/contact"
 BOX_LOG_MOVE = 0.01                     # [m] print the box pose when it moved this far
 
 WAYPOINTS_VIZ = (os.environ.get("PEGASUS_PUSH_WAYPOINTS", "") or "1").strip() != "0"
@@ -200,6 +284,36 @@ WP_SHOW = ((0, "body", "1 Go To Start drone"), (1, "claw", "2 Grasp EE"),
 CAMERA_POS    = [-1.2, 2.6, 2.2]        # behind-left of the start, high
 CAMERA_TARGET = [1.0, 0.1, 0.9]
 
+# THE T650 LANDING GEAR (2026-10-06, user): the experiment drone is the T650, its
+# gear ~7 cm shorter than the X650 gear AM_xfwd.usda carries (bottom plate to
+# ground 22-23 cm vs 29-30 cm). AM_T650.usda is a copy of AM_xfwd.usda with the
+# gear shortened by 0.070 m (utils_model/make_t650_gear_asset.py; the original is
+# untouched): skids 0.2425 m under the body origin (was 0.3125), so the vehicle
+# rests 0.070 m lower. The planner's push_pull_gear_depth carries the same
+# 0.2425. PEGASUS_PUSH_AM_ASSET=AM_xfwd.usda flies the X650 gear again (then also
+# set PEGASUS_PUSH_GROUND_BODY_Z=0.305 and the planner's gear depth 0.313).
+AM_ASSET = (os.environ.get("PEGASUS_PUSH_AM_ASSET", "") or "AM_T650.usda").strip()
+am06.USD_FILE = os.path.join(am06.ASSETS_DIR, AM_ASSET)
+if not os.path.isfile(am06.USD_FILE):
+    raise SystemExit(f"{am06.USD_FILE} not found -- generate it with "
+                     f"robotic_arm/utils_model/make_t650_gear_asset.py (or set PEGASUS_PUSH_AM_ASSET)")
+am06.GROUND_BODY_Z = am06._envf("PEGASUS_PUSH_GROUND_BODY_Z",
+                                0.305 - 0.070 if AM_ASSET == "AM_T650.usda" else 0.305)
+print(f"\033[1;35m[AM-T650-PUSH] airframe asset {AM_ASSET} (resting body height "
+      f"{am06.GROUND_BODY_Z:.3f} m)\033[0m", flush=True)
+# THE REAL ARM'S q2 RANGE (2026-10-06, user): about [-20, 45] deg on the
+# hardware, against the asset's [-90, 50]. Authored on manip_joint2's PhysX
+# limits at spawn, so in this scene q2 meets a hard stop where the real arm does.
+# The planner's own joint box is unchanged (compiled shared constants, q2 <= 50).
+_q2_raw = (os.environ.get("PEGASUS_PUSH_Q2_LIMIT_DEG", "") or "-20,45").strip()
+if _q2_raw.lower() == "asset":
+    Q2_LIMIT_DEG = None
+else:
+    try:
+        Q2_LIMIT_DEG = tuple(float(v) for v in _q2_raw.split(","))
+        assert len(Q2_LIMIT_DEG) == 2 and Q2_LIMIT_DEG[0] < Q2_LIMIT_DEG[1]
+    except (ValueError, AssertionError):
+        raise SystemExit(f"PEGASUS_PUSH_Q2_LIMIT_DEG must be 'lo,hi' or 'asset', got {_q2_raw!r}")
 am06.SPAWN_POS = (float(SPAWN_XY[0]), float(SPAWN_XY[1]), float(am06.SPAWN_POS[2]))
 am06.SPAWN_EULER = (0.0, 0.0, SPAWN_YAW_DEG)
 if am06.EE_MARKER_CUBE:
@@ -245,7 +359,26 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
     # world.reset(): the scene exists when PhysX first reads the stage.
     def _spawn_am_px4_primary(self):
         self._build_scene(omni.usd.get_context().get_stage())
-        return super()._spawn_am_px4_primary()
+        drone_path = super()._spawn_am_px4_primary()
+        self._set_q2_limit(drone_path)    # 06 assigns self.drone_path from this return value
+        return drone_path
+
+    def _set_q2_limit(self, drone_path):
+        if Q2_LIMIT_DEG is None:
+            print("[AM-T650-PUSH] q2 stops: the asset's", flush=True)
+            return
+        stage = omni.usd.get_context().get_stage()
+        root = stage.GetPrimAtPath(drone_path)
+        prim = next((p for p in Usd.PrimRange(root)
+                     if p.GetName() == "manip_joint2" and p.IsA(UsdPhysics.RevoluteJoint)), None)
+        if prim is None:
+            raise SystemExit("[AM-T650-PUSH] no manip_joint2 to put the q2 stops on")
+        j = UsdPhysics.RevoluteJoint(prim)
+        old = (j.GetLowerLimitAttr().Get(), j.GetUpperLimitAttr().Get())
+        j.GetLowerLimitAttr().Set(float(Q2_LIMIT_DEG[0]))
+        j.GetUpperLimitAttr().Set(float(Q2_LIMIT_DEG[1]))
+        print(f"\033[1;35m[AM-T650-PUSH] q2 hard stops {Q2_LIMIT_DEG[0]:.0f}..{Q2_LIMIT_DEG[1]:.0f} deg "
+              f"(the real arm's range; asset {old[0]:.0f}..{old[1]:.0f})\033[0m", flush=True)
 
     def _build_scene(self, stage):
         UsdGeom.Xform.Define(stage, SCENE_ROOT)
@@ -286,18 +419,69 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
         xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p0)))
         xf.AddRotateZOp().Set(float(BOX_YAW_DEG))
         prim = body.GetPrim()
+        if HANDLE == "cad":
+            self._build_cad_box(stage, prim, slide_mat, grip_mat)
+            self._box_p0 = np.array(p0)
+            return
         box = _box(stage, BOX_PRIM + "/box", (0.0, 0.0, 0.0), BOX_SIZE, (0.85, 0.55, 0.20))
-        fin_h = HANDLE_TOP - HANDLE_BOTTOM
-        fin_zc = -0.5 * bz + HANDLE_BOTTOM + 0.5 * fin_h        # box frame
-        fin = _box(stage, BOX_PRIM + "/handle",
-                   (0.0, 0.5 * by + 0.5 * HANDLE_LENGTH, fin_zc),
-                   (HANDLE_THICKNESS, HANDLE_LENGTH, fin_h), (0.85, 0.85, 0.30))
+        if HANDLE == "post":
+            post_h = POST_TOP - bz                                  # above the box top
+            fin = _box(stage, BOX_PRIM + "/handle",
+                       (0.0, 0.0, 0.5 * bz + 0.5 * post_h),          # box frame
+                       (HANDLE_THICKNESS, POST_DEPTH_Y, post_h), (0.85, 0.85, 0.30))
+        else:
+            fin_h = HANDLE_TOP - HANDLE_BOTTOM
+            fin_zc = -0.5 * bz + HANDLE_BOTTOM + 0.5 * fin_h        # box frame
+            fin = _box(stage, BOX_PRIM + "/handle",
+                       (0.0, 0.5 * by + 0.5 * HANDLE_LENGTH, fin_zc),
+                       (HANDLE_THICKNESS, HANDLE_LENGTH, fin_h), (0.85, 0.85, 0.30))
         for part, mat in ((box, slide_mat), (fin, grip_mat)):
             UsdPhysics.CollisionAPI.Apply(part.GetPrim())
             _bind_physics(part.GetPrim(), mat)
         UsdPhysics.RigidBodyAPI.Apply(prim)
         UsdPhysics.MassAPI.Apply(prim).CreateMassAttr(float(BOX_MASS))
+        # every contact of the box's colliders reported (threshold 0): the
+        # ground-truth wrench the vehicle puts on it (CONTACT_TRUTH_TOPIC)
+        PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr().Set(0.0)
         self._box_p0 = np.array(p0)
+
+    def _build_cad_box(self, stage, prim, slide_mat, grip_mat):
+        """The CAD box: Box_Push.usda REFERENCED onto the box body (the unscaled
+        Xform at the box centre = obj_0), the rigid body here. The asset carries
+        the visual mesh, the colliders (box + bracket blocks, the fin and rib
+        flagged fsc:grip) and the CAD mass properties; the grip shim is added."""
+        prim.GetReferences().AddReference(BOX_USD)
+        n_col = 0
+        for p in Usd.PrimRange(prim):
+            if p.HasAPI(UsdPhysics.CollisionAPI):
+                g = p.GetAttribute("fsc:grip")
+                _bind_physics(p, grip_mat if (g and g.Get()) else slide_mat)
+                n_col += 1
+        shim = FIN_GRIP_MM * 1e-3
+        if shim > CAD["fin_thickness_m"]:
+            h = CAD["fin_top_z_m"] - CAD["fin_exposed_bottom_z_m"]
+            g = _box(stage, BOX_PRIM + "/grip_shim",
+                     (CAD["fin_centre_x_m"], CAD["fin_centre_y_m"], CAD["fin_exposed_bottom_z_m"] + 0.5 * h),
+                     (shim, CAD["fin_length_m"], h), (0.30, 0.85, 0.40))
+            UsdPhysics.CollisionAPI.Apply(g.GetPrim())
+            _bind_physics(g.GetPrim(), grip_mat)
+            UsdGeom.Imageable(g.GetPrim()).MakeInvisible()     # physics only: the visual is the CAD fin
+            n_col += 1
+        UsdPhysics.RigidBodyAPI.Apply(prim)
+        mass = UsdPhysics.MassAPI(prim)               # the asset's: mass, CoM, inertia, principal axes
+        m_asset = float(mass.GetMassAttr().Get())
+        if abs(BOX_MASS - m_asset) > 1e-9:            # same shape, another total: inertia scales with it
+            k = BOX_MASS / m_asset
+            mass.GetMassAttr().Set(float(BOX_MASS))
+            mass.GetDiagonalInertiaAttr().Set(Gf.Vec3f(*[float(k * v) for v in mass.GetDiagonalInertiaAttr().Get()]))
+        PhysxSchema.PhysxContactReportAPI.Apply(prim).CreateThresholdAttr().Set(0.0)
+        com = mass.GetCenterOfMassAttr().Get()
+        print(f"[AM-T650-PUSH] box 'cad': {BOX_USD} referenced on {BOX_PRIM}, {n_col} colliders, "
+              f"{BOX_MASS * 1e3:.0f} g, CoM {[round(1e3 * c, 1) for c in com]} mm from the box centre; "
+              + (f"GRIP SHIM {FIN_GRIP_MM:.0f} mm on the {CAD['fin_thickness_m'] * 1e3:.0f} mm fin (invisible)"
+                 if shim > CAD["fin_thickness_m"] else
+                 f"NO grip shim: the bare {CAD['fin_thickness_m'] * 1e3:.0f} mm fin (the sim claw cannot clamp it)"),
+              flush=True)
 
     def _setup_gripper_drive(self):
         super()._setup_gripper_drive()
@@ -319,7 +503,8 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
         if WAYPOINTS_VIZ:
             self._wp_setup_view()
         g = 9.81
-        grasp_h = HANDLE_TOP - GRASP_BELOW_TOP
+        grasp_h = (0.5 * BOX_SIZE[2] + EE_OFFSET[2]) if HANDLE == "cad" else \
+            (POST_TOP - POST_GRASP_BELOW_TOP) if HANDLE == "post" else (HANDLE_TOP - GRASP_BELOW_TOP)
         tip_margin = (0.5 * BOX_SIZE[1]) / (FRICTION_STATIC * grasp_h)
         print(f"\033[1;35m[AM-T650-PUSH] PUSH-AND-PULL SCENE: vehicle at ({SPAWN_XY[0]:.2f}, "
               f"{SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward). TABLE (HOOBRO "
@@ -328,9 +513,18 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
               f"x {TABLE_CENTER_XY[0] - 0.5 * TABLE_DEPTH_X:.3f}..{TABLE_CENTER_XY[0] + 0.5 * TABLE_DEPTH_X:.3f}, "
               f"y {TABLE_CENTER_XY[1] - 0.5 * TABLE_LENGTH_Y:.3f}..{TABLE_CENTER_XY[1] + 0.5 * TABLE_LENGTH_Y:.3f}. "
               f"BOX {BOX_MASS * 1e3:.0f} g = {BOX_SIZE[0] * 1e3:.0f} x {BOX_SIZE[1] * 1e3:.0f} x "
-              f"{BOX_SIZE[2] * 1e3:.0f} mm (x, y, z) + a {HANDLE_THICKNESS * 1e3:.0f} mm fin on its +y face "
-              f"({HANDLE_LENGTH * 1e3:.0f} mm out, {HANDLE_BOTTOM * 1e3:.0f}..{HANDLE_TOP * 1e3:.0f} mm above "
-              f"the table), centre {np.round(self._box_p0, 4).tolist()} m, yaw {BOX_YAW_DEG:.1f} deg -> "
+              f"{BOX_SIZE[2] * 1e3:.0f} mm (x, y, z) + "
+              + (f"the CAD clamp bracket with a {CAD.get('fin_thickness_m', 0) * 1e3:.0f} x "
+                 f"{CAD.get('fin_length_m', 0) * 1e3:.0f} mm FIN on its top centre (top "
+                 f"{(0.5 * BOX_SIZE[2] + CAD.get('fin_top_z_m', 0)) * 1e3:.0f} mm, grasp {grasp_h * 1e3:.0f} mm "
+                 f"above the table, clamped as {max(FIN_GRIP_MM, 1e3 * CAD.get('fin_thickness_m', 0)):.0f} mm)"
+                 if HANDLE == "cad" else
+                 f"a {HANDLE_THICKNESS * 1e3:.0f} x {POST_DEPTH_Y * 1e3:.0f} mm POST on its top centre "
+                 f"(top {POST_TOP * 1e3:.0f} mm, grasp {grasp_h * 1e3:.0f} mm above the table)"
+                 if HANDLE == "post" else
+                 f"a {HANDLE_THICKNESS * 1e3:.0f} mm fin on its +y face ({HANDLE_LENGTH * 1e3:.0f} mm out, "
+                 f"{HANDLE_BOTTOM * 1e3:.0f}..{HANDLE_TOP * 1e3:.0f} mm above the table)")
+              + f", centre {np.round(self._box_p0, 4).tolist()} m, yaw {BOX_YAW_DEG:.1f} deg -> "
               f"mocap {BOX_BODY}. EE offset (planner push_pull_ee_offset) "
               f"[{EE_OFFSET[0]:.3f}, {EE_OFFSET[1]:.3f}, {EE_OFFSET[2]:.3f}] m. Box / table friction "
               f"{FRICTION_STATIC}/{FRICTION_DYNAMIC}: break-away {FRICTION_STATIC * BOX_MASS * g:.2f} N, "
@@ -361,6 +555,22 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
         self._claw_msg.header.frame_id = "map"
         self._claw_pad_com = None
         self._fixed_step = 0
+        from std_msgs.msg import Float64MultiArray
+        self._ct_pub = node.create_publisher(Float64MultiArray, CONTACT_TRUTH_TOPIC, 10)
+        self._ct_msg = Float64MultiArray()
+        self._ct_acc = np.zeros(18)
+        self._ct_time = 0.0
+        self._ct_npts = 0
+        self._ct_err = None
+        try:
+            from omni.physx import get_physx_simulation_interface
+            self._ct_sub = get_physx_simulation_interface().subscribe_full_contact_report_events(
+                self._on_contacts)
+            print(f"[AM-T650-PUSH] contact truth: the box's PhysX contacts -> {CONTACT_TRUTH_TOPIC} "
+                  f"(raw normal / friction sums, {250 // FIXED_PUB_DIV:.0f} Hz)", flush=True)
+        except Exception as exc:              # ground truth must never stop the plant
+            self._ct_sub = None
+            print(f"[AM-T650-PUSH] contact truth OFF: {exc}", flush=True)
         if WAYPOINTS_VIZ:
             self._wp_setup_ros()
 
@@ -400,8 +610,64 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
         m.pose.position.x, m.pose.position.y, m.pose.position.z = map(float, claw)
         self._claw_pub.publish(m)
 
+    def _on_contacts(self, headers, data, anchors):
+        """One physics step's contact report: add the box's contact impulses to
+        the publish-interval accumulator (vehicle and table kept apart, normal
+        and friction-anchor parts kept apart, as reported)."""
+        try:
+            acc = self._ct_acc
+            for h in headers:
+                a0 = str(PhysicsSchemaTools.intToSdfPath(h.actor0))
+                a1 = str(PhysicsSchemaTools.intToSdfPath(h.actor1))
+                # normalised to "the box is actor0": one sign convention for every
+                # pair, which the analysis calibrates on the table's normal force
+                if a0 == BOX_PRIM:
+                    other, sgn = a1, 1.0
+                elif a1 == BOX_PRIM:
+                    other, sgn = a0, -1.0
+                else:
+                    continue
+                if other.startswith(self.drone_path):
+                    k = 0
+                elif other.startswith(SCENE_ROOT + "/table"):
+                    k = 6
+                else:
+                    continue
+                o, n = h.contact_data_offset, h.num_contact_data
+                for i in range(o, o + n):
+                    c = data[i]
+                    f = sgn * np.array([c.impulse[0], c.impulse[1], c.impulse[2]])
+                    acc[k:k + 3] += f
+                    if k == 0:
+                        pp = np.array([c.position[0], c.position[1], c.position[2]])
+                        acc[12:15] += np.cross(pp, f)
+                        self._ct_npts += 1
+                o, n = h.friction_anchors_offset, h.num_friction_anchors_data
+                for i in range(o, o + n):
+                    c = anchors[i]
+                    f = sgn * np.array([c.impulse[0], c.impulse[1], c.impulse[2]])
+                    acc[k + 3:k + 6] += f
+                    if k == 0:
+                        pp = np.array([c.position[0], c.position[1], c.position[2]])
+                        acc[15:18] += np.cross(pp, f)
+        except Exception as exc:              # report once, never stop the plant
+            if self._ct_err is None:
+                self._ct_err = exc
+                print(f"[AM-T650-PUSH] contact truth callback failed: {exc!r}", flush=True)
+
+    def _publish_contact_truth(self):
+        T = self._ct_time
+        if T <= 0.0:
+            return
+        self._ct_msg.data = [float(v) for v in (self._ct_acc / T)] + [float(T), float(self._ct_npts)]
+        self._ct_pub.publish(self._ct_msg)
+        self._ct_acc[:] = 0.0
+        self._ct_time = 0.0
+        self._ct_npts = 0
+
     def _control_step_inner(self, dt):
         super()._control_step_inner(dt)
+        self._ct_time += dt
         self._fixed_step += 1
         if self._fixed_step % FIXED_PUB_DIV == 0:
             stamp = self._arm_node.get_clock().now().to_msg()
@@ -421,6 +687,10 @@ class AmT650PushAndPull(am06.AmT650WholeBodyArmSim):
             try:
                 self._publish_claw_truth(stamp)
             except Exception:                 # a ground-truth topic must never stop the plant
+                pass
+            try:
+                self._publish_contact_truth()
+            except Exception:
                 pass
         if self._wp_ready:
             try:

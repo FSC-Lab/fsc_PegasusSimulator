@@ -4,7 +4,7 @@
     /usr/bin/python3 make_pick_place_yaml.py [--check]
 
   in : fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
-  out: fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_place.yaml
+  out: fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml
 
 The output is the mirror file BYTE FOR BYTE, plus
   * a header saying what differs (written above the mirror's own header),
@@ -36,7 +36,7 @@ import yaml
 
 CFG = os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2/config")
 SRC = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml")
-DST = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_place.yaml")
+DST = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml")
 VEHICLE_NAME = "AM-T650-WB-L1-4D-PNP"
 
 # Controller keys that differ from the mirror (name -> YAML value text).
@@ -254,9 +254,9 @@ HEADER = """# ==================================================================
 #   * the trajectory planner's pick-and-place block (end of the file).
 # The payload is MODEL UNCERTAINTY: wb_l1_contact stays false (chi free).
 #
-# HOW TO FLY IT: WB_SIM_PROFILE=pick_place on BOTH the stack script and the
+# HOW TO FLY IT: WB_SIM_PROFILE=pick_and_place on BOTH the stack script and the
 # Pegasus launcher (the pick-and-place wrapper sets it itself):
-#   WB_SIM_PROFILE=pick_place scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh <cfg>
+#   WB_SIM_PROFILE=pick_and_place scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh <cfg>
 #   fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh <cfg>
 # ============================================================================
 """

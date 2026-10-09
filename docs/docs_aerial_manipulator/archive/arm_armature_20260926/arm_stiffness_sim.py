@@ -45,6 +45,16 @@ CAP = np.array([0.34, 2.44, 1.42, 0.39])                   # servo max_effort [N
 FC = np.array([0.01711, 0.03143, 0.05751, 0.05237])        # arm yaml friction (N.m)
 MU = np.array([0.0, 0.246, 0.161, 0.0])
 W_FF = 0.015                                               # FF tanh width [rad/s]
+# THE FRICTION FEED-FORWARD's VELOCITY SOURCE (2026-10-08): "reference" = as flown
+# 0918-0924 (tanh(qdot_d / W_FF)); "measured" = the arm controller since 2026-09-28
+# (friction_velocity_source: measured, tanh(qdot_meas / FF_W_MEAS), the law's own
+# velocity estimate as qdot_meas); "blend" = measured + FF_BLEND x reference, the
+# sum clipped to +-1. FF_SCALE = the per-joint scaling (hardware 2026-09-28:
+# j2 x0.70, j3 x0.65 on fc AND mu).
+FF_SOURCE = "reference"
+FF_W_MEAS = 0.03
+FF_BLEND = 0.3
+FF_SCALE = np.ones(4)
 KIN = np.array([0.8, 0.85, 0.65, 0.8])                     # kinetic / static (flight ID)
 VQ, V_DELAY = 0.023969, 0.048                              # Present Velocity quantum / lag
 V_NOISE = 0.0                                              # white velocity noise [rad/s] (observer study)
@@ -210,7 +220,13 @@ def simulate(name, model_kind="hht", J_model=JA0, J_true=JA0, gains=None, postur
         w_cmd = E.allocate(u1, tau_body, kf); fifo.append(w_cmd); w_cmd = fifo.pop(0)
         omega_rot = w_cmd + (omega_rot - w_cmd) * np.exp(-E.LAMBDA_ROTOR * DT)
         thrust_a, tau_a = E.wrench_from_rotors(omega_rot, kf)
-        ff = (FC + MU * np.abs(tau_law)) * np.tanh(R["qdot_d"] / W_FF) if friction_on else np.zeros(N)
+        if FF_SOURCE == "reference":
+            gate = np.tanh(R["qdot_d"] / W_FF)
+        elif FF_SOURCE == "measured":
+            gate = np.tanh(qd_meas / FF_W_MEAS)
+        else:
+            gate = np.clip(np.tanh(qd_meas / FF_W_MEAS) + FF_BLEND * np.tanh(R["qdot_d"] / W_FF), -1.0, 1.0)
+        ff = FF_SCALE * (FC + MU * np.abs(tau_law)) * gate if friction_on else np.zeros(N)
         tau_cmd = np.clip(tau_law + ff, -CAP, CAP)
         if n_ac:
             acbuf.append(tau_cmd.copy()); tau_cmd = acbuf.pop(0)

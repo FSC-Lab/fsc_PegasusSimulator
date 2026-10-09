@@ -923,6 +923,16 @@ ROS_DOMAIN_ID=77 /usr/bin/python3 tools/hw_fig8_workflow_check.py --rig wb|decou
                                                               # planner + bridge + real arm-GS panel, no vehicle
 ```
 
+**Figure-8 hardware flights, 2026-10-05 → section 2 of the report "Experiment: Free-flight Comparison"**
+
+```bash
+cd ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_vs_decoupled_figure8_flight_20261005/tools
+AM_NPZ=<npz dir> PYTHONNOUSERSITE=1 /usr/bin/python3 summary_data.py      # extraction: README.md
+cd ../../decoupled_flight_20261002/tools && python3 make_templates.py && python3 build_summary_report.py
+python3 build_artifact_page.py <out.html>                                  # https://claude.ai/artifact/LhpXomd3ooNuKquPoQ9Joq
+# EE rms: whole-body 37–44 mm (0.10 m/s), 43–58 mm (0.13); decoupled 73 / 77 mm; heading 0.5° vs 3.6 / 4.7°
+```
+
 ## 15. PS4 teleoperation on the decoupled rig (geometric + L1, position-mode arm)
 
 **shiqi_machine**
@@ -953,7 +963,14 @@ FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulat
 ## 16. Pick-and-place scene (whole-body L1 4-D and decoupled geometric + L1)
 
 **shiqi_machine** -- the same scene, payload and task for both controllers; one block each, every
-command in its own terminal. `WB_SIM_PROFILE=pick_place` in step 1 is REQUIRED: step 2 refuses to start
+command in its own terminal. Payload (2026-10-07): the CAD box (`Box_Payload.usda`, a basket with
+a wire hanger), held by a HOOK grasp -- the fingers go in under the hanger's arch on both sides of
+its stem and the lift hangs the arch on them; `PEGASUS_PNP_PAYLOAD=plate` in front of step 2 flies
+the old box + clamped handle. Platform (2026-10-08): the printed HAT on each 1 m pillar (`Top_Hat.usda`,
+Ø200.6 mm, its top 8 mm above the pillar top; the pillars are 97.7 mm, the hat's ribs' fit);
+`PEGASUS_PNP_PLATFORM=cap` in front of step 2 = the old 160 mm disc. Records: `archive/pick_place_box_payload_20261007/README.md`
+(payload), `archive/pick_place_top_hat_20261008/README.md` (hat). `WB_SIM_PROFILE=pick_and_place` in step 1 is REQUIRED (the yamls end in `_sim_pick_and_place.yaml`
+since 2026-10-08; `pick_place` is still accepted as an alias): step 2 refuses to start
 unless the running planner and controller came from the pick-and-place yamls.
 
 **Whole-body controller (4-D L1)**
@@ -964,7 +981,7 @@ unless the running planner and controller came from the pick-and-place yamls.
 ~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
 # 1. stack (4-D L1 node, EKF2-fused estimator, emulator with obj_0 + drop_0, planner, drone GS)
-WB_SIM_PROFILE=pick_place ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
+WB_SIM_PROFILE=pick_and_place ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
 
 # 2. the pick-and-place scene + PX4 + torque-mode arm stack + arm GS (+ gamepad if plugged in)
 ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh shiqi_machine
@@ -987,7 +1004,7 @@ FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulat
 ~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
 # 1. stack (geometric + L1 node, raw mocap odometry, emulator with obj_0 + drop_0, planner + reference bridge, drone GS)
-WB_SIM_PROFILE=pick_place ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+WB_SIM_PROFILE=pick_and_place ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
 # 2. the pick-and-place scene + PX4 + position-mode arm stack + arm GS (+ gamepad if plugged in)
 ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_pick_and_place_sitl.sh shiqi_machine
@@ -998,31 +1015,62 @@ FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulat
   /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up --hover-z 1.0 --settle 0
 ```
 
+**Modular adaptive controller (MAC) -- the comparison's third rig (2026-10-08)**
+
+```bash
+# 0. clean slate (TWO separate calls), as above
+# 1. stack (modular adaptive node, raw mocap, emulator with obj_0 + drop_0, planner on the modular pick-and-place yaml)
+WB_SIM_PROFILE=pick_and_place ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+# 2. the pick-and-place scene + PX4 + torque-mode arm stack + arm GS (the modular launcher takes the scene hooks since 2026-10-08)
+WB_SIM_PROFILE=pick_and_place AM_ISAAC_SCENE_SCRIPT=~/fsc_PegasusSimulator/application/robotic_arm/07_px4_t650_aerial_manipulator_pick_and_place.py \
+  AM_ISAAC_SCENE_LABEL=AM-T650-MODULAR-PNP PEGASUS_EE_MARKER_CUBE=0 \
+  ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_modular_adaptive_direct_actuation_sitl.sh shiqi_machine
+# 3. as the whole-body block (the modular node answers under the whole-body namespace)
+```
+
+**The three-controller comparison (2026-10-08)** -- `results/utils/run_pick_and_place_campaign.sh [N] [wb geo mod]`
+(detached; one `archive/pick_place_top_hat_20261008/tools/run_pnp.sh` flight per attempt, clean slate between,
+closes the simulation at the end), scored by `PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py
+[--paper <main.tex>]` into `results/utils/tables/pick_and_place_sim.{csv,json,tex}`, the MATLAB files and the three
+figures; record `results/simulation_results/README.md`.
+
+**HARDWARE (the Orin, 2026-10-08)**: `AM_HW_PROFILE=pick_and_place` in front of either whole-body hardware stack
+script (fused / raw) or either decoupled one selects the parallel `..._t650_pick_and_place.yaml` (generated by
+`archive/pick_place_top_hat_20261008/tools/make_hw_pick_and_place_yamls.py`: the free-flight hardware file + the
+pick-and-place gains the simulation validated -- whole-body k_R/k_w 1.6/1.2 + the anchor blend; decoupled
+kp/kv 15/10, kp_z/kv_z 40/18); the scripts print `PROFILE:` and check the profile's own values. Unset = free flight.
+
 **Operating the arm GS "Pick & Place" tab**
 
 Before the flight (on the ground, after steps 1–2)
 
 1. **Adjust** — with the vehicle on (or over) its start mark. The shift is written into the four drone points (Start, Place Start, Land Start, Land).
 2. **Get** on the *Pick (obj_0)* row — captures the payload box's mocap pose (x, y, z, yaw).
-3. Check the *Place* pose (x, y, z, yaw) — the box CG at release (sim default: the place pillar
-   top + 4 cm). An edit is written to the planner on Enter; Adjust never moves it.
-4. **EE Offset** — type the three boxes, press the button (sim default 0.22 m up). The claw
+3. Check the *Place* pose (x, y, z, yaw) — the basket centre at release, 2 cm below its resting
+   height, so the claw ends out of the arch: z = the place pillar top + 8 mm (hat) + 12.5 mm (sim
+   default 1.02; on hardware the mark's reading less the marker's height above the pillar top). An edit is written to the planner on Enter; Adjust never moves it.
+4. **EE Offset** — type the three boxes, press the button (default [-0.02, 0, 0.16] m: the claw
+   just past the hanger's stem, its fingers under the arch). The claw
    targets (green, *Planned goal*) = Pick / Place pose + this offset turned by its yaw.
-5. **Safety Margin** — the clearance above both EE targets (default 0.20 m); type, press the button.
+5. **Vertical Margin** — the clearance above both EE targets (default 0.20 m), and **Side Margin** —
+   how far behind the stem Ready To Pick hovers and how far Exit To Place backs out (default
+   0.10 m, hook grasp only); each: type, press its button. Both sit right of the points.
 
 During the flight (after step 3: DIRECT, planner HOLD)
 
 1. **Plan** — dry-runs all six legs and draws the path. Wait for `READY next=go_to_start`.
-2. **1 Go To Start**, then **2.1 Ready To Pick** — opens the gripper and hovers at the safety
-   margin above the handle (`WAITING … press Pick to descend`).
-3. **2.2 Pick** — descends (a large hover correction is flown sideways first, then straight
-   down), and closes the gripper once the EE is within 2 cm AND centred across the handle to
-   3 mm (the lamp shows it). As soon as the jaws grip the handle, **2.3 Exit To Pick** starts
-   by itself (back up the safety margin, 1.6 s) — clamped to the payload on its pillar the
-   vehicle tips within ~1.5 s (decoupled rig). If the gripper closes on nothing, the tab says
-   so and does not lift.
-4. **3 Go To Place Start** (turns clockwise to −180°, arm to the hold pose), **4.1 Ready To
-   Place**, **4.2 Place** (descends, opens within 2 cm), **4.3 Exit To Place**.
+2. **1 Go To Start**, then **2.1 Ready To Pick** — opens the gripper and hovers the Side Margin
+   behind the hanger's stem at grasp height (`WAITING … press Pick to descend`).
+3. **2.2 Pick** — slides in level under the arch, and closes the gripper once the EE is within
+   2 cm AND centred to 3 mm (the lamp shows it). The fingers close AROUND the 3 mm stem (they
+   cannot clamp it), so a full close is the grasp: **2.3 Exit To Pick** then starts by itself
+   (up the vertical margin, 3.2 s; the arch settles on the fingers).
+4. **3 Go To Place Start** (turns clockwise to −180°, arm to the carry pose), **4.1 Ready To
+   Place**, **4.2 Place** (descends with the jaws CLOSED; at the bottom the gripper opens and
+   **4.3 Exit To Place** starts by itself: the Side Margin back out from under the arch, then up the
+   vertical margin, then the gripper closes — when the basket lands the vehicle lurches ~10 cm back (decoupled: ~20 cm) and returns, so do not wait for the claw).
+   Arm poses: pick / place [0, 32, 38, 0], carry [12, 38, 42, 0]. The hook needs grip on the
+   fingers' top edges: in Isaac it slips off at friction 0.4.
 5. **5 Go To Land Start** (on clockwise to −360°), **6 Execute To Land** — hovers over the
    landing spot (`COMPLETE`). Touch down:
    ```bash
@@ -1043,31 +1091,41 @@ During the flight (after step 3: DIRECT, planner HOLD)
 ## 17. Push-and-pull scene (whole-body L1 4-D, contact phase)
 
 **shiqi_machine** -- the HOOBRO console table (1.000 x 0.150 x 0.800 m) in front of the start, its length
-along y; a 200 g box (200 x 100 x 60 mm) near its +y end with a 20 mm fin handle on its +y face; the
-vehicle grasps the fin and slides the box 0.50 m along the table with the arm held still. The law's
-contact phase flag is CONTACT from the claw's arrival on the handle (end of Ready) to the Exit press, and
+along y; the real 400 g box near its +y end, from the user's CAD (`Box_Push.stl` -> `Box_Push.usda`, 2026-10-07:
+240 x 160 x 100 mm, friction 0.29 = the measured experiment table) with its clamp bracket and a 5 mm fin
+handle on the top centre (grasp 0.233 m above the table; the sim claw cannot close below ~19 mm, so the
+fin's bare part carries an invisible 20 mm grip shim, `PEGASUS_PUSH_FIN_GRIP_MM`). `PEGASUS_PUSH_HANDLE=post`
+gives the 10-06 post (grasp 0.273 m; printable: `archive/push_pull_20261003/handle/`). The airframe carries the T650's landing gear, 7 cm shorter than
+the X650's (`AM_T650.usda`, a copy of `AM_xfwd.usda`; planner `push_pull_gear_depth` 0.2425); the
+vehicle grasps the post and slides the box 0.50 m along the table with the arm held still (folded forward,
+[0, 30, 40, 0] deg). The law's contact phase flag follows the GRIPPER: CONTACT from the jaws' grip (the
+Push press) to the end of the push, before the jaws open, and
 the claw stays held in the world through the push. Flown 2026-10-04: 3 / 3 complete missions, the box
 pushed 495-502 mm and left on the table. `WB_SIM_PROFILE=push_pull` in step 1
 is REQUIRED: step 2 refuses to start unless the running planner and controller came from the
-push-and-pull yaml. Record: `docs/docs_aerial_manipulator/archive/push_pull_20261003/`.
+push-and-pull yaml. Record: `docs/docs_aerial_manipulator/archive/push_pull_20261003/`; the CAD box:
+`archive/push_pull_cad_box_20261007/`.
 
 ```bash
 # 0. clean slate (TWO separate calls)
 ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
 ~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
 
-# 1. stack (4-D L1 node, EKF2-fused estimator, emulator with obj_0, planner, drone GS)
-WB_SIM_PROFILE=push_pull ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
+# 1. stack (4-D L1 node, RAW mocap feedback, emulator with obj_0, planner, drone GS). Not the _fused
+#    stack: in contact EKF2 drifts 1-1.5 cm / 1-3 deg and every fused push failed (2026-10-05, record section 8)
+WB_SIM_PROFILE=push_pull ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
 # 2. the push-and-pull scene + PX4 + torque-mode arm stack + arm GS (+ gamepad if plugged in)
-~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_push_and_pull_sitl.sh shiqi_machine
+PUSH_FEEDBACK=raw ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_push_and_pull_sitl.sh shiqi_machine
 
-# 3. take off to 1 m, hover 3 s, switch to DIRECT (wait for "Ready for takeoff!" in the PX4 pane first)
+# 3. take off to 1.3 m, hover 3 s, switch to DIRECT (wait for "Ready for takeoff!" in the PX4 pane first)
 FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
-  /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up --hover-z 1.0 --settle 0
+  /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up --hover-z 1.3 --settle 0
+#    (1.3 m, not 1.0: the push pose holds the body lower over the box; from 1.0 m Plan refuses Go To Start)
 ```
 
 Or the whole mission scripted, headless (after step 0): `archive/push_pull_20261003/tools/run_pl.sh <tag>`.
+Score it (impedance residual + rho_UAV): `PYTHONNOUSERSITE=1 /usr/bin/python3 archive/push_pull_20261003/tools/pl_metrics.py runs/<tag>.npz`.
 
 **Operating the arm GS "Push & Pull" tab**
 
@@ -1075,27 +1133,36 @@ Before the flight (on the ground, after steps 1-2)
 
 1. **Adjust** -- the vehicle on its start mark; the shift is written into the Start mark and Land.
 2. **Get** on the *Box (obj_0)* row -- captures the box's mocap pose (x, y, z, yaw).
-3. **EE Offset** (sim [0, 0.155, 0.065] m, box frame), **Safety Margin** (0.20 m), **Push Distance**
+3. **EE Offset** (sim [0, 0, 0.183] m for the CAD box, box frame), **Safety Margin** (0.20 m), **Push Distance**
    (0.50 m; negative pulls) -- type, press the button.
 
 During the flight (after step 3: DIRECT, planner HOLD)
 
 1. **Plan** -- dry-runs all five steps and draws the path. Wait for `READY next=go_to_start`.
-2. **1 Go To Start** -- to the table's left end, turning right to -90 deg; the claw 0.20 m above the
-   fin.
-3. **2 Ready To Push** -- opens the gripper and descends straight onto the fin; on arrival the law
-   goes to CONTACT (the contact line turns purple).
-4. **3 Push** -- closes the gripper once the claw is within 2 cm AND centred across the fin to 3 mm;
-   once the jaws grip, the box slides 0.50 m (1.5 s settle + 12 s). If the gripper closes on
-   nothing, nothing moves.
-5. **4 Exit To Push** -- opens the gripper, waits 1 s, contact off, up 0.20 m, arm home.
+2. **1 Go To Start** -- to the table's left end, turning right to -90 deg; the claw 0.12 m behind and
+   0.10 m above the post's grasp point.
+3. **2 Ready To Push** -- opens the gripper and slides diagonally down-forward onto the handle (CoM-anchored;
+   the claw is world-held from its arrival).
+4. **3 Push** -- closes the gripper once the claw is within 2 cm AND centred across the post to 3 mm;
+   once the jaws grip, the law goes to CONTACT (the contact line turns purple) and the box slides
+   0.50 m (1.5 s settle + 12 s); CONTACT ends with the push. If the gripper closes on nothing,
+   nothing moves.
+5. **4 Exit To Push** -- opens the gripper, waits 1 s, up 0.20 m (the gear clears the box), arm home.
 6. **5 Go To Land** -- on clockwise to -360 deg, a hover 0.5 m behind the start (`COMPLETE`).
-   Touch down with `ps4_teleop_bringup.py land` (section 16).
+   Touch down with `ps4_teleop_bringup.py land --land-z 0.25` (section 16; the T650 gear rests the body at
+   0.235 m -- the default 0.35 would leave it hovering 11 cm up).
 
 - **ABORT** (red, any time): gripper open, contact off; on the handle a 0.5 s hold for the jaws,
   then 0.30 m up and the arm home. After an abort with the box touched: **Get** and **Plan** again.
   The planner aborts by itself if the tilt stays above 15 deg for 0.1 s, or the push force the
   law reads stays above 5 N for 0.3 s.
 - Scene knobs (env, before step 2): `PEGASUS_PUSH_BOX_MASS`, `PEGASUS_PUSH_FRICTION_STATIC` /
-  `_DYNAMIC` (0.6 / 0.6: 1.2 N to break the box loose and to slide it -- keep the two EQUAL: at
-  0.7 / 0.6 the box sticks and then lets go, and the vehicle surges), `PEGASUS_PUSH_BOX_XY`.
+  `_DYNAMIC` (0.29 / 0.29 with 400 g: 1.14 N to break the box loose and to slide it -- keep the two EQUAL: at
+  0.7 / 0.6 the box sticks and then lets go, and the vehicle surges), `PEGASUS_PUSH_BOX_XY`,
+  `PEGASUS_PUSH_Q2_LIMIT_DEG` (default `-20,45`, the real arm's q2 range as hard stops; `asset` = -90,50).
+  Inside that range the shipped 70 deg pose fails; only the 50 deg pose [0, 26, 24, 0] with
+  `wb_l1_omega_c_t` 1.0 pushed the full 0.50 m (2 / 2), and no pull worked (record section 9.2). CAD box
+  (2026-10-07): the push yaml now flies the 60 deg pose [0, 26, 34, 0], `wb_l1_omega_c_t` 1.0,
+  `push_pull_push_time_s` 24, and a CoM-anchored hover and descent with the claw world-held only from its
+  arrival on the handle -- 3 / 3 (12 s pulls: 0 / 3). Still open: the release folds the arm onto q3's +50 stop
+  (every pull, most pushes) and the exit can drag the box. Don't pull on hardware.

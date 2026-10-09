@@ -1,0 +1,77 @@
+[16:14:41] waiting for the planner's push-and-pull block
+[16:14:48] planner up, EE offset array('d', [0.0, 0.0, 0.2255])
+[16:14:48] waiting for the box (Isaac)
+[16:15:26] box up; letting PX4 / the arm stack settle
+[16:16:11] flying
+[   0.03s] planner: IDLE
+[   0.03s] push_pull: NOT IN DIRECT
+[   0.53s] box at rest [1.2, -0.25, 0.8475]
+[   1.08s] reset: success=True push-and-pull progress and plan cleared (the box capture and the typed points kept)
+[   1.13s] adjust: success=True start mark and land point moved by [0.100, -0.070] m (the box is measured and not moved); press Plan
+[   2.18s] capture_box: success=True captured the box at [1.200, -0.250, 0.847] m, yaw -0.0 deg from /obj_0/mocap (125 samples, spread 1.7 mm); the EE offset is applied in this box frame -- press Plan
+[   3.23s] offboard: success=True Offboard mode request sent
+[   6.28s] arm: success=True Arm command sent
+[   8.29s] climbing to 1.3 m
+[  20.07s] planner: HOLD
+[  20.07s] push_pull: NOT PLANNED: press Plan
+[  20.11s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  20.11s] MARK direct
+[  35.13s] push_pull: PLANNING
+[  35.14s] push_pull: READY next=go_to_start
+[  35.18s] plan: success=True planning the five steps from the current hold -- the status reads READY when done
+[  35.18s] planned step durations [8.2, 3.0, 13.5, 6.0, 23.9] s
+[  35.18s] MARK go_to_start:start
+[  35.18s] planner: CALCULATING
+[  35.18s] push_pull: FLYING go_to_start
+[  35.18s] planner: EXECUTING T=8.2s
+[  35.18s] push_pull: FLYING go_to_start T=8.2s
+[  35.23s] go_to_start: success=True go_to_start: planning from the current hold; it executes as soon as it is planned
+[  35.23s] go_to_start: executing, T = 8.2 s
+[  43.38s] planner: HOLD
+[  43.38s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 9 mm from the point above the handle (tolerance 50 mm)
+[  43.40s] MARK go_to_start:end
+[  43.40s] MARK ready:start
+[  43.40s] MARK gripper_open:start
+[  43.40s] gripper open: at -0.0 deg
+[  43.40s] MARK gripper_open:end
+[  43.41s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  43.51s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  43.81s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  44.01s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 3 mm from the point above the handle (tolerance 50 mm)
+[  44.21s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  44.51s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 3 mm from the point above the handle (tolerance 50 mm)
+[  44.61s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 5 mm from the point above the handle (tolerance 50 mm)
+[  44.71s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  44.81s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  44.91s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 5 mm from the point above the handle (tolerance 50 mm)
+[  45.11s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  45.31s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  45.40s] planner: CALCULATING
+[  45.40s] push_pull: FLYING ready
+[  45.40s] planner: EXECUTING T=3.0s
+[  45.40s] push_pull: FLYING ready T=3.0s
+[  45.45s] ready: success=True ready: planning from the current hold; it executes as soon as it is planned (goal trimmed by [0.5, 0.2, 0.9] mm, the hover error)
+[  45.45s] ready: executing, T = 3.0 s
+[  48.41s] planner: HOLD
+[  48.41s] push_pull: DONE ready next=push (CONTACT on: the gripper closes first)
+[  48.45s] MARK ready:end
+[  48.45s] MARK close:start
+[  48.76s] close: claw 4.3 mm from the grasp point, +0.6 mm across the fin after 0.3 s
+[  48.76s] MARK gripper_close:start
+[  50.18s] gripper close (action): stalled=True reached=False position 0.0004 m, at -32.1 deg
+[  50.18s] MARK gripper_close:end
+[  50.18s] MARK push:start
+[  50.18s] planner: CALCULATING
+[  50.18s] push_pull: FLYING push (CONTACT)
+[  50.18s] planner: EXECUTING T=13.5s
+[  50.18s] push_pull: FLYING push (CONTACT) T=13.5s
+[  50.23s] push: success=True push: planning from the current hold; it executes as soon as it is planned -- CONTACT phase on, the push holds 1.5 s, then slides -0.5 m
+[  50.23s] push: executing, T = 13.5 s
+[  55.65s] planner: IDLE
+[  55.65s] push_pull: NOT IN DIRECT
+[  55.69s] ABORT: left DIRECT while push complete
+[  61.69s] landing by reference
+[  78.47s] disarm: success=True Disarm command sent
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_20261003/tools/../runs/pl_76.npz
+ABORTED: left DIRECT while push complete
+[16:17:30] done

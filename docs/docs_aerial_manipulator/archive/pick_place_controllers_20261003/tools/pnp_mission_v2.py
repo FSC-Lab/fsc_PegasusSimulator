@@ -48,7 +48,9 @@ PX4_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, durability=Durab
 LATCHED = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                      durability=DurabilityPolicy.TRANSIENT_LOCAL)
 RIGS = {"wb": ("fsc_autopilot_ros2/whole_body_direct_actuation", "wb_control_debug"),
-        "geo": ("fsc_autopilot_ros2/geometric_l1_direct_actuation", "l1_control_debug")}
+        "geo": ("fsc_autopilot_ros2/geometric_l1_direct_actuation", "l1_control_debug"),
+        # the modular adaptive node answers under the whole-body namespace on purpose (2026-10-08)
+        "mod": ("fsc_autopilot_ros2/whole_body_direct_actuation", "modular_control_debug")}
 REF_TOPIC = "fsc_autopilot_ros2/whole_body_direct_actuation/reference"   # the planner's stream (both rigs)
 PP = "whole_body_planner/pick_place"
 STEPS = ["go_to_start", "ready_pick", "pick", "exit_pick", "go_to_place_start",
@@ -146,8 +148,11 @@ class Driver(Node):
         r = m.r_ed
         # [12..14] b1_d (MODEL body-x heading), appended 2026-10-03 for the airframe
         # reference x_b_ref = x_cd - R(psi_d) r_0c(q_d) of the Suarez et al. benchmark
+        # [15..17] x_cd_ddot and [18..20] b1_de, appended 2026-10-08 for the comparison
+        # metrics (the compatible attitude reference and the EE heading reference)
         self.L["ref"].append([self.now(), r.x, r.y, r.z, m.x_cd.x, m.x_cd.y, m.x_cd.z,
-                              *list(m.q_d)[:4], self.step, m.b1_d.x, m.b1_d.y, m.b1_d.z])
+                              *list(m.q_d)[:4], self.step, m.b1_d.x, m.b1_d.y, m.b1_d.z,
+                              m.x_cd_ddot.x, m.x_cd_ddot.y, m.x_cd_ddot.z, m.b1_de.x, m.b1_de.y, m.b1_de.z])
 
     def on_payload(self, m):
         p, q = m.pose.position, m.pose.orientation
@@ -264,8 +269,9 @@ class Driver(Node):
                       T + 40, f"{name} complete")
         self.mark(f"{step}:end")
 
-    def descend(self, leg_k, step):
-        """Pick / Place: descend (once the claw has settled above), then the EE within grip_tol."""
+    def descend(self, leg_k, step, gate=True):
+        """Pick / Place: descend (once the claw has settled above), then the EE within grip_tol
+        (gate=False: return as soon as the descent leg is complete -- the hook place)."""
         self.begin(step)
         name = "descend_pick" if leg_k == 1 else "descend_place"
         # hover first, as the operator does: the planner averages the claw's
@@ -281,6 +287,10 @@ class Driver(Node):
             time.sleep(0.5)
         self.wait(lambda: self.status == "HOLD" and self.info is not None and int(self.info[5]) == leg_k
                   and self.info[85] > 0.5, 40, f"{name} complete")
+        if not gate:
+            e = self.arrival[2] * 1e3 if self.arrival is not None else float("nan")
+            self.ev(f"{step}: descent complete, EE {e:.1f} mm from the target")
+            return
         t, since = time.time(), None
         # the handle's THIN axis = the jaws' closing axis = the object's y axis
         q = self.payload0[3:7]
@@ -362,7 +372,10 @@ class Driver(Node):
         self.ev(f"gripper {what} (action): stalled={res.stalled} reached={res.reached_goal} "
                 f"position {res.position:.4f} m, at {np.degrees(self.grip or np.nan):.1f} deg")
         self.mark(f"gripper_{what}:end")
-        if not res.stalled:
+        # the box payload's HOOK grasp (2026-10-07): the fingers close AROUND the
+        # 3 mm stem without clamping it, so a full close IS the grasp (the arm GS's
+        # hook mode accepts it the same way)
+        if not res.stalled and not self.a.hook_place:
             raise Abort("the gripper closed on NOTHING -- not lifting")
 
     def exit(self, leg_k, step):
@@ -442,6 +455,33 @@ class Driver(Node):
         self.leg("go_to_place_start", "go_to_place_start")
         time.sleep(a.leg_pause)
         self.leg("execute_place", "ready_place")
+        if a.hook_place:
+            # the box payload's HOOK place (2026-10-07): jaws CLOSED through the
+            # descent (an open claw holds the arch only on its fingers' outer
+            # corners, under the curving arms -- the touchdown slid it 19 mm sideways
+            # onto a finger, hook4); at the end of the descent OPEN and back out AT
+            # ONCE: when the basket lands the vehicle lurches ~10-13 cm back and
+            # returns (the observer unlearning the payload), and waiting for the
+            # claw to come back within 2 cm is waiting for a closed claw to re-enter
+            # around the stem (hook3: a finger hit it and the basket fell off)
+            self.descend(3, "place", gate=False)
+            self.mark("gripper_open:start")
+            self.grip_cmd = GRIP_OPEN
+            self.exit(3, "exit_place")
+            self.mark("gripper_open:end")
+            self.leg("go_to_land_start", "go_to_land_start")
+            time.sleep(a.leg_pause)
+            self.leg("execute_land", "execute_land")
+            self.wait(lambda: self.pp_status.startswith("COMPLETE"), 10, "COMPLETE")
+            time.sleep(a.post_hold)
+            self.phase = "done"
+            return
+        if a.open_before_place:
+            # the box payload's HOOK grasp (2026-10-07): open while hovering above
+            # the place -- open fingers still carry the arch, and give the stem
+            # ~17 mm a side when the vehicle lurches back and returns after the
+            # basket lands (the arm GS does the same at Ready To Place in hook mode)
+            self.gripper(GRIP_OPEN, "open_early")
         self.descend(3, "place")
         self.gripper(GRIP_OPEN, "open")
         time.sleep(a.release_dwell)
@@ -518,6 +558,10 @@ def main():
                     help="close the pick through the GripperCommand action and exit on its result (the arm GS's path)")
     ap.add_argument("--grip-action", default="/uav_0/fsc_open_manipulator/gripper_controller/gripper_cmd")
     ap.add_argument("--grip-closed-m", type=float, default=-0.010, help="the GS's gripper_closed [m]")
+    ap.add_argument("--hook-place", action="store_true",
+                    help="the box payload's hook place: jaws closed through the descent, then open and exit at once")
+    ap.add_argument("--open-before-place", action="store_true",
+                    help="open the gripper at Ready To Place, before the descent (the box payload's hook grasp)")
     ap.add_argument("--clamp-hold", type=float, default=0.0,
                     help="wait this long clamped on the pick pillar before Exit To Pick [s]")
     ap.add_argument("--max-disturb", type=float, default=0.008)

@@ -1,0 +1,30 @@
+[10:38:14] waiting for the planner's push-and-pull block
+[10:38:20] planner up, EE offset array('d', [0.0, 0.0, 0.1825])
+[10:38:20] waiting for the box (Isaac)
+[10:38:56] box up; letting PX4 / the arm stack settle
+[10:39:41] flying
+[   0.03s] planner: IDLE
+[   0.03s] push_pull: NOT IN DIRECT
+[   1.03s] box at rest [1.2, 0.25, 0.8475]
+[   1.08s] reset: success=True push-and-pull progress and plan cleared (the box capture and the typed points kept)
+[   1.13s] adjust: success=True start mark and land point moved by [0.101, -0.070] m (the box is measured and not moved); press Plan
+[   2.18s] capture_box: success=True captured the box at [1.200, 0.250, 0.847] m, yaw -0.0 deg from /obj_0/mocap (125 samples, spread 1.6 mm); the EE offset is applied in this box frame -- press Plan
+[   3.24s] offboard: success=True Offboard mode request sent
+[   6.29s] arm: success=True Arm command sent
+[   8.29s] climbing to 1.0 m
+[  20.73s] planner: HOLD
+[  20.73s] push_pull: NOT PLANNED: press Plan
+[  20.78s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  20.78s] MARK direct
+[  35.79s] push_pull: PLANNING
+[  35.80s] push_pull: INFEASIBLE: go_to_start: the landing gear would be -0.001 m above the table top (0.800 m) at t = 5.6 s, over the table -- it must keep 0.050 m -- check the table's pose (push_pull_table) and the box capture / EE offset
+[  35.84s] plan: success=True planning the five steps from the current hold -- the status reads READY when done
+[  95.89s] ABORT: timeout (60 s): mission READY  [mode=DIRECT plan=HOLD push_pull=INFEASIBLE: go_to_start: the landing gear would be -0.001 m above the table top (0.800 m) at t = 5.6 s, over the table -- it must keep 0.050 m -- check the table's pose (push_pull_table) and the box capture / EE offset]
+[  95.89s] planner: IDLE
+[  95.89s] push_pull: NOT IN DIRECT
+[  95.94s] set_direct_mode(false): success=True Switched to SAFETY mode
+[ 101.95s] landing by reference
+[ 117.26s] disarm: success=True Disarm command sent
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_20261003/tools/../runs/pl_37.npz
+ABORTED: timeout (60 s): mission READY  [mode=DIRECT plan=HOLD push_pull=INFEASIBLE: go_to_start: the landing gear would be -0.001 m above the table top (0.800 m) at t = 5.6 s, over the table -- it must keep 0.050 m -- check the table's pose (push_pull_table) and the box capture / EE offset]
+[10:41:40] done

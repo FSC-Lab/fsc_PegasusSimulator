@@ -34,8 +34,15 @@ PEG="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "$PEG/scripts/config/${CFG}.conf"
 AUT="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2"
 if [[ "$WHICH" == wb ]]; then
-  STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
-  SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh"
+  # AM_CMP_FEEDBACK=fused (2026-10-07) flies the EKF2-fused twin pair, the hardware's feedback path;
+  # unset or raw = the raw-mocap pair every comparison before it flew.
+  if [[ "${AM_CMP_FEEDBACK:-raw}" == fused ]]; then
+    STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh"
+    SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_fused_sitl.sh"
+  else
+    STACK="$AUT/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
+    SITL="$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh"
+  fi
   NODE="autopilot_whole_body_l1_direct_actuation_node"
 elif [[ "$WHICH" == modular ]]; then
   STACK="$AUT/scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh"

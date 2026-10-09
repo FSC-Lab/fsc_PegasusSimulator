@@ -1,0 +1,17 @@
+  push_pull_push_pose_deg -> [0.0, 26.0, 34.0, 0.0]
+  push_pull_push_distance -> -0.50
+  push_pull_push_time_s -> 24.0
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_10] completed
+  push_pull_push_pose_deg -> [0.0, 26.0, 34.0, 0.0]
+  push_pull_push_distance -> -0.50
+  push_pull_push_time_s -> 24.0
+  push_pull_contact_off_at_push_end -> false
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_11] completed
+  push_pull_push_pose_deg -> [0.0, 26.0, 34.0, 0.0]
+  push_pull_push_distance -> -0.50
+  push_pull_push_time_s -> 24.0
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_12] completed
+CHAIN6 DONE

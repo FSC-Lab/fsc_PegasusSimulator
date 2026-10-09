@@ -4242,3 +4242,280 @@ expressions (section 1); circle = section 2, figure-8 = section 3, settings = se
   transposed rows); `ros2 param set --no-daemon` intermittently fails node discovery on this desktop
   -- set parameters with one SetParameters call; the driver's `dbg` object array mixes 58-element
   SAFETY rows with 116-element DIRECT rows (keep the longest).
+
+**1005 HARDWARE FIGURE-8: WHOLE-BODY vs DECOUPLED, SECTION 2 OF THE COMPARISON REPORT (2026-10-05, user request:
+analyse + append).** Bags `1005 -  T650-AM whole-body vs decoupled Figure-8-*/` (two spaces after "1005 -"); analysis
+`docs/docs_aerial_manipulator/archive/wb_vs_decoupled_figure8_flight_20261005/` (README); report = section 2 of
+https://claude.ai/artifact/LhpXomd3ooNuKquPoQ9Joq (title now "... 0928 + 1002 + 1005"; builder
+`archive/decoupled_flight_20261002/tools/build_summary_report.py`, Tables 6–9 + Fig. 2, section 1 byte-identical);
+Command.md §14. The first-flight figure-8 (A 0.70 / B 0.35 m, world x, q2 25 ± 15° four per lap) at 0.10 and 0.13 m/s,
+gains as the circle flights, tilt watchdog 15° (`d85be8a`). Six runs, all completed, 0 saturation, no mocap faults,
+scored with the 0928 `metrics.analyse` over each whole EXECUTING span. EE rms: **whole-body 37.3 / 43.7 mm (0.10),
+42.7 / 58.2 mm (0.13), heading 0.46–0.54°; decoupled 72.6 (0.10) / 76.9 mm (0.13), heading 3.6 / 4.7°**; worst tilt
+2.2–2.3° vs 4.2–4.3°. The whole-body error is larger than on its 09-28 circle (24–26 mm), the decoupled one about its
+10-02 circle (73–78). No mechanism text in the report (the user's 10-03 rule for this page). Fixed on the way: the
+archived 0928 `common.py` resolved the repo root four levels up since the move into `archive/` (now five).
+
+**PUSH-AND-PULL WITH A 400 g BOX ON THE MEASURED TABLE (mu 0.29), THE IMPEDANCE / rho_UAV
+METRICS, AND THE STATE ESTIMATE AS THE LIMIT (2026-10-05/06, user request; campaign
+`docs/docs_aerial_manipulator/archive/push_pull_20261003/README.md` section 8, Command.md section 17).**
+0.4 x 9.81 x 0.29 = 1.14 N = the old 200 g / 0.6 force; the 07 scene now defaults to 0.400 kg and
+0.29 / 0.29. New scoring `tools/pl_metrics.py`: impedance residual e_imp = F_ext - (M_d edot_v +
+D_d e_v + K_d e_y) per channel against the TRUE contact wrench (07 publishes the box's PhysX
+full contact report on `/push_pull_truth/contact`; sign calibrated on the table) and the true
+claw, plus the pick-and-place rho_UAV (L 0.370 m) on the true airframe (`/uav_0/state/pose`).
+25 headless flights:
+- **Raw mocap, shipped yaml: 3 / 3 complete but the impedance is not realised** -- SLIDE e_imp
+  2.5 N rms against 1.4 N of contact force, mostly LATERAL, rho max 0.18-0.22. The "arm swing"
+  = the box yawing with q1 / q4 counter-rotating 10-20 deg.
+- **Cause: the law's attitude.** PX4 `vehicle_attitude` drifts from 0.1-0.5 deg to **1-2.9 deg in
+  contact** (the push shakes the IMU 6-7x); with the claw ~0.33 m below the body the law's claw
+  is 6-7 mm from the real one (model FK on the TRUE attitude: 0.2 mm). **EKF2-fused feedback
+  (the hardware path) also drifts 10-15 mm in position in contact** -> a ~3 N phantom on a 1.14 N
+  box: every fused push failed (user's windowed flight + 9 headless), whatever the gains.
+- Gains do not fix it (omega_c_t/r, omega_x 0.5/5, K_y 80, K_psi 0.6, k_v 20, D_y 40, k_R, slower
+  push: neutral or worse; k_v 20 even left DIRECT in free flight).
+- **New code options, default off (fsc_autopilot_ros2 whole-body client, uncommitted):**
+  `wb_attitude_from_odometry`, `wb_attitude_odometry_correction_rad_s` (PX4 attitude with its slow
+  error to the odometry orientation removed; logs |odometry - PX4| every 2 s). Slide e_imp
+  -20..-65 % (best 0.87 N, rho 0.12) but **5 / 7 completed vs 3 / 3 shipped** (failures: box stuck
+  ~3 s at the slide start); the planner still uses PX4 attitude for the grasp trim. Push yaml
+  ships both OFF.
+- Command.md section 17 now launches the RAW stack + `PUSH_FEEDBACK=raw`. For the experiment:
+  log PX4 attitude / EKF2 odometry vs OptiTrack while gripping the box first; the likely fix is a
+  hybrid feedback (mocap position + attitude, EKF2 velocity) with the planner on the same attitude.
+
+**PUSH-AND-PULL REDESIGN: THE REAL BOX, A POST HANDLE, THE FOLDED ARM, THE GRIPPER AS THE CONTACT
+SWITCH (2026-10-06, user request; campaign README section 9, summary artifact
+https://claude.ai/artifact/Pq9VWkJk2XqmKM7dymZ2Q4).** Real box 240 x 160 x 95 mm; a vertical post on
+its top centre (07: `PEGASUS_PUSH_HANDLE`, `PEGASUS_PUSH_POST_TOP` 0.298); push pose [0, 30, 40, 0]
+(claw 0.087 m below the CoM, was 0.284); planner options `push_pull_approach_back`, `_exit_dz`,
+`_contact_at_ready`, `_contact_off_at_push_end` (default-off in code, ON in the push yaml); takeoff
+1.3 m. Raw 6/6: SLIDE impedance residual 2.5 -> 0.94-0.98 N, rho 0.18-0.22 -> 0.06-0.09, net pitch
+moment 0.18-0.22 -> 0.00-0.12 N.m, release residual 1.07-1.35 N. Open: the force is 28-38 deg above
+the table (claw presses ~1 N); fused 0/6 (estimator); the planner keep-out ignores the box (the gear
+clipped the 95 mm box at grasp-height approach -- approach now 0.10 m higher).
+**T650 LANDING GEAR IN ISAAC (2026-10-06, user request):** `AM_T650.usda` = a copy of `AM_xfwd.usda`
+with the gear 7 cm shorter (`utils_model/make_t650_gear_asset.py`; original untouched; skids
+0.2425 m under the body origin, was 0.3125; resting body height 0.235 m). The push scene loads it by
+default (`PEGASUS_PUSH_AM_ASSET`, `PEGASUS_PUSH_GROUND_BODY_Z`), the planner plans with
+`push_pull_gear_depth: 0.2425`, landing to 0.24 m (manual: `--land-z 0.25`). Other rigs still fly
+AM_xfwd. 70 deg pose on the T650 gear 2/2; the 80 deg fold [0,40,40,0] gives a horizontal contact
+force (down-press 0.01 N) but its grasp/release failed 2/2 -- README 9.1.
+**INSIDE THE REAL ARM'S q2 RANGE [-20, 45] deg, PUSHING AND PULLING (2026-10-06, user request; README
+9.2, artifact Pq9VWkJk2XqmKM7dymZ2Q4 v3, Command.md section 17).** The push scene authors the real
+range as hard stops on `manip_joint2` (`PEGASUS_PUSH_Q2_LIMIT_DEG`, default `-20,45`; `asset` = the
+asset's -90..50); q3 keeps +50 and must stay > 0 (elbow-singular branch). The planner's joint box is
+still the compiled q2 <= 50. **Mechanism:** with the claw world-held the arm absorbs all airframe drift,
+4-5.5 deg q2 and 6-8 deg q3 per cm along the arm at ANY fold; the fold only sets the window (1.3-4 cm),
+while the contact drift is 10-29 mm std. Results (raw, T650 gear, 400 g, mu 0.29): the shipped 70 deg
+pose 0/1 (q3 pinned on +50; earlier asset-stop runs reached q2 47-50); 50/40 deg 0/2 push, 0/2 pull;
+freezing the translational observer in contact (`wb_l1_contact_hold_translation`) 0/1 (55 mm offset
+from the grip); **50 deg [0,26,24,0] with `wb_l1_omega_c_t` 2.927 -> 1.0: 2/2 pushes slid 0.50 m**
+(pl_71 complete, 1.04 N / rho 0.085; pl_74 0.84 N / rho 0.067 then failed at the exit). Pull: 0/6 in
+range; one 70 deg pull with the asset stop completed (pl_73, q2 peaked 42, force 6 deg from parallel);
+the slow-observer pulls lost the box running ahead of its reference at mid-slide (unexplained). The EE
+reference is parallel to the table to 1.3-1.4 mm (planned airframe tilt with the arm held). Push yaml
+NOT changed. Trap hit: 06 assigns `self.drone_path` FROM `_spawn_am_px4_primary()`'s return value, so
+an override must use the returned path (two runs crashed at spawn before the fix).
+
+**PICK-AND-PLACE WITH THE CAD BOX PAYLOAD -- A HOOK GRASP, AND ITS ARM POSES (2026-10-07,
+user request; campaign `docs/docs_aerial_manipulator/archive/pick_place_box_payload_20261007/README.md`,
+Command.md section 16).** The user's `rotorcraft/assets/Box_Payload.STL` (SolidWorks, mm, +Y up;
+an open basket 110 x 115 x 65 mm with a flat wire HANGER: struts, a 3 x 2.5 mm vertical stem, an
+arch on top) became `Box_Payload.usda` (`tools/stl_to_usda.py`: metres, +Z up, origin = basket
+centre = obj_0, +x = the hanger-plane normal, colliders = basket box + 36 exact convex prisms of
+the hanger, the CAD solid's mass properties at 200 g) and the 07 scene's DEFAULT payload
+(`PEGASUS_PNP_PAYLOAD=box|plate`). **The asset's claw cannot clamp the stem**: hub + slider-crank
+(crank 15 / rod 40 mm), pads never closer than ~19 mm (~14 at the tips) even at the crank's dead
+centre. User's design: a HOOK -- one finger each side of the stem, both under the arch; close
+around it, lift, the arch rests on the fingers. That needs a near-horizontal claw and a SIDEWAYS
+approach: planner `pick_place_pick_approach_back` / `pick_place_place_exit_back` (0.10 m; default
+0 = vertical, gtest added), arm GS hook mode keyed on the first (a full close = the grasp; at the
+place, closed jaws through the descent, then open + Exit To Place at once), driver
+`--hook-place`, `pick_place_world_anchor_pick` false, `pick_place_exit_time_s` 0 (gentle lift),
+EE offset [-0.02, 0, 0.16], place point z 1.01. **POSES: pick / place [0, 32, 38, 0] (claw 20 deg
+down), place start / carry [12, 38, 42, 0]** (the SHOWCASE pose, user request: was [0, 35, 40, 0],
+which moved the hung basket only 20-25 mm; q1 is the only lever for a visible move, and the yaw
+is capped by the landing gear -- basket-to-skid 29 mm at 12 deg, ~1 cm at 15). Flown 4/4 clean
+(old carry pose: placed 34 / 11 mm; new: 53 / 28 mm, the 53 a deeper hook at the PICK; tilt
+<= 4.4 deg); the new pose moves the basket 63 / 69 mm (51-57 sideways, 34-36 up), skids >= 32 mm,
+carry-leg q2 / q3 <= 39.3 / 44.5; sigma_nd >= 0.31, worst joint moments = the load steps
+(set-down +5..+8 deg UP on q2 and q3 -> 5-6 deg to +45 / +50; lift -10..-12 on q2). Task block identical in the mirror
+`_sim.yaml` and the HARDWARE 4-D yaml; all four hardware stacks refuse a planner build without the
+hook keys. **Three traps, each cost a run:** every set-down LURCHES the vehicle 11-15 cm back and
+returns in ~3.5 s (the observer unlearning the 2 N payload) -- waiting for the claw to come back
+within 2 cm re-entered a closed claw around the stem and knocked the basket off (hook3); opening
+BEFORE the descent hangs the arch on the open fingers' outer corners, a wedge that slid 19 mm onto
+a finger at touchdown (hook4, abort); and **friction is a requirement no pose fixes** -- the
+fingers' tops slope ~21-26 deg toward the tips, and at mu 0.4 (`PEGASUS_PNP_GRIP_FRICTION`,
+combine min) the arch slid off at the lift with both beta 70 and 75 (hook7/8); hardware needs
+mu >~ 0.6 on the finger tops or a notch on the arch. **DECOUPLED RIG (geometric + L1, position-mode
+arm) flown the same task 2/2** (placed 38 / 30 mm; driver `--hook-place --grip-via-action
+--grip-axis-tol 0.003`, and `pnp_mission_v2.py` now accepts a FULL close, not only a stall, as
+the hook grasp): the planner's descent trim absorbed its ~5 cm hover offset (claw centred to
+0.1 mm), the position-mode arm tracks without the whole-body arm's ~1 Hz ripple and stays 3 deg
+further from the stops, but the vehicle moves more at the load steps -- lift tilt 8.0-8.5 vs
+4.2-4.3 deg, set-down lurch 215-219 vs 106-149 mm, and the back-out then nudges the placed
+basket ~3 mm / 2.5 deg (still upright). NOT flown on hardware; the decoupled rig not at mu 0.4;
+the HOME pose [0, 40, 40, 0] itself sits 5 deg from q2's +45. Rebuild on the Orin:
+fsc_trajectory_planner, utils_custom_ground_station.
+
+**THE PRINTED PILLAR HAT IS THE PICK-AND-PLACE PLATFORM (2026-10-08, user request; campaign
+`docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/README.md`, Command.md §16).**
+The user's `rotorcraft/assets/Top_Hat.STL` (mm, +Z up) became `Top_Hat.usda`
+(`tools/hat_stl_to_usda.py`, run with plain `/usr/bin/python3` -- usd-core is in the user site;
+every dimension derived from the mesh and checked): a Ø200.6 x 5 mm platform on a Ø122 mm sleeve
+with a Ø110 mm bore, 52 mm deep; frame origin = the SEAT (bore ceiling = the pillar top),
+colliders = two solid static cylinders. 07's default since then is `PEGASUS_PNP_PLATFORM=hat`
+(`cap` = the 10-03 Ø160 x 10 mm disc on Ø100 pillars; `PEGASUS_PNP_HAT_USD`; both wrappers
+forward both). **Pillars stay 1.0 m to their top (the user's 10-01 spec, `drop_0`); the
+platform top is 1.008 m.**
+- **The four internal RIBS, not the bore, set the fit: Ø97.86 mm.** The user asked to size the
+  pillars UP to fit; the ribs make that impossible, so the sim pillars went DOWN, 100 -> 97.66 mm
+  (ribs less 0.2 mm). A real pillar of Ø98 mm or more will not take this hat.
+- `pick_place_place_point` z 1.01 -> 1.02 (pillar top + 8 mm hat + 12.5 mm = 1.0205, still the
+  basket released 20 mm below its resting height) in the mirror `_sim.yaml` AND the hardware
+  4-D yaml, `_sim_pick_place` / `_sim_push_pull` regenerated (diff = that line + comment). On
+  hardware type z = the place mark's reading, less the marker centre's height above the
+  pillar top, + 20.5 mm.
+- Skids vs the bigger disc (`tools/skid_clearance.py` on the 10-07 paths): 58-70 mm (cap 75-90).
+- Flown once (whole-body, headless, `tools/run_pnp.sh wb hat1`): complete, basket placed 47 mm off
+  axis and upright on the hat (10-07 cap runs 53 / 28), tilt 3.6 deg, skids >= 68 mm from the
+  platform, joint margins unchanged. Decoupled rig not flown on the hat.
+- Trap hit again: `Usd.Stage.Open(p).GetDefaultPrim()` on a temporary stage -> "Accessed invalid
+  expired prim" at Isaac start; keep the stage in a variable.
+
+**PICK-AND-PLACE MADE HARDWARE-READY, THE pick_and_place PARAMETER FILES, AND THE THREE-CONTROLLER
+COMPARISON (2026-10-08/09, user request; campaign README `archive/pick_place_top_hat_20261008/README.md`,
+Command.md §16, results `results/simulation_results/README.md`).**
+- **Hardware check (whole-body fused stack + wb-torque arm stack + laptop processor/GS)**: the pick topic
+  path is consistent end to end (`/obj_0/mocap`, absolute; planner under /uav_0; GS resolves it); Get refuses
+  a >20 mm spread, so ONE publisher only; `FSC_PICK_PLACE_PICK_TOPIC` must be unset on the Orin. **Two
+  fixes in `external_torque_controller_hardware_aerial_pwm.yaml`**: gripper `goal_tolerance: 0.002` (was the
+  0.01 default -- a close reported done 10 mm early, and the tab lifts on that result) and **the q2 guard
+  `min/max_position` = [-20, 45] deg** (the real arm's range; NOTHING enforced it before -- the planner/law
+  keep the asset's box, a tighter guard is safe). Everything of the hook grasp was uncommitted in 3 repos.
+- **`*_pick_and_place.yaml` (user rule: files end in pick_and_place)**: hardware
+  `..._{whole_body_l1_4d,geometric_l1}_direct_actuation_t650_pick_and_place.yaml` GENERATED by
+  `tools/make_hw_pick_and_place_yamls.py` (free-flight file + WB k_R/k_w 1.6/1.2 + anchor blend; GEO
+  kp/kv 15/10, kp_z/kv_z 40/18); `AM_HW_PROFILE=pick_and_place` on all four hardware stack scripts
+  (profile-aware checks; dry-run OK both profiles). Sim twins RENAMED `_sim_pick_place` ->
+  `_sim_pick_and_place` (profile `pick_and_place`, `pick_place` alias kept in every script); the modular
+  rig gained a pick-and-place yaml (make_modular_yaml.py profile) + `AM_ISAAC_SCENE_SCRIPT` on its launcher
+  + `drop_0`; `run_pnp.sh` (top-hat copy) and `pnp_mission_v2.py` know rig `mod`; `pnp_score.py` accepts the
+  hat's 1.008 platform top. The driver's `ref` rows carry `x_cd_ddot` + `b1_de` since today (cols 15..20).
+- **Comparison (results/utils/run_pick_and_place_campaign.sh + build_pick_and_place.py; fixed window =
+  each leg's shortest flown duration, 78.1 s; eps_UAV / rho_UAV with L 0.37)**: whole-body 2/2 placed,
+  eps max 143 mm (rho 0.39) / rms 27.5 mm, EE 29 mm; geometric 2/2, 309 mm (0.84) / 65 mm, EE 65 mm;
+  **modular 0/6 -- flips ~2 s after DIRECT entry with the arm torques railing at +-3 N.m from the first
+  0.5 s**, controller yaml identical to the free-flight one (diffed) AND flown clean on the free-flight circle
+  with that very yaml right after (isolating test), so the cause is the pick-and-place SCENE / DRIVER
+  entry path, OPEN. The eps peaks are the lift and the set-down (the observer taking up / releasing 2 N).
+- **Joint tracking (Figs 9/11)**: the WB arm error = an antisymmetric q2/q3 HOLD offset (+-1.5-2.4 deg,
+  stiction inside the task spring's band; not reachable by any compensation term, harmless for pick-and-
+  place) + stick-slip in motion. Offline (`tools/ff_sweep.py`, `arm_stiffness_sim.py` gained `FF_SOURCE`):
+  the measured-velocity friction relay (hardware since 09-28) stick-slips 2x more than the old reference FF;
+  **measured + 0.6 x reference blend halves the moving rms** -- needs `friction_velocity_source: blend` in
+  TorqueControllerBase, recommended for a later circle flight, NOT applied.
+- Traps: the campaign's success grep read `placed: True` while the scorer prints `placed   True` (one run
+  mis-filed, rescued); `pkill -f "[r]un_..."` STILL killed the invoking shell because the same command line
+  named the script in plain text later (exit 144, again).
+- **Arm GS Pick & Place tab, same day (user decisions):** EE Offset, **Vertical Margin** (renamed
+  from "Safety Margin" -- same parameter, `pick_place_approach_dz`; the planner's two pick-and-place
+  status strings renamed too) and a NEW **Side Margin** box moved into a block RIGHT of the points
+  (on the first row their button text was cut). Side Margin writes BOTH
+  `pick_place_pick_approach_back` and `pick_place_place_exit_back` (hook only: disabled when the
+  planner picks from above; 0.05-0.30 m, since 0 would switch the hook off). **The gripper now
+  CLOSES once Exit To Place is done** (once per flown exit, never during it: closing while backing
+  out would take the stem again). Claw-step tooltips follow the grasp mode. Checked offscreen on
+  ROS domain 77 (`archive/pick_place_top_hat_20261008/tools/gs_pnp_check.sh` + `gs_harness/`): the
+  close fires once per exit through a 7-stage fake planner feed, and Side Margin 0.12 -> 0.10
+  round-trips on the real planner with the hardware yaml. Not flown through the GS yet.
+
+**WHOLE-BODY FIGURE-8 SPEED SWEEP → 0.20 m/s FOR THE NEXT HARDWARE FLIGHT (2026-10-07, user request:
+a safe mean speed at which the whole-body controller's hardware EE rms ≈ the decoupled one's hardware
+72.6–76.9 mm).** Campaign `docs/docs_aerial_manipulator/archive/figure8_wb_speed_20261007/` (README,
+`figures/prediction.png`). Isaac, WB only, the hardware's shape A 0.70 / B 0.35, s = 1, RTF 1 headless:
+14 attempts, 12 runs, EE rms linear 14.4 → 24.2 mm at 0.10 → 0.20 m/s (4.6 + 98.6·v, repeats within
+0.2 mm); EKF2-fused feedback (new `AM_CMP_FEEDBACK=fused` in `am_compare_cycle.sh`, default raw) adds
+~1 mm at the same slope; 0.22 / 0.25 m/s (sim-only raised EE bounds) also clean, tilt ≤ 3.2°, 0 sat.
+- **The WB hardware/sim ratio on this figure-8 is 2.9, not the 1/0.6 the 10-05 envelope used**: the
+  hardware error is mostly NON-repeatable airframe wander (two-run split 0.10: repeatable 18.8 /
+  random 36.0 mm; 0.13: 23.4 / 45.3; static DIRECT holds already 24–39 mm). The sim matches the
+  repeatable part in size (×1.3) but not in time pattern, so the scaling is by magnitude only.
+  Four models (proportional / constant wander / growing wander / linear) all fit 0.10 and 0.13 and
+  give **52–75 mm at 0.20 m/s**; parity with the decoupled band at 0.19–0.27 m/s (never, under
+  constant wander). The decoupled ratio is 1.6.
+- **0.20 m/s is the planner's ceiling on the hardware yaml for this shape** (s_max 1.02: CoM 0.294/0.30
+  m/s, yaw 55/57°/s, accel 0.37/0.40) — faster needs `ee_traj_v/a/w_max` raised. Margins projected to
+  hardware at 0.20: tilt ~3° vs 15°, rotor commands ~0.21–0.87, |τz| max 0.42–0.46 of ≥ 0.62 N·m
+  (hardware yaw = +0.16 N·m standing bias + noise; its speed-dependent part is NOT larger than the
+  sim's), j1 torque is noise (R² ≤ 0.06 vs yaw motion), WB never left the planned box by > 23 mm/side
+  on 10-05. Suggested: 0.16 m/s first (predicted 49–61 mm), then 0.20.
+- Traps: 2 of 14 attempts tripped the guard while HOVERING before the run — the 1.50 Hz sim pitch mode;
+  it is sim-only (1.3–1.7 Hz holds 23–47 % of sim e_R,y energy vs 7–9 % on 245 s of hardware DIRECT);
+  the driver saves those npz with `aborted=False` and no run window. One cycle stalled at step 3c with
+  the arm stack streaming ~0 torque (arm sagged to q2 −11.5°) — kill and re-fly, never fly from it.
+
+**PUSH-AND-PULL WITH THE USER'S CAD BOX (2026-10-07, user request; campaign
+`docs/docs_aerial_manipulator/archive/push_pull_cad_box_20261007/README.md`, Command.md section 17).**
+`rotorcraft/assets/Box_Push.stl` (metres, +Z up: a 240 x 160 x 100 mm box + a printed clamp
+bracket with a **5 mm x 60 mm fin** handle, 75..258 mm above the table) became `Box_Push.usda`
+(`tools/stl_to_usda_push.py`, usd-core from the user site): frame = the scene's box frame
+(Rz+90 of the CAD: origin = box centre = `obj_0`, +y = the 240 mm axis = the push, +x = the jaws'
+closing axis), the full mesh as visual, the box + bracket as 13 exact convex blocks (the converter
+REFUSES to write unless every bracket vertex lies in its blocks), 400 g at uniform density (CoM
+2.2 mm above the box centre), `fsc:*` attributes for the scene. The push scene's DEFAULT is now
+`PEGASUS_PUSH_HANDLE=cad` (`post` / `fin` keep the old ones; `PEGASUS_PUSH_BOX_USD` overrides the
+asset). **The sim claw cannot close below ~19 mm** (the asset's slider-crank; the real gripper's foam
+pads close fully), so the fin's bare part carries an INVISIBLE 20 mm grip shim
+(`PEGASUS_PUSH_FIN_GRIP_MM`, 0 = the bare CAD fin). Grasp 25 mm under the fin top = 233 mm above the
+table -> `make_push_pull_yaml.py` `push_pull_ee_offset` [0, 0, 0.183] (was 0.2255 for the post); the
+generated yaml's other push-and-pull changes are listed under SHIPPED below.
+- **Flown, 12 headless runs** (raw mocap, real q2 range [-20, 45] as stops, T650 gear, mu 0.29,
+  `wb_l1_omega_c_t` 1.0): **push 3/3** -- 50 deg [0, 26, 24, 0] 500 / 496 mm, slide e_imp 1.25 / 1.23 N,
+  rho 0.099 / 0.070, but q3 touched 1.0 deg at break-away; **60 deg [0, 26, 34, 0] 498 mm, 1.20 N,
+  rho 0.090 with q2 <= 36.2 and q3 25.7..43.9** (the better pose, one run). **Pull at the planned 12 s:
+  0/3** at both folds (0/6 with the post on 10-06). NOT the grip (box moves with the claw to 2-5 mm),
+  NOT the arm (q2/q3 swing +-6-7 deg in every push and pull alike) and NOT an over-lean (the mean lean
+  matches the contact force in both): the box stick-slips -- lags 13-20 mm, lurches at 0.13-0.26 m/s
+  vs a planned 0.08-0.10 -- and the tilt peaks grow 2.5 -> 8 deg until the arm lands on its stops.
+  **Pull-only sweep at 60 deg: `push_pull_push_time_s` 12 -> 24 is 4/4 complete** (491-498 mm, e_imp
+  1.08-1.34 N, rho 0.046-0.074; lurches 9-14 cm/s, tilt <= 6.4); `wb_dy` 40 flipped in FREE flight
+  (arm swing 5 -> 25 deg in 3 s during Ready) and `wb_k_x/k_v` 32/20 diverged in HOVER -- both rejected.
+  **SHIPPED (make_push_pull_yaml.py): the 60 deg pose, `wb_l1_omega_c_t` 1.0, `push_pull_push_time_s` 24**
+  (sets push AND pull), plus the descent anchoring below; the scene check now also compares
+  `push_pull_push_time_s`.
+  **OPEN 1 -- the release after a pull**: the pull ends with the drone still pulling ~1 N and pressing
+  down ~1.5 N; whatever lets go first (CONTACT off, the jaws -- `contact_off_at_push_end` false gave a
+  5.8 N spike) folds the arm onto q3's +50 stop in every pull, and the Exit then drags the box back
+  47 / 2 / 23 / 1 mm. **A planner UNLOAD was built and does NOT work** (`push_pull_unload_time_s` /
+  `_wait_s` / `_avg_s` / `_max`, default 0 = off, OFF in the yaml; gtest
+  `UnloadReSeatsTheHoldOnTheMeasuredClaw`): re-seating the hold on the law's own e_y zeroes the claw's
+  spring, but the arm still folds onto the stop during the unload, at 1.5 s AND 6 s -- the load is
+  stored in the law's translational estimate (d_hat_t swung -3.1 -> +0.9 N along, +0.7 -> -2.7 N
+  vertical, CoM 33 mm toward the box). With the box held by static friction any load the drone applies
+  is self-consistent (the estimator learns the reaction and compensates it), so it never decays on its
+  own: a CONTROLLER problem. **FIXED -- the Ready descent** (chains 9-10): world-held from the end of Go To Start the claw's own
+  vertical loop bobbed (claw height error 6-30 mm p-p hovering, 20-57 mm in the descent vs 4-11 mm
+  CoM-anchored; arm 13-25 deg in every run; cad_18 flipped). CoM-anchored all the way: calm (2-3 deg) but
+  the claw follows the base's drift (cad_20 14 mm off across the fin, never gripped). New planner option
+  `push_pull_world_anchor_on_handle` (default false; with `push_pull_world_anchor_ready` false it switches
+  the claw to world-held on ARRIVAL at the handle) + `push_pull_descent_trim` false: 3/3, descent 2-3 deg /
+  5-6 mm, grips within 1.4 mm across, push e_imp 0.74-0.75 N. All three now SHIPPED in the yaml and the
+  scene check compares the two anchor keys. The release fold (OPEN 1) shows on pushes too (q3 49-50,
+  box 16 / 3 / 1 mm). Campaign tallies: 24 s pull 8/9, push 7/9. Don't pull on hardware.
+  Trap hit: a log command with the planner's NAME in it tripped the stack's stale-node guard and a run
+  never flew (cad_15) -- keep node names out of every command while a campaign runs.
+- **The force guard reads a REAL force.** Low-passed as the planner does it (vector, 3 rad/s), the
+  law's `wb_control_debug` [97..99] matches the PhysX truth on the claw to ~0.3 N on average; the raw
+  250 Hz norm averages 4-7 N on a ~1 N force. Never threshold the norm of the raw reading.
+- Harness: `tools/try_cad.sh <tag> key=val ...` (regenerates the yaml, flies `run_pl.sh` into the
+  campaign's `runs/` via the new `PL_RUNS_DIR`, restores the yaml), `tools/summarize.py`.
+  `pl_mission.py` now calls `whole_body_planner/clear` when the DIRECT switch leaves a PENDING plan
+  (the climb reference was captured as a drone target and the run timed out waiting for HOLD).
+  Traps: a stage opened as a temporary expires its prims (keep the `Usd.Stage` alive); headless
+  scene output is in tmux `px4_isaac`, not `<tag>.scene.log`; the recorder's `dbg` columns are the
+  debug index + 2. NOT flown on hardware; check on the bench that the foam pads hold ~2 N along the
+  5 mm fin before flying.

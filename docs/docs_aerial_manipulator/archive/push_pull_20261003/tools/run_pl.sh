@@ -16,7 +16,7 @@
 set -o pipefail   # (no -u: the ROS setup scripts read unset variables)
 TAG="${1:?tag}"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-RUNS="$HERE/../runs"; mkdir -p "$RUNS"
+RUNS="${PL_RUNS_DIR:-$HERE/../runs}"; mkdir -p "$RUNS"   # PL_RUNS_DIR: another campaign's runs/
 PEG="$HOME/fsc_PegasusSimulator"
 STACKS="$HOME/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim"
 FB="${PUSH_FEEDBACK:-raw}"

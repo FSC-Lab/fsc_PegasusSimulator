@@ -1,0 +1,367 @@
+<title>Push-and-Pull Simulation Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one full-width reading column on black (the user's report rule); tables
+   scroll inside their own box; charts are HTML dot plots on percentage tracks. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #141413;
+  --line: #2c2b28;
+  --fg: #ecebe6;
+  --muted: #a9a79e;
+  --accent: #e3b341;            /* section markers, the one warm accent */
+  --raw: #3987e5;               /* categorical slot 1 (dark step) */
+  --fused: #d95926;             /* categorical slot 2 (dark step) */
+  --ok: #4fb37a;
+  --bad: #e66767;
+  --band: rgba(236, 235, 230, 0.10);
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 64px; }
+header { display: grid; gap: 10px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(28px, 4vw, 38px); line-height: 1.15; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 26px; margin: 48px 0 6px; text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .num { color: var(--accent); font-family: var(--f-mono); font-size: 18px; }
+h3 { font-family: var(--f-display); font-weight: 600; font-size: 19px; margin: 32px 0 8px; text-wrap: balance; }
+p, li { overflow-wrap: anywhere; }
+p { margin: 8px 0; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+code { font-family: var(--f-mono); font-size: 0.88em; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+.lede { color: var(--muted); margin: 0; }
+.setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 24px; margin-top: 6px; }
+.setup div { min-width: 0; }
+.setup dt { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.setup dd { margin: 2px 0 0; }
+.defs { display: grid; gap: 12px; margin: 12px 0; }
+.def { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.def .f { font-family: var(--f-mono); font-size: 15px; margin-bottom: 4px; overflow-wrap: anywhere; }
+.def p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.tscroll { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--muted); font-size: 12.5px; background: var(--panel); position: sticky; top: 0; }
+td.n, th.n { text-align: right; white-space: nowrap; font-family: var(--f-mono); font-size: 12.5px; }
+td.runs { font-family: var(--f-mono); font-size: 12px; color: var(--muted); min-width: 7rem; }
+td.cfg { min-width: 16rem; }
+td.chg { min-width: 12rem; }
+tr:last-child td { border-bottom: 0; }
+.note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.fb { font-family: var(--f-mono); font-size: 11.5px; padding: 1px 7px; border-radius: 10px; border: 1px solid; white-space: nowrap; }
+.fb.raw { color: var(--fg); border-color: var(--raw); }
+.fb.fused { color: var(--fg); border-color: var(--fused); }
+.chip { font-family: var(--f-mono); font-size: 11.5px; white-space: nowrap; }
+.chip::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.chip.ok::before { background: var(--ok); }
+.chip.bad::before { background: var(--bad); }
+.cap { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; }
+/* dot plots */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 18px; margin: 14px 0; }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px 12px; min-width: 0; }
+.chart h4 { margin: 0 0 2px; font-family: var(--f-display); font-weight: 600; font-size: 16px; }
+.chart .sub { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); margin: 4px 0 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.sw.raw { background: var(--raw); } .sw.fused { background: var(--fused); }
+.sw.hollow { background: transparent; border: 2px solid var(--muted); width: 9px; height: 9px; }
+.row { display: grid; grid-template-columns: minmax(0, 13.5rem) minmax(0, 1fr); gap: 10px; align-items: center; min-height: 30px; }
+.row .lab { font-size: 12.5px; line-height: 1.25; color: var(--fg); }
+.track { position: relative; height: 26px; border-bottom: 1px solid var(--line); }
+.band { position: absolute; top: 0; bottom: 0; background: var(--band); }
+.refline { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--muted); }
+.dot { position: absolute; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%; border: 2px solid var(--panel); padding: 0; cursor: default; }
+.dot.raw { background: var(--raw); } .dot.fused { background: var(--fused); }
+.dot.hollow { background: var(--panel); border-color: currentColor; }
+.dot.hollow.raw { color: var(--raw); } .dot.hollow.fused { color: var(--fused); }
+.dot:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.axis { position: relative; height: 22px; margin-left: calc(13.5rem + 10px); font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.axis span { position: absolute; transform: translateX(-50%); top: 4px; white-space: nowrap; }
+.axis-title { margin-left: calc(13.5rem + 10px); font-size: 11.5px; color: var(--muted); }
+.reflab { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+#tip { position: fixed; z-index: 10; pointer-events: none; background: #1f1e1c; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 12.5px; color: var(--fg); font-family: var(--f-mono); line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+@media (max-width: 640px) {
+  .row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .axis, .axis-title { margin-left: 0; }
+}
+figure { margin: 14px 0; }
+figure img { width: 100%; border: 1px solid var(--line); border-radius: 6px; filter: invert(1) hue-rotate(180deg); }
+figcaption { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
+/* issues */
+.issues { display: grid; gap: 14px; margin-top: 14px; counter-reset: iss; }
+.issue { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.issue.top { border-color: var(--accent); }
+b.over { color: var(--bad); font-family: var(--f-mono); }
+.issue h3 { margin: 0 0 6px; display: flex; gap: 10px; align-items: baseline; }
+.issue h3 .rank { font-family: var(--f-mono); font-size: 13px; color: var(--accent); white-space: nowrap; }
+.issue .lbl { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 2px; }
+.status { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Isaac Sim · whole-body 4-D L1 · contact phase · 2026-10-05/06</div>
+  <h1>Push-and-Pull Simulation Results</h1>
+  <p class="lede">The vehicle grasps a handle on a 400 g box and slides it 0.50 m along the experiment table with the arm held still, the law in its contact (impedance) phase. @@N_RUNS@@ headless flights at real time on the mirror plant: first with a side fin on a 200 mm box, then with your real box and a post handle on its top centre, then on the T650's shorter landing gear inside the real arm's q2 range, pushing and pulling.</p>
+  <dl class="setup">
+    <div><dt>Box and table</dt><dd>400 g; table friction 0.29 (measured), static = sliding → <b>1.14 N</b> to move it. Runs pl_9–36: 200 × 100 × 60 mm with a side fin. Runs pl_37–51: the real box, 240 × 160 × 95 mm, with a post on its top centre</dd></div>
+    <div><dt>Mission</dt><dd>Go To Start → onto the handle → close the jaws → 1.5 s settle → 0.50 m in 12 s → open → exit → land</dd></div>
+    <div><dt>Impedance targets</dt><dd>M<sub>d</sub> = 1 kg, D<sub>d</sub> = 26.8 N·s/m, K<sub>d</sub> = 212 N/m per axis; heading 0.05 / 0.29 / 0.25</dd></div>
+    <div><dt>Feedback modes</dt><dd><b>raw</b>: position from the motion capture · <b>fused</b>: position from EKF2 (the hardware stack). Attitude comes from PX4 in both.</dd></div>
+  </dl>
+</header>
+
+<h2><span class="num">1</span>Tracking errors and evaluation metrics</h2>
+
+<div class="defs">
+  <div class="def">
+    <div class="f">e<sub>imp</sub> = F<sub>ext</sub> − (M<sub>d</sub> ė<sub>v</sub> + D<sub>d</sub> e<sub>v</sub> + K<sub>d</sub> e<sub>y</sub>)</div>
+    <p>Impedance residual, per channel (x, y, z in N; heading in N·m); 0 means the commanded impedance is realised exactly. F<sub>ext</sub> is the true wrench on the claw from PhysX's contact report on the box (normal + friction), e<sub>y</sub> the true claw position minus its reference, all terms low-passed at 5 Hz. Check on every run: in the steady slide F<sub>ext</sub> equals the table's friction on the box (e.g. 1.05 N and 1.05 N).</p>
+  </div>
+  <div class="def">
+    <div class="f">ε<sub>UAV</sub> = ‖r<sub>UAV</sub><sup>ref</sup> − r<sub>UAV</sub>‖,&nbsp;&nbsp; ρ<sub>UAV</sub> = ε<sub>UAV</sub> / L,&nbsp;&nbsp; L = @@L_MM@@ mm</div>
+    <p>Platform deviation, as in the pick-and-place benchmark: the planned airframe position against the true airframe position; L is the arm's maximum reach.</p>
+  </div>
+  <div class="def">
+    <div class="f">HOLD · SLIDE · RELEASE</div>
+    <p>HOLD = from the claw's arrival on the handle to the start of the slide (grip + settle, the box held by static friction). SLIDE = the 12 s move. RELEASE = push end to Exit (jaws open).</p>
+  </div>
+</div>
+
+<h3>Inside the real arm's q2 range, pushing and pulling (latest)</h3>
+<p>Your measured limit, q2 between −20° and +45°, is now a hard stop on q2 in the scene. q3 keeps its +50° stop and must stay above 0°: below that is the elbow-singular branch, where the arm folds the wrong way and the controller loses it. All runs in this section use the T650's shorter gear (skids 0.2425 m below the body, a copy of the asset), raw mocap and the gripper as the contact switch. A pull starts the box at y = −0.25 m and draws it 0.50 m back.</p>
+<p><b>What limits the arm.</b> The claw is held fixed in the world, so the arm takes up every millimetre the airframe drifts from its plan: 4–5.5° of q2 and 6–8° of q3 per centimetre along the arm, whatever the fold. The fold only decides how much drift fits before a joint reaches a limit:</p>
+<div class="tscroll"><table>
+<thead><tr><th class="n">Pose [q1, q2, q3, q4] (°)</th><th class="n">Fold q2+q3</th><th class="n">Claw below CoM</th><th class="n">Drift until q2 = 45° or q3 = 0°</th><th class="n">Drift until q3 = 50°</th><th>Note</th></tr></thead>
+<tbody>
+@@Q2_GEOM@@
+</tbody></table></div>
+<p class="cap">From the planner's model, base drift along the arm with the claw held still. In contact the airframe drifted 10–25 mm (std) along the push in every run, peaking at 30–40 mm, so no fold has room to spare.</p>
+<p><b>What reduced the drift.</b> The controller's translational disturbance observer (bandwidth 2.93 rad/s) keeps re-estimating the box's reaction while the box sticks and slides, and pushes against it. At the 50° and 40° folds with that observer as shipped, the drift was 15–29 mm (std) and every run failed. With it slowed to 1.0 rad/s the drift was 7–11 mm, and both 50° pushes stayed inside the joint limits (pl_71, pl_74). The two slow-observer pulls still failed, for a different reason (Priority 1). Freezing the observer in contact instead made the airframe sit 55 mm off its plan from the moment of the grip (pl_67). The drift's dominant frequency varies from 0.15 to 1.5 Hz between runs, so the observer is a contributor, not the only source.</p>
+<div class="tscroll"><table>
+<thead><tr><th>Run</th><th>Task</th><th class="n">Fold</th><th class="n">q2 stops</th><th>Outcome</th><th class="n">Box travel [mm]</th></tr></thead>
+<tbody>
+@@Q2_ROWS@@
+</tbody></table></div>
+<div class="tscroll"><table>
+<thead><tr><th>Run</th><th>Task</th><th class="n">q2 range [°]</th><th class="n">q3 range [°]</th><th class="n">q3 at +50° [%]</th><th class="n">Drift (std, peak freq.)</th><th class="n">SLIDE e<sub>imp</sub> [N]</th><th class="n">SLIDE ρ max</th></tr></thead>
+<tbody>
+@@Q2_ROWS_B@@
+</tbody></table></div>
+<p class="cap">Same runs, same order. "Asset" runs flew with the asset's q2 stop at +50°, before your limit; they show where those poses actually went. Joint ranges and drift are over the push step, up to the push end or to just before a failed run broke away; a red ! marks q2 above 45° or q3 below 0°. Drift = true airframe minus planned airframe along the push. SLIDE values only where the slide finished.</p>
+<figure>
+  <img alt="Four columns of plots against time from the grip: q2 and q3 with the q2 = 45 and q3 = 0 limits shaded, and the airframe drift along and across the push, for a 70 degree push with the old stop, a 50 degree push and pull with the real stop that diverge, and a 50 degree push with the slower observer that completes." src="data:image/png;base64,@@Q2_IMG@@">
+  <figcaption>Joints (top) and airframe drift (bottom) through the push step. At 70° (asset stop) q3 rides its +50° stop and q2 passes 45°. At 50° (push) and 70° (pull) with the real stop, the drift drives q2 to 45° and q3 below 0°, and the run diverges. With the observer slowed (right) both joints stay inside their limits.</figcaption>
+</figure>
+<p><b>The end-effector reference is parallel to the table.</b> Over the 0.50 m slide the planned claw height varies by only @@REFZ@@ mm in every run; the planned CoM height is exactly constant. The small change is not a planner error. The arm is held still while the planned airframe tilts about 0.1° to accelerate, which raises and lowers the claw's 0.25 m lever. An exactly flat claw path would need the arm to counter that tilt during the push.</p>
+
+<h3>The redesign: post handle and folded arm</h3>
+<p>Your suggestion, tested: move the handle to a vertical post on the box's top centre (the push line through the box's friction centre) and fold the arm forward so the claw sits closer to the vehicle's CoM. The post must then be taller so the landing gear clears the table. The contact phase also switches on the gripper: on at the jaws' grip, off when the push ends, before the jaws open.</p>
+<div class="tscroll"><table>
+<thead><tr><th>Design</th><th class="n">Claw below CoM</th><th class="n">Pitch moment, 1.14 N push [N·m]</th><th class="n">Claw tilt from vertical</th><th class="n">Grasp height</th><th class="n">Tipping μh/(L/2)</th></tr></thead>
+<tbody>
+@@DESIGN_GEOM@@
+</tbody></table></div>
+<div class="tscroll"><table>
+<thead><tr><th>Design</th><th class="n">Raw done</th><th class="n">Fused done</th><th class="n">SLIDE e<sub>imp</sub> [N]</th><th class="n">ρ<sub>UAV</sub> max</th><th class="n">Net pitch [N·m]</th><th class="n">Force angle [°]</th><th class="n">Box yaw [°]</th><th class="n">Tilt max [°]</th></tr></thead>
+<tbody>
+@@DESIGN_ROWS@@
+</tbody></table></div>
+<p class="cap">First table: the controller's own model (pitch moment of the horizontal push alone). Second table: measured, raw-mocap runs only, one value per run; SLIDE e<sub>imp</sub> is the rms residual over the slide, force angle is above the table (0 = parallel). Net pitch moment = the mean contact force during the slide times its lever about the system CoM. The 60° row's raw runs include two on the old contact timing (pl_38, pl_39) and two with the gripper switch (pl_42, pl_49); the 70° runs use the gripper switch. Each design was flown 2–4 times.</p>
+
+<h3>Results by configuration</h3>
+<p>Values are listed per run, only for runs whose window is clean: completed missions, plus runs that finished the push and failed afterwards. Runs that diverged mid-push count only in the outcome column.</p>
+<div class="tscroll"><table>
+<thead><tr><th>Feedback</th><th>Configuration</th><th class="n">Completed</th><th class="n">SLIDE e<sub>imp</sub> rms [N]</th><th class="n">HOLD e<sub>imp</sub> rms [N]</th><th class="n">SLIDE ρ<sub>UAV</sub> max</th><th class="n">Push tilt max [°]</th><th>Runs (pl_)</th></tr></thead>
+<tbody>
+@@CONF_ROWS@@
+</tbody></table></div>
+<p class="cap">Contact force during the slide: 1.1–1.5 N rms in every run. On the shipped raw configuration the residual (2.5 N) is <b>larger than the force it should render</b>; 1.6–2.0 N of it is lateral.</p>
+
+<div class="charts">
+  <div class="chart" id="c1">
+    <h4>Impedance residual during the slide</h4>
+    <p class="sub">e<sub>imp</sub> xyz, rms over the 12 s slide, one dot per run</p>
+  </div>
+  <div class="chart" id="c2">
+    <h4>Platform deviation during the slide</h4>
+    <p class="sub">ρ<sub>UAV</sub> maximum over the 12 s slide, one dot per run</p>
+  </div>
+</div>
+<p class="cap">The shaded band is the contact force itself (rms); a residual inside or above it means the impedance relation does not hold. Hover or focus a dot for its run.</p>
+
+<figure>
+  <img alt="Three panels against time from the start of contact: impedance residual magnitude, push-axis contact force, and platform deviation rho, for pl_23 (shipped), pl_27 (attitude from mocap) and pl_29 (attitude correction 1 rad/s)." src="data:image/png;base64,@@IMG@@">
+  <figcaption>Shipped (pl_23) against the two attitude fixes (pl_27, pl_29) through the contact: residual (top), push force (middle), ρ<sub>UAV</sub> (bottom). Through the slide (5–15 s) the residual drops from 2–4.6 N to 0.5–2 N; pl_29's spike in the first second is the jaws closing.</figcaption>
+</figure>
+
+<h3>The estimate the controller flies on, against the truth</h3>
+<div class="tscroll"><table>
+<thead><tr><th>Quantity</th><th>Free flight</th><th>In contact (push)</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td>PX4 attitude error (total angle)</td><td class="n">0.1–0.5°</td><td class="n">1–2.9° (one 5.6° spike)</td><td>controller log, raw runs pl_27–33</td></tr>
+<tr><td>… of which yaw (mean)</td><td class="n">≈0.2°</td><td class="n">−1.40° shipped · −0.64° full mocap trust</td><td>pl_34 · pl_36 (fused)</td></tr>
+<tr><td>… tilt (mean / max)</td><td class="n">0.1–0.3°</td><td class="n">0.4–0.6° / 1.2°</td><td>pl_34–36</td></tr>
+<tr><td>Base position, raw mocap</td><td class="n">0.5 mm std</td><td class="n">0.5 mm std</td><td>pl_15</td></tr>
+<tr><td>Base position, EKF2-fused (shipped)</td><td class="n">2–4 mm std</td><td class="n">9–15 mm offset along the push, 7–12 mm std</td><td>pl_16–18, pl_34</td></tr>
+<tr><td>Base position, EKF2 trusting the mocap</td><td class="n">1–3 mm std</td><td class="n">4–5 mm offset, ~7 mm std</td><td>pl_35, pl_36</td></tr>
+<tr><td>Claw position the law believes, lateral (raw)</td><td class="n">agrees to ~1 mm</td><td class="n">+0.4 mm believed vs +7.6 mm true</td><td>pl_15 slide</td></tr>
+</tbody></table></div>
+<p class="cap">The model itself is exact: forward kinematics on the true attitude matches the true claw to 0.1–0.2 mm. The error is not lag (shifting EKF2 in time by −50 to +400 ms does not reduce it). EKF2 runs on PX4's defaults, <code>EKF2_EVP_NOISE</code> / <code>EVV_NOISE</code> / <code>EVA_NOISE</code> = 0.1, so it treats the mocap as 10 cm, 10 cm/s and 5.7° accurate (the simulated mocap is 0.5 mm), while contact shakes the IMU 6–7× harder.</p>
+
+<h3>Every run</h3>
+<div class="tscroll"><table>
+<thead><tr><th>Run</th><th>Feedback</th><th>Change</th><th>Outcome</th><th class="n">Box [mm]</th><th class="n">HOLD e<sub>imp</sub> rms [N]</th><th class="n">SLIDE e<sub>imp</sub> rms [N]</th><th class="n">pk [N]</th><th class="n">heading rms [N·m]</th><th class="n">F<sub>ext</sub> rms [N]</th><th class="n">|e<sub>y</sub>| rms [mm]</th><th class="n">ε max [mm]</th><th class="n">ρ max</th><th class="n">ε rms [mm]</th><th class="n">F angle [°]</th><th class="n">net pitch [N·m]</th></tr></thead>
+<tbody>
+@@RUN_ROWS@@
+</tbody></table></div>
+<p class="cap">pl_9 predates the contact instrumentation. "Box" is the box's travel during the push step (planned 500 mm). ε values are for the slide window. F angle: the mean contact force's angle above the table during the slide (0 = parallel to the table). Net pitch: that force's moment about the system CoM.</p>
+
+<h2><span class="num">2</span>Key issues and what to fix</h2>
+<p>Ordered by priority. Each item states the evidence from the runs above and the next step; "untested" marks proposals that have not been flown.</p>
+
+<div class="issues">
+  <div class="issue top">
+    <h3><span class="rank">Priority 1</span>Inside the real q2 range, the airframe's drift in contact is larger than the arm can absorb</h3>
+    <p>With the claw held fixed in the world, the arm must take up the airframe's drift. Inside q2 ≤ 45° and q3 ≥ 0° that leaves 1.3–4 cm, depending on the fold. In contact the shipped controller lets the airframe drift 10–29 mm (std). Results: only the 50° push with that observer slowed to 1.0 rad/s slid the box the full 0.50 m inside the range (2 of 2; pl_71 completed, pl_74 failed after the jaws opened). Every other push inside the range failed (0 of 4: 70°, 50°, 40°, and 50° with the observer frozen), and no pull succeeded (0 of 6). In each failure the drift drove q2 to 45° and q3 below 0° (or, at 70°, pinned q3 on its +50° stop), and the force guard or the watchdog ended the run.</p>
+    <div class="lbl">Next steps</div>
+    <ul>
+      <li><b>Fold the push pose to [0, 26, 24, 0]</b> (50°), the most balanced joint window (3.3 / 3.5 cm), with the translational observer at 1.0 rad/s. Its cost: the observer is global today, so free flight converges more slowly too; the approach error rose from about 0.05 to 0.08 of the reach.</li>
+      <li><b>A contact-only observer bandwidth</b>: keep 2.93 rad/s in free flight and drop to ~1 rad/s only while the gripper holds the handle. This is a small code change in the whole-body client. Untested.</li>
+      <li><b>Pulling</b>: no configuration pulls inside the range yet (0 of 6). At 70° with the asset's 50° stop, one pull completed with the force within 6° of parallel (pl_73: residual 1.20 N, ρ 0.067); there q2 happened to peak at 42°. The same pull with the 45° stop failed when the drift reached q2 = 45° (pl_76). In both 50° pulls with the slow observer, the box ran ahead of its reference at mid-slide (0.3 m/s against ~0.09 m/s planned) before the arm unfolded. Why it runs ahead is not yet explained.</li>
+      <li><b>The planner still allows q2 up to 50°</b> (a compiled limit shared by every mode). It plans no q2 above 45° here, but nothing stops a plan from asking for it. Make it a parameter before the experiment.</li>
+      <li>Confirm the 45° figure on the real arm: whether it is the airframe in the way or the servo limit, and whether the arm hits it softly or hard.</li>
+    </ul>
+  </div>
+
+  <div class="issue top">
+    <h3><span class="rank">Priority 2</span>The controller flies on the wrong state while it is in contact</h3>
+    <p>In contact, PX4's attitude drifts 1–3° (mostly yaw) and EKF2's base position drifts 9–15 mm, so the controller places the claw several millimetres from where it is and the impedance pushes on that phantom. This is the one problem the redesign did not touch: with the post design, <b>fused feedback still completed 0 of 6</b>. The approach knocked the box twice (Priority 4), the force guard tripped three times with real contact spikes of 15–17 N in the stick-slip, and one run left DIRECT. On raw mocap the same design completed 6 of 6.</p>
+    <div class="lbl">Next steps</div>
+    <ol>
+      <li><b>Hybrid feedback for contact tasks:</b> position and attitude from the motion capture, velocity from EKF2. Needs an estimator or relay change; the controller's odometry topic is hard-coded. Untested.</li>
+      <li><b>Planner and controller on the same attitude</b> (the planner computes the grasp target and its trim with PX4's attitude).</li>
+      <li><b>Read the Pixhawk's <code>EKF2_EV*</code> before flying.</b> At the 0.1 defaults EKF2 treats the mocap as 10 cm accurate; noise mode 1 with about 0.01 / 0.03 / 0.05 halved the contact drift in sim (pl_36). PX4 still floors the vision position noise at 1 cm.</li>
+      <li><b>Bench check on the vehicle:</b> grip the box and log PX4 attitude and EKF2 odometry against OptiTrack.</li>
+    </ol>
+  </div>
+
+  <div class="issue">
+    <h3><span class="rank">Priority 3</span>Interaction geometry: the post handle and folded arm work; the force is still not parallel to the table</h3>
+    <p>Adopted as the scenario default (70° fold, post top 0.298 m, grasp 0.273 m), before your q2 limit: at 70° q2 reaches 47–50° in the push, so that pose does not fit the real arm (Priority 1). On raw mocap, against the side fin:</p>
+    <ul>
+      <li>Slide impedance residual 2.5 N → <b>0.94–0.98 N</b> (60° fold: 1.27–1.68 N).</li>
+      <li>ρ<sub>UAV</sub> max 0.18–0.22 → <b>0.06–0.09</b>.</li>
+      <li>Net pitch moment on the vehicle 0.18–0.22 → <b>0.00–0.12 N·m</b>; push tilt 9–10° → 3–6°.</li>
+      <li>Claw slip on the handle about 21 mm → 2–4 mm; box yaw up to 9° → −1 to +2° with the gripper switch.</li>
+    </ul>
+    <p>What did not improve: the contact force points <b>28–38° above the table</b> (the claw presses down 0.55–1.0 N, more than the side fin's 0.4–0.55 N). Only about 0.4 N of it is the vertical impedance error; the rest comes from the grip on the post. The 70° fold barely changed it (expected 0.36 of the push, measured about 0.6), so the claw angle alone does not explain it. It costs little torque today, because the claw now sits ahead of the CoM and the upward reaction offsets the horizontal push's moment, but it loads the box onto the table (normal force 4.5–5.0 N instead of 3.9 N), which raises the friction to overcome.</p>
+    <div class="lbl">Next steps</div>
+    <ul>
+      <li>Find where the vertical force comes from: per-contact data on the post (jaw pads against fingertips) is already in the recordings.</li>
+      <li>Trim the grasp height so the vertical impedance error is zero. Consider a handle face the palm meets horizontally. A fully horizontal claw (90° fold) needs a 0.35 m grasp and fails the tipping rule for this box. Untested.</li>
+      <li>Your real handle: a post on the box's top centre, 20 mm across the jaws, top about 0.30 m above the table (scene default).</li>
+    </ul>
+  </div>
+
+  <div class="issue">
+    <h3><span class="rank">Priority 4</span>The landing gear can hit the box; the planner only knows the table</h3>
+    <p>At the grasp the skids straddle the 160 mm box with 6 cm to spare each side, but hang below its 95 mm top. Approaching at grasp height, a skid clipped the box and pushed it 45–52 mm (pl_40, pl_41; measured skid 1.6 cm from the box side, 6 mm below its top). The planner's keep-out covers only the table top. Separately, from the old 1.0 m takeoff the planner refused Go To Start (gear vs table, pl_37).</p>
+    <div class="lbl">Fixed for now, and the proper fix</div>
+    <ul>
+      <li>The approach starts 0.12 m behind and 0.10 m above the grasp, the exit climbs 0.20 m, and the mission takes off to 1.3 m (all in the push yaml and Command.md §17).</li>
+      <li>Proper fix: a keep-out for the box and its handle in the planner, from the captured box pose and its known size. Untested.</li>
+      <li>The scene now flies the T650's shorter gear (skids 0.2425 m below the body instead of 0.3125, a copy of the asset; the original is unchanged), and the planner's gear depth matches. The vehicle rests 0.235 m high and lands to 0.24 m.</li>
+    </ul>
+  </div>
+
+  <div class="issue">
+    <h3><span class="rank">Priority 5</span>The gripper as the contact switch</h3>
+    <p>Implemented as two planner options and made the default: CONTACT on at the Push press (sent on the jaws' grip), free when the push completes, before the jaws open. Raw, release residual <b>1.07–1.35 N</b> against 1.70–4.11 N with the old timing (pl_39 spiked to 11.6 N as the jaws opened in contact); box yaw stayed within ±2°. On fused feedback it is not enough on its own (pl_47, pl_48 failed).</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="rank">Priority 6</span>Static friction at the start of the slide</h3>
+    <p>The box breaks loose only once the claw trails its reference by F / K<sub>d</sub> ≈ 5–6 mm. In the attitude-fix failures it stayed stuck for about 3 s with the tilt already 5–6°, then broke loose in bursts. Real box base: equal static and sliding friction (PTFE glides or felt, not rubber). A force-led start (pre-load before the reference moves) is untested.</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="rank">Priority 7</span>Gains are mostly not the lever</h3>
+    <p>Thirteen gain and timing variants across raw and fused feedback (observer bandwidths, contact reading, arm and heading stiffness, base and arm damping, push speed); none beat the shipped configuration and several made it worse. The geometry change did more than all of them together. One exception appeared inside the real q2 range: slowing the translational observer to 1.0 rad/s is what keeps the joints in their window (Priority 1).</p>
+  </div>
+
+  <div class="issue">
+    <h3><span class="rank">Priority 8</span>The evidence is thin, and part of it exists only in simulation</h3>
+    <ul>
+      <li>1–4 runs per configuration, and outcomes vary run to run. Repeat ≥3 times before relying on a number; the q2-range results are 1–2 runs each.</li>
+      <li>F<sub>ext</sub> ground truth exists only in Isaac. On hardware the residual needs a force/torque sensor at the gripper, or the controller's own contact reading (about 25× noisier on the 0918 flight than in sim).</li>
+      <li>The simulated jaws, pads and post are idealised; the real grip on a post may carry the push differently.</li>
+      <li>The scene's console table is 150 mm deep and the real box 160 mm wide (5 mm overhang a side); the real box mass is assumed 400 g. No hardware push-and-pull configuration exists yet.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<div id="tip" hidden></div>
+<script>
+(function () {
+  var DATA = @@CHART_JSON@@;
+  var tip = document.getElementById('tip');
+  function show(ev, html) {
+    tip.innerHTML = html; tip.hidden = false;
+    var r = ev.target.getBoundingClientRect();
+    var x = r.left + r.width / 2 + 12, y = r.top - 8;
+    tip.style.left = Math.min(x, window.innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top = Math.max(8, y - tip.offsetHeight) + 'px';
+  }
+  function hide() { tip.hidden = true; }
+  function build(id, key, max, ticks, fmt, unit, band, ref) {
+    var box = document.getElementById(id);
+    var lg = document.createElement('div'); lg.className = 'legend';
+    lg.innerHTML = '<span><i class="sw raw"></i>raw mocap feedback</span><span><i class="sw fused"></i>EKF2-fused feedback</span>' +
+                   '<span><i class="sw hollow"></i>failed after the push (slide window clean)</span>';
+    box.appendChild(lg);
+    DATA.forEach(function (row) {
+      var r = document.createElement('div'); r.className = 'row';
+      var lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = row.label;
+      var tr = document.createElement('div'); tr.className = 'track';
+      if (band) { var b = document.createElement('div'); b.className = 'band';
+        b.style.left = (band[0] / max * 100) + '%'; b.style.width = ((band[1] - band[0]) / max * 100) + '%'; tr.appendChild(b); }
+      if (ref != null) { var rl = document.createElement('div'); rl.className = 'refline'; rl.style.left = (ref / max * 100) + '%'; tr.appendChild(rl); }
+      row.pts.forEach(function (p) {
+        var d = document.createElement('button'); d.type = 'button';
+        d.className = 'dot ' + row.fb + (p.failed_after ? ' hollow' : '');
+        d.style.left = (Math.min(p[key], max) / max * 100) + '%';
+        var txt = p.tag + ' · ' + row.label + (p.failed_after ? ' (failed after the push)' : '');
+        d.setAttribute('aria-label', txt + ': ' + fmt(p[key]) + ' ' + unit);
+        var html = '<b>' + p.tag + '</b> ' + (p.failed_after ? '· failed after the push' : '') +
+          '<br>SLIDE e_imp rms ' + p.e.toFixed(2) + ' N<br>SLIDE ρ_UAV max ' + p.rho.toFixed(3) +
+          '<br>F_ext rms ' + p.F.toFixed(2) + ' N · |e_y| rms ' + p.ey.toFixed(1) + ' mm<br>push tilt max ' + p.tilt.toFixed(1) + '°';
+        d.addEventListener('mouseenter', function (e) { show(e, html); });
+        d.addEventListener('focus', function (e) { show(e, html); });
+        d.addEventListener('mouseleave', hide); d.addEventListener('blur', hide);
+        tr.appendChild(d);
+      });
+      r.appendChild(lab); r.appendChild(tr); box.appendChild(r);
+    });
+    var ax = document.createElement('div'); ax.className = 'axis';
+    ticks.forEach(function (t) { var s = document.createElement('span'); s.style.left = (t / max * 100) + '%'; s.textContent = fmt(t); ax.appendChild(s); });
+    box.appendChild(ax);
+    var at = document.createElement('div'); at.className = 'axis-title'; at.textContent = unit === 'N' ? 'N, rms' : 'ρ_UAV = ε / L';
+    box.appendChild(at);
+    if (band) { var bl = document.createElement('p'); bl.className = 'reflab'; bl.textContent = 'Shaded: contact force rms during the slide, ' + band[0].toFixed(1) + '–' + band[1].toFixed(1) + ' N.'; box.appendChild(bl); }
+    if (ref != null) { var rlab = document.createElement('p'); rlab.className = 'reflab'; rlab.textContent = 'Dashed: 0.25, the pick-and-place way-point limit (ε < 0.25 L).'; box.appendChild(rlab); }
+  }
+  var Fs = []; DATA.forEach(function (r) { r.pts.forEach(function (p) { Fs.push(p.F); }); });
+  build('c1', 'e', 4, [0, 1, 2, 3, 4], function (v) { return (+v).toFixed(0); }, 'N', [Math.min.apply(null, Fs), Math.max.apply(null, Fs)], null);
+  build('c2', 'rho', 0.3, [0, 0.1, 0.2, 0.3], function (v) { return (+v).toFixed(1); }, '', null, 0.25);
+  window.addEventListener('scroll', hide, { passive: true });
+})();
+</script>

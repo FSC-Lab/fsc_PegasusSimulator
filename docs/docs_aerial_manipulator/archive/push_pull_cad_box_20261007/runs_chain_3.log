@@ -1,0 +1,5 @@
+  push_pull_push_pose_deg -> [0.0, 26.0, 24.0, 0.0]
+  push_pull_push_distance -> -0.50
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_02] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 9.6 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, t
+CHAIN3 DONE

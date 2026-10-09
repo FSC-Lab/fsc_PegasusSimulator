@@ -13,7 +13,11 @@
 # has no push_pull_* parameters at all), 2 when either node could not be read.
 # A mismatch always wins over a failed read. (Adjust moves push_pull_land and
 # push_pull_start_mark, so those two are not compared.)
-PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg"
+# push_pull_push_time_s (2026-10-07): 24 s, not 12 -- a pull at 12 s failed 0/3.
+# push_pull_world_anchor_on_handle (2026-10-07): a planner built before it has
+# no such parameter, and with world_anchor_ready false would fly the whole grasp
+# CoM-anchored (one run never centred) -- a key missing on the node is a mismatch.
+PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle"
 
 push_pull_planner_check() {
   local yaml="$1" node="${PL_CHECK_NODE:-/uav_0/whole_body_trajectory_planner}"

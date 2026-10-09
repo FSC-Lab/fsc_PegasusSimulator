@@ -1,0 +1,87 @@
+<figure class="wide">
+<div class="ee3d" id="ee3d8">
+  <div class="ee3d-bar">
+    <div class="seg tog" role="group" aria-label="Lines shown">
+      <button type="button" data-cat="ee_ref" aria-pressed="true"><span class="sw dash" style="--c:var(--ink2)"></span>EE planned (figure-8, 1.40 × 0.70 m)</button>
+      <button type="button" data-cat="ee" aria-pressed="true"><span class="sw" style="--c:var(--blue)"></span><span class="sw" style="--c:var(--violet);margin-left:-4px"></span>EE measured</button>
+      <button type="button" data-cat="base_ref" aria-pressed="true"><span class="sw dot" style="--c:var(--ink2)"></span>Airframe planned</button>
+      <button type="button" data-cat="base" aria-pressed="true"><span class="sw" style="--c:var(--aqua)"></span>Airframe measured</button>
+      <button type="button" data-cat="arm" aria-pressed="true"><span class="sw thin" style="--c:var(--ink2)"></span>Arm, airframe to EE every 2 s</button>
+    </div>
+    <div class="seg" role="group" aria-label="Vertical scale">
+      <button type="button" data-z="1" aria-pressed="true">True vertical scale</button>
+      <button type="button" data-z="5" aria-pressed="false">Vertical ×5</button>
+    </div>
+    <button type="button" id="ee3d8-reset" class="plain">Reset all views</button>
+  </div>
+  <div class="ee3d-grid">
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="w3"></div><div class="ee3d-plot" data-flight="w3" aria-label="Rotatable 3D plot, whole-body run WB-3, 0.10 m/s"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="w4"></div><div class="ee3d-plot" data-flight="w4" aria-label="Rotatable 3D plot, whole-body run WB-4, 0.10 m/s"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="r5"></div><div class="ee3d-plot" data-flight="r5" aria-label="Rotatable 3D plot, decoupled run DEC-5, 0.10 m/s"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="r6"></div><div class="ee3d-plot" data-flight="r6" aria-label="Rotatable 3D plot, decoupled run DEC-6, 0.13 m/s"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="w5"></div><div class="ee3d-plot" data-flight="w5" aria-label="Rotatable 3D plot, whole-body run WB-5, 0.13 m/s"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="w6"></div><div class="ee3d-plot" data-flight="w6" aria-label="Rotatable 3D plot, whole-body run WB-6, 0.13 m/s"></div></div>
+  </div>
+  <p id="ee3d8-fallback" hidden>This interactive figure needs the Plotly library, which did not load. Table 9 below carries the same result in numbers.</p>
+</div>
+<script type="application/json" id="ee3d8-data">__DATA__</script>
+<script>
+(function(){
+  var root=document.getElementById('ee3d8'), D=JSON.parse(document.getElementById('ee3d8-data').textContent);
+  var KEYS=['w3','w4','r5','r6','w5','w6'];
+  KEYS.forEach(function(k){root.querySelector('[data-title="'+k+'"]').textContent=D[k].label+({wb:' · whole-body',old:' · decoupled, old gains',new:' · decoupled, tuned gains'})[D[k].grp]+' · EE error '+D[k].rms.toFixed(0)+' mm rms';});
+  if(typeof window.Plotly==='undefined'){
+    root.querySelector('.ee3d-grid').hidden=true; root.querySelector('.ee3d-bar').hidden=true;
+    document.getElementById('ee3d8-fallback').hidden=false; return;
+  }
+  var show={ee_ref:true,ee:true,base_ref:true,base:true,arm:true}, zs=1;
+  var cam0={eye:{x:0.9,y:-1.35,z:0.75},up:{x:0,y:0,z:1},center:{x:0,y:0,z:-0.05}};
+  function clone(o){return JSON.parse(JSON.stringify(o));}
+  var cams={}; KEYS.forEach(function(k){cams[k]=clone(cam0);});
+  function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function col(A,k){return A.map(function(p){return p[k];});}
+  function el(k){return root.querySelector('.ee3d-plot[data-flight="'+k+'"]');}
+  function traces(f){
+    var c={ink:tok('--ink'),ink2:tok('--ink2'),blue:tok('--blue'),orange:tok('--orange'),aqua:tok('--aqua'),violet:tok('--violet')};
+    var n=f.ee.length, eec=({wb:c.blue,old:c.orange,new:c.violet})[f.grp], wx=[],wy=[],wz=[];
+    for(var j=0;j<n;j+=20){wx.push(f.base[j][0],f.ee[j][0],null);wy.push(f.base[j][1],f.ee[j][1],null);wz.push(f.base[j][2],f.ee[j][2],null);}
+    var hov='t = %{customdata[0]:.1f} s into the run<br>EE error %{customdata[1]:.0f} mm<extra>EE measured</extra>';
+    var T=[
+      {meta:'ee_ref',type:'scatter3d',mode:'lines',name:'EE planned',x:col(f.ee_ref,0),y:col(f.ee_ref,1),z:col(f.ee_ref,2),line:{color:c.ink2,width:3,dash:'dash'},hoverinfo:'skip'},
+      {meta:'base_ref',type:'scatter3d',mode:'lines',name:'Airframe planned',x:col(f.base_ref,0),y:col(f.base_ref,1),z:col(f.base_ref,2),line:{color:c.ink2,width:2,dash:'dot'},hoverinfo:'skip'},
+      {meta:'base',type:'scatter3d',mode:'lines',name:'Airframe measured',x:col(f.base,0),y:col(f.base,1),z:col(f.base,2),line:{color:c.aqua,width:4},hoverinfo:'skip'},
+      {meta:'arm',type:'scatter3d',mode:'lines',name:'Arm',x:wx,y:wy,z:wz,line:{color:c.ink2,width:2},opacity:0.45,hoverinfo:'skip'},
+      {meta:'ee',type:'scatter3d',mode:'lines',name:'EE measured',x:col(f.ee,0),y:col(f.ee,1),z:col(f.ee,2),customdata:f.t.map(function(t,i){return [t,f.err[i]];}),line:{color:eec,width:6},hovertemplate:hov},
+      {meta:'ee',type:'scatter3d',mode:'markers+text',name:'start',x:[f.ee_ref[0][0]],y:[f.ee_ref[0][1]],z:[f.ee_ref[0][2]],text:['start'],textposition:'top center',textfont:{color:c.ink,size:11},marker:{size:4,color:c.ink},hoverinfo:'skip'}];
+    T.forEach(function(t){t.visible=show[t.meta];t.showlegend=false;});
+    return T;
+  }
+  // one common span on each axis (the same scale in every view), each view centred on its own figure-8
+  var LO={}, HI={}, half=[0,0,0];
+  KEYS.forEach(function(k){var f=D[k],a=[1e9,1e9,1e9],b=[-1e9,-1e9,-1e9];f.ee.concat(f.ee_ref,f.base,f.base_ref).forEach(function(p){for(var q=0;q<3;q++){if(p[q]<a[q])a[q]=p[q];if(p[q]>b[q])b[q]=p[q];}});
+    for(var q=0;q<3;q++){half[q]=Math.max(half[q],(b[q]-a[q])/2);} LO[k]=a; HI[k]=b;});
+  KEYS.forEach(function(k){for(var q=0;q<3;q++){var mid=(LO[k][q]+HI[k][q])/2;LO[k][q]=mid-half[q];HI[k][q]=mid+half[q];}});
+  function layout(k){
+    var ink=tok('--ink'),ink2=tok('--ink2'),line=tok('--line'), pad=0.04, lo=LO[k], hi=HI[k];
+    var span=[0,1,2].map(function(q){return hi[q]-lo[q];}), m=Math.max(span[0],span[1]);
+    function ax(title,q){return {title:{text:title,font:{color:ink2,size:11}},range:[lo[q]-pad,hi[q]+pad],color:ink2,gridcolor:line,zerolinecolor:line,showbackground:false,tickfont:{color:ink2,size:9}};}
+    return {margin:{l:0,r:0,t:0,b:0},paper_bgcolor:'rgba(0,0,0,0)',font:{family:"'IBM Plex Sans',system-ui,sans-serif",color:ink},showlegend:false,
+      scene:{xaxis:ax('x [m]',0),yaxis:ax('y [m]',1),zaxis:ax('z [m]',2),aspectmode:'manual',
+        aspectratio:{x:(span[0]+2*pad)/m,y:(span[1]+2*pad)/m,z:Math.min(1.2,(span[2]+2*pad)/m*zs)},camera:cams[k]},
+      hoverlabel:{bgcolor:tok('--panel'),bordercolor:line,font:{color:ink}}};
+  }
+  function keepCam(k){try{var c=el(k)._fullLayout.scene._scene.getCamera();if(c)cams[k]=c;}catch(e){}}
+  function draw(k){Plotly.react(el(k),traces(D[k]),layout(k),{displaylogo:false,responsive:true,displayModeBar:false});}
+  KEYS.forEach(function(k){draw(k);el(k).on('plotly_relayout',function(ev){if(ev&&ev['scene.camera'])cams[k]=ev['scene.camera'];});});
+  function press(attr,val){root.querySelectorAll('button['+attr+']').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute(attr)===val));});}
+  root.querySelectorAll('button[data-cat]').forEach(function(b){b.addEventListener('click',function(){
+    var cat=b.dataset.cat; show[cat]=!show[cat]; b.setAttribute('aria-pressed',String(show[cat]));
+    KEYS.forEach(function(k){var e=el(k),idx=[];e.data.forEach(function(t,i){if(t.meta===cat)idx.push(i);});Plotly.restyle(e,{visible:show[cat]},idx);});
+  });});
+  root.querySelectorAll('button[data-z]').forEach(function(b){b.addEventListener('click',function(){
+    zs=+b.dataset.z; press('data-z',b.dataset.z); KEYS.forEach(function(k){keepCam(k);draw(k);});
+  });});
+  document.getElementById('ee3d8-reset').addEventListener('click',function(){KEYS.forEach(function(k){cams[k]=clone(cam0);draw(k);});});
+})();
+</script>
+<figcaption>Fig. 2 — The six figure-8 runs in 3D, world frame, over each run's scored span. The EE line is blue for the whole-body controller and violet for the decoupled controller on its tuned gains. All six views share one scale; each view is centred on its own figure-8, because the planned figure-8 is centred on the gripper's position when it was selected and that differs between flights. Each view rotates on its own: drag to rotate, scroll or pinch to zoom, hover the EE path for time and error. The buttons switch a line on or off in all six views.</figcaption></figure>

@@ -185,3 +185,298 @@ INTEGRATES that reaction pushes through it until break-away:
   (negative distance -- not flown), the hardware |F_hat| noise against the 5 N
   guard.
 
+
+## 8. The 400 g box on the measured table, the evaluation metrics, and what limits the push (2026-10-05)
+
+User request: the experiment table's measured friction is **0.29**; try a **400 g** box.
+0.4 x 9.81 x 0.29 = **1.14 N** to break it loose and to slide it -- the same force as
+the 200 g / 0.6 design (1.18 N), so the force budget, the 5 N guard and the tipping
+margin (now 3.6x) are unchanged. The scene defaults are now 0.400 kg and 0.29 / 0.29
+(07, `PEGASUS_PUSH_*`; static = kinetic kept, section 7). Then: "the arm swang during
+the push" (the user's windowed raw flight) -- tune it, scored by the IMPEDANCE RESIDUAL
+and the PLATFORM DEVIATION. 25 headless flights (pl_9..pl_33), Isaac at RTF 1.
+
+### 8.1 The metrics (new, `tools/pl_metrics.py`)
+
+- **Impedance residual** `e_imp = F_ext - (M_d edot_v + D_d e_v + K_d e_y)`, per task
+  channel x / y / z [N] and heading [N.m], with M_d / D_d / K_d = the law's
+  `wb_my_* / wb_dy_* / wb_ky_*` of the yaml the run flew (`--yaml`). F_ext is the TRUE
+  wrench on the claw: the scene now publishes the box's PhysX contact report
+  (`/push_pull_truth/contact`, normal + friction-anchor impulses kept apart, summed per
+  16 ms) and the scorer calibrates the PhysX sign on the table (its normal force must
+  hold the box up, its friction must oppose the slide). e_y = the TRUE claw (claw_0)
+  minus the streamed r_ed (heading: the law's e_y[3]); every term through the same 5 Hz
+  zero-phase low-pass. Self-check on every run: in the steady slide F_ext along the push
+  = the table's friction on the box (pl_15: +1.05 / +1.05 N; table normal 4.32 N = the
+  box's 3.92 N + the claw's 0.39 N press).
+- **Platform deviation** `eps_UAV = ||r_UAV^ref - r_UAV||`, `rho = eps / L`, L = 0.370 m --
+  exactly the pick-and-place benchmark's (planned airframe from x_cd, q_d, b1_d on the
+  planner's model), with r_UAV the TRUE airframe (`/uav_0/state/pose`, now recorded).
+- Windows: HOLD (end of Ready -> slide start: the grip + the 1.5 s settle), SLIDE (12 s),
+  RELEASE (push end -> Exit), plus APPROACH / EXIT for eps.
+
+### 8.2 Results
+
+| run | feedback | change (push yaml only) | outcome | SLIDE e_imp xyz rms / pk [N] | SLIDE rho max | HOLD e_imp rms |
+|---|---|---|---|---|---|---|
+| pl_9, pl_15, pl_23 | raw | shipped | **3 / 3 complete** | 2.61 / 7.3, 2.46 / 4.7 | 0.215, 0.175 | 0.70, 0.98 |
+| pl_10, pl_19 | fused | shipped | abort (2 / 2) + the user's windowed flight | | | |
+| pl_11 | fused | omega_c_t 2.93 -> 1.0 | abort | | | |
+| pl_12 | fused | omega_x 2.0 -> 0.5 | abort in the settle | | | |
+| pl_13, pl_16 | fused | omega_x 5.0 | push done then release abort; abort | | | |
+| pl_14 | fused | K_y / D_y 80 / 24 | abort in the settle | | | |
+| pl_17 | fused | omega_x 5 + k_R / k_w 2.134 / 1.567 | abort | | | |
+| pl_18 | fused | omega_x 5 + omega_c_r 0.4 | abort at 13.1 s (414 mm) | | | |
+| pl_20 | raw | omega_c_r 0.4 | abort | | | |
+| pl_21, pl_22 | raw | K_psi / D_psi 0.6 / 0.5 (+ omega_c_r 0.4) | complete, box yaw +25 deg, box knocked off the table after | 2.83, 2.35 | 0.172, 0.179 | |
+| pl_24 | raw | k_v 12.58 -> 20 | left DIRECT in Go To Start (free flight) | | | |
+| pl_25 | raw | D_y 26.8 -> 40 | the descent knocked the box 19.5 mm | | | |
+| pl_26 | raw | push 12 -> 20 s | abort, box yaw +63 deg, off the table | | | |
+| **pl_27**, pl_28 | raw | `wb_attitude_from_odometry` | **complete**, abort (box stuck 3 s at the slide start) | **0.87 / 2.0** | **0.119** | 1.69 |
+| **pl_29**, pl_30, pl_31 | raw | `wb_attitude_odometry_correction_rad_s` 1.0 | complete, complete, abort (same signature) | **1.38** / 2.8, 1.61 / 3.9 | **0.112**, 0.213 | 3.77, 1.96 |
+| pl_32, pl_33 | raw | `wb_attitude_odometry_correction_rad_s` 3.0 | complete, complete | 1.68 / 4.8, 2.15 / 6.0 | 0.236, 0.215 | 0.94, 0.61 |
+
+Shipped raw, SLIDE: F_ext 1.4 N rms against an e_imp of 2.5 N -- **the impedance is not
+realised**; its biggest part is LATERAL (2.0 N rms of the 2.6) and it is K e with no
+force behind it (the claw 7.6 mm sideways, the true lateral force -0.04 N). Figure:
+`runs/metrics_baseline_vs_attitude.png` (pl_23 / pl_27 / pl_29: residual, push force,
+rho through the contact).
+
+### 8.3 What limits it -- the law flies on the wrong STATE in contact, not on the wrong gains
+
+Measured by taking the law's own picture of the claw apart with the ground truth:
+
+1. **Attitude (raw AND fused).** The whole-body client takes its attitude from PX4's
+   `vehicle_attitude` (EKF2). In free flight it agrees with the true (mocap) attitude
+   to 0.1-0.5 deg; **in contact it drifts to 1-2.9 deg** (logged live in pl_27..pl_33,
+   one 5.6 deg spike), while the push shakes the IMU 6-7x harder (horizontal HF
+   acceleration 0.29 / 0.24 against 0.04 m/s^2, pl_19). The claw hangs ~0.33 m from the
+   body, so the law's claw is **6-7 mm from the real one** (the model FK on the true
+   attitude matches the true claw to 0.1-0.2 mm; base position and joint angles are
+   exact). The impedance then acts on that phantom: it is the lateral residual, and the
+   wrist pair q1 / q4 counter-rotating 10-20 deg is the visible "arm swing" (the claw is
+   clamped to the fin, so it is the box that turns -- the claw's lateral position
+   follows the box yaw to 0.5 mm). The heading stiffness, the observer bandwidths, the
+   base / EE damping and the push speed (pl_20..pl_26) do not touch this, and most made
+   it worse.
+2. **Position (fused only).** The EKF2-fused odometry the hardware stack flies on is 2-4
+   mm from truth in free flight and **10-15 mm off along the push axis (+ ~10 mm std) in
+   contact** (raw mocap: 0.5 mm everywhere). Not a lag (time-shifting does not shrink
+   it); EKF2 keeps fusing the vision (cs_ev_pos = 1). With the claw world-held, K_y 212
+   turns 15 mm into a ~3 N phantom force on a box held by 1.14 N -- every fused flight
+   failed, and no gain change (7 tried) survived it.
+
+**The remedy is the state, and it is a code option, default off** (fsc_autopilot_ros2,
+whole-body client, uncommitted; every existing config byte-identical):
+`wb_attitude_from_odometry` (the law's attitude = the odometry orientation) and
+`wb_attitude_odometry_correction_rad_s` (PX4's 250 Hz attitude kept, its slow error to
+the odometry orientation removed through a first-order filter; the controller logs
+`|odometry - PX4|` every 2 s). Both cut the slide residual (by 20-65 %; in pl_27 and
+pl_29 also the push tilt, 4 deg against ~10), but **robustness is NOT shown**: 5 of 7 attitude-fix flights
+completed against 3 of 3 shipped, and both failures share one signature (the box stuck
+for ~3 s at the slide start with the tilt already 5-6 deg, then stick-slip and a 0.9 Hz
+oscillation), and the grip phase got worse at 1 rad/s (HOLD 2-3.8 N). A likely reason,
+not fixed: the PLANNER still computes the grasp target and its descent trim with PX4's
+attitude, so the law and the planner disagree by the PX4 error and the claw lands a few
+mm off the fin. **Shipped yaml unchanged: both keys written false / 0.**
+
+### 8.4 For the experiment
+
+- **Check the estimator in contact first, on the bench**: hold the gripped box with the
+  vehicle hovering (or on a stand) and log PX4 `vehicle_attitude` + the EKF2-fused odometry
+  against the raw OptiTrack pose. 1-3 deg / 1 cm there would reproduce today's failure.
+  (The real IMU is far noisier than Isaac's -- 1.3-1.7 m/s^2 above 2 Hz, sim 2-6 % of
+  that -- so the sim may understate it.)
+- **The likely fix is a hybrid feedback** for the push: position + attitude from the
+  motion capture (exact; on hardware a 120 Hz OptiTrack is ~0.1-0.5 mm), velocity from
+  EKF2 (smooth; the 120 Hz finite-difference velocity is what made raw 0921 noisy).
+  Needs an estimator / relay change (the law's odometry topic is hard-coded) and the
+  planner on the same attitude -- not done tonight.
+- Command.md section 17's stack step now uses the RAW stack: the fused one fails in this
+  scene (above).
+- Not covered: the hybrid feedback; the planner on the corrected attitude; pull;
+  hardware; repeat counts beyond 2-3 per configuration (run-to-run scatter is large in
+  contact, section 7's lesson).
+
+Tools: `tools/pl_metrics.py` (the metrics; `PYTHONNOUSERSITE=1 /usr/bin/python3`),
+`tools/pl_timeline.py` (0.5 s bins of tilt / |e_R| / force / box through a step).
+`pl_mission.py` now records the contact truth, the true airframe and the reference
+derivatives; each tuning run's yaml is saved beside it as `runs/<tag>.yaml`.
+
+### 8.5 Why EKF2 drifts in contact -- tested (2026-10-06, user question)
+
+Question: is it lag (the vehicle moves suddenly, EKF2 smooths)? **No.** Time-shifting
+EKF2's position against the truth by -50..+400 ms does not reduce the error, and the push
+is slow (<= 0.09 m/s: 20 ms of lag = 2 mm, not 15). It is an OFFSET plus ~7 mm of wander,
+while EKF2 keeps fusing the vision (cs_ev_pos = 1).
+
+**Cause: EKF2 trusts the mocap ~200x less than it deserves, so in contact its IMU-driven
+prediction wanders and the vision only weakly pulls it back.** Read live from the
+running PX4: `EKF2_EVP_NOISE 0.1`, `EKF2_EVV_NOISE 0.1`, `EKF2_EVA_NOISE 0.1` (PX4
+defaults, no script sets them), `EKF2_EV_NOISE_MD 0`. In mode 0 EKF2 uses
+max(parameter^2, the estimator's variance) (EKF2.cpp 2226-2310) -> the mocap counts as
+10 cm / 10 cm/s / 5.7 deg noisy (the estimator itself sends 1 cm / 1 cm/s / 0.57 deg
+roll-pitch / 5 deg yaw, hard-coded in indoor_state_estimator.cpp:172-177); the simulated
+mocap is 0.5 mm. In contact the IMU's horizontal vibration is 6-7x larger. The attitude
+error is mostly YAW (the weakest anchor): -1.3..-1.4 deg mean in the push (raw runs:
+up to 2.6 deg); tilt 0.4 deg. With the claw ~0.13 m ahead of the body, 2.6 deg of yaw =
+~6 mm sideways -- the lateral phantom of section 8.3.
+
+`tools/ekf_check.py` (EKF2 position + PX4 attitude vs Isaac truth, per step; needs the
+`<tag>_px4.npz` the diagnostic recorder writes), fused runs, one each:
+
+| run | EKF2 vision trust | push: position est - truth (mean / std, along the push) | push: yaw err | free-flight pos std | mission | SLIDE e_imp rms | SLIDE rho max |
+|---|---|---|---|---|---|---|---|
+| pl_34 | shipped (0.1 / 0.1 / 0.1, mode 0) | -8.7 / 6.6 mm | -1.40 deg | 2-4 mm | push done, diverged in the release | 3.73 N | 0.242 |
+| pl_35 | EVP 0.01 | -4.3 / 7.5 mm | -1.28 deg | 0.5-1.7 mm | push done, diverged in the release | 3.20 N | 0.244 |
+| pl_36 | mode 1, EVP 0.01, EVV 0.03, EVA 0.05 | -4.7 / 6.9 mm | **-0.64 deg** | 1.3-2.7 mm | **complete** | 2.85 N | 0.266 |
+
+Trusting the mocap more HALVES EKF2's contact offset and yaw error and gave the first
+complete fused mission -- but ~7 mm of wander stays and the impedance residual is still
+no better than raw mocap (2.5 N). **It cannot close the gap: PX4 hard-codes a 1 cm floor
+on the vision position std** (`ev_pos_control.cpp:145`, `sq(0.01f)`), so EKF2 can never
+use the mocap at its real accuracy. Conclusion: tune the Pixhawk's `EKF2_EV*` anyway
+(they are at the 10 cm defaults unless someone set them -- read them before the flight),
+but for the contact task feed the law the motion capture's position AND attitude
+directly (the hybrid of 8.4: mocap pose, EKF2 velocity). All four parameters were
+restored to 0 / 0.1 / 0.1 / 0.1 and saved after the test (verified). One run per setting.
+
+## 9. The real box, a post handle, the folded arm, and the gripper as the contact switch (2026-10-06)
+
+User: "adjust the handle of the box as well and also determine the appropriate arm pose ...
+the gripper will be the switch signal for physical interaction for the disturbance observer
+... the interaction should be the force parallel to the table surface." The real box: 240
+(along the push) x 160 x 95 mm (mass assumed 400 g, mu 0.29). 15 headless flights
+(pl_37..pl_51), scored with `tools/pl_metrics.py`; summary page
+`summary.html` (artifact "Push-and-Pull Simulation Results", built by
+`tools/report_data.py` + `tools/build_summary_page.py`).
+
+**What changed (now the scenario default):**
+- Scene (07): the real box; a 20 x 30 mm vertical POST on its top centre
+  (`PEGASUS_PUSH_HANDLE=post|fin`, `PEGASUS_PUSH_POST_TOP` default 0.298 m), so the push line
+  passes through the box's friction centre (no yaw lever; the fin sat 0.155 m behind it).
+- Push pose [0, 30, 40, 0] deg (beta 70): the claw 0.087 m below the system CoM (was 0.284), so
+  a 1.14 N horizontal push is 0.10 N.m of pitch (was 0.32); claw 20 deg below horizontal;
+  70 deg off the wrist singularity (was 10). Grasp 0.273 m above the table so the gear clears it by
+  ~6.5 cm; tipping mu h/(L/2) = 0.66 (L/3 rule 0.079 < 0.080).
+- Planner (fsc_trajectory_planner, default-off options, gtests 8/8): `push_pull_approach_back`
+  (approach from behind along the nose), `push_pull_exit_dz`, `push_pull_contact_at_ready` false
+  (CONTACT at the Push press = the jaws' grip) and `push_pull_contact_off_at_push_end` true (free
+  before the jaws open). Push yaml: approach 0.12 m behind + 0.10 m above, exit 0.20 m.
+- Mission takeoff 1.3 m (pl_mission default; Command.md section 17): from 1.0 m the planner refused
+  Go To Start (gear vs table, pl_37).
+
+**Results (raw mocap):** 6 / 6 complete (pl_38, 39, 42, 49 at the 60 deg fold [0, 20, 40, 0];
+pl_50, 51 at 70 deg). SLIDE impedance residual 2.5 N (side fin) -> 1.27-1.68 N (60 deg) ->
+**0.94-0.98 N (70 deg)**; rho_UAV max 0.18-0.22 -> **0.06-0.09**; measured net pitch moment of the
+contact force about the CoM 0.18-0.22 -> **0.00-0.12 N.m**; push tilt 9-10 -> 3-6 deg; claw slip on
+the handle ~21 -> 2-4 mm. Gripper switch: release residual 1.07-1.35 N vs 1.70-4.11 N on the
+old timing (pl_39 spiked to 11.6 N as the jaws opened in CONTACT); box yaw -1..+2 deg vs 5-6 deg.
+
+**Not solved:**
+- **The force is still not parallel to the table**: 28-38 deg above it (the claw presses down
+  0.55-1.0 N, MORE than the side fin's 0.4-0.55; table normal 4.5-5.0 N vs 3.9 N). ~0.4 N is the
+  vertical impedance error, the rest the grip on the post; the 70 deg fold barely changed it. It
+  costs little torque now (the claw is ahead of the CoM, so the upward reaction offsets the
+  horizontal push's moment) but it loads the box onto the table.
+- **Fused (EKF2) feedback: 0 / 6** -- the state-estimate problem of section 8 is untouched by
+  geometry (force guard x3 with real stick-slip spikes of 15-17 N, left DIRECT x1).
+- **The landing gear can hit the box**: at the grasp the skids straddle the 160 mm box 6 cm clear
+  a side but hang BELOW its 95 mm top; approaching at grasp height a skid clipped it (pl_40/41,
+  45-52 mm). Fixed by the higher approach; the planner's keep-out knows only the table -- a box +
+  handle keep-out is the proper fix.
+- The scene table is 150 mm deep, the real box 160 mm wide (5 mm overhang a side).
+
+**The printable handle (2026-10-06, user: "we can 3D print the handle").** `handle/`:
+`push_handle.scad` (parametric source: post, base plate, root ribs, M4 holes, centring notches,
+grasp-height groove), `push_handle.stl` (solid body only, overlapping closed solids -- slicers
+union them; glue or tape the plate), `make_handle_stl.py` (regenerates the STL + preview,
+`PYTHONNOUSERSITE=1 /usr/bin/python3`), `push_handle_preview.png`. Post 20 mm ACROSS the jaws x
+30 mm ALONG the push, 203 mm above the box top (top 0.298 m, grasp 0.273 m above the table), on a
+70 x 90 x 4 mm plate centred on the box top. ~150 cm^3 of model -> roughly 80-110 g in PLA at
+4 perimeters / 20-30 % infill: weigh box + handle, it sets the friction force. Checks before
+printing: the 20 mm thickness must sit inside the REAL gripper's closing range with squeeze margin
+(the custom claw strokes -9.7..+13.2 mm each, absolute widths not recorded in fsc_open_manipulator);
+the post height follows from the model's landing gear (skids 0.313 m under the body origin) --
+re-derive it if the real gear differs.
+User's answers (2026-10-06): the real gripper opens to 45 mm with foam/rubber pads (held a smooth
+200 g weight) -> 20 mm is fine; **the experiment drone is the T650, whose landing gear is ~7 cm
+SHORTER** than the X650 the sim models (airframe bottom plate to ground 22-23 cm vs 29-30 cm). With
+the printed post (grasp 0.273 m) the T650's gear clears the table by ~13.5 cm at the 70 deg pose
+(sim: 6.5 cm), and a more horizontal claw becomes possible on hardware: [0, 40, 40, 0] (claw 10 deg
+below horizontal, gear ~9 cm) or [0, 45, 45, 0] (horizontal, ~5.7 cm, q2 5 deg off its stop). The
+planner already takes `push_pull_gear_depth` (0.313 = X650; ~0.243 for the T650, assuming the same
+body-origin-to-plate offset); the Isaac asset still has the X650 legs, so the sim cannot fly those
+folded poses at this grasp height without shortening them.
+
+### 9.1 The T650 landing gear in Isaac (2026-10-06, user request)
+
+`AM_T650.usda` = a COPY of `AM_xfwd.usda` with the landing gear 0.070 m shorter
+(`robotic_arm/utils_model/make_t650_gear_asset.py`, run under `~/isaacsim/python_r_fsc.sh`; the
+original is verified untouched). The gear is part of the one body mesh
+(`/gripper_bat/body/body`, 550 k points, convexDecomposition, no cooked collision data): every
+point below z = -0.06 m (body frame) is compressed linearly in z (k = 0.7228), so the skids end at
+-0.2425 m (was -0.3125), the struts stay straight, nothing above the frame moves. The push scene
+loads it by default (`PEGASUS_PUSH_AM_ASSET`, resting body height `PEGASUS_PUSH_GROUND_BODY_Z`
+0.235 m -- measured 0.235 in pl_52); the planner plans with the T650 gear
+(`push_pull_gear_depth: 0.2425` in the push yaml); the scripted landing goes to 0.24 m
+(`pl_mission --land-z`), the manual one needs `ps4_teleop_bringup.py land --land-z 0.25`.
+
+Flown (raw, gripper contact switch):
+
+| run | pose | outcome | SLIDE e_imp | rho max | contact force: down-press, angle | table normal |
+|---|---|---|---|---|---|---|
+| pl_52 | 70 deg [0, 30, 40, 0] | complete | 1.11 N | 0.086 | 0.56 N, +24 deg | 4.48 N |
+| pl_56 | 70 deg | complete | 2.47 N | 0.109 | 0.51 N | 4.44 N |
+| pl_54 | 80 deg [0, 40, 40, 0] | aborted in the settle (force guard; the box moved 18 mm before the slide) | | | | |
+| pl_55 | 80 deg | push done, then left DIRECT in the release | 1.20 N | 0.086 | **0.01 N, ~0 deg** | **3.93 N = the box's weight** |
+
+(pl_53 never flew: the stack's ROS feeds did not come up in 90 s.) The 70 deg default works on the
+T650 gear (2 / 2, a large run-to-run spread: 1.11 vs 2.47 N). **The 80 deg fold makes the contact
+force PARALLEL to the table** -- the user's goal -- but its grasp and release are not stable yet
+(0 / 2 complete); the claw is ~10 deg below horizontal there, and the model's claw point lies 39 mm
+beyond the pads along the claw axis, so how the jaws meet the post changes. Not adopted.
+
+### 9.2 Inside the real arm's q2 range [-20, 45] deg, pushing and pulling (2026-10-06, user request)
+
+The user measured q2 at about [-20, 45] deg on the real arm (q3 fine). The scene now authors it as
+hard stops on `manip_joint2` at spawn (`PEGASUS_PUSH_Q2_LIMIT_DEG`, default `-20,45`; `asset` keeps
+-90..50; forwarded by the push launcher). q3 keeps its +50 stop and must stay above 0 (below is the
+elbow-singular branch). The planner's own joint box is a compiled shared constant (q2 <= 50) and was
+NOT changed. All runs: T650 gear, raw mocap, gripper contact switch, 400 g, mu 0.29. A pull starts the
+box at y = -0.25 and uses `push_pull_push_distance: -0.50`.
+
+**The mechanism.** The claw is world-held, so the arm takes up every millimetre the airframe drifts
+from its plan: 4-5.5 deg of q2 and 6-8 deg of q3 per cm along the arm, whatever the fold (planner
+model). The fold only sets the window before a limit: [0,40,40,0] 1.3 / 1.6 cm, [0,30,40,0] 3.6 /
+1.6 cm, [0,26,24,0] 3.3 / 3.5 cm, [0,22,18,0] 2.3 / 4.2 cm (until q2 = 45 or q3 = 0 / until q3 = 50).
+In contact the airframe drifted 10-29 mm (std), peaks 30-40 mm. Earlier 70 deg runs (asset stop)
+already reached q2 47-50 and rode q3's +50 stop 22-32 % of the push.
+
+| config (q2 stops -20..45 unless noted) | runs | result |
+|---|---|---|
+| push 70 deg [0,30,40,0] | pl_66 | 0/1: q3 pinned on +50, box shoved 24 mm in the settle, force guard at 1.5 s |
+| push 50 deg [0,26,24,0] | pl_62 | 0/1: 313 mm, then q2 -> 45 and q3 < 0, guard |
+| push 40 deg [0,22,18,0] | pl_63 | 0/1: same, 327 mm |
+| push 50 deg, `wb_l1_contact_hold_translation` true | pl_67 | 0/1: airframe 55 mm off its plan from the grip |
+| **push 50 deg, `wb_l1_omega_c_t` 2.927 -> 1.0** | **pl_71, pl_74** | **2/2 slid 0.50 m**: pl_71 complete (SLIDE e_imp 1.04 N, rho 0.085, q2 12-39, q3 8-42); pl_74 slide 0.84 N, rho 0.067, force 0.6 deg from parallel, then failed at the exit (the arm swung after the release while the slow observer still carried the box force) |
+| pull 70 deg, asset stop (q2 <= 50) | pl_73 | 1/1 complete: 1.20 N, rho 0.067, force 6 deg from parallel, q2 peaked 42 |
+| pull 70 deg | pl_76 | 0/1: q2 -> 45, q3 < 0 at 5.3 s |
+| pull 50 / 40 deg | pl_64, pl_65 | 0/2 |
+| pull 50 deg, `omega_c_t` 1.0 | pl_72, pl_75 | 0/2: the box ran ahead of its reference at mid-slide (0.3 m/s vs ~0.09 planned), then q3 < 0 |
+
+Drift with the shipped observer at 50/40 deg: 15-29 mm std; with `omega_c_t` 1.0: 7-11 mm. Its
+dominant frequency varies 0.15-1.5 Hz between runs, so the observer is a contributor, not the only
+source. `omega_c_t` is global: the approach error rose to ~0.08 of the reach. Why the box runs ahead
+in the pull is NOT explained.
+
+The EE reference stays parallel to the table: the planned claw height varies 1.3-1.4 mm over the
+0.50 m slide (the planned CoM height is exactly constant) -- the arm is held still while the planned
+airframe tilts ~0.1 deg to accelerate.
+
+Nothing adopted (the push yaml is unchanged). Next: a contact-only translational observer bandwidth
+(code), the 50 deg pose, the planner's q2 limit as a parameter, the pull's run-away, repeats.
+Tools: `tools/plot_q2limit.py` (joint window figure), `tools/report_data.py` (now also q2/q3 window,
+q3-stop time, airframe drift std/frequency, failure time and box travel at failure), the scene knob
+in `07_px4_direct_t650_aerial_manipulator_push_and_pull.py`, `contact_hold_translation` in
+`utils/wb_l1_set_gains.py`. Report: artifact Pq9VWkJk2XqmKM7dymZ2Q4, version 3.

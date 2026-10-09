@@ -1,0 +1,8 @@
+  push_pull_world_anchor_ready -> false
+[cad_19] completed
+  push_pull_world_anchor_ready -> false
+[cad_20] ABORTED: the claw never came within 20 mm / 3 mm across the fin (last 15 / -14.3 mm)
+  push_pull_world_anchor_ready -> false
+  push_pull_push_distance -> -0.50
+[cad_21] completed
+CHAIN9 DONE

@@ -10,9 +10,9 @@
 # gamepad -- is that launcher's, unchanged.
 #
 #   PNP_FEEDBACK=fused (default)  EKF2-fused odometry, the hardware path:
-#       WB_SIM_PROFILE=pick_place start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh first
+#       WB_SIM_PROFILE=pick_and_place start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh first
 #   PNP_FEEDBACK=raw              raw mocap odometry:
-#       WB_SIM_PROFILE=pick_place start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh first
+#       WB_SIM_PROFILE=pick_and_place start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh first
 #
 # Usage: start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh [--in-terminal] <config>
 set -euo pipefail
@@ -27,9 +27,9 @@ export AM_ISAAC_SCENE_LABEL="AM-T650-WB-L1-4D-PNP"
 # The payload is obj_0 in this scene; the EE marker cube would publish it too.
 export PEGASUS_EE_MARKER_CUBE=0
 # The paired config: the mirror plant + controller with the tuned pick-and-place
-# planner block (..._sim_pick_place.yaml). The STACK must be started with the
+# planner block (..._sim_pick_and_place.yaml). The STACK must be started with the
 # same profile -- this launcher checks the running planner below.
-export WB_SIM_PROFILE="${WB_SIM_PROFILE:-pick_place}"
+export WB_SIM_PROFILE="${WB_SIM_PROFILE:-pick_and_place}"
 
 [[ -f "$AM_ISAAC_SCENE_SCRIPT" ]] || { echo "ERROR: missing $AM_ISAAC_SCENE_SCRIPT" >&2; exit 1; }
 
@@ -40,7 +40,7 @@ export WB_SIM_PROFILE="${WB_SIM_PROFILE:-pick_place}"
 # (list-sessions, not `tmux info`: info needs an attached client, and a
 # background launch has none -- the knobs then silently never arrive)
 if tmux list-sessions >/dev/null 2>&1; then
-  for v in PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
+  for v in PEGASUS_PNP_PAYLOAD PEGASUS_PNP_PAYLOAD_USD PEGASUS_PNP_GRIP_FRICTION PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_PLATFORM PEGASUS_PNP_HAT_USD PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
     if [[ -n "${!v:-}" ]]; then
       tmux setenv -g "$v" "${!v}"
       echo -e "\033[1;33m  scene knob $v=${!v}\033[0m"
@@ -57,8 +57,8 @@ fi
 # on a mismatch (2026-10-03: the old check on approach_dz <= 0 stopped seeing
 # anything once that default became 0.20 m, and a stack without the profile
 # was reported as loaded). PP_CHECK=0 skips it.
-PP_PLANNER_YAML="${WB_SIM_YAML:-${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_place.yaml}"
-if [[ "${PP_CHECK:-1}" != 0 && "$WB_SIM_PROFILE" == pick_place ]] && command -v ros2 >/dev/null 2>&1; then
+PP_PLANNER_YAML="${WB_SIM_YAML:-${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml}"
+if [[ "${PP_CHECK:-1}" != 0 && ( "$WB_SIM_PROFILE" == pick_and_place || "$WB_SIM_PROFILE" == pick_place ) ]] && command -v ros2 >/dev/null 2>&1; then
   source "$SCRIPT_DIR/lib/pick_place_planner_check.sh"
   set +e; _pp_out=$(pick_place_planner_check "$PP_PLANNER_YAML" "$PP_PLANNER_YAML"); _pp_rc=$?; set -e
   if [[ $_pp_rc == 0 ]]; then
@@ -80,5 +80,5 @@ case "${PNP_FEEDBACK:-fused}" in
 esac
 [[ -x "$LAUNCHER" ]] || { echo "ERROR: missing executable $LAUNCHER" >&2; exit 1; }
 
-echo -e "\033[1;35mPICK-AND-PLACE SCENE ($AM_ISAAC_SCENE_LABEL, ${PNP_FEEDBACK:-fused} feedback): field 4.5 x 4.2 m (x by y), vehicle at ${PEGASUS_PNP_SPAWN_XY:-0.10,-0.07} facing +x, pillars at (1.0, 1.0) PICK and (-1.0, -1.0) PLACE, 200 g payload (box + 20 mm handle) on the PICK pillar, 160 mm caps on both pillars. Mocap: /obj_0/mocap = the payload box (CG + yaw), /drop_0/mocap = PLACE pillar top.\033[0m"
+echo -e "\033[1;35mPICK-AND-PLACE SCENE ($AM_ISAAC_SCENE_LABEL, ${PNP_FEEDBACK:-fused} feedback): field 4.5 x 4.2 m (x by y), vehicle at ${PEGASUS_PNP_SPAWN_XY:-0.10,-0.07} facing +x, pillars at (1.0, 1.0) PICK and (-1.0, -1.0) PLACE, ${PEGASUS_PNP_PAYLOAD_MASS:-0.2} kg payload (${PEGASUS_PNP_PAYLOAD:-box}: box = the CAD basket + hanger, hook grasp; plate = the old box + 20 mm handle) on the PICK pillar, ${PEGASUS_PNP_PLATFORM:-hat} on both pillars (hat = the printed Top_Hat, its platform 8 mm above the 1 m pillar top; cap = the old 160 mm disc). Mocap: /obj_0/mocap = the payload box (CG + yaw), /drop_0/mocap = PLACE pillar top.\033[0m"
 exec "$LAUNCHER" "$@"

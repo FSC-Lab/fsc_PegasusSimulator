@@ -110,8 +110,10 @@ ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
-export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py"
-export INDOOR_SIM_VEHICLE_LABEL="AM-T650-MODULAR"
+# AM_ISAAC_SCENE_SCRIPT / _LABEL (2026-10-08): a scene on 06's plant instead of 06 itself
+# (the pick-and-place wrapper sets them), as on the 4-D and geometric launchers.
+export INDOOR_SIM_PEGASUS_SCRIPT="${AM_ISAAC_SCENE_SCRIPT:-$REPO_ROOT/application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py}"
+export INDOOR_SIM_VEHICLE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-MODULAR}"
 export INDOOR_SIM_PX4_PROFILE="rootfs_fsc_indoor_am_t650"
 # Fail before physics starts if this plant ever drifts from the mass used by
 # the paired whole-body controller YAML.
@@ -119,7 +121,8 @@ export PEGASUS_EXPECTED_TOTAL_MASS="3.746170"
 case "${WB_SIM_PROFILE:-mirror}" in
   mirror)     _MOD_SUFFIX="_sim.yaml" ;;
   robustness) _MOD_SUFFIX="_sim_robustness.yaml" ;;
-  *) echo "ERROR: WB_SIM_PROFILE must be 'mirror' or 'robustness' (got '${WB_SIM_PROFILE}')" >&2; exit 2 ;;
+  pick_and_place|pick_place) _MOD_SUFFIX="_sim_pick_and_place.yaml" ;;
+  *) echo "ERROR: WB_SIM_PROFILE must be 'mirror', 'robustness' or 'pick_and_place' (got '${WB_SIM_PROFILE}')" >&2; exit 2 ;;
 esac
 export WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_modular_adaptive_direct_actuation_t650${_MOD_SUFFIX}}"
 

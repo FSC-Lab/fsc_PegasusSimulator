@@ -13,7 +13,7 @@ import os, sys, math
 import numpy as np
 np.set_printoptions(precision=4, suppress=True, linewidth=200)
 DATA = os.environ.get("AM_NPZ", "/tmp/claude-1000/-home-shiqi-fsc-PegasusSimulator/bf8404ab-c60b-4598-9acf-e8041f10c130/scratchpad/npz")
-_REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))
+_REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "..", ".."))
 sys.path.insert(0, os.path.join(_REPO, "extensions", "fsc_aerial_manipulation"))
 from fsc_aerial_manipulation.robotic_arm.utils_planner import transition_planner as TP  # noqa: E402
 

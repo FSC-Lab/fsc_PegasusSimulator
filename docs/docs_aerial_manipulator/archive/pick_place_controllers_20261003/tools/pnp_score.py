@@ -16,7 +16,9 @@ import numpy as np
 
 PLACE_XY = np.array([-1.0, -1.0])
 PICK_XY = np.array([1.0, 1.0])
+# the platform top: 1.000 (the 10-03 cap) or 1.008 (the 10-08 hat); `placed` accepts either
 CAP_TOP, BOX_HALF, CAP_R = 1.0, 0.0325, 0.08
+PLATFORM_TOPS = (1.0, 1.008)
 STEPS = ["go_to_start", "ready_pick", "pick", "exit_pick", "go_to_place_start",
          "ready_place", "place", "exit_place", "go_to_land_start", "execute_land"]
 
@@ -41,7 +43,7 @@ def score(path):
         q_end = pay[-1, 4:8]
         out["picked"] = bool(np.max(pay[:, 3]) > CAP_TOP + BOX_HALF + 0.10)
         on_place = (np.linalg.norm(p_end[:2] - PLACE_XY) < CAP_R and
-                    abs(p_end[2] - (CAP_TOP + BOX_HALF)) < 0.01)
+                    min(abs(p_end[2] - (t + BOX_HALF)) for t in PLATFORM_TOPS) < 0.01)
         out["placed"] = bool(on_place and tilt_deg(q_end[None])[0] < 5.0)
         out["place_off_mm"] = float(np.linalg.norm(p_end[:2] - PLACE_XY) * 1e3)
         out["payload_tilt_end"] = float(tilt_deg(q_end[None])[0])

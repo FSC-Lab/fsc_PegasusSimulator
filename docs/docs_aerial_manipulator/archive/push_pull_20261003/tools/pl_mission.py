@@ -74,7 +74,8 @@ class Driver(Node):
         self.ref = np.array([0.0, 0.0, a.hover_z])
         self.stream_ref = True
         self.grip_cmd = None
-        self.L = {k: [] for k in ("odom", "dbg", "box", "ee", "ref", "grip", "joints", "arrival", "claw")}
+        self.L = {k: [] for k in ("odom", "dbg", "box", "ee", "ref", "grip", "joints", "arrival", "claw",
+                                  "contact", "base_truth", "refd")}
         sub = self.create_subscription
         sub(Odometry, f"{ns}/state_estimator/local_position/odom", self.on_odom, 10)
         sub(String, f"{ns}/{DA}/mode", lambda m: setattr(self, "mode", m.data), LATCHED)
@@ -91,6 +92,11 @@ class Driver(Node):
         sub(JointState, f"{ns}/isaacsim_manipulator/gripper_state", self.on_grip, qos_profile_sensor_data)
         sub(PoseStamped, "/claw_0/state/pose", self.on_claw, qos_profile_sensor_data)
         sub(JointState, f"{ns}/isaacsim_manipulator/joint_states", self.on_joints, qos_profile_sensor_data)
+        # ground truth for the metrics (pl_metrics.py): the box's PhysX contacts and the
+        # airframe's true pose (Isaac, not the estimate the law flies on)
+        sub(Float64MultiArray, "/push_pull_truth/contact",
+            lambda m: self.L["contact"].append([self.now(), *m.data, self.step]), 50)
+        sub(PoseStamped, f"{ns}/state/pose", self.on_base_truth, qos_profile_sensor_data)
         self.ref_pub = self.create_publisher(PositionControllerReference,
                                              f"{ns}/fsc_autopilot_ros2/position_controller/reference", 10)
         self.grip_pub = self.create_publisher(Float64, f"{ns}/isaacsim_manipulator/gripper_command", 10)
@@ -102,6 +108,7 @@ class Driver(Node):
                   "reset", "abort"):
             self.cli[n] = self.create_client(Trigger, f"{ns}/{PL}/{n}")
         self.direct = self.create_client(SetBool, f"{ns}/{DA}/set_direct_mode")
+        self.clear = self.create_client(Trigger, f"{ns}/whole_body_planner/clear")
         self.create_timer(1.0 / a.rate, self.tick)
 
     # ---- callbacks ---------------------------------------------------------
@@ -145,11 +152,17 @@ class Driver(Node):
         r = m.r_ed
         self.L["ref"].append([self.now(), r.x, r.y, r.z, m.x_cd.x, m.x_cd.y, m.x_cd.z,
                               *list(m.q_d)[:4], m.b1_d.x, m.b1_d.y, self.step])
+        v, a = m.r_ed_dot, m.r_ed_ddot
+        self.L["refd"].append([self.now(), v.x, v.y, v.z, a.x, a.y, a.z, self.step])
 
     def on_box(self, m):
         p, q = m.pose.position, m.pose.orientation
         self.box = np.array([p.x, p.y, p.z, q.w, q.x, q.y, q.z])
         self.L["box"].append([self.now(), *self.box, self.step])
+
+    def on_base_truth(self, m):
+        p, q = m.pose.position, m.pose.orientation
+        self.L["base_truth"].append([self.now(), p.x, p.y, p.z, q.w, q.x, q.y, q.z, self.step])
 
     def on_claw(self, m):
         p = m.pose.position
@@ -321,6 +334,15 @@ class Driver(Node):
         self.mark("direct")
         self.stream_ref = False
         time.sleep(a.direct_settle)
+        # The climb's reference stream can overlap the switch by a tick, and the
+        # planner then holds that setpoint as a PENDING drone target (PLANNED,
+        # never executed; cad_02, 2026-10-07). Clear it, as ps4_teleop_bringup does.
+        if not self.status.startswith("HOLD"):
+            self.ev(f"planner {self.status!r} after the switch -- clearing the stray pending target")
+            fut = self.clear.call_async(Trigger.Request())
+            t_c = time.time()
+            while not fut.done() and time.time() - t_c < 5.0:
+                time.sleep(0.05)
         self.wait(lambda: self.status == "HOLD", 15, "planner HOLD")
         self.trig("plan")
         self.wait(lambda: self.pl_status.startswith("READY"), 60, "mission READY")
@@ -437,8 +459,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--namespace", default="/uav_0")
     ap.add_argument("--rate", type=float, default=50.0)
-    ap.add_argument("--hover-z", type=float, default=1.0)
-    ap.add_argument("--land-z", type=float, default=0.30)
+    # 1.3 m (2026-10-06): the post-handle push pose holds the body lower over the
+    # box; from a 1.0 m hover the planner refuses Go To Start (gear vs table)
+    ap.add_argument("--hover-z", type=float, default=1.3)
+    # 0.24 (2026-10-06): the T650 gear (AM_T650.usda) rests the body at 0.235 m;
+    # with the X650 gear (0.305) pass --land-z 0.30
+    ap.add_argument("--land-z", type=float, default=0.24)
     ap.add_argument("--grip-tol", type=float, default=0.02, help="the GS's push_pull_grip_tol [m]")
     ap.add_argument("--grip-axis-tol", type=float, default=0.003, help="the GS's push_pull_grip_axis_tol [m]")
     ap.add_argument("--grip-dwell-in", type=float, default=0.3)

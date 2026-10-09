@@ -91,3 +91,45 @@ t = t[:i0] + ("<figcaption>Fig. 1 — The six circle runs in 3D, world frame, ov
 assert "__DATA__" in t
 open(os.path.join(HERE, "summary_ee3d_section.html"), "w", encoding="utf-8").write(t)
 print("wrote summary_ee3d_section.html")
+
+# ---- section 2 (2026-10-05): the six figure-8 runs, derived from Fig. 1's template ---------------------------------
+t = open(os.path.join(HERE, "summary_ee3d_section.html"), encoding="utf-8").read()
+for a in ('id="ee3ds"', "getElementById('ee3ds')", "ee3ds-reset", "ee3ds-fallback", "ee3ds-data"):
+    assert t.count(a) >= 1, a
+    t = t.replace(a, a.replace("ee3ds", "ee3d8"))
+EIGHT = (("w3", "whole-body run WB-3, 0.10 m/s"), ("w4", "whole-body run WB-4, 0.10 m/s"),
+         ("r5", "decoupled run DEC-5, 0.10 m/s"), ("r6", "decoupled run DEC-6, 0.13 m/s"),
+         ("w5", "whole-body run WB-5, 0.13 m/s"), ("w6", "whole-body run WB-6, 0.13 m/s"))
+cells = "".join(f'    <div class="ee3d-cell"><div class="ee3d-title" data-title="{k}"></div><div class="ee3d-plot" data-flight="{k}" aria-label="Rotatable 3D plot, {lab}"></div></div>\n'
+                for k, lab in EIGHT)
+i0 = t.index('    <div class="ee3d-cell">'); i1 = t.index("  </div>\n  <p id=\"ee3d8-fallback\"")
+t = t[:i0] + cells + t[i1:]
+t = sub(t, "var KEYS=['w1','w2','d1','d2','r1','r2'];", "var KEYS=['w3','w4','r5','r6','w5','w6'];")
+t = sub(t, "EE planned (r = 0.50 m)", "EE planned (figure-8, 1.40 × 0.70 m)")
+t = sub(t, '<span class="sw" style="--c:var(--blue)"></span><span class="sw" style="--c:var(--orange);margin-left:-4px"></span>'
+        '<span class="sw" style="--c:var(--violet);margin-left:-4px"></span>',
+        '<span class="sw" style="--c:var(--blue)"></span><span class="sw" style="--c:var(--violet);margin-left:-4px"></span>')
+t = sub(t, "Table 5 below carries", "Table 9 below carries")
+# each figure-8 is centred on its own flight's EE hover point: one common span (the same scale in every view), each
+# view centred on its own data, instead of one set of axis ranges that would shrink every figure-8
+t = sub(t, "  // one set of axis ranges for all four views, so the circles compare at a glance\n"
+           "  var lo=[1e9,1e9,1e9], hi=[-1e9,-1e9,-1e9];\n"
+           "  KEYS.forEach(function(k){var f=D[k];f.ee.concat(f.ee_ref,f.base,f.base_ref).forEach(function(p){for(var q=0;q<3;q++){if(p[q]<lo[q])lo[q]=p[q];if(p[q]>hi[q])hi[q]=p[q];}});});\n",
+        "  // one common span on each axis (the same scale in every view), each view centred on its own figure-8\n"
+        "  var LO={}, HI={}, half=[0,0,0];\n"
+        "  KEYS.forEach(function(k){var f=D[k],a=[1e9,1e9,1e9],b=[-1e9,-1e9,-1e9];f.ee.concat(f.ee_ref,f.base,f.base_ref).forEach(function(p){for(var q=0;q<3;q++){if(p[q]<a[q])a[q]=p[q];if(p[q]>b[q])b[q]=p[q];}});\n"
+        "    for(var q=0;q<3;q++){half[q]=Math.max(half[q],(b[q]-a[q])/2);} LO[k]=a; HI[k]=b;});\n"
+        "  KEYS.forEach(function(k){for(var q=0;q<3;q++){var mid=(LO[k][q]+HI[k][q])/2;LO[k][q]=mid-half[q];HI[k][q]=mid+half[q];}});\n")
+t = sub(t, "    var ink=tok('--ink'),ink2=tok('--ink2'),line=tok('--line'), pad=0.04;\n",
+        "    var ink=tok('--ink'),ink2=tok('--ink2'),line=tok('--line'), pad=0.04, lo=LO[k], hi=HI[k];\n")
+n0 = len(re.findall(r'<script src="https://cdn\.jsdelivr\.net/npm/plotly[^"]*"></script>\n?', t)); assert n0 == 1, n0
+t = re.sub(r'<script src="https://cdn\.jsdelivr\.net/npm/plotly[^"]*"></script>\n?', "", t)   # section 1 already loads Plotly
+i0 = t.index("<figcaption>"); i1 = t.index("</figcaption>")
+t = t[:i0] + ("<figcaption>Fig. 2 — The six figure-8 runs in 3D, world frame, over each run's scored span. The EE line is blue for the "
+              "whole-body controller and violet for the decoupled controller on its tuned gains. All six views share one scale; each "
+              "view is centred on its own figure-8, because the planned figure-8 is centred on the gripper's position when it was "
+              "selected and that differs between flights. Each view rotates on its own: drag to rotate, scroll or pinch to zoom, hover "
+              "the EE path for time and error. The buttons switch a line on or off in all six views.") + t[i1:]
+assert "__DATA__" in t
+open(os.path.join(HERE, "fig8_ee3d_section.html"), "w", encoding="utf-8").write(t)
+print("wrote fig8_ee3d_section.html")

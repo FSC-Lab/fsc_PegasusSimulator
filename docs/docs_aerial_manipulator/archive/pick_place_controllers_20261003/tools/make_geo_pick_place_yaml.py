@@ -8,7 +8,7 @@ each from its own parameter file).
 Source: the 2026-10-01 tuned geometric + L1 MIRROR yaml
 (archive/geometric_l1_tune_20261001/variants/geometric_l1_mirror_sim_tuned.yaml),
 whose plant section (every sim_* key) is the whole-body mirror's -- verified
-identical to the whole-body ..._sim_pick_place.yaml before writing. OVERRIDES
+identical to the whole-body ..._sim_pick_and_place.yaml before writing. OVERRIDES
 below are the pick-and-place changes to the controller (empty = the tuned
 yaml as it flew the 10-01 comparison). The planner block is NOT here: the
 decoupled stack reads it from the whole-body pick-and-place yaml
@@ -23,8 +23,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.abspath(os.path.join(HERE, "..", "..", "geometric_l1_tune_20261001",
                                    "variants", "geometric_l1_mirror_sim_tuned.yaml"))
 CFG = os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2/config")
-WB = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_place.yaml")
-OUT = os.path.join(CFG, "params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_place.yaml")
+WB = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml")
+OUT = os.path.join(CFG, "params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_and_place.yaml")
 
 # key -> (value, why). Applied to the controller node's section.
 OVERRIDES = {
@@ -64,7 +64,7 @@ HEADER = """# ==================================================================
 # = archive/geometric_l1_tune_20261001/variants/geometric_l1_mirror_sim_tuned.yaml
 #   (the geometric + L1 law on the whole-body MIRROR plant, 10-01 bench tune)
 #   with the pick-and-place overrides listed in the generator. The planner
-#   block comes from the whole-body ..._sim_pick_place.yaml (WB_PLANNER_YAML).
+#   block comes from the whole-body ..._sim_pick_and_place.yaml (WB_PLANNER_YAML).
 #   SIMULATION ONLY.
 # ============================================================================
 """

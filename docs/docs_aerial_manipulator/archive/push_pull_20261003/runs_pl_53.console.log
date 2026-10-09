@@ -1,0 +1,9 @@
+[13:50:27] waiting for the planner's push-and-pull block
+[13:50:33] planner up, EE offset array('d', [0.0, 0.0, 0.2255])
+[13:50:33] waiting for the box (Isaac)
+[13:55:02] box up; letting PX4 / the arm stack settle
+[13:55:47] flying
+[  90.03s] ABORT: timeout (90 s): vehicle + box + planner feeds  [mode= plan= push_pull=]
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_20261003/tools/../runs/pl_53.npz
+ABORTED: timeout (90 s): vehicle + box + planner feeds  [mode= plan= push_pull=]
+[13:57:17] done

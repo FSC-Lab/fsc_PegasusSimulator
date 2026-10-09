@@ -1,0 +1,19 @@
+  push_pull_push_pose_deg -> [0.0, 26.0, 34.0, 0.0]
+  push_pull_push_distance -> -0.50
+  push_pull_push_time_s -> 24.0
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_07] completed
+  push_pull_push_pose_deg -> [0.0, 26.0, 34.0, 0.0]
+  push_pull_push_distance -> -0.50
+  wb_l1_omega_c_t : 2.927 -> 1.0
+  wb_dy_x : 26.82 -> 40.0
+  wb_dy_y : 26.82 -> 40.0
+  wb_dy_z : 26.82 -> 40.0
+[cad_08] ABORTED: left DIRECT while ready complete
+  push_pull_push_pose_deg -> [0.0, 26.0, 34.0, 0.0]
+  push_pull_push_distance -> -0.50
+  wb_l1_omega_c_t : 2.927 -> 1.0
+  wb_k_x : 50.03 -> 32.0
+  wb_k_v : 12.58 -> 20.0
+[cad_09] ABORTED: left DIRECT while go_to_start complete
+CHAIN5 DONE

@@ -38,7 +38,7 @@ export WB_SIM_PROFILE="${WB_SIM_PROFILE:-push_pull}"
 # stack started it). Push the set ones into the global environment and clear
 # the unset ones, so a knob from an earlier run cannot leak into this one.
 if tmux list-sessions >/dev/null 2>&1; then
-  for v in PEGASUS_PUSH_BOX_MASS PEGASUS_PUSH_FRICTION_STATIC PEGASUS_PUSH_FRICTION_DYNAMIC PEGASUS_PUSH_BOX_XY PEGASUS_PUSH_BOX_YAW_DEG PEGASUS_PUSH_HANDLE_THICKNESS PEGASUS_PUSH_GRIP_TORQUE PEGASUS_PUSH_SPAWN_XY PEGASUS_PUSH_SPAWN_YAW_DEG PEGASUS_PUSH_WAYPOINTS; do
+  for v in PEGASUS_PUSH_BOX_MASS PEGASUS_PUSH_FRICTION_STATIC PEGASUS_PUSH_FRICTION_DYNAMIC PEGASUS_PUSH_BOX_XY PEGASUS_PUSH_BOX_YAW_DEG PEGASUS_PUSH_HANDLE PEGASUS_PUSH_BOX_USD PEGASUS_PUSH_FIN_GRIP_MM PEGASUS_PUSH_POST_TOP PEGASUS_PUSH_AM_ASSET PEGASUS_PUSH_GROUND_BODY_Z PEGASUS_PUSH_Q2_LIMIT_DEG PEGASUS_PUSH_HANDLE_THICKNESS PEGASUS_PUSH_GRIP_TORQUE PEGASUS_PUSH_SPAWN_XY PEGASUS_PUSH_SPAWN_YAW_DEG PEGASUS_PUSH_WAYPOINTS; do
     if [[ -n "${!v:-}" ]]; then
       tmux setenv -g "$v" "${!v}"
       echo -e "\033[1;33m  scene knob $v=${!v}\033[0m"
@@ -76,5 +76,5 @@ case "${PUSH_FEEDBACK:-fused}" in
 esac
 [[ -x "$LAUNCHER" ]] || { echo "ERROR: missing executable $LAUNCHER" >&2; exit 1; }
 
-echo -e "\033[1;35mPUSH-AND-PULL SCENE ($AM_ISAAC_SCENE_LABEL, ${PUSH_FEEDBACK:-fused} feedback): vehicle at ${PEGASUS_PUSH_SPAWN_XY:-0.10,-0.07} facing +x; the HOOBRO console table (1.000 x 0.150 x 0.800 m) centred on (1.20, 0), its length along y; a ${PEGASUS_PUSH_BOX_MASS:-0.200} kg box (200 x 100 x 60 mm + a 20 mm fin handle on its +y face) at ${PEGASUS_PUSH_BOX_XY:-1.20,0.25}. Mocap: /obj_0/mocap = the box (centre + yaw).\033[0m"
+echo -e "\033[1;35mPUSH-AND-PULL SCENE ($AM_ISAAC_SCENE_LABEL, ${PUSH_FEEDBACK:-fused} feedback): vehicle at ${PEGASUS_PUSH_SPAWN_XY:-0.10,-0.07} facing +x; the HOOBRO console table (1.000 x 0.150 x 0.800 m) centred on (1.20, 0), its length along y; a ${PEGASUS_PUSH_BOX_MASS:-0.400} kg box (${PEGASUS_PUSH_HANDLE:-cad} handle: cad = the CAD box 240 x 160 x 100 mm + clamp bracket + 5 mm fin, grip shim ${PEGASUS_PUSH_FIN_GRIP_MM:-20} mm) at ${PEGASUS_PUSH_BOX_XY:-1.20,0.25}. Mocap: /obj_0/mocap = the box (centre + yaw).\033[0m"
 exec "$LAUNCHER" "$@"

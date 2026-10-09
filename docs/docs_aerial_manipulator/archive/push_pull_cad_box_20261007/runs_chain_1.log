@@ -1,0 +1,16 @@
+  push_pull_push_pose_deg -> [0.0, 26.0, 24.0, 0.0]
+  wb_l1_omega_c_t : 2.927 -> 1.0
+Terminated
+[cad_01] 
+  push_pull_push_pose_deg -> [0.0, 26.0, 24.0, 0.0]
+  push_pull_push_distance -> -0.50
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_02] ABORTED: timeout (15 s): planner HOLD  [mode=DIRECT plan=PLANNED T=3.0s push_pull=NOT PLANNED: press Plan]
+  push_pull_push_pose_deg -> [0.0, 26.0, 24.0, 0.0]
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_03] completed
+  push_pull_push_pose_deg -> [0.0, 26.0, 24.0, 0.0]
+  push_pull_push_distance -> -0.50
+  wb_l1_omega_c_t : 2.927 -> 1.0
+[cad_04] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 11.0 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, 
+CHAIN1 DONE

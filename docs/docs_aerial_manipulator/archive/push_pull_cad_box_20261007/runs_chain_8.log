@@ -1,0 +1,9 @@
+  push_pull_push_distance -> -0.50
+  push_pull_unload_time_s -> 6.0
+[cad_16] completed
+  push_pull_push_distance -> -0.50
+  push_pull_unload_time_s -> 6.0
+[cad_17] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 14.4 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, 
+  push_pull_unload_time_s -> 6.0
+[cad_18] ABORTED: left DIRECT while close
+CHAIN8 DONE

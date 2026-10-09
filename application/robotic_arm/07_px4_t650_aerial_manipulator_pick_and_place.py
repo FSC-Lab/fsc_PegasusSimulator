@@ -19,9 +19,12 @@ the scene and the two mocap bodies the planner captures:
             field's forward direction -- by default a little OFF the origin,
             (0.10, -0.07) m, as a real start mark sits off the mocap origin, so
             Adjust has a real offset to measure
-  pillars   two cylinders, 1.0 m tall, 0.10 m diameter, static colliders:
-            PICK at (1.0, 1.0) m (front-left), PLACE at (-1.0, -1.0) m
-            (back-right)
+  pillars   two cylinders, 1.0 m tall, static colliders: PICK at (1.0, 1.0) m
+            (front-left), PLACE at (-1.0, -1.0) m (back-right). Each carries
+            the user's printed HAT (2026-10-08, assets/Top_Hat.usda): a 200.6 mm
+            platform 8 mm above the pillar top, on a sleeve whose four ribs
+            centre it on a pillar of up to 97.86 mm -- the pillars are sized to
+            that fit. PEGASUS_PNP_PLATFORM=cap = the 10-03 160 mm disc instead.
   payload   ONE dynamic rigid body, 200 g in total, resting on the PICK pillar:
             a 110 x 110 x 65 mm box plus a vertical HANDLE plate standing in
             the middle of its top, 200 mm tall, for the gripper to grasp from
@@ -68,6 +71,9 @@ Knobs (environment):
   PEGASUS_PNP_WAYPOINTS=0    hide the waypoint markers and labels
   PEGASUS_PNP_SPAWN_XY       where the vehicle starts, "x,y" [m], default "0.10,-0.07"
   PEGASUS_PNP_SPAWN_YAW_DEG  its heading [deg], default 0 (+x)
+  PEGASUS_PNP_PLATFORM       hat (default) | cap: what sits on the pillars
+  PEGASUS_PNP_HAT_USD        the hat asset, default assets/Top_Hat.usda
+  PEGASUS_PNP_CAP_DIAMETER   the cap's diameter [m] (PLATFORM=cap), default 0.16
 
 WAYPOINT VIEW: blue ball = a drone-body goal ("Start drone", "Place Start
 drone", "Land Start drone", "Land drone"; its yaw is in the label); orange
@@ -79,7 +85,7 @@ source ([typed], [captured], [live, not captured], [planned]), prints here
 whenever it changes.
 
 Planner offset for this payload (the pick-and-place yaml,
-..._sim_pick_place.yaml): ONE EE offset for the pick AND the place (2026-10-03,
+..._sim_pick_and_place.yaml): ONE EE offset for the pick AND the place (2026-10-03,
 user decision), pick_place_ee_offset z = +0.22 m from the BOX CENTRE (32.5 mm
 half box + 200 mm handle - 12.5 mm: the claw 12.5 mm below the handle top,
 7.5 mm short of where the open jaws pinch it; was pick 0.250 / place 0.260
@@ -123,8 +129,24 @@ except (ValueError, AssertionError):
     raise SystemExit(f"PEGASUS_PNP_SPAWN_XY must be 'x,y' in metres, got {_SPAWN_XY_RAW!r}")
 SPAWN_YAW_DEG = am06._envf("PEGASUS_PNP_SPAWN_YAW_DEG", 0.0)   # 0 = +x, the field's forward
 
-PILLAR_HEIGHT   = 1.0                   # [m] to the top of the cap
-PILLAR_DIAMETER = 0.10                  # [m]
+PILLAR_HEIGHT   = 1.0                   # [m] the pillar top (user, 2026-10-01: 1 m pillars) --
+                                        # where a hardware mark sits, and drop_0
+# WHAT SITS ON THE PILLARS -- the platform the payload is picked from and placed on.
+#   hat (default, 2026-10-08, user's CAD Top_Hat.STL -> assets/Top_Hat.usda,
+#       pick_place_top_hat_20261008/tools/hat_stl_to_usda.py): a 200.6 mm disc,
+#       5 mm thick, on a 122 mm sleeve that slides 52 mm down over the pillar.
+#       Its bore is 110 mm, but FOUR RIBS (8 mm wide, on the hat's x / y axes)
+#       narrow it to 97.86 mm: the ribs centre it, and a pillar must be no wider.
+#       The pillar is sized to that fit (less HAT_PILLAR_CLEARANCE), the bore
+#       ceiling rests on the pillar top, and the platform top is 8 mm above it.
+#   cap (2026-10-03): a 160 mm x 10 mm disc on a 100 mm pillar, its top AT
+#       PILLAR_HEIGHT (the shaft 10 mm shorter) -- the flights up to 2026-10-07.
+PLATFORM = (os.environ.get("PEGASUS_PNP_PLATFORM", "") or "hat").strip().lower()
+if PLATFORM not in ("hat", "cap"):
+    raise SystemExit(f"PEGASUS_PNP_PLATFORM must be 'hat' or 'cap', got {PLATFORM!r}")
+HAT_USD = (os.environ.get("PEGASUS_PNP_HAT_USD", "") or
+           os.path.join(am06.ASSETS_DIR, "Top_Hat.usda")).strip()
+HAT_PILLAR_CLEARANCE = 0.0002           # [m] on the diameter, pillar vs the ribs
 # THE CAP (2026-10-03, user request: a flat cylinder on each pillar so the
 # payload is not dropped off it): 160 mm across -- the 110 mm box's whole
 # footprint at ANY yaw (its diagonal is 155.6 mm), so a box set down up to
@@ -133,12 +155,54 @@ PILLAR_DIAMETER = 0.10                  # [m]
 # thick, its top at PILLAR_HEIGHT: every point and offset is unchanged.
 CAP_DIAMETER    = am06._envf("PEGASUS_PNP_CAP_DIAMETER", 0.16)   # [m]
 CAP_THICKNESS   = 0.010                 # [m]
+if PLATFORM == "hat":
+    if not os.path.isfile(HAT_USD):
+        raise SystemExit(f"[AM-T650-PNP] PEGASUS_PNP_PLATFORM=hat needs {HAT_USD} (generate it with "
+                         f"pick_place_top_hat_20261008/tools/hat_stl_to_usda.py), or set "
+                         f"PEGASUS_PNP_PLATFORM=cap for the 10-03 disc")
+    _hat_stage = Usd.Stage.Open(HAT_USD)     # keep the stage alive: a temporary's prims expire
+    _hat_root = _hat_stage.GetDefaultPrim()
+    HAT = {k: float(_hat_root.GetAttribute(f"fsc:{k}").Get())
+           for k in ("platform_top_z_m", "platform_radius_m", "rib_inner_diameter_m", "bore_diameter_m")}
+    del _hat_root, _hat_stage
+    PILLAR_DIAMETER = HAT["rib_inner_diameter_m"] - HAT_PILLAR_CLEARANCE   # [m] 97.66 mm
+    PLATFORM_TOP    = PILLAR_HEIGHT + HAT["platform_top_z_m"]              # [m] 1.008
+    PLATFORM_DIAMETER = 2.0 * HAT["platform_radius_m"]
+else:
+    PILLAR_DIAMETER = 0.10              # [m]
+    PLATFORM_TOP    = PILLAR_HEIGHT     # [m] the cap top
+    PLATFORM_DIAMETER = CAP_DIAMETER
 PICK_PILLAR_XY  = (1.0, 1.0)            # [m] front-left, on the 1 m grid
 PLACE_PILLAR_XY = (-1.0, -1.0)          # [m] back-right
 
 PAYLOAD_SIZE = (0.110, 0.110, 0.065)    # [m] the box, x, y, z
 PAYLOAD_MASS = am06._envf("PEGASUS_PNP_PAYLOAD_MASS", 0.200)   # [kg] box + handle
 PAYLOAD_DROP_GAP = 0.0005               # [m] spawned this far above the pillar top
+
+# THE PAYLOAD MODEL (2026-10-07, user: "use this model as the payload"):
+#   box    (default) the CAD payload, assets/Box_Payload.usda -- an open
+#          basket 110 x 115 x 65 mm with a flat wire HANGER on top: struts, a
+#          vertical stem (3 x 2.5 mm) and an ARCH. The claw does not clamp it
+#          (its jaws close to ~14 mm at the fingertips at best): it slides in
+#          UNDER the arch with one finger on each side of the stem, closes,
+#          and on the lift the arch rests on the fingers -- the planner's hook
+#          options pick_place_pick_approach_back / _place_exit_back. Frame (the
+#          asset's): origin = the basket centre = obj_0, +z up, +x = the
+#          hanger plane's normal (the claw comes in along it), +y = along the
+#          arch (the jaws close along it); the stem is at x = -27.5 mm.
+#          Generated by docs/docs_aerial_manipulator/archive/
+#          pick_place_box_payload_20261007/tools/stl_to_usda.py from
+#          Box_Payload.STL; PEGASUS_PNP_PAYLOAD_USD overrides the path.
+#   plate  the 2026-10-01..10-03 payload: a box + a clamped handle plate (below).
+PAYLOAD_MODEL = (os.environ.get("PEGASUS_PNP_PAYLOAD", "") or "box").strip().lower()
+if PAYLOAD_MODEL not in ("box", "plate"):
+    raise SystemExit(f"PEGASUS_PNP_PAYLOAD must be 'box' or 'plate', got {PAYLOAD_MODEL!r}")
+PAYLOAD_USD = (os.environ.get("PEGASUS_PNP_PAYLOAD_USD", "") or
+               os.path.join(am06.ASSETS_DIR, "Box_Payload.usda")).strip()
+if PAYLOAD_MODEL == "box" and not os.path.isfile(PAYLOAD_USD):
+    raise SystemExit(f"[AM-T650-PNP] payload model 'box' needs {PAYLOAD_USD} (generate it with "
+                     f"pick_place_box_payload_20261007/tools/stl_to_usda.py), or set "
+                     f"PEGASUS_PNP_PAYLOAD=plate for the old box + handle plate")
 
 # The handle: a vertical plate in the middle of the box top. THICKNESS is along
 # the payload's y axis (the jaws close along it), WIDTH along its x axis -- so
@@ -230,6 +294,21 @@ WP_CLAW_RADIUS  = 0.015                 # [m]
 # friction: the payload's material wins every contact it is in ("max")
 GRIP_FRICTION_STATIC  = 1.2
 GRIP_FRICTION_DYNAMIC = 1.0
+# PEGASUS_PNP_GRIP_FRICTION="static,dynamic" (2026-10-07): the payload's own
+# friction, for a sensitivity run -- 1.2 / 1.0 is generous; the box payload's
+# hook hangs its arch on the fingers' sloping top edges (~21-26 deg at the hook
+# poses), so a real hanger on real fingers may have far less.
+# Set, the payload's contacts COMBINE with "min" instead of "max", so the value
+# given IS the finger-to-hanger friction (with "max" the gripper's own material
+# would win over a lower one).
+GRIP_FRICTION_COMBINE = "max"
+_gf = (os.environ.get("PEGASUS_PNP_GRIP_FRICTION", "") or "").strip()
+if _gf:
+    GRIP_FRICTION_COMBINE = "min"
+    try:
+        GRIP_FRICTION_STATIC, GRIP_FRICTION_DYNAMIC = (float(v) for v in _gf.split(","))
+    except ValueError:
+        raise SystemExit(f"PEGASUS_PNP_GRIP_FRICTION must be 'static,dynamic', got {_gf!r}")
 PILLAR_FRICTION_STATIC  = 0.8
 PILLAR_FRICTION_DYNAMIC = 0.7
 GRIP_TORQUE_MAX = am06._envf("PEGASUS_PNP_GRIP_TORQUE", 0.3)   # [N.m] gripper drive cap
@@ -302,13 +381,14 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         pillar_mat = _physics_material(stage, SCENE_ROOT + "/pillar_material",
                                        PILLAR_FRICTION_STATIC, PILLAR_FRICTION_DYNAMIC)
         grip_mat = _physics_material(stage, SCENE_ROOT + "/payload_material",
-                                     GRIP_FRICTION_STATIC, GRIP_FRICTION_DYNAMIC, combine="max")
+                                     GRIP_FRICTION_STATIC, GRIP_FRICTION_DYNAMIC,
+                                     combine=GRIP_FRICTION_COMBINE)
 
         # pillars: static colliders (no rigid body)
         for name, (x, y), rgb in (("pick_pillar", PICK_PILLAR_XY, (0.30, 0.50, 0.80)),
                                   ("place_pillar", PLACE_PILLAR_XY, (0.30, 0.70, 0.40))):
             cyl = UsdGeom.Cylinder.Define(stage, f"{SCENE_ROOT}/{name}")
-            h = PILLAR_HEIGHT - CAP_THICKNESS
+            h = PILLAR_HEIGHT - (CAP_THICKNESS if PLATFORM == "cap" else 0.0)
             cyl.CreateRadiusAttr(0.5 * PILLAR_DIAMETER)
             cyl.CreateHeightAttr(h)
             cyl.CreateAxisAttr("Z")
@@ -316,6 +396,17 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             _color(cyl, rgb)
             UsdPhysics.CollisionAPI.Apply(cyl.GetPrim())
             _bind_physics(cyl.GetPrim(), pillar_mat)
+            if PLATFORM == "hat":
+                # the hat REFERENCED with its seat on the pillar top (static: its
+                # colliders and no rigid body); the payload's material still wins
+                # the basket-to-platform contact (combine max)
+                hat = UsdGeom.Xform.Define(stage, f"{SCENE_ROOT}/{name}_hat")
+                UsdGeom.Xformable(hat).AddTranslateOp().Set(Gf.Vec3d(x, y, PILLAR_HEIGHT))
+                hat.GetPrim().GetReferences().AddReference(HAT_USD)
+                for p in Usd.PrimRange(hat.GetPrim()):
+                    if p.HasAPI(UsdPhysics.CollisionAPI):
+                        _bind_physics(p, pillar_mat)
+                continue
             # the cap: a flat disc, its top at PILLAR_HEIGHT
             cap = UsdGeom.Cylinder.Define(stage, f"{SCENE_ROOT}/{name}_cap")
             cap.CreateRadiusAttr(0.5 * CAP_DIAMETER)
@@ -327,11 +418,14 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             UsdPhysics.CollisionAPI.Apply(cap.GetPrim())
             _bind_physics(cap.GetPrim(), pillar_mat)
 
+        if PAYLOAD_MODEL == "box":
+            self._build_box_payload(stage, grip_mat)
+            return
         # payload: ONE dynamic body, an UNSCALED Xform at the box centre (the
         # mocap backend reads orientation with ExtractRotation, exact only on
         # an unscaled matrix), with the box and the handle as collider children.
         sx, sy, sz = PAYLOAD_SIZE
-        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PILLAR_HEIGHT + 0.5 * sz + PAYLOAD_DROP_GAP)
+        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PLATFORM_TOP + 0.5 * sz + PAYLOAD_DROP_GAP)
         body = UsdGeom.Xform.Define(stage, PAYLOAD_PRIM)
         xf = UsdGeom.Xformable(body)
         xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p0)))
@@ -349,6 +443,41 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         # two colliders at the uniform density that gives this total
         UsdPhysics.MassAPI.Apply(prim).CreateMassAttr(float(PAYLOAD_MASS))
         self._payload_p0 = np.array(p0)
+
+    def _build_box_payload(self, stage, grip_mat):
+        """The CAD payload: Box_Payload.usda REFERENCED onto the payload body --
+        an UNSCALED Xform at the basket centre (obj_0), the rigid body here.
+        The asset carries the visual mesh, the colliders (a basket box + the
+        hanger as exact convex prisms) and the CAD mass properties."""
+        src = Usd.Stage.Open(PAYLOAD_USD)
+        sroot = src.GetDefaultPrim()
+        self._hook = {k: float(sroot.GetAttribute(f"fsc:{k}").Get())
+                      for k in ("box_half_height_m", "hanger_x_m", "hanger_thickness_m", "hanger_top_z_m")}
+        half = self._hook["box_half_height_m"]
+        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PLATFORM_TOP + half + PAYLOAD_DROP_GAP)
+        body = UsdGeom.Xform.Define(stage, PAYLOAD_PRIM)
+        xf = UsdGeom.Xformable(body)
+        xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p0)))
+        xf.AddRotateZOp().Set(float(PAYLOAD_YAW_DEG))
+        prim = body.GetPrim()
+        prim.GetReferences().AddReference(PAYLOAD_USD)
+        n_col = 0
+        for p in Usd.PrimRange(prim):
+            if p.HasAPI(UsdPhysics.CollisionAPI):
+                _bind_physics(p, grip_mat)
+                n_col += 1
+        UsdPhysics.RigidBodyAPI.Apply(prim)
+        mass = UsdPhysics.MassAPI(prim)
+        m_asset = float(mass.GetMassAttr().Get())
+        if abs(PAYLOAD_MASS - m_asset) > 1e-9:       # same shape, another total: inertia scales with it
+            k = PAYLOAD_MASS / m_asset
+            mass.GetMassAttr().Set(float(PAYLOAD_MASS))
+            mass.GetDiagonalInertiaAttr().Set(Gf.Vec3f(*[float(k * v) for v in mass.GetDiagonalInertiaAttr().Get()]))
+        self._payload_p0 = np.array(p0)
+        com = mass.GetCenterOfMassAttr().Get()
+        print(f"[AM-T650-PNP] payload 'box': {PAYLOAD_USD} referenced on {PAYLOAD_PRIM}, {n_col} colliders, "
+              f"{PAYLOAD_MASS * 1e3:.0f} g, CoM {[round(1e3 * c, 1) for c in com]} mm from the basket centre "
+              f"(the CAD solid's)", flush=True)
 
     def _setup_gripper_drive(self):
         super()._setup_gripper_drive()
@@ -390,10 +519,31 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         if WAYPOINTS_VIZ:
             self._wp_setup_view()
 
+        if GRASP_TEST and PAYLOAD_MODEL == "box":
+            raise SystemExit("PEGASUS_PNP_GRASP_TEST is the clamped handle plate's test "
+                             "(PEGASUS_PNP_PAYLOAD=plate); the box payload is a hook grasp")
+        plat = (f"the HAT (platform {PLATFORM_DIAMETER * 1e3:.1f} mm, its top at {PLATFORM_TOP:.3f} m; "
+                f"pillars {PILLAR_DIAMETER * 1e3:.2f} mm = the hat's ribs {HAT['rib_inner_diameter_m'] * 1e3:.2f} mm "
+                f"less {HAT_PILLAR_CLEARANCE * 1e3:.1f} mm)" if PLATFORM == "hat" else
+                f"a {CAP_DIAMETER * 1e3:.0f} x {CAP_THICKNESS * 1e3:.0f} mm cap (its top at {PLATFORM_TOP:.3f} m; "
+                f"pillars {PILLAR_DIAMETER * 1e3:.0f} mm)")
+        if PAYLOAD_MODEL == "box":
+            h = self._hook
+            print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE: vehicle at ({SPAWN_XY[0]:.2f}, "
+                  f"{SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg; pillars {PILLAR_HEIGHT} m tall under "
+                  f"{plat}, PICK at {PICK_PILLAR_XY} (basket centre -> mocap "
+                  f"{PICK_BODY}), PLACE at {PLACE_PILLAR_XY}; payload = the CAD BOX ({PAYLOAD_MASS * 1e3:.0f} g, "
+                  f"yaw {PAYLOAD_YAW_DEG:.1f} deg): basket centre {np.round(self._payload_p0, 4).tolist()} m, "
+                  f"hanger plane at x = {h['hanger_x_m'] * 1e3:+.1f} mm ({h['hanger_thickness_m'] * 1e3:.1f} mm "
+                  f"thick, normal = the payload's x: the claw comes in along it, the jaws close along its y), "
+                  f"hanger top {h['hanger_top_z_m'] * 1e3:.1f} mm above the basket centre. HOOK GRASP: the "
+                  f"fingers go in under the arch on either side of the stem and lift it. Friction "
+                  f"{GRIP_FRICTION_STATIC}/{GRIP_FRICTION_DYNAMIC} (combine {GRIP_FRICTION_COMBINE}).\033[0m", flush=True)
+            return
         sz = PAYLOAD_SIZE[2]
         print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE: vehicle at "
-              f"({SPAWN_XY[0]:.2f}, {SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward); pillars {PILLAR_HEIGHT} m tall, "
-              f"{PILLAR_DIAMETER * 1e3:.0f} mm diameter under a {CAP_DIAMETER * 1e3:.0f} x {CAP_THICKNESS * 1e3:.0f} mm cap, PICK at {PICK_PILLAR_XY} (payload box -> mocap "
+              f"({SPAWN_XY[0]:.2f}, {SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward); pillars {PILLAR_HEIGHT} m tall "
+              f"under {plat}, PICK at {PICK_PILLAR_XY} (payload box -> mocap "
               f"{PICK_BODY}), PLACE at {PLACE_PILLAR_XY} (top -> mocap {DROP_BODY}); payload "
               f"{PAYLOAD_MASS * 1e3:.0f} g = box "
               f"{PAYLOAD_SIZE[0] * 1e3:.0f} x {PAYLOAD_SIZE[1] * 1e3:.0f} x {sz * 1e3:.0f} mm + "
@@ -403,7 +553,7 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
               f"handle top {self._payload_p0[2] + 0.5 * sz + HANDLE_HEIGHT:.4f} m. EE offset (pick AND "
               f"place) [0, 0, {PICK_EE_OFFSET_Z:.2f}] from the box centre (claw "
               f"{(0.5 * sz + HANDLE_HEIGHT - PICK_EE_OFFSET_Z) * 1e3:.1f} mm below the handle top); place "
-              f"point = the place pillar top + {(0.5 * sz + PLACE_DROP) * 1e3:.1f} mm (the box CG at release). Friction "
+              f"point = the place platform top + {(0.5 * sz + PLACE_DROP) * 1e3:.1f} mm (the box CG at release). Friction "
               f"{GRIP_FRICTION_STATIC}/{GRIP_FRICTION_DYNAMIC} (combine max). Unmodelled by "
               f"every controller.\033[0m", flush=True)
 
@@ -599,6 +749,47 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                   + ", ".join(f"l {dl * 1e3:+.0f}: {min(h[0] for h in hits if abs(h[2] - dl) < 1e-6) * 1e3:.0f}"
                               for dl in sorted({h[2] for h in hits})) + " mm\033[0m", flush=True)
 
+    def _probe_hook_profile(self):
+        """The box payload's HOOK grasp (2026-10-07): the arch rests on the
+        fingers' upper edges. In the claw frame -- a = the claw axis (out),
+        u = the jaw closing axis, w = a x u flipped to point UP -- rays cast
+        along -w (top surface) and +w (bottom surface) over the fingers, at
+        stations s along a from the claw point. Prints, per station, the
+        highest top and the lowest bottom of any gripper body (mm from the
+        claw point along w) and where across u they are."""
+        from omni.physx import get_physx_scene_query_interface
+        g = self._pad_geometry()
+        if g is None:
+            return
+        cl, cr, mid, u, p_w, R_w = g
+        sq = get_physx_scene_query_interface()
+        a = R_w @ np.array([0.0, 0.0, -1.0])
+        w = np.cross(a, u)
+        w /= np.linalg.norm(w)
+        if w[2] < 0.0:
+            w = -w
+        claw = mid + CLAW_BEYOND_PADS * a
+        rows = []
+        for s in np.arange(-0.060, 0.0301, 0.005):
+            tops, bots = [], []
+            for c in np.arange(-0.040, 0.0401, 0.002):
+                o = claw + s * a + c * u
+                for sgn, out in ((1.0, tops), (-1.0, bots)):
+                    r = sq.raycast_closest(tuple(map(float, o + sgn * 0.08 * w)), tuple(map(float, -sgn * w)), 0.16)
+                    if r.get("hit", False) and str(r.get("rigidBody", "")).startswith(self.drone_path):
+                        out.append((sgn * (0.08 - float(r["distance"])), c))
+            if tops:
+                t = max(tops)
+                b = min(bots) if bots else (float("nan"), float("nan"))
+                cs = [c for _, c in tops]
+                rows.append(f"s {s * 1e3:+.0f}: top {t[0] * 1e3:+.1f} (u {t[1] * 1e3:+.0f}) bottom "
+                            f"{b[0] * 1e3:+.1f}, across u [{min(cs) * 1e3:+.0f},{max(cs) * 1e3:+.0f}]")
+            else:
+                rows.append(f"s {s * 1e3:+.0f}: -")
+        print(f"\033[1;36m[AM-T650-PNP] HOOK PROFILE (claw frame, mm; a = claw axis {np.round(a, 3).tolist()}, "
+              f"w = up {np.round(w, 3).tolist()}, gripper at {math.degrees(self._grip_angle()):.1f} deg): "
+              + " | ".join(rows) + "\033[0m", flush=True)
+
     def _probe_footprint(self):
         """The vehicle's UNDERSIDE in its own frame: rays cast upward on a 2 cm
         grid from 3 mm above the floor (the vehicle is seated). Where the body
@@ -669,6 +860,8 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             try:
                 self._probe_gripper()
                 self._probe_footprint()
+                if PAYLOAD_MODEL == "box":
+                    self._probe_hook_profile()
             except Exception as exc:          # a probe must never stop the plant
                 print(f"[AM-T650-PNP] gripper probe failed: {exc}", flush=True)
         if GRASP_TEST and self._gt_phase != "done":

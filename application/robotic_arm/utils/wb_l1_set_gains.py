@@ -30,7 +30,7 @@ FOUR_D = DEFAULT.replace("_whole_body_l1_direct_", "_whole_body_l1_4d_direct_")
 
 KNOWN = ("observer_type a_t a_r a_q adapt_period_s omega_c_t omega_c_r "
          "omega_c_q omega_i omega_x lc_var_f lc_var_m lc_var_q decompose "
-         "four_d omega_q contact collision_threshold_n "
+         "four_d omega_q contact contact_hold_translation collision_threshold_n "
          "omega_x_t omega_x_r omega_x_q "
          "max_force_n max_torque_nm max_joint_nm max_wrench_force_n "
          "max_wrench_torque_nm").split()
