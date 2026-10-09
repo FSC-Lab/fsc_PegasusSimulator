@@ -209,6 +209,33 @@ across all four runs to 0.01 s. Means: whole-body eps max 146 mm / rms 26.1 mm, 
 312 / 66.2 mm, EE 67.3 mm -- within a few mm of the unaligned 10-08 numbers. The 10-08 runs are in
 `runs/unaligned_20261008/` (local, gitignored).
 
+## ABORT, two-step arm: release pose, hold, home (2026-10-09, user design)
+
+With the hook grasp an OPEN gripper still carries the hanger's arch (10-07), so the old abort (gripper
+open, arm straight home, climb 0.30 m) could carry the basket away, or lift it off a hat. The abort now
+plans three segments (planner `planPickPlaceAbort`, keys `pick_place_abort_release_pose_deg`
+[0, 0, 30, 0] + `pick_place_abort_release_hold_s` 2.0, empty pose = the old single move):
+1. climb 0.30 m while the arm goes to the RELEASE pose -- claws 60 deg down (claw pitch = 90 - (q2 + q3);
+   the arch slides on the fingers once their slope exceeds the friction angle, 22-31 deg at mu 0.4-0.6);
+2. hold the release pose 2 s;
+3. fold home in place; the arm GS closes the gripper when the planner reports ABORTED.
+Total 10.5 s (release reached at 4.2 s) vs 4.0 s before. gtest `TheAbortGoesThroughTheReleasePoseThenHome`.
+The pose: q2 = 0 inside the real arm's [-20, +45]; gripper 0.26 m under the body, above the gear.
+
+Isaac, whole-body, `tools/run_abort_tests.sh` (driver `--abort-at`, emulating the GS button: open, abort,
+close on ABORTED), scored by `tools/abort_score.py`:
+
+| case | pressed | basket | lifted | vehicle tilt max / climb | end state |
+|---|---|---|---|---|---|
+| carry (6 s into To place start) | basket hanging on the claw | slid off +2.1 s, fell to the floor, upright | -- | 7.1 deg / 0.30 m | arm home, gripper closed |
+| pick (fingers around the stem, basket on the hat) | before Exit To Pick | stayed on the PICK hat, 0 mm off axis, upright | 8 mm | 4.7 deg / 0.30 m | arm home, gripper closed |
+| place (touchdown, claw under the arch) | before the open + exit | stayed on the PLACE hat, 36 mm off axis, upright | 14 mm | 5.8 deg / 0.30 m | arm home, gripper closed |
+| carry, DECOUPLED rig (geometric + L1, position-mode arm) | basket hanging on the claw | slid off +2.5 s, fell to the floor, upright | -- | 9.6 deg / 0.30 m | arm home, gripper closed |
+
+On hardware the planner's tilt guard (15 deg, 0.1 s) never acts: the flight node's own tilt watchdog is
+also 15 deg since 10-05 and trips on the first sample, reverting to SAFETY (hover in place, arm home
+after 1 s, gripper unchanged). Only the operator's button gives this response.
+
 ## Not covered
 
 The decoupled rig on the hat (its paths cleared the bigger disc by 61-69 mm offline); a

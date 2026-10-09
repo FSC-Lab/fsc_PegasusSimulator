@@ -1,12 +1,14 @@
 # Simulation results, MATLAB data (free-flight trajectory tracking)
 
 This is the data behind the paper's simulation table (Table II, `tab:sim_free_flight_tracking`).
+It is one task folder of `matlab_simulation_data/`; the pick-and-place data are in the separate
+`pick_and_place/` folder beside it.
 The folder is self-contained: these files plus MATLAB are all you need.
 
 ## Files
 
 ```
-free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat   one run, struct `run`
+<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat   one run, struct `run`
 free_flight_tracking_rmse.mat     rmse_mean = Table II (mean over runs), rmse_runs = every run
 configs/                          the exact controller + plant config each method flew
 ```
@@ -23,15 +25,13 @@ configs/                          the exact controller + plant config each metho
 | `modular_adaptive` | MAC | modular adaptive control, Yadav et al., IEEE/ASME Trans. Mechatronics 30(4) (2025) |
 
 ```matlab
-r = load('free_flight_tracking/circle/v0p13/whole_body_l1_circle_v0p13_run1.mat').run;
+r = load('circle/v0p13/whole_body_l1_circle_v0p13_run1.mat').run;
 plot(r.tracking.t, vecnorm(r.tracking.ee_pos_err_m, 2, 2) * 1e3)        % EE position error [mm]
 plot3(r.tracking.ee_pos_ref_m(:,1), r.tracking.ee_pos_ref_m(:,2), r.tracking.ee_pos_ref_m(:,3), '--')
 S = load('free_flight_tracking_rmse.mat');
 T = struct2table(S.rmse_mean);     % Table II: one row per (shape, speed, method)
 R = struct2table(S.rmse_runs);     % every run
 ```
-
-**Payload pick-and-place** (the paper's `tab:sim_pick_place`): `pick_and_place/`, `pick_and_place_metrics.mat` and `configs/*_sim_pick_and_place.yaml`. See `README_pick_and_place.md`.
 
 ## Simulation index
 
@@ -46,24 +46,24 @@ Each table cell is the mean over its 3 runs of the per-run RMSE.
 
 | trajectory | speed [m/s] | method | folder | files | EE RMSE per run [mm] | mean (table) [mm] | attempts |
 |---|---|---|---|---|---|---|---|
-| circle | 0.10 | Proposed | `free_flight_tracking/circle/v0p10/` | `whole_body_l1_circle_v0p10_run1.mat`, `whole_body_l1_circle_v0p10_run2.mat`, `whole_body_l1_circle_v0p10_run3.mat` | 12.3 / 12.0 / 12.5 | 12.24 | 3 (0 hover trips, 0 failed in run) |
-| circle | 0.10 | Geo-L1 | `free_flight_tracking/circle/v0p10/` | `geometric_l1_circle_v0p10_run1.mat`, `geometric_l1_circle_v0p10_run2.mat`, `geometric_l1_circle_v0p10_run3.mat` | 42.4 / 44.4 / 45.2 | 44.01 | 3 (0 hover trips, 0 failed in run) |
-| circle | 0.10 | MAC | `free_flight_tracking/circle/v0p10/` | `modular_adaptive_circle_v0p10_run1.mat`, `modular_adaptive_circle_v0p10_run2.mat`, `modular_adaptive_circle_v0p10_run3.mat` | 77.8 / 76.4 / 76.9 | 77.04 | 3 (0 hover trips, 0 failed in run) |
-| circle | 0.13 | Proposed | `free_flight_tracking/circle/v0p13/` | `whole_body_l1_circle_v0p13_run1.mat`, `whole_body_l1_circle_v0p13_run2.mat`, `whole_body_l1_circle_v0p13_run3.mat` | 14.5 / 15.9 / 14.8 | 15.06 | 3 (0 hover trips, 0 failed in run) |
-| circle | 0.13 | Geo-L1 | `free_flight_tracking/circle/v0p13/` | `geometric_l1_circle_v0p13_run1.mat`, `geometric_l1_circle_v0p13_run2.mat`, `geometric_l1_circle_v0p13_run3.mat` | 46.6 / 46.4 / 47.5 | 46.85 | 3 (0 hover trips, 0 failed in run) |
-| circle | 0.13 | MAC | `free_flight_tracking/circle/v0p13/` | `modular_adaptive_circle_v0p13_run1.mat`, `modular_adaptive_circle_v0p13_run2.mat`, `modular_adaptive_circle_v0p13_run3.mat` | 74.9 / 75.0 / 75.7 | 75.20 | 5 (2 hover trips, 0 failed in run) |
-| circle | 0.20 | Proposed | `free_flight_tracking/circle/v0p20/` | `whole_body_l1_circle_v0p20_run1.mat`, `whole_body_l1_circle_v0p20_run2.mat`, `whole_body_l1_circle_v0p20_run3.mat` | 19.9 / 19.9 / 20.0 | 19.93 | 6 (3 hover trips, 0 failed in run) |
-| circle | 0.20 | Geo-L1 | `free_flight_tracking/circle/v0p20/` | `geometric_l1_circle_v0p20_run1.mat`, `geometric_l1_circle_v0p20_run2.mat`, `geometric_l1_circle_v0p20_run3.mat` | 52.1 / 51.9 / 53.4 | 52.48 | 3 (0 hover trips, 0 failed in run) |
-| circle | 0.20 | MAC | `free_flight_tracking/circle/v0p20/` | `modular_adaptive_circle_v0p20_run1.mat`, `modular_adaptive_circle_v0p20_run2.mat`, `modular_adaptive_circle_v0p20_run3.mat` | 74.5 / 76.9 / 75.7 | 75.69 | 5 (2 hover trips, 0 failed in run) |
-| figure-8 | 0.10 | Proposed | `free_flight_tracking/figure8/v0p10/` | `whole_body_l1_figure8_v0p10_run1.mat`, `whole_body_l1_figure8_v0p10_run2.mat`, `whole_body_l1_figure8_v0p10_run3.mat` | 15.5 / 15.4 / 15.2 | 15.37 | 5 (2 hover trips, 0 failed in run) |
-| figure-8 | 0.10 | Geo-L1 | `free_flight_tracking/figure8/v0p10/` | `geometric_l1_figure8_v0p10_run1.mat`, `geometric_l1_figure8_v0p10_run2.mat`, `geometric_l1_figure8_v0p10_run3.mat` | 42.1 / 42.0 / 44.4 | 42.86 | 3 (0 hover trips, 0 failed in run) |
-| figure-8 | 0.10 | MAC | `free_flight_tracking/figure8/v0p10/` | `modular_adaptive_figure8_v0p10_run1.mat`, `modular_adaptive_figure8_v0p10_run2.mat`, `modular_adaptive_figure8_v0p10_run3.mat` | 77.7 / 77.7 / 77.5 | 77.66 | 4 (1 hover trip, 0 failed in run) |
-| figure-8 | 0.13 | Proposed | `free_flight_tracking/figure8/v0p13/` | `whole_body_l1_figure8_v0p13_run1.mat`, `whole_body_l1_figure8_v0p13_run2.mat`, `whole_body_l1_figure8_v0p13_run3.mat` | 19.3 / 18.7 / 18.1 | 18.70 | 5 (2 hover trips, 0 failed in run) |
-| figure-8 | 0.13 | Geo-L1 | `free_flight_tracking/figure8/v0p13/` | `geometric_l1_figure8_v0p13_run1.mat`, `geometric_l1_figure8_v0p13_run2.mat`, `geometric_l1_figure8_v0p13_run3.mat` | 44.9 / 45.4 / 45.6 | 45.29 | 3 (0 hover trips, 0 failed in run) |
-| figure-8 | 0.13 | MAC | `free_flight_tracking/figure8/v0p13/` | `modular_adaptive_figure8_v0p13_run1.mat`, `modular_adaptive_figure8_v0p13_run2.mat`, `modular_adaptive_figure8_v0p13_run3.mat` | 76.2 / 76.9 / 75.5 | 76.18 | 3 (0 hover trips, 0 failed in run) |
-| figure-8 | 0.20 | Proposed | `free_flight_tracking/figure8/v0p20/` | `whole_body_l1_figure8_v0p20_run1.mat`, `whole_body_l1_figure8_v0p20_run2.mat`, `whole_body_l1_figure8_v0p20_run3.mat` | 25.4 / 24.7 / 25.6 | 25.26 | 3 (0 hover trips, 0 failed in run) |
-| figure-8 | 0.20 | Geo-L1 | `free_flight_tracking/figure8/v0p20/` | `geometric_l1_figure8_v0p20_run1.mat`, `geometric_l1_figure8_v0p20_run2.mat`, `geometric_l1_figure8_v0p20_run3.mat` | 59.8 / 60.2 / 61.1 | 60.40 | 3 (0 hover trips, 0 failed in run) |
-| figure-8 | 0.20 | MAC | `free_flight_tracking/figure8/v0p20/` | `modular_adaptive_figure8_v0p20_run1.mat`, `modular_adaptive_figure8_v0p20_run2.mat`, `modular_adaptive_figure8_v0p20_run3.mat` | 74.0 / 74.4 / 73.1 | 73.84 | 4 (1 hover trip, 0 failed in run) |
+| circle | 0.10 | Proposed | `circle/v0p10/` | `whole_body_l1_circle_v0p10_run1.mat`, `whole_body_l1_circle_v0p10_run2.mat`, `whole_body_l1_circle_v0p10_run3.mat` | 12.3 / 12.0 / 12.5 | 12.24 | 3 (0 hover trips, 0 failed in run) |
+| circle | 0.10 | Geo-L1 | `circle/v0p10/` | `geometric_l1_circle_v0p10_run1.mat`, `geometric_l1_circle_v0p10_run2.mat`, `geometric_l1_circle_v0p10_run3.mat` | 42.4 / 44.4 / 45.2 | 44.01 | 3 (0 hover trips, 0 failed in run) |
+| circle | 0.10 | MAC | `circle/v0p10/` | `modular_adaptive_circle_v0p10_run1.mat`, `modular_adaptive_circle_v0p10_run2.mat`, `modular_adaptive_circle_v0p10_run3.mat` | 77.8 / 76.4 / 76.9 | 77.04 | 3 (0 hover trips, 0 failed in run) |
+| circle | 0.13 | Proposed | `circle/v0p13/` | `whole_body_l1_circle_v0p13_run1.mat`, `whole_body_l1_circle_v0p13_run2.mat`, `whole_body_l1_circle_v0p13_run3.mat` | 14.5 / 15.9 / 14.8 | 15.06 | 3 (0 hover trips, 0 failed in run) |
+| circle | 0.13 | Geo-L1 | `circle/v0p13/` | `geometric_l1_circle_v0p13_run1.mat`, `geometric_l1_circle_v0p13_run2.mat`, `geometric_l1_circle_v0p13_run3.mat` | 46.6 / 46.4 / 47.5 | 46.85 | 3 (0 hover trips, 0 failed in run) |
+| circle | 0.13 | MAC | `circle/v0p13/` | `modular_adaptive_circle_v0p13_run1.mat`, `modular_adaptive_circle_v0p13_run2.mat`, `modular_adaptive_circle_v0p13_run3.mat` | 74.9 / 75.0 / 75.7 | 75.20 | 5 (2 hover trips, 0 failed in run) |
+| circle | 0.20 | Proposed | `circle/v0p20/` | `whole_body_l1_circle_v0p20_run1.mat`, `whole_body_l1_circle_v0p20_run2.mat`, `whole_body_l1_circle_v0p20_run3.mat` | 19.9 / 19.9 / 20.0 | 19.93 | 6 (3 hover trips, 0 failed in run) |
+| circle | 0.20 | Geo-L1 | `circle/v0p20/` | `geometric_l1_circle_v0p20_run1.mat`, `geometric_l1_circle_v0p20_run2.mat`, `geometric_l1_circle_v0p20_run3.mat` | 52.1 / 51.9 / 53.4 | 52.48 | 3 (0 hover trips, 0 failed in run) |
+| circle | 0.20 | MAC | `circle/v0p20/` | `modular_adaptive_circle_v0p20_run1.mat`, `modular_adaptive_circle_v0p20_run2.mat`, `modular_adaptive_circle_v0p20_run3.mat` | 74.5 / 76.9 / 75.7 | 75.69 | 5 (2 hover trips, 0 failed in run) |
+| figure-8 | 0.10 | Proposed | `figure8/v0p10/` | `whole_body_l1_figure8_v0p10_run1.mat`, `whole_body_l1_figure8_v0p10_run2.mat`, `whole_body_l1_figure8_v0p10_run3.mat` | 15.5 / 15.4 / 15.2 | 15.37 | 5 (2 hover trips, 0 failed in run) |
+| figure-8 | 0.10 | Geo-L1 | `figure8/v0p10/` | `geometric_l1_figure8_v0p10_run1.mat`, `geometric_l1_figure8_v0p10_run2.mat`, `geometric_l1_figure8_v0p10_run3.mat` | 42.1 / 42.0 / 44.4 | 42.86 | 3 (0 hover trips, 0 failed in run) |
+| figure-8 | 0.10 | MAC | `figure8/v0p10/` | `modular_adaptive_figure8_v0p10_run1.mat`, `modular_adaptive_figure8_v0p10_run2.mat`, `modular_adaptive_figure8_v0p10_run3.mat` | 77.7 / 77.7 / 77.5 | 77.66 | 4 (1 hover trip, 0 failed in run) |
+| figure-8 | 0.13 | Proposed | `figure8/v0p13/` | `whole_body_l1_figure8_v0p13_run1.mat`, `whole_body_l1_figure8_v0p13_run2.mat`, `whole_body_l1_figure8_v0p13_run3.mat` | 19.3 / 18.7 / 18.1 | 18.70 | 5 (2 hover trips, 0 failed in run) |
+| figure-8 | 0.13 | Geo-L1 | `figure8/v0p13/` | `geometric_l1_figure8_v0p13_run1.mat`, `geometric_l1_figure8_v0p13_run2.mat`, `geometric_l1_figure8_v0p13_run3.mat` | 44.9 / 45.4 / 45.6 | 45.29 | 3 (0 hover trips, 0 failed in run) |
+| figure-8 | 0.13 | MAC | `figure8/v0p13/` | `modular_adaptive_figure8_v0p13_run1.mat`, `modular_adaptive_figure8_v0p13_run2.mat`, `modular_adaptive_figure8_v0p13_run3.mat` | 76.2 / 76.9 / 75.5 | 76.18 | 3 (0 hover trips, 0 failed in run) |
+| figure-8 | 0.20 | Proposed | `figure8/v0p20/` | `whole_body_l1_figure8_v0p20_run1.mat`, `whole_body_l1_figure8_v0p20_run2.mat`, `whole_body_l1_figure8_v0p20_run3.mat` | 25.4 / 24.7 / 25.6 | 25.26 | 3 (0 hover trips, 0 failed in run) |
+| figure-8 | 0.20 | Geo-L1 | `figure8/v0p20/` | `geometric_l1_figure8_v0p20_run1.mat`, `geometric_l1_figure8_v0p20_run2.mat`, `geometric_l1_figure8_v0p20_run3.mat` | 59.8 / 60.2 / 61.1 | 60.40 | 3 (0 hover trips, 0 failed in run) |
+| figure-8 | 0.20 | MAC | `figure8/v0p20/` | `modular_adaptive_figure8_v0p20_run1.mat`, `modular_adaptive_figure8_v0p20_run2.mat`, `modular_adaptive_figure8_v0p20_run3.mat` | 74.0 / 74.4 / 73.1 | 73.84 | 4 (1 hover trip, 0 failed in run) |
 
 Some attempts failed while hovering in DIRECT, before the trajectory started; they were re-flown. No
 trajectory failed after starting. Totals: Proposed 7 of 25 attempts; Geo-L1 0 of 18 attempts; MAC 6 of 24 attempts.

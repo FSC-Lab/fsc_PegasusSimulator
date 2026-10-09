@@ -2,7 +2,8 @@
 
 The paper's results live in three folders, separate from the older comparison material below:
 
-- `simulation_results/`: the simulation data. Its `matlab_simulation_data/` folder is what MATLAB needs.
+- `simulation_results/`: the simulation data. Its `matlab_simulation_data/` folder is what MATLAB needs: one
+  self-contained folder per task (`free_flight_tracking/`, `pick_and_place/`), so copy only the task folder.
 - `experiment_results/`: the selected hardware runs (ros2 bags) and their `matlab_experiment_data/`, plus
   `flight_test_index.md`, which lists every aerial-manipulator flight-test bag and which runs fill the experimental table.
 - `utils/`: the tools that fly, score and tabulate both, and their table outputs (`utils/tables/`).

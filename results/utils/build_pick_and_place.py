@@ -7,7 +7,8 @@ Reads results/simulation_results/pick_and_place/<method>_pnp_run<k>.npz (the npz
 docs/docs_aerial_manipulator/archive/pick_place_controllers_20261003/tools/pnp_mission_v2.py, flown by
 run_pick_and_place_campaign.sh) and writes
     simulation_results/matlab_simulation_data/pick_and_place/<name>.mat       struct `run`: meta, raw, tracking, metrics
-    simulation_results/matlab_simulation_data/pick_and_place_metrics.mat        `metrics_runs`, `metrics_mean`
+    simulation_results/matlab_simulation_data/pick_and_place/pick_and_place_metrics.mat   the table + per-phase metrics
+    simulation_results/matlab_simulation_data/pick_and_place/README.md, configs/     the folder's guide + the flown configs
     results/utils/tables/pick_and_place_sim.csv / .json / .tex                 the table (mean over runs)
     <figdir>/sim_pick_place_trajectory_3d.png, sim_pick_place_tracking_error.png, sim_pick_place_uav_deviation.png
 and with --paper splices the table and the three figures into the paper's
@@ -47,6 +48,8 @@ REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 PNP = os.path.join(ROOT, "pick_and_place")
 TABLES = os.path.join(HERE, "tables")
 MAT_DIR = os.path.join(ROOT, "matlab_simulation_data")
+# one self-contained folder per task inside MAT_DIR (2026-10-09, user request): copy the task folder
+PNP_MAT = os.path.join(MAT_DIR, "pick_and_place")
 sys.path.insert(0, os.path.join(REPO, "extensions", "fsc_aerial_manipulation"))
 
 METHODS = {
@@ -195,7 +198,7 @@ def main():
     runs = discover()
     if not runs:
         sys.exit(f"no runs in {PNP}")
-    os.makedirs(os.path.join(MAT_DIR, "pick_and_place"), exist_ok=True)
+    os.makedirs(PNP_MAT, exist_ok=True)
     os.makedirs(TABLES, exist_ok=True); os.makedirs(a.figdir, exist_ok=True)
     rows, loaded = [], {}
     all_R = {(m, k): load_run(p) for m, k, p in runs}
@@ -280,7 +283,7 @@ def main():
                         ee_heading_deg=R["az"], ee_heading_ref_deg=R["az_ref"], ee_heading_err_deg=R["ee_head_err"],
                         q_deg=np.degrees(R["q"]), q_ref_deg=np.degrees(R["q_d"]), q_err_deg=R["e_q"],
                         columns="platform_att_err_deg = [roll pitch heading] (body axes); xyz columns are world ENU")
-        scipy.io.savemat(os.path.join(MAT_DIR, "pick_and_place", name + ".mat"),
+        scipy.io.savemat(os.path.join(PNP_MAT, name + ".mat"),
                          {"run": dict(meta=meta, metrics=dict(window=r, whole_recording=r_whole, per_phase=per_leg),
                                       tracking=tracking, raw=raw)},
                          do_compression=True, long_field_names=True, oned_as="column")
@@ -328,7 +331,7 @@ def main():
         for j in range(4):
             f[f"q{j + 1}_deg"] = r["joints_deg"][j]
         flat.append(f)
-    scipy.io.savemat(os.path.join(MAT_DIR, "pick_and_place_metrics.mat"),
+    scipy.io.savemat(os.path.join(PNP_MAT, "pick_and_place_metrics.mat"),
                      {"metrics_runs": colstruct(flat, list(flat[0].keys())),
                       "metrics_mean": colstruct(summary, cols),
                       "metrics_phase": colstruct(ph_rows, list(ph_rows[0].keys())),
@@ -361,19 +364,22 @@ FLOWN_CONFIGS = {   # name in configs/ <- the yaml the stack flew (whole-body; t
     "whole_body_l1_4d_sim_pick_and_place.yaml": "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml",
     "geometric_l1_sim_pick_and_place.yaml": "params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_and_place.yaml",
 }
-POINTER = ("**Payload pick-and-place** (the paper's `tab:sim_pick_place`): `pick_and_place/`, "
-           "`pick_and_place_metrics.mat` and `configs/*_sim_pick_and_place.yaml`. See `README_pick_and_place.md`.")
 
 
 def write_readme(rows, summary, PH, T_common, all_R):
-    """matlab_simulation_data/README_pick_and_place.md (generated) + the as-flown configs + a pointer in README.md."""
+    """matlab_simulation_data/pick_and_place/README.md (generated) + the as-flown configs."""
     import shutil
     sys.path.insert(0, HERE)
     from readme_text import _md_table
-    cfg_dir = os.path.join(MAT_DIR, "configs")
+    cfg_dir = os.path.join(PNP_MAT, "configs")
     os.makedirs(cfg_dir, exist_ok=True)
     for dst, src in FLOWN_CONFIGS.items():
         shutil.copy2(os.path.join(AUTOPILOT_CONFIG, src), os.path.join(cfg_dir, dst))
+    plant = []
+    for line in open(os.path.join(AUTOPILOT_CONFIG, FLOWN_CONFIGS["whole_body_l1_4d_sim_pick_and_place.yaml"])):
+        mm = re.match(r"^\s*(sim_[a-z0-9_]+):\s*([^#\n]*)", line)
+        if mm:
+            plant.append(f"{mm.group(1)}: {mm.group(2).strip()}")
     jl = os.path.join(PNP, "campaign.jsonl")
     att = [json.loads(l) for l in open(jl)] if os.path.isfile(jl) else []
     att_by = {}
@@ -382,7 +388,7 @@ def write_readme(rows, summary, PH, T_common, all_R):
     first = min((x["time"] for x in att), default="?")[:16].replace("T", " ")
     last = max((x["time"] for x in att), default="?")[:16].replace("T", " ")
     names = {"whole_body_l1": "Proposed", "geometric_l1": "Geo-L1", "modular_adaptive": "MAC"}
-    run_rows = [[names[r["method"]], f"`pick_and_place/{r['name']}.mat`", f"{r['eps_uav_max_mm']:.1f}", f"{r['rho_uav_max']:.3f}",
+    run_rows = [[names[r["method"]], f"`{r['name']}.mat`", f"{r['eps_uav_max_mm']:.1f}", f"{r['rho_uav_max']:.3f}",
                  f"{r['eps_uav_rms_mm']:.1f}", f"{r['rho_uav_rms']:.3f}", f"{r['ee_pos_mm']:.1f}", f"{r['place_off_axis_mm']:.1f}"]
                 for r in sorted(rows, key=lambda x: (ORDER.index(x["method"]), x["run"]))]
     mean_rows = [[names[x["method"]], str(x["runs"]), f"{x['eps_uav_max_mm']:.1f}", f"{x['rho_uav_max']:.3f}",
@@ -404,11 +410,12 @@ def write_readme(rows, summary, PH, T_common, all_R):
     L = [
         "# Simulation results, MATLAB data (payload pick-and-place)", "",
         "This is the data behind the paper's pick-and-place table (`tab:sim_pick_place`) and its figures.",
-        "It sits beside the free-flight data in this folder (see `README.md`) and uses the same plant, the same",
-        "`run` struct layout and the same notation. These files plus MATLAB are all you need.", "",
+        "It is one task folder of `matlab_simulation_data/`, self-contained: these files plus MATLAB are all",
+        "you need. The free-flight data are in the separate `free_flight_tracking/` folder beside it, with",
+        "the same plant, the same `run` struct layout and the same notation.", "",
         "## Files", "",
         "```",
-        "pick_and_place/<method>_pnp_run<k>.mat   one run, struct `run`",
+        "<method>_pnp_run<k>.mat                  one run, struct `run`",
         "pick_and_place_metrics.mat               metrics_mean = the table (mean over runs), metrics_runs = every run,",
         "                                         metrics_phase = every run x phase, phases = the common phase table,",
         "                                         window_s = the evaluation window, L_arm_m = L",
@@ -423,8 +430,8 @@ def write_readme(rows, summary, PH, T_common, all_R):
         "```matlab",
         "S = load('pick_and_place_metrics.mat');",
         "P = S.phases;                                    % the six phases, common to every run",
-        "r = load('pick_and_place/whole_body_l1_pnp_run1.mat').run;",
-        "g = load('pick_and_place/geometric_l1_pnp_run1.mat').run;",
+        "r = load('whole_body_l1_pnp_run1.mat').run;",
+        "g = load('geometric_l1_pnp_run1.mat').run;",
         "figure; hold on",
         "for i = 1:numel(P.start_s)                       % phase bands, alternating shades",
         "    c = 0.90 + 0.07*mod(i+1, 2);",
@@ -481,7 +488,11 @@ def write_readme(rows, summary, PH, T_common, all_R):
         "  3 mm stem, and the lift hangs the basket on them. At the place the claw descends with the jaws",
         "  closed, opens, and backs out.",
         "- **Arm poses:** pick and place [0, 32, 38, 0] deg, carry [12, 38, 42, 0] deg.",
-        "- **Plant:** the free-flight mirror plant (see `README.md`, Plant). All `sim_*` keys are in the configs.", "",
+        "- **Plant:** the free-flight mirror plant -- motor delay, model mismatch, battery sag, a standing",
+        "  wrench bias, imperfect joint actuation and emulated mocap feedback (the free-flight README explains",
+        "  each). Every `sim_*` key as flown (`configs/whole_body_l1_4d_sim_pick_and_place.yaml`; the decoupled",
+        "  file carries the same):", "",
+        "```", *plant, "```", "",
         "## The struct `run`", "",
         _md_table(["field", "content"], [
             ["`meta`", "method, run index, scene, plant, `phases` (key, label, start_s, end_s of this run), "
@@ -514,17 +525,9 @@ def write_readme(rows, summary, PH, T_common, all_R):
         "  The platform reference x<sub>b</sub> = x<sub>c,d</sub> − R<sub>0,d</sub> r<sub>0c</sub>(q<sub>d</sub>) is "
         "r<sub>UAV</sub><sup>ref</sup>.",
         "- **max / rms:** over the window; the table's other columns are RMS errors.", ""]
-    with open(os.path.join(MAT_DIR, "README_pick_and_place.md"), "w") as f:
+    with open(os.path.join(PNP_MAT, "README.md"), "w") as f:
         f.write("\n".join(L))
-    # the pointer in README.md (regenerated by build_free_flight.py, whose template carries it too)
-    rp = os.path.join(MAT_DIR, "README.md")
-    if os.path.isfile(rp):
-        t = open(rp).read()
-        if POINTER not in t:
-            anchor = "## Simulation index"
-            t = t.replace(anchor, POINTER + "\n\n" + anchor, 1) if anchor in t else t + "\n" + POINTER + "\n"
-            open(rp, "w").write(t)
-    print("wrote", os.path.join(MAT_DIR, "README_pick_and_place.md"))
+    print("wrote", os.path.join(PNP_MAT, "README.md"))
 
 
 def latex_table(summary, T_common):

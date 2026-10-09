@@ -8,7 +8,7 @@ Reads every completed run on disk, free_flight_tracking/<shape>/v<speed>/<method
 and writes
     simulation_results/matlab_simulation_data/free_flight_tracking/<shape>/v<speed>/<name>.mat
                   struct `run`: meta, raw streams (column-named), the 100 Hz tracking signals and the RMSEs
-    simulation_results/matlab_simulation_data/free_flight_tracking_rmse.mat
+    simulation_results/matlab_simulation_data/free_flight_tracking/free_flight_tracking_rmse.mat
                   structs `rmse_runs` (one row per run) and `rmse_mean` (the table: mean over runs)
     results/utils/tables/free_flight_tracking_sim.csv / .json   the same numbers, read by make_latex_table.py
 
@@ -49,6 +49,8 @@ REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 FF = os.path.join(ROOT, "free_flight_tracking")
 TABLES = os.path.join(HERE, "tables")                                  # results/utils/tables
 MAT_DIR = os.path.join(ROOT, "matlab_simulation_data")
+# one self-contained folder per task inside MAT_DIR (2026-10-09, user request): copy the task folder
+FF_MAT = os.path.join(MAT_DIR, "free_flight_tracking")
 
 METHODS = {
     "whole_body_l1": "Whole-body L1 impedance (proposed)",
@@ -323,8 +325,8 @@ def stage2(tmp):
             f[k] = r[k]
         flat.append(f)
     mcols = [c for c in cols if c != "failed_after_start"]
-    os.makedirs(MAT_DIR, exist_ok=True)
-    scipy.io.savemat(os.path.join(MAT_DIR, "free_flight_tracking_rmse.mat"),
+    os.makedirs(FF_MAT, exist_ok=True)
+    scipy.io.savemat(os.path.join(FF_MAT, "free_flight_tracking_rmse.mat"),
                      {"rmse_runs": colstruct(flat, list(flat[0].keys())), "rmse_mean": colstruct(summary, mcols)},
                      oned_as="column")
     # the self-contained README of matlab_simulation_data (index, conditions, struct, notation) + the flown configs
@@ -333,9 +335,9 @@ def stage2(tmp):
     import readme_text as RT
     cfg_src = os.path.join(FF, "configs")
     cfgs = ["whole_body_l1_4d_mirror_sim.yaml", "geometric_l1_mirror_sim.yaml", "modular_adaptive_mirror_sim.yaml"]
-    os.makedirs(os.path.join(MAT_DIR, "configs"), exist_ok=True)
+    os.makedirs(os.path.join(FF_MAT, "configs"), exist_ok=True)
     for c in cfgs:
-        shutil.copy2(os.path.join(cfg_src, c), os.path.join(MAT_DIR, "configs", c))
+        shutil.copy2(os.path.join(cfg_src, c), os.path.join(FF_MAT, "configs", c))
     import re as regex                     # `re` is the EE position array in this function
     plant = []
     for line in open(os.path.join(cfg_src, cfgs[0])):
@@ -344,7 +346,7 @@ def stage2(tmp):
             plant.append((mm.group(1), mm.group(2).strip()))
     attempts = [json.loads(l) for l in open(os.path.join(FF, "campaign.jsonl"))] if os.path.isfile(
         os.path.join(FF, "campaign.jsonl")) else []
-    with open(os.path.join(MAT_DIR, "README.md"), "w") as f:
+    with open(os.path.join(FF_MAT, "README.md"), "w") as f:
         f.write(RT.sim_readme(summary, rows, attempts, plant, cfgs))
     for s in summary:
         print(f"MEAN {s['shape']} {s['mean_speed_mps']:.2f} {s['method']} (n={s['runs']}): "

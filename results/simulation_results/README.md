@@ -28,7 +28,7 @@ Only the DIRECT control law differs between methods. For Geo-L1 the arm also run
 # fly (resumes: completed runs on disk are skipped)
 setsid nohup /usr/bin/python3 results/utils/run_tracking_campaign.py \
     > results/simulation_results/free_flight_tracking/campaign.out 2>&1 < /dev/null &
-# score every completed run -> matlab_simulation_data/ + results/utils/tables/free_flight_tracking_sim.csv|json
+# score every completed run -> matlab_simulation_data/free_flight_tracking/ + results/utils/tables/free_flight_tracking_sim.csv|json
 /usr/bin/python3 results/utils/build_free_flight.py
 # the paper table (results/utils/tables/free_flight_tracking_sim.tex; --paper <main.tex> also updates the paper)
 /usr/bin/python3 results/utils/make_latex_table.py
@@ -53,9 +53,11 @@ starting.
 
 ```
 simulation_results/
-  matlab_simulation_data/                     MATLAB-ready (see its README): copy this folder to plot
-    free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat
-    free_flight_tracking_rmse.mat             the table's numbers (rmse_mean) and every run (rmse_runs)
+  matlab_simulation_data/                     MATLAB-ready: ONE self-contained folder per task -- copy the task folder
+    free_flight_tracking/                     README.md, configs/, and:
+      <shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat
+      free_flight_tracking_rmse.mat           the table's numbers (rmse_mean) and every run (rmse_runs)
+    pick_and_place/                           README.md, configs/, the run files, pick_and_place_metrics.mat
   free_flight_tracking/                       the raw campaign record
     <shape>/v<speed>/                         shape = circle | figure8, v0p13 = 0.13 m/s
         <method>_<shape>_v<speed>_run<k>.npz  the raw run as recorded (am_ee_compare_driver.py)
@@ -129,7 +131,7 @@ makes the place descent trim sideways first on every run, so it always lasts ~8.
 # fly (resumes; one archive/pick_place_top_hat_20261008/tools/run_pnp.sh flight per attempt; closes the sim at the end)
 setsid nohup results/utils/run_pick_and_place_campaign.sh 2 wb geo \
     > results/simulation_results/pick_and_place/campaign.out 2>&1 < /dev/null &
-# score -> matlab_simulation_data/pick_and_place/ + README_pick_and_place.md + results/utils/tables/pick_and_place_sim.csv|json|tex + figures
+# score -> matlab_simulation_data/pick_and_place/ (runs, metrics, README.md, configs/) + results/utils/tables/pick_and_place_sim.csv|json|tex + figures
 PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py [--paper <main.tex>]
 ```
 
@@ -171,8 +173,9 @@ simulation_results/
     <method>_pnp_run<k>.npz                    the mission driver's npz (pnp_mission_v2.py --timetable)
     logs/<name>/, failed/<name>_attempt<a>/    logs; failed attempts kept whole
     campaign.jsonl, campaign.out, figures/
-  matlab_simulation_data/README_pick_and_place.md     how to use the MATLAB data (timing, struct, notation)
-  matlab_simulation_data/pick_and_place/<name>.mat   struct `run`: meta (incl. phases), metrics (window, per_phase, whole_recording), tracking, raw
-  matlab_simulation_data/pick_and_place_metrics.mat  metrics_mean (the table) / metrics_runs / metrics_phase / phases / window_s / L_arm_m
-  matlab_simulation_data/configs/*_sim_pick_and_place.yaml   the configs as flown
+  matlab_simulation_data/pick_and_place/      the task folder to copy
+    README.md                                 how to use the MATLAB data (timing, struct, notation)
+    <name>.mat                                struct `run`: meta (incl. phases), metrics (window, per_phase, whole_recording), tracking, raw
+    pick_and_place_metrics.mat                metrics_mean (the table) / metrics_runs / metrics_phase / phases / window_s / L_arm_m
+    configs/*_sim_pick_and_place.yaml         the configs as flown
 ```

@@ -711,6 +711,12 @@
     # Safety guard: ABORT's response once the tilt stays above 15 deg for 0.1 s.
     pick_place_guard_tilt_deg: 15.0
     pick_place_guard_persist_s: 0.10
+    # ABORT, two-step arm (2026-10-09, user design): the gripper opens, the arm
+    # goes to this RELEASE pose while the vehicle climbs (claws 60 deg down: an
+    # arch still hanging on the open fingers slides off), holds it, then folds
+    # home; the arm GS closes the gripper when the abort completes.
+    pick_place_abort_release_pose_deg: [0.0, 0.0, 30.0, 0.0]
+    pick_place_abort_release_hold_s: 2.0
     # World-held claw for the pick hover / descent / grasp only (the whole-body
     # node's set_ee_anchor_com; the decoupled node has none, so it is a no-op).
     # The box payload's hook grasp keeps the CoM anchor for the pick too: the

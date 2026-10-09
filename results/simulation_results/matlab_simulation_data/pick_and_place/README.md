@@ -1,13 +1,14 @@
 # Simulation results, MATLAB data (payload pick-and-place)
 
 This is the data behind the paper's pick-and-place table (`tab:sim_pick_place`) and its figures.
-It sits beside the free-flight data in this folder (see `README.md`) and uses the same plant, the same
-`run` struct layout and the same notation. These files plus MATLAB are all you need.
+It is one task folder of `matlab_simulation_data/`, self-contained: these files plus MATLAB are all
+you need. The free-flight data are in the separate `free_flight_tracking/` folder beside it, with
+the same plant, the same `run` struct layout and the same notation.
 
 ## Files
 
 ```
-pick_and_place/<method>_pnp_run<k>.mat   one run, struct `run`
+<method>_pnp_run<k>.mat                  one run, struct `run`
 pick_and_place_metrics.mat               metrics_mean = the table (mean over runs), metrics_runs = every run,
                                          metrics_phase = every run x phase, phases = the common phase table,
                                          window_s = the evaluation window, L_arm_m = L
@@ -24,8 +25,8 @@ configs/geometric_l1_sim_pick_and_place.yaml       the decoupled (Geo-L1) contro
 ```matlab
 S = load('pick_and_place_metrics.mat');
 P = S.phases;                                    % the six phases, common to every run
-r = load('pick_and_place/whole_body_l1_pnp_run1.mat').run;
-g = load('pick_and_place/geometric_l1_pnp_run1.mat').run;
+r = load('whole_body_l1_pnp_run1.mat').run;
+g = load('geometric_l1_pnp_run1.mat').run;
 figure; hold on
 for i = 1:numel(P.start_s)                       % phase bands, alternating shades
     c = 0.90 + 0.07*mod(i+1, 2);
@@ -83,10 +84,10 @@ plant, planner, scene and task for every method.
 
 | method | file | eps max [mm] | rho max | eps rms [mm] | rho rms | EE RMSE [mm] | placed off axis [mm] |
 |---|---|---|---|---|---|---|---|
-| Proposed | `pick_and_place/whole_body_l1_pnp_run1.mat` | 140.9 | 0.381 | 25.6 | 0.069 | 27.5 | 25.3 |
-| Proposed | `pick_and_place/whole_body_l1_pnp_run2.mat` | 151.9 | 0.411 | 26.7 | 0.072 | 28.7 | 23.7 |
-| Geo-L1 | `pick_and_place/geometric_l1_pnp_run1.mat` | 314.5 | 0.850 | 66.7 | 0.180 | 67.6 | 27.1 |
-| Geo-L1 | `pick_and_place/geometric_l1_pnp_run2.mat` | 310.2 | 0.838 | 65.7 | 0.178 | 67.0 | 30.2 |
+| Proposed | `whole_body_l1_pnp_run1.mat` | 140.9 | 0.381 | 25.6 | 0.069 | 27.5 | 25.3 |
+| Proposed | `whole_body_l1_pnp_run2.mat` | 151.9 | 0.411 | 26.7 | 0.072 | 28.7 | 23.7 |
+| Geo-L1 | `geometric_l1_pnp_run1.mat` | 314.5 | 0.850 | 66.7 | 0.180 | 67.6 | 27.1 |
+| Geo-L1 | `geometric_l1_pnp_run2.mat` | 310.2 | 0.838 | 65.7 | 0.178 | 67.0 | 30.2 |
 
 The table is the mean over the runs:
 
@@ -111,7 +112,50 @@ Attempts (a run is kept only if it completed, placed the basket and kept every s
   3 mm stem, and the lift hangs the basket on them. At the place the claw descends with the jaws
   closed, opens, and backs out.
 - **Arm poses:** pick and place [0, 32, 38, 0] deg, carry [12, 38, 42, 0] deg.
-- **Plant:** the free-flight mirror plant (see `README.md`, Plant). All `sim_*` keys are in the configs.
+- **Plant:** the free-flight mirror plant -- motor delay, model mismatch, battery sag, a standing
+  wrench bias, imperfect joint actuation and emulated mocap feedback (the free-flight README explains
+  each). Every `sim_*` key as flown (`configs/whole_body_l1_4d_sim_pick_and_place.yaml`; the decoupled
+  file carries the same):
+
+```
+sim_plant_kf_scale: 1.037
+sim_plant_kf_sag_per_min: 0.036
+sim_plant_km_scale: 0.2333
+sim_plant_rotor_lambda: 10.0265
+sim_wall_clock_compensation: true
+sim_plant_mass_scale: 1.0
+sim_plant_inertia_scale: 1.0
+sim_plant_com_shift_x: -0.017854
+sim_plant_com_shift_y: 0.0
+sim_plant_com_shift_z: 0.0
+sim_plant_force_bias_x: 0.55
+sim_plant_force_bias_y: -0.50
+sim_plant_force_bias_z: 0.0
+sim_plant_torque_bias_x: 0.0
+sim_plant_torque_bias_y: 0.0
+sim_plant_torque_bias_z: -0.095
+sim_arm_current_noise_enable: true
+sim_arm_current_noise_a_j1: 0.0096
+sim_arm_current_noise_a_j2: 0.0062
+sim_arm_current_noise_a_j3: 0.0096
+sim_arm_current_noise_a_j4: 0.0096
+sim_arm_current_noise_bw_hz: 5.0
+sim_arm_current_noise_seed: 0
+sim_arm_friction_scale_j1: 1.0
+sim_arm_friction_scale_j2: 0.70
+sim_arm_friction_scale_j3: 0.65
+sim_arm_friction_scale_j4: 1.5
+sim_arm_friction_width: 0.015
+sim_arm_mass_scale: 1.0
+sim_arm_vel_lag_s: 0.048
+sim_arm_vel_quant_rad_s: 0.024
+sim_ee_marker_cube: false
+sim_ee_marker_cube_mass_kg: 0.03
+sim_feedback_mocap_rate_hz: 60.0
+sim_feedback_pos_noise_m: 0.0005
+sim_feedback_vel_noise_mps: 0.022
+sim_feedback_noise_seed: 0
+```
 
 ## The struct `run`
 

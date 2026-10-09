@@ -62,6 +62,11 @@ class Abort(Exception):
     pass
 
 
+class OpAbortDone(Exception):
+    """--abort-at: the operator abort was pressed and flown; the mission ends here."""
+    pass
+
+
 class Driver(Node):
     def __init__(self, a):
         super().__init__("pnp_mission_v2")
@@ -71,6 +76,8 @@ class Driver(Node):
         self.t0 = time.time()
         self.events, self.marks = [], []
         self.late = []                       # --timetable: (step, seconds late)
+        self.op_abort_req = False            # --abort-at carry: set by the watcher thread
+        self.op_abort_done = False
         self.odom = self.mode = self.armed = None
         self.mode = ""
         self.status = self.pp_status = ""
@@ -214,8 +221,48 @@ class Driver(Node):
         self.ev(f"timetable: {what} in {max(dt, 0.0):.2f} s")
         t_end = time.time() + max(dt, 0.0)
         while time.time() < t_end:
+            self.maybe_op_abort()
             self.guard(what)
             time.sleep(0.01)
+
+    def maybe_op_abort(self):
+        if self.op_abort_req and not self.op_abort_done:
+            self.op_abort(self.a.abort_at)
+
+    def op_abort(self, where):
+        """--abort-at (2026-10-09): press ABORT exactly as the arm GS's button does --
+        gripper OPEN, then the planner's pick_place/abort -- and, as the GS does once
+        the planner reports ABORTED, CLOSE the gripper; then hold --post-abort-hold s
+        watching the payload, and end the mission (OpAbortDone)."""
+        self.op_abort_done = True
+        self.mark("op_abort:start")
+        self.ev(f"OPERATOR ABORT ({where}): gripper OPEN + pick_place/abort")
+        self.grip_cmd = GRIP_OPEN
+        r = self.trig("abort", must=False)
+        self.ev(f"abort: success={r.success} {r.message}")
+        t = time.time()
+        while time.time() - t < 40.0:
+            if self.pp_status.startswith("ABORTED") or self.pp_status.startswith("INFEASIBLE"):
+                break
+            time.sleep(0.02)
+        self.mark("op_abort:end")
+        self.ev(f"abort finished: {self.pp_status}")
+        self.grip_cmd = GRIP_CLOSE           # the arm GS closes it on ABORTED
+        self.mark("gripper_close_after_abort")
+        time.sleep(self.a.post_abort_hold)
+        self.mark("post_abort_hold:end")
+        raise OpAbortDone(where)
+
+    def carry_watcher(self):
+        """--abort-at carry: request the abort --abort-delay s into go_to_place_start."""
+        while not any(n == "go_to_place_start:start" for _, n in self.marks):
+            if self.phase != "mission" and self.phase != "init":
+                return
+            time.sleep(0.02)
+        t_mark = [t for t, n in self.marks if n == "go_to_place_start:start"][-1]
+        while self.now() < t_mark + self.a.abort_delay:
+            time.sleep(0.01)
+        self.op_abort_req = True
 
     def started_late(self, step, name):
         """--timetable: the planner refused the call for a while (still settling)."""
@@ -230,6 +277,7 @@ class Driver(Node):
     def wait(self, cond, timeout, what):
         t = time.time()
         while time.time() - t < timeout:
+            self.maybe_op_abort()
             if cond():
                 return time.time() - t
             self.guard(what)
@@ -460,6 +508,8 @@ class Driver(Node):
         self.wait(lambda: self.pp_status.startswith("READY"), 60, "mission READY")
         self.ev(f"planned leg durations {np.round(self.info[8:14], 1).tolist()} s, exits "
                 f"{np.round(self.info[81:83], 1).tolist()} s")
+        if a.abort_at == "carry":
+            threading.Thread(target=self.carry_watcher, daemon=True).start()
         self.leg("go_to_start", "go_to_start")
         if a.timetable:
             self.align("go_to_start:start", a.slot_ready_pick, "ready_pick")
@@ -478,6 +528,10 @@ class Driver(Node):
         # 2.3 Exit To Pick at once (the closed chain with the pillar drifts) -- or
         # after --clamp-hold s, an operator's reaction time (2026-10-03: the user's
         # manual decoupled run sat clamped ~4 s and tipped over at the lift)
+        if a.abort_at == "exit_pick":
+            # the operator aborts with the fingers around the stem, the basket on the hat
+            time.sleep(a.abort_delay)
+            self.op_abort("exit_pick")
         if a.timetable:
             # the hook grasp: the fingers close AROUND the stem without clamping it,
             # so holding here is safe; this slack absorbs the gate + close time
@@ -503,6 +557,10 @@ class Driver(Node):
             # claw to come back within 2 cm is waiting for a closed claw to re-enter
             # around the stem (hook3: a finger hit it and the basket fell off)
             self.descend(3, "place", gate=False)
+            if a.abort_at == "exit_place":
+                # the operator aborts at touchdown, the claw still under the arch
+                time.sleep(a.abort_delay)
+                self.op_abort("exit_place")
             self.mark("gripper_open:start")
             self.grip_cmd = GRIP_OPEN
             self.exit(3, "exit_place")
@@ -622,6 +680,13 @@ def main():
     # margin); a step past its slot is recorded as LATE (npz late_name / late_s).
     # Needs the planner's pick_place_descent_trim_first_min = 0 (the sim
     # _pick_and_place.yaml) so the place descent lasts the same on every run.
+    # --abort-at (2026-10-09): the ABORT button test -- press it with the claw around
+    # the stem on the pick hat (exit_pick, instead of Exit To Pick), at the place
+    # touchdown (exit_place, instead of the open + Exit To Place), or --abort-delay s
+    # into the carry (carry). Emulates the arm GS: gripper open, abort, close on ABORTED.
+    ap.add_argument("--abort-at", choices=["none", "exit_pick", "exit_place", "carry"], default="none")
+    ap.add_argument("--abort-delay", type=float, default=0.3, help="[s] after the trigger point (carry: into the leg)")
+    ap.add_argument("--post-abort-hold", type=float, default=8.0, help="[s] watched after the abort completes")
     ap.add_argument("--timetable", action="store_true",
                     help="start every step at a fixed mission time (replaces --leg-pause / --clamp-hold)")
     ap.add_argument("--slot-ready-pick", type=float, default=5.3, help="go_to_start start -> Ready To Pick")
@@ -642,6 +707,9 @@ def main():
     try:
         d.mission()
         d.ev("mission complete")
+    except OpAbortDone as e:
+        reason = f"operator abort test ({e})"
+        d.ev("mission ended by the operator abort test")
     except Abort as e:
         aborted, reason = True, str(e)
         d.ev("ABORT: " + reason)

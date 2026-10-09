@@ -4448,10 +4448,26 @@ Command.md §16, results `results/simulation_results/README.md`).**
   a late step re-flies the run. Result: phase starts agree to 0.01 s, window = the whole 92.5 s mission as
   six contiguous phases; WB eps max/rms 146/26.1 mm, EE 28.1; GEO 312/66.2, EE 67.3 (4 runs kept, 1 WB
   attempt dropped the basket mid-carry -- the hook's friction limit). MATLAB data + generated
-  `matlab_simulation_data/README_pick_and_place.md` (the user plots in MATLAB on another laptop; the
+  `matlab_simulation_data/pick_and_place/README.md` -- since 2026-10-09 ONE self-contained folder per task
+  (`free_flight_tracking/`, `pick_and_place/`), user request (the user plots in MATLAB on another laptop; the
   zip was regenerated to include it); paper table re-spliced. **Trap hit:** the campaign reuses run TAGS,
   so yesterday's `runs/cmp_*` files would have passed the success check if a new attempt died before its
   driver wrote -- moved to `runs/unaligned_20261008/` first; the campaign script now moves a tag's old files to `runs/stale/` before each attempt.
+- **ABORT made TWO-STEP for the hook grasp (2026-10-09, user design).** An OPEN gripper still carries the
+  hanger's arch, so the old abort (open, arm straight home, climb 0.30 m) could carry the basket off or
+  lift it from a hat. Now: open, climb 0.30 m while the arm goes to a RELEASE pose (claws 60 deg down),
+  hold 2 s, fold home, and the arm GS CLOSES the gripper on ABORTED (~10.5 s total). Planner
+  `planPickPlaceAbort` + keys `pick_place_abort_release_pose_deg` [0, 0, 30, 0] /
+  `pick_place_abort_release_hold_s` 2.0 (default empty = the old single move); set in the hardware 4-D
+  yaml AND the mirror (task block identical), all derived yamls regenerated; the four hardware stack
+  scripts refuse a planner build lacking the key. Isaac (`tools/run_abort_tests.sh`, driver `--abort-at`,
+  `tools/abort_score.py`): released 4/4 -- WB carry, pick, place + decoupled carry; mid-carry the basket
+  falls to the floor, hooked on a hat it lifts <= 14 mm and stays upright. Claw pitch = 90 - (q2+q3).
+  On hardware the planner's 15 deg tilt guard never acts (the flight node's own 15 deg watchdog trips
+  first -> SAFETY, hover in place, arm home after 1 s, gripper unchanged).
+- **`matlab_simulation_data/` = one self-contained folder per task (2026-10-09, user request):**
+  `free_flight_tracking/` and `pick_and_place/`, each with README.md, configs/, the run files and its
+  summary .mat; both builders write there (`FF_MAT` / `PNP_MAT`). Copy only the task folder.
 
 **WHOLE-BODY FIGURE-8 SPEED SWEEP → 0.20 m/s FOR THE NEXT HARDWARE FLIGHT (2026-10-07, user request:
 a safe mean speed at which the whole-body controller's hardware EE rms ≈ the decoupled one's hardware

@@ -122,7 +122,7 @@ def sim_readme(summary, runs, attempts, plant, configs):
                 s = next((x for x in summary if x["shape"] == shape and f"{x['mean_speed_mps']:.2f}" == v
                           and x["method"] == m), None)
                 a = att.get((shape, v, m), {})
-                folder = f"`free_flight_tracking/{shape}/v{v.replace('.', 'p')}/`"
+                folder = f"`{shape}/v{v.replace('.', 'p')}/`"
                 files = ", ".join(f"`{x['name']}.mat`" for x in rr) or "--"
                 rows.append([SHAPE_NAMES[shape], v, METHOD_NAMES[m][0], folder, files,
                              " / ".join(f"{x['ee_pos_mm']:.1f}" for x in rr) or "--",
@@ -137,10 +137,12 @@ def sim_readme(summary, runs, attempts, plant, configs):
     L = [
         "# Simulation results, MATLAB data (free-flight trajectory tracking)", "",
         "This is the data behind the paper's simulation table (Table II, `tab:sim_free_flight_tracking`).",
+        "It is one task folder of `matlab_simulation_data/`; the pick-and-place data are in the separate",
+        "`pick_and_place/` folder beside it.",
         "The folder is self-contained: these files plus MATLAB are all you need.", "",
         "## Files", "",
         "```",
-        "free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat   one run, struct `run`",
+        "<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat   one run, struct `run`",
         "free_flight_tracking_rmse.mat     rmse_mean = Table II (mean over runs), rmse_runs = every run",
         "configs/                          the exact controller + plant config each method flew",
         "```", "",
@@ -150,16 +152,13 @@ def sim_readme(summary, runs, attempts, plant, configs):
         "- **`<method>`:** see the table below.", "",
         _md_table(["method key", "table name", "method"], meth), "",
         "```matlab",
-        "r = load('free_flight_tracking/circle/v0p13/whole_body_l1_circle_v0p13_run1.mat').run;",
+        "r = load('circle/v0p13/whole_body_l1_circle_v0p13_run1.mat').run;",
         "plot(r.tracking.t, vecnorm(r.tracking.ee_pos_err_m, 2, 2) * 1e3)        % EE position error [mm]",
         "plot3(r.tracking.ee_pos_ref_m(:,1), r.tracking.ee_pos_ref_m(:,2), r.tracking.ee_pos_ref_m(:,3), '--')",
         "S = load('free_flight_tracking_rmse.mat');",
         "T = struct2table(S.rmse_mean);     % Table II: one row per (shape, speed, method)",
         "R = struct2table(S.rmse_runs);     % every run",
         "```", "",
-        # the pick-and-place data share this folder (build_pick_and_place.py writes that README; same text there)
-        "**Payload pick-and-place** (the paper's `tab:sim_pick_place`): `pick_and_place/`, "
-        "`pick_and_place_metrics.mat` and `configs/*_sim_pick_and_place.yaml`. See `README_pick_and_place.md`.", "",
         "## Simulation index", "",
         f"Flown {first} to {last}, in one campaign with one launch condition:",
         "- **Simulator:** Isaac Sim, headless, at real time (RTF 1.000 during every trajectory).",
