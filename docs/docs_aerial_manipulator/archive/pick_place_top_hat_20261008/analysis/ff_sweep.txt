@@ -1,0 +1,15 @@
+FF ref_0924                                  | j2 rms  0.3 max  0.8 span   99% stuck   0% v99  8.3 over  -0.0 | j3 rms  0.8 max  1.4 span  101% stuck   0% v99  8.3 over  +0.3 | tilt  0.2 CoM    14 mm EE  1.1 mm | tau j2/j3 1.10/0.49 cap 0.0%
+   hold-offset j2/j3 -0.11/-0.12 deg; moving rms j2/j3 0.35/0.75 deg; stuck j2/j3 20/19 %; cap 0.0 %
+FF meas_hw                                   | j2 rms  0.7 max  2.9 span  104% stuck  22% v99 19.6 over  +0.8 | j3 rms  0.7 max  2.8 span  101% stuck  24% v99 20.5 over  +0.2 | tilt  0.7 CoM    22 mm EE  1.4 mm | tau j2/j3 1.29/0.59 cap 0.0%
+   hold-offset j2/j3 -0.22/-0.22 deg; moving rms j2/j3 0.70/0.66 deg; stuck j2/j3 36/40 %; cap 0.0 %
+FF meas_s1                                   | j2 rms  1.0 max  2.3 span  107% stuck  43% v99 28.5 over  +1.1 | j3 rms  1.0 max  2.2 span  106% stuck  40% v99 32.4 over  +1.0 | tilt  0.9 CoM    24 mm EE  1.7 mm | tau j2/j3 1.39/0.64 cap 0.0%
+   hold-offset j2/j3 -0.40/-0.54 deg; moving rms j2/j3 0.95/0.96 deg; stuck j2/j3 54/53 %; cap 0.0 %
+FF meas_w015                                 | j2 rms  0.7 max  2.7 span   95% stuck  22% v99 19.1 over  -0.4 | j3 rms  0.7 max  2.6 span   94% stuck  21% v99 21.0 over  -0.7 | tilt  0.6 CoM    24 mm EE  1.4 mm | tau j2/j3 1.09/0.59 cap 0.0%
+   hold-offset j2/j3 -0.26/-0.28 deg; moving rms j2/j3 0.68/0.64 deg; stuck j2/j3 40/41 %; cap 0.0 %
+FF meas_w06                                  | j2 rms  0.8 max  2.9 span   99% stuck  27% v99 21.6 over  -0.1 | j3 rms  0.8 max  2.8 span   97% stuck  30% v99 23.9 over  -0.3 | tilt  0.6 CoM    26 mm EE  1.4 mm | tau j2/j3 1.26/0.57 cap 0.0%
+   hold-offset j2/j3 -0.17/-0.17 deg; moving rms j2/j3 0.73/0.74 deg; stuck j2/j3 45/47 %; cap 0.0 %
+FF blend30                                   | j2 rms  0.6 max  2.3 span   96% stuck  17% v99 14.2 over  -0.3 | j3 rms  0.5 max  2.3 span   96% stuck  17% v99 17.2 over  -0.4 | tilt  0.5 CoM    20 mm EE  1.2 mm | tau j2/j3 1.09/0.55 cap 0.0%
+   hold-offset j2/j3 -0.22/-0.22 deg; moving rms j2/j3 0.54/0.50 deg; stuck j2/j3 37/38 %; cap 0.0 %
+FF blend60                                   | j2 rms  0.4 max  1.6 span   97% stuck  10% v99  9.4 over  -0.3 | j3 rms  0.3 max  1.6 span   97% stuck  10% v99 12.3 over  -0.4 | tilt  0.4 CoM    15 mm EE  1.0 mm | tau j2/j3 1.09/0.54 cap 0.0%
+   hold-offset j2/j3 -0.22/-0.22 deg; moving rms j2/j3 0.35/0.31 deg; stuck j2/j3 31/32 %; cap 0.0 %
+rc=0

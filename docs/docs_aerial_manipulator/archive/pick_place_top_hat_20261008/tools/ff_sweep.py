@@ -32,6 +32,11 @@ CASES = {
     "meas_w06":     dict(src="measured", w=0.06, scale=HW_SCALE),
     "blend30":      dict(src="blend", w=0.03, scale=HW_SCALE, blend=0.3),
     "blend60":      dict(src="blend", w=0.03, scale=HW_SCALE, blend=0.6),
+    # 2026-10-09: the two CONFIG-ONLY directions the first sweep missed
+    "meas_s050":    dict(src="measured", w=0.03, scale=np.array([1.0, 0.50, 0.45, 1.0])),
+    "meas_s035":    dict(src="measured", w=0.03, scale=np.array([1.0, 0.35, 0.33, 1.0])),
+    "ref_hw":       dict(src="reference", w=0.03, scale=HW_SCALE),   # reference source, hardware scale
+    "blend60_s085": dict(src="blend", w=0.03, scale=np.array([1.0, 0.60, 0.55, 1.0]), blend=0.6),
 }
 
 

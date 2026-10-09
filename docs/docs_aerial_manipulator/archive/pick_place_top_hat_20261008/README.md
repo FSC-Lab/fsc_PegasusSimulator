@@ -143,7 +143,7 @@ Paper Figs. 9 / 11 and the experiment table: whole-body q2 / q3 RMSE 1.66-1.77 /
 For part 2 the offline arm sim (`arm_armature_20260926/arm_stiffness_sim.py`, which gained a
 `FF_SOURCE` option today) was run at the CURRENT hardware law (K_y 211.9 / D_y 26.82, joint-
 diagonal bench armature, observer velocity, 8 + 8 ms arm transport) -- `tools/ff_sweep.py`,
-`runs/ff_sweep.txt`, ORDINAL evidence only (this sim under-predicts the flown joint error 3-5x):
+`analysis/ff_sweep.txt`, ORDINAL evidence only (this sim under-predicts the flown joint error 3-5x):
 
 | friction FF | j2 / j3 moving rms [deg] | stuck j2 / j3 | v99 [deg/s] |
 |---|---|---|---|
@@ -153,16 +153,33 @@ diagonal bench armature, observer velocity, 8 + 8 ms arm transport) -- `tools/ff
 | measured, w 0.015 / 0.06 | 0.68 / 0.64 ; 0.73 / 0.74 | 40 / 47 % | 19-24 |
 | measured + 0.3 x reference | 0.54 / 0.50 | 37 / 38 % | 14 |
 | **measured + 0.6 x reference** | **0.35 / 0.31** | **31 / 32 %** | **9** |
+| measured, x0.50/0.45 ; x0.35/0.33 (2026-10-09) | 0.83 / 0.88 ; 0.90 / 1.02 | 39-42 % | 12-16 |
+| measured + 0.6 x reference, x0.60/0.55 (2026-10-09) | 0.47 / 0.42 | 32 / 33 % | 10-12 |
+| **reference-driven, x0.70/0.65 (2026-10-09)** | **0.23 / 0.16** | **25 / 27 %** | **8** |
 
 The measured-velocity relay is zero while the joint is stuck, so nothing pre-breaks the stiction
 when the reference starts moving: the joint waits for the task spring to wind up, then jumps --
 the burst-and-stick pattern of the flights. Blending the reference term back in at the
-calibrated scale keeps the delivered FF level right (the reason the pure reference FF was
-abandoned: 10-40 % high, pushing through every stick) and halves the moving error and the burst
-speed. **Recommendation, NOT applied** (it needs a `friction_velocity_source: blend` in
-`TorqueControllerBase` + a bench loopback + an Isaac flight, i.e. its own step, not an edit before
-a hardware flight): add the blend and fly it on a circle first. Tomorrow's pick-and-place moves
-the arm only between holds, so the hardware arm config stays as flown on 09-28 / 10-05.
+calibrated scale halves the moving error and the burst speed.
+
+**Corrected 2026-10-09: the best case needs NO code change.** The 2026-09-26 change did two
+things at once -- it scaled the FF down to the flight-identified friction (x0.70 / x0.65, the
+reason the reference FF had pushed through every stick: it was 10-40 % HIGH) AND moved its
+velocity source to the measured relay. The offline arm says the scale was the fix and the
+source switch the cost: the reference source at the calibrated scale (`ref_hw`,
+`analysis/ff_sweep_extra.txt`) is the best case of all, 0.23 / 0.16 deg moving rms against the
+flown setting's 0.70 / 0.66, three times lower, and lower than the blend's 0.35 / 0.31. A
+SMALLER measured-relay scale does not help (x0.50: 0.83 / 0.88) -- the relay's problem is its
+timing (zero while stuck), not its size. On the arm that is one line,
+`friction_velocity_source: reference` in `external_torque_controller_hardware_aerial_pwm.yaml`
+(the scales stay). Caveats: this sim under-predicts the flown joint error 3-5x and does not
+reproduce the flown hold offset (0.1-0.2 deg vs 1.5-2.4), so it ranks, it does not predict;
+and at the 0928 flights the friction terms changed TOGETHER with the gains, so hardware has
+never isolated the source. **Not applied for the pick-and-place flight** (one change at a
+time): fly it first on a circle or a hover-with-arm-sweep, A/B against the 0928 / 1005 runs.
+The hold offset itself is out of reach of every velocity-keyed term; only a joint-space term
+(the arm-side `passthrough_integral`, deliberately off because the L1 arm channel already
+integrates the joint residual) or a stiffer task spring acts on it.
 
 ## Not covered
 
