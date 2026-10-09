@@ -1,0 +1,8 @@
+[Config] Using: /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/scripts/config/shiqi_machine.conf
+[1;35mDISTURBANCE OBSERVER: L1 ADAPTIVE, FOUR-DIMENSIONAL ATTRIBUTION (joint rows). Same law, same gains, same plant, same executable as the 6-D rig.[0m
+[1;36mMIRROR profile -- the controller flies the HARDWARE config (gains, allocator, thrust map); the plant is the one identified from the 0918/0921/0924 flights.[0m
+Controller yaml: params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml
+Ground-station interpreter: python3 (Python 3.10.12)
+[1;36mEmulated mocap: frequency:=60.0 position_noise_std:=0.0005 velocity_noise_std:=0.022 noise_seed:=0[0m
+Whole-body trajectory planner: transition planner = bspline
+open terminal failed: not a terminal

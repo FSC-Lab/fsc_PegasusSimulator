@@ -111,23 +111,33 @@ These are the same definitions as the hardware report (`docs/docs_aerial_manipul
 
 The same scene and task for every controller (`application/robotic_arm/07_px4_t650_aerial_manipulator_pick_and_place.py`):
 two 1 m pillars at (1, 1) and (−1, −1) m carrying the printed hat platform (top 1.008 m), the 200 g CAD basket
-payload hooked by its wire hanger, the six-leg plan of the pick-and-place planner (go to start, pick, go to
-place start, place, go to land start, land; the hook approach, the clockwise turns, the carry pose). Headless
-Isaac at RTF 1, raw mocap, the mirror plant; each controller's `*_pick_and_place.yaml` (the free-flight
-file + the pick-and-place gains: whole-body k_R/k_w 1.6/1.2, geometric kp/kv 15/10 and kp_z/kv_z 40/18).
+payload hooked by its wire hanger, the pick-and-place planner's plan (go to start, pick, go to place start,
+place, go to land start, land; the hook approach, the clockwise turns, the carry pose). Headless Isaac at
+RTF 1, raw mocap, the mirror plant; each controller's `*_sim_pick_and_place.yaml` (the free-flight file + the
+pick-and-place gains: whole-body k_R/k_w 1.6/1.2, geometric kp/kv 15/10 and kp_z/kv_z 40/18).
+
+**One timetable for every run (2026-10-09).** The flight driver runs with `--timetable`: every step starts
+at the same mission time on every run and every controller, so the six phases are contiguous and line up
+across runs (measured: phase starts within 0.01 s). The short hovers between steps are constant slack inside
+the phase they end. The planner's `pick_place_descent_trim_first_min: 0` (sim pick-and-place yaml only)
+makes the place descent trim sideways first on every run, so it always lasts ~8.2 s; with the hardware's
+5 mm default the whole-body rig's 4-6 mm trim flipped between a 3.2 s and an 8.2 s descent. The
+2026-10-08 runs, flown without the timetable, are in
+`docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/runs/unaligned_20261008/` (local only).
 
 ```bash
 # fly (resumes; one archive/pick_place_top_hat_20261008/tools/run_pnp.sh flight per attempt; closes the sim at the end)
-setsid nohup results/utils/run_pick_and_place_campaign.sh 2 wb geo mod \
+setsid nohup results/utils/run_pick_and_place_campaign.sh 2 wb geo \
     > results/simulation_results/pick_and_place/campaign.out 2>&1 < /dev/null &
-# score -> matlab_simulation_data/pick_and_place/ + results/utils/tables/pick_and_place_sim.csv|json|tex + figures
+# score -> matlab_simulation_data/pick_and_place/ + README_pick_and_place.md + results/utils/tables/pick_and_place_sim.csv|json|tex + figures
 PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py [--paper <main.tex>]
 ```
 
 ### Metrics
 
-- **Window**: each of the six legs from its start mark for the SHORTEST duration that leg was flown over
-  all runs (identical for every controller, 78.1 s in total); the operator waits between legs are excluded.
+- **Window**: the whole mission, from the start of go to start to the end of land, 92.5 s, identical for
+  every controller. Phases (s): go to start 0-5.3, pick 5.3-26.9, to place start 26.9-45.9, place
+  45.9-70.9, to land start 70.9-89.2, land 89.2-92.5.
 - **UAV deviation** (Suarez et al. 2020): ‖ε_UAV‖ = ‖r_UAV^ref − r_UAV‖, max and RMS over the window, and
   ρ_UAV = ‖ε_UAV‖ / L with L = 0.37 m (the arm's reach). r_UAV^ref = x_cd − R0 r_0c(q_d) from the planner's
   reference stream, as in the free-flight metrics.
@@ -136,31 +146,33 @@ PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py [--pap
 
 ### Campaign outcome
 
-| method | attempts | completed | note |
+| method | attempts | kept | note |
 |---|---|---|---|
-| whole_body_l1 | 2 | 2 | basket placed 22.6 / 14.5 mm off the pillar axis |
-| geometric_l1 | 2 | 2 | 25.5 / 28.9 mm |
-| modular_adaptive | 6 | 0 | every attempt left DIRECT ~2 s after entering it: the arm module's joint torques rail at ±3 N·m from the first 0.5 s and the airframe flips (the controller yaml is identical to the one that flew the free-flight comparison except for the planner's task block, and the SAME yaml flew a free-flight circle cleanly right after -- `failed/modular_isolating_test_free_flight_circle/` -- so the cause is in the pick-and-place scene / driver entry path, open) |
+| whole_body_l1 | 3 | 2 | basket placed 25.3 / 23.7 mm off the pillar axis; one attempt dropped the basket mid-carry (it slid off the hook 35 s in, the hook grasp's known finger-friction limit) |
+| geometric_l1 | 2 | 2 | 27.1 / 30.2 mm |
+| modular_adaptive | 6 (2026-10-08) | 0 | every attempt left DIRECT ~2 s after entering it: the arm module's joint torques rail at ±3 N·m from the first 0.5 s and the airframe flips (the controller yaml is identical to the one that flew the free-flight comparison except for the planner's task block, and the SAME yaml flew a free-flight circle cleanly right after -- `failed/modular_isolating_test_free_flight_circle/` -- so the cause is in the pick-and-place scene / driver entry path, open). Not re-flown with the timetable. |
 
-Mean over the completed runs (`results/utils/tables/pick_and_place_sim.csv`):
+Mean over the kept runs (`results/utils/tables/pick_and_place_sim.csv`):
 
 | method | ‖ε‖ max (mm) | ρ max | ‖ε‖ rms (mm) | ρ rms | platform (mm) | EE (mm) | EE heading (°) | q1..q4 (°) |
 |---|---|---|---|---|---|---|---|---|
-| whole_body_l1 | 142.6 | 0.386 | 27.5 | 0.074 | 27.5 | 29.4 | 0.38 | 0.43 / 2.23 / 1.46 / 1.79 |
-| geometric_l1 | 309.4 | 0.836 | 64.7 | 0.175 | 64.7 | 65.4 | 1.78 | 0.19 / 1.58 / 0.77 / 0.06 |
+| whole_body_l1 | 146.4 | 0.396 | 26.1 | 0.071 | 26.1 | 28.1 | 0.46 | 0.46 / 2.24 / 1.57 / 1.83 |
+| geometric_l1 | 312.3 | 0.844 | 66.2 | 0.179 | 66.2 | 67.3 | 1.76 | 0.18 / 1.60 / 0.80 / 0.06 |
 
-The two ‖ε_UAV‖ peaks of every run are the lift (the payload's weight arriving on the claw) and the
-set-down (leaving it): the estimator taking up and releasing the 2 N, 10-15 cm on the whole-body rig and
-~30 cm on the decoupled one.
+The two ‖ε_UAV‖ peaks of every run are the lift (the payload's weight arriving on the claw, ~26 s) and the
+set-down (leaving it, ~64 s): the estimator taking up and releasing the 2 N, 12-15 cm on the whole-body rig
+and 21-31 cm on the decoupled one.
 
 ### Layout
 
 ```
 simulation_results/
   pick_and_place/                              the raw campaign record
-    <method>_pnp_run<k>.npz                    the mission driver's npz (pnp_mission_v2.py)
+    <method>_pnp_run<k>.npz                    the mission driver's npz (pnp_mission_v2.py --timetable)
     logs/<name>/, failed/<name>_attempt<a>/    logs; failed attempts kept whole
     campaign.jsonl, campaign.out, figures/
-  matlab_simulation_data/pick_and_place/<name>.mat   struct `run`: meta, metrics (fixed_window, whole_mission, per_leg), tracking, raw
-  matlab_simulation_data/pick_and_place_metrics.mat  metrics_runs / metrics_mean
+  matlab_simulation_data/README_pick_and_place.md     how to use the MATLAB data (timing, struct, notation)
+  matlab_simulation_data/pick_and_place/<name>.mat   struct `run`: meta (incl. phases), metrics (window, per_phase, whole_recording), tracking, raw
+  matlab_simulation_data/pick_and_place_metrics.mat  metrics_mean (the table) / metrics_runs / metrics_phase / phases / window_s / L_arm_m
+  matlab_simulation_data/configs/*_sim_pick_and_place.yaml   the configs as flown
 ```

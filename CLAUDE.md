@@ -4438,6 +4438,20 @@ Command.md §16, results `results/simulation_results/README.md`).**
   ROS domain 77 (`archive/pick_place_top_hat_20261008/tools/gs_pnp_check.sh` + `gs_harness/`): the
   close fires once per exit through a 7-stage fake planner feed, and Side Margin 0.12 -> 0.10
   round-trips on the real planner with the hardware yaml. Not flown through the GS yet.
+- **The comparison re-flown on ONE TIMETABLE (2026-10-09, user request: no gaps between phases, aligned
+  curves).** Two causes of misalignment, both measured: (a) the planner flies a descent trim > 5 mm
+  sideways-first (8.2 s) and a smaller one straight (3.2 s); the whole-body place trim is 4-6 mm, so its
+  descent length was random -- new planner key `pick_place_descent_trim_first_min` (default 0.005,
+  hardware unchanged), 0 in the SIM pick-and-place yaml only; (b) event waits at the close. New driver
+  flag `pnp_mission_v2.py --timetable`: every step starts at a fixed mission time (slots 5.3/18.3/22.3/
+  25.0/18.3 s), slack only where hovering is safe (never between the place touchdown and the release),
+  a late step re-flies the run. Result: phase starts agree to 0.01 s, window = the whole 92.5 s mission as
+  six contiguous phases; WB eps max/rms 146/26.1 mm, EE 28.1; GEO 312/66.2, EE 67.3 (4 runs kept, 1 WB
+  attempt dropped the basket mid-carry -- the hook's friction limit). MATLAB data + generated
+  `matlab_simulation_data/README_pick_and_place.md` (the user plots in MATLAB on another laptop; the
+  zip was regenerated to include it); paper table re-spliced. **Trap hit:** the campaign reuses run TAGS,
+  so yesterday's `runs/cmp_*` files would have passed the success check if a new attempt died before its
+  driver wrote -- moved to `runs/unaligned_20261008/` first; the campaign script now moves a tag's old files to `runs/stale/` before each attempt.
 
 **WHOLE-BODY FIGURE-8 SPEED SWEEP → 0.20 m/s FOR THE NEXT HARDWARE FLIGHT (2026-10-07, user request:
 a safe mean speed at which the whole-body controller's hardware EE rms ≈ the decoupled one's hardware

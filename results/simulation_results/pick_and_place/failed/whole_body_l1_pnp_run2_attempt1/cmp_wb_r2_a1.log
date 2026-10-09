@@ -1,0 +1,163 @@
+[   0.01s] planner: IDLE
+[   0.01s] pick_place: NOT IN DIRECT
+[   0.56s] payload at rest [1.0, 1.0, 1.0405]
+[   0.62s] reset: success=True pick-and-place progress and plan cleared (captures and the Adjust offset kept)
+[   0.67s] adjust: success=True drone points moved by [0.103, -0.071, 0.000] m, yaw 0.0 deg (written into Start, Place Start, Land Start, Land; Place not moved); press Plan
+[   1.72s] capture_pick: success=True captured pick at [1.000, 1.000, 1.040] m, yaw -0.0 deg from /obj_0/mocap (125 samples, spread 2.0 mm); the EE offset is applied in this object frame
+[   2.77s] offboard: success=True Offboard mode request sent
+[   5.82s] arm: success=True Arm command sent
+[   7.82s] climbing to 1.0 m
+[  20.81s] planner: HOLD
+[  20.81s] pick_place: NOT PLANNED: press Plan
+[  20.86s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  20.86s] MARK direct
+[  35.88s] pick_place: PLANNING
+[  35.91s] pick_place: READY next=go_to_start
+[  35.93s] plan: success=True planning the six legs from the current hold -- the status reads READY when done
+[  35.93s] planned leg durations [3.0, 12.1, 16.5, 11.2, 16.0, 3.2] s, exits [3.2, 6.2] s
+[  35.93s] MARK go_to_start:start
+[  35.93s] planner: CALCULATING
+[  35.93s] pick_place: FLYING go_to_start
+[  35.93s] planner: EXECUTING T=3.0s
+[  35.93s] pick_place: FLYING go_to_start T=3.0s
+[  35.98s] go_to_start: success=True planning go_to_start from the current hold; it executes as soon as it is planned
+[  35.98s] go_to_start: executing, T = 3.0 s
+[  38.94s] planner: HOLD
+[  38.94s] pick_place: DONE go_to_start next=execute_pick
+[  38.99s] MARK go_to_start:end
+[  38.99s] timetable: ready_pick in 2.24 s
+[  41.23s] MARK ready_pick:start
+[  41.23s] planner: CALCULATING
+[  41.23s] pick_place: FLYING execute_pick (approach)
+[  41.24s] planner: EXECUTING T=9.1s
+[  41.24s] pick_place: FLYING execute_pick (approach) T=9.1s
+[  41.28s] execute_pick: success=True planning execute_pick from the current hold; it executes as soon as it is planned
+[  41.28s] execute_pick: executing, T = 9.1 s
+[  50.37s] planner: HOLD
+[  50.37s] pick_place: WAITING execute_pick: claw 9 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  50.40s] pick_place: WAITING execute_pick: claw 5 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  50.41s] MARK ready_pick:end
+[  50.41s] MARK pick:start
+[  50.60s] pick_place: WAITING execute_pick: claw 8 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  50.70s] pick_place: WAITING execute_pick: claw 9 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  50.80s] pick_place: WAITING execute_pick: claw 6 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  50.90s] pick_place: WAITING execute_pick: claw 5 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  51.00s] pick_place: WAITING execute_pick: claw 3 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  51.10s] pick_place: WAITING execute_pick: claw 4 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  51.30s] pick_place: WAITING execute_pick: claw 5 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  51.50s] pick_place: WAITING execute_pick: claw 3 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  51.70s] pick_place: WAITING execute_pick: claw 1 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  51.90s] pick_place: WAITING execute_pick: claw 2 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  52.00s] pick_place: WAITING execute_pick: claw 4 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  52.20s] pick_place: WAITING execute_pick: claw 3 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  52.30s] pick_place: WAITING execute_pick: claw 2 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+[  52.41s] planner: CALCULATING
+[  52.41s] pick_place: FLYING execute_pick (descent)
+[  52.41s] planner: EXECUTING T=3.0s
+[  52.41s] pick_place: FLYING execute_pick (descent) T=3.0s
+[  52.46s] descend_pick: success=True descend_pick: descending onto the target (goal trimmed by [-0.2, 0.8, 1.1] mm, the hover error)
+[  55.42s] planner: HOLD
+[  55.42s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw inside tolerance, settling
+[  55.50s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw within tolerance: fine correction OK
+[  55.77s] pick: closing-axis error -0.3 mm after 0.3 s at the bottom
+[  55.77s] pick: EE 5.5 mm from the target -- gripper
+[  55.77s] MARK gripper_close:start
+[  57.78s] gripper close: settled at -50.0 deg (command -50)
+[  57.78s] MARK gripper_close:end
+[  57.78s] timetable: exit_pick in 1.75 s
+[  59.54s] MARK exit_pick:start
+[  59.54s] planner: CALCULATING
+[  59.54s] pick_place: FLYING exit_pick (up the vertical margin)
+[  59.54s] planner: EXECUTING T=3.2s
+[  59.54s] pick_place: FLYING exit_pick (up the vertical margin) T=3.2s
+[  59.59s] exit_pick: success=True exit_pick: climbing 20 cm straight up to the clearance point
+[  62.78s] planner: HOLD
+[  62.78s] pick_place: DONE exit_pick next=go_to_place_start
+[  62.80s] MARK exit_pick:end
+[  62.80s] MARK go_to_place_start:start
+[  62.80s] planner: CALCULATING
+[  62.80s] pick_place: FLYING go_to_place_start
+[  62.80s] planner: EXECUTING T=16.5s
+[  62.80s] pick_place: FLYING go_to_place_start T=16.5s
+[  62.85s] go_to_place_start: success=True planning go_to_place_start from the current hold; it executes as soon as it is planned
+[  62.85s] go_to_place_start: executing, T = 16.5 s
+[  79.35s] planner: HOLD
+[  79.35s] pick_place: DONE go_to_place_start next=execute_place
+[  79.39s] MARK go_to_place_start:end
+[  79.39s] timetable: ready_place in 2.45 s
+[  81.85s] MARK ready_place:start
+[  81.85s] planner: CALCULATING
+[  81.85s] pick_place: FLYING execute_place (approach)
+[  81.85s] planner: EXECUTING T=8.0s
+[  81.85s] pick_place: FLYING execute_place (approach) T=8.0s
+[  81.90s] execute_place: success=True planning execute_place from the current hold; it executes as soon as it is planned
+[  81.90s] execute_place: executing, T = 8.0 s
+[  89.86s] planner: HOLD
+[  89.86s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  89.87s] MARK ready_place:end
+[  89.87s] MARK place:start
+[  89.90s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.00s] pick_place: WAITING execute_place: claw 12 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.10s] pick_place: WAITING execute_place: claw 7 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.20s] pick_place: WAITING execute_place: claw 2 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.30s] pick_place: WAITING execute_place: claw 3 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.40s] pick_place: WAITING execute_place: claw 5 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.50s] pick_place: WAITING execute_place: claw 7 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.60s] pick_place: WAITING execute_place: claw 8 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  90.70s] pick_place: WAITING execute_place: claw 9 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.00s] pick_place: WAITING execute_place: claw 7 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.10s] pick_place: WAITING execute_place: claw 6 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.20s] pick_place: WAITING execute_place: claw 4 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.40s] pick_place: WAITING execute_place: claw 6 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.50s] pick_place: WAITING execute_place: claw 7 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.60s] pick_place: WAITING execute_place: claw 6 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.70s] pick_place: WAITING execute_place: claw 8 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+[  91.87s] planner: CALCULATING
+[  91.87s] pick_place: FLYING execute_place (descent)
+[  91.87s] planner: EXECUTING T=8.2s
+[  91.87s] pick_place: FLYING execute_place (descent) T=8.2s
+[  91.92s] descend_place: success=True descend_place: descending onto the target (goal trimmed by [-0.3, 1.7, -1.2] mm, the hover error)
+[ 100.12s] planner: HOLD
+[ 100.12s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling
+[ 100.14s] place: descent complete, EE 3.7 mm from the target
+[ 100.14s] MARK gripper_open:start
+[ 100.14s] MARK exit_place:start
+[ 100.14s] planner: CALCULATING
+[ 100.14s] pick_place: FLYING exit_place (up the vertical margin)
+[ 100.15s] planner: EXECUTING T=6.2s
+[ 100.15s] pick_place: FLYING exit_place (up the vertical margin) T=6.2s
+[ 100.19s] exit_place: success=True exit_place: backing out 10 cm (out from under the arch), then climbing 20 cm straight up to the clearance point
+[ 106.38s] planner: HOLD
+[ 106.38s] pick_place: DONE exit_place next=go_to_land_start
+[ 106.40s] MARK exit_place:end
+[ 106.40s] MARK gripper_open:end
+[ 106.40s] timetable: go_to_land_start in 0.44 s
+[ 106.85s] MARK go_to_land_start:start
+[ 106.85s] planner: CALCULATING
+[ 106.85s] pick_place: FLYING go_to_land_start
+[ 106.85s] planner: EXECUTING T=16.0s
+[ 106.85s] pick_place: FLYING go_to_land_start T=16.0s
+[ 106.90s] go_to_land_start: success=True planning go_to_land_start from the current hold; it executes as soon as it is planned
+[ 106.90s] go_to_land_start: executing, T = 16.0 s
+[ 122.82s] planner: HOLD
+[ 122.82s] pick_place: DONE go_to_land_start next=execute_land
+[ 122.83s] MARK go_to_land_start:end
+[ 122.83s] timetable: execute_land in 2.31 s
+[ 125.15s] MARK execute_land:start
+[ 125.15s] planner: CALCULATING
+[ 125.15s] pick_place: FLYING execute_land
+[ 125.15s] planner: EXECUTING T=3.2s
+[ 125.15s] pick_place: FLYING execute_land T=3.2s
+[ 125.20s] execute_land: success=True planning execute_land from the current hold; it executes as soon as it is planned
+[ 125.20s] execute_land: executing, T = 3.2 s
+[ 128.39s] planner: HOLD
+[ 128.39s] pick_place: COMPLETE -- touch down with SAFETY -> land
+[ 128.41s] MARK execute_land:end
+[ 133.41s] mission complete
+[ 133.41s] planner: IDLE
+[ 133.41s] pick_place: NOT IN DIRECT
+[ 133.46s] set_direct_mode(false): success=True Switched to SAFETY mode
+[ 139.47s] landing by reference
+[ 153.82s] disarm: success=True Disarm command sent
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/tools/../runs/cmp_wb_r2_a1.npz
+completed

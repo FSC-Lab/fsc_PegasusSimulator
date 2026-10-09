@@ -1,0 +1,741 @@
+# ============================================================================
+# !! GENERATED -- DO NOT EDIT. PICK-AND-PLACE SIM CONFIG (2026-10-02).       !!
+# ============================================================================
+# Made by fsc_PegasusSimulator/docs/docs_aerial_manipulator/
+#   pick_place_tune_20261001/tools/make_pick_place_yaml.py
+# from params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+# (the experiment MIRROR, whose own header follows unchanged). Differences:
+#   * vehicle_name AM-T650-WB-L1-4D-PNP
+#   * controller overrides: wb_k_r 1.6, wb_k_w 1.2
+#   * the trajectory planner's pick-and-place block (end of the file).
+# The payload is MODEL UNCERTAINTY: wb_l1_contact stays false (chi free).
+#
+# HOW TO FLY IT: WB_SIM_PROFILE=pick_and_place on BOTH the stack script and the
+# Pegasus launcher (the pick-and-place wrapper sets it itself):
+#   WB_SIM_PROFILE=pick_and_place scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh <cfg>
+#   fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh <cfg>
+# ============================================================================
+# ============================================================================
+# !! SIMULATION CONFIG -- IsaacSim/Pegasus AM-T650, THE EXPERIMENT MIRROR.   !!
+# !! NOT A HARDWARE FILE. NOT THE STRESS-TEST FILE EITHER (see below).       !!
+# ============================================================================
+# AM-T650 WHOLE-BODY + L1 ADAPTIVE OBSERVER, FOUR-DIMENSIONAL ATTRIBUTION
+#   node: autopilot_whole_body_l1_direct_actuation_node
+#
+# WHAT THIS FILE IS (2026-09-26, user request). The simulation twin of the
+# 0918 / 0921 / 0924 hardware flights:
+#
+#   * Section 2 is the HARDWARE controller config
+#       params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml
+#     VERBATIM -- every gain, the observer, the allocator's believed kf/km, the
+#     SAFETY thrust map, the guards -- exactly as flown on those three days.
+#     Nothing in section 2 is a tuning knob for sim-to-real alignment. If the
+#     hardware file changes, change section 2 the same way.
+#   * Section 1 is the PLANT, identified from the flight data
+#     (fsc_PegasusSimulator/docs/docs_aerial_manipulator/sim2real_tuning_20260926,
+#     tools/fit_plant.py on the six extracted bags). THESE are the knobs to
+#     refine when new flight data comes in. Each key says what it was fitted
+#     from and how well the flights agree on it.
+#   * Section 3 lists the few keys that MUST differ between sim and hardware
+#     because the sim's arm/estimator topology differs, not the vehicle.
+#
+# THE OTHER SIM FILE. Until 2026-09-26 this name carried the STRESS plant
+# (config A: +17.6 % allocator kf, body mass/inertia x1.10, 10/10/5 mm CoM
+# shift, arm friction/mass x1.05, ...). That file is now, byte for byte,
+#   params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_robustness.yaml
+# and is selected with WB_SIM_PROFILE=robustness on BOTH the stack script and
+# the Pegasus launcher (default: mirror = this file). Every campaign recorded
+# before 2026-09-26 flew that plant, not this one.
+#
+# HOW TO FLY IT (Command.md 7.17.1, unchanged except the profile):
+#   WB_SIM_PROFILE=mirror  scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack{,_fused}.sh <cfg>
+#   WB_SIM_PROFILE=mirror  fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D{,_fused}_direct_actuation_sitl.sh <cfg>
+# The Pegasus launcher reads section 1 out of this file (env > yaml > built-in
+# for every sim_ key), the stack hands the whole file to the node and the
+# trajectory planner. 0918/0921 flew the raw-mocap stack, 0924 the fused one.
+#
+# WHAT THE MIRROR CANNOT REPRODUCE, so nobody tunes against it:
+#   * REAL-TIME FACTOR. Isaac+PX4 run at RTF ~0.5 on shiqi-desktop while the
+#     law (250 Hz) and the planner (100 Hz) run on the wall clock. The law's
+#     force/torque terms are time-invariant, but every filter (L1 C(s),
+#     omega_x, the arm's trims) is ~2x faster in plant time, and a planned
+#     transition executes in ~half the plant time. Replays request EE-trajectory
+#     time scale s = RTF and scale the planner's kinematic bounds by RTF
+#     (sim2real_tuning_20260926/tools/replay_*.sh) -- those are run-time
+#     overrides, NOT values of this file. Measure RTF from sensor_combined's
+#     timestamp span before reading any transient.
+#   * FEEDBACK NOISE. The emulated mocap is exact PhysX state at 250 Hz; the
+#     real feeds were 60 Hz (0918) / 120 Hz (0921) raw mocap with a
+#     processor-side velocity (hover velocity std 2.7/2.1/1.6 cm/s), and the
+#     EKF2-fused ~100 Hz odometry on 0924 (1.2/1.5/0.9 cm/s, ~20 ms lag). The
+#     fused sim stack reproduces the EKF path but not the sensor noise.
+#   * ACTUATION DEAD TIME beyond the rotor lag: the delay scan found <= 10 ms
+#     on these flights (the 0807 bare-T650 campaign found 25-40 ms); nothing
+#     to model here.
+#   * GEARBOX STICTION vs KINETIC friction: the tanh model has one level.
+#     j2/j3 breakaway on 0924 was within the scatter of kinetic; j4's was
+#     ~2x (0.105-0.13 vs ~0.07 N.m), carried here as a higher j4 scale.
+#   * A yaw torque that is really prop/motor drag ASYMMETRY is carried as a
+#     constant body torque (sim_plant_torque_bias_z), which is what the
+#     observer sees but not what the rotors do.
+#
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ SECTION INDEX                                                            │
+# │   0  NODE, RATES AND INTERFACES                                          │
+# │   1  PLANT -- THE MIRROR (sim_ keys, read by the Pegasus launcher)       │
+# │        1.1 rotors  1.2 airframe  1.3 arm actuators  1.4 EE payload       │
+# │        1.5 feedback (mocap rate/noise)  1.6 per-flight identification   │
+# │   2  CONTROLLER -- THE HARDWARE CONFIG VERBATIM                          │
+# │        2.1 guards  2.2 vehicle + SAFETY thrust map  2.3 SAFETY loop      │
+# │        2.4 whole-body law  2.5 L1 observer  2.6 4-D attribution          │
+# │        2.7 arm interface  2.8 wrench allocation                          │
+# │   3  SIM-TOPOLOGY DIFFERENCES (the only deliberate departures from 2)    │
+# │   4  WHOLE-BODY TRAJECTORY PLANNER (hardware verbatim)                   │
+# └──────────────────────────────────────────────────────────────────────────┘
+# ============================================================================
+
+/**/fsc_autopilot_ros2:
+  ros__parameters:
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 0. NODE, RATES AND INTERFACES
+    # ══════════════════════════════════════════════════════════════════════
+    # "-4D" without "-HW": the sim mirror. vehicle_info info[0] shows it.
+    vehicle_name: "AM-T650-WB-L1-4D-PNP"
+    vehicle_num_rotors: 4
+    system_posctl_type: robust_controller
+    system_posctl_rate: 100.0
+    system_attctl_rate: 250.0
+    system_ude_type: velocity_based
+
+    # Arm interface (Arm Topic Naming.md): the REAL arm stack's names, same on
+    # hardware. Never point anything at /uav_0/isaacsim_manipulator/*.
+    wb_arm_joint_topic: "fsc_open_manipulator/joint_states"
+    wb_arm_reference_topic: "fsc_open_manipulator/external_torque_controller/reference_joint_trajectory"
+    wb_arm_torque_topic: "fsc_open_manipulator/external_torque_controller/joint_torque_command"
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 1. PLANT -- THE MIRROR
+    # ══════════════════════════════════════════════════════════════════════
+    # READ BY THE PEGASUS LAUNCHER (scripts/indoor_sim/lib/am_plant_from_yaml.sh),
+    # NOT BY THIS NODE: rclcpp ignores undeclared keys, the launcher greps them
+    # and hands them to the Isaac plant (06) on its command line. Precedence
+    # environment > yaml > built-in default, per key. That is why the prefix
+    # is sim_ and why the controller cannot see any of it -- the plant is the
+    # experiment, the controller believes section 2.
+    #
+    # THE REFERENCE PLANT below is the MEAN over the six flights. The flights
+    # differ mostly by battery state (kf tracks pack voltage), and a replay of
+    # ONE flight should set that flight's kf and sag from table 1.6 through
+    # PEGASUS_PLANT_KF_SCALE / PEGASUS_PLANT_KF_SAG_PER_MIN in the environment.
+    #
+    # ── 1.1 ROTORS (MN4010 + 15x5, t650_params.py is the base) ──────────────
+    # THRUST. The sim plant's calibrated kf is 4.041283e-05 (the 2026-08-25
+    # re-anchor on log_252, a low-voltage hover). The hover thrust balance of
+    # the three campaigns -- kf_true = kf_believed * m g / u1 over every
+    # planner HOLD, with kf_believed = the flown alloc_thrust_coeff
+    # 4.260431e-05 -- gives kf at DIRECT entry of
+    #   0918 4.31e-05 (24.1 V)  0921 4.26e-05 (23.8 V)  0924 F1 4.22e-05 (23.5 V)
+    #   0924 F2 4.03e-05 (23.0 V)  F3 4.29e-05 (23.8 V)  F4 4.03e-05 (23.2 V)
+    # mean 4.19e-05 = 1.037 x the sim plant. The same-command specific-thrust
+    # test agrees flight by flight (DC gain 0.98-1.06).
+    sim_plant_kf_scale: 1.037
+    # BATTERY SAG. Over each DIRECT window kf falls linearly with the pack:
+    # -3.4 (0918), -4.5 (F1), -4.0 (F2), -3.7 (F3), -2.6 (F4) %/min at ~20 A.
+    # 06 applies kf(t) = kf0 (1 - r t/60) from lift-off. On 0918 this is what
+    # walked d_hat_z from -0.1 to -1.0 N over the flight.
+    sim_plant_kf_sag_per_min: 0.036
+    # YAW. The sim plant's c is 3.0 x the bench 8.247e-07 (the 2026-08-06 PX4-
+    # baseline yaw fit, standing in for the un-modelled rotor-inertia reaction
+    # torque). In whole-body DIRECT the same-command yaw test reads the real
+    # vehicle's yaw acceleration per command at 0.14-0.26 of THAT plant, i.e.
+    # 0.43-0.78 of the BENCH c (0921 #3, the only flight with strong yaw
+    # excitation: 0.78; the bare-T650 DIRECT campaign of 2026-08-07: 0.61).
+    # Set to 0.70 x bench = 0.2333 x the plant constant. The allocator still
+    # believes the bench ratio (km 0.018164), so the sim delivers ~70 % of
+    # the commanded yaw torque, as the hardware does.
+    sim_plant_km_scale: 0.2333
+    # ROTOR LAG. Bench MN4010 value kept: the delay scan of the roll/pitch
+    # response found <= 10 ms beyond it (0921 #3, corr 0.72/0.83).
+    sim_plant_rotor_lambda: 10.0265
+    # WALL-CLOCK COMPENSATION (2026-09-27). Every lag in this section is in
+    # PLANT (physical) seconds, but the law and planner run on the WALL clock
+    # and Isaac + PX4 run at RTF ~0.48 on shiqi-desktop: uncompensated, the law
+    # sees the rotor pole at ~200 ms instead of 100 ms and the hardware gains
+    # DIVERGE in DIRECT (2026-09-27 §7.17.1 launch: tilt watchdog 14 s after
+    # entry; f18_r1 on 2026-09-26 the same). true = the Pegasus launcher divides
+    # sim_plant_rotor_lambda and the current-noise corner by the machine's
+    # SIM_RTF and multiplies sim_arm_vel_lag_s by it (PEGASUS_SIM_RTF overrides;
+    # a value set in the environment is never rescaled). Keep it true; false
+    # reproduces the divergence.
+    sim_wall_clock_compensation: true
+
+    # ── 1.2 AIRFRAME ─────────────────────────────────────────────────────────
+    # MASS and INERTIA nominal. The node's mass gate holds vehicle_mass to the
+    # model's 3.746174 kg (+-0.5 %), so a real mass error is indistinguishable
+    # from a kf error at hover and is carried in kf above. Roll/pitch same-
+    # command gains at the coupled inertia at home (0.112/0.132/0.116 kg.m^2):
+    # 1.11 / 1.03 on 0921 #3 (corr 0.72/0.83) -- of which 1.06 is that
+    # flight's kf -- so the inertia is right within the resolution here.
+    sim_plant_mass_scale: 1.0
+    sim_plant_inertia_scale: 1.0
+    # BARE-AIRFRAME CoM. The hardware controller carries the measured
+    # wb_base_com_y = -0.017854 (MODEL frame, 2026-08-25 flight); the USD
+    # asset's own base CoM is at 0.3 mm. The plant must carry the same
+    # offset so that belief and plant agree exactly as they did on hardware.
+    # FRAME: these three are added to the USD body prim's centre of mass, i.e.
+    # the ACTUAL x-forward body frame (model +y = actual +x), so the model's
+    # -17.854 mm in y is -17.854 mm in x here. (The robustness file's comment
+    # calling this the MODEL frame is wrong; its 10/10/5 mm never cared.)
+    # The observer's roll/pitch residual at hover (0.03-0.05 N.m ~ 1 mm) says
+    # the measured value is right; nothing is added for it.
+    sim_plant_com_shift_x: -0.017854
+    sim_plant_com_shift_y: 0.0
+    sim_plant_com_shift_z: 0.0
+    # STANDING WRENCH BIAS, body-fixed FLU [N] / [N.m], applied by 06 every
+    # physics step. The filtered translational estimate d_hat_t sits at
+    # (+0.57, -0.44) / (+0.57, -0.42) / (+0.47, -0.50) / (+0.62, -0.60) N on
+    # 0918 / 0921 / 0924 F1 / F2 in every hover hold (world frame, all at
+    # yaw ~0; on the 0924 circle its BODY-yaw-frame mean is constant to
+    # 0.1 N while the heading sweeps 360 deg -> body-fixed), i.e. a real
+    # ~0.7 N force the symmetric rotor model cannot make (a ~1.1 deg tilt
+    # of the thrust axis against the mocap body frame). The rotational
+    # estimate carries a -0.07..-0.13 N.m standing YAW torque on every flight
+    # (prop/motor drag asymmetry). Both are what the observer must find in
+    # the sim exactly as it did on hardware.
+    sim_plant_force_bias_x: 0.55
+    sim_plant_force_bias_y: -0.50
+    sim_plant_force_bias_z: 0.0
+    sim_plant_torque_bias_x: 0.0
+    sim_plant_torque_bias_y: 0.0
+    sim_plant_torque_bias_z: -0.095
+
+    # ── 1.3 ARM ACTUATORS (OM-X, servo_model.py) ─────────────────────────────
+    # CURRENT-LOOP RESIDUAL: the bench numbers (fsc_open_manipulator doc
+    # "Current Loop Design.md" 9.6, 2026-09-11), unchanged -- the flights'
+    # applied-minus-intended torque scatter (0.01-0.04 N.m rms) is consistent
+    # with them. j1/j4 carry j3's value (their own sits below the current
+    # sensor's floor).
+    sim_arm_current_noise_enable: true
+    sim_arm_current_noise_a_j1: 0.0096   # A rms total
+    sim_arm_current_noise_a_j2: 0.0062
+    sim_arm_current_noise_a_j3: 0.0096
+    sim_arm_current_noise_a_j4: 0.0096
+    sim_arm_current_noise_bw_hz: 5.0
+    sim_arm_current_noise_seed: 0
+    # GEARBOX FRICTION, PER JOINT, as a fraction of the calibration report's
+    # model [fc + mu|tau|] tanh(qd/w) (servo_model.py FRICTION_*), which is
+    # also what the arm controller feeds forward at 1.00 x on hardware and in
+    # the sim arm stack (torque_controller_isaac_aerial.yaml). Identified in
+    # flight on 0924 (wb_l1_4d_flight_20260924/analysis: friction_id.txt,
+    # breakaway.txt), the two fast-arm flights F3/F4 being the informative
+    # ones:
+    #   j2  Coulomb-like 0.154 / 0.185 N.m and kinetic median 0.212 / 0.201
+    #       against the model's 0.190 / 0.199 at that load     -> 0.95
+    #   j3  0.068 / 0.091 and 0.089 / 0.097 against 0.112 / 0.114 -> 0.75
+    #   j4  no in-flight motion; the 2026-09-13 ground test measured breakaway
+    #       0.105-0.13 and kinetic ~0.07 N.m against the model's 0.052 -> 1.5
+    #       (this is why the hardware config caps its observer share, 2.6)
+    #   j1  no data                                              -> 1.0
+    # The arm-side feed-forward stays at 1.00 x, so the mirror reproduces the
+    # flights' "compensation 10-40 % high on j2/j3" as measured.
+    sim_arm_friction_scale_j1: 1.0
+    # 2026-09-26 audit (arm_comp_audit.txt): kinetic level on the MEASURED
+    # velocity at the flown loads, all 0924 circles: j2 0.11-0.17 vs the report's
+    # 0.20 (x0.70), j3 0.03-0.09 vs 0.11 (x0.65). Supersedes the 0.95/0.75 taken
+    # from the earlier friction_id numbers. The arm stacks' feed-forward was
+    # corrected by the same factors, so plant and compensation agree here as
+    # on the corrected hardware.
+    sim_arm_friction_scale_j2: 0.70
+    sim_arm_friction_scale_j3: 0.65
+    sim_arm_friction_scale_j4: 1.5
+    sim_arm_friction_width: 0.015
+    # ARM MASS nominal: at every hold the applied torque minus the model's
+    # gravity term is within what friction holds (-0.04..-0.11 N.m on j2),
+    # with no consistent sign across flights -- no gravity error resolvable.
+    sim_arm_mass_scale: 1.0
+    # JOINT-VELOCITY FEEDBACK. The law's qdot IS joint_states.velocity, which
+    # on hardware is the Dynamixel Present Velocity: 0.024 rad/s quantum and a
+    # 44-56 ms lag behind the encoder (cross-correlation of the reported
+    # velocity against the differentiated reported position, j2/j3, all six
+    # flights; corr up to 0.98). 06 applies a first-order lag of this time
+    # constant plus the quantum to the velocity it REPORTS; the physics and
+    # the friction model keep the true rate. This is the single largest
+    # reason the sim arm used to track a sinusoid the hardware arm could not.
+    sim_arm_vel_lag_s: 0.048
+    sim_arm_vel_quant_rad_s: 0.024
+    # The int16 Goal-PWM register (6-8 mN.m per count) is not modelled here:
+    # below the current-loop residual. sim_arm_counts_enable would add it.
+
+    # ── 1.4 END-EFFECTOR PAYLOAD ─────────────────────────────────────────────
+    # No marker cube: the flights flew the bare gripper (the 0918+ mocap
+    # rigid body on the gripper has no modelled mass).
+    sim_ee_marker_cube: false
+    sim_ee_marker_cube_mass_kg: 0.03
+
+    # ── 1.5 FEEDBACK: the emulated mocap feed ────────────────────────────────
+    # READ BY THE STACK SCRIPTS (not the node, not the Pegasus launcher) and
+    # forwarded to isaacsim_optitrack_ros2_emulator, which publishes /uav_0/mocap
+    # from Isaac's exact state. Before 2026-09-26 that feed was 250 Hz and
+    # noise-free; the sim then hovered at 2.6 mm CoM rms / 1.2 deg tilt against
+    # the flight's 27 mm / 3.8 deg (replay f18_r2). The real feed:
+    #   0918   raw mocap 60 Hz, processor velocity: hover velocity noise
+    #          2.6 / 2.2 / 1.5 cm/s (x/y/z), position wander 17 / 12 / 3 mm
+    #          at 0.08-0.15 Hz
+    #   0921   raw mocap 120 Hz: 10.8 / 5.0 / 4.2 cm/s (a finite difference)
+    #   0924   EKF2-fused ~100 Hz: 1.2 / 1.5 / 0.9 cm/s
+    # Modelled as white Gaussian noise per published sample on position and
+    # linear velocity. In the raw stack the law reads these directly; in the
+    # fused stack they are EKF2's external-vision input, as on hardware.
+    sim_feedback_mocap_rate_hz: 60.0
+    sim_feedback_pos_noise_m: 0.0005
+    sim_feedback_vel_noise_mps: 0.022
+    sim_feedback_noise_seed: 0
+
+    # ── 1.6 PER-FLIGHT IDENTIFICATION (tools/fit_plant.py, analysis/) ───────
+    # flight    kf at entry  kf_scale  sag %/min  V start->end  d_hat_t xy [N]  yaw bias
+    # 0918      4.31e-05     1.066     3.4        24.11->23.60  +0.57 -0.44     -0.095
+    # 0921 #3   4.26e-05     1.054     (21 s)     23.77->23.59  +0.57 -0.42     -0.072
+    # 0924 F1   4.22e-05     1.043     4.5        23.54->23.07  +0.47 -0.50     -0.078
+    # 0924 F2   4.03e-05     0.997     4.0        23.04->22.79  +0.62 -0.60     -0.131  (lift-off 4.17e-05 = x1.030: the SAFETY UDE's -3.0 N on the bench map; at 0.997 the sim cannot leave the ground -- bench map 4.1 N short below the 0.4 m UDE gate)
+    # 0924 F3   4.29e-05     1.062     3.7        23.82->23.50   (no hold)       --
+    # 0924 F4   4.03e-05     0.998     2.6        23.15->22.78   (no hold)       --
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 2. CONTROLLER -- THE HARDWARE CONFIG VERBATIM
+    # ══════════════════════════════════════════════════════════════════════
+    # params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml
+    # as of 2026-09-26 (the armature / K_y 80 / observer-velocity update of that
+    # evening); the 0918-0924 flights and their replays used the AS-FLOWN values
+    # noted beside each changed key. Comments are the hardware file's, shortened; the
+    # values are not to be tuned here -- change the hardware file first.
+
+    # ── 2.1 guards ───────────────────────────────────────────────────────────
+    system_wd_max_tilt_deg: 15.0   # 2026-10-05 = the hardware file (was 20.0)
+    system_wd_max_rate_dps: 360.0
+    system_wd_max_drift_m: 0.75
+    system_fb_timeout_s: 1.0
+    system_fb_land_speed: 0.2
+    # (system_arm_go_home_service: see section 3)
+
+    # ── 2.2 vehicle + SAFETY thrust map ──────────────────────────────────────
+    # The SAFETY tangent linearisation at the BENCH kf 4.540431e-05 and this
+    # mass (u_hover 0.5792). On the mirror plant that map is ~7 % short of
+    # hover, exactly as on hardware; the UDE absorbs it above its gate.
+    vehicle_thrust_scaling: 0.036758
+    vehicle_idle_thrust: 0.241528
+    vehicle_mass: 3.746170
+
+    # ── 2.3 SAFETY position loop (robust_controller) + UDE ──────────────────
+    posctl_pid_form: "nested"
+    posctl_apply_pos_err_saturation: true
+    posctl_apply_vel_err_saturation: true
+    posctl_k_pos_x: 0.45
+    posctl_k_pos_y: 0.45
+    posctl_k_pos_z: 1.0
+    posctl_k_vel_x: 7.0
+    posctl_k_vel_y: 7.0
+    posctl_k_vel_z: 7.0
+    ude_gain: 0.45
+    ude_height_threshold: 0.4
+    ude_disturbance_lbx: -10.0
+    ude_disturbance_lby: -10.0
+    ude_disturbance_lbz: -10.0
+    ude_disturbance_ubx: 10.0
+    ude_disturbance_uby: 10.0
+    ude_disturbance_ubz: 10.0
+    safety_min_thrust_setpoint: 0.0
+    safety_max_thrust_setpoint: 150.0
+
+    # ── 2.4 whole-body law (wb_*) ────────────────────────────────────────────
+    wb_k_x: 50.03  # 2026-09-27 circle tune; was 32.0 (H1b, circle_tune_20260927)
+    wb_k_v: 12.58  # 2026-09-27 circle tune; was 20.0 (H1b, circle_tune_20260927)
+    wb_k_r: 1.6  # PICK-AND-PLACE OVERRIDE (mirror: 2.134) -- make_pick_place_yaml.py
+    # 2026-09-27: k_w 1.5 -> 0.9 (sim2real_tuning_20260926, Command.md 7.17.14).
+    # The circle's base error is a BODY-FIXED lateral force rotating in world at
+    # the heading rate; f_d_dot has no d_hat rate, so omega_0c carries a spurious
+    # roll/pitch rate and the attitude parks at e_R ~ (k_w/k_R) e_w. Lower k_w =
+    # smaller e_R AND more delay margin (1.5 aborts at 24 ms offline, 0.9 survives
+    # 28). Isaac, 0924 F2 circle: flight-matched plant 83.3 -> 63.5 mm EE abs,
+    # robustness plant 86.5 -> 68.0 mm, |e_R| 0.10 -> 0.06; cost = larger
+    # robustness DIRECT-entry handover 360 -> 427 mm. zeta 1.47 -> 0.88.
+    # Previous value: 1.5. NOT flown on hardware yet.
+    # SUPERSEDED the same day by the joint circle tune H1b (k_w 1.567 below,
+    # with k_x/k_v/k_R/M_r_d/K_y/D_y/L1 moved together -- circle_tune_20260927,
+    # Command.md 7.17.16). Do not revert k_w alone.
+    wb_k_w: 1.2  # PICK-AND-PLACE OVERRIDE (mirror: 1.567) -- make_pick_place_yaml.py
+    # 2026-09-26 hardware update: M_r_d rescaled with the joint-diagonal armature
+    # so M_r M_r_d^-1 k_R stays the flown loop gain. AS FLOWN 0918-0924:
+    # 0.116522 / 0.136107 / 0.125102 (replay.sh restores those with WB_REPLAY_ASFLOWN=1).
+    wb_mrd_x: 0.139992  # 2026-09-27 circle tune; was 0.130710 (H1b, circle_tune_20260927)
+    wb_mrd_y: 0.145617  # 2026-09-27 circle tune; was 0.135962 (H1b, circle_tune_20260927)
+    wb_mrd_z: 0.143795  # 2026-09-27 circle tune; was 0.134261 (H1b, circle_tune_20260927)
+    # 2026-09-26 hardware update: K_y/D_y 20/12 -> 80/24 after the armature
+    # structure and the observer velocity were fixed. AS FLOWN 0918-0924: 20 / 12.
+    wb_ky_x: 211.9  # 2026-09-27 circle tune; was 80.0 (H1b, circle_tune_20260927)
+    wb_ky_y: 211.9  # 2026-09-27 circle tune; was 80.0 (H1b, circle_tune_20260927)
+    wb_ky_z: 211.9  # 2026-09-27 circle tune; was 80.0 (H1b, circle_tune_20260927)
+    wb_ky_psi: 0.2484  # 2026-09-27 circle tune; was 0.3 (H1b, circle_tune_20260927)
+    wb_dy_x: 26.82  # 2026-09-27 circle tune; was 24.0 (H1b, circle_tune_20260927)
+    wb_dy_y: 26.82  # 2026-09-27 circle tune; was 24.0 (H1b, circle_tune_20260927)
+    wb_dy_z: 26.82  # 2026-09-27 circle tune; was 24.0 (H1b, circle_tune_20260927)
+    wb_dy_psi: 0.2903  # 2026-09-27 circle tune; was 0.3 (H1b, circle_tune_20260927)
+    wb_my_x: 1.0
+    wb_my_y: 1.0
+    wb_my_z: 1.0
+    wb_my_psi: 0.05
+    wb_impedance_shaped: true
+    wb_dls_lambda: 0.3
+    wb_tau_max: 3.0
+    wb_omega_e_ff: false
+    wb_gmo_use_achieved: false
+    # The posture PID's replacement (the four wb_posture_* keys are ABSENT on
+    # purpose; the node's LAW CHECK line prints green).
+    wb_ee_anchor_com: true
+    wb_ee_anchor_blend_s: 1.0  # PICK-AND-PLACE: the planner switches the EE anchor to the WORLD for
+                               # execute_pick's hold, descent and grasp (pick_place_world_anchor_pick)
+                               # and back to the CoM at the next leg's request; blended over 1 s
+    wb_u3_internal_ff: true
+    wb_u3_internal_ff_use_w_hat: true
+    # Stiction cap on the observer-driven share of u3: J4 only (2026-09-13).
+    wb_u3_estimate_max_j1: 0.0
+    wb_u3_estimate_max_j2: 0.0
+    wb_u3_estimate_max_j3: 0.0
+    wb_u3_estimate_max_j4: 0.06
+    wb_seed_disturbance_from_ude: false
+    # Bare-airframe CoM, MODEL frame (model +y = actual +x): the 2026-08-25
+    # measurement. The plant carries the same offset (1.2) and the planner's
+    # base_com (section 4) must equal it.
+    wb_base_com_x: 0.0
+    wb_base_com_y: -0.017854
+    wb_base_com_z: 0.0
+
+    # ── 2.5 disturbance observer: L1 adaptive ───────────────────────────────
+    wb_use_gmo: true
+    wb_ko_t: 0.5
+    wb_ko_r: 0.1
+    wb_ko_q: 0.1
+    wb_l1_observer_type: "l1"
+    wb_l1_a_t: 2.0
+    wb_l1_a_r: 2.0
+    wb_l1_a_q: 2.0
+    wb_l1_adapt_period_s: 0.0
+    wb_l1_omega_c_t: 2.927  # 2026-09-27 circle tune; was 2.0 (H1b, circle_tune_20260927)
+    wb_l1_omega_c_r: 0.7428  # 2026-09-27 circle tune; was 0.5 (H1b, circle_tune_20260927)
+    wb_l1_omega_c_q: 0.8479  # 2026-09-27 circle tune; was 0.5 (H1b, circle_tune_20260927)
+    wb_l1_omega_i: 2.0
+    wb_l1_omega_x: 0.2072  # 2026-09-27 circle tune; was 0.25 (H1b, circle_tune_20260927)
+    wb_l1_lc_var_f: 100.0
+    wb_l1_lc_var_m: 0.25
+    wb_l1_lc_var_q: 0.0025
+    wb_l1_decompose: true
+
+    # ── 2.6 four-dimensional attribution ────────────────────────────────────
+    wb_l1_four_d: true
+    wb_l1_omega_q: 0.2
+    wb_l1_contact: false
+    wb_l1_collision_threshold_n: 0.0
+    wb_l1_omega_x_t: 0.0
+    wb_l1_omega_x_r: 0.0
+    wb_l1_omega_x_q: 0.0
+    wb_l1_max_force_n: 20.0
+    wb_l1_max_torque_nm: 2.0
+    wb_l1_max_joint_nm: 1.5
+    wb_l1_max_wrench_force_n: 15.0
+    wb_l1_max_wrench_torque_nm: 3.0
+
+    # ── 2.7 arm interface, hold and DIRECT-entry gates ──────────────────────
+    wb_arm_state_timeout_s: 0.5
+    wb_arm_reference_timeout_s: 0.2
+    wb_arm_hold_kp: 3.0
+    wb_arm_hold_kd: 0.25
+    wb_gate_pos_m: 0.15
+    wb_gate_vel_mps: 0.20
+    wb_gate_arm_rad: 0.05
+    # 2026-09-26 hardware update: the law reads the arm controller's velocity
+    # OBSERVER (20 Hz, on encoder positions) instead of joint_states.velocity
+    # (Present Velocity, 44-56 ms behind). The sim arm stack publishes the same
+    # topic from the same observer on Isaac's exact positions. AS FLOWN
+    # 0918-0924: joint_states.velocity (key absent).
+    wb_arm_velocity_topic: "fsc_open_manipulator/external_torque_controller/velocity_observer"
+    wb_arm_velocity_timeout_s: 0.05
+    # 2026-09-26 hardware update: servo armature as a joint-DIAGONAL reflected
+    # inertia with the calibrated values (link-rank-1 0.020 as flown 0918-0924).
+    wb_armature_joint_diag: true
+    wb_armature_j1: 0.010
+    wb_armature_j2: 0.0194
+    wb_armature_j3: 0.0097
+    wb_armature_j4: 0.0097
+    # (wb_arm_hold_stream, wb_arm_sign_*: see section 3)
+
+    # ── 2.8 wrench allocation -- AM_xfwd geometry, MN4010 motors ────────────
+    # THE BELIEVED kf AND km ARE THE FLOWN ONES: 4.260431e-05 (the 2026-09-12
+    # experiment value, bench 4.540431e-05 understated 6.2 %) and the bench km
+    # +-0.018164. Against the mirror plant's kf (1.1: 4.19e-05 mean) the
+    # allocator over-believes thrust by ~1.7 % on average -- the real mismatch
+    # the observer absorbed on those days (d_hat_z +0.4 .. -2.2 N), not the
+    # robustness file's +17.6 %.
+    alloc_rotor0_px: 0.22990663
+    alloc_rotor0_py: 0.22990663
+    alloc_rotor0_km: 0.018164
+    alloc_rotor1_px: -0.22990663
+    alloc_rotor1_py: -0.22990663
+    alloc_rotor1_km: 0.018164
+    alloc_rotor2_px: 0.22990663
+    alloc_rotor2_py: -0.22990663
+    alloc_rotor2_km: -0.018164
+    alloc_rotor3_px: -0.22990663
+    alloc_rotor3_py: 0.22990663
+    alloc_rotor3_km: -0.018164
+    alloc_thrust_coeff: 4.260431e-05
+    alloc_omega_idle: 64.0603
+    alloc_omega_max: 730.0507
+    alloc_motor_idle: 0.0
+    alloc_motor_max: 1.0
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 3. SIM-TOPOLOGY DIFFERENCES -- the only deliberate departures from 2
+    # ══════════════════════════════════════════════════════════════════════
+    # (a) SAFETY-revert arm fold. On hardware this node calls the arm
+    #     controller's go_home 1 s after a revert; in the Isaac rig arm_planner
+    #     (torque_controller_isaac_aerial.yaml, home_on_safety_revert: true)
+    #     owns that edge, so the service is EMPTY here -- exactly one of the
+    #     two may be active or the arm is commanded twice.
+    system_arm_go_home_service: ""
+    system_arm_go_home_delay_s: 1.0
+    # (b) Who holds the arm in SAFETY. Hardware: false (the arm controller's
+    #     own calibrated PD+ with a URDF gravity model). Isaac arm stack: no
+    #     gravity model, so this node streams its PD+gravity hold (true).
+    #     SAFETY only; in DIRECT the coupled law owns the arm on both.
+    wb_arm_hold_stream: true
+    # (c) Arm sign map. Hardware joint1/joint4 are URDF/Dynamixel convention,
+    #     opposite the whole-body model (wb_arm_sign_j1/j4 = -1). Isaac
+    #     publishes the model convention, so the keys are OMITTED (identity).
+    # (d) The planner's base_com / arm_joint_sign (section 4): the hardware
+    #     launcher passes them on the command line; the sim stack launches the
+    #     planner on this file alone, so they are set IN the file.
+
+# ============================================================================
+# 4. WHOLE-BODY TRAJECTORY PLANNER (fsc_trajectory_planner, C++) -- hardware
+#    verbatim except base_com (3d). LEGACY whole_body_planner section kept for
+#    the python-era key.
+# ============================================================================
+/**/whole_body_planner:
+  ros__parameters:
+    planner: "bspline"
+
+/**/whole_body_trajectory_planner:
+  ros__parameters:
+    vehicle: "t650_aerial_manipulator"
+    planner: "bspline"
+    stream_rate: 100.0
+    v_max: 0.30                 # peak CoM speed              [m/s]
+    a_max: 0.15                 # peak CoM acceleration       [m/s^2]
+    w_max: 0.30                 # peak rate, any angle channel [rad/s]
+    t_min: 3.0                  # never faster than this      [s]
+    dw_max: 0.60                # bspline: peak angular acceleration [rad/s^2]
+    t_max: 40.0                 # bspline: refuse rather than crawl   [s]
+    tau_joint_max: 3.0          # bspline: MUST equal wb_tau_max above
+    rotor_bounds: true          # bspline: rotor bounds via inverse dynamics
+    n_check: 101                # diagnostic grid; 0 disables
+    home_pose: [0.0, 0.698132, 0.698132, 0.0]
+    hold_ee_world: false
+    # Servo armature: MUST equal wb_armature_joint_diag / wb_armature_j1..j4
+    # (the planner's joint-torque feasibility and reference torques use it).
+    # Mirrors the hardware yaml; missing here until 2026-09-27, so the sim's
+    # planner built its references on the old link-armature model.
+    armature_joint_diag: true
+    armature: [0.010, 0.0194, 0.0097, 0.0097]
+    # = wb_base_com_* (the hardware launcher passes the same three numbers);
+    # arm sign identity in Isaac (3c).
+    base_com: [0.0, -0.017854, 0.0]
+    arm_joint_sign: [1.0, 1.0, 1.0, 1.0]
+
+    # --- end-effector trajectory mode (arm GS "EE trajectory" tab) ------
+    # The 0924 circles: r 0.5 m, 24 s lap, ONE lap (F2-F4; F1 flew laps 2),
+    # fold 60, q2 30 +- 10 deg at a 48 s period (F1/F2); F3/F4 flew fold 55,
+    # q2 25 +- 15 at 12 s / 6 s -- set those per replay, as the flights did.
+    ee_traj_circle_radius: 0.5      # [m]
+    # FIGURE-8 (2026-10-05, Pegasus docs/docs_aerial_manipulator/archive/
+    # figure8_compare_20261005): "radius" = the half-length A. FIRST-FLIGHT SETTING
+    # A 0.70 / B 0.35 m at a 0.10 m/s mean EE speed (the arm GS's Figure-8 defaults:
+    # path 4.2681 m -> a 42.68 s lap, q2 period 10.67 s via ee_traj_q2_cycles_per_lap).
+    # Chosen from the conservative sweep: the geometric (decoupled) EE peak scales
+    # with the peak YAW RATE, and at 0.10 m/s it is 73 mm in sim (~121 mm predicted
+    # in flight, sim/flight 0.6), the 8 + errors fitting a 2 x 2 m square with
+    # +110 mm per side. Faster steps flown in sim: 0.15 m/s (geo peak 91 mm),
+    # 0.20 m/s (128 mm). The 8 is centred on the EE's HOVER point (the crossing).
+    ee_traj_fig8_a: 0.70            # figure-8 half-length along its long axis [m]
+    ee_traj_fig8_b: 0.35            # half-width across it [m] (B = A/2)
+    # LONG AXIS ON WORLD x (2026-10-05, user request): without this the 8 starts along
+    # the nose with its long axis ~45 deg off it (diagonal from a yaw-0 hover). The
+    # crossing stays at the hovering EE; go-to-start yaws the drone by at most 45 deg.
+    ee_traj_fig8_world_axis: true
+    ee_traj_fig8_axis_deg: 0.0      # long-axis azimuth, world frame [deg] (0 = x, 90 = y)
+    ee_traj_lap_time: 24.0          # one lap at time scale 1 [s]
+    ee_traj_laps: 1
+    ee_traj_ccw: true               # circle turns counter-clockwise
+    ee_traj_center_origin: true     # circle centred on the world origin at the EE height
+    ee_traj_ramp_time: 4.0          # min-snap ramp-in / ramp-out [s]
+    ee_traj_fold_deg: 60.0
+    ee_traj_q2_center_deg: 30.0     # the assigned redundancy DoF: q2 sinusoid
+    ee_traj_q2_amp_deg: 10.0
+    ee_traj_q2_period_s: 48.0
+    # q2 PERIOD TIED TO THE LAP (2026-10-05): > 0 makes the planner use
+    # lap_time / cycles and IGNORE ee_traj_q2_period_s, so whatever lap the arm GS
+    # writes (circle 24.166 s -> 6.0415 s; figure-8 A 0.70 at 0.10 m/s 42.68 s -> 10.67 s,
+    # 8.8 deg/s peak q2 rate at s = 1; A 0.75 at 0.20 m/s 22.865 s -> 5.716 s)
+    # stays on whole cycles and the run ends on its start pose. 0 = use the period above.
+    # SIM: 0 keeps this file's 48 s design (half a cycle per 24 s lap); the
+    # hardware file sets 4. The figure-8 campaign set 4 at run time.
+    ee_traj_q2_cycles_per_lap: 0
+    # RATE BOUNDS FOR THE EE RUN ONLY (2026-10-05; > 0 overrides v_max/a_max/w_max for
+    # this mode, 0 = inherit). The shared bounds above also size every transition
+    # (go-to-start, back-to-origin, GS targets) and would cap the 0.20 m/s figure-8 at
+    # s = 0.34. With these: s_max 1.06 (set by v_max 0.30), the circle's s = 1 plan is
+    # unchanged (only its s_max rises). Sim-flown 3+3 at s = 1, both rigs, 0 saturation.
+    ee_traj_v_max: 0.0              # 0 = v_max (0.30 m/s; figure-8 peak 0.28)
+    ee_traj_a_max: 0.40             # CoM acceleration [m/s^2]; figure-8 peak 0.33
+    ee_traj_w_max: 1.0              # yaw rate [rad/s]; figure-8 peak 0.90 (51 deg/s)
+    ee_traj_qdot_max: 0.5           # [rad/s]
+    ee_traj_time_scale: 1.0         # the default request; the GS slider overrides
+    ee_traj_start_pos_tol: 0.05     # Start button gate: [m], [deg], [deg]
+    ee_traj_start_yaw_tol_deg: 5.0
+    ee_traj_start_joint_tol_deg: 5.0
+
+    # --- pick-and-place mode (arm GS "Pick & Place" tab), 2026-10-03 -------
+    # THE TASK, IDENTICAL ON HARDWARE AND IN SIMULATION (this block is in the
+    # hardware file and, verbatim, in section 2 of the mirror ..._sim.yaml).
+    # Without it the planner flies its built-in defaults -- pick / place arm
+    # pose [0, 0, 0, 0], carry = the folded home pose, every yaw 0 (no turns).
+    # The decoupled stacks read their planner section from this file too.
+    # Record: Pegasus docs/docs_aerial_manipulator/archive/pick_place_controllers_20261003/.
+    #
+    # Drone points [x, y, z, yaw_deg] (world, ACTUAL yaw) -- the sim field's
+    # nominal points. Adjust (arm GS, vehicle on its start mark) writes a
+    # common x / y / yaw shift into all four; CHECK THEM AGAINST THE LAB.
+    # Yaw sequence CLOCKWISE, flown as typed: pick at the payload's yaw (0,
+    # pick_place_align_yaw), round to -180 for the place, on to -360 to land
+    # (+180 / +360 would turn the other way).
+    pick_place_start: [0.0, 0.0, 1.0, 0.0]
+    pick_place_place_start: [0.0, -1.0, 1.0, -180.0]
+    pick_place_land_start: [-1.0, 0.0, 1.0, -360.0]
+    pick_place_land: [-1.0, 0.0, 0.8, -360.0]
+    pick_place_align_yaw: true
+    # Arm poses [deg, q1..q4] -- THE BOX PAYLOAD (2026-10-07, user's CAD: a basket
+    # with a wire HANGER on top; the claw takes the vertical stem with one finger
+    # on each side, both UNDER the arch, and the lift hangs the arch on them).
+    # The fingers must pass under the arch, so the claw is near HORIZONTAL
+    # (beta = q2 + q3 ~ 70-75). Inside the real arm's q2 range -20..+45 (U2D2
+    # board) and q3's +50 stop. Sized on the measured excursions, not the
+    # nominal pose: the SET-DOWN (the basket's weight leaving the claw) springs
+    # the arm UP by +5..+8 deg on q2 and q3, the LIFT dips q2 by -10..-12.
+    # PICK / PLACE [0, 32, 38, 0]: beta 70, the claw 20 deg below horizontal;
+    #   flown 3/3 (hook3/5/6, Isaac): q2 peaked 38.9-40.1 at the set-down, q3
+    #   44.2-45.5 -> 5-6 deg to +45 / +50; q2 never below 20 (40 deg off -20).
+    # CARRY (Place Start) [12, 38, 42, 0] (2026-10-07, user: a pose clearly
+    #   different from the pick pose, to SHOWCASE the arm moving with the payload):
+    #   the arm yaws 12 deg and folds up 10 deg -- the hung basket lifts 37 mm and
+    #   swings 53 mm sideways (65 mm). The yaw is capped by the landing gear: the
+    #   hung basket clears the skids by 29 mm at rest here, by ~1 cm at 15 deg.
+    #   beta 80 (claw 10 deg down: flatter than the pick pose, so the hook needs
+    #   LESS friction while carrying); 7 / 8 deg to the q2 / q3 stops before the
+    #   +2..+3 deg measured in carry. (q1 does not change sigma_nd.)
+    #   FLOWN 2/2 (hook9/10, Isaac): the hung basket moved 63 / 69 mm (body
+    #   frame) between the carry and place poses, vs 20-25 mm with the old
+    #   [0, 35, 40, 0]; skids >= 32 mm; carry-leg peaks q2 39.3, q3 44.5;
+    #   placed 53 / 28 mm off axis (the 53 = a deeper hook at the PICK).
+    # sigma_nd >= 0.31 everywhere flown (keep-out 0.10, the law's 0.87); J2 / J3
+    # hold ~1.2 / 0.6 N.m with the 200 g basket hung.
+    # FRICTION IS A REQUIREMENT, NOT A POSE CHOICE: the arch rests on the fingers'
+    # top edges, which slope down toward the tips by the claw tilt + ~6 deg of
+    # taper (~26 deg at the pick pose, ~21 at beta 75). Isaac at the scene's
+    # mu 1.2: 3/3 placed (hook3 knocked off only before the hook-place fix);
+    # at mu 0.4 the arch slid off the fingers at the lift with BOTH beta 70
+    # and beta 75 (hook7/8). On hardware give the finger tops mu >~ 0.6
+    # (rubber / grip tape) or a notch on the arch.
+    # Record: Pegasus docs/docs_aerial_manipulator/archive/pick_place_box_payload_20261007/.
+    pick_place_pick_pose_deg: [0.0, 32.0, 38.0, 0.0]
+    pick_place_place_pose_deg: [0.0, 32.0, 38.0, 0.0]
+    pick_place_carry_pose_deg: [12.0, 38.0, 42.0, 0.0]
+    # No arm sweep on the way to the place (three poses only): lo == hi.
+    pick_place_sweep_lo_deg: [0.0, 32.0, 38.0, 0.0]
+    pick_place_sweep_hi_deg: [0.0, 32.0, 38.0, 0.0]
+    pick_place_sweep_phase_deg: [0.0, 90.0, 270.0, 0.0]
+    # EE offset [m]: basket centre (obj_0) -> the claw point, ONE for pick and
+    # place, in the object's frame (+x = the hanger plane's normal, the claw's
+    # approach direction; +z up). THE BOX PAYLOAD: the stem is at x = -27.5 mm,
+    # the arch's underside 199 mm above the basket centre; the claw point goes
+    # 7.5 mm BEYOND the stem (the stem 8 mm deep between the 30 mm-tall
+    # fingers, 24 mm short of their tips) and 0.16 m up, where the open
+    # fingers' tops pass 21 mm under the arch and 10 mm under its curving arms.
+    # The lift then raises the claw 21 mm before the arch settles on the
+    # closed fingers. TUNE ON THE REAL PAYLOAD -- the arm GS's EE Offset row
+    # writes it live.
+    pick_place_ee_offset: [-0.02, 0.0, 0.16]
+    # PLACE pose [x, y, z, yaw_deg] = the basket centre at release, in obj_0's
+    # frame. TYPE IT BEFORE THE FLIGHT: z = the place PILLAR TOP (its mark's
+    # mocap reading, less the marker centre's height above the pillar top)
+    # + 8 mm (the HAT's platform above the pillar top it sits on: Top_Hat.STL,
+    # 2026-10-08) + 12.5 mm (half the basket, less 20 mm). The hooked basket is
+    # SET DOWN on the hat and the claw goes on down, out of the arch, before it
+    # backs out (pick_place_place_exit_back). The 20 mm is measured (hook1,
+    # 2026-10-07): once the basket rests, its weight leaves the claw and the
+    # observer that had learned it lifts the claw ~18 mm off its target for a
+    # few seconds -- at the basket's own resting height (+32.5 mm) the fingers
+    # cleared the arch by only ~10 mm and the back-off dragged it. Adjust never
+    # moves it. The yaw must stay -180 with the yaw sequence above.
+    # Default = the sim: 1 m pillar + 8 mm + 12.5 mm = 1.0205 (the GS shows 1.02).
+    pick_place_place_point: [-1.0, -1.0, 1.02, -180.0]
+    # Safety Margin: Ready To Pick / Place hover this far above the EE target,
+    # Exit To Pick / Place climb back to it. Pick / Place descend on request.
+    pick_place_approach_dz: 0.20
+    pick_place_descent_on_request: true
+    # Exit To Pick / Place duration: 0 = the leg bounds (3.2 s for the 0.20 m
+    # climb). THE BOX PAYLOAD (2026-10-07): the hook is not a clamp, so nothing
+    # pins the vehicle to the pillar and the lift should be GENTLE -- at 1.6 s
+    # the arch engaged at ~0.15 m/s, the basket swung to 21 deg and q2 dipped
+    # 13.6 deg (hook1). 1.6 s was for the clamped handle plate
+    # (PEGASUS_PNP_PAYLOAD=plate): a 3.2 s climb left that box on the cap
+    # ~0.9 s and the decoupled rig, pinned to it, tipped over (2026-10-03).
+    pick_place_exit_time_s: 0.0
+    # Descent trim cap: the decoupled law parks its claw ~5 cm off (up to
+    # 74 mm at the place); the trim cancels it. The 50 mm residual gate after
+    # the trim is unchanged; the whole-body law trims 1-7 mm.
+    pick_place_descent_trim_max: 0.15
+    # TRIM FIRST: a trim over 5 mm is flown sideways at the hover height, held
+    # 2 s, then the claw descends STRAIGHT down. Flown inside the descent, the
+    # decoupled law's ~5 cm trim overshot ~10 mm at the bottom -- beyond the
+    # open fingertips' 8.75 mm clearance of the handle (2026-10-03, geo_22).
+    pick_place_descent_trim_settle_s: 2.0
+    # Safety guard: ABORT's response once the tilt stays above 15 deg for 0.1 s.
+    pick_place_guard_tilt_deg: 15.0
+    pick_place_guard_persist_s: 0.10
+    # World-held claw for the pick hover / descent / grasp only (the whole-body
+    # node's set_ee_anchor_com; the decoupled node has none, so it is a no-op).
+    # The box payload's hook grasp keeps the CoM anchor for the pick too: the
+    # fingers have ~17 mm to spare around the stem, and the world-held claw
+    # swings q2 by up to 12 deg (2026-10-06 screen) -- past the real arm's +45.
+    pick_place_world_anchor_pick: false
+    pick_place_world_anchor_place: false
+    # HOOK GRASP (the box payload, 2026-10-07): the pick comes in level from
+    # 0.10 m behind the stem, the place exit backs out 0.10 m before climbing
+    # (the fingers must slide out from under the arch, not lift it again).
+    pick_place_pick_approach_back: 0.10
+    pick_place_place_exit_back: 0.10
+    # pick_place_fence_max_z stays at the node default 1.8 m -- set the lab's
+    # ceiling (the sim's pick-and-place profile raises it to 2.2: Isaac has none).
+
+    # --- SIM-ONLY pick-and-place keys (make_pick_place_yaml.py) ------------
+    # The task itself is the block above, shared with the hardware file. Only:
+    # GEOFENCE CEILING 1.8 -> 2.2 m -- Isaac has no ceiling. With the 0.20 m
+    # safety margin the highest planned point is 1.795 m, and ABORT / the
+    # safety guard climb 0.30 m from wherever they cut in, clipped at this
+    # ceiling (1.8 left them ~0). On hardware the lab's ceiling sets it.
+    pick_place_fence_max_z: 2.2
+    # TRIM FIRST ALWAYS (2026-10-09, the controller comparison): the place
+    # descent is sideways-settle-down for every hover error, so it lasts the
+    # same ~8.2 s on every run and every controller. The hardware default
+    # (5 mm) flies a smaller trim inside a straight 3.2 s descent, and the
+    # whole-body rig's 4-6 mm place trim flipped between the two at random.
+    pick_place_descent_trim_first_min: 0.0

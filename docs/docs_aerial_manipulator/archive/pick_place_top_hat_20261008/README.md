@@ -181,6 +181,34 @@ The hold offset itself is out of reach of every velocity-keyed term; only a join
 (the arm-side `passthrough_integral`, deliberately off because the L1 arm channel already
 integrates the joint residual) or a stiffer task spring acts on it.
 
+## The comparison on one timetable (2026-10-09, user request)
+
+The 10-08 comparison figure had gaps between the phases, and the two controllers' curves drifted apart
+inside a run. Two sources, both measured from the 10-08 step marks:
+
+- **The place descent's length was random.** The planner flies a descent trim larger than 5 mm sideways
+  first (sideways 3.0 s + settle 2.0 s + down 3.2 s = 8.2 s) and a smaller one inside a straight 3.2 s
+  descent. The decoupled rig always trims about 5 cm; the whole-body rig trims 4-6 mm, so its runs got
+  either one. New planner key `pick_place_descent_trim_first_min` (default 0.005 = unchanged, hardware
+  untouched), set to 0 in the sim pick-and-place yaml only (`make_pick_place_yaml.py`'s sim-only block):
+  every descent then trims first. gtest `TrimFirstMinZeroGivesEveryDescentTheSameSegmentsAndDuration`:
+  8.19-8.23 s for trims of 0.5 to 59 mm.
+- **Event waits inside the pick.** The close waits for the claw to settle within tolerance (whole-body
+  0.3 s, decoupled 1.2 s with its closing-axis gate) and the close itself takes 1.7-2.0 s.
+
+`pnp_mission_v2.py --timetable` (new) starts every step at a fixed mission time: slots 5.3 / 18.3 / 22.3 /
+25.0 / 18.3 s after the previous phase start (go to start -> ready pick -> exit pick -> ready place ->
+go to land start -> land). The slack sits only where hovering is safe: after the transits, after the hook
+close (the fingers surround the stem without clamping it), and after the place exit -- never between the
+place touchdown and the release. A step past its slot is recorded (`late_name` / `late_s` in the npz) and
+the campaign re-flies the run. The builder now scores the whole mission (92.5 s) as six contiguous phases.
+
+Flown 4 kept runs + 1 dropped (whole-body attempt 2: the basket slid off the hook mid-carry, 35 s in --
+the hook grasp's finger-friction limit, 22 s after the lift, unrelated to the timetable). Phase starts agree
+across all four runs to 0.01 s. Means: whole-body eps max 146 mm / rms 26.1 mm, EE 28.1 mm; decoupled
+312 / 66.2 mm, EE 67.3 mm -- within a few mm of the unaligned 10-08 numbers. The 10-08 runs are in
+`runs/unaligned_20261008/` (local, gitignored).
+
 ## Not covered
 
 The decoupled rig on the hat (its paths cleared the bigger disc by 61-69 mm offline); a

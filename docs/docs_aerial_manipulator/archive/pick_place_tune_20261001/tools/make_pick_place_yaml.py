@@ -236,6 +236,12 @@ PICK_PLACE_BLOCK = """
     # safety guard climb 0.30 m from wherever they cut in, clipped at this
     # ceiling (1.8 left them ~0). On hardware the lab's ceiling sets it.
     pick_place_fence_max_z: 2.2
+    # TRIM FIRST ALWAYS (2026-10-09, the controller comparison): the place
+    # descent is sideways-settle-down for every hover error, so it lasts the
+    # same ~8.2 s on every run and every controller. The hardware default
+    # (5 mm) flies a smaller trim inside a straight 3.2 s descent, and the
+    # whole-body rig's 4-6 mm place trim flipped between the two at random.
+    pick_place_descent_trim_first_min: 0.0
 """
 # The mirror must carry the task block (these keys) and none of the sim-only ones.
 TASK_KEYS = ("pick_place_start", "pick_place_place_start", "pick_place_land_start", "pick_place_land",

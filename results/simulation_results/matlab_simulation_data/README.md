@@ -31,6 +31,8 @@ T = struct2table(S.rmse_mean);     % Table II: one row per (shape, speed, method
 R = struct2table(S.rmse_runs);     % every run
 ```
 
+**Payload pick-and-place** (the paper's `tab:sim_pick_place`): `pick_and_place/`, `pick_and_place_metrics.mat` and `configs/*_sim_pick_and_place.yaml`. See `README_pick_and_place.md`.
+
 ## Simulation index
 
 Flown 2026-10-07 21:52:15 to 2026-10-08 01:02:07, in one campaign with one launch condition:

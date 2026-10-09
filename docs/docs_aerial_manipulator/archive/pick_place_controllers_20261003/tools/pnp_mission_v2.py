@@ -70,6 +70,7 @@ class Driver(Node):
         da, dbg = RIGS[a.rig]
         self.t0 = time.time()
         self.events, self.marks = [], []
+        self.late = []                       # --timetable: (step, seconds late)
         self.odom = self.mode = self.armed = None
         self.mode = ""
         self.status = self.pp_status = ""
@@ -198,6 +199,31 @@ class Driver(Node):
     def guard(self, what):
         if self.armed and self.mode != "DIRECT" and self.phase == "mission":
             raise Abort(f"left DIRECT while {what}")
+
+    def align(self, ref_mark, slot, what):
+        """--timetable (2026-10-09): hold until `slot` s after the mark `ref_mark`, so
+        the next step starts at the SAME mission time on every run and every
+        controller. Only called where hovering is safe. A step already past its
+        slot is LATE (recorded; the campaign re-flies such a run)."""
+        t_ref = [t for t, n in self.marks if n == ref_mark][-1]
+        dt = t_ref + slot - self.now()
+        if dt < -0.05:
+            self.late.append((what, -dt))
+            self.ev(f"TIMETABLE LATE: {what} {-dt:.2f} s behind its slot")
+            return
+        self.ev(f"timetable: {what} in {max(dt, 0.0):.2f} s")
+        t_end = time.time() + max(dt, 0.0)
+        while time.time() < t_end:
+            self.guard(what)
+            time.sleep(0.01)
+
+    def started_late(self, step, name):
+        """--timetable: the planner refused the call for a while (still settling)."""
+        t_mark = [t for t, n in self.marks if n == f"{step}:start"][-1]
+        lag = self.now() - t_mark
+        if self.a.timetable and lag > 0.3:
+            self.late.append((f"{name} accepted", lag))
+            self.ev(f"TIMETABLE LATE: {name} accepted {lag:.2f} s after its mark")
         if self.phase == "mission" and self.pp_status.startswith(("ABORTING", "ABORTED")):
             raise Abort(f"pick-and-place ABORTED while {what}: {self.pp_status}")
 
@@ -256,6 +282,7 @@ class Driver(Node):
         """A planner leg to its end (a claw leg to its HOLD above the target)."""
         self.begin(step)
         self.start(name)
+        self.started_late(step, name)
         self.wait(lambda: self.status.startswith("EXECUTING"), 20, f"{name} EXECUTING")
         T = float(self.status.split("T=")[1].split("s")[0]) if "T=" in self.status else 60.0
         self.ev(f"{name}: executing, T = {T:.1f} s")
@@ -382,6 +409,7 @@ class Driver(Node):
         self.begin(step)
         name = "exit_pick" if leg_k == 1 else "exit_place"
         self.start(name)
+        self.started_late(step, name)
         self.wait(lambda: self.status.startswith("EXECUTING"), 20, f"{name} EXECUTING")
         k = 83 if leg_k == 1 else 84
         self.wait(lambda: self.status == "HOLD" and self.info is not None and self.info[k] > 0.5, 40,
@@ -433,7 +461,10 @@ class Driver(Node):
         self.ev(f"planned leg durations {np.round(self.info[8:14], 1).tolist()} s, exits "
                 f"{np.round(self.info[81:83], 1).tolist()} s")
         self.leg("go_to_start", "go_to_start")
-        time.sleep(a.leg_pause)
+        if a.timetable:
+            self.align("go_to_start:start", a.slot_ready_pick, "ready_pick")
+        else:
+            time.sleep(a.leg_pause)
         # 2.1 Ready To Pick: OPEN first, then to the safety margin above the handle
         self.grip_cmd = GRIP_OPEN
         self.leg("execute_pick", "ready_pick")
@@ -447,13 +478,20 @@ class Driver(Node):
         # 2.3 Exit To Pick at once (the closed chain with the pillar drifts) -- or
         # after --clamp-hold s, an operator's reaction time (2026-10-03: the user's
         # manual decoupled run sat clamped ~4 s and tipped over at the lift)
-        if a.clamp_hold > 0.0:
+        if a.timetable:
+            # the hook grasp: the fingers close AROUND the stem without clamping it,
+            # so holding here is safe; this slack absorbs the gate + close time
+            self.align("ready_pick:start", a.slot_exit_pick, "exit_pick")
+        elif a.clamp_hold > 0.0:
             self.mark("clamp_hold:start")
             time.sleep(a.clamp_hold)
             self.mark("clamp_hold:end")
         self.exit(1, "exit_pick")
         self.leg("go_to_place_start", "go_to_place_start")
-        time.sleep(a.leg_pause)
+        if a.timetable:
+            self.align("exit_pick:start", a.slot_ready_place, "ready_place")
+        else:
+            time.sleep(a.leg_pause)
         self.leg("execute_place", "ready_place")
         if a.hook_place:
             # the box payload's HOOK place (2026-10-07): jaws CLOSED through the
@@ -469,8 +507,14 @@ class Driver(Node):
             self.grip_cmd = GRIP_OPEN
             self.exit(3, "exit_place")
             self.mark("gripper_open:end")
+            if a.timetable:
+                # hovering above the place point, the basket released: safe slack
+                self.align("ready_place:start", a.slot_land_start, "go_to_land_start")
             self.leg("go_to_land_start", "go_to_land_start")
-            time.sleep(a.leg_pause)
+            if a.timetable:
+                self.align("go_to_land_start:start", a.slot_land, "execute_land")
+            else:
+                time.sleep(a.leg_pause)
             self.leg("execute_land", "execute_land")
             self.wait(lambda: self.pp_status.startswith("COMPLETE"), 10, "COMPLETE")
             time.sleep(a.post_hold)
@@ -533,7 +577,12 @@ class Driver(Node):
                             payload0=getattr(self, "payload0", np.zeros(7)),
                             payload_final=self.payload if self.payload is not None else np.zeros(7),
                             joint_names=np.array(getattr(self, "joint_names", [])),
-                            rig=self.a.rig, aborted=aborted, reason=reason)
+                            rig=self.a.rig, aborted=aborted, reason=reason,
+                            timetable=np.array([self.a.slot_ready_pick, self.a.slot_exit_pick,
+                                                self.a.slot_ready_place, self.a.slot_land_start,
+                                                self.a.slot_land]) if self.a.timetable else np.zeros(0),
+                            late_name=np.array([l[0] for l in self.late]),
+                            late_s=np.array([l[1] for l in self.late]))
         print(f"saved {path}")
 
 
@@ -567,6 +616,19 @@ def main():
     ap.add_argument("--max-disturb", type=float, default=0.008)
     ap.add_argument("--direct-settle", type=float, default=15.0)
     ap.add_argument("--leg-pause", type=float, default=2.0)
+    # --timetable (2026-10-09): every step starts at the same mission time on every
+    # run and every controller, for the comparison figures. The slots [s] are the
+    # step-to-step offsets below, sized from the 2026-10-08 runs (largest flown +
+    # margin); a step past its slot is recorded as LATE (npz late_name / late_s).
+    # Needs the planner's pick_place_descent_trim_first_min = 0 (the sim
+    # _pick_and_place.yaml) so the place descent lasts the same on every run.
+    ap.add_argument("--timetable", action="store_true",
+                    help="start every step at a fixed mission time (replaces --leg-pause / --clamp-hold)")
+    ap.add_argument("--slot-ready-pick", type=float, default=5.3, help="go_to_start start -> Ready To Pick")
+    ap.add_argument("--slot-exit-pick", type=float, default=18.3, help="Ready To Pick start -> Exit To Pick")
+    ap.add_argument("--slot-ready-place", type=float, default=22.3, help="Exit To Pick start -> Ready To Place")
+    ap.add_argument("--slot-land-start", type=float, default=25.0, help="Ready To Place start -> go_to_land_start")
+    ap.add_argument("--slot-land", type=float, default=18.3, help="go_to_land_start start -> execute_land")
     ap.add_argument("--post-hold", type=float, default=5.0)
     ap.add_argument("--abort-settle", type=float, default=6.0)
     ap.add_argument("--land-wait", type=float, default=12.0)

@@ -157,6 +157,9 @@ def sim_readme(summary, runs, attempts, plant, configs):
         "T = struct2table(S.rmse_mean);     % Table II: one row per (shape, speed, method)",
         "R = struct2table(S.rmse_runs);     % every run",
         "```", "",
+        # the pick-and-place data share this folder (build_pick_and_place.py writes that README; same text there)
+        "**Payload pick-and-place** (the paper's `tab:sim_pick_place`): `pick_and_place/`, "
+        "`pick_and_place_metrics.mat` and `configs/*_sim_pick_and_place.yaml`. See `README_pick_and_place.md`.", "",
         "## Simulation index", "",
         f"Flown {first} to {last}, in one campaign with one launch condition:",
         "- **Simulator:** Isaac Sim, headless, at real time (RTF 1.000 during every trajectory).",
