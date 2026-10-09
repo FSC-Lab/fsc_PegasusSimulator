@@ -221,6 +221,14 @@ plans three segments (planner `planPickPlaceAbort`, keys `pick_place_abort_relea
 3. fold home in place; the arm GS closes the gripper when the planner reports ABORTED.
 Total 10.5 s (release reached at 4.2 s) vs 4.0 s before. gtest `TheAbortGoesThroughTheReleasePoseThenHome`.
 The pose: q2 = 0 inside the real arm's [-20, +45]; gripper 0.26 m under the body, above the gear.
+SINGULARITY (checked 2026-10-09, user request): sigma_nd (the planner's margin, sigma_min of J_3y with the
+translational rows scaled by 1/Lchar; the planner refuses below 0.10) is 0.298 at the release pose -- 3.0x the
+margin, against 0.334 at home and 0.327 at the pick/place pose. Every straight joint path into and out of it,
+from home, pick/place, carry, the pad home and both corners of the joint box, keeps >= 0.298 (sigma_nd falls
+monotonically with beta = q2 + q3 along the fold; the minimum is the release end). Flown (measured joints,
+the four Isaac aborts): min 0.296-0.302; q3 stayed >= 29.6 deg, far from the elbow-singular branch at negative
+q3; q2 dipped to -8.0 deg at most when the basket dropped off (the real arm's guard is -20); |q1| <= 8.4 deg,
+|q4| <= 5.0 deg. beta = 30 deg is also 30 deg from the wrist singularity (beta = 0, q1 and q4 coaxial).
 
 Isaac, whole-body, `tools/run_abort_tests.sh` (driver `--abort-at`, emulating the GS button: open, abort,
 close on ABORTED), scored by `tools/abort_score.py`:
