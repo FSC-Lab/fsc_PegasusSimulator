@@ -5,10 +5,12 @@
 
 Reads every completed run on disk, free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.npz
 (raw npz written by application/robotic_arm/utils/am_ee_compare_driver.py, flown by run_tracking_campaign.py),
-and for each one writes, next to the raw npz,
-    <name>.mat    struct `run`: meta, raw streams (column-named), the 100 Hz tracking signals and the RMSEs
-and over all runs
-    tables/free_flight_tracking_sim.csv / .json   per run and per (shape, speed, method) mean
+and writes
+    simulation_results/matlab_simulation_data/free_flight_tracking/<shape>/v<speed>/<name>.mat
+                  struct `run`: meta, raw streams (column-named), the 100 Hz tracking signals and the RMSEs
+    simulation_results/matlab_simulation_data/free_flight_tracking_rmse.mat
+                  structs `rmse_runs` (one row per run) and `rmse_mean` (the table: mean over runs)
+    results/utils/tables/free_flight_tracking_sim.csv / .json   the same numbers, read by make_latex_table.py
 
 Two interpreters are needed on this machine: the raw npz carry a numpy-2 pickled object array
 (the controller debug stream), which only the user-site numpy 2 can read, while scipy (rotations,
@@ -45,7 +47,8 @@ RESULTS = os.path.abspath(os.path.join(HERE, ".."))                  # results/
 ROOT = os.path.join(RESULTS, "simulation_results")
 REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 FF = os.path.join(ROOT, "free_flight_tracking")
-TABLES = os.path.join(ROOT, "tables")
+TABLES = os.path.join(HERE, "tables")                                  # results/utils/tables
+MAT_DIR = os.path.join(ROOT, "matlab_simulation_data")
 
 METHODS = {
     "whole_body_l1": "Whole-body L1 impedance (proposed)",
@@ -255,7 +258,9 @@ def stage2(tmp):
             columns="platform_att_err_deg = [roll pitch heading] (body axes); xyz columns are world ENU",
         )
         mat = dict(meta=meta, rmse=r, tracking=tracking, raw=raw)
-        scipy.io.savemat(src[:-4] + ".mat", {"run": mat}, do_compression=True,
+        mat_path = os.path.join(MAT_DIR, os.path.relpath(src[:-4] + ".mat", ROOT))
+        os.makedirs(os.path.dirname(mat_path), exist_ok=True)
+        scipy.io.savemat(mat_path, {"run": mat}, do_compression=True,
                          long_field_names=True, oned_as="column")
         rows.append(dict(name=name, shape=shape, mean_speed_mps=v, method=method, run=k, flown=rec.get("time", ""), **r))
         print(f"{name:40s} plat {r['platform_pos_mm']:6.1f} mm  rpy {r['platform_roll_deg']:.2f}/"
@@ -300,6 +305,47 @@ def stage2(tmp):
         f.write(",".join(cols) + "\n")
         for s in summary:
             f.write(",".join(str(s[c]) if not isinstance(s[c], float) else f"{s[c]:.4f}" for c in cols) + "\n")
+    def colstruct(rows, keys):
+        out = {}
+        for k in keys:
+            vals = [r[k] for r in rows]
+            out[k] = np.array(vals, dtype=object) if isinstance(vals[0], str) else np.array(vals, dtype=float)
+        return out
+    flat = []
+    for r in rows:
+        f = {k: r[k] for k in ("name", "shape", "mean_speed_mps", "method", "run")}
+        for j, ax in enumerate("xyz"):
+            f[f"platform_{ax}_mm"] = r["platform_pos_xyz_mm"][j]; f[f"ee_{ax}_mm"] = r["ee_pos_xyz_mm"][j]
+        for j in range(4):
+            f[f"q{j + 1}_deg"] = r["joints_deg"][j]
+        for k in ("platform_heading_deg", "platform_roll_deg", "platform_pitch_deg", "ee_heading_deg",
+                  "platform_pos_mm", "ee_pos_mm", "com_pos_mm", "ee_pos_max_mm", "tilt_max_deg"):
+            f[k] = r[k]
+        flat.append(f)
+    mcols = [c for c in cols if c != "failed_after_start"]
+    os.makedirs(MAT_DIR, exist_ok=True)
+    scipy.io.savemat(os.path.join(MAT_DIR, "free_flight_tracking_rmse.mat"),
+                     {"rmse_runs": colstruct(flat, list(flat[0].keys())), "rmse_mean": colstruct(summary, mcols)},
+                     oned_as="column")
+    # the self-contained README of matlab_simulation_data (index, conditions, struct, notation) + the flown configs
+    sys.path.insert(0, HERE)
+    import shutil
+    import readme_text as RT
+    cfg_src = os.path.join(FF, "configs")
+    cfgs = ["whole_body_l1_4d_mirror_sim.yaml", "geometric_l1_mirror_sim.yaml", "modular_adaptive_mirror_sim.yaml"]
+    os.makedirs(os.path.join(MAT_DIR, "configs"), exist_ok=True)
+    for c in cfgs:
+        shutil.copy2(os.path.join(cfg_src, c), os.path.join(MAT_DIR, "configs", c))
+    import re as regex                     # `re` is the EE position array in this function
+    plant = []
+    for line in open(os.path.join(cfg_src, cfgs[0])):
+        mm = regex.match(r"^\s*(sim_[a-z0-9_]+):\s*([^#\n]*)", line)
+        if mm:
+            plant.append((mm.group(1), mm.group(2).strip()))
+    attempts = [json.loads(l) for l in open(os.path.join(FF, "campaign.jsonl"))] if os.path.isfile(
+        os.path.join(FF, "campaign.jsonl")) else []
+    with open(os.path.join(MAT_DIR, "README.md"), "w") as f:
+        f.write(RT.sim_readme(summary, rows, attempts, plant, cfgs))
     for s in summary:
         print(f"MEAN {s['shape']} {s['mean_speed_mps']:.2f} {s['method']} (n={s['runs']}): "
               + "  ".join(f"{c} {s[c]:.2f}" for c in cols[5:]))

@@ -1,0 +1,14 @@
+=== [modular/pnpyaml_circle] 0. clean slate ===
+=== [modular/pnpyaml_circle] 1. controller stack ===
+=== [modular/pnpyaml_circle] 2. Pegasus / PX4 / arm ===
+=== [modular/pnpyaml_circle] 3. waiting for odometry ===
+=== [modular/pnpyaml_circle] 3b. waiting for EKF yaw/EV alignment ===
+=== [modular/pnpyaml_circle] 3c. waiting for the arm stack + planner ===
+=== [modular/pnpyaml_circle] 4. flying (--shape circle --radius 0.5 --lap-time 24.1661 --laps 1 --q2-period 6.041525 --fold-deg 55 --q2-center-deg 25 --q2-amp-deg 15 --ee-a-max 0.40 --ee-w-max 1.0 --time-scale 1.0 --start-pos-tol 0.10 --gate-speed 0.10) ===
+=== [modular/pnpyaml_circle] done (driver rc=0) ===
+[  91.17s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 103.19s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[ 123.21s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 123.21s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+EE tracking during the run: 422 samples, mean 77.7 mm, p95 88.4 mm, max 92.9 mm
+saved /tmp/claude-1000/-home-shiqi-fsc-PegasusSimulator/7802439a-db9a-4e14-9cde-ed76d83c8b89/scratchpad/modtest/modular_pnpyaml_circle.npz aborted=False 

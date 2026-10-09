@@ -1,0 +1,24 @@
+\begin{table}[H]
+\centering
+\caption{Payload pick-and-place in simulation: platform deviation and RMSE of the tracked states over the mission's six planned legs.}
+\label{tab:sim_pick_place}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{threeparttable}
+\begin{tabular}{l c c c c c c c c c c c c c c c c c c c}
+\toprule
+& \multicolumn{4}{c}{UAV deviation} & \multicolumn{6}{c}{Platform} & \multicolumn{4}{c}{End-effector} & \multicolumn{4}{c}{Joint} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-11} \cmidrule(lr){12-15} \cmidrule(lr){16-19}
+Method & $\|\varepsilon_{UAV}\|_{\max}$ & $\rho_{UAV,\max}$ & $\|\varepsilon_{UAV}\|_{\mathrm{rms}}$ & $\rho_{UAV,\mathrm{rms}}$ & $r_{0,x}$ & $r_{0,y}$ & $r_{0,z}$ & $\psi_0$ & $\phi_0$ & $\theta_0$ & $r_{e,x}$ & $r_{e,y}$ & $r_{e,z}$ & $\psi_e$ & $q_1$ & $q_2$ & $q_3$ & $q_4$ \\
+ & (mm) & (--) & (mm) & (--) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) \\
+\midrule
+Proposed & \textbf{142.64} & \textbf{0.386} & \textbf{27.53} & \textbf{0.074} & \textbf{26.32} & \textbf{7.44} & \textbf{3.17} & \textbf{0.41} & 0.82 & \textbf{1.03} & \textbf{27.09} & \textbf{7.88} & \textbf{8.36} & \textbf{0.38} & 0.43 & 2.23 & 1.46 & 1.79 \\
+Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & 309.43 & 0.836 & 64.68 & 0.175 & 49.05 & 41.81 & 5.25 & 1.79 & \textbf{0.78} & 1.09 & 49.39 & 41.07 & 12.39 & 1.78 & \textbf{0.19} & \textbf{1.58} & \textbf{0.77} & \textbf{0.06} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item[] Each entry is the mean over the completed runs of that method. $\|\varepsilon_{UAV}\| = \|\boldsymbol{r}_{UAV}^{ref} - \boldsymbol{r}_{UAV}\|$ is the platform's deviation from its reference position and $\rho_{UAV} = \|\varepsilon_{UAV}\|/L$ its ratio to the arm's reach $L = 0.37$~m, given as the maximum and the RMS over the window; the remaining columns are RMS tracking errors with the symbols of Table~\ref{tab:sim_free_flight_tracking}. The window is the union of the six planned legs (go to start, pick, go to place start, place, go to land start, land), each taken from its start for the shortest duration flown for that leg over all runs, so the window is identical for every method. MAC did not complete the task in any of its six attempts (the arm module saturated and the platform flipped within 2~s of entering its control law), so no entry is reported for it.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

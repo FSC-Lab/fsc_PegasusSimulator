@@ -1,0 +1,26 @@
+[00:04:04] waiting for the planner
+[00:04:10] planner up, safety margin 0.2 m
+[00:04:10] waiting for the payload (Isaac)
+[00:04:26] payload up; letting PX4 / the arm stack settle
+[00:05:11] flying
+[   0.01s] planner: IDLE
+[   0.01s] pick_place: NOT IN DIRECT
+[   0.51s] payload at rest [1.0, 1.0, 1.0405]
+[   1.07s] reset: success=True pick-and-place progress and plan cleared (captures and the Adjust offset kept)
+[   1.12s] adjust: success=True drone points moved by [0.102, -0.069, 0.000] m, yaw 0.0 deg (written into Start, Place Start, Land Start, Land; Place not moved); press Plan
+[   2.17s] capture_pick: success=True captured pick at [1.000, 1.000, 1.040] m, yaw -0.0 deg from /obj_0/mocap (125 samples, spread 1.6 mm); the EE offset is applied in this object frame
+[   3.22s] offboard: success=True Offboard mode request sent
+[   6.27s] arm: success=True Arm command sent
+[   8.27s] climbing to 1.0 m
+[  21.21s] planner: HOLD
+[  21.21s] pick_place: NOT PLANNED: press Plan
+[  21.26s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  21.26s] MARK direct
+[  24.05s] planner: IDLE
+[  24.05s] pick_place: NOT IN DIRECT
+[  36.27s] ABORT: left DIRECT while planner HOLD
+[  42.28s] landing by reference
+[  54.34s] disarm: success=True Disarm command sent
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/tools/../runs/cmp_mod_r2_a1.npz
+ABORTED: left DIRECT while planner HOLD
+[00:06:05] done

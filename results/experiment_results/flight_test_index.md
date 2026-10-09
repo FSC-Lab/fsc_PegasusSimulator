@@ -71,20 +71,25 @@ lowest end-effector position RMSE of its setting.
 | figure-8 | 0.13 | WB-5 | DEC-6 |
 | figure-8 | 0.20 | not flown | not flown |
 
-## 4. Copies of the selected bags
+## 4. The selected runs' data in this folder
 
-The bag of every selected run, copied unchanged (folder and file names as recorded) to
-`results/experiment_results/ros2bags/<trajectory>_v<speed>/<method>/<bag>/`. Some bags hold two runs;
-the table uses the one named here (the n-th planner trajectory run in the bag).
+Named like the simulation results: `<method>_<trajectory>_v<speed>_<run>`.
 
-| run | copy | run in the bag |
-|---|---|---|
-| DEC-3 | `ros2bags/circle_v0p13/geometric_l1/flight_decoupled_l1_circle_20261002_134247/` | first of 2 |
-| WB-2 | `ros2bags/circle_v0p13/whole_body_l1/flight_wb_l1_4d_circle_20260928_172242/` | only run |
-| DEC-5 | `ros2bags/figure8_v0p10/geometric_l1/flight_decoupled_l1_figure8_vel010_20261005_163734/` | only run |
-| WB-3 | `ros2bags/figure8_v0p10/whole_body_l1/flight_wb_l1_4d_figure8_vel010_20261005_162406/` | first of 2 |
-| DEC-6 | `ros2bags/figure8_v0p13/geometric_l1/flight_decoupled_l1_figure8_vel013_20261005_165431/` | only run |
-| WB-5 | `ros2bags/figure8_v0p13/whole_body_l1/flight_wb_l1_4d_figure8_vel013_20261005_170129/` | first of 2 |
+- `free_flight_tracking/<trajectory>/v<speed>/<name>/`: the run's ros2 bag, copied unchanged (the `.db3`
+  and `metadata.yaml` inside keep their recorded names; `ros2 bag info <name>` works on the folder).
+- `matlab_experiment_data/free_flight_tracking/<trajectory>/v<speed>/<name>.mat`: the run converted for MATLAB
+  (`load(...).run`), the same struct as `simulation_results/matlab_simulation_data`. Only the selected run of the
+  bag is exported.
+- `matlab_experiment_data/free_flight_tracking_rmse.mat`: the experimental table's numbers.
+
+| run | name | original bag | run in the bag |
+|---|---|---|---|
+| DEC-3 | `geometric_l1_circle_v0p13_DEC-3` | `flight_decoupled_l1_circle_20261002_134247` | first of 2 |
+| WB-2 | `whole_body_l1_circle_v0p13_WB-2` | `flight_wb_l1_4d_circle_20260928_172242` | only run |
+| DEC-5 | `geometric_l1_figure8_v0p10_DEC-5` | `flight_decoupled_l1_figure8_vel010_20261005_163734` | only run |
+| WB-3 | `whole_body_l1_figure8_v0p10_WB-3` | `flight_wb_l1_4d_figure8_vel010_20261005_162406` | first of 2 |
+| DEC-6 | `geometric_l1_figure8_v0p13_DEC-6` | `flight_decoupled_l1_figure8_vel013_20261005_165431` | only run |
+| WB-5 | `whole_body_l1_figure8_v0p13_WB-5` | `flight_wb_l1_4d_figure8_vel013_20261005_170129` | first of 2 |
 
 Every selected run: T650 aerial manipulator, total mass 3.746 kg, EKF2-fused OptiTrack feedback, the
 planner's EE trajectory with the gripper heading along the tangent, q2 = 25 +- 15 deg four cycles per lap,

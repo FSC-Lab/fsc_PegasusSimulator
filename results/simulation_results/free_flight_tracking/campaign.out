@@ -1,0 +1,69 @@
+campaign start 2026-10-07 21:49:26: 3 runs x 6 cells x 3 methods; already done: 0
+[2026-10-07 21:52:15] whole_body_l1     circle   0.20 run1 a1: completed run 19.7 s  rtf_min=1.0 wall=169.1s
+[2026-10-07 21:55:13] geometric_l1      circle   0.20 run1 a1: completed run 19.7 s  rtf_min=1.0 wall=177.8s
+[2026-10-07 21:58:03] modular_adaptive  circle   0.20 run1 a1: completed run 19.7 s  rtf_min=1.0 wall=170.0s
+[2026-10-07 22:00:59] whole_body_l1     figure8  0.20 run1 a1: completed run 25.3 s  rtf_min=0.995 wall=175.8s
+[2026-10-07 22:03:51] geometric_l1      figure8  0.20 run1 a1: completed run 25.3 s  rtf_min=1.0 wall=172.5s
+[2026-10-07 22:06:47] modular_adaptive  figure8  0.20 run1 a1: completed run 25.3 s  rtf_min=1.0 wall=175.7s
+[2026-10-07 22:09:55] whole_body_l1     circle   0.10 run1 a1: completed run 35.4 s  rtf_min=1.0 wall=188.0s
+[2026-10-07 22:12:58] geometric_l1      circle   0.10 run1 a1: completed run 35.4 s  rtf_min=1.0 wall=182.3s
+[2026-10-07 22:16:03] modular_adaptive  circle   0.10 run1 a1: completed run 35.4 s  rtf_min=1.0 wall=185.5s
+[2026-10-07 22:19:20] whole_body_l1     circle   0.13 run1 a1: completed run 28.2 s  rtf_min=1.0 wall=196.9s
+[2026-10-07 22:22:18] geometric_l1      circle   0.13 run1 a1: completed run 28.2 s  rtf_min=0.999 wall=178.5s
+[2026-10-07 22:24:24] modular_adaptive  circle   0.13 run1 a1: pre_run   never started (aborted=False )  rtf_min=0.995 wall=126.1s
+[2026-10-07 22:27:21] modular_adaptive  circle   0.13 run1 a2: completed run 28.2 s  rtf_min=0.999 wall=176.6s
+[2026-10-07 22:29:28] whole_body_l1     figure8  0.10 run1 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=126.6s
+[2026-10-07 22:31:42] whole_body_l1     figure8  0.10 run1 a2: pre_run   never started (aborted=False )  rtf_min=1.0 wall=134.6s
+[2026-10-07 22:35:00] whole_body_l1     figure8  0.10 run1 a3: completed run 46.7 s  rtf_min=1.0 wall=198.2s
+[2026-10-07 22:38:14] geometric_l1      figure8  0.10 run1 a1: completed run 46.7 s  rtf_min=0.995 wall=193.4s
+[2026-10-07 22:41:28] modular_adaptive  figure8  0.10 run1 a1: completed run 46.7 s  rtf_min=1.0 wall=194.2s
+[2026-10-07 22:44:36] whole_body_l1     figure8  0.13 run1 a1: completed run 36.8 s  rtf_min=0.995 wall=187.7s
+[2026-10-07 22:47:41] geometric_l1      figure8  0.13 run1 a1: completed run 36.8 s  rtf_min=0.966 wall=184.7s
+[2026-10-07 22:50:48] modular_adaptive  figure8  0.13 run1 a1: completed run 36.8 s  rtf_min=1.0 wall=187.5s
+[2026-10-07 22:53:12] whole_body_l1     circle   0.20 run2 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=143.8s
+[2026-10-07 22:55:38] whole_body_l1     circle   0.20 run2 a2: pre_run   never started (aborted=False )  rtf_min=0.995 wall=145.8s
+[2026-10-07 22:58:29] whole_body_l1     circle   0.20 run2 a3: completed run 19.7 s  rtf_min=1.0 wall=171.5s
+[2026-10-07 23:01:16] geometric_l1      circle   0.20 run2 a1: completed run 19.7 s  rtf_min=1.0 wall=166.8s
+[2026-10-07 23:03:24] modular_adaptive  circle   0.20 run2 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=128.5s
+[2026-10-07 23:06:20] modular_adaptive  circle   0.20 run2 a2: completed run 19.7 s  rtf_min=1.0 wall=175.7s
+[2026-10-07 23:09:14] whole_body_l1     figure8  0.20 run2 a1: completed run 25.3 s  rtf_min=1.0 wall=173.7s
+[2026-10-07 23:12:08] geometric_l1      figure8  0.20 run2 a1: completed run 25.3 s  rtf_min=1.0 wall=173.6s
+[2026-10-07 23:14:30] modular_adaptive  figure8  0.20 run2 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=142.4s
+[2026-10-07 23:17:24] modular_adaptive  figure8  0.20 run2 a2: completed run 25.3 s  rtf_min=1.0 wall=174.3s
+[2026-10-07 23:20:33] whole_body_l1     circle   0.10 run2 a1: completed run 35.4 s  rtf_min=1.0 wall=188.5s
+[2026-10-07 23:23:36] geometric_l1      circle   0.10 run2 a1: completed run 35.4 s  rtf_min=1.0 wall=183.2s
+[2026-10-07 23:26:44] modular_adaptive  circle   0.10 run2 a1: completed run 35.4 s  rtf_min=1.0 wall=188.3s
+[2026-10-07 23:29:42] whole_body_l1     circle   0.13 run2 a1: completed run 28.2 s  rtf_min=1.0 wall=177.8s
+[2026-10-07 23:32:38] geometric_l1      circle   0.13 run2 a1: completed run 28.2 s  rtf_min=1.0 wall=176.2s
+[2026-10-07 23:34:43] modular_adaptive  circle   0.13 run2 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=124.6s
+[2026-10-07 23:37:40] modular_adaptive  circle   0.13 run2 a2: completed run 28.2 s  rtf_min=1.0 wall=176.9s
+[2026-10-07 23:40:49] whole_body_l1     figure8  0.10 run2 a1: completed run 46.7 s  rtf_min=1.0 wall=189.3s
+[2026-10-07 23:44:05] geometric_l1      figure8  0.10 run2 a1: completed run 46.7 s  rtf_min=0.997 wall=195.6s
+[2026-10-07 23:47:19] modular_adaptive  figure8  0.10 run2 a1: completed run 46.7 s  rtf_min=0.995 wall=194.0s
+[2026-10-07 23:50:23] whole_body_l1     figure8  0.13 run2 a1: completed run 36.8 s  rtf_min=1.0 wall=183.9s
+[2026-10-07 23:53:26] geometric_l1      figure8  0.13 run2 a1: completed run 36.8 s  rtf_min=1.0 wall=183.3s
+[2026-10-07 23:56:33] modular_adaptive  figure8  0.13 run2 a1: completed run 36.8 s  rtf_min=1.0 wall=186.7s
+[2026-10-07 23:58:41] whole_body_l1     circle   0.20 run3 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=128.4s
+[2026-10-08 00:01:32] whole_body_l1     circle   0.20 run3 a2: completed run 19.7 s  rtf_min=1.0 wall=170.6s
+[2026-10-08 00:04:23] geometric_l1      circle   0.20 run3 a1: completed run 19.7 s  rtf_min=1.0 wall=171.1s
+[2026-10-08 00:06:29] modular_adaptive  circle   0.20 run3 a1: pre_run   never started (aborted=False )  rtf_min=0.971 wall=126.5s
+[2026-10-08 00:09:25] modular_adaptive  circle   0.20 run3 a2: completed run 19.7 s  rtf_min=1.0 wall=175.4s
+[2026-10-08 00:12:20] whole_body_l1     figure8  0.20 run3 a1: completed run 25.3 s  rtf_min=1.0 wall=175.1s
+[2026-10-08 00:15:14] geometric_l1      figure8  0.20 run3 a1: completed run 25.3 s  rtf_min=1.0 wall=173.7s
+[2026-10-08 00:18:06] modular_adaptive  figure8  0.20 run3 a1: completed run 25.3 s  rtf_min=1.0 wall=172.4s
+[2026-10-08 00:21:10] whole_body_l1     circle   0.10 run3 a1: completed run 35.4 s  rtf_min=1.0 wall=184.4s
+[2026-10-08 00:24:13] geometric_l1      circle   0.10 run3 a1: completed run 35.4 s  rtf_min=1.0 wall=182.9s
+[2026-10-08 00:27:20] modular_adaptive  circle   0.10 run3 a1: completed run 35.4 s  rtf_min=1.0 wall=187.0s
+[2026-10-08 00:30:20] whole_body_l1     circle   0.13 run3 a1: completed run 28.2 s  rtf_min=1.0 wall=179.5s
+[2026-10-08 00:33:20] geometric_l1      circle   0.13 run3 a1: completed run 28.2 s  rtf_min=0.999 wall=180.5s
+[2026-10-08 00:36:20] modular_adaptive  circle   0.13 run3 a1: completed run 28.2 s  rtf_min=1.0 wall=179.5s
+[2026-10-08 00:39:34] whole_body_l1     figure8  0.10 run3 a1: completed run 46.7 s  rtf_min=0.965 wall=194.4s
+[2026-10-08 00:42:51] geometric_l1      figure8  0.10 run3 a1: completed run 46.7 s  rtf_min=1.0 wall=197.0s
+[2026-10-08 00:45:08] modular_adaptive  figure8  0.10 run3 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=136.7s
+[2026-10-08 00:48:23] modular_adaptive  figure8  0.10 run3 a2: completed run 46.7 s  rtf_min=1.0 wall=195.0s
+[2026-10-08 00:50:36] whole_body_l1     figure8  0.13 run3 a1: pre_run   never started (aborted=False )  rtf_min=1.0 wall=133.1s
+[2026-10-08 00:52:51] whole_body_l1     figure8  0.13 run3 a2: pre_run   never started (aborted=False )  rtf_min=1.0 wall=134.9s
+[2026-10-08 00:55:58] whole_body_l1     figure8  0.13 run3 a3: completed run 36.8 s  rtf_min=1.0 wall=186.6s
+[2026-10-08 00:59:01] geometric_l1      figure8  0.13 run3 a1: completed run 36.8 s  rtf_min=1.0 wall=183.0s
+[2026-10-08 01:02:07] modular_adaptive  figure8  0.13 run3 a1: completed run 36.8 s  rtf_min=0.995 wall=185.7s
+campaign end 2026-10-08 01:02:07

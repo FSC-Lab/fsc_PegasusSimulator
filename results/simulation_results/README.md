@@ -28,9 +28,9 @@ Only the DIRECT control law differs between methods. For Geo-L1 the arm also run
 # fly (resumes: completed runs on disk are skipped)
 setsid nohup /usr/bin/python3 results/utils/run_tracking_campaign.py \
     > results/simulation_results/free_flight_tracking/campaign.out 2>&1 < /dev/null &
-# score every completed run -> .mat files + tables/free_flight_tracking_sim.csv|json
+# score every completed run -> matlab_simulation_data/ + results/utils/tables/free_flight_tracking_sim.csv|json
 /usr/bin/python3 results/utils/build_free_flight.py
-# the paper table (tables/free_flight_tracking_sim.tex; --paper <main.tex> also updates the paper)
+# the paper table (results/utils/tables/free_flight_tracking_sim.tex; --paper <main.tex> also updates the paper)
 /usr/bin/python3 results/utils/make_latex_table.py
 ```
 
@@ -53,19 +53,21 @@ starting.
 
 ```
 simulation_results/
-  free_flight_tracking/
+  matlab_simulation_data/                     MATLAB-ready (see its README): copy this folder to plot
+    free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat
+    free_flight_tracking_rmse.mat             the table's numbers (rmse_mean) and every run (rmse_runs)
+  free_flight_tracking/                       the raw campaign record
     <shape>/v<speed>/                         shape = circle | figure8, v0p13 = 0.13 m/s
-        <method>_<shape>_v<speed>_run<k>.mat  MATLAB: load(...).run
         <method>_<shape>_v<speed>_run<k>.npz  the raw run as recorded (am_ee_compare_driver.py)
         logs/<name>/                          driver, cycle, stack, Pegasus and Isaac-pane logs
         failed/                               attempts that never started or failed after Start
     configs/                                  the exact controller + plant yaml each method flew
     campaign.jsonl                            one line per attempt: status, reason, RTF, driver args
     previous/                                 earlier runs, not used in the table
-  tables/free_flight_tracking_sim.csv|json|tex
 ```
 
-The tools that fly, score and tabulate these runs are in `results/utils/`.
+The tools that fly, score and tabulate these runs, and their table outputs (`tables/`), are in
+`results/utils/`.
 
 `configs/` holds:
 
@@ -104,3 +106,61 @@ These are the same definitions as the hardware report (`docs/docs_aerial_manipul
 ### Previous runs
 
 `previous/20261001_circle_v0p13_rtf1/` holds three whole-body circle runs flown on 2026-10-01 (lap 24.0 s). They were the source of the first draft row and are superseded by the campaign. The `rtf_profile_20261001/data/wb_rt1{b,d,e}.npz` symlinks point at them.
+
+## Payload pick-and-place (2026-10-08/09)
+
+The same scene and task for every controller (`application/robotic_arm/07_px4_t650_aerial_manipulator_pick_and_place.py`):
+two 1 m pillars at (1, 1) and (−1, −1) m carrying the printed hat platform (top 1.008 m), the 200 g CAD basket
+payload hooked by its wire hanger, the six-leg plan of the pick-and-place planner (go to start, pick, go to
+place start, place, go to land start, land; the hook approach, the clockwise turns, the carry pose). Headless
+Isaac at RTF 1, raw mocap, the mirror plant; each controller's `*_pick_and_place.yaml` (the free-flight
+file + the pick-and-place gains: whole-body k_R/k_w 1.6/1.2, geometric kp/kv 15/10 and kp_z/kv_z 40/18).
+
+```bash
+# fly (resumes; one archive/pick_place_top_hat_20261008/tools/run_pnp.sh flight per attempt; closes the sim at the end)
+setsid nohup results/utils/run_pick_and_place_campaign.sh 2 wb geo mod \
+    > results/simulation_results/pick_and_place/campaign.out 2>&1 < /dev/null &
+# score -> matlab_simulation_data/pick_and_place/ + results/utils/tables/pick_and_place_sim.csv|json|tex + figures
+PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py [--paper <main.tex>]
+```
+
+### Metrics
+
+- **Window**: each of the six legs from its start mark for the SHORTEST duration that leg was flown over
+  all runs (identical for every controller, 78.1 s in total); the operator waits between legs are excluded.
+- **UAV deviation** (Suarez et al. 2020): ‖ε_UAV‖ = ‖r_UAV^ref − r_UAV‖, max and RMS over the window, and
+  ρ_UAV = ‖ε_UAV‖ / L with L = 0.37 m (the arm's reach). r_UAV^ref = x_cd − R0 r_0c(q_d) from the planner's
+  reference stream, as in the free-flight metrics.
+- **State RMSE**: the free-flight definitions (platform position xyz, attitude as the rotation vector of
+  R_ref^T R, EE position xyz, EE heading, joints).
+
+### Campaign outcome
+
+| method | attempts | completed | note |
+|---|---|---|---|
+| whole_body_l1 | 2 | 2 | basket placed 22.6 / 14.5 mm off the pillar axis |
+| geometric_l1 | 2 | 2 | 25.5 / 28.9 mm |
+| modular_adaptive | 6 | 0 | every attempt left DIRECT ~2 s after entering it: the arm module's joint torques rail at ±3 N·m from the first 0.5 s and the airframe flips (the controller yaml is identical to the one that flew the free-flight comparison except for the planner's task block, and the SAME yaml flew a free-flight circle cleanly right after -- `failed/modular_isolating_test_free_flight_circle/` -- so the cause is in the pick-and-place scene / driver entry path, open) |
+
+Mean over the completed runs (`results/utils/tables/pick_and_place_sim.csv`):
+
+| method | ‖ε‖ max (mm) | ρ max | ‖ε‖ rms (mm) | ρ rms | platform (mm) | EE (mm) | EE heading (°) | q1..q4 (°) |
+|---|---|---|---|---|---|---|---|---|
+| whole_body_l1 | 142.6 | 0.386 | 27.5 | 0.074 | 27.5 | 29.4 | 0.38 | 0.43 / 2.23 / 1.46 / 1.79 |
+| geometric_l1 | 309.4 | 0.836 | 64.7 | 0.175 | 64.7 | 65.4 | 1.78 | 0.19 / 1.58 / 0.77 / 0.06 |
+
+The two ‖ε_UAV‖ peaks of every run are the lift (the payload's weight arriving on the claw) and the
+set-down (leaving it): the estimator taking up and releasing the 2 N, 10-15 cm on the whole-body rig and
+~30 cm on the decoupled one.
+
+### Layout
+
+```
+simulation_results/
+  pick_and_place/                              the raw campaign record
+    <method>_pnp_run<k>.npz                    the mission driver's npz (pnp_mission_v2.py)
+    logs/<name>/, failed/<name>_attempt<a>/    logs; failed attempts kept whole
+    campaign.jsonl, campaign.out, figures/
+  matlab_simulation_data/pick_and_place/<name>.mat   struct `run`: meta, metrics (fixed_window, whole_mission, per_leg), tracking, raw
+  matlab_simulation_data/pick_and_place_metrics.mat  metrics_runs / metrics_mean
+```

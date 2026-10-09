@@ -3,8 +3,8 @@
 
     /usr/bin/python3 results/utils/make_latex_table.py [--paper <main.tex>]
 
-Simulation: reads results/simulation_results/tables/free_flight_tracking_sim.json (build_free_flight.py),
-writes results/simulation_results/tables/free_flight_tracking_sim.tex, and with --paper replaces the
+Simulation: reads results/utils/tables/free_flight_tracking_sim.json (build_free_flight.py),
+writes results/utils/tables/free_flight_tracking_sim.tex, and with --paper replaces the
 table labelled tab:sim_free_flight_tracking in main.tex. Each cell is the mean over the completed runs
 of the per-run RMSE.
 
@@ -18,9 +18,10 @@ import json
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SIM = os.path.join(os.path.abspath(os.path.join(HERE, "..")), "simulation_results")
-SIM_JSON = os.path.join(SIM, "tables", "free_flight_tracking_sim.json")
-SIM_TEX = os.path.join(SIM, "tables", "free_flight_tracking_sim.tex")
+TABLES = os.path.join(HERE, "tables")
+SIM_JSON = os.path.join(TABLES, "free_flight_tracking_sim.json")
+SIM_TEX = os.path.join(TABLES, "free_flight_tracking_sim.tex")
+EXP_TEX = os.path.join(TABLES, "free_flight_tracking_exp.tex")
 SIM_LABEL = "tab:sim_free_flight_tracking"
 EXP_LABEL = "tab:exp_free_flight_tracking"
 

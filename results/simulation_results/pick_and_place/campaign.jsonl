@@ -1,0 +1,10 @@
+{"time":"2026-10-08T23:42:10-04:00","method":"whole_body_l1","rig":"wb","run":1,"attempt":1,"status":"completed","why":"(rescued: the success check mis-read the scorer)","rc":0,"wall_s":264,"tag":"cmp_wb_r1_a1"}
+{"time":"2026-10-08T23:46:44-04:00","method":"whole_body_l1","rig":"wb","run":2,"attempt":2,"status":"completed","why":"(flown as run1 attempt 2 while the campaign was being fixed; kept as run 2)","rc":0,"wall_s":0,"tag":"cmp_wb_r1_a2"}
+{"time":"2026-10-08T23:51:27-04:00","method":"geometric_l1","rig":"geo","run":1,"attempt":1,"status":"completed","why":"","rc":0,"wall_s":261,"tag":"cmp_geo_r1_a1"}
+{"time":"2026-10-08T23:55:56-04:00","method":"geometric_l1","rig":"geo","run":2,"attempt":1,"status":"completed","why":"","rc":0,"wall_s":260,"tag":"cmp_geo_r2_a1"}
+{"time":"2026-10-08T23:58:27-04:00","method":"modular_adaptive","rig":"mod","run":1,"attempt":1,"status":"failed","why":"[  35.82s] ABORT: left DIRECT while planner HOLD","rc":0,"wall_s":141,"tag":"cmp_mod_r1_a1"}
+{"time":"2026-10-09T00:00:57-04:00","method":"modular_adaptive","rig":"mod","run":1,"attempt":2,"status":"failed","why":"[  36.02s] ABORT: left DIRECT while planner HOLD","rc":0,"wall_s":141,"tag":"cmp_mod_r1_a2"}
+{"time":"2026-10-09T00:03:34-04:00","method":"modular_adaptive","rig":"mod","run":1,"attempt":3,"status":"failed","why":"[  35.62s] ABORT: left DIRECT while planner HOLD","rc":0,"wall_s":147,"tag":"cmp_mod_r1_a3"}
+{"time":"2026-10-09T00:06:05-04:00","method":"modular_adaptive","rig":"mod","run":2,"attempt":1,"status":"failed","why":"[  36.27s] ABORT: left DIRECT while planner HOLD","rc":0,"wall_s":142,"tag":"cmp_mod_r2_a1"}
+{"time":"2026-10-09T00:08:39-04:00","method":"modular_adaptive","rig":"mod","run":2,"attempt":2,"status":"failed","why":"[  35.62s] ABORT: left DIRECT while planner HOLD","rc":0,"wall_s":144,"tag":"cmp_mod_r2_a2"}
+{"time":"2026-10-09T00:11:16-04:00","method":"modular_adaptive","rig":"mod","run":2,"attempt":3,"status":"failed","why":"[  36.07s] ABORT: left DIRECT while planner HOLD","rc":0,"wall_s":148,"tag":"cmp_mod_r2_a3"}

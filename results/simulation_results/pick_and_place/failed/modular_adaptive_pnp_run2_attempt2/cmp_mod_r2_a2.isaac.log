@@ -1,0 +1,88 @@
+Starting MODULAR ADAPTIVE control node (Yadav et al. TMECH 2025) for uav_0 (AM-T650 params, starts in SAFETY mode)...   
+[autopilot_modular_adaptive_direct_actuation_node-1]  - vehicle_name: AM-T650-MODULAR  
+[autopilot_modular_adaptive_direct_actuation_node-1]     Starting MODULAR ADAPTIVE direct-actuation autopilot for vehicle: AM-T650-MODULAR            
+Starting indoor AM-T650-MODULAR-PNP PX4 SITL with persistent OptiTrack parameters...   
+Launching indoor AM-T650-MODULAR-PNP from: /home/shiqi/fsc_PegasusSimulator/application/robotic_arm/07_px4_t650_aerial_manipulator_pick_and_place.py            
+[AM-T650-PNP] payload 'box': /home/shiqi/fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/Box_Payload.usda referenced on /World/pick_place/payload, 37 colliders, 200 g, CoM [-0.5, 0.1, -3.4] mm from the basket centre (the CAD solid's)       
+[AM-T650-WB] spawned PX4-PRIMARY AM at /World/quadrotor_0: MN4010 k_f=4.1908e-05 (x1.0370 PLANT-SIDE) k_m=5.7722e-07 (x0.2333 PLANT-SIDE) lambda=10.0265 omega=[0.0, 730.0507] map u->omega: x665.9904 +64.0603 | lockstep=OFF                  
+[AM-T650-WB] BATTERY SAG: k_f falls 3.60 %/min from lift-off (the 0918/0924 packs measured -2.6..-4.5 %/min).           
+[AM-T650-WB] STANDING WRENCH BIAS on the body (FLU): force [0.55, -0.5, 0.0] N, torque [0.0, 0.0, -0.095] N.m -- the airframe asymmetry the flights' observer found.      
+[AM-T650-WB] ARM VELOCITY FEEDBACK emulates Present Velocity: lag 48 ms, quantum 0.024 rad/s (reported only; the physics and the friction model use the true rate).       
+[AM-T650-WB] self-collision disabled on /World/quadrotor_0  
+[AM-T650-WB] disabled 4 rotor collider(s).        
+[AM-T650-WB] INJECTION body CoM [-3.300e-04 -1.000e-05  4.042e-02] -> [-1.818e-02 -1.000e-05  4.042e-02] m (shift [-0.01785  0.       0.     ])                 
+[AM-T650-WB] body inertia diag [0.063342 0.063012 0.098681] -> [0.077    0.064082 0.065005] kg·m² (T650), Ixy +0.008900; authored as principal moments [0.059544 0.065005 0.081538] + principalAxes (w,x,y,z) [ 0.603   0.603  -0.3694 -0.3694] 
+[AM-T650-WB] inertia round-trip off the stage: max err 2.88e-09 kg·m²           
+[AM-T650-WB] T650 MASS OVERRIDE: /World/quadrotor_0/body 2.476079 -> 2.950000 kg (delta +0.473921); other bodies 0.796170 kg; TOTAL 3.272249 -> 3.746170 kg (weight 36.75 N). vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. The .usda is untouched.    
+[AM-T650-WB] gripper drive stiffened on /World/quadrotor_0/hub/gripper_joint    
+[AM-T650-PNP] gripper drive torque capped at 0.3 N.m (06: 1000) -- a closed gripper squeezes the handle with a bounded force      
+[AM-T650-WB] core Articulation API active; arm dof indices [6, 3, 1, 0], gripper dof 2    
+[AM-T650-WB] control model mirrored: m0=3.109550 kg, m_total=3.746174 kg (hover thrust 36.75 N)     
+[AM-T650-WB] arm spawned at HOME q = [ 0. 40. 40.  0.] deg (body re-seated: teleport moved it 0.189 m)                  
+[AM-T650-WB] ground-seated: body z 0.613 -> 0.305 m (dz=-0.308)                 
+[AM-T650-WB] arm armature (joint-diagonal, default) = [0.0200, 0.0200, 0.0200, 0.0200] kg·m²        
+[AM-T650-WB] arm servo model 'current' (noise from the controller yaml): current-loop residual [9.6, 6.2, 9.6, 9.6] mA rms @ [5.0, 5.0, 5.0, 5.0] Hz = [22.0, 15.0, 23.7, 23.3] mN·m rms, seed 0, ceiling [3.0, 3.0, 3.0, 3.0] N·m              
+[AM-T650-WB] count↔torque path OFF: the arm command stays a continuous torque (perfect calibration, no register)        
+[AM-T650-WB] GEARBOX FRICTION ACTIVE x[1.0, 0.7, 0.65, 1.5] per joint: [fc + mu|tau|] tanh(qd/0.015) with fc [17.1, 31.4, 57.5, 52.4] mN·m, mu [0.0, 0.246, 0.161, 0.0] -- at the home hold load that is [17.1, 142.5, 62.5, 78.6] mN·m per joint, of which the arm controller's feed-forward pays 1.00x the report's model. Momentum-clamped at I_min 0.0200 kg·m².    
+[AM-T650-WB] arm dofs in effort mode; EXTERNAL TORQUE (clip ±3.0 N·m, fresh < 0.3s) with PD+gravity fallback KP=3.0 KD=0.25 on a stale stream                   
+[AM-T650-WB] GRIPPER bus: /uav_0/isaacsim_manipulator/gripper_command -> gripper_joint drive (slew 0.5 rad/s, +-50 deg), state on /uav_0/isaacsim_manipulator/gripper_state         
+[AM-T650-WB] arm ROS2 bridge up: states -> /uav_0/isaacsim_manipulator/joint_states, efforts <- /uav_0/isaacsim_manipulator/effort_commands (names ['joint1', 'joint2', 'joint3', 'joint4'])            
+[AM-T650-PNP] waypoint view on: blue = '<point> drone' body goal (yaw in the label), orange = '<point> EE' claw target, grey = 'Pick/Place drone' body once planned       
+[AM-T650-PNP] PICK-AND-PLACE SCENE: vehicle at (0.10, -0.07) m, yaw 0 deg; pillars 1.0 m tall under the HAT (platform 200.6 mm, its top at 1.008 m; pillars 97.66 mm = the hat's ribs 97.86 mm less 0.2 mm), PICK at (1.0, 1.0) (basket centre -> mocap obj_0), PLACE at (-1.0, -1.0); payload = the CAD BOX (200 g, yaw 0.0 deg): basket centre [1.0, 1.0, 1.041] m, hanger plane at x = -27.5 mm (2.5 mm thick, normal = the payload's x: the claw comes in along it, the jaws close along its y), hanger top 200.9 mm above the basket centre. HOOK GRASP: the fingers go in under the arch on either side of the stem and lift it. Friction 1.2/1.0 (combine max).    
+[AM-T650-WB] REAL-TIME PACER on (headless): simulated time is held to the wall clock (RTF <= 1).    
+[AM-T650-WB] arm gravity: fast path == dynamics() to 1.1e-16 N.m                
+[AM-T650-WB] t=    0.0s  z= 0.305 m  |v|= 0.00 m/s  arm=PD-HOLD  q=[-0.  39.9 40.   0. ] deg  |tau|max cmd/app=0.77/0.93 N·m  cmds: none yet (PD hold at spawn pose)  omega=[0.,0.,0.,0.] rad/s         
+[AM-T650-PNP] WAYPOINTS:                
+[AM-T650-PNP] WAYPOINTS:                
+[AM-T650-PNP] GRIPPER PROBE (gripper at 0.0 deg): pad CoM separation 57.6 mm, inner-face gap 43.3 mm (rays 21.6 / 21.6 mm, bodies right_grip / left_grip); closing axis world [0.002, 1.0, 0.004] = body(FLU) [0.002, 1.0, 0.004]; pad midpoint in the wrist frame [0.0001, 0.0119, -0.0688] m    
+[AM-T650-PNP] PAD EXTENT along the claw axis (from the pad midpoint, + = out): [-12, +54] mm, i.e. the pad faces span -15..51 mm ABOVE the claw point; first body above the pad midpoint: 23 mm (manip_base) = 62 mm above the claw point       
+[AM-T650-PNP] JAW GAP vs height above the claw point [mm] (l = -25 / 0 / +25 mm): -16: -/39/-  -12: -/38/-  -8: -/38/-  -4: -/38/-  +0: -/38/-  +4: -/38/-  +8: -/37/-  +12: -/37/-  +16: -/37/-  +20: -/37/-  +24: -/37/-  +28: -/43/-  +32: -/44/-  +36: -/43/-  +40: -/43/-  +44: 34/43/34  +48: 17/15/17  +52: 23/-/23  +56: 31/47/30  +60: 39/6/39  +64: 12/0/50   
+[AM-T650-PNP] HANDLE CEILING: the lowest gripper surface over a 30 x 60 mm handle footprint is 44.3 mm above the claw point (at c -15, l -20 mm, left_grip); per row min l -30: 63, l -20: 44, l -10: 44, l +0: 44, l +10: 44, l +20: 44 mm     
+[AM-T650-PNP] FOOTPRINT PROBE (body frame, x = nose, y = left; body origin 0.305 m above the floor): underside below -0.20 m at 45 of 235 grid points, x [-0.16, +0.16] m, y [-0.16, +0.16] m, lowest -0.302 m; bodies ['body']                 
+[AM-T650-PNP]   x -0.24 m: lowest underside +0.004 m (0 gear points)            
+[AM-T650-PNP]   x -0.20 m: lowest underside +0.007 m (0 gear points)            
+[AM-T650-PNP]   x -0.16 m: lowest underside -0.302 m (2 gear points, y -0.16 +0.16)       
+[AM-T650-PNP]   x -0.12 m: lowest underside -0.302 m (2 gear points, y -0.16 +0.16)       
+[AM-T650-PNP]   x -0.08 m: lowest underside -0.302 m (3 gear points, y -0.16 -0.14 +0.16) 
+[AM-T650-PNP]   x -0.04 m: lowest underside -0.302 m (3 gear points, y -0.16 -0.14 +0.16) 
+[AM-T650-PNP]   x -0.00 m: lowest underside -0.302 m (6 gear points, y -0.16 -0.14 -0.12 +0.12 +0.14 +0.16)             
+[AM-T650-PNP]   x +0.04 m: lowest underside -0.302 m (3 gear points, y -0.16 -0.14 +0.16) 
+[AM-T650-PNP]   x +0.08 m: lowest underside -0.302 m (2 gear points, y -0.16 +0.16)       
+[AM-T650-PNP]   x +0.12 m: lowest underside -0.302 m (2 gear points, y -0.16 +0.16)       
+[AM-T650-PNP]   x +0.16 m: lowest underside -0.302 m (2 gear points, y -0.16 +0.16)       
+[AM-T650-PNP]   x +0.20 m: lowest underside -0.083 m (0 gear points)            
+[AM-T650-PNP]   x +0.24 m: lowest underside -0.076 m (0 gear points)            
+[AM-T650-PNP] HOOK PROFILE (claw frame, mm; a = claw axis [0.983, -0.001, -0.181], w = up [0.181, -0.005, 0.983], gripper at 0.0 deg): s -60: top +30.1 (u -28) bottom -30.1, across u [-40,+40] | s -55: top +30.0 (u -28) bottom -30.0, across u [-40,+40] | s -50: top +29.9 (u -30) bottom -29.9, across u [-40,+40] | s -45: top +29.2 (u -24) bottom -29.2, across u [-40,+40] | s -40: top +18.6 (u -26) bottom -18.7, across u [-40,+40] | s -35: top +18.4 (u -26) bottom -18.4, across u [-40,+40] | s -30: top +18.2 (u -28) bottom -18.1, across u [-40,+40] | s -25: top +17.7 (u -28) bottom -17.7, across u [-38,+38] | s -20: top +17.2 (u -28) bottom -17.3, across u [-36,+36] | s -15: top +16.6 (u -28) bottom -16.8, across u [-34,+34] | s -10: top +16.1 (u -28) bottom -16.2, across u [-32,+32] | s -5: top +15.6 (u -26) bottom -15.1, across u [-32,+30] | s -0: top +15.0 (u -28) bottom -15.1, across u [-30,+30] | s +5: top +14.5 (u -28) bottom -14.4, across u [-30,+30] | s +10: top +13.9 (u -28) bottom -13.9, across u [-28,+28] | s +15: top +12.0 (u -28) bottom -12.1, across u [-28,+28] | s +20: - | s +25: - | s +30: -        
+[AM-T650-WB] external torque stream LIVE at t=3.1s — applying commanded efforts 
+[AM-T650-WB] t=    5.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[ 0.5 41.4 39.   0.2] deg  |tau|max cmd/app=0.76/0.74 N·m  cmds: n=467, age  0.0s  omega=[0.,0.,0.,0.] rad/s  
+[AM-T650-WB] RTF 0.985 over the last 10.0 s (worst lag 50.5 ms, 3 re-anchor(s), slept 0.52 s)       
+[AM-T650-WB] t=   10.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.1 40.1 40.2  0. ] deg  |tau|max cmd/app=0.70/0.69 N·m  cmds: n=1711, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] t=   15.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.3 40.  40.1  0. ] deg  |tau|max cmd/app=0.70/0.70 N·m  cmds: n=2957, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 3.1 ms, 0 re-anchor(s), slept 0.82 s)        
+[AM-T650-WB] t=   20.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.  40.  39.5 -0. ] deg  |tau|max cmd/app=0.71/0.72 N·m  cmds: n=4201, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] t=   25.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.1 40.  39.9  0. ] deg  |tau|max cmd/app=0.70/0.70 N·m  cmds: n=5447, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 2.6 ms, 0 re-anchor(s), slept 0.81 s)        
+[AM-T650-WB] t=   30.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.3 39.9 40.   0. ] deg  |tau|max cmd/app=0.71/0.72 N·m  cmds: n=6691, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] t=   35.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[ 0.3 39.9 40.1  0. ] deg  |tau|max cmd/app=0.71/0.71 N·m  cmds: n=7937, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 9.2 ms, 0 re-anchor(s), slept 0.79 s)        
+[AM-T650-WB] t=   40.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.3 39.9 40.  -0.1] deg  |tau|max cmd/app=0.71/0.70 N·m  cmds: n=9181, age  0.0s  omega=[0.,0.,0.,0.] rad/s 
+[AM-T650-WB] t=   45.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.6 39.9 40.  -0.1] deg  |tau|max cmd/app=0.71/0.70 N·m  cmds: n=10427, age  0.0s  omega=[0.,0.,0.,0.] rad/s                    
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 18.1 ms, 0 re-anchor(s), slept 0.72 s)       
+[AM-T650-WB] t=   50.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[ 0.5 39.9 40.1  0. ] deg  |tau|max cmd/app=0.71/0.71 N·m  cmds: n=11668, age  0.0s  omega=[0.,0.,0.,0.] rad/s                    
+[AM-T650-PNP] WAYPOINTS:                
+[AM-T650-PNP] WAYPOINTS:                
+[AM-T650-WB] t=   55.0s  z= 0.305 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.1 40.  40.   0. ] deg  |tau|max cmd/app=0.70/0.70 N·m  cmds: n=12678, age  0.0s  omega=[449.,449.,448.,449.] rad/s            
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 1.9 ms, 0 re-anchor(s), slept 0.69 s)        
+[AM-T650-WB] t=   60.0s  z= 0.686 m  |v|= 0.18 m/s  arm=EXT-TORQUE  q=[ 0.7 39.9 39.9  0. ] deg  |tau|max cmd/app=0.71/0.71 N·m  cmds: n=13674, age  0.0s  omega=[417.,406.,524.,513.] rad/s            
+[AM-T650-WB] t=   65.0s  z= 0.957 m  |v|= 0.02 m/s  arm=EXT-TORQUE  q=[ 0.5 40.  40.1  0.1] deg  |tau|max cmd/app=0.70/0.71 N·m  cmds: n=14670, age  0.0s  omega=[433.,421.,514.,504.] rad/s            
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 1.3 ms, 0 re-anchor(s), slept 0.74 s)        
+[AM-T650-WB] t=   70.0s  z= 0.943 m  |v|= 0.09 m/s  arm=EXT-TORQUE  q=[-2.7 40.6 13.4 -0.2] deg  |tau|max cmd/app=2.65/2.35 N·m  cmds: n=15664, age  0.0s  omega=[479.,415.,577.,416.] rad/s            
+[AM-T650-WB] t=   75.0s  z= 0.132 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-15.8  35.8  -6.   -0.2] deg  |tau|max cmd/app=0.74/0.85 N·m  cmds: n=16659, age  0.0s  omega=[358.,519.,366.,593.] rad/s        
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 2.4 ms, 0 re-anchor(s), slept 0.69 s)        
+[AM-T650-WB] t=   80.0s  z= 0.154 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.4 39.6 39.9  0. ] deg  |tau|max cmd/app=0.62/0.62 N·m  cmds: n=17655, age  0.0s  omega=[268.,604.,175.,730.] rad/s            
+[AM-T650-WB] t=   85.0s  z= 0.154 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.3 39.9 40.1  0. ] deg  |tau|max cmd/app=0.63/0.67 N·m  cmds: n=18650, age  0.0s  omega=[287.,530., 79.,727.] rad/s            
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 1.6 ms, 0 re-anchor(s), slept 0.68 s)        
+[AM-T650-WB] t=   90.0s  z= 0.154 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.1 39.9 40.1 -0. ] deg  |tau|max cmd/app=0.63/0.63 N·m  cmds: n=19646, age  0.0s  omega=[295.,532., 64.,717.] rad/s            
+[AM-T650-WB] t=   95.0s  z= 0.154 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[ 0.  39.9 40.   0. ] deg  |tau|max cmd/app=0.63/0.63 N·m  cmds: n=20641, age  0.0s  omega=[296.,534., 64.,716.] rad/s            
+[AM-T650-WB] RTF 1.000 over the last 10.0 s (worst lag 2.2 ms, 0 re-anchor(s), slept 0.70 s)        
+[AM-T650-WB] t=  100.0s  z= 0.154 m  |v|= 0.00 m/s  arm=EXT-TORQUE  q=[-0.1 39.9 40.1  0.1] deg  |tau|max cmd/app=0.64/0.65 N·m  cmds: n=21637, age  0.0s  omega=[296.,534., 64.,716.] rad/s            
