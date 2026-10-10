@@ -95,7 +95,8 @@ is worse than no trim in every case. With the real descent times (bottom 3.2 s a
 8.4 s with it on), loaded: off 48 mm rms, 1 s 70, 5 s 38, 10 s about the wander (34 mm; replay 22 on 3 s of data).
 The loaded hover has a room-fixed offset of about (+25, +10) mm in all three loaded hovers, cause unknown.
 Decided 2026-10-10 (user): `pick_place_descent_trim_window_s: 5.0`, applied to the hardware whole-body
-`_pick_and_place.yaml` through `../pick_place_top_hat_20261008/tools/make_hw_pick_and_place_yamls.py` (uncommitted).
+`_pick_and_place.yaml` through `../pick_place_top_hat_20261008/tools/make_hw_pick_and_place_yamls.py`
+(fsc_autopilot_ros2 `dev_robotic_arm` 1d1ae4e).
 Press Place no earlier than 8 s after WAITING: under 2.5 s the planner applies no shift, at exactly 5 s the average
 still holds the arrival swing (49 mm wrong on the loaded hover, about 20 mm from 6 s on).
 

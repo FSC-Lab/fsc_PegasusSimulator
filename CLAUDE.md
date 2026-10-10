@@ -4648,8 +4648,8 @@ report artifact "1009 Pick-and-Place Flights" (https://claude.ai/artifact/SKoEL1
   OFF the planner's 50 mm gate becomes a real distance check; with it on and under half a window of samples the
   shift is zero. I recommended 10 s + a 15 s wait; **the user chose 5 s (2026-10-10) and it is APPLIED:
   `pick_place_descent_trim_window_s: 5.0` in the HARDWARE whole-body `_pick_and_place.yaml` only, through
-  `make_hw_pick_and_place_yamls.py`'s `added` (regenerated, `--check` current, UNCOMMITTED in fsc_autopilot_ros2
-  `dev_robotic_arm`; the planner block of that file is read by BOTH hardware rigs; sim twins keep the 1 s default).
+  `make_hw_pick_and_place_yamls.py`'s `added` (regenerated, `--check` current, pushed 2026-10-10 as fsc_autopilot_ros2
+  `dev_robotic_arm` 1d1ae4e; the planner block of that file is read by BOTH hardware rigs; sim twins keep the 1 s default).
   OPERATOR RULE: press Place ≥ 8 s after WAITING -- under 2.5 s (half a window) the planner applies NO shift, at
   exactly 5 s the average still holds the arrival swing (49 mm wrong on the one loaded hover that can be replayed,
   ~20 mm from 6 s on). Sign: trim = mean(target − claw) added to the goal, so a claw BEHIND its target moves the
@@ -4671,7 +4671,8 @@ report artifact "1009 Pick-and-Place Flights" (https://claude.ai/artifact/SKoEL1
   (d) Report Fig. 5 / 6 = top + side views of the pick and the place (three stages, hat-centred approach frame,
   `tools/views.py`); new tools `payload_budget.py`, `hover_error.py`, `views.py`.
 - **ARM GS: A GET ON THE PLACE ROW, AND THE PICK ROW EDITABLE (2026-10-10, user request with the flight analysis;
-  uncommitted in fsc_trajectory_planner `main` and fsc_open_manipulator `omx-torque-control`).** Planner: new
+  pushed 2026-10-10: fsc_trajectory_planner `main` 50baa25, fsc_open_manipulator `omx-torque-control` 3142c03,
+  Pegasus eaa8631; the Orin rebuilds the planner, the laptop rebuilds utils_custom_ground_station).** Planner: new
   parameter **`pick_place_pick_point`** (`[]` = not captured, else `[x, y, z, yaw_deg]`) that mirrors the pick capture
   both ways (`capture_pick` writes it; a set from outside sets the capture and makes the plan stale; `pick_place/info`
   [60..63], [80] unchanged), new service **`pick_place/get_place`** (averages the PICK body obj_0 like a capture and
