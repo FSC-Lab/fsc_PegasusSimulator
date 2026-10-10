@@ -1043,15 +1043,28 @@ script (fused / raw) or either decoupled one selects the parallel `..._t650_pick
 pick-and-place gains the simulation validated -- whole-body k_R/k_w 1.6/1.2 + the anchor blend; decoupled
 kp/kv 15/10, kp_z/kv_z 40/18); the scripts print `PROFILE:` and check the profile's own values. Unset = free flight.
 
+**HARDWARE flights 2026-10-09 (whole-body, fused)** -- record `archive/wb_pick_place_flight_20261009/README.md`,
+report https://claude.ai/artifact/SKoEL1B8DjJR1fLYaLpfLS. PP-1 flew all six legs without a payload (33 mm rms);
+PP-2 hooked the basket (190 g) and set it down 166 mm short of the place point; PP-3 missed with
+EE Offset z 0.20. From the data (revised 2026-10-10): **EE Offset [-0.02, 0, 0.16]** (the fingers meet the arch at 0.167: 0.17 puts
+them at arch height for two thirds of the slide-in), **Pick = Get x + 0.01**, **Place = Get x − 0.03 (further along the
+approach; check the hang on the ground with the new, wider handle first), Get y, Get z − 0.02, yaw −180**, margins unchanged;
+wait ≥ 8 s in the hover before **4.2 Place**: the planner's descent trim window is 5 s since 2026-10-10
+(`pick_place_descent_trim_window_s: 5.0` in the hardware whole-body `_pick_and_place.yaml`, read by both rigs' planner;
+with the 1 s default it sampled the arrival swing). Open: the PX4 ↔ Orin link froze
+in PP-2's last hover (2.6 m fly-away), both STAB landings tipped over -- land through SAFETY from ≥ 0.8 m.
+
 **Operating the arm GS "Pick & Place" tab**
 
 Before the flight (on the ground, after steps 1–2)
 
 1. **Adjust** — with the vehicle on (or over) its start mark. The shift is written into the four drone points (Start, Place Start, Land Start, Land).
-2. **Get** on the *Pick (obj_0)* row — captures the payload box's mocap pose (x, y, z, yaw).
-3. Check the *Place* pose (x, y, z, yaw) — the basket centre at release, 2 cm below its resting
-   height, so the claw ends out of the arch: z = the place pillar top + 8 mm (hat) + 12.5 mm (sim
-   default 1.02; on hardware the mark's reading less the marker's height above the pillar top). An edit is written to the planner on Enter; Adjust never moves it.
+2. Basket on the place hat → **Get** on the *Place* row (2026-10-10) — fills x, y, z from the basket's mocap
+   pose and keeps the typed yaw (−180). Then lower z by hand: the basket centre at release sits 2 cm below its
+   resting height, so the claw ends out of the arch (sim default 1.02). An edit is written to the planner on Enter; Adjust never moves it.
+3. Basket on the pick hat → **Get** on the *Pick (obj_0)* row — captures the payload box's mocap pose (x, y, z, yaw)
+   into the row's boxes, which can be edited afterwards (2026-10-10). Both Gets refuse a frozen pose (body not
+   tracked) and a yaw that flips inside the half-second window.
 4. **EE Offset** — type the three boxes, press the button (default [-0.02, 0, 0.16] m: the claw
    just past the hanger's stem, its fingers under the arch). The claw
    targets (green, *Planned goal*) = Pick / Place pose + this offset turned by its yaw.

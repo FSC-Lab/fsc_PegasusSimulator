@@ -42,7 +42,20 @@ RIGS = {
         name="AM-T650-WB-L1-4D-HW-PNP",
         overrides={"wb_k_r": "1.6", "wb_k_w": "1.2"},
         added={"wb_ee_anchor_blend_s": ("wb_ee_anchor_com",
-               "    wb_ee_anchor_blend_s: 1.0  # PICK-AND-PLACE: the planner's world/CoM anchor switch, blended over 1 s")},
+               "    wb_ee_anchor_blend_s: 1.0  # PICK-AND-PLACE: the planner's world/CoM anchor switch, blended over 1 s"),
+               # HARDWARE ONLY (2026-10-10, user decision after the 10-09 flights; the simulation twins keep
+               # the planner's 1 s default). Planner section, read by BOTH hardware rigs in this profile.
+               "pick_place_descent_trim_window_s": ("pick_place_descent_trim_settle_s",
+               "    # DESCENT TRIM WINDOW 1 -> 5 s (2026-10-10, user decision; Pegasus archive/\n"
+               "    # wb_pick_place_flight_20261009, report section 3.5). On 10-09 Place was pressed 0.8 s after\n"
+               "    # arrival and the 1 s average of the arrival swing shifted the descent 55 mm: a third of the\n"
+               "    # 164 mm miss. Replayed on the flights' long hovers a 1 s trim is worse than none in every\n"
+               "    # case (the hover wanders with a 5-7 s period); with the basket 5 s gives 38 mm rms against\n"
+               "    # 48 with the trim off. OPERATOR: press Place NO EARLIER THAN 8 s after the status reads\n"
+               "    # WAITING -- under 2.5 s the planner applies no shift at all (half a window), and at exactly\n"
+               "    # 5 s the average still holds the arrival swing (49 mm wrong on the one loaded hover that\n"
+               "    # can be replayed, 20 mm from 6 s on). Applies to Pick too, where it costs nothing.\n"
+               "    pick_place_descent_trim_window_s: 5.0")},
         title="WHOLE-BODY 4-D L1, HARDWARE, PICK-AND-PLACE"),
     "geo": dict(
         src="params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml",

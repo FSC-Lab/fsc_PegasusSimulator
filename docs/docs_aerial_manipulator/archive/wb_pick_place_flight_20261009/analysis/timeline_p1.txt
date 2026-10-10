@@ -1,0 +1,170 @@
+    0.00  LOG rosbag2_recorder         Press SPACE for pausing/resuming
+    0.00  LOG rosbag2_recorder         Listening for topics...
+    0.00  LOG rosbag2_recorder         Event publisher thread: Starting
+    0.00  LOG rosbag2_recorder         Recording...
+    0.24  wbmode                       SAFETY
+    0.24  ctype                        Baseline (Safety)
+    1.45  pp_status                    NOT IN DIRECT
+    1.45  actlaw                       LOCAL_PD_PLUS_HOLD
+    1.48  mocap_status                 mocap_normal
+    1.66  fused_status                 fused_odom_normal
+    6.21  pl_status                    IDLE
+   21.74  LOG single_drone_gui_node    Publishing coordinates: 0.04, 0.02, 1.2, 0.73
+   28.04  LOG fsc_autopilot_ros2       CoM anchor captured: [0.002 -0.004 -0.014] m (measured CoM minus GS reference).
+   28.04  LOG fsc_autopilot_ros2       ENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).
+   28.04  wbmode                       DIRECT
+   28.04  ctype                        Whole-Body Direct Actuation
+   28.04  LOG fsc_autopilot_ros2       activate 'Whole-Body Direct Actuation' -> OK (switched to Whole-Body Direct Actuation)
+   28.04  LOG arm_planner              Whole-body DIRECT: going SILENT, the whole-body planner owns the arm.
+   28.04  LOG whole_body_trajectory_planner DIRECT engaged: hold captured -- base [0.037 0.016 1.200] m, q [0.2, 40.0, 40.0, -0.1] deg, EE (inertial) [0.290 0.019 1.140] m az -89.1 deg
+   28.04  pl_status                    HOLD
+   28.04  pp_status                    NOT PLANNED: press Plan
+   28.04  LOG fsc_autopilot_ros2       Streamed whole-body reference ACTIVE -- the law tracks the whole-body planner's compatible trajectory.
+   28.05  LOG external_torque_controller External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+   28.05  actlaw                       EXTERNAL_WHOLE_BODY
+   32.28  pp_status                    PLANNING
+   32.31  LOG arm_joint_plot_inverted  Plan: planning the six legs from the current hold -- the status reads READY when done
+   32.42  LOG whole_body_trajectory_planner pick-and-place go_to_start: [1] T = 3.24 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.887, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 468.3/485.3, solve 11.8 ms
+   32.42  LOG whole_body_trajectory_planner pick-and-place execute_pick: [1] [1] T = 8.75 s (v_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.5/482.1, solve 10.1 ms | [2] T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.07 m/s, tau_j 0.71 N.m, rotor 471.5/482.0, solve 10.2 ms
+   32.42  LOG whole_body_trajectory_planner pick-and-place go_to_place_start: [1] T = 16.05 s (v_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 468.7/485.6, solve 7.7 ms
+   32.42  LOG whole_body_trajectory_planner pick-and-place execute_place: [1] [1] arm sweep T = 8.0 s (2 probes), 2 cycles, peak |v| 0.27 m/s, |qdot| 0.06 rad/s, |v_ee| 0.27 m/s, tau_j 0.71 N.m, rotor 8.9/9.5 N, sigma_nd 0.327, solve 28.7 ms | [2] T = 3.23 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.72 N.m, rotor 468.2/485.4, solve 8.0 ms
+   32.42  LOG whole_body_trajectory_planner pick-and-place go_to_land_start: [1] T = 15.96 s (w_max, 0 dilations), defect 2.5e-16 m, sigma_nd 0.856, peak |v| 0.16 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 8.3 ms
+   32.42  LOG whole_body_trajectory_planner pick-and-place execute_land: [1] T = 3.23 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 9.2 ms
+   32.42  LOG whole_body_trajectory_planner pick-and-place planned: 70.9 s of flight in six legs and two exits.
+   32.42  pp_status                    READY next=go_to_start
+   35.33  pl_status                    CALCULATING
+   35.33  pp_status                    FLYING go_to_start
+   35.33  LOG whole_body_trajectory_planner pick-and-place: planning go_to_start from the current hold; it executes as soon as it is planned
+   35.35  LOG whole_body_trajectory_planner pick-and-place go_to_start: executing -- [1] T = 3.24 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.887, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 468.3/485.3, solve 11.1 ms
+   35.35  pl_status                    EXECUTING T=3.2s
+   35.35  pp_status                    FLYING go_to_start T=3.2s
+   35.35  LOG arm_joint_plot_inverted  Go To Start: planning go_to_start from the current hold; it executes as soon as it is planned
+   38.59  LOG whole_body_trajectory_planner pick-and-place: go_to_start complete.
+   38.60  LOG whole_body_trajectory_planner transition complete: hold captured -- base [0.018 0.017 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [0.271 0.015 0.939] m az -90.0 deg
+   38.60  pl_status                    HOLD
+   38.60  pp_status                    DONE go_to_start next=execute_pick
+   42.97  LOG gripper_controller       Received & accepted new action goal
+   42.97  pl_status                    CALCULATING
+   42.97  pp_status                    FLYING execute_pick (approach)
+   42.97  LOG whole_body_trajectory_planner pick-and-place: planning execute_pick from the current hold; it executes as soon as it is planned
+   42.99  LOG whole_body_trajectory_planner pick-and-place execute_pick: executing -- [1] T = 8.75 s (v_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.5/482.1, solve 12.5 ms
+   42.99  pl_status                    EXECUTING T=8.7s
+   42.99  pp_status                    FLYING execute_pick (approach) T=8.7s
+   43.02  LOG arm_joint_plot_inverted  Ready To Pick: planning execute_pick from the current hold; it executes as soon as it is planned
+   51.73  LOG whole_body_trajectory_planner pick-and-place: execute_pick above its target -- descending once the claw is within tolerance.
+   51.73  LOG whole_body_trajectory_planner transition complete: hold captured -- base [0.601 1.031 1.133] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.857 1.032 1.031] m az -89.4 deg
+   51.73  pl_status                    HOLD
+   51.73  pp_status                    WAITING execute_pick: claw 20 mm from the point above the target (tolerance 50 mm) -- press Pick to descend
+   90.71  LOG whole_body_trajectory_planner pick-and-place execute_pick: claw within tolerance above the target -- descending (goal trimmed by [17.3, 5.8, 2.6] mm, the hover error).
+   90.71  pl_status                    CALCULATING
+   90.71  pp_status                    FLYING execute_pick (descent)
+   90.71  LOG whole_body_trajectory_planner pick-and-place: descend_pick: descending onto the target (goal trimmed by [17.3, 5.8, 2.6] mm, the hover error)
+   90.72  pl_status                    EXECUTING T=3.0s
+   90.72  pp_status                    FLYING execute_pick (descent) T=3.0s
+   90.74  LOG arm_joint_plot_inverted  Pick: descend_pick: descending onto the target (goal trimmed by [17.3, 5.8, 2.6] mm, the hover error)
+   93.72  LOG whole_body_trajectory_planner pick-and-place: execute_pick complete.
+   93.73  LOG whole_body_trajectory_planner transition complete: hold captured -- base [0.718 1.038 1.135] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.974 1.039 1.034] m az -89.4 deg
+   93.73  pl_status                    HOLD
+   93.73  pp_status                    DONE execute_pick next=exit_pick (close the gripper first) -- claw inside tolerance, settling
+   93.80  pp_status                    DONE execute_pick next=exit_pick (close the gripper first) -- claw within tolerance: fine correction OK
+   93.80  LOG arm_joint_plot_inverted  Pick: EE 12 mm from the target -- gripper CLOSE
+   93.81  LOG gripper_controller       Received & accepted new action goal
+   94.41  LOG arm_joint_plot_inverted  Pick: closed around the stem (hook grasp) -- Exit To Pick at once (automatic)
+   94.41  pl_status                    CALCULATING
+   94.41  pp_status                    FLYING exit_pick (up the vertical margin)
+   94.41  LOG whole_body_trajectory_planner pick-and-place: exit_pick: climbing 20 cm straight up to the clearance point
+   94.42  LOG whole_body_trajectory_planner pick-and-place exit_pick: executing -- T = 3.23 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.72 N.m, rotor 468.2/485.4, solve 8.5 ms
+   94.42  pl_status                    EXECUTING T=3.2s
+   94.42  pp_status                    FLYING exit_pick (up the vertical margin) T=3.2s
+   94.43  LOG arm_joint_plot_inverted  Exit To Pick (automatic, gripped): exit_pick: climbing 20 cm straight up to the clearance point
+   97.65  LOG whole_body_trajectory_planner pick-and-place: exit_pick complete.
+   97.66  LOG whole_body_trajectory_planner transition complete: hold captured -- base [0.718 1.038 1.335] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.974 1.039 1.234] m az -89.4 deg
+   97.66  pl_status                    HOLD
+   97.66  pp_status                    DONE exit_pick next=go_to_place_start
+  100.69  pl_status                    CALCULATING
+  100.69  pp_status                    FLYING go_to_place_start
+  100.69  LOG whole_body_trajectory_planner pick-and-place: planning go_to_place_start from the current hold; it executes as soon as it is planned
+  100.71  LOG whole_body_trajectory_planner pick-and-place go_to_place_start: executing -- [1] T = 16.13 s (v_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 468.7/485.6, solve 13.1 ms
+  100.71  pl_status                    EXECUTING T=16.1s
+  100.71  pp_status                    FLYING go_to_place_start T=16.1s
+  100.71  LOG arm_joint_plot_inverted  Go To Place Start: planning go_to_place_start from the current hold; it executes as soon as it is planned
+  116.85  LOG whole_body_trajectory_planner pick-and-place: go_to_place_start complete.
+  116.85  LOG whole_body_trajectory_planner transition complete: hold captured -- base [0.018 -0.983 1.000] m, q [12.0, 38.0, 42.0, 0.0] deg, EE (inertial) [-0.226 -1.033 0.936] m az 102.0 deg
+  116.85  pl_status                    HOLD
+  116.85  pp_status                    DONE go_to_place_start next=execute_place
+  118.30  pl_status                    CALCULATING
+  118.30  pp_status                    FLYING execute_place (approach)
+  118.30  LOG whole_body_trajectory_planner pick-and-place: planning execute_place from the current hold; it executes as soon as it is planned
+  118.32  LOG arm_joint_plot_inverted  Ready To Place: planning execute_place from the current hold; it executes as soon as it is planned
+  118.34  LOG whole_body_trajectory_planner pick-and-place execute_place: executing -- [1] arm sweep T = 8.0 s (2 probes), 2 cycles, peak |v| 0.27 m/s, |qdot| 0.06 rad/s, |v_ee| 0.27 m/s, tau_j 0.71 N.m, rotor 8.9/9.5 N, sigma_nd 0.327, solve 35.7 ms
+  118.34  pl_status                    EXECUTING T=8.0s
+  118.35  pp_status                    FLYING execute_place (approach) T=8.0s
+  126.34  LOG whole_body_trajectory_planner pick-and-place: execute_place above its target -- descending once the claw is within tolerance.
+  126.35  LOG whole_body_trajectory_planner transition complete: hold captured -- base [-0.784 -1.022 1.322] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-1.040 -1.020 1.220] m az 90.0 deg
+  126.35  pl_status                    HOLD
+  126.35  pp_status                    WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- press Place to descend
+  127.91  LOG whole_body_trajectory_planner pick-and-place execute_place: claw within tolerance above the target -- descending (goal trimmed by [35.6, 21.6, -2.2] mm, the hover error).
+  127.91  pl_status                    CALCULATING
+  127.91  pp_status                    FLYING execute_place (descent)
+  127.92  LOG whole_body_trajectory_planner pick-and-place: descend_place: descending onto the target (goal trimmed by [35.6, 21.6, -2.2] mm, the hover error)
+  127.94  pl_status                    EXECUTING T=8.2s
+  127.94  pp_status                    FLYING execute_place (descent) T=8.2s
+  127.95  LOG arm_joint_plot_inverted  Place: descend_place: descending onto the target (goal trimmed by [35.6, 21.6, -2.2] mm, the hover error)
+  136.20  LOG whole_body_trajectory_planner pick-and-place: execute_place complete.
+  136.20  LOG whole_body_trajectory_planner transition complete: hold captured -- base [-0.748 -1.000 1.119] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-1.004 -0.998 1.018] m az 90.0 deg
+  136.20  pl_status                    HOLD
+  136.20  pp_status                    DONE execute_place next=exit_place (open the gripper first) -- claw outside tolerance
+  136.22  LOG arm_joint_plot_inverted  Place: EE 65 mm from the target -- gripper OPEN
+  136.22  LOG arm_joint_plot_inverted  Place (hook): Exit To Place at once (automatic)
+  136.23  LOG gripper_controller       Received & accepted new action goal
+  136.23  pl_status                    CALCULATING
+  136.23  pp_status                    FLYING exit_place (up the vertical margin)
+  136.23  LOG whole_body_trajectory_planner pick-and-place: exit_place: backing out 10 cm (out from under the arch), then climbing 20 cm straight up to the clearance point
+  136.25  LOG whole_body_trajectory_planner pick-and-place exit_place: executing -- [1] T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.07 m/s, tau_j 0.71 N.m, rotor 471.5/482.0, solve 10.9 ms | [2] T = 3.23 s (a_max, 0 dilations), defect 2.5e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.72 N.m, rotor 468.2/485.4, solve 10.2 ms
+  136.26  pl_status                    EXECUTING T=6.2s
+  136.26  pp_status                    FLYING exit_place (up the vertical margin) T=6.2s
+  136.27  LOG arm_joint_plot_inverted  Exit To Place (automatic, hook place): exit_place: backing out 10 cm (out from under the arch), then climbing 20 cm straight up to the clearance point
+  142.48  LOG whole_body_trajectory_planner pick-and-place: exit_place complete.
+  142.49  LOG whole_body_trajectory_planner transition complete: hold captured -- base [-0.648 -1.000 1.319] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-0.904 -0.998 1.218] m az 90.0 deg
+  142.49  pl_status                    HOLD
+  142.49  pp_status                    DONE exit_place next=go_to_land_start
+  142.52  LOG arm_joint_plot_inverted  Exit To Place complete -- gripper CLOSE
+  142.53  LOG gripper_controller       Received & accepted new action goal
+  144.69  pl_status                    CALCULATING
+  144.69  pp_status                    FLYING go_to_land_start
+  144.69  LOG whole_body_trajectory_planner pick-and-place: planning go_to_land_start from the current hold; it executes as soon as it is planned
+  144.71  LOG arm_joint_plot_inverted  Go To Land Start: planning go_to_land_start from the current hold; it executes as soon as it is planned
+  144.71  LOG whole_body_trajectory_planner pick-and-place go_to_land_start: executing -- [1] T = 15.96 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.16 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 15.3 ms
+  144.71  pl_status                    EXECUTING T=16.0s
+  144.71  pp_status                    FLYING go_to_land_start T=16.0s
+  160.68  LOG whole_body_trajectory_planner pick-and-place: go_to_land_start complete.
+  160.68  LOG whole_body_trajectory_planner transition complete: hold captured -- base [-0.982 0.017 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [-0.729 0.015 0.939] m az -90.0 deg
+  160.68  pl_status                    HOLD
+  160.68  pp_status                    DONE go_to_land_start next=execute_land
+  162.32  pl_status                    CALCULATING
+  162.32  pp_status                    FLYING execute_land
+  162.32  LOG whole_body_trajectory_planner pick-and-place: planning execute_land from the current hold; it executes as soon as it is planned
+  162.34  LOG whole_body_trajectory_planner pick-and-place execute_land: executing -- [1] T = 3.23 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 13.7 ms
+  162.34  pl_status                    EXECUTING T=3.2s
+  162.34  pp_status                    FLYING execute_land T=3.2s
+  162.34  LOG arm_joint_plot_inverted  Execute To Land: planning execute_land from the current hold; it executes as soon as it is planned
+  165.57  LOG whole_body_trajectory_planner pick-and-place: execute_land complete.
+  165.57  LOG whole_body_trajectory_planner transition complete: hold captured -- base [-0.982 0.017 0.800] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [-0.729 0.015 0.739] m az -90.0 deg
+  165.57  pl_status                    HOLD
+  165.57  pp_status                    COMPLETE -- touch down with SAFETY -> land
+  172.03  LOG single_drone_gui_node    Publishing coordinates: -0.96, 0.01, 0.35, 359.7
+  172.04  pl_status                    PENDING
+  172.04  pl_status                    CALCULATING
+  172.05  LOG whole_body_trajectory_planner planned: T = 4.85 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.21 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 12.0 ms -- awaiting Send.
+  172.05  pl_status                    PLANNED T=4.8s
+  183.88  pl_status                    EXECUTING T=4.8s
+  183.88  LOG whole_body_trajectory_planner executing compatible transition, T = 4.85 s
+  187.51  LOG external_torque_controller External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+  187.51  actlaw                       LOCAL_PD_PLUS_HOLD
+  188.44  pl_status                    CALCULATING
+  188.44  pp_status                    ABORTING (SAFETY GUARD: tilt 18.4 deg > 15.0 deg) -- gripper open, arm to the release pose then home, climbing 0.30 m
+  188.45  LOG whole_body_trajectory_planner pick-and-place: ABORT: arm to the release pose, then home, and up 0.30 m from the point the run was cut at
+  188.45  LOG whole_body_trajectory_planner pick-and-place SAFETY GUARD: tilt 18.4 deg > 15.0 deg -- ABORT: arm to the release pose, then home, and up 0.30 m from the point the run was cut at
+  188.46  LOG gripper_controller       Received & accepted new action goal
+  188.47  LOG whole_body_trajectory_planner pick-and-place ABORT: [1] T = 4.36 s (w_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.715, peak |v| 0.15 m/s, tau_j 0.71 N.m, rotor 471.7/484.6, solve 10.2 ms | [2] settle 2.0 s | [3] T = 4.36 s (w_max, 0 dilations), defect 1.6e-16 m, sigma_nd 0.715, peak |v| 0.01 m/s, tau_j 0.70 N.m, rotor 471.7/481.7, solve 10.2 ms
+  188.47  pl_status                    EXECUTING T=10.7s

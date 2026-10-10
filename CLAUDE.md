@@ -4555,3 +4555,139 @@ generated yaml's other push-and-pull changes are listed under SHIPPED below.
   scene output is in tmux `px4_isaac`, not `<tag>.scene.log`; the recorder's `dbg` columns are the
   debug index + 2. NOT flown on hardware; check on the bench that the foam pads hold ~2 N along the
   5 mm fin before flying.
+
+**1009 HARDWARE: FIRST PICK-AND-PLACE FLIGHTS (whole-body 4-D L1, fused) — PICK HOOKED, PLACE 166 mm SHORT,
+PX4 LINK FROZE IN FLIGHT, BOTH STAB LANDINGS TIPPED (2026-10-09/10, user request: analyse + report).** Bags
+`docs/experimental_data_ros2_bag/1009 - T650-AM whole-body Pick&Place-*/` (`_172557` PP-1, `_180228` PP-2,
+`_181817` PP-3); analysis + tools + README `docs/docs_aerial_manipulator/archive/wb_pick_place_flight_20261009/`;
+report artifact "1009 Pick-and-Place Flights" (https://claude.ai/artifact/SKoEL1B8DjJR1fLYaLpfLS; rebuild
+`tools/build_report.py` + `build_artifact_page.py`, layout checked by `measure_layout.py`); Command.md §16.
+- **PP-1 = the full six-leg mission to COMPLETE WITHOUT a payload** (no thrust / arm-torque step at the lift;
+  `obj_0` not streamed): CoM 33 mm rms / 105 max over 159 s, claw-vs-airframe 2.2 mm, heading 0.24°, tilt ≤ 2.5°,
+  0 sat / 0 clamp; hover 15–28 mm rms, moving legs 39. Hover wander at the pick (39 s): std 15/16/3 mm, p-p
+  67/79/14 mm, period 6–7 s, MEAN 4 mm.
+- **PP-2 = the one real attempt.** Pick: Get within 3 mm / 0.03° of the basket's rest pose; gripper closed with the
+  claw at (−21, 1, 158) mm planner frame / (−27, −4, 154) mocap frame for EE Offset (−20, 0, 160); basket lifted
+  when the claw reached **167 mm (planner) / 163 (mocap)** → 0.16 leaves 7 mm under the arch. **The basket
+  weighs 190 g (the user's scale; the first report's "0.31 kg" was the thrust-command step / g and WRONG -- see the
+  2026-10-10 follow-up bullet below)**: lift excursion 252 / 123 mm,
+  tilt 6.6°, loaded hover 63 mm rms / 164 max, applied j2 / j3 torque 2.18 / 1.36 N·m = 89 / 96 % of the arm caps,
+  wrist dragged 13° (carry) / 52° (after the place). Hanging: basket tilted 10.8° about the arch (CAD: hanger plane
+  27.5 mm off the basket centre), claw at (−29, 10, 170) mm in the basket frame → the basket centre is 20–30 mm
+  closer to the vehicle than the planner assumes. **Place failed**: Place pressed 0.8 s after arrival → the 1 s
+  descent trim sampled the arrival overshoot (+55 mm); + 60–70 mm loaded tracking offset + the hang offset →
+  touchdown 166 mm short / 25 sideways (hat radius 100); the hook place opens with no position gate ("EE 140 mm");
+  basket slid off the rim, stayed on the open fingers, lifted again by the exit, taken off at 119 s. (PP-1's place,
+  no payload: pressed after 1.6 s, trim (+36, +22), opened at 65 mm.)
+- **PP-3**: EE Offset z raised to 0.20 → the gripper closed 25 mm ABOVE the arch-contact height, nothing lifted;
+  Reset, flown home.
+- **Recommended (in the report, NOT applied to any yaml):** EE Offset (−0.02, 0, **0.15**), never above 0.16;
+  Place = Get x **− 0.02** (further along the approach; −x at yaw −180), Get y, Get z **− 0.01** (with 0.15: the
+  same claw height as z − 0.02 with 0.16), yaw −180; margins 0.20 / 0.10 unchanged; `pick_place_descent_trim: false`
+  on the whole-body rig (its mean hover error is 4 mm — the trim was built for the decoupled rig's steady 5 cm);
+  wait ≥ 5 s before Place; gate the hook release on the claw error (GS change, not made); weigh / lighten the basket.
+- **LINK FREEZE (PP-2, 144.67 s = 18:04:53, 1.0 m hover after go_to_land_start):** every `/fmu/out` topic stopped
+  at once; one FRESH sample at 149.90 (PX4 clock continuous = no reboot; EKF2 had dropped EV = the Orin → PX4
+  direction was down too; STAB; disarmed by RC switch), then nothing to the bag's end. Vehicle: roll 11.6° /
+  0.62 m/s after 0.93 s, 14.8° at 145.8, level at 146.0 (fits PX4's offboard-loss timeout), coasted 1.2–1.5 m/s,
+  touchdown 147.35 at (−2.41, −1.51), rest (−2.70, −2.00), upright. The node logged POSITION FEEDBACK LOST at its
+  1.0 s gate. PP-3: the same stream stopped at 89.7 s on the ground, 7 s after disarm, with the stack still up.
+  Cause NOT in the bag (Orin dmesg / agent log / ulog). Ideas: `COM_OF_LOSS_T` 0.2–0.3 s, a short attitude/rate
+  staleness gate in the node.
+- **BOTH MANUAL LANDINGS TIPPED OVER** (DIRECT descent to 0.35 m by a drone-GS target, pilot STAB at 0.40 / 0.44 m):
+  PP-1 dropped 1.2 m/s from 0.43 m → 45° nose down; PP-3 climbed to 0.56 m, hit at 1.75 m/s → 57° nose up.
+  **The WB node keeps reporting DIRECT after PX4 leaves OFFBOARD**, so in PP-1 the planner's tilt guard (18.4°)
+  flew its ABORT on the ground and the arm (local hold tracking the planner's reference) pushed into the floor at
+  the servo caps (j2 −2.7, j3 −1.4 N·m) for ≥ 2.4 s. Not fixed.
+- **`obj_0`**: PP-1 `/vrpn_mocap/obj_0/pose` 0 messages, the processor republished ONE frozen pose (11 423 samples,
+  60 Hz, status "normal"); PP-2/3 the solved orientation flips 180° (+5° tilt) whenever the claw is near
+  (99.8–100 % right at rest). A Get during a flip would turn the pick yaw (and, with align_yaw, the approach side).
+- **PX4 attitude vs mocap attitude**: 1.9–2.2° roll / 2.2–2.9° pitch body-fixed (PP-3 1.2 / 1.4) + 0.4–0.6°
+  world-fixed → the planner-frame claw is 4–10 mm higher than the mocap-frame claw.
+- Analysis traps: `np.interp` across PP-2's 5.2 s feedback gap (the scoring window now ends where the odometry
+  stops); use the basket's REST pose as the pick frame (flips); `pixhawk_euler` is NED/FRD, mocap Euler ENU/FLU.
+- **FOLLOW-UP 2026-10-10 (user: the basket weighs ~190 g; report v3 sections 2.4–2.6, 3.1, 3.3).**
+  (a) **The L1 vertical estimate is a force in the ALLOCATOR's newtons, never a mass.** With NOTHING on the claw the
+  thrust command for the same hover ran 34.3 → 40.3 N and d̂_z +2.2 → −2.7 N over the three flights as the pack went
+  24.2 → 23.0 V, while two unit-free gauges stayed flat: delivered thrust (motor commands through the 0820 fit
+  `kf = exp(−16.767 + 2.149 lnV − 0.264 u)`) 34.5 ± 0.3 N and battery power 465 ± 4 W. With the basket: power 512 W
+  (+10 % → thrust +6.5 % = 2.2–2.4 N), delivered-thrust gauge +2.7–2.8 N, command +3.7 N; **the pitch moment
+  (d̂_r,x −0.45…−0.50 N·m, ÷ the same thrust ratio, lever 0.24–0.25 m) gives 1.7–1.9 N at the claw = the scale.** The
+  0.4–0.9 N the thrust gauges read beyond the weight has no matching moment, so it is thrust-side (likely thrust per
+  command falling faster with throttle than the 0820 fit), not mass. Just before the place d̂_z = −4.9 N = 0.2
+  pre-existing + 1.9 weight + 1.0 beyond the weight + 1.1 battery sag during the carry + 0.4 throttle + 0.2 units.
+  Joint torques cannot settle it (gearbox friction ±0.15–0.25 N·m ≈ ±1 N; j2 2.4 N, j3 3.7 N).
+  (b) **Settled hover error of the claw** (reference still > 1.5 s, first 3 s dropped; `tools/hover_error.py`): no
+  payload 95 s / 12 hovers / 3 flights: offset 10 mm rms, wander 20, total 22 mm rms, 95 % inside 43, max 68, within
+  20 / 50 mm 67 / 97 % of the time; with the basket 23 s / 3 hovers (PP-2 only): offset 27, wander 34, total 45 mm
+  rms, 95 % inside 84, max 92, within 20 / 50 / 70 mm 24 / 67 / 90 %; height ±5–6 mm either way (claw sags 7 mm).
+  **The loaded offset is ROOM-fixed: (+23, +7), (+25, +11), (+29, +11) mm in world x / y in the three loaded hovers
+  at headings 0° and 180° -- cause unknown; my first reading "T·e_R/k_x" matched in size but NOT in sign and is
+  withdrawn.** The place is the hard half: 4 corners on the Ø200 hat needs
+  the basket centre within 20 mm, it tips beyond ~70 mm.
+  (c) **Arm caps:** no tick clipped; the arm controller's total torque term reached 97 % (j2) / 98 % (j3) of
+  `max_effort`; applied > 80 % of the cap for 0.36 s (j2) / 1.59 s (j3). **Recommended, NOT applied: j3 192 → 230
+  duty counts (1.42 → 1.70 N·m, 25 → 30 % of stall) with its PWM Limit 330 → 380; j2 unchanged** -- its limit is
+  HEAT: it carried the basket at 180–224 current counts for 70 s vs the ~250 counts of the 08-26 overload shutdown.
+  `wb_tau_max` 3.0 sits above all four arm caps (the law is not told when the arm clips; per-joint limits = code).
+  (e) **WHAT A Pick / Place PRESS DOES (planner `onPpDescend`, read + checked against the five presses).** The
+  planner does NOT wait for convergence: with the descent trim ON (default, what flew) its 50 mm gate is
+  `|latest claw error − its own 1 s mean| ≤ pick_place_arrival_tol`, i.e. a SPEED check, not a distance to the
+  target (`within`/`settled` in `arrival_error` are not used for it; refusals only: leg still flying, residual
+  > 50 mm, mean > `descent_trim_max` 0.15). The 1 s mean becomes the trim and shifts the descent (> 5 mm: sideways
+  first, 2 s hold, then down). Arm GS afterwards: Pick closes only within 20 mm and 3 mm across (a hurried Pick is
+  forgiven); the hook Place opens at the bottom with NO gate. Flights: PP-2 Place accepted at 76 mm from the target
+  (logged "claw within tolerance"), trim 57 mm; even PP-1's Pick after a 39 s wait got an 18 mm trim, because the
+  hover wanders with a 5–7 s period and a 1 s mean samples the wander. **Replay of the trim on the three long
+  hovers (`tools/trim_window.py`, landing 6 s after the press, rms): the 1 s trim is WORSE than no trim everywhere
+  -- 23 → 35 and 11 → 15 mm unloaded, 44 → 67 mm with the basket; unloaded no window helps; loaded (27–31 mm
+  standing offset) 5 s → 38 mm, 10 s → 29 mm (one 21 s hover).** With the REAL timings (`tools/trim_choice.py`:
+  bottom 3.2 s after the press with the trim off, 8.4 s with it on): loaded off 48 / 86 mm (rms / 95 %), 1 s 70 / 173,
+  5 s 38 / 57, 10 s 22 / 31 (3 s of press times only -- expect "the wander", ~34 mm); unloaded 10 s costs nothing
+  (23 vs 22, 7 vs 11). Waiting for a small reading with the trim off does not help (46 mm at ≤ 30 mm). With the trim
+  OFF the planner's 50 mm gate becomes a real distance check; with it on and under half a window of samples the
+  shift is zero. I recommended 10 s + a 15 s wait; **the user chose 5 s (2026-10-10) and it is APPLIED:
+  `pick_place_descent_trim_window_s: 5.0` in the HARDWARE whole-body `_pick_and_place.yaml` only, through
+  `make_hw_pick_and_place_yamls.py`'s `added` (regenerated, `--check` current, UNCOMMITTED in fsc_autopilot_ros2
+  `dev_robotic_arm`; the planner block of that file is read by BOTH hardware rigs; sim twins keep the 1 s default).
+  OPERATOR RULE: press Place ≥ 8 s after WAITING -- under 2.5 s (half a window) the planner applies NO shift, at
+  exactly 5 s the average still holds the arrival swing (49 mm wrong on the one loaded hover that can be replayed,
+  ~20 mm from 6 s on). Sign: trim = mean(target − claw) added to the goal, so a claw BEHIND its target moves the
+  descent FORWARD; the settled loaded claw sat ~29 mm behind at the place, while the 10-09 1 s trim moved the
+  descent 55 mm BACKWARD (claw sampled past the target). The key is live-settable
+  (`ros2 param set /uav_0/whole_body_trajectory_planner pick_place_descent_trim_window_s 5.0`).**
+  (f) **SETPOINTS REVISED WITH THE USER (2026-10-10; they proposed EE z 0.17, Pick x + 0.01, Place x forward
+  0.01–0.02; `tools/setpoint_tuning.py`).** EE Offset z stays **0.16, NOT 0.17**: yesterday's claw heights shifted to
+  0.17 are ABOVE the arch-contact height (167 planner / 163 mocap) for 67 % of the slide-in and 30 % of the wait
+  (0.16: never, 6 mm to spare in the slide-in; true gap under the arch 12 mm mean, taken up by the climb at ~5 cm/s;
+  ~0.5 N at arch height tips a 190 g basket). **Pick = Get x + 0.01** agreed (at the close the stem was 0.5 mm inside
+  the jaws by mocap; PP-3 stopped 10–18 mm short). **Place x = Get x − 0.03**: at the place the basket centre hung
+  10–22 mm BEHIND the claw (planner frame; mocap 10–17) against the planner's +20 → 30–42 mm short with a perfect
+  claw; the arch slid along the fingers (+7 … −17 mm) during the carry. **Place z = Get z − 0.02, not higher** (the
+  claw must end under the arch contact or the open fingers still carry the basket; by mocap the claw flies 11–16 mm
+  lower at the place than the planner reads). CAVEATS: the user re-printed the handle with a WIDER stem -- a clamped
+  basket may hang closer to the planner's assumption (then 0.03 overshoots: check the hang on the ground), and the
+  slide-in's sideways error reached 17 mm (PP-2) / 25 mm (PP-3), so (open jaw gap − stem width) should be ≥ 50 mm.
+  (d) Report Fig. 5 / 6 = top + side views of the pick and the place (three stages, hat-centred approach frame,
+  `tools/views.py`); new tools `payload_budget.py`, `hover_error.py`, `views.py`.
+- **ARM GS: A GET ON THE PLACE ROW, AND THE PICK ROW EDITABLE (2026-10-10, user request with the flight analysis;
+  uncommitted in fsc_trajectory_planner `main` and fsc_open_manipulator `omx-torque-control`).** Planner: new
+  parameter **`pick_place_pick_point`** (`[]` = not captured, else `[x, y, z, yaw_deg]`) that mirrors the pick capture
+  both ways (`capture_pick` writes it; a set from outside sets the capture and makes the plan stale; `pick_place/info`
+  [60..63], [80] unchanged), new service **`pick_place/get_place`** (averages the PICK body obj_0 like a capture and
+  writes x, y, z into `pick_place_place_point`, **keeping the typed yaw and subtracting nothing from z**; the pick
+  capture is not touched), and two capture gates from this flight's data, in the shared `ppAverageBody`: a **FROZEN
+  feed** (every position in the window bit-identical) and a **FLIPPING yaw** (spread above
+  `pick_place_capture_max_yaw_spread_deg`, 10; ≤ 0 off) are refused with a readable reason. **The frozen gate has no
+  off switch and needs jitter on a simulated body**: the pick-and-place sim yamls and the mirror set
+  `sim_feedback_pos_noise_m: 0.0005` (the emulator applies it to obj_0); a zero-noise stack (the `_sim_robustness`
+  yamls, the geometric `_sim.yaml`) with a resting payload would be refused — not checked in Isaac. GS
+  (`pick_place_panel.{hpp,cpp}`): the Pick row is four boxes bound to that parameter (disabled with an amber dash
+  until Get; read-only from the info block against an older planner), the Place row has its own Get; editing one
+  box sends the planner's full-precision values for the boxes left alone (the boxes show 2 decimals). Tested:
+  planner `test_pick_place_get_loopback.py` (new) + the existing loopback PASS, package tests 60 / 0 failures,
+  the REAL panel offscreen against the real planner 28 checks (`gs_change/gs_get_check.sh`); live demo without a
+  vehicle `gs_change/gs_demo.sh` (planner + arm GS + `fake_basket.py` on ROS domain 77). **For hardware: rebuild
+  fsc_trajectory_planner on the Orin and utils_custom_ground_station on the laptop**; an old planner with the new
+  GS degrades (Pick boxes read-only, Place Get "service not available"). `ros2 param set … "[]"` cannot clear the
+  pick point (ros2cli types an empty list as a bool array). NOT flown.

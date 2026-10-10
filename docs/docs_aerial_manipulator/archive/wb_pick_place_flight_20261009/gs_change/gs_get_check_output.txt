@@ -1,0 +1,58 @@
+== 1. a planner from BEFORE the change (<scratch>/old_planner/whole_body_trajectory_planner_old)
+GSVAL start_place_param [-1.000000, -1.000000, 1.020000, -180.000000]
+GSVAL start_pick_boxes — — — —
+GSVAL start_place_boxes -1.00 -1.00 1.02 -180.00
+GSVAL check ok    older planner: the tab LOADS (the Place boxes show its place point, enabled)
+GSVAL check ok    ... the Pick boxes are disabled and show a dash  (— — — —)
+GSVAL after_pick_get_boxes 1.00 1.00 1.04 -2.00
+GSVAL after_pick_get_info_60_63_80 [1.002059, 0.996683, 1.041229, 1.000000, -2.000298]
+GSVAL check ok    older planner: Pick Get still captures, and the Pick boxes show it from pick_place/info
+GSVAL check ok    ... READ-ONLY (disabled), as the labels were
+GSVAL check ok    ... and a value forced into a Pick box is not sent to the planner  (NOT IN DIRECT)
+GSVAL place_get_lamp Get Place (obj_0): service not available (is the planner running?)
+GSVAL check ok    older planner: the Place Get reports the missing service, the place point unchanged  ([-1.000000, -1.000000, 1.020000, -180.000000])
+GSVAL result PASS
+== 2. the planner as built now (hardware pick-and-place yaml)
+GSVAL minimum_size_hint 802 x 762
+GSVAL start_pick_param []
+GSVAL start_place_param [-1.000000, -1.000000, 1.020000, -180.000000]
+GSVAL start_pick_boxes — — — —
+GSVAL start_place_boxes -1.00 -1.00 1.02 -180.00
+GSVAL check ok    nothing captured: pick_place_pick_point is []
+GSVAL check ok    ... the Pick boxes are disabled and show a dash  (— — — —)
+GSVAL check ok    the Place boxes show the planner's place point
+GSVAL check ok    both Get buttons are enabled
+GSVAL check ok    a value forced into a disabled Pick box was NOT written (never zeros as a pick pose)  ([])
+GSVAL after_place_get_param [-1.003457, -0.997832, 1.040549, -180.000000]
+GSVAL after_place_get_boxes -1.00 -1.00 1.04 -180.00
+GSVAL check ok    Place Get: x, y, z are the payload on the place platform (< 1 mm)
+GSVAL check ok    ... the typed yaw is KEPT, exactly (-180, not the payload's 3)  ([-1.003457, -0.997832, 1.040549, -180.000000])
+GSVAL check ok    ... z is the resting height: nothing subtracted
+GSVAL check ok    ... the pick point is untouched ([]), its boxes still disabled
+GSVAL after_place_z_edit_param [-1.003457, -0.997832, 1.020000, -180.000000]
+GSVAL after_place_z_edit_boxes -1.00 -1.00 1.02 -180.00
+GSVAL check ok    Place z lowered by hand: the planner has the typed z
+GSVAL check ok    ... and x, y, yaw exactly as measured (not rounded to the boxes' 2 decimals)
+GSVAL after_pick_get_param [1.002068, 0.996710, 1.041223, -2.006307]
+GSVAL after_pick_get_boxes 1.00 1.00 1.04 -2.01
+GSVAL check ok    Pick Get: pick_place_pick_point = the payload on the pick platform (< 1 mm)
+GSVAL check ok    ... with its yaw  ([1.002068, 0.996710, 1.041223, -2.006307])
+GSVAL check ok    ... the Pick boxes are filled and ENABLED
+GSVAL check ok    ... the place point is untouched  ([-1.003457, -0.997832, 1.020000, -180.000000])
+GSVAL after_pick_x_edit_param [1.050000, 0.996710, 1.041223, -2.006307]
+GSVAL after_pick_x_edit_boxes 1.05 1.00 1.04 -2.01
+GSVAL after_pick_x_edit_info_60_63_80 [1.050000, 0.996710, 1.041223, 1.000000, -2.006307]
+GSVAL check ok    Pick x edited: the planner has the typed x
+GSVAL check ok    ... y, z, yaw exactly as measured
+GSVAL check ok    ... the planner's CAPTURE follows (pick_place/info [60..63], [80])
+GSVAL ee_offset_param [-0.020, 0.000, 0.160]
+GSVAL planned_goal_pick [1.03, 1.00, 1.20]
+GSVAL planned_goal_place [-0.98, -1.00, 1.18]
+GSVAL check ok    the Planned-goal preview of the Pick row = the edited pick pose + the EE offset  ([1.03, 1.00, 1.20])
+GSVAL check ok    ... and of the Place row = the place pose + the EE offset  ([-0.98, -1.00, 1.18])
+GSVAL frozen_pick_get_lamp Get Pick (obj_0): obj_0's pose is frozen -- the body is not tracked (50 identical samples from /obj_0/mocap in 0.50 s: the mocap processor is republishing its last pose) -- NOT captured
+GSVAL check ok    a FROZEN feed: the Pick Get is refused on the status line, the pick point unchanged  ([1.050000, 0.996710, 1.041223, -2.006307])
+GSVAL frozen_place_get_lamp Get Place (obj_0): obj_0's pose is frozen -- the body is not tracked (50 identical samples from /obj_0/mocap in 0.50 s: the mocap processor is republishing its last pose) -- Place NOT changed
+GSVAL check ok    ... and the Place Get too, the place point unchanged  ([-1.003457, -0.997832, 1.020000, -180.000000])
+GSVAL result PASS
+logs: <scratch>/gs_logs
