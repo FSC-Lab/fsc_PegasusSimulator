@@ -8,9 +8,19 @@ pick_and_place, used by the experiment AND the simulation).
   whole-body 4-D L1:
     in : config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml
     out: config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_pick_and_place.yaml
+    out: config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_pick_and_drop.yaml
   decoupled geometric + L1:
     in : config/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml
     out: config/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_pick_and_place.yaml
+
+TWO HARDWARE TASKS (2026-10-14, user request: the runbook keeps a Pick-and-Place AND a
+Pick-and-Drop flight). The free-flight source's planner task block is the DROP's since
+2026-10-14 (= the simulation mirror's), so:
+  *_pick_and_drop.yaml   the source's task block unchanged (AM_HW_PROFILE=pick_and_drop)
+  *_pick_and_place.yaml  the set-down block restored by PLANNER OVERRIDES to exactly what
+                         flew 10-09/10-10 (AM_HW_PROFILE=pick_and_place): Place Start
+                         (0, -1, 1), Land Start / Land (-1, 0, 1 / 0.8), place point z 1.02,
+                         place_drop false, fence floor at the node default 0.6
 
 Each output is its source BYTE FOR BYTE plus a header, vehicle_name, and the
 pick-and-place gain overrides -- the SAME overrides the simulation twins carry
@@ -35,6 +45,17 @@ import sys
 CFG = os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2/config")
 ME = "docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/tools/make_hw_pick_and_place_yamls.py"
 
+# The set-down task block the hardware pick-and-place flew on 10-09/10-10 (fsc_autopilot_ros2
+# 71ec97a's free-flight file), restored over the source's drop block. Literal yaml values.
+SET_DOWN = {
+    "pick_place_place_start": "[0.0, -1.0, 1.0, -180.0]",
+    "pick_place_land_start": "[-1.0, 0.0, 1.0, -360.0]",
+    "pick_place_land": "[-1.0, 0.0, 0.8, -360.0]",
+    "pick_place_fence_min_z": "0.6",
+    "pick_place_place_point": "[-1.0, -1.0, 1.02, -180.0]",
+    "pick_place_place_drop": "false",
+}
+
 RIGS = {
     "wb": dict(
         src="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml",
@@ -56,7 +77,16 @@ RIGS = {
                "    # 5 s the average still holds the arrival swing (49 mm wrong on the one loaded hover that\n"
                "    # can be replayed, 20 mm from 6 s on). Applies to Pick too, where it costs nothing.\n"
                "    pick_place_descent_trim_window_s: 5.0")},
+        planner_overrides=SET_DOWN,
         title="WHOLE-BODY 4-D L1, HARDWARE, PICK-AND-PLACE"),
+    "wb_drop": dict(
+        src="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml",
+        dst="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_pick_and_drop.yaml",
+        name="AM-T650-WB-L1-4D-HW-PND",
+        overrides=None,          # = the pick-and-place rig's (filled in below)
+        added=None,
+        planner_overrides={},    # the source's task block IS the drop's
+        title="WHOLE-BODY 4-D L1, HARDWARE, PICK-AND-DROP"),
     "geo": dict(
         src="params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml",
         dst="params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_pick_and_place.yaml",
@@ -64,8 +94,12 @@ RIGS = {
         overrides={"l1geo_kp_x": "15.0", "l1geo_kp_y": "15.0", "l1geo_kp_z": "40.0",
                    "l1geo_kv_x": "10.0", "l1geo_kv_y": "10.0", "l1geo_kv_z": "18.0"},
         added={},
+        planner_overrides={},
         title="DECOUPLED GEOMETRIC + L1, HARDWARE, PICK-AND-PLACE"),
 }
+# the drop flies the same controller as the pick-and-place (same gains, same pick)
+RIGS["wb_drop"]["overrides"] = RIGS["wb"]["overrides"]
+RIGS["wb_drop"]["added"] = RIGS["wb"]["added"]
 
 
 def header(rig, r):
@@ -78,6 +112,11 @@ def header(rig, r):
         lines.append(f"#   {k}: {v}")
     for k in r["added"]:
         lines.append(f"#   + {k}")
+    if r["planner_overrides"]:
+        lines.append("# Planner task block (the set-down place the hardware flew 10-09/10-10; the source")
+        lines.append("# carries the DROP's -- AM_HW_PROFILE=pick_and_drop flies that one):")
+        for k, v in r["planner_overrides"].items():
+            lines.append(f"#   {k}: {v}")
     return "\n".join(lines) + "\n"
 
 
@@ -95,6 +134,13 @@ def generate(rig):
         if len(ms) != 1:
             sys.exit(f"{rig}: {k} found {len(ms)} times in {r['src']} (need exactly 1)")
         out = re.sub(pat, lambda m: f"{m.group(1)}{v}  # PICK-AND-PLACE OVERRIDE (free flight: {m.group(2)})",
+                     out, flags=re.M)
+    for k, v in r["planner_overrides"].items():
+        pat = rf"^(    {re.escape(k)}: )(\[[^\]]*\]|true|false|[-0-9.eE]+)(.*)$"
+        ms = re.findall(pat, out, flags=re.M)
+        if len(ms) != 1:
+            sys.exit(f"{rig}: {k} found {len(ms)} times in {r['src']} (need exactly 1)")
+        out = re.sub(pat, lambda m: f"{m.group(1)}{v}  # PICK-AND-PLACE (set-down) OVERRIDE (source: {m.group(2)})",
                      out, flags=re.M)
     for k, (after, text) in r["added"].items():
         if re.search(rf"^    {re.escape(k)}:", out, flags=re.M):

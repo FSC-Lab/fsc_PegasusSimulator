@@ -19,8 +19,11 @@ the scene and the two mocap bodies the planner captures:
             field's forward direction -- by default a little OFF the origin,
             (0.10, -0.07) m, as a real start mark sits off the mocap origin, so
             Adjust has a real offset to measure
-  pillars   two cylinders, 1.0 m tall, static colliders: PICK at (1.0, 1.0) m
-            (front-left), PLACE at (-1.0, -1.0) m (back-right). Each carries
+  pillars   two cylinders, static colliders: PICK at (1.0, 1.0) m (front-left),
+            PLACE at (-1.0, -1.0) m (back-right), 0.77 m tall under TASK drop (the lab's,
+            user 2026-10-14; PEGASUS_PNP_PICK_PILLAR_HEIGHT /
+            PEGASUS_PNP_PLACE_PILLAR_HEIGHT; 1.0 for both = TASK place, the scene up to
+            2026-10-12). Each carries
             the user's printed HAT (2026-10-08, assets/Top_Hat.usda): a 200.6 mm
             platform 8 mm above the pillar top, on a sleeve whose four ribs
             centre it on a pillar of up to 97.86 mm -- the pillars are sized to
@@ -29,6 +32,16 @@ the scene and the two mocap bodies the planner captures:
             a 110 x 110 x 65 mm box plus a vertical HANDLE plate standing in
             the middle of its top, 200 mm tall, for the gripper to grasp from
             above. PhysX spreads the 200 g over both colliders (uniform density).
+            THAT IS PEGASUS_PNP_PAYLOAD=plate. The default since 2026-10-14 is
+            "assembly": the real payload (Box_Assembly.stl) -- the basket, the
+            holder WITHOUT its arch (the jaws clamp its stem + fin and release
+            it by opening), five mocap markers and two brackets. "holder"
+            (2026-10-13, with the arch) and "box" (2026-10-07, one-piece basket
+            + wire hanger) stay selectable. See PAYLOAD_MODEL below.
+  bin       (2026-10-14) a transparent plastic box, 371 x 290 x 172 mm, open
+            top, static, centred on the PLACE hat with its length along y: the
+            payload is DROPPED into it (the planner's pick_place_place_drop).
+            PEGASUS_PNP_BIN=0 removes it.
 
   mocap     obj_0  = the payload's BOTTOM BOX: its centre (CG) and yaw, live
             (2026-10-03, user: on hardware the markers sit around the box, so
@@ -60,7 +73,23 @@ GRASPING is real PhysX contact, no attachment:
 06's EE marker cube is forced OFF here: it would publish obj_0 too.
 
 Knobs (environment):
-  PEGASUS_PNP_PAYLOAD_MASS   total payload mass [kg], default 0.200
+  PEGASUS_PNP_TASK           place (default) | drop: THE DEMONSTRATION -- place = the
+                             original pick-and-place (the paper's comparison: payload
+                             box, 1.0 m pillars, no bin), drop = the pick-and-drop
+                             (payload assembly, 0.77 m pillars, the bin). Sets the
+                             defaults of the payload, pillar and bin knobs below;
+                             the pick-and-place wrappers set it from WB_SIM_PROFILE
+  PEGASUS_PNP_PAYLOAD        the TASK's (drop: assembly, place: box) | holder | plate: the payload model
+  PEGASUS_PNP_FIN_GRIP_MM    payloads assembly / holder: the clamped width of the
+                             fin in the sim [mm], default 20 (an invisible pad
+                             standing in for the real gripper's foam); 0 = the
+                             bare 3 mm fin
+  PEGASUS_PNP_PICK_PILLAR_HEIGHT / PEGASUS_PNP_PLACE_PILLAR_HEIGHT
+                             the pillar tops [m], default the TASK's (drop 0.77, place 1.0; under the hat)
+  PEGASUS_PNP_BIN            the TASK's (drop 1, place 0) | 1 | 0: the plastic box on the PLACE hat
+  PEGASUS_PNP_BIN_SIZE       its outer "x,y,z" [m], default "0.371,0.290,0.172"
+  PEGASUS_PNP_BIN_YAW_DEG    its yaw [deg], default 90 (length along y; 0 = along x)
+  PEGASUS_PNP_PAYLOAD_MASS   total payload mass [kg], default the TASK's (drop 0.180, place 0.200)
   PEGASUS_PNP_PAYLOAD_YAW_DEG the payload's yaw [deg] = obj_0's; the handle's
                              THIN axis (the jaws close along it) is the payload's
                              y, so a drone at this yaw picks it; default 0
@@ -114,7 +143,7 @@ _spec.loader.exec_module(am06)          # starts the SimulationApp, defines the 
 
 import numpy as np                      # noqa: E402  (after SimulationApp, see memory note)
 import omni.usd                         # noqa: E402
-from pxr import Gf, PhysxSchema, Usd, UsdGeom, UsdPhysics, UsdShade  # noqa: E402
+from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics, UsdShade  # noqa: E402
 
 # ── the scene ──────────────────────────────────────────────────────────────
 FIELD_LENGTH_X = 4.5                    # [m] along the forward axis; informative only, not drawn
@@ -129,8 +158,26 @@ except (ValueError, AssertionError):
     raise SystemExit(f"PEGASUS_PNP_SPAWN_XY must be 'x,y' in metres, got {_SPAWN_XY_RAW!r}")
 SPAWN_YAW_DEG = am06._envf("PEGASUS_PNP_SPAWN_YAW_DEG", 0.0)   # 0 = +x, the field's forward
 
-PILLAR_HEIGHT   = 1.0                   # [m] the pillar top (user, 2026-10-01: 1 m pillars) --
-                                        # where a hardware mark sits, and drop_0
+PAYLOAD_SIZE = (0.110, 0.110, 0.065)    # [m] the box / basket, x, y, z
+# THE TASK (2026-10-14, user: "two pick-and-place demonstrations in the
+# simulation"). It sets DEFAULTS only -- every knob below still overrides it:
+#   place  THE ORIGINAL PICK-AND-PLACE, the paper's simulation comparison
+#          (2026-10-08/09 campaign): the one-piece basket + wire hanger ("box"),
+#          1.0 m pillars, no bin; the basket is SET DOWN on the place hat
+#          (planner pick_place_place_drop false; WB_SIM_PROFILE=pick_and_place)
+#   drop   THE PICK-AND-DROP (2026-10-14): the real payload ("assembly"), the
+#          lab's 0.77 m pillars and the plastic bin on the place hat; the
+#          payload is DROPPED into the bin (pick_place_place_drop true;
+#          WB_SIM_PROFILE=pick_and_drop)
+# The pick-and-place wrappers set it from WB_SIM_PROFILE; unset = place.
+TASK = (os.environ.get("PEGASUS_PNP_TASK", "") or "place").strip().lower()
+if TASK not in ("place", "drop"):
+    raise SystemExit(f"PEGASUS_PNP_TASK must be 'place' or 'drop', got {TASK!r}")
+# PILLAR HEIGHTS: drop = THE LAB'S (2026-10-14, user: "the pillar itself
+# without the hat is about 77 cm"); place = 1.0 m, the comparison's (0.8595 /
+# 0.8415 m, inferred from the 10-10 flight's mocap readings, flew for a day).
+# The hat sits on top unchanged, its platform 8 mm above the pillar top.
+PILLAR_HEIGHT_DEFAULT = 0.77 if TASK == "drop" else 1.0   # [m] both pillars, under the hat
 # WHAT SITS ON THE PILLARS -- the platform the payload is picked from and placed on.
 #   hat (default, 2026-10-08, user's CAD Top_Hat.STL -> assets/Top_Hat.usda,
 #       pick_place_top_hat_20261008/tools/hat_stl_to_usda.py): a 200.6 mm disc,
@@ -140,7 +187,7 @@ PILLAR_HEIGHT   = 1.0                   # [m] the pillar top (user, 2026-10-01: 
 #       The pillar is sized to that fit (less HAT_PILLAR_CLEARANCE), the bore
 #       ceiling rests on the pillar top, and the platform top is 8 mm above it.
 #   cap (2026-10-03): a 160 mm x 10 mm disc on a 100 mm pillar, its top AT
-#       PILLAR_HEIGHT (the shaft 10 mm shorter) -- the flights up to 2026-10-07.
+#       the pillar height (the shaft 10 mm shorter) -- the flights up to 2026-10-07.
 PLATFORM = (os.environ.get("PEGASUS_PNP_PLATFORM", "") or "hat").strip().lower()
 if PLATFORM not in ("hat", "cap"):
     raise SystemExit(f"PEGASUS_PNP_PLATFORM must be 'hat' or 'cap', got {PLATFORM!r}")
@@ -152,7 +199,7 @@ HAT_PILLAR_CLEARANCE = 0.0002           # [m] on the diameter, pillar vs the rib
 # footprint at ANY yaw (its diagonal is 155.6 mm), so a box set down up to
 # ~80 mm off the pillar axis still rests on it with its centre supported
 # (the 2026-10-02 places landed 18-30 mm off axis, on a 100 mm pillar). 10 mm
-# thick, its top at PILLAR_HEIGHT: every point and offset is unchanged.
+# thick, its top at the pillar height: every point and offset is unchanged.
 CAP_DIAMETER    = am06._envf("PEGASUS_PNP_CAP_DIAMETER", 0.16)   # [m]
 CAP_THICKNESS   = 0.010                 # [m]
 if PLATFORM == "hat":
@@ -166,21 +213,78 @@ if PLATFORM == "hat":
            for k in ("platform_top_z_m", "platform_radius_m", "rib_inner_diameter_m", "bore_diameter_m")}
     del _hat_root, _hat_stage
     PILLAR_DIAMETER = HAT["rib_inner_diameter_m"] - HAT_PILLAR_CLEARANCE   # [m] 97.66 mm
-    PLATFORM_TOP    = PILLAR_HEIGHT + HAT["platform_top_z_m"]              # [m] 1.008
+    PLATFORM_ABOVE_PILLAR = HAT["platform_top_z_m"]                        # [m] 0.008
     PLATFORM_DIAMETER = 2.0 * HAT["platform_radius_m"]
 else:
     PILLAR_DIAMETER = 0.10              # [m]
-    PLATFORM_TOP    = PILLAR_HEIGHT     # [m] the cap top
+    PLATFORM_ABOVE_PILLAR = 0.0         # [m] the cap top IS the pillar height
     PLATFORM_DIAMETER = CAP_DIAMETER
+PICK_PILLAR_HEIGHT  = am06._envf("PEGASUS_PNP_PICK_PILLAR_HEIGHT", PILLAR_HEIGHT_DEFAULT)    # [m]
+PLACE_PILLAR_HEIGHT = am06._envf("PEGASUS_PNP_PLACE_PILLAR_HEIGHT", PILLAR_HEIGHT_DEFAULT)  # [m]
+for _n, _h in (("PICK", PICK_PILLAR_HEIGHT), ("PLACE", PLACE_PILLAR_HEIGHT)):
+    if not 0.3 <= _h <= 1.6:
+        raise SystemExit(f"PEGASUS_PNP_{_n}_PILLAR_HEIGHT must be 0.3..1.6 m, got {_h}")
+PICK_PLATFORM_TOP  = PICK_PILLAR_HEIGHT + PLATFORM_ABOVE_PILLAR     # [m] where the payload rests
+PLACE_PLATFORM_TOP = PLACE_PILLAR_HEIGHT + PLATFORM_ABOVE_PILLAR    # [m] where it is set down
+# THE BIN (2026-10-14, user design: the payload is DROPPED into a plastic box
+# instead of being set down): 37.1 x 29 x 17.2 cm outer, open top, centred on
+# the PLACE platform; length along x at first, TURNED to y the same day.
+# Static (it does not move when the payload lands in it), transparent, thin
+# walls. The planner's drop point is pick_place_drop_height above the place
+# point; the place point is where the payload's CG rests inside the bin.
+BIN_ENABLE = (os.environ.get("PEGASUS_PNP_BIN", "") or ("1" if TASK == "drop" else "0")).strip() != "0"
+_BIN_RAW = (os.environ.get("PEGASUS_PNP_BIN_SIZE", "") or "0.371,0.290,0.172").strip()
+try:
+    BIN_SIZE = tuple(float(v) for v in _BIN_RAW.split(","))
+    assert len(BIN_SIZE) == 3 and min(BIN_SIZE) > 0.0
+except (ValueError, AssertionError):
+    raise SystemExit(f"PEGASUS_PNP_BIN_SIZE must be 'x,y,z' in metres, got {_BIN_RAW!r}")
+BIN_WALL = 0.0025                       # [m] walls and floor
+# 90 (user, 2026-10-14): the box TURNED so its 371 mm length runs along y -- the
+# payload, dropped at yaw -180, is 306 mm wide along y (its two side markers)
+BIN_YAW_DEG = am06._envf("PEGASUS_PNP_BIN_YAW_DEG", 90.0)
+BIN_FRICTION = 0.4                      # polypropylene-ish, static = dynamic
+BIN_EDGE = 0.003                        # [m] the drawn edges' square section (visual only)
+BIN_EDGE_RGB = (0.10, 0.12, 0.16)
 PICK_PILLAR_XY  = (1.0, 1.0)            # [m] front-left, on the 1 m grid
 PLACE_PILLAR_XY = (-1.0, -1.0)          # [m] back-right
 
-PAYLOAD_SIZE = (0.110, 0.110, 0.065)    # [m] the box, x, y, z
-PAYLOAD_MASS = am06._envf("PEGASUS_PNP_PAYLOAD_MASS", 0.200)   # [kg] box + handle
+# [kg] the whole payload: drop = the 3-D-printed Box_Assembly, ~180 g (user,
+# 2026-10-14); place = the comparison's 200 g
+PAYLOAD_MASS = am06._envf("PEGASUS_PNP_PAYLOAD_MASS", 0.180 if TASK == "drop" else 0.200)
 PAYLOAD_DROP_GAP = 0.0005               # [m] spawned this far above the pillar top
 
-# THE PAYLOAD MODEL (2026-10-07, user: "use this model as the payload"):
-#   box    (default) the CAD payload, assets/Box_Payload.usda -- an open
+# THE PAYLOAD MODEL:
+#   assembly (TASK drop's, 2026-10-14, user: "use the latest model") the real
+#          payload, Box_Assembly.stl -> assets/Box_Payload_Assembly.usda
+#          (docs/docs_aerial_manipulator/archive/pick_place_drop_20261014/tools/
+#          assembly_stl_to_usda.py): the basket, the holder WITHOUT its arch (the
+#          T's horizontal bar removed, so opening the jaws releases it), five
+#          mocap markers and two brackets. Same frame as "holder"; the assembly
+#          shows the fin pointing AWAY from the basket centre, i.e. toward the
+#          vehicle (the "holder" asset's default guessed the opposite). Its
+#          widest point is the two side markers, 306 mm across the jaws' axis.
+#          The same grip pad as "holder" stands in for the real foam.
+#   holder (2026-10-13, user: "replace it with this model") the
+#          basket of Box_Payload.STL carrying the user's Holder.STL, the handle
+#          of the 2026-10-10 flight: the same arch and struts as the wire
+#          hanger but 10 mm deep, screwed to the basket's side walls through
+#          the old feet's holes, with a FIN under the arch -- 3 mm thick, 20 mm
+#          deep, 50 mm tall, pointing to the basket centre -- that the jaws
+#          close on. assets/Box_Payload_Holder.usda, generated by
+#          docs/docs_aerial_manipulator/archive/pick_place_holder_20261013/
+#          tools/holder_stl_to_usda.py (frame as "box" below; the flat part's
+#          mid-plane stays at x = -27.5 mm, the fin spans x -22.5..-2.5 mm, so
+#          the claw point of EE Offset x = -0.02 is inside the fin).
+#          THE GRIP PAD: the sim claw cannot clamp 3 mm -- its slider-crank
+#          stops the pads ~19 mm apart (~14 mm at the fingertips), where the
+#          real gripper's foam pads close fully. So the stem + fin under the
+#          arch carry an INVISIBLE collider PEGASUS_PNP_FIN_GRIP_MM wide
+#          (default 20, the width the push scene's fin flies with), standing in
+#          for the foam. The closed jaws then HOLD the basket, as in the
+#          flights. 0 = the bare CAD fin: the claw closes on air and the basket
+#          only hangs by its arch (the sim's behaviour up to 2026-10-12).
+#   box    (TASK place's, 2026-10-07) the one-piece CAD payload, assets/Box_Payload.usda -- an open
 #          basket 110 x 115 x 65 mm with a flat wire HANGER on top: struts, a
 #          vertical stem (3 x 2.5 mm) and an ARCH. The claw does not clamp it
 #          (its jaws close to ~14 mm at the fingertips at best): it slides in
@@ -194,15 +298,21 @@ PAYLOAD_DROP_GAP = 0.0005               # [m] spawned this far above the pillar 
 #          pick_place_box_payload_20261007/tools/stl_to_usda.py from
 #          Box_Payload.STL; PEGASUS_PNP_PAYLOAD_USD overrides the path.
 #   plate  the 2026-10-01..10-03 payload: a box + a clamped handle plate (below).
-PAYLOAD_MODEL = (os.environ.get("PEGASUS_PNP_PAYLOAD", "") or "box").strip().lower()
-if PAYLOAD_MODEL not in ("box", "plate"):
-    raise SystemExit(f"PEGASUS_PNP_PAYLOAD must be 'box' or 'plate', got {PAYLOAD_MODEL!r}")
+PAYLOAD_MODEL = (os.environ.get("PEGASUS_PNP_PAYLOAD", "") or
+                 ("assembly" if TASK == "drop" else "box")).strip().lower()   # the TASK's payload
+if PAYLOAD_MODEL not in ("assembly", "holder", "box", "plate"):
+    raise SystemExit(f"PEGASUS_PNP_PAYLOAD must be 'assembly', 'holder', 'box' or 'plate', got {PAYLOAD_MODEL!r}")
+PAYLOAD_CAD = PAYLOAD_MODEL in ("assembly", "holder", "box")   # a CAD basket: the side-approach task
+_PAYLOAD_ASSET = {"assembly": ("Box_Payload_Assembly.usda", "pick_place_drop_20261014/tools/assembly_stl_to_usda.py"),
+                  "holder": ("Box_Payload_Holder.usda", "pick_place_holder_20261013/tools/holder_stl_to_usda.py"),
+                  "box": ("Box_Payload.usda", "pick_place_box_payload_20261007/tools/stl_to_usda.py")}
 PAYLOAD_USD = (os.environ.get("PEGASUS_PNP_PAYLOAD_USD", "") or
-               os.path.join(am06.ASSETS_DIR, "Box_Payload.usda")).strip()
-if PAYLOAD_MODEL == "box" and not os.path.isfile(PAYLOAD_USD):
-    raise SystemExit(f"[AM-T650-PNP] payload model 'box' needs {PAYLOAD_USD} (generate it with "
-                     f"pick_place_box_payload_20261007/tools/stl_to_usda.py), or set "
-                     f"PEGASUS_PNP_PAYLOAD=plate for the old box + handle plate")
+               os.path.join(am06.ASSETS_DIR, _PAYLOAD_ASSET.get(PAYLOAD_MODEL, ("", ""))[0])).strip()
+if PAYLOAD_CAD and not os.path.isfile(PAYLOAD_USD):
+    raise SystemExit(f"[AM-T650-PNP] payload model '{PAYLOAD_MODEL}' needs {PAYLOAD_USD} (generate it with "
+                     f"/usr/bin/python3 docs/docs_aerial_manipulator/archive/{_PAYLOAD_ASSET[PAYLOAD_MODEL][1]}), "
+                     f"or set PEGASUS_PNP_PAYLOAD=plate for the old box + handle plate")
+FIN_GRIP_MM = am06._envf("PEGASUS_PNP_FIN_GRIP_MM", 20.0)      # [mm] holder only; 0 = the bare fin
 
 # The handle: a vertical plate in the middle of the box top. THICKNESS is along
 # the payload's y axis (the jaws close along it), WIDTH along its x axis -- so
@@ -284,6 +394,13 @@ WP_CLAW_PARAMS  = {1: "pick_place_ee_offset", 3: "pick_place_ee_offset"}
 # the base poses, NOT shifted by the Adjust offset (2026-10-03); its yaw turns
 # the EE offset there (2026-10-03))
 WP_PLACE_POINT_PARAM = "pick_place_place_point"
+# the DROP place (planner 2026-10-14): the claw hovers pick_place_drop_height
+# above the place point and opens there -- the Place EE marker follows it
+WP_DROP_PARAMS = ("pick_place_place_drop", "pick_place_drop_height")
+# the drop phase's altitude and its exit (planner 2026-10-14): a drone marker
+# "4.3 Drop Exit" at the place point's x, y + the exit OFFSET [dx, dy, yaw_deg]
+# (fixed relative to the place pillar, never shifted by Adjust), at the drop altitude
+WP_DROP_EXIT_PARAMS = ("pick_place_drop_exit_offset", "pick_place_drop_altitude")
 WP_NAMES        = ["Start", "Pick", "Place Start", "Place", "Land Start", "Land"]
 WP_BODY_RGB     = (0.20, 0.55, 1.00)
 WP_CLAW_RGB     = (1.00, 0.60, 0.10)
@@ -385,10 +502,11 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                                      combine=GRIP_FRICTION_COMBINE)
 
         # pillars: static colliders (no rigid body)
-        for name, (x, y), rgb in (("pick_pillar", PICK_PILLAR_XY, (0.30, 0.50, 0.80)),
-                                  ("place_pillar", PLACE_PILLAR_XY, (0.30, 0.70, 0.40))):
+        for name, (x, y), rgb, top in (
+                ("pick_pillar", PICK_PILLAR_XY, (0.30, 0.50, 0.80), PICK_PILLAR_HEIGHT),
+                ("place_pillar", PLACE_PILLAR_XY, (0.30, 0.70, 0.40), PLACE_PILLAR_HEIGHT)):
             cyl = UsdGeom.Cylinder.Define(stage, f"{SCENE_ROOT}/{name}")
-            h = PILLAR_HEIGHT - (CAP_THICKNESS if PLATFORM == "cap" else 0.0)
+            h = top - (CAP_THICKNESS if PLATFORM == "cap" else 0.0)
             cyl.CreateRadiusAttr(0.5 * PILLAR_DIAMETER)
             cyl.CreateHeightAttr(h)
             cyl.CreateAxisAttr("Z")
@@ -401,31 +519,33 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                 # colliders and no rigid body); the payload's material still wins
                 # the basket-to-platform contact (combine max)
                 hat = UsdGeom.Xform.Define(stage, f"{SCENE_ROOT}/{name}_hat")
-                UsdGeom.Xformable(hat).AddTranslateOp().Set(Gf.Vec3d(x, y, PILLAR_HEIGHT))
+                UsdGeom.Xformable(hat).AddTranslateOp().Set(Gf.Vec3d(x, y, top))
                 hat.GetPrim().GetReferences().AddReference(HAT_USD)
                 for p in Usd.PrimRange(hat.GetPrim()):
                     if p.HasAPI(UsdPhysics.CollisionAPI):
                         _bind_physics(p, pillar_mat)
                 continue
-            # the cap: a flat disc, its top at PILLAR_HEIGHT
+            # the cap: a flat disc, its top at the pillar height
             cap = UsdGeom.Cylinder.Define(stage, f"{SCENE_ROOT}/{name}_cap")
             cap.CreateRadiusAttr(0.5 * CAP_DIAMETER)
             cap.CreateHeightAttr(CAP_THICKNESS)
             cap.CreateAxisAttr("Z")
             UsdGeom.Xformable(cap).AddTranslateOp().Set(
-                Gf.Vec3d(x, y, PILLAR_HEIGHT - 0.5 * CAP_THICKNESS))
+                Gf.Vec3d(x, y, top - 0.5 * CAP_THICKNESS))
             _color(cap, tuple(0.6 * c for c in rgb))
             UsdPhysics.CollisionAPI.Apply(cap.GetPrim())
             _bind_physics(cap.GetPrim(), pillar_mat)
 
-        if PAYLOAD_MODEL == "box":
+        if BIN_ENABLE:
+            self._build_bin(stage)
+        if PAYLOAD_CAD:
             self._build_box_payload(stage, grip_mat)
             return
         # payload: ONE dynamic body, an UNSCALED Xform at the box centre (the
         # mocap backend reads orientation with ExtractRotation, exact only on
         # an unscaled matrix), with the box and the handle as collider children.
         sx, sy, sz = PAYLOAD_SIZE
-        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PLATFORM_TOP + 0.5 * sz + PAYLOAD_DROP_GAP)
+        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PICK_PLATFORM_TOP + 0.5 * sz + PAYLOAD_DROP_GAP)
         body = UsdGeom.Xform.Define(stage, PAYLOAD_PRIM)
         xf = UsdGeom.Xformable(body)
         xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p0)))
@@ -444,17 +564,72 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         UsdPhysics.MassAPI.Apply(prim).CreateMassAttr(float(PAYLOAD_MASS))
         self._payload_p0 = np.array(p0)
 
+    def _build_bin(self, stage):
+        """The plastic box the payload is dropped into (2026-10-14): a floor and
+        four walls, static colliders under one Xform standing on the PLACE
+        platform, length along the Xform's x (BIN_YAW_DEG turns it). Clear
+        glass to look at; physics is the panels' own material."""
+        root = SCENE_ROOT + "/bin"
+        xa = UsdGeom.Xformable(UsdGeom.Xform.Define(stage, root))
+        xa.AddTranslateOp().Set(Gf.Vec3d(PLACE_PILLAR_XY[0], PLACE_PILLAR_XY[1], PLACE_PLATFORM_TOP))
+        xa.AddRotateZOp().Set(float(BIN_YAW_DEG))
+        lx, ly, lz = BIN_SIZE
+        t = BIN_WALL
+        panels = {"floor": ((0.0, 0.0, 0.5 * t), (lx, ly, t)),
+                  "wall_px": ((0.5 * (lx - t), 0.0, 0.5 * lz), (t, ly, lz)),
+                  "wall_nx": ((-0.5 * (lx - t), 0.0, 0.5 * lz), (t, ly, lz)),
+                  "wall_py": ((0.0, 0.5 * (ly - t), 0.5 * lz), (lx - 2.0 * t, t, lz)),
+                  "wall_ny": ((0.0, -0.5 * (ly - t), 0.5 * lz), (lx - 2.0 * t, t, lz))}
+        mat = _physics_material(stage, SCENE_ROOT + "/bin_physics_material", BIN_FRICTION, BIN_FRICTION)
+        look = None
+        try:                                  # the look: clear glass (visual only)
+            import omni.kit.commands
+            path = SCENE_ROOT + "/bin_glass"
+            omni.kit.commands.execute("CreateMdlMaterialPrim", mtl_url="OmniGlass.mdl",
+                                      mtl_name="OmniGlass", mtl_path=path)
+            shader = UsdShade.Shader(stage.GetPrimAtPath(path + "/Shader"))
+            if shader:
+                shader.CreateInput("glass_color", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.85, 0.93, 1.0))
+                shader.CreateInput("thin_walled", Sdf.ValueTypeNames.Bool).Set(True)
+                shader.CreateInput("glass_ior", Sdf.ValueTypeNames.Float).Set(1.0)
+            look = UsdShade.Material(stage.GetPrimAtPath(path))
+        except Exception as exc:              # a look must never stop the scene
+            print(f"[AM-T650-PNP] bin: no glass material ({exc}); drawn translucent instead", flush=True)
+        for name, (centre, size) in panels.items():
+            cube = _box(stage, f"{root}/{name}", centre, size, (0.75, 0.88, 0.95))
+            UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
+            _bind_physics(cube.GetPrim(), mat)
+            cube.CreateDisplayOpacityAttr([0.3])
+            if look:
+                UsdShade.MaterialBindingAPI.Apply(cube.GetPrim()).Bind(look)
+        # the twelve EDGES (user, 2026-10-14: glass alone is hard to see): thin
+        # dark bars just inside the outer box, visual only (no collider)
+        e = BIN_EDGE
+        hx, hy = 0.5 * (lx - e), 0.5 * (ly - e)
+        z0, z1 = 0.5 * e, lz - 0.5 * e
+        edges = []
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                edges.append(((sx * hx, sy * hy, 0.5 * lz), (e, e, lz)))          # vertical
+        for z in (z0, z1):
+            for s in (-1, 1):
+                edges.append(((0.0, s * hy, z), (lx, e, e)))                     # along x
+                edges.append(((s * hx, 0.0, z), (e, ly, e)))                     # along y
+        for k, (centre, size) in enumerate(edges):
+            _box(stage, f"{root}/edge_{k:02d}", centre, size, BIN_EDGE_RGB)
+
     def _build_box_payload(self, stage, grip_mat):
-        """The CAD payload: Box_Payload.usda REFERENCED onto the payload body --
-        an UNSCALED Xform at the basket centre (obj_0), the rigid body here.
-        The asset carries the visual mesh, the colliders (a basket box + the
-        hanger as exact convex prisms) and the CAD mass properties."""
+        """The CAD payload ("holder" or "box"): its asset REFERENCED onto the
+        payload body -- an UNSCALED Xform at the basket centre (obj_0), the
+        rigid body here. The asset carries the visual mesh, the colliders (a
+        basket box + the hanger / holder as exact convex prisms) and the CAD
+        mass properties; the holder's grip pad is added here."""
         src = Usd.Stage.Open(PAYLOAD_USD)
         sroot = src.GetDefaultPrim()
         self._hook = {k: float(sroot.GetAttribute(f"fsc:{k}").Get())
                       for k in ("box_half_height_m", "hanger_x_m", "hanger_thickness_m", "hanger_top_z_m")}
         half = self._hook["box_half_height_m"]
-        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PLATFORM_TOP + half + PAYLOAD_DROP_GAP)
+        p0 = (PICK_PILLAR_XY[0], PICK_PILLAR_XY[1], PICK_PLATFORM_TOP + half + PAYLOAD_DROP_GAP)
         body = UsdGeom.Xform.Define(stage, PAYLOAD_PRIM)
         xf = UsdGeom.Xformable(body)
         xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p0)))
@@ -466,6 +641,31 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             if p.HasAPI(UsdPhysics.CollisionAPI):
                 _bind_physics(p, grip_mat)
                 n_col += 1
+        # the holder's fin (assets with the fsc:fin_* attributes): the grip pad
+        fin = {}
+        for k in ("stem_x_lo_m", "stem_x_hi_m", "fin_x_lo_m", "fin_x_hi_m", "fin_z_lo_m", "fin_z_hi_m",
+                  "fin_thickness_m", "fin_centre_y_m"):
+            at = sroot.GetAttribute(f"fsc:{k}")
+            if at and at.HasAuthoredValue():
+                fin[k] = float(at.Get())
+        self._fin = fin if len(fin) == 8 else None
+        arch = sroot.GetAttribute("fsc:arch_underside_z_m")
+        has_arch = sroot.GetAttribute("fsc:has_arch")
+        self._arch_z = (float(arch.Get()) if arch and arch.HasAuthoredValue() and
+                        not (has_arch and has_arch.HasAuthoredValue() and not has_arch.Get()) else None)
+        self._fin_pad = 0.0
+        if self._fin is not None and FIN_GRIP_MM * 1e-3 > fin["fin_thickness_m"]:
+            x0 = min(fin["stem_x_lo_m"], fin["fin_x_lo_m"])
+            x1 = max(fin["stem_x_hi_m"], fin["fin_x_hi_m"])
+            z0, z1 = fin["fin_z_lo_m"], fin["fin_z_hi_m"]
+            pad = _box(stage, PAYLOAD_PRIM + "/grip_pad",
+                       (0.5 * (x0 + x1), fin["fin_centre_y_m"], 0.5 * (z0 + z1)),
+                       (x1 - x0, FIN_GRIP_MM * 1e-3, z1 - z0), (0.30, 0.85, 0.40))
+            UsdPhysics.CollisionAPI.Apply(pad.GetPrim())
+            _bind_physics(pad.GetPrim(), grip_mat)
+            UsdGeom.Imageable(pad.GetPrim()).MakeInvisible()    # physics only: the visual is the CAD fin
+            self._fin_pad = FIN_GRIP_MM * 1e-3
+            n_col += 1
         UsdPhysics.RigidBodyAPI.Apply(prim)
         mass = UsdPhysics.MassAPI(prim)
         m_asset = float(mass.GetMassAttr().Get())
@@ -475,9 +675,14 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             mass.GetDiagonalInertiaAttr().Set(Gf.Vec3f(*[float(k * v) for v in mass.GetDiagonalInertiaAttr().Get()]))
         self._payload_p0 = np.array(p0)
         com = mass.GetCenterOfMassAttr().Get()
-        print(f"[AM-T650-PNP] payload 'box': {PAYLOAD_USD} referenced on {PAYLOAD_PRIM}, {n_col} colliders, "
+        print(f"[AM-T650-PNP] payload '{PAYLOAD_MODEL}': {PAYLOAD_USD} referenced on {PAYLOAD_PRIM}, {n_col} colliders, "
               f"{PAYLOAD_MASS * 1e3:.0f} g, CoM {[round(1e3 * c, 1) for c in com]} mm from the basket centre "
-              f"(the CAD solid's)", flush=True)
+              f"(the CAD solid's)"
+              + ("" if self._fin is None else
+                 f"; GRIP PAD {FIN_GRIP_MM:.0f} mm on the {fin['fin_thickness_m'] * 1e3:.0f} mm fin (invisible)"
+                 if self._fin_pad > 0.0 else
+                 f"; NO grip pad: the bare {fin['fin_thickness_m'] * 1e3:.0f} mm fin (the sim claw cannot clamp it)"),
+              flush=True)
 
     def _setup_gripper_drive(self):
         super()._setup_gripper_drive()
@@ -519,30 +724,50 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         if WAYPOINTS_VIZ:
             self._wp_setup_view()
 
-        if GRASP_TEST and PAYLOAD_MODEL == "box":
+        if GRASP_TEST and PAYLOAD_CAD:
             raise SystemExit("PEGASUS_PNP_GRASP_TEST is the clamped handle plate's test "
-                             "(PEGASUS_PNP_PAYLOAD=plate); the box payload is a hook grasp")
-        plat = (f"the HAT (platform {PLATFORM_DIAMETER * 1e3:.1f} mm, its top at {PLATFORM_TOP:.3f} m; "
+                             "(PEGASUS_PNP_PAYLOAD=plate); the CAD payloads are a hook grasp")
+        tops = (f"its top at {PICK_PLATFORM_TOP:.4f} m on the PICK pillar and {PLACE_PLATFORM_TOP:.4f} m on the "
+                f"PLACE pillar")
+        plat = (f"the HAT (platform {PLATFORM_DIAMETER * 1e3:.1f} mm, {tops}; "
                 f"pillars {PILLAR_DIAMETER * 1e3:.2f} mm = the hat's ribs {HAT['rib_inner_diameter_m'] * 1e3:.2f} mm "
                 f"less {HAT_PILLAR_CLEARANCE * 1e3:.1f} mm)" if PLATFORM == "hat" else
-                f"a {CAP_DIAMETER * 1e3:.0f} x {CAP_THICKNESS * 1e3:.0f} mm cap (its top at {PLATFORM_TOP:.3f} m; "
+                f"a {CAP_DIAMETER * 1e3:.0f} x {CAP_THICKNESS * 1e3:.0f} mm cap ({tops}; "
                 f"pillars {PILLAR_DIAMETER * 1e3:.0f} mm)")
-        if PAYLOAD_MODEL == "box":
+        tall = (f"pillars {PICK_PILLAR_HEIGHT:.4f} m (PICK) and {PLACE_PILLAR_HEIGHT:.4f} m (PLACE) tall")
+        if PAYLOAD_CAD:
             h = self._hook
-            print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE: vehicle at ({SPAWN_XY[0]:.2f}, "
-                  f"{SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg; pillars {PILLAR_HEIGHT} m tall under "
+            half = h["box_half_height_m"]
+            if self._fin is not None:
+                f = self._fin
+                grasp = (f"HOLDER: fin {f['fin_thickness_m'] * 1e3:.0f} mm thick at x "
+                         f"{f['fin_x_lo_m'] * 1e3:+.1f}..{f['fin_x_hi_m'] * 1e3:+.1f} mm, "
+                         f"{f['fin_z_lo_m'] * 1e3:.1f}..{f['fin_z_hi_m'] * 1e3:.1f} mm above the basket centre, "
+                         + (f"arch underside at {self._arch_z * 1e3:.1f} mm; " if self._arch_z is not None
+                            else "NO arch (released by opening the jaws); ")
+                         + (f"the jaws CLAMP it through a {self._fin_pad * 1e3:.0f} mm grip pad (invisible)"
+                            if self._fin_pad > 0.0 else
+                            "NO grip pad: the claw closes on air"
+                            + (" and the arch hangs on the fingers" if self._arch_z is not None else "")))
+            else:
+                grasp = ("HOOK GRASP: the fingers go in under the arch on either side of the stem and lift it")
+            print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE (TASK {TASK}: {'pick-and-DROP into the bin' if TASK == 'drop' else 'the original pick-and-place, set down'}): vehicle at ({SPAWN_XY[0]:.2f}, "
+                  f"{SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg; {tall} under "
                   f"{plat}, PICK at {PICK_PILLAR_XY} (basket centre -> mocap "
-                  f"{PICK_BODY}), PLACE at {PLACE_PILLAR_XY}; payload = the CAD BOX ({PAYLOAD_MASS * 1e3:.0f} g, "
-                  f"yaw {PAYLOAD_YAW_DEG:.1f} deg): basket centre {np.round(self._payload_p0, 4).tolist()} m, "
-                  f"hanger plane at x = {h['hanger_x_m'] * 1e3:+.1f} mm ({h['hanger_thickness_m'] * 1e3:.1f} mm "
+                  f"{PICK_BODY}), PLACE at {PLACE_PILLAR_XY}; payload = '{PAYLOAD_MODEL}' ({PAYLOAD_MASS * 1e3:.0f} g, "
+                  f"yaw {PAYLOAD_YAW_DEG:.1f} deg): basket centre {np.round(self._payload_p0, 4).tolist()} m; "
+                  + (f"BIN {BIN_SIZE[0] * 1e3:.0f} x {BIN_SIZE[1] * 1e3:.0f} x {BIN_SIZE[2] * 1e3:.0f} mm on the PLACE "
+                     f"platform (yaw {BIN_YAW_DEG:.0f} deg, rim at {PLACE_PLATFORM_TOP + BIN_SIZE[2]:.3f} m); resting in it "
+                     f"the payload's centre is at {PLACE_PLATFORM_TOP + BIN_WALL + half:.4f} m. " if BIN_ENABLE else
+                     f"set flat on the PLACE platform its centre is at {PLACE_PLATFORM_TOP + half:.4f} m. ")
+                  + f"Hanger plane at x = {h['hanger_x_m'] * 1e3:+.1f} mm ({h['hanger_thickness_m'] * 1e3:.1f} mm "
                   f"thick, normal = the payload's x: the claw comes in along it, the jaws close along its y), "
-                  f"hanger top {h['hanger_top_z_m'] * 1e3:.1f} mm above the basket centre. HOOK GRASP: the "
-                  f"fingers go in under the arch on either side of the stem and lift it. Friction "
+                  f"hanger top {h['hanger_top_z_m'] * 1e3:.1f} mm above the basket centre. {grasp}. Friction "
                   f"{GRIP_FRICTION_STATIC}/{GRIP_FRICTION_DYNAMIC} (combine {GRIP_FRICTION_COMBINE}).\033[0m", flush=True)
             return
         sz = PAYLOAD_SIZE[2]
-        print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE: vehicle at "
-              f"({SPAWN_XY[0]:.2f}, {SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward); pillars {PILLAR_HEIGHT} m tall "
+        print(f"\033[1;35m[AM-T650-PNP] PICK-AND-PLACE SCENE (TASK {TASK}): vehicle at "
+              f"({SPAWN_XY[0]:.2f}, {SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward); {tall} "
               f"under {plat}, PICK at {PICK_PILLAR_XY} (payload box -> mocap "
               f"{PICK_BODY}), PLACE at {PLACE_PILLAR_XY} (top -> mocap {DROP_BODY}); payload "
               f"{PAYLOAD_MASS * 1e3:.0f} g = box "
@@ -566,11 +791,12 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         # (live, below), drop_0 = the PLACE pillar top (fixed)
         self._fixed_bodies = []
         self._payload_h = None
-        for body, (x, y) in ((PICK_BODY, PICK_PILLAR_XY), (DROP_BODY, PLACE_PILLAR_XY)):
+        for body, (x, y), z in ((PICK_BODY, PICK_PILLAR_XY, PICK_PILLAR_HEIGHT),
+                                (DROP_BODY, PLACE_PILLAR_XY, PLACE_PILLAR_HEIGHT)):
             pose = PoseStamped()
             pose.header.frame_id = "map"
             pose.pose.position.x, pose.pose.position.y = float(x), float(y)
-            pose.pose.position.z = float(PILLAR_HEIGHT)
+            pose.pose.position.z = float(z)
             pose.pose.orientation.w = 1.0
             self._fixed_bodies.append((
                 node.create_publisher(PoseStamped, f"/{body}/state/pose", qos_profile_sensor_data),
@@ -860,7 +1086,7 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             try:
                 self._probe_gripper()
                 self._probe_footprint()
-                if PAYLOAD_MODEL == "box":
+                if PAYLOAD_CAD:
                     self._probe_hook_profile()
             except Exception as exc:          # a probe must never stop the plant
                 print(f"[AM-T650-PNP] gripper probe failed: {exc}", flush=True)
@@ -932,6 +1158,10 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                 for n, v in zip(self._wp_req_names, self._wp_future.result().values):
                     if v.type == 8:                       # PARAMETER_DOUBLE_ARRAY
                         self._wp_params[n] = list(v.double_array_value)
+                    elif v.type == 1:                     # PARAMETER_BOOL
+                        self._wp_params[n] = bool(v.bool_value)
+                    elif v.type == 3:                     # PARAMETER_DOUBLE
+                        self._wp_params[n] = float(v.double_value)
             except Exception:
                 pass
             self._wp_future = None
@@ -939,7 +1169,8 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                 and self._wp_client.service_is_ready()):
             req = self._wp_GetParameters.Request()
             req.names = list(dict.fromkeys(list(WP_BASE_PARAMS.values())
-                                           + list(WP_CLAW_PARAMS.values()) + [WP_PLACE_POINT_PARAM]))
+                                           + list(WP_CLAW_PARAMS.values()) + [WP_PLACE_POINT_PARAM]
+                                           + list(WP_DROP_PARAMS) + list(WP_DROP_EXIT_PARAMS)))
             self._wp_req_names = list(req.names)
             self._wp_future = self._wp_client.call_async(req)
             self._wp_poll_t = time.monotonic()
@@ -1003,7 +1234,17 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                     yw = math.radians(v[3]) if len(v) == 4 else 0.0   # the offset turns with it
                     o = np.array([math.cos(yw) * o[0] - math.sin(yw) * o[1],
                                   math.sin(yw) * o[0] + math.cos(yw) * o[1], o[2]])
+                    if self._wp_params.get(WP_DROP_PARAMS[0]) is True:   # drop: hover above it
+                        o = o + np.array([0.0, 0.0, float(self._wp_params.get(WP_DROP_PARAMS[1], 0.0))])
                 out[f"{k}c"] = ("claw", p + o, None, name + " EE", src)
+        de = self._wp_params.get(WP_DROP_EXIT_PARAMS[0])
+        pp = self._wp_params.get(WP_PLACE_POINT_PARAM)
+        if (self._wp_params.get(WP_DROP_PARAMS[0]) is True and isinstance(de, list) and len(de) == 3
+                and isinstance(pp, list) and len(pp) in (3, 4)):
+            za = self._wp_params.get(WP_DROP_EXIT_PARAMS[1])
+            z = za if isinstance(za, float) and za > 0.0 else pp[2]
+            out["dx"] = ("body", np.array([pp[0] + de[0], pp[1] + de[1], z], float), de[2],
+                         "4.3 Drop Exit drone", "place point + offset")
         return out
 
     def _wp_make(self, key, kind):

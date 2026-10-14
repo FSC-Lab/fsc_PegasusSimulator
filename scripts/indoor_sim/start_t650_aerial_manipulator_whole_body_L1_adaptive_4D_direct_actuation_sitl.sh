@@ -143,6 +143,15 @@ ARM_STATE_TOPIC="/uav_0/isaacsim_manipulator/joint_states"
 # Display-only workspace datum for the inverted ground station: the paired
 # fsc_autopilot stack's standard hover reference is z = 1.2 m.
 ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
+# The tab the arm ground station opens on (2026-10-14; its start_tab parameter, a
+# 0-based index: with the 4-joint arm 0 Setpoints, 1 EE Whole-Body, 2 EE Trajectory,
+# 3 PS4 Remote, 4 Pick & Place, 5 Pick & Drop, 6 Push & Pull). Unset = the
+# station's own default (Setpoints); the pick-and-place wrapper sets it per profile.
+ARM_GS_TAB_ARG=""
+if [[ -n "${ARM_GS_START_TAB:-}" ]]; then
+  [[ "$ARM_GS_START_TAB" =~ ^[0-9]+$ ]] || { echo "ERROR: ARM_GS_START_TAB must be a tab index, got '$ARM_GS_START_TAB'" >&2; exit 1; }
+  ARM_GS_TAB_ARG="-p start_tab:=$ARM_GS_START_TAB"
+fi
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
@@ -360,7 +369,7 @@ export DISPLAY='$ARM_DISPLAY'
 echo 'Arm ground station (inverted, torque mode). simulation:=true — Isaac reports N*m.'
 ros2 run utils_custom_ground_station joint_plot_inverted --ros-args -r __ns:=/$ARM_NS \\
   -p controller:=external_torque_controller -p simulation:=true \\
-  -p mount_height:=$ARM_GS_MOUNT_HEIGHT \\
+  -p mount_height:=$ARM_GS_MOUNT_HEIGHT $ARM_GS_TAB_ARG \\
   -p fallback_min_deg:='[-35.0, -80.0, -40.0, -120.0]' \\
   -p fallback_max_deg:='[35.0, 50.0, 50.0, 120.0]'
 echo 'Arm ground station exited.'

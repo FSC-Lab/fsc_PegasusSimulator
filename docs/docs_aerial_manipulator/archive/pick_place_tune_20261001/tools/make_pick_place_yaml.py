@@ -1,15 +1,29 @@
 #!/usr/bin/env python3
-"""Generate the PICK-AND-PLACE sim config from the 4-D mirror sim config.
+"""Generate the PICK-AND-PLACE and PICK-AND-DROP sim configs from the 4-D mirror sim config.
 
-    /usr/bin/python3 make_pick_place_yaml.py [--check]
+    /usr/bin/python3 make_pick_place_yaml.py [--profile pick_and_place|pick_and_drop] [--check]
 
   in : fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
   out: fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml
+       fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_drop.yaml
+  (no --profile = both)
+
+TWO SIMULATION DEMONSTRATIONS (2026-10-14, user: "one is the original
+pick-and-place, which is for the simulation comparison in the paper. The other
+one is the today's pick-and-drop"). They share the controller and everything
+in the task block except the PLACE, which belongs to each demonstration (and
+its scene, 07's PEGASUS_PNP_TASK):
+  pick_and_place  the paper's: the basket SET DOWN on the place hat of a 1.0 m
+                  pillar (place point z 1.02, as flown 2026-10-08/09), no drop
+  pick_and_drop   today's: the payload DROPPED into the bin on the place hat of
+                  a 0.77 m pillar (the mirror's = the hardware file's task block)
 
 The output is the mirror file BYTE FOR BYTE, plus
   * a header saying what differs (written above the mirror's own header),
   * vehicle_name -> AM-T650-WB-L1-4D-PNP,
   * every key in GAIN_OVERRIDES replaced in place (each must exist exactly once),
+  * every key in PLANNER_OVERRIDES replaced in place in the planner section
+    (since 2026-10-13: the place point's height, which belongs to the SCENE),
   * the SIM-ONLY pick-and-place keys appended to the trajectory planner section.
 SINCE 2026-10-03 THE TASK BLOCK ITSELF (drone points, arm poses, EE offset, place
 pose, safety margin, guard, trim cap, anchors) LIVES IN THE MIRROR -- section 2,
@@ -36,8 +50,7 @@ import yaml
 
 CFG = os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2/config")
 SRC = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml")
-DST = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml")
-VEHICLE_NAME = "AM-T650-WB-L1-4D-PNP"
+DST_FMT = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_{profile}.yaml")
 
 # Controller keys that differ from the mirror (name -> YAML value text).
 #
@@ -74,6 +87,45 @@ VEHICLE_NAME = "AM-T650-WB-L1-4D-PNP"
 # unload), and the payload sits rigidly in the jaws (~0.8 deg rms in-jaw
 # oscillation at both 0.3 and 1.0 N.m of grip).
 GAIN_OVERRIDES = {"wb_k_r": "1.6", "wb_k_w": "1.2"}
+
+# Planner keys REPLACED IN PLACE, per demonstration (key -> (YAML value text,
+# python value)). The task block is the mirror's = the hardware file's, EXCEPT
+# what belongs to the demonstration's scene. (2026-10-13 a single override, the
+# place point's height 0.87 for the 10-10 flight's inferred pillars, flew a day.)
+PROFILES = {
+    # THE ORIGINAL PICK-AND-PLACE (the paper's simulation comparison, 2026-10-08/09
+    # campaign, results/simulation_results): 1.0 m pillars under the hat, the
+    # one-piece basket set down on the place hat -- place point z 1.02 (pillar top
+    # 1.0 + 8 mm hat + 32.5 mm half basket - 20.5 mm released below its rest),
+    # yaw -180; no drop; and the drone points, land height and fence floor AS
+    # FLOWN THEN (the mirror carries the pick-and-drop's since 2026-10-14).
+    "pick_and_place": {
+        "vehicle": "AM-T650-WB-L1-4D-PNP",
+        "planner": {
+            "pick_place_place_start": ("[0.0, -1.0, 1.0, -180.0]", [0.0, -1.0, 1.0, -180.0]),
+            "pick_place_land_start": ("[-1.0, 0.0, 1.0, -360.0]", [-1.0, 0.0, 1.0, -360.0]),
+            "pick_place_land": ("[-1.0, 0.0, 0.8, -360.0]", [-1.0, 0.0, 0.8, -360.0]),
+            "pick_place_fence_min_z": ("0.6", 0.6),
+            "pick_place_place_point": ("[-1.0, -1.0, 1.02, -180.0]", [-1.0, -1.0, 1.02, -180.0]),
+            "pick_place_place_drop": ("false", False),
+        },
+    },
+    # THE PICK-AND-DROP (2026-10-14): the mirror's task block = the hardware
+    # file's (0.77 m pillars, the bin turned 90 deg, the clockwise route with
+    # Place Start at (0.8, -1, 1.6), the drop phase level at 1.35 m, yaw -180,
+    # the drop exit just off the bin heading left, Land Start / Land at
+    # (-0.5, 0.8)) with ONE sim override: the claw
+    # takes the assembly's flag at its middle. Its fin points TOWARD the vehicle,
+    # and at EE Offset x -0.02 it reached 12-32 mm behind the claw point, into the
+    # sim jaws' linkage (drop1: jaws stalled at -5.8 deg, the payload slid out and
+    # was flung at release; drop2/3 at -0.04: -39.7 / -38.9 deg on the grip pad).
+    "pick_and_drop": {
+        "vehicle": "AM-T650-WB-L1-4D-PND",
+        "planner": {
+            "pick_place_ee_offset": ("[-0.04, 0.0, 0.16]", [-0.04, 0.0, 0.16]),
+        },
+    },
+}
 
 # Node keys ADDED after an existing one (key -> (after_key, YAML line text)).
 ADDED_NODE_KEYS = {
@@ -251,24 +303,27 @@ TASK_KEYS = ("pick_place_start", "pick_place_place_start", "pick_place_land_star
 HEADER = """# ============================================================================
 # !! GENERATED -- DO NOT EDIT. PICK-AND-PLACE SIM CONFIG (2026-10-02).       !!
 # ============================================================================
-# Made by fsc_PegasusSimulator/docs/docs_aerial_manipulator/
-#   pick_place_tune_20261001/tools/make_pick_place_yaml.py
+# Made by fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/
+#   pick_place_tune_20261001/tools/make_pick_place_yaml.py --profile {profile}
 # from params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
 # (the experiment MIRROR, whose own header follows unchanged). Differences:
 #   * vehicle_name {vehicle}
 #   * controller overrides: {overrides}
-#   * the trajectory planner's pick-and-place block (end of the file).
+#   * planner overrides: {poverrides}
+#   * the trajectory planner's sim-only pick-and-place keys (end of the file).
 # The payload is MODEL UNCERTAINTY: wb_l1_contact stays false (chi free).
 #
-# HOW TO FLY IT: WB_SIM_PROFILE=pick_and_place on BOTH the stack script and the
-# Pegasus launcher (the pick-and-place wrapper sets it itself):
-#   WB_SIM_PROFILE=pick_and_place scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh <cfg>
-#   fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh <cfg>
+# HOW TO FLY IT: WB_SIM_PROFILE={profile} on BOTH the stack script and the
+# Pegasus pick-and-place wrapper (which sets the scene's PEGASUS_PNP_TASK from it):
+#   WB_SIM_PROFILE={profile} scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh <cfg>
+#   WB_SIM_PROFILE={profile} fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh <cfg>
 # ============================================================================
 """
 
 
-def build():
+def build(profile):
+    VEHICLE_NAME = PROFILES[profile]["vehicle"]
+    PLANNER_OVERRIDES = PROFILES[profile]["planner"]
     src = open(SRC).read()
     missing = [k for k in TASK_KEYS if not re.search(rf"^    {k}:", src, flags=re.M)]
     if missing:
@@ -290,6 +345,13 @@ def build():
             sys.exit(f"override {key}: found {len(hits)} times in the mirror")
         out = re.sub(pat, lambda m: f"{m.group(1)}{val}  # PICK-AND-PLACE OVERRIDE (mirror: "
                      f"{m.group(2).strip()}) -- make_pick_place_yaml.py", out, flags=re.M)
+    for key, (val, _) in PLANNER_OVERRIDES.items():
+        pat = rf"^(    {re.escape(key)}:[ \t]*)([^#\n]*?)([ \t]*(#.*)?)$"
+        hits = re.findall(pat, out, flags=re.M)
+        if len(hits) != 1:
+            sys.exit(f"planner override {key}: found {len(hits)} times in the mirror")
+        out = re.sub(pat, lambda m: f"{m.group(1)}{val}  # PICK-AND-PLACE SIM OVERRIDE (mirror: "
+                     f"{m.group(2).strip()}) -- make_pick_place_yaml.py", out, flags=re.M)
     for key, (after, text) in ADDED_NODE_KEYS.items():
         pat = rf"^(    {re.escape(after)}:[^\n]*\n)"
         if len(re.findall(pat, out, flags=re.M)) != 1:
@@ -300,11 +362,13 @@ def build():
         sys.exit("the mirror no longer ends inside the planner section")
     out = out.rstrip("\n") + "\n" + PICK_PLACE_BLOCK
     ov = ", ".join(f"{k} {v}" for k, v in GAIN_OVERRIDES.items()) or "none (the hardware gains verbatim)"
-    return HEADER.format(vehicle=VEHICLE_NAME, overrides=ov) + out
+    pov = ", ".join(f"{k} {v[0]}" for k, v in PLANNER_OVERRIDES.items()) or "none"
+    return HEADER.format(vehicle=VEHICLE_NAME, overrides=ov, poverrides=pov, profile=profile) + out
 
 
-def check(text):
+def check(text, profile):
     """Parse both, and confirm the only differences are the declared ones."""
+    PLANNER_OVERRIDES = PROFILES[profile]["planner"]
     a = yaml.safe_load(open(SRC))
     b = yaml.safe_load(text)
     na = a["/**/fsc_autopilot_ros2"]["ros__parameters"]
@@ -317,26 +381,33 @@ def check(text):
     pb = b["/**/whole_body_trajectory_planner"]["ros__parameters"]
     extra = sorted(set(pb) - set(pa))
     assert all(k.startswith("pick_place_") for k in extra), extra
-    assert all(pa[k] == pb[k] for k in pa), "planner section changed outside pick_place_"
+    assert all(pa[k] == pb[k] for k in pa if k not in PLANNER_OVERRIDES), "planner section changed outside the declared overrides"
+    for k, (_, v) in PLANNER_OVERRIDES.items():
+        assert pb[k] == v, (k, pb[k], v)
     for k in set(a) - {"/**/fsc_autopilot_ros2", "/**/whole_body_trajectory_planner"}:
         assert a[k] == b[k], k
-    print(f"OK: node differs only in {diff}; planner adds {len(extra)} pick_place_ keys; "
+    print(f"OK [{profile}]: node differs only in {diff}; planner overrides {sorted(PLANNER_OVERRIDES)}, adds {len(extra)} pick_place_ keys; "
           f"wb_l1_contact false, four_d true")
 
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--profile", choices=sorted(PROFILES), help="one demonstration (default: both)")
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
-    text = build()
-    check(text)
-    if a.check:
-        ok = os.path.exists(DST) and open(DST).read() == text
-        print("on-disk file is current" if ok else "on-disk file is STALE -- regenerate")
-        return 0 if ok else 1
-    open(DST, "w").write(text)
-    print(f"wrote {DST}")
-    return 0
+    rc = 0
+    for profile in ([a.profile] if a.profile else sorted(PROFILES)):
+        dst = DST_FMT.format(profile=profile)
+        text = build(profile)
+        check(text, profile)
+        if a.check:
+            ok = os.path.exists(dst) and open(dst).read() == text
+            print(f"  {os.path.basename(dst)}: " + ("current" if ok else "STALE -- regenerate"))
+            rc |= 0 if ok else 1
+            continue
+        open(dst, "w").write(text)
+        print(f"  wrote {dst}")
+    return rc
 
 
 if __name__ == "__main__":

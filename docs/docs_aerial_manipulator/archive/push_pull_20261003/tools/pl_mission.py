@@ -65,21 +65,29 @@ class Driver(Node):
         ns = a.namespace.rstrip("/")
         self.t0 = time.time()
         self.events, self.marks = [], []
+        self.late = []                       # --timetable: (step, seconds late)
         self.odom = self.armed = None
         self.mode = ""
         self.status = self.pl_status = ""
-        self.info = self.arrival = self.grip = self.box = None
+        self.info = self.arrival = self.grip = self.box = self.claw = None
         self.step = -1
         self.phase = "init"
         self.ref = np.array([0.0, 0.0, a.hover_z])
         self.stream_ref = True
         self.grip_cmd = None
         self.L = {k: [] for k in ("odom", "dbg", "box", "ee", "ref", "grip", "joints", "arrival", "claw",
-                                  "contact", "base_truth", "refd")}
+                                  "contact", "base_truth", "refd", "cadm")}
+        # 2026-10-10: the controller namespace is an option (--da) so the SAME mission
+        # flies on the coordinated-admittance rig (Liu et al. CEP 2024): mode topic,
+        # set_direct_mode and the debug array (--dbg-topic, --dbg-len) follow it; the
+        # planner's reference stream (REF_TOPIC) is rig-independent.
+        self.da = a.da
         sub = self.create_subscription
         sub(Odometry, f"{ns}/state_estimator/local_position/odom", self.on_odom, 10)
-        sub(String, f"{ns}/{DA}/mode", lambda m: setattr(self, "mode", m.data), LATCHED)
-        sub(Float32MultiArray, f"{ns}/{DA}/wb_control_debug", self.on_dbg, 50)
+        sub(String, f"{ns}/{a.da}/mode", lambda m: setattr(self, "mode", m.data), LATCHED)
+        sub(Float32MultiArray, f"{ns}/{a.da}/{a.dbg_topic}", self.on_dbg, 50)
+        sub(Float64MultiArray, f"{ns}/coordinated_planner/state",
+            lambda m: self.L["cadm"].append([self.now(), self.step, *m.data]) if self.mode == "DIRECT" else None, 50)
         sub(VehicleStatus, f"{ns}/fmu/out/vehicle_status_v1",
             lambda m: setattr(self, "armed", m.arming_state == 2), PX4_QOS)
         sub(String, f"{ns}/whole_body_planner/status", self.on_status, LATCHED)
@@ -107,7 +115,7 @@ class Driver(Node):
         for n in ("go_to_start", "ready", "push", "exit", "go_to_land", "adjust", "plan", "capture_box",
                   "reset", "abort"):
             self.cli[n] = self.create_client(Trigger, f"{ns}/{PL}/{n}")
-        self.direct = self.create_client(SetBool, f"{ns}/{DA}/set_direct_mode")
+        self.direct = self.create_client(SetBool, f"{ns}/{a.da}/set_direct_mode")
         self.clear = self.create_client(Trigger, f"{ns}/whole_body_planner/clear")
         self.create_timer(1.0 / a.rate, self.tick)
 
@@ -123,7 +131,7 @@ class Driver(Node):
 
     def on_dbg(self, m):
         if self.mode == "DIRECT":
-            self.L["dbg"].append(np.concatenate([[self.now(), self.step], np.asarray(m.data, np.float32)[:120]]))
+            self.L["dbg"].append(np.concatenate([[self.now(), self.step], np.asarray(m.data, np.float32)[:self.a.dbg_len]]))
 
     def on_status(self, m):
         if m.data != self.status:
@@ -150,8 +158,12 @@ class Driver(Node):
 
     def on_ref(self, m):
         r = m.r_ed
+        # cols 13..18 = x_cd_ddot, b1_de (2026-10-09: the MATLAB export's compatible
+        # attitude / EE heading reference); the step tag stays the LAST column
         self.L["ref"].append([self.now(), r.x, r.y, r.z, m.x_cd.x, m.x_cd.y, m.x_cd.z,
-                              *list(m.q_d)[:4], m.b1_d.x, m.b1_d.y, self.step])
+                              *list(m.q_d)[:4], m.b1_d.x, m.b1_d.y,
+                              m.x_cd_ddot.x, m.x_cd_ddot.y, m.x_cd_ddot.z,
+                              m.b1_de.x, m.b1_de.y, m.b1_de.z, self.step])
         v, a = m.r_ed_dot, m.r_ed_ddot
         self.L["refd"].append([self.now(), v.x, v.y, v.z, a.x, a.y, a.z, self.step])
 
@@ -166,6 +178,7 @@ class Driver(Node):
 
     def on_claw(self, m):
         p = m.pose.position
+        self.claw = np.array([p.x, p.y, p.z])
         self.L["claw"].append([self.now(), p.x, p.y, p.z, self.step])
 
     def on_grip(self, m):
@@ -199,6 +212,24 @@ class Driver(Node):
     def mark(self, name):
         self.marks.append((self.now(), name))
         self.ev(f"MARK {name}")
+
+    def align(self, ref_mark, slot, what):
+        """--timetable (2026-10-09): hold until `slot` s after the mark `ref_mark`,
+        so the next step starts at the SAME mission time on every run (the
+        pick-and-place driver's rule). Only called where hovering, or gripping
+        in CONTACT after the push, is safe. A step already past its slot is
+        LATE (recorded in the npz; the campaign re-flies such a run)."""
+        t_ref = [t for t, n in self.marks if n == ref_mark][-1]
+        dt = t_ref + slot - self.now()
+        if dt < -0.05:
+            self.late.append((what, -dt))
+            self.ev(f"TIMETABLE LATE: {what} {-dt:.2f} s behind its slot")
+            return
+        self.ev(f"timetable: {what} in {max(dt, 0.0):.2f} s")
+        t_end = time.time() + max(dt, 0.0)
+        while time.time() < t_end:
+            self.guard(what)
+            time.sleep(0.01)
 
     def guard(self, what):
         if self.armed and self.mode != "DIRECT" and self.phase == "mission":
@@ -351,22 +382,45 @@ class Driver(Node):
         self.begin("go_to_start")
         self.step_to_end("go_to_start", 0, at_handle=False)
         self.mark("go_to_start:end")
+        if a.timetable:
+            self.align("go_to_start:start", a.slot_ready, "ready")
         # 2 Ready To Push: open, hover (the trim window), then down onto the fin
         self.begin("ready")
         self.gripper_open("open")
-        time.sleep(a.hover_dwell)
+        if a.timetable:
+            self.align("ready:start", a.slot_descent, "ready descent")
+        else:
+            time.sleep(a.hover_dwell)
         self.step_to_end("ready", 1, at_handle=True)
         moved = np.linalg.norm(self.box[:3] - self.box0[:3])
         if moved > a.max_disturb:
             raise Abort(f"the box was disturbed {moved * 1e3:.1f} mm by the descent -- not closing")
         self.mark("ready:end")
-        # 3 Push: close once the claw is there, push on the stall
+        if a.timetable:
+            self.align("ready:start", a.slot_close, "close")
+        # 3 Push: close once the claw is there, push on the stall (the jaws' stall
+        # itself is never delayed: a gripped box must be pushed in CONTACT at once)
         self.begin("close")
         t, since = time.time(), None
         while True:
-            ok = (self.arrival is not None and len(self.arrival) >= 10 and int(self.arrival[0]) == 1
-                  and self.arrival[1] > 0.5 and self.arrival[2] <= a.grip_tol
-                  and abs(self.arrival[9]) <= a.grip_axis_tol)
+            if a.grip_live_box:
+                # --grip-live-box (2026-10-10, the coordinated-admittance rig): gate on the measured
+                # claw against the LIVE box (obj_0), not the planner's captured grasp point -- a
+                # swaying base whose finger pads brush the fin drags the box along the fin, so the
+                # captured point walks away while the claw is in fact on the fin. Across the fin
+                # (x, the closing axis) within grip_axis_tol, along it (y) within grip_tol.
+                ok = (self.claw is not None and self.box is not None
+                      and abs(self.claw[0] - self.box[0]) <= a.grip_axis_tol
+                      and abs(self.claw[1] - self.box[1]) <= a.grip_tol)
+                if self.claw is not None and self.box is not None:
+                    self.arrival = (self.arrival or [0.0] * 10)
+                    self.arrival = list(self.arrival)
+                    self.arrival[2] = float(abs(self.claw[1] - self.box[1]))
+                    self.arrival[9] = float(self.claw[0] - self.box[0])
+            else:
+                ok = (self.arrival is not None and len(self.arrival) >= 10 and int(self.arrival[0]) == 1
+                      and self.arrival[1] > 0.5 and self.arrival[2] <= a.grip_tol
+                      and abs(self.arrival[9]) <= a.grip_axis_tol)
             since = (since or time.time()) if ok else None
             if since and time.time() - since >= a.grip_dwell_in:
                 break
@@ -385,16 +439,25 @@ class Driver(Node):
         self.mark("push:end")
         d = self.box[:3] - self.box_at_push[:3]
         self.ev(f"push: the box moved [{d[0] * 1e3:+.0f}, {d[1] * 1e3:+.0f}, {d[2] * 1e3:+.0f}] mm")
-        time.sleep(a.push_hold)
+        if a.timetable:
+            self.align("push:start", a.slot_release, "release")
+        else:
+            time.sleep(a.push_hold)
         # 4 Exit To Push: open, wait for the jaws, exit
         self.begin("release")
         self.gripper_open("release")
-        time.sleep(a.release_wait)
+        if a.timetable:
+            self.align("release:start", a.slot_exit, "exit")
+        else:
+            time.sleep(a.release_wait)
         self.begin("exit")
         self.step_to_end("exit", 3, at_handle=False)
         self.mark("exit:end")
         # 5 Go To Land
-        time.sleep(a.leg_pause)
+        if a.timetable:
+            self.align("exit:start", a.slot_land, "go_to_land")
+        else:
+            time.sleep(a.leg_pause)
         self.begin("go_to_land")
         self.step_to_end("go_to_land", 4)
         self.mark("go_to_land:end")
@@ -451,6 +514,11 @@ class Driver(Node):
                             box0=getattr(self, "box0", np.zeros(7)),
                             box_final=self.box if self.box is not None else np.zeros(7),
                             joint_names=np.array(getattr(self, "joint_names", [])),
+                            timetable=np.array([self.a.slot_ready, self.a.slot_descent, self.a.slot_close,
+                                                self.a.slot_release, self.a.slot_exit, self.a.slot_land])
+                            if self.a.timetable else np.zeros(0),
+                            late_name=np.array([l[0] for l in self.late]),
+                            late_s=np.array([l[1] for l in self.late]),
                             aborted=aborted, reason=reason)
         print(f"saved {path}")
 
@@ -458,6 +526,12 @@ class Driver(Node):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--namespace", default="/uav_0")
+    ap.add_argument("--da", default=DA,
+                    help="the controller's direct-actuation namespace (mode topic, set_direct_mode, debug); "
+                         "fsc_autopilot_ros2/coordinated_admittance_direct_actuation for the Liu et al. rig")
+    ap.add_argument("--dbg-topic", default="wb_control_debug",
+                    help="the debug array under --da (coordinated_control_debug on the Liu et al. rig)")
+    ap.add_argument("--dbg-len", type=int, default=120)
     ap.add_argument("--rate", type=float, default=50.0)
     # 1.3 m (2026-10-06): the post-handle push pose holds the body lower over the
     # box; from a 1.0 m hover the planner refuses Go To Start (gear vs table)
@@ -468,6 +542,8 @@ def main():
     ap.add_argument("--grip-tol", type=float, default=0.02, help="the GS's push_pull_grip_tol [m]")
     ap.add_argument("--grip-axis-tol", type=float, default=0.003, help="the GS's push_pull_grip_axis_tol [m]")
     ap.add_argument("--grip-dwell-in", type=float, default=0.3)
+    ap.add_argument("--grip-live-box", action="store_true",
+                    help="gate the close on the measured claw vs the LIVE box pose (x across within grip_axis_tol, y along the fin within grip_tol)")
     ap.add_argument("--grip-timeout", type=float, default=30.0)
     ap.add_argument("--grip-action", default="/uav_0/fsc_open_manipulator/gripper_controller/gripper_cmd")
     ap.add_argument("--grip-closed-m", type=float, default=-0.010, help="the GS's gripper_closed [m]")
@@ -482,6 +558,22 @@ def main():
     ap.add_argument("--post-hold", type=float, default=5.0)
     ap.add_argument("--abort-settle", type=float, default=6.0)
     ap.add_argument("--land-wait", type=float, default=12.0)
+    # --timetable (2026-10-09): every step starts at a fixed mission time on every
+    # run, for the results campaign (the pick-and-place driver's rule). Slots [s]
+    # are offsets from the PREVIOUS step's start mark, sized from the 2026-10-07
+    # runs (flown + margin): go_to_start 9.6 s -> ready; open + dwell -> descent 3.0 s
+    # -> close; the jaws' stall -> push (never delayed); push 1.5 + 24 s -> release;
+    # open -> exit 6 s -> go_to_land. Only the CLOSE step's own length (the claw's
+    # arrival on the fin, 0.3-2 s) varies between runs. A step past its slot is
+    # recorded as LATE (npz late_name / late_s).
+    ap.add_argument("--timetable", action="store_true",
+                    help="start every step at a fixed mission time (replaces the dwell / hold / pause waits)")
+    ap.add_argument("--slot-ready", type=float, default=11.0, help="go_to_start start -> Ready (gripper open)")
+    ap.add_argument("--slot-descent", type=float, default=2.5, help="Ready start -> its descent onto the fin")
+    ap.add_argument("--slot-close", type=float, default=7.0, help="Ready start -> the close step (wait for the claw)")
+    ap.add_argument("--slot-release", type=float, default=27.0, help="Push start -> release (gripper open)")
+    ap.add_argument("--slot-exit", type=float, default=3.0, help="release start -> Exit To Push")
+    ap.add_argument("--slot-land", type=float, default=8.5, help="Exit start -> Go To Land")
     ap.add_argument("--out", default="pl_run.npz")
     a = ap.parse_args()
     rclpy.init()

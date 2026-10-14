@@ -8,8 +8,16 @@ Bags: `docs/experimental_data_ros2_bag/1009 - T650-AM whole-body Pick&Place-*/10
 | PP-2 (`p2`) | `flight_wb_l1_4d_pick_and_place_20261009_180228` | pick (hooked), carry, place (failed), to land start; **PX4 link froze** at 144.67 s |
 | PP-3 (`p3`) | `flight_wb_l1_4d_pick_and_place_20261009_181817` | pick missed (EE Offset z 0.20), Reset, flown home |
 
-Report: `report.html`, published as the artifact "1009 Pick-and-Place Flights"
-(https://claude.ai/artifact/SKoEL1B8DjJR1fLYaLpfLS).
+Report: `report.html`, published as the artifact "1009 + 1010 Pick-and-Place Flights"
+(https://claude.ai/artifact/SKoEL1B8DjJR1fLYaLpfLS). Since 2026-10-12 the page also carries the 10 October flight
+(PP-4): `tools/build_report.py` reads `../wb_pick_place_flight_20261010/analysis/*.json`, its `figures/setdown_strip.jpg`
+and `tools/figures10.js`, so that folder's run order comes first. Page structure since 2026-10-13 (user's layout):
+Section 2 "Whole-body controller overall performance" = 2.1 the flight path in 3-D, 2.2 tracking error curves and ONE
+table for all four flights (leg by leg and the settled hover under it); Section 3 "Pick-and-place precision" = 3.1 Pick
+(views, pick offsets), 3.2 Place (hang, views, trim window, place offsets, what a press does); Section 4 = problems,
+4.1 open (now also the vertical load and joint 2's stick-slip) / 4.2 solved (now also the arm torque caps);
+Section 5 = Further Improvement. Figures are numbered in page order. `tools/figures.js` accepts a `p4` entry in the 3d / err / views / land data blocks (hat offset, arch-contact
+height and the basket's earlier position are per-run fields of the views data).
 
 ## Run order
 
@@ -35,7 +43,7 @@ export PYTHONNOUSERSITE=1                                                    # e
 /usr/bin/python3 trim_choice.py            # -> analysis/trim_choice.json (trim off vs on, 1 / 5 / 10 s windows, real descent times)
 /usr/bin/python3 setpoint_tuning.py        # -> analysis/setpoint_tuning.json (claw vs arch height, sideways error, how the basket hangs)
 /usr/bin/python3 fig_data.py               # -> analysis/fig_*.json
-python3 build_report.py && python3 build_artifact_page.py <out.html>
+python3 build_report.py && python3 build_artifact_page.py <out.html>   # needs ../wb_pick_place_flight_20261010/analysis (PP-4)
 python3 measure_layout.py <out.html> 1440  # also 1100, 500
 ```
 
@@ -107,6 +115,9 @@ wider handle), Get y, Get z − 0.02, yaw −180; Vertical / Side Margin 0.20 / 
 ≥ 5 s before Place; gate the hook release on the claw error (not implemented).
 
 **Problems.**
+(2026-10-12: problem 1 has a found cause and a fix -- the MicroXRCEAgent livelocked under SCHED_FIFO 70 on its
+isolated core when PX4 re-established its uXRCE session; fsc_autopilot_ros2 `71ec97a` runs it at ordinary priority;
+PP-4 on 10-10 flew with a clean link. See `../wb_pick_place_flight_20261010/README.md`.)
 1. PP-2: every `/fmu/out` topic stopped at 144.666 s (18:04:53) in a 1.0 m hover; one fresh sample at 149.90
    (EKF2 had dropped EV, STAB, disarmed by RC switch), then nothing. Vehicle: roll 11.6° / 0.62 m/s after 0.93 s,
    levelled by 146.0 (PX4's own failsafe timing), coasted at 1.2–1.5 m/s, touchdown 147.35 at (−2.41, −1.51), rest at

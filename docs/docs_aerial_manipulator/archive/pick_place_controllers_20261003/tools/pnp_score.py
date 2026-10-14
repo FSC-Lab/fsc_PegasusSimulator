@@ -16,9 +16,16 @@ import numpy as np
 
 PLACE_XY = np.array([-1.0, -1.0])
 PICK_XY = np.array([1.0, 1.0])
-# the platform top: 1.000 (the 10-03 cap) or 1.008 (the 10-08 hat); `placed` accepts either
+# the place platform top: 1.000 (the 10-03 cap), 1.008 (the 10-08 hat), 0.8495 (2026-10-13: the
+# place pillar at the 10-10 flight's height, 0.8415 m, + the hat's 8 mm) or 0.7805 (2026-10-14: the
+# 0.77 m pillar + the hat's 8 mm + the drop bin's 2.5 mm floor); `placed` accepts any
 CAP_TOP, BOX_HALF, CAP_R = 1.0, 0.0325, 0.08
-PLATFORM_TOPS = (1.0, 1.008)
+PLATFORM_TOPS = (1.0, 1.008, 0.8495, 0.7805)
+# THE DROP BIN (2026-10-14): 371 x 290 mm outer on the place hat, length along x, 2.5 mm walls, rim
+# 0.172 m above the platform top (0.778 m on the 0.77 m pillar). `in_bin` = the payload's centre ended
+# inside its inner footprint and below its rim.
+BIN_HALF_IN = (0.5 * 0.371 - 0.0025, 0.5 * 0.290 - 0.0025)
+BIN_RIM_Z = 0.778 + 0.172
 STEPS = ["go_to_start", "ready_pick", "pick", "exit_pick", "go_to_place_start",
          "ready_place", "place", "exit_place", "go_to_land_start", "execute_land"]
 
@@ -41,11 +48,13 @@ def score(path):
     if pay.shape[1] >= 8:
         p_end = pay[-1, 1:4]
         q_end = pay[-1, 4:8]
-        out["picked"] = bool(np.max(pay[:, 3]) > CAP_TOP + BOX_HALF + 0.10)
+        out["picked"] = bool(np.max(pay[:, 3]) > pay[0, 3] + 0.10)     # 0.10 m above where it rested at the start
         on_place = (np.linalg.norm(p_end[:2] - PLACE_XY) < CAP_R and
                     min(abs(p_end[2] - (t + BOX_HALF)) for t in PLATFORM_TOPS) < 0.01)
         out["placed"] = bool(on_place and tilt_deg(q_end[None])[0] < 5.0)
         out["place_off_mm"] = float(np.linalg.norm(p_end[:2] - PLACE_XY) * 1e3)
+        dxy = np.abs(p_end[:2] - PLACE_XY)
+        out["in_bin"] = bool(dxy[0] < BIN_HALF_IN[0] and dxy[1] < BIN_HALF_IN[1] and p_end[2] < BIN_RIM_Z)
         out["payload_tilt_end"] = float(tilt_deg(q_end[None])[0])
         out["payload_end"] = np.round(p_end, 3).tolist()
     od = d["odom"]

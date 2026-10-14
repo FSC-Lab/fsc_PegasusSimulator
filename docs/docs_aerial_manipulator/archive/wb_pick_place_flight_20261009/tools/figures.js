@@ -9,14 +9,15 @@
  if(typeof Plotly==='undefined'){[].forEach.call(document.querySelectorAll('.plot-missing'),function(e){e.hidden=false;});return;}
 
  /* ---------- Fig. 1: 3-D trajectories ---------- */
- var d3=D('data-3d'),names={p1:'PP-1',p2:'PP-2',p3:'PP-3'},plots3=[];
+ var d3=D('data-3d'),plots3=[];
  function tr3(P,t,name,color,width,dash,key){return {type:'scatter3d',mode:'lines',x:col(P,0),y:col(P,1),z:col(P,2),customdata:t,name:name,meta:key,line:{color:color,width:width,dash:dash||'solid'},hovertemplate:'t = %{customdata:.1f} s<br>x %{x:.2f}, y %{y:.2f}, z %{z:.2f} m<extra>'+name+'</extra>'};}
- ['p1','p2','p3'].forEach(function(nm){
+ ['p1','p2','p3','p4'].forEach(function(nm){
+  if(!d3[nm]||!document.getElementById('f3d-'+nm)){return;}
   var e=d3[nm],tr=[tr3(e.ref,e.t,'planned claw path',C.grey,3,'dash','ref'),tr3(e.base,e.t,'airframe',C.blue,3,null,'base'),tr3(e.claw,e.t,'claw',C.orange,4,null,'claw')];
   if(e.basket){tr.push(tr3(e.basket,e.tb,'basket',C.aqua,5,null,'basket'));}
-  if(e.flyaway){tr.push(tr3(e.flyaway,e.tf,'after the link froze',C.red,5,null,'fly'));}
+  if(e.flyaway){tr.push(tr3(e.flyaway,e.tf,e.fly_name||'after the link froze',C.red,5,null,'fly'));}
   tr.push({type:'scatter3d',mode:'markers+text',x:[e.pick_goal[0],e.place_goal[0]],y:[e.pick_goal[1],e.place_goal[1]],z:[e.pick_goal[2],e.place_goal[2]],text:['pick','place'],textposition:'top center',textfont:{color:INK,size:11},marker:{size:4,color:INK,symbol:'diamond'},name:'claw targets',meta:'ref',hovertemplate:'%{text} target<br>x %{x:.2f}, y %{y:.2f}, z %{z:.2f} m<extra></extra>'});
-  [[e.capture[0],e.capture[1],e.capture[2]-0.03],[e.place_goal[0]-0.02,e.place_goal[1],e.place_goal[2]-0.16-0.03]].forEach(function(p){tr.push({type:'scatter3d',mode:'lines',x:[p[0],p[0]],y:[p[1],p[1]],z:[0,p[2]],line:{color:'#6b6a62',width:8},hoverinfo:'skip',showlegend:false,meta:'pillar'});});
+  [[e.capture[0],e.capture[1],e.capture[2]-0.03],e.place_pillar||[e.place_goal[0]-0.02,e.place_goal[1],e.place_goal[2]-0.16-0.03]].forEach(function(p){tr.push({type:'scatter3d',mode:'lines',x:[p[0],p[0]],y:[p[1],p[1]],z:[0,p[2]],line:{color:'#6b6a62',width:8},hoverinfo:'skip',showlegend:false,meta:'pillar'});});
   var sc={xaxis:ax('x [m]',{backgroundcolor:'rgba(0,0,0,0)',showbackground:false}),yaxis:ax('y [m]',{showbackground:false}),zaxis:ax('z [m]',{showbackground:false,range:[0,1.6]}),aspectmode:'data',camera:{eye:{x:-1.3,y:-1.65,z:1.0}}};
   var el=document.getElementById('f3d-'+nm);
   Plotly.newPlot(el,tr,base({scene:sc,showlegend:false,margin:{l:0,r:0,t:0,b:0}}),cfg3);plots3.push(el);
@@ -46,7 +47,7 @@
     if((p[1]-p[0])/span>0.018){lay.annotations.push({xref:'x',yref:'paper',x:(p[0]+p[1])/2,y:1.0,yanchor:'bottom',yshift:26,text:p[2],showarrow:false,font:{size:10.5,color:INK2},textangle:-35});}});
   Plotly.react(elE,tr,lay,cfg);
  }
- errPlot('p1');
+ errPlot((document.querySelector('#ferr-pick button[aria-pressed="true"]')||{dataset:{k:'p1'}}).dataset.k);
  [].forEach.call(document.querySelectorAll('#ferr-pick button'),function(b){b.addEventListener('click',function(){
    [].forEach.call(document.querySelectorAll('#ferr-pick button'),function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});errPlot(b.dataset.k);});});
 
@@ -125,27 +126,31 @@
   top.push({type:'scatter',mode:'markers',x:[g[0]],y:[g[1]],marker:mx,showlegend:false,hovertemplate:'claw target: along %{x:.0f}, across %{y:.0f} mm<extra></extra>'});
   side.push({type:'scatter',mode:'markers',x:[g[0]],y:[g[2]],marker:mx,showlegend:false,hovertemplate:'claw target: along %{x:.0f}, height %{y:.0f} mm<extra></extra>'});
   var c0=task==='pick'&&e.rest?e.rest:[0,0,32.5],dsh=task==='pick'?'solid':'dash',fill=task==='pick'?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.02)';
-  shT.push({type:'circle',x0:-HAT,x1:HAT,y0:-HAT,y1:HAT,line:{color:'#8f8e84',width:1.6},fillcolor:'rgba(255,255,255,0.04)',layer:'below'});
+  var hx=e.hat?e.hat[0]:0,hy=e.hat?e.hat[1]:0;
+  shT.push({type:'circle',x0:hx-HAT,x1:hx+HAT,y0:hy-HAT,y1:hy+HAT,line:{color:'#8f8e84',width:1.6},fillcolor:'rgba(255,255,255,0.04)',layer:'below'});
+  if(e.rest_early){var q0=e.rest_early;shT.push({type:'rect',x0:q0[0]-BX,x1:q0[0]+BX,y0:q0[1]-BY,y1:q0[1]+BY,line:{color:'#c98500',width:1.2,dash:'dot'},layer:'below'});
+  }
   shT.push({type:'rect',x0:c0[0]-BX,x1:c0[0]+BX,y0:c0[1]-BY,y1:c0[1]+BY,line:{color:INK2,width:1.2,dash:dsh},fillcolor:fill,layer:'below'});
   shT.push({type:'line',x0:c0[0]+STEM,x1:c0[0]+STEM,y0:c0[1]-40,y1:c0[1]+40,line:{color:INK2,width:3,dash:dsh},layer:'below'});
-  anT.push({x:0,y:HAT,text:'hat, radius 100 mm',showarrow:false,yanchor:'bottom',font:{size:11,color:INK2}});
+  anT.push({x:hx,y:hy+HAT,text:'hat, radius 100 mm',showarrow:false,yanchor:'bottom',font:{size:11,color:INK2}});
   anT.push({x:c0[0],y:c0[1]-BY,text:task==='pick'?'basket at rest':'basket on the place point',showarrow:false,xanchor:'center',yanchor:'top',yshift:-2,font:{size:11,color:INK2}});
-  shS.push({type:'rect',x0:-HAT,x1:HAT,y0:-5,y1:0,line:{width:0},fillcolor:'#8f8e84',layer:'below'});
-  shS.push({type:'rect',x0:-61,x1:61,y0:-57,y1:-5,line:{width:0},fillcolor:'#55554f',layer:'below'});
+  shS.push({type:'rect',x0:hx-HAT,x1:hx+HAT,y0:-5,y1:0,line:{width:0},fillcolor:'#8f8e84',layer:'below'});
+  shS.push({type:'rect',x0:hx-61,x1:hx+61,y0:-57,y1:-5,line:{width:0},fillcolor:'#55554f',layer:'below'});
   shS.push({type:'rect',x0:c0[0]-BX,x1:c0[0]+BX,y0:0,y1:BH,line:{color:INK2,width:1.2,dash:dsh},fillcolor:fill,layer:'below'});
   shS.push({type:'line',x0:c0[0]+STEM,x1:c0[0]+STEM,y0:BH,y1:ARCH,line:{color:INK2,width:2,dash:dsh},layer:'below'});
   shS.push({type:'line',x0:c0[0]+STEM-9,x1:c0[0]+STEM+9,y0:ARCH,y1:ARCH,line:{color:INK2,width:4},layer:'below'});
   anS.push({x:c0[0]+STEM+9,y:ARCH,text:'arch',showarrow:false,xanchor:'left',xshift:4,font:{size:11,color:INK2}});
-  anS.push({x:-HAT,y:-5,text:'hat top, z = '+e.z_world0.toFixed(3)+' m',showarrow:false,xanchor:'right',yanchor:'top',xshift:-6,font:{size:11,color:INK2}});
-  if(task==='pick'){shS.push({type:'line',x0:-340,x1:290,y0:195.5,y1:195.5,line:{color:'#c98500',width:1.2,dash:'dot'},layer:'below'});
-}
+  anS.push({x:hx-HAT,y:-5,text:'hat top, z = '+e.z_world0.toFixed(3)+' m',showarrow:false,xanchor:'right',yanchor:'top',xshift:-6,font:{size:11,color:INK2}});
+  var ch=e.contact_h||(task==='pick'?195.5:null);
+  if(ch){shS.push({type:'line',x0:-340,x1:290,y0:ch,y1:ch,line:{color:'#c98500',width:1.2,dash:'dot'},layer:'below'});
+   if(task==='place'){anS.push({x:285,y:ch,text:'fingers meet the arch',showarrow:false,xanchor:'right',yanchor:'bottom',font:{size:11,color:INK2}});}}
   var world=task==='pick'?'world +x':'world −x',wy=task==='pick'?'world +y':'world −y';
   Plotly.react('fv-'+task+'-top',top,base({margin:{l:56,r:10,t:16,b:44},showlegend:false,hovermode:'closest',shapes:shT,annotations:anT,
    xaxis:ax('along the approach ('+world+') [mm]',{range:[-340,290]}),yaxis:ax('across ('+wy+') [mm]',{range:[-190,190],scaleanchor:'x',scaleratio:1})}),cfg);
   Plotly.react('fv-'+task+'-side',side,base({margin:{l:56,r:10,t:16,b:44},showlegend:false,hovermode:'closest',shapes:shS,annotations:anS,
    xaxis:ax('along the approach ('+world+') [mm]',{range:[-340,290]}),yaxis:ax('height above the hat [mm]',{range:[-70,450],scaleanchor:'x',scaleratio:1})}),cfg);
  }
- ['pick','place'].forEach(function(task){viewPlot(task,'p2');
+ ['pick','place'].forEach(function(task){viewPlot(task,(document.querySelector('#fv-'+task+'-run button[aria-pressed="true"]')||{dataset:{k:'p2'}}).dataset.k);
   [].forEach.call(document.querySelectorAll('#fv-'+task+'-run button'),function(b){b.addEventListener('click',function(){
     [].forEach.call(document.querySelectorAll('#fv-'+task+'-run button'),function(o){o.setAttribute('aria-pressed',o===b?'true':'false');});viewPlot(task,b.dataset.k);});});});
 
@@ -171,8 +176,9 @@
 
  /* ---------- Fig. 8: the two manual touchdowns ---------- */
  var dn=D('data-land');
- [['p1','fland-p1',[[1.94,'planner abort']]],['p3','fland-p3',[]]].forEach(function(q){var e=dn[q[0]],sh=[],an=[];
-  [[e.t_stab,'pilot takes STAB'],[e.t_disarm,'disarmed']].concat(q[2]).forEach(function(v,i){var l=vline(v[0],v[1]);if(i===2){l.a.yshift=26;}sh.push(l.s);an.push(l.a);});
+ [['p1','fland-p1',[[1.94,'planner abort']]],['p3','fland-p3',[]],['p4','fland-p4',null]].forEach(function(q){var e=dn[q[0]],sh=[],an=[];
+  if(!e||!document.getElementById(q[1])){return;}if(q[2]===null){q[2]=e.extra||[];}
+  [[e.t_stab,'pilot takes STAB'],[e.t_disarm,'disarmed']].concat(q[2]).forEach(function(v,i){var l=vline(v[0],v[1]);if(i>=2){l.a.yshift=26*(i-1);}sh.push(l.s);an.push(l.a);});
   Plotly.newPlot(q[1],[
    {type:'scatter',mode:'lines',x:e.t,y:e.z,name:'height',line:{color:C.blue,width:2},showlegend:false,hovertemplate:'%{y:.2f} m<extra>height</extra>'},
    {type:'scatter',mode:'lines',x:e.t,y:e.pitch,name:'pitch (+ nose down)',line:{color:C.blue,width:2},yaxis:'y2',legend:'legend',hovertemplate:'%{y:.0f}°<extra>pitch</extra>'},

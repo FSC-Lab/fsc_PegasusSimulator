@@ -46,7 +46,8 @@ LATCHED = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                      durability=DurabilityPolicy.TRANSIENT_LOCAL)
 # Direct-actuation namespaces whose stacks run the trajectory planner (the
 # modular rig answers under the whole-body one on purpose).
-KNOWN_DA = ("whole_body_direct_actuation", "geometric_l1_direct_actuation")
+KNOWN_DA = ("whole_body_direct_actuation", "geometric_l1_direct_actuation",
+            "coordinated_admittance_direct_actuation")   # 2026-10-10: the Liu et al. CEP 2024 rig
 
 
 def detect_da(namespace, timeout=20.0):

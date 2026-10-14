@@ -4556,6 +4556,43 @@ generated yaml's other push-and-pull changes are listed under SHIPPED below.
   debug index + 2. NOT flown on hardware; check on the bench that the foam pads hold ~2 N along the
   5 mm fin before flying.
 
+**BOX PUSHING IS THE PHYSICAL-INTERACTION TASK, THE PUSH YAML IS TUNED, AND THE RESULTS CAMPAIGN
+FLEW (2026-10-09, user request; campaign `docs/docs_aerial_manipulator/archive/push_pull_tune_20261009/
+README.md`, Command.md section 17, results `results/simulation_results/README.md` "Box pushing" +
+`matlab_simulation_data/box_pushing/`).** `Box_Assembly.stl` = `Box_Push.stl` byte for byte (the
+experiment's box; the sim asset needed no change). (1) **Push, not pull**: a 3 + 3 A/B at the shipped
+10-07 push yaml completed both ways, but a pull ends LOADED (still pulling ~1 N and pressing the box
+down), so its release is a jolt -- impedance residual 2-4.8 N rms with peaks to 16 N, tilt 5-7 deg
+vs 3, q2 on its 45 deg stop, the box dragged back 3-6 mm at every exit (push 0-1 mm). (2) **The tune
+(16 screening + 8 confirmation flights, one change per run, scored on e_imp = F_ext - (M_d edot_v +
+D_d e_v + K_d e_y) over SLIDE / CONTACT / RELEASE + rho_UAV + the joint margins): the EE impedance
+is the ONE lever.** `wb_ky_x/y/z` 211.9 -> 120 and `wb_dy_x/y/z` 26.82 -> 20.2 (zeta 0.92 kept)
+halve the residual on every window (slide 0.53-0.82 vs 0.66-1.22 N rms, release 0.5-0.9 vs 1.3,
+release peaks 0.8-1.8 vs 3-5 N), keep the arm OFF q3's +50 stop at the release (42-47 deg -- the
+10-07 "release folds the arm onto the stop" problem is gone at this stiffness) and leave the box
+untouched in the exit, for 10 mm rms of claw deflection instead of 6 (F / K_y). K_y 300 is unstable
+in the grasp; K_y 80 (2/2) is inside K_y 120's scatter with 4-5 mm more deflection and q3 ON its
+stop in the push -- not taken. `wb_l1_omega_x_t/r/q` 0.2072 -> 0.1 ships with it as the most
+consistent 3/3 combination, but ALONE its repeat is a baseline run (the gain is K_y's). Measured and
+LEFT: omega_c_t 0.5 / 1.5 and omega_c_r 0.5 / 1.0 (inside the baseline's scatter or less margin);
+**omega_x 1.0 AND 4.0 both double the contact residual and make the release a 16-20 N jolt** (2.0
+is the sweet spot); k_R/k_w 1.3/1.0 (tilt 5.4, q2 on its stop) and 2.134/1.567 (hover abort);
+k_x/k_v 32/10 (force guard 24 N) and 64/14 (hover abort); push 12 / 18 s (complete, release peaks
+5.7-6.5 N). Shipped in `make_push_pull_yaml.py` OVERRIDES; the hardware files are untouched (no
+hardware push-and-pull block exists). (3) **Driver**: `pl_mission.py --timetable` (slots
+11 / 2.5 / 7 / 27 / 3 / 8.5 s from the previous step's start; the jaws' stall is never delayed, so
+only the grasp's length varies, 0.09 s across the campaign) and the recorded reference carries
+`x_cd_ddot` + `b1_de` (cols 13..18, step last). (4) **Results**: `results/utils/
+run_box_pushing_campaign.sh` (3 runs, success = completed + box >= 0.45 m + no LATE) +
+`build_box_pushing.py` (the pick-and-place pipeline + the residual: `run.impedance` series,
+`metrics.impedance.<window>`, `metrics_impedance`, four figures, `tab:sim_box_push`). 3/3 at the
+first attempt: e_imp slide 0.66 N rms (max 1.39) / contact 0.69 / release 0.89, F_ext 1.16 N,
+eps_UAV 36.8 / 17.5 mm (rho 0.100 / 0.047; the max is the 270 deg turn to the landing hover, the
+push peaks at 23-37 mm), EE 18.2 mm over the mission (free-flight wander; 10 mm in the slide = the
+designed deflection), heading 2.1 deg, box 492-498 mm, tilt <= 3.1 deg. The baseline's own
+run-to-run scatter is wide (slide 0.66-1.22 N on identical settings) -- never rank a push tune on
+one flight. The simulation was closed after the campaign (user request). Nothing committed.
+
 **1009 HARDWARE: FIRST PICK-AND-PLACE FLIGHTS (whole-body 4-D L1, fused) — PICK HOOKED, PLACE 166 mm SHORT,
 PX4 LINK FROZE IN FLIGHT, BOTH STAB LANDINGS TIPPED (2026-10-09/10, user request: analyse + report).** Bags
 `docs/experimental_data_ros2_bag/1009 - T650-AM whole-body Pick&Place-*/` (`_172557` PP-1, `_180228` PP-2,
@@ -4692,3 +4729,275 @@ report artifact "1009 Pick-and-Place Flights" (https://claude.ai/artifact/SKoEL1
   fsc_trajectory_planner on the Orin and utils_custom_ground_station on the laptop**; an old planner with the new
   GS degrades (Pick boxes read-only, Place Get "service not available"). `ros2 param set … "[]"` cannot clear the
   pick point (ros2cli types an empty list as a bool array). NOT flown.
+
+**COORDINATED ADMITTANCE FRAMEWORK (Liu et al., CEP 146 (2024) 105898) AS THE THIRD BOX-PUSHING
+COMPARISON RIG — C++/OSQP PLANNER, 21 FLIGHTS TO THE FIRST COMPLETE PUSH (2026-10-10, user request:
+implement the paper independently, fly the same box-pushing task, compare).** Record
+`docs/docs_aerial_manipulator/archive/push_pull_coordinated_admittance_20261010/README.md`
+(design choices (a)–(p), the full flight log), Command.md §17.x. Everything is NEW FILES (the
+modular-adaptive / geometric+L1 fork pattern): fsc_autopilot_ros2 fork
+`single_aerial_manipulator_coordinated_admittance_direct_actuation` = the FLIGHT NODE
+(`autopilot_coordinated_admittance_direct_actuation_node`: eqs 11-14 UAV PD + flatness attitude
+in Euler coordinates, eq 25 momentum wrench estimator, 250 Hz) + the PLANNER NODE
+(`coordinated_admittance_planner_node`, C++: eq 27 admittance, eqs 31-32 force-adaptive weights,
+eqs 28-39 kinematic MPC on h = [P_b; q], **QP on OSQP v0.6.3 fetched at build time by CMake
+FetchContent — no system package**; the user asked for C++/a mature solver after the Python ADMM
+sat at its iteration cap) + a POSITION-mode arm; Python reference
+`extensions/.../utils_controller/coordinated_admittance.py` (self-test; OSQP backend when the
+wheel in `~/sources/pyosqp` is on `PYTHONPATH` with `PYTHONNOUSERSITE=1`) and
+`scripts/tools/coordinated_admittance_planner.py` (the readable reference, no longer flown);
+parity gtests `Coordinated*` 7/7 (law 1e-9 incl. the integrals, estimator, arm model, admittance,
+weights, the assembled QP to 1e-8, OSQP vs a 1e-9 reference solve). Yamls GENERATED
+(`tools/make_coordinated_yaml.py` from the 4-D whole-body ones; plant + planner sections verbatim
+except five declared keys). Results pipeline: `METHOD=coordinated_admittance
+results/utils/run_box_pushing_campaign.sh`, `build_box_pushing.py` knows the method (its
+platform/arm/attitude references are that rig's own commands, `cadm` record + the law's eta_d).
+- **THE PAPER AS PRINTED CANNOT FLY THIS PLANT; each gap cost a flight and each fix is the
+  paper's own ingredient applied where it is silent** (all switchable, 0 = the paper): (e) position
+  integral (the thrust-model error parks a PD 8 cm low); (j) ATTITUDE integral — the integral-free
+  Euler PD parks at tau/K under the arm's ~0.2 N·m standing moment: 3° pitch / 4° yaw in every
+  hover, the claw heading 4° off the fin; (k) soft state/EE/CoM boxes with a QUADRATIC slack only
+  (an exact-penalty linear term is a kink OSQP crawls on: 2750 vs 50 iterations per hover tick);
+  (l) in the reference-state MPC the command is LEASHED to the measurement (0.15 m / 0.2 rad),
+  never jumped and never handed the mocap velocity (the jump re-sync fed 160 mm x0 steps and
+  0.3 m/s into the MPC, which chattered ±u_max); (o) in CONTACT the arm is HELD and the heading
+  term dropped — with the claw clamped to the box the chain base–arm–box–table is closed, a joint
+  motion moves the BASE, and the heading term's q1 counter-rotation yawed the base exponentially
+  (−19° in 3 s); (p) the mission's contact flag (the same SetBool the whole-body node gets, here
+  `coordinated_planner/set_contact`, from the jaws' stall to the Exit press) freezes a TARE of
+  eq 25's lumped estimate (its ~0.7 N / ~2 N standing model error is not an interaction force)
+  and switches the admittance to claw-frame contact gains 150/20/20 N/m — a box dragged 18 mm at
+  the grasp is then 0.36 N on the claw instead of its full 1.1 N friction, whose 0.29 N·m yaw
+  moment through the 0.26 m claw lever had exceeded the plant's yaw authority (0.40 N·m clamp,
+  0.70 delivered). TWO RETIRED, both flown: (m) arm compensation of the base tracking error —
+  inside the MPC it is positive feedback (the MPC moves the BASE by the error too, 4 m in 6 s);
+  outside it at 0.1 s OR 1.0 s low-pass the arm chases the 0.33 Hz sway and its reaction sustains
+  a ±180 mm limit cycle; (n) eq 25's torque estimate fed back to the attitude law — a growing
+  1 Hz oscillation to a flip in 8 s (the estimate carries the law's inertia mismatch with the
+  arm; unity feedback against the rotor-lag pole). Also: the whole-body planner's descent TRIM
+  sampled this rig's slow sway and put the claw 27 mm BESIDE the fin (off); transits at the
+  whole-body bounds arrived 70/120 mm behind and swinging (gentler 0.20 / 0.08 / 0.20 + a 15 s
+  dwell); the driver gained `--grip-live-box` (gate on claw vs the LIVE box: a swaying base whose
+  pads brush the fin drags the captured grasp point away) — the paper-literal gate never passed.
+- **cadm_21, the first complete mission**: box 521 mm, ρ_UAV 0.145 max / 0.07 rms in the slide,
+  EE 26 mm rms, |e_R| ≤ 2°, planner 66 iterations / 1.2 ms per tick, 0 uncertified. Impedance
+  residual 3.0 N rms in the slide (whole-body 0.66), 2.95 of it ALONG the push: the admittance
+  presumes the UAV tracks its base command and this decoupled PD lags it 20–40 mm under a 1 N
+  load, a lag the kinematic MPC (planning from its own command) cannot see and the scorer rightly
+  books as un-rendered impedance. `pl_metrics.py` scores this rig with its claw-frame contact
+  gains (`admittance_k_contact`) — with the free gains the vertical channel alone read 4 N.
+- Traps: a parameter added to only ONE of a `ParameterSchema`'s two `members()` overloads loads
+  silently as its default (found by running the node standalone on the yaml and reading its
+  summary); a bench rigid body without the arm said the torque feedback was benign; the Python
+  `osqp` wheel cannot live in the user site (numpy 2 vs the apt scipy) — `~/sources/pyosqp`;
+  `run_pl_cadm.sh` now CLOSES the simulation when the driver exits (a stack left up over a break
+  wrote 27 GB of PX4 ulog + a 1.2 GB Isaac kit log in 4 h) and deletes that run's ulog/kit log.
+- **CAMPAIGN (same evening): 3/3 at the first attempt**, box 525 / 521 / 518 mm; results
+  `results/simulation_results/box_pushing/` + `matlab_simulation_data/box_pushing/` + tables, both
+  methods in one table (`build_box_pushing.py` now ALIGNS THE METHODS AT READY: this rig's first
+  transit is ~19 s longer, `--slot-ready 30`). Mean: e_imp slide 2.98 N rms vs 0.66 (2.94 along the
+  push); ρ_UAV 0.279 max / 0.079 rms vs 0.100 / 0.047; EE 30.7 vs 18.2 mm; heading 0.96 vs 2.09°.
+  Report artifact "Box Pushing, Two Controllers": https://claude.ai/artifact/FhKMmqvsmBZJsJBECb85J1.
+
+**1010 HARDWARE: PICK-AND-PLACE REACHED THE HAT, AND THE SET-DOWN PULLED THE BASKET OFF IT (2026-10-12, user request:
+analyse PP-4 + integrate into the 1009 report; three questions: 5 s trim window, the 10-10 offsets, what to improve).**
+Bag `docs/experimental_data_ros2_bag/1010 - T650-AM whole-body Pick&Place-*/…/flight_wb_l1_4d_pick_and_place_20261010_190719`
+(one flight, "PP-4", + `VID_20261010_190704.mp4`, 14.0 s ahead of the bag); analysis + README
+`docs/docs_aerial_manipulator/archive/wb_pick_place_flight_20261010/` (reuses the 10-09 tools through `pp10_common.py`);
+report = the SAME artifact, now "1009 + 1010 Pick-and-Place Flights" (https://claude.ai/artifact/SKoEL1B8DjJR1fLYaLpfLS,
+v14): Section 3 = performance of both days (3.4 trim window, 3.5 offsets), Section 4 = 4.1 open / 4.2 solved problems,
+Section 5 = "Further Improvement". Builder still `archive/wb_pick_place_flight_20261009/tools/build_report.py` (reads the
+10-10 folder). Pulled first: fsc_autopilot_ros2 `71ec97a` (Orin) and 4 ros2_ground_station_gui commits (Longhao's LLM / VLM
+drone station), local uncommitted work re-applied; fsc_autopilot_ros2 + fsc_trajectory_planner rebuilt. Nothing committed;
+no yaml or code changed by the analysis.
+- **Settings read from the bag:** Pick = Get x + 0.01, EE Offset (−0.02, 0, 0.16), Place = Get x − 0.03 / Get z − 0.01
+  (two-decimal numbers = typed, four = Get → place hat centre (−1.08, −1.104), basket rests at 0.882 m), trim window 5 s.
+- **Pick worked** (10 mm from target at the close, fingers 4–8 mm under the arch; contact height 171 mm mocap).
+  **Rotor wash moved the basket 21 mm / 7.5° on the pick hat as the vehicle arrived** (10-09: 4–6 mm). **The jaws centre
+  ~20 mm to the LEFT of obj_0's origin on both days** (10-09's "the close dragged the basket 30 mm" is this) → EE Offset
+  y = +0.02 or re-zero the body's pivot. Lift pushes the airframe 23–27 cm forward (both days).
+- **Place:** touchdown 106 mm short of the typed point = trim 38 + tracking 22 + hang 47 (basket centre hangs 27 mm
+  BEHIND the claw, tilt 22° top forward, planner assumes 20 ahead; 10-09: 35), 85 mm from the hat centre.
+- **THE PLANNER HAS NO PAYLOAD MODEL, and "short by the hang" means exactly this (follow-up 2026-10-12, report v13
+  Section 3.2 + Fig. 7, `tools/hang_views.py` → `fig_hang.json`):** claw target = point + Rz(yaw)·EE Offset at the
+  pick AND the place (`fsc_trajectory_planner/src/pick_place.cpp`), so it takes the basket's origin to be 20 mm ahead
+  of the claw, 160 mm below, level, at both ends. Hanging from the arch the basket tilts top-forward and its origin
+  swings back: PP-2 −1 / −10 / −17 mm at 10 / 16 / 18° (after lift / above place / descent), PP-4 −13 / −19 / −27 mm at
+  14 / 19 / 22° → 37 and 47 mm short with a perfect claw. Free hang would be 9°. **10-10 reads 10–13 mm further back
+  and 4° more tilted at EVERY stage (171·sin 4° = 12 mm, one change); the bag cannot tell the new handle (arch 171 vs
+  163 mm above the origin) from a re-defined mocap body (rest reading 3.3° vs 0.2°, 180° flips gone) — do not write
+  "because of the new handle".** For Place x it does not matter (Get captures the same origin).
+- **THE CLOSED JAWS HOLD THE STEM — THE HANGING BASKET IS NOT A FREE PENDULUM, AND THAT DECIDES THE HANDLE DESIGN
+  (2026-10-12, user's idea: a handle tilted BACK toward the vehicle; report v14 Fig. 8 + Section 5.3, `tools/hang_follow.py`).**
+  In the claw's own vertical plane (fingers' pitch | basket tilt): after the lift 28 | 10° and 29 | 14° (free hang
+  = atan(27.5 / h) = 9–10°), carry 12 | 12° and 9 | 13°, before the touchdown 23 | 18° and 22 | 22°. A jolt (the lift,
+  a joint-2 stick–slip jump) lets the stem slip to about the free-hang angle; otherwise the basket turns WITH the claw
+  (pitch changes < 2 s followed 64 / 84 %, carry → touchdown 57 / 73 %) and creeps back at 0.1–0.3°/s. So tilt at the
+  touchdown = free hang (handle geometry) + 9 / 13° (the place pose points the claw 10° lower than the carry pose,
+  plus sag). **A handle leaning BACK only moves the arch further behind the CoM: the basket still settles with its CoM
+  under the arch, hangs steeper (15° lean → 21° free hang, 30–34° at the touchdown) and the pick-vs-place mismatch
+  grows 37–47 → 73–82 mm. Lean it FORWARD ~12° (arch above the CoM): hangs level, 9–18 mm / 9–13° left, EE Offset x
+  ≈ +0.01 valid at pick AND place.** The rest goes with equal claw pitch in carry and place poses, or jaws that do
+  not grip the stem. Bench check: hung by its arch on a round rod the basket must hang level (today 9°). Estimates
+  (`handle_case` in `build_report.py`) assume the two flights' behaviour; nothing printed or flown.
+- **THE SIM DOES NOT SHOW THIS, AND STILL CARRIES THE FIRST HANDLE (`tools/sim_hang.py` on the 10-08/09 mission
+  npz, 3 WB + 2 decoupled):** `Box_Payload.usda` = the 2026-10-07 STL (3 × 2.5 mm stem); the re-printed handle's CAD is
+  not in the repo. The sim claw cannot close below ~19 mm, so it never grips the stem and the basket is a free
+  pendulum: tilt 8–10° at every stage while the fingers' pitch goes 10 → 20° (slope 0.00–0.02), centre within 9 mm of
+  the point under the claw (hardware 17–27 mm behind). The sim has the free-hang 9° and not the grip's +9 / +13°, so
+  it never showed the 37–47 mm hang offset. To reproduce it: the new CAD, or an invisible grip shim on the stem (the
+  push scene's `PEGASUS_PUSH_FIN_GRIP_MM` pattern). Not done. **Q1: the 5 s window did
+  not help** — pressed exactly 5.0 s after arrival, it averaged the whole arrival swing (logged trim = bag average to
+  0.2 mm); trim off would have put the claw 24 mm from its target instead of 67. All three places so far got a trim
+  toward the vehicle (36 / 55 / 38 mm).
+- **THE SET-DOWN LURCH (new, the reason PP-4 failed):** when the hat takes the basket's weight the 0.6 N·m nose-down
+  moment vanishes faster than the observer lets go → 4.2° nose up → airframe back 227 mm in ~1 s (starts +0.36 s), the
+  claw stays 21 mm above its path AT the arch, gripper still closed on the stem → basket dragged 12 cm over the rim at
+  +0.92 s; the GS opens only at the leg's end (+1.38 s; the last 56 mm of a rest-to-rest descent are its slowest part).
+  Same physics as the lift, reversed. PP-2 never showed it because its basket never lay on the hat. Sim shows 11–15 cm
+  and never grips the stem (claw cannot close < 19 mm).
+- **Loaded arm:** j2 stick–slip (36° ↔ 45°, 9° jumps every 2.2 s, airframe ±0.15 m), commands CUT at the arm caps
+  (j2 0.07 s, j3 0.10 s; j3 cap still 192), q2 on its 45° guard twice. Load gauges read 0.3–0.7 N more than 10-09 (moment
+  0.60–0.64 N·m) → the basket with the new handle is probably heavier than 190 g; not weighed.
+- **Link freeze of 10-09 = MicroXRCEAgent livelock under SCHED_FIFO 70** (`71ec97a`, committed 27 min before PP-4);
+  PP-4: 400.0 Hz, largest gap 15 ms. **Third pilot takeover ended tipped** (STAB at 1.16 m, motors stopped at 1.42 m,
+  3.8 m/s impact, 36°); the flight node still reports DIRECT after PX4 leaves OFFBOARD and the planner's ABORT ran on the floor.
+- **Recommended (report Section 5, NOT applied):** release at the touchdown (planner reports it from obj_0 height; or
+  jaws that do not grip the stem — the GS has only open / closed); EE Offset (−0.02, +0.02, 0.15), Place = Get x − 0.06,
+  Get z; `pick_place_descent_trim: false` for whole-body flights (live-settable; the decoupled rig needs it on) or a
+  planner that averages from 3 s after arrival; platform 200 wide × 300 deep extended AWAY from the vehicle with the
+  aim point 18 cm from the near rim (skids: 284 mm apart inside, tips 66 mm behind the basket, 30–83 mm above the hat);
+  weigh / lighten the basket (push ∝ weight; but a lighter basket moves more in the rotor wash → rim or mat on the hats);
+  payload mass in the controller's model switched by the gripper events.
+- Analysis traps: the 10-09 `grasp.run` rest-pose filter (tilt < 2°) finds nothing on 10-10 (body reads 3.3–3.8° at
+  rest); the lift-off "arch contact" height is a few mm above true contact, so do not claim the claw went clear of the
+  arch from it; no ffmpeg here — `PYTHONNOUSERSITE=1 /usr/bin/python3 -I` + cv2 reads the mp4; headless Chrome's minimum
+  window is 500 px.
+
+**PICK-AND-PLACE SCENE: THE SCREWED-ON HOLDER (FIN) AND THE EXPERIMENT'S PILLAR HEIGHTS (2026-10-13, user request;
+campaign `docs/docs_aerial_manipulator/archive/pick_place_holder_20261013/README.md`, Command.md §16).**
+- **Payload default is now `PEGASUS_PNP_PAYLOAD=holder`**: `assets/Box_Payload_Holder.usda` = the basket shell of
+  `Box_Payload.STL` (that file holds TWO closed shells, basket + old wire hanger) + the user's `Holder.STL`, by
+  `tools/holder_stl_to_usda.py` (plain `/usr/bin/python3`; asserts the fit). The holder = the old arch and struts
+  10 mm deep, a 3 × 10 mm stem, a FIN under the arch (3 mm thick, 20 deep, 50 tall), two lugs. **Mounting derived
+  from the screw holes**: the lugs replace the old feet (same width, height, two 3.3 mm holes) and the basket has
+  the matching hole pairs at x = ±25 mm, z = 23 / 28 mm, so the arch is exactly where the old one was (underside
+  199.5 mm above the basket centre). **The facing is the one assumption** (`--fin centre`, default: fin toward the
+  basket centre, flat part's mid-plane at the old hanger plane x = −27.5 mm, the claw point of EE Offset x = −0.02
+  inside the fin x −22.5…−2.5 mm; `--fin vehicle` turns it round). `box` (10-07 one-piece) and `plate` stay.
+- **Grip pad**: the sim claw cannot close below ~19 mm, so the scene adds an invisible collider over stem + fin,
+  `PEGASUS_PNP_FIN_GRIP_MM` wide (default 20; 0 = bare fin, the claw closes on air and the arch only hangs).
+- **Pillar tops 0.8595 m (pick) / 0.8415 m (place)** (`PEGASUS_PNP_PICK_PILLAR_HEIGHT` / `_PLACE_PILLAR_HEIGHT`;
+  1.0 = the old scene), inferred from the 10-10 bag: the basket rests at 0.900 m (Get 0.9002) and 0.882 m. The
+  drone waypoints were already the flight's; **sim place point z 1.02 → 0.87** through a new `PLANNER_OVERRIDES` in
+  `pick_place_tune_20261001/tools/make_pick_place_yaml.py` (the SIM pick-and-place yaml only; mirror and hardware
+  yamls keep 1.02; the modular pick-and-place yaml regenerated). `pnp_score.py` knows the new place platform top
+  and tests `picked` against the basket's start height. Both pick-and-place wrappers forward the three new knobs.
+- **Two headless WB flights, both complete** (`tools/run_pnp.sh wb <tag>`): pad ON — jaws stall at −39.6°, the
+  basket turns with the claw ONE TO ONE (rigid; flights 57–84 % with slips), touches down 18 mm from the axis, then
+  **the set-down pushes the vehicle back 225 mm (10-10 flight: 227) and drags the clamped basket 61 mm** before the
+  release (ends 50 mm off, upright); pad OFF — basket hangs at 8–9° (free hang), moves 9 mm at the set-down,
+  vehicle back 125 mm. So the sim now shows the flight's set-down drag, but NOT the flight's hang offset (the real
+  clamp slips to the free-hang angle; the sim's does not — `PEGASUS_PNP_GRIP_TORQUE` / `_GRIP_FRICTION` untuned).
+  The sim fingers carry the arch 186 mm above the basket centre (real 163–171).
+- Not changed: hardware yamls; `results/utils/build_pick_and_place.py` and `abort_score.py` still describe the
+  1 m pillars of the campaigns they scored. One flight each; decoupled rig not flown on this scene.
+- **Report restructured the same day (user's layout)**: Section 2 "Whole-body controller overall performance"
+  (2.1 flight path in 3-D, 2.2 tracking curves + ONE table for all four flights), Section 3 "Pick-and-place
+  precision" (3.1 Pick, 3.2 Place), the vertical-load analysis moved to 4.1 open problems, the arm torque caps to
+  4.2 solved problems, PP-4 merged into the shared tables; figures renumbered in page order.
+
+**PICK-AND-DROP, AND THE TWO SIMULATION DEMONSTRATIONS (2026-10-14, user request; campaign
+`docs/docs_aerial_manipulator/archive/pick_place_drop_20261014/README.md`, Command.md §16).** The lab's
+pillars are 0.77 m under the (unchanged) hat; the payload is `Box_Assembly.stl` (basket + the holder WITHOUT
+its arch + 5 mocap markers + 2 brackets) -> `assets/Box_Payload_Assembly.usda` (`tools/assembly_stl_to_usda.py`,
+plain /usr/bin/python3, asserts the shells and "no arch"); the place became a DROP into a 37.1 x 29 x 17.2 cm
+plastic bin centred on the place hat, length along x.
+- **TWO DEMONSTRATIONS, one `WB_SIM_PROFILE` each, on BOTH the stack and the scene wrapper**:
+  `pick_and_place` = the paper's comparison, EXACTLY as flown 10-08/09 (box payload, 1.0 m pillars, set down,
+  place z 1.02, Place Start (0,-1,1), Land (-1,0,0.8), fence floor 0.6); `pick_and_drop` = today's. Both yamls
+  GENERATED by `pick_place_tune_20261001/tools/make_pick_place_yaml.py` (now `PROFILES`, each with its planner
+  overrides; no `--profile` = both) from the mirror, whose task block = the hardware file's = the DROP's now.
+  The wrappers set 07's new `PEGASUS_PNP_TASK` (place|drop; unset = place) from the profile -- it only sets the
+  DEFAULTS of payload / pillar height / bin, every knob still overrides -- and refuse a stack on the other
+  profile (vehicle_name PNP vs PND + waypoints). Profile `pick_and_drop` added to am_plant_from_yaml.sh, both
+  WB stacks, the geometric stack and both wrappers; the modular rig stays pick_and_place only. The paper
+  campaign (`results/utils/run_pick_and_place_campaign.sh`) needed no edit.
+- **Planner** (fsc_trajectory_planner): `pick_place_place_drop` -- execute_place flies straight to the place
+  claw target (+ `pick_place_drop_height`) and ENDS there, no approach / no descent; descent refused; Exit To
+  Place backs off `place_exit_back` and climbs `approach_dz`. **`pick_place_drop_height` default 0.0** = the
+  place point IS the release point (user's workflow: Get the basket on the bin's COVER, type z + 0.05, remove
+  the cover). gtest covers drop / zero / negative; 26/26.
+- **Task block (hardware 4-D yaml = mirror)**: drop true, drop height 0, place point [-1,-1,1.0325,-180]
+  (rim 0.950 + 32.5 + 50 mm), **Place Start (0.2,-1,1.40,-180), Land Start (-1,0.3,1.40,-360), Land z 0.35,
+  `pick_place_fence_min_z` 0.30** (user: more clearance; Land 0.30 or 0.35, 0.35 chosen: clears both gears).
+  From z 1.0 Ready To Place would have climbed with the basket ~0.25 m BELOW the rim into the bin's wall
+  (carry pose: claw 64 mm under the body, basket bottom ~0.26 m); from 1.40 it descends ~0.1 m onto the drop.
+- **THE PAYLOAD IS 306 x 227 mm WITH ITS MARKER BALLS (306 across the jaws' axis); the bin is ~285 mm wide
+  inside.** At the workflow's place yaw -180 the side balls land on the rims; the sim's pick_and_drop flies
+  **yaw -90** (Place Start (-1,0.2,1.4,-90)), where the margin is ~+-30 mm in BOTH axes. OPEN for the
+  experiment: yaw -90, turn the bin, or move the side markers (told the user).
+- **EE Offset x -0.04 for this payload (sim pick_and_drop)**: the assembly's flag points TOWARD the vehicle;
+  at -0.02 it sat 12-32 mm behind the claw point near the jaws' linkage and the sim jaws JAMMED at -5.8 deg
+  (drop1: payload slid, then flung 2.5 m/s at release); at -0.04 they close on the pad (-39.7 / -38.9 deg).
+  Mechanism not isolated in Isaac. Hardware yaml still -0.02 (real gripper differs; bench-check).
+- **Scene (07)**: the bin = 5 static glass panels + 12 dark EDGE bars (visual, user request), rim 0.950 m; the
+  Place EE marker follows the drop. **Arm GS**: Pick & Place PS4 tab + `pick_place_fine_panel.*` REMOVED;
+  "Pick & Drop" tab = a second `PickPlacePanel(node, true)`. A tab's Plan sets the planner's
+  `pick_place_place_drop` to its mode then plans; only the matching tab is ACTIVE (steps, Reset and every
+  automatic gripper action), so the one gripper is never commanded twice; drop tab's script abort =
+  `pick_drop_panel/abort`. Offscreen 5/5 vs the real planner (`tools/gs_drop_check.sh`, domain 77).
+- **Flights (headless WB)**: drop2 (yaw -90, -0.04) COMPLETE, in the bin 9.6 deg tilt; drop3 (final config)
+  COMPLETE, body >= 1.29 m near the bin, released 5.6 cm above the rim 23 mm toward the vehicle -> in the bin
+  but 36 deg tilted against the near wall (a ball caught the rim). Rebuild on the Orin/laptop:
+  fsc_trajectory_planner, utils_custom_ground_station. NOT flown on hardware; nothing committed.
+- Harness trap: two fake status messages published back to back on a depth-1 latched topic arrive as ONE
+  (the subscriber keeps only the last) -- space them.
+- **DROP PHASE REDESIGNED, same afternoon (user; README "The drop phase redesigned").** Clockwise route
+  kept: Place Start **(1, -1, 1.6, -180)** front-right, 2 m from both pillars, higher than pick and drop
+  (up AND down shown); drop at **yaw -180** (user) with the body at **`pick_place_drop_altitude` 1.35**
+  (new planner key, 0 = off, refused below the release point); Place only opens; Exit To Place closes the
+  gripper and flies LEVEL to **`pick_place_drop_exit_point` (-1, 0.3, -, -270)** with the arm folding home
+  (new key, [] = old exit, Adjust shifts it, z unused); Land Start (-1, 0.6, 1.0), Land 0.35; payload
+  **180 g** for TASK drop (asset regenerated). gtest 27/27; hardware stacks probe the new key; GS Pick & Drop
+  has a Drop Exit row (z column = drop altitude). drop4 COMPLETE at the planned altitudes, but **at yaw -180
+  the payload lands in the bin ON ITS SIDE (81 deg)** -- the 306 mm marker span vs the 285 mm interior.
+  The sim pick_and_drop profile now overrides ONLY EE Offset x -0.04.
+- **FINAL LAYOUT, same evening (user's screenshot review; README "Final layout").** Place Start
+  **(0.8, -1, 0.7, -180)** (low) -> Ready To Place climbs STRAIGHT UP there to 1.35, then level over the bin
+  (planner: a climbing diagonal would graze the rim) -> Place opens -> Exit To Place climbs
+  `pick_place_drop_exit_climb` 0.10 then level to **(-0.70, -0.85), yaw -270**, arm + open gripper unchanged
+  -> Go To Land Start folds the arm and closes the gripper (GS button + driver) -> **Land Start / Land
+  (-0.5, 0.8)**. **The BIN is TURNED 90 deg** (`PEGASUS_PNP_BIN_YAW_DEG` default 90, length along y) -- the
+  user's fix for the 306 mm marker span. drop5: COMPLETE, **payload landed FLAT in the bin (tilt 0.0, z 0.813)**,
+  basket bottom >= 1.05 m over the bin's footprint. gtest 27/27. Nothing committed; NOT flown on hardware.
+- **SMOOTH CLIMB + EXIT FURTHER LEFT, same night (user's Isaac review; README "Smooth climb").** Ready To
+  Place is now ONE arm-sweep curve whose altitude change finishes in the first `pick_place_drop_climb_lead`
+  (0.5) of the leg (new `ArmSweepOptions::z_lead`: the CoM's z on its own nonic phase, default 1 =
+  unchanged; gtest 27/27); exit y typed **-0.73** (the sim's Adjust adds -0.07 -> flown -0.80; typed -0.85
+  flew -0.92). Hardware stacks probe `pick_place_drop_climb_lead`. drop6: leg 19.1 -> 13.8 s, no stop, same
+  +98 mm over the rim; payload in the bin but **61 deg against the +y wall** -- release state identical to
+  drop5's (origin ~20 mm +y: claw roll ~3.5 deg, uncontrolled by the EE task, x 0.16 m lever + claw
+  +7 mm), and that eats the ~20 mm a side the 306 mm span leaves; flat vs tilted is chance.
+- **HARDWARE GETS ITS OWN pick_and_drop PROFILE (same night, user: runbook keeps both flights).** The drop
+  block had gone into the hardware free-flight yaml and so into the hardware `_pick_and_place.yaml` too
+  (it would have flown the drop). `make_hw_pick_and_place_yamls.py` now writes `..._t650_pick_and_place.yaml`
+  with the 10-09/10-10 SET-DOWN block restored by planner overrides (Place Start (0,-1,1), Land Start /
+  Land (-1,0,1 / 0.8), place z 1.02, place_drop false, fence floor 0.6) and a new
+  `..._t650_pick_and_drop.yaml` (the drop block, vehicle `AM-T650-WB-L1-4D-HW-PND`), same controller.
+  `AM_HW_PROFILE=pick_and_drop` on the two WHOLE-BODY hardware stacks only (profile `case` + attitude-gain
+  check); **CPU-isolation code untouched** (`scripts/realtime/` diff empty, no change near the RT CPU
+  PLACEMENT block). Both yamls verified in the built planner (private domain). **Trap: the coordinated-
+  admittance fork (10-10) FetchContent-clones OSQP at configure time -- an offline Orin build of
+  fsc_autopilot_ros2 fails if it is committed; pick-and-drop needs no fsc_autopilot_ros2 rebuild.**
+  GS Pick & Drop tab renamed Place -> Drop (rows, steps, status line; services keep place names); sim
+  launcher `ARM_GS_START_TAB` (4 Pick & Place, 5 Pick & Drop, set by the wrapper). Video
+  `~/pick_and_drop_sim_20261014.mp4` (tools/video/): GStreamer compositor of the Isaac viewport + arm GS;
+  `tune=zerolatency` or mp4mux dies on "Buffer has no PTS"; ends with a FORCED disarm (param2 21196,
+  sim only) because PX4 refuses the plain one on this rig.
+- **DROP EXIT FIXED TO THE PLACE PILLAR (same night, user).** `pick_place_drop_exit_point` (absolute,
+  Adjust-shifted) -> **`pick_place_drop_exit_offset: [dx, dy, yaw_deg]`** from the place point's x, y (room
+  frame), never moved by Adjust; task block `[0.30, 0.20, -270]` = (-0.70, -0.80) at place (-1, -1). GS row
+  "Drop Exit Δ" shows the absolute exit; 07 marker, hardware build checks updated. The Drop row's typed z
+  only sets the FLOOR of the drop (refused if the release needs the base above `drop_altitude`); the
+  drop flies at the drop altitude.

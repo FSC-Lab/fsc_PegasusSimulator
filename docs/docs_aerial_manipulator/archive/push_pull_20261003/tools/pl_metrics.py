@@ -58,12 +58,35 @@ SLIDE_DELAY = 1.5                        # the planner's push settle [s]
 
 
 def yaml_gains(path):
+    """The impedance the rig RENDERS, as [x, y, z, heading]. Whole-body yaml: the
+    task impedance wb_my/dy/ky. Coordinated-admittance yaml (2026-10-10): the
+    paper's eq-27 admittance_m/d/k (translational only -- the EE heading is held
+    kinematically through q1, no heading impedance exists, so that row is 0 and
+    the heading residual is reported as the raw heading moment)."""
     txt = open(path).read()
     g = {}
+    if re.search(r"^\s*admittance_k:", txt, re.M):
+        # the CONTACT gains when the yaml has them (addition (p), 2026-10-10): the rig renders
+        # admittance_k_contact / d_contact in the CLAW frame [along its heading, lateral,
+        # vertical] while the mission's contact flag is on -- every scored window is in contact
+        for k, key, alt in (("my", "admittance_m", None), ("dy", "admittance_d", "admittance_d_contact"),
+                            ("ky", "admittance_k", "admittance_k_contact")):
+            m_ = re.search(rf"^\s*{alt}:\s*\[([^\]]*)\]", txt, re.M) if alt else None
+            if m_ is None:
+                m_ = re.search(rf"^\s*{key}:\s*\[([^\]]*)\]", txt, re.M)
+            g[k] = np.array([float(x) for x in m_.group(1).split(",")] + [0.0])
+        g["rig"] = "cadm"
+        g["claw_frame"] = re.search(r"^\s*admittance_k_contact:", txt, re.M) is not None
+        return g
     for k in ("my", "dy", "ky"):
         g[k] = np.array([float(re.search(rf"^\s*wb_{k}_{a}:\s*([-+0-9.eE]+)", txt, re.M).group(1))
                          for a in ("x", "y", "z", "psi")])
+    g["rig"] = "wb"
     return g
+
+
+def _yaw_of_quat(w, x, y, z):
+    return np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
 
 
 def Rz(a):
@@ -125,7 +148,17 @@ def analyse(path, gains, fc):
     r = interp(t, ref, (1, 2, 3))
     rd = interp(t, refd, (1, 2, 3))
     rdd = interp(t, refd, (4, 5, 6))
-    hd = np.interp(t, dbg[:, 0], dbg[:, D_EY_HDG])
+    if gains.get("rig") == "cadm":
+        # no heading task row in that law's debug: the claw heading from the planner's
+        # current_ee (FK of the measured pose + joints, world quaternion wxyz) against the
+        # streamed EE heading b1_de (model x-axis; actual yaw = azimuth + 90 deg), as sin()
+        ee = z["ee"]
+        yaw_ee = _yaw_of_quat(ee[:, 4], ee[:, 5], ee[:, 6], ee[:, 7])
+        yaw_ref = np.arctan2(ref[:, 17], ref[:, 16]) + 0.5 * np.pi
+        dpsi = np.interp(t, ee[:, 0], np.unwrap(yaw_ee)) - np.interp(t, ref[:, 0], np.unwrap(yaw_ref))
+        hd = np.sin(np.arctan2(np.sin(dpsi), np.cos(dpsi)))
+    else:
+        hd = np.interp(t, dbg[:, 0], dbg[:, D_EY_HDG])
     e_y = np.column_stack([c - r, hd])
     e_y_f = lpf(e_y, fs, fc)
     ydot = np.gradient(e_y_f, t, axis=0)
@@ -134,7 +167,18 @@ def analyse(path, gains, fc):
     e_v = np.column_stack([cdot - lpf(rd, fs, fc), ydot[:, 3]])
     e_a = np.column_stack([cddot - lpf(rdd, fs, fc), np.gradient(ydot[:, 3], t)])
     Fx_f = lpf(Fx, fs, fc)
-    rendered = gains["my"] * e_a + gains["dy"] * e_v + gains["ky"] * e_y_f
+    if gains.get("claw_frame"):
+        # gains in the claw frame: rotate the translational error chains in, render, rotate out
+        yaw_c = np.interp(t, ref[:, 0], np.unwrap(np.arctan2(ref[:, 17], ref[:, 16]) + 0.5 * np.pi))
+        rendered = np.zeros_like(e_y_f)
+        for i in range(len(t)):
+            R_ = Rz(yaw_c[i])
+            tr = (gains["my"][:3] * (R_.T @ e_a[i, :3]) + gains["dy"][:3] * (R_.T @ e_v[i, :3])
+                  + gains["ky"][:3] * (R_.T @ e_y_f[i, :3]))
+            rendered[i, :3] = R_ @ tr
+            rendered[i, 3] = gains["my"][3] * e_a[i, 3] + gains["dy"][3] * e_v[i, 3] + gains["ky"][3] * e_y_f[i, 3]
+    else:
+        rendered = gains["my"] * e_a + gains["dy"] * e_v + gains["ky"] * e_y_f
     e_imp = Fx_f - rendered
     out["fs"] = fs
     # ---- windows ------------------------------------------------------------
@@ -168,12 +212,21 @@ def analyse(path, gains, fc):
     bt = z["base_truth"] if "base_truth" in z.files and z["base_truth"].size > 1 else None
     src = "truth" if bt is not None else "odometry"
     pos = bt if bt is not None else z["odom"]
-    xb_ref = np.zeros((len(ref), 3))
-    for k, row in enumerate(ref):
-        r0c, _, _ = TP.arm_fk_model(row[7:11], P)
-        xb_ref[k] = row[4:7] - Rz(np.arctan2(row[12], row[11])) @ r0c
-    tt = pos[(pos[:, 0] >= ref[0, 0]) & (pos[:, 0] <= ref[-1, 0]), 0]
-    rr = np.column_stack([np.interp(tt, ref[:, 0], xb_ref[:, i]) for i in range(3)])
+    if gains.get("rig") == "cadm" and "cadm" in z.files and z["cadm"].size > 1:
+        # the coordinated rig decides its own base/arm split: eps_UAV is measured
+        # against the base position ITS planner commanded (MPC h1, state cols 24..26
+        # -> recorder cols 26..28), not the whole-body plan's x_cd chain
+        cs = z["cadm"]
+        ref_t, xb_ref = cs[:, 0], cs[:, 26:29]
+        src += "/cadm-command"
+    else:
+        ref_t = ref[:, 0]
+        xb_ref = np.zeros((len(ref), 3))
+        for k, row in enumerate(ref):
+            r0c, _, _ = TP.arm_fk_model(row[7:11], P)
+            xb_ref[k] = row[4:7] - Rz(np.arctan2(row[12], row[11])) @ r0c
+    tt = pos[(pos[:, 0] >= ref_t[0]) & (pos[:, 0] <= ref_t[-1]), 0]
+    rr = np.column_stack([np.interp(tt, ref_t, xb_ref[:, i]) for i in range(3)])
     pp = interp(tt, pos, (1, 2, 3))
     eps = np.linalg.norm(rr - pp, axis=1)
     out["eps_src"] = src

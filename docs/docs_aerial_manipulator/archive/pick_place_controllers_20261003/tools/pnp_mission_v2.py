@@ -14,6 +14,8 @@ scripted:
   3   go_to_place_start
   4.1 Ready To Place   execute_place: hover above the place pillar
   4.2 Place            descend_place; OPEN once the EE is within 2 cm
+                       (--drop-place, 2026-10-14: no descent -- Ready To Place
+                       ends on the drop point above the bin, Place only OPENS)
   4.3 Exit To Place    exit_place
   5   go_to_land_start, 6 execute_land -> SAFETY -> land by reference -> disarm
 
@@ -334,7 +336,7 @@ class Driver(Node):
         self.wait(lambda: self.status.startswith("EXECUTING"), 20, f"{name} EXECUTING")
         T = float(self.status.split("T=")[1].split("s")[0]) if "T=" in self.status else 60.0
         self.ev(f"{name}: executing, T = {T:.1f} s")
-        if name in ("execute_pick", "execute_place"):
+        if name == "execute_pick" or (name == "execute_place" and not self.a.drop_place):
             self.wait(lambda: self.pp_status.startswith("WAITING") and self.status == "HOLD", T + 40,
                       f"{name} holding above")
         else:
@@ -547,6 +549,30 @@ class Driver(Node):
         else:
             time.sleep(a.leg_pause)
         self.leg("execute_place", "ready_place")
+        if a.drop_place:
+            # the DROP place (2026-10-14, user design): the leg already holds on
+            # the drop point above the bin -- let the claw settle, OPEN (the
+            # payload falls into the bin), then Exit To Place to the safe point
+            self.begin("place")
+            time.sleep(a.drop_dwell)
+            e = self.arrival[2] * 1e3 if self.arrival is not None else float("nan")
+            self.ev(f"place (drop): EE {e:.1f} mm from the drop point -- gripper OPEN")
+            self.gripper(GRIP_OPEN, "open")
+            time.sleep(a.release_dwell)
+            self.mark("place:end")
+            self.exit(3, "exit_place")
+            # (2026-10-14, user design) the gripper stays OPEN through the exit
+            # and closes on the way to Land Start while the arm folds -- as the
+            # arm GS's Pick & Drop tab does on that button
+            self.grip_cmd = GRIP_CLOSE      # (not waited for: the leg starts at once)
+            self.ev("gripper CLOSE with Go To Land Start (the arm folds on the way)")
+            self.leg("go_to_land_start", "go_to_land_start")
+            time.sleep(a.leg_pause)
+            self.leg("execute_land", "execute_land")
+            self.wait(lambda: self.pp_status.startswith("COMPLETE"), 10, "COMPLETE")
+            time.sleep(a.post_hold)
+            self.phase = "done"
+            return
         if a.hook_place:
             # the box payload's HOOK place (2026-10-07): jaws CLOSED through the
             # descent (an open claw holds the arch only on its fingers' outer
@@ -667,6 +693,9 @@ def main():
     ap.add_argument("--grip-closed-m", type=float, default=-0.010, help="the GS's gripper_closed [m]")
     ap.add_argument("--hook-place", action="store_true",
                     help="the box payload's hook place: jaws closed through the descent, then open and exit at once")
+    ap.add_argument("--drop-place", action="store_true",
+                    help="the planner's pick_place_place_drop: Place only opens the gripper on the drop point")
+    ap.add_argument("--drop-dwell", type=float, default=2.0, help="hover on the drop point before opening [s]")
     ap.add_argument("--open-before-place", action="store_true",
                     help="open the gripper at Ready To Place, before the descent (the box payload's hook grasp)")
     ap.add_argument("--clamp-hold", type=float, default=0.0,

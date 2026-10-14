@@ -29,6 +29,16 @@ export AM_ISAAC_SCENE_LABEL="AM-T650-GEO-L1-PNP"
 export PEGASUS_EE_MARKER_CUBE=0
 FSC_AUTOPILOT_CONFIG="${FSC_AUTOPILOT_WS:-$HOME/ros2_ws}/src/fsc_autopilot_ros2/config"
 export WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_CONFIG/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_and_place.yaml}"
+# TWO DEMONSTRATIONS (2026-10-14): WB_SIM_PROFILE=pick_and_place (default, the
+# original, set down) or pick_and_drop (the drop into the bin) -- the SAME as on
+# the decoupled stack. It picks the scene (07's PEGASUS_PNP_TASK) and the planner
+# block checked below; the controller yaml is the same for both.
+case "${WB_SIM_PROFILE:-pick_and_place}" in
+  pick_and_place|pick_place) _PNP_TASK=place; _PNP_PLANNER_SUFFIX=_sim_pick_and_place.yaml ;;
+  pick_and_drop)             _PNP_TASK=drop;  _PNP_PLANNER_SUFFIX=_sim_pick_and_drop.yaml ;;
+  *) echo "ERROR: WB_SIM_PROFILE must be pick_and_place or pick_and_drop for this scene (got '$WB_SIM_PROFILE')" >&2; exit 1 ;;
+esac
+export PEGASUS_PNP_TASK="${PEGASUS_PNP_TASK:-$_PNP_TASK}"
 
 [[ -f "$AM_ISAAC_SCENE_SCRIPT" ]] || { echo "ERROR: missing $AM_ISAAC_SCENE_SCRIPT" >&2; exit 1; }
 [[ -r "$WB_SIM_YAML" ]] || { echo "ERROR: controller yaml not readable: $WB_SIM_YAML" >&2; exit 1; }
@@ -37,7 +47,7 @@ export WB_SIM_YAML="${WB_SIM_YAML:-$FSC_AUTOPILOT_CONFIG/params_single_aerial_ma
 # starts from its SERVER's environment (the stack started the server): push the
 # set ones, clear the unset ones -- the whole-body wrapper's logic.
 if tmux list-sessions >/dev/null 2>&1; then
-  for v in PEGASUS_PNP_PAYLOAD PEGASUS_PNP_PAYLOAD_USD PEGASUS_PNP_GRIP_FRICTION PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_PLATFORM PEGASUS_PNP_HAT_USD PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
+  for v in PEGASUS_PNP_TASK PEGASUS_PNP_BIN PEGASUS_PNP_BIN_SIZE PEGASUS_PNP_BIN_YAW_DEG PEGASUS_PNP_PAYLOAD PEGASUS_PNP_PAYLOAD_USD PEGASUS_PNP_FIN_GRIP_MM PEGASUS_PNP_PICK_PILLAR_HEIGHT PEGASUS_PNP_PLACE_PILLAR_HEIGHT PEGASUS_PNP_GRIP_FRICTION PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_PLATFORM PEGASUS_PNP_HAT_USD PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
     if [[ -n "${!v:-}" ]]; then
       tmux setenv -g "$v" "${!v}"
       echo -e "\033[1;33m  scene knob $v=${!v}\033[0m"
@@ -63,7 +73,7 @@ echo -e "\033[1;35mPICK-AND-PLACE SCENE ($AM_ISAAC_SCENE_LABEL): the DECOUPLED g
 # The planner must carry the pick-and-place block (the stack's WB_PLANNER_YAML):
 # without it it flies its defaults -- pick / place pose [0, 0, 0, 0], carry =
 # the folded home pose, no clockwise turns. Refuse on a mismatch; PP_CHECK=0 skips.
-PP_PLANNER_YAML="${WB_PLANNER_YAML:-$FSC_AUTOPILOT_CONFIG/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml}"
+PP_PLANNER_YAML="${WB_PLANNER_YAML:-$FSC_AUTOPILOT_CONFIG/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650${_PNP_PLANNER_SUFFIX}}"
 if [[ "${PP_CHECK:-1}" != 0 ]] && command -v ros2 >/dev/null 2>&1; then
   source "$SCRIPT_DIR/lib/pick_place_planner_check.sh"
   set +e; _pp_out=$(pick_place_planner_check "$PP_PLANNER_YAML" "$WB_SIM_YAML"); _pp_rc=$?; set -e
@@ -72,7 +82,7 @@ if [[ "${PP_CHECK:-1}" != 0 ]] && command -v ros2 >/dev/null 2>&1; then
   elif [[ $_pp_rc == 1 ]]; then
     echo -e "\033[1;31m$_pp_out\033[0m"
     echo -e "\033[1;31mREFUSED: the running planner does not carry the pick-and-place block -- clean slate, then start the\033[0m"
-    echo -e "\033[1;31mdecoupled stack with WB_SIM_PROFILE=pick_and_place (Command.md section 16).\033[0m"
+    echo -e "\033[1;31mdecoupled stack with WB_SIM_PROFILE=${WB_SIM_PROFILE:-pick_and_place} (Command.md section 16).\033[0m"
     exit 1
   else
     echo -e "\033[1;33mWARNING: could not verify the planner's pick-and-place block ($_pp_out).\033[0m"

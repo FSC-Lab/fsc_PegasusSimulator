@@ -57,14 +57,40 @@ VEHICLE_NAME = "AM-T650-WB-L1-4D-PUSH"
 # [-20, 45] the push needs the slower translational observer -- with H1b's 2.927
 # no in-range push or pull completed (push_pull_20261003 README 9.2); at 1.0 the
 # CAD box flew push 3/3 and the 24 s pull 4/4 (push_pull_cad_box_20261007).
+#
+# THE PUSH TUNE (2026-10-09, push_pull_tune_20261009, 16 screening + 8 confirmation
+# flights on the CAD box, scored on the impedance residual e_imp = F_ext - (M_d edot_v +
+# D_d e_v + K_d e_y) + rho_UAV + the joint margins): the EE impedance is the one lever.
+#   wb_ky_x/y/z 211.9 -> 120, wb_dy_x/y/z 26.82 -> 20.2 (the same damping ratio 0.92):
+#     the residual halves on EVERY contact window (slide 0.53-0.82 vs 0.66-1.22 N rms,
+#     release 0.5-0.9 vs 1.3, release peaks 0.8-1.8 vs 3-5 N), the arm stays OFF q3's
+#     +50 stop at the release (42-47 deg vs 41-50) and the exit leaves the box (0 mm).
+#     Price: the claw gives 10 mm rms under the 1 N force instead of 6 (F / K_y). K_y 300
+#     is unstable in the grasp (watchdog); K_y 80 (2/2) trades 4 mm more deflection and
+#     q3 on its stop in the push for a residual inside K_y 120's scatter -- not taken.
+#   wb_l1_omega_x_t/r/q 0.2072 -> 0.1: the u3 feed-forward filters, a modest gain alone
+#     (contact 0.77, release 0.96 / peak 2.3 N) and, combined with K_y 120, the most
+#     consistent set of the campaign (3/3: slide 0.57-0.81, release 0.51-0.78, peaks
+#     1.2-1.5 N, q3 42-44 at the release, exit 0 mm). 0.4 does nothing.
+#   Left where they are, measured: omega_c_t 0.5 / 1.5, omega_c_r 0.5 / 1.0 (inside the
+#     baseline's scatter or less margin), omega_x 1.0 / 4.0 (BOTH double the contact
+#     residual and make the release a 16-20 N jolt), k_R/k_w 1.3/1.0 (tilt 5.4, q2 on its
+#     stop) and 2.134/1.567 (hover abort), k_x/k_v 32/10 (force guard 24 N) and 64/14
+#     (hover abort), push 12 / 18 s (complete, but release peaks 5.7-6.5 N).
 OVERRIDES = {
     "wb_k_r": "1.6",
     "wb_k_w": "1.2",
+    "wb_ky_x": "120.0",
+    "wb_ky_y": "120.0",
+    "wb_ky_z": "120.0",
+    "wb_dy_x": "20.2",
+    "wb_dy_y": "20.2",
+    "wb_dy_z": "20.2",
     "wb_l1_omega_c_t": "1.0",
     "wb_l1_omega_x": "2.0",
-    "wb_l1_omega_x_t": "0.2072",
-    "wb_l1_omega_x_r": "0.2072",
-    "wb_l1_omega_x_q": "0.2072",
+    "wb_l1_omega_x_t": "0.1",
+    "wb_l1_omega_x_r": "0.1",
+    "wb_l1_omega_x_q": "0.1",
 }
 # Controller keys the mirror does not carry (they default off in the node),
 # inserted after the named anchor key: name -> (anchor, YAML value text).
@@ -216,7 +242,9 @@ HEADER = """# ==================================================================
 #   * vehicle_name AM-T650-WB-L1-4D-PUSH
 #   * controller overrides: wb_k_r 1.6, wb_k_w 1.2 (the pick-and-place pair),
 #     wb_l1_omega_c_t 1.0 (the in-range push / pull, 2026-10-07),
-#     wb_l1_omega_x 2.0 + wb_l1_omega_x_t/r/q 0.2072 (the contact reading split),
+#     wb_ky_x/y/z 120 + wb_dy_x/y/z 20.2 (the EE impedance, the push tune 2026-10-09),
+#     wb_l1_omega_x 2.0 + wb_l1_omega_x_t/r/q 0.1 (the contact reading split; the
+#     feed-forward filters 0.2072 -> 0.1, the push tune 2026-10-09),
 #     wb_l1_contact_hold_translation false (written out; see the generator)
 #   * the push-and-pull planner block (end of the planner section)
 # wb_l1_contact stays false at startup: the PLANNER switches it to CONTACT from
