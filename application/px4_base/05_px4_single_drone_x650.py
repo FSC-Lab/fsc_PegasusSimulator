@@ -3,7 +3,7 @@
 | File: 05_px4_single_drone_x650.py
 | License: BSD-3-Clause
 | Description: Single bare X650 quadrotor SITL for the CCM (rotor-thrust RCCM) stack, at the
-|   WEIGHED flight mass (2.9 kg total since 2026-10, PEGASUS_X650_TOTAL_MASS overrides).
+|   WEIGHED flight mass (3.25 kg total with battery; PEGASUS_X650_TOTAL_MASS overrides).
 |   03_px4_single_drone_x650.py with the real-time knobs of 05_px4_single_drone_t650.py:
 |
 |     * the real-time pacer (PEGASUS_REALTIME / PEGASUS_RENDER_EVERY) and the RTF profiler;
@@ -14,7 +14,7 @@
 |   x650_params.py: kf 4.536223e-05, omega 81.84..817.59 rad/s, lambda 10.51 1/s), CAD inertia
 |   diag(0.05777498, 0.06408172, 0.065004565) authored on /body/body (diagonal only, so the
 |   PhysX principalAxes caveat of the T650 does not apply). Body mass = total - the asset's four
-|   authored rotor bodies (0.0839 kg). At 2.9 kg it hovers at a command of ~0.427.
+|   authored rotor bodies (0.0839 kg). At 3.25 kg it hovers at a command of ~0.458.
 |   03 (3.5 kg, no pacer) is unchanged for the other X650 rigs.
 """
 
@@ -49,10 +49,10 @@ PROFILE_OUT = (os.environ.get("PEGASUS_PROFILE_OUT", "") or
 PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
 
 # TOTAL flying mass [kg] (body + the asset's four rotor bodies). Default: the weighed X650,
-# 2.9 kg (2026-10), which the CCM training (CCM_quad config_quad_torque 'x650') and the
+# 3.25 kg with battery, which the CCM training (CCM_quad config_quad_torque 'x650') and the
 # fsc_autopilot_ros2 *_x650 CCM yamls use. Inertia is NOT rescaled with the mass.
 _mass_raw = os.environ.get("PEGASUS_X650_TOTAL_MASS", "").strip()
-TOTAL_MASS = float(_mass_raw) if _mass_raw else 2.9
+TOTAL_MASS = float(_mass_raw) if _mass_raw else 3.25
 if not 0.5 < TOTAL_MASS < 10.0:
     raise ValueError(f"PEGASUS_X650_TOTAL_MASS must be a total mass in kg, got {TOTAL_MASS}")
 

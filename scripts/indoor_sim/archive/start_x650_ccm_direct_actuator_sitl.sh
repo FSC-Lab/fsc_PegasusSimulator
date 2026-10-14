@@ -2,7 +2,7 @@
 # X650 direct-actuator SITL for the CCM (rotor-thrust RCCM) stack: start_x650_direct_actuator_sitl.sh
 # (lockstep OFF, the DIRECT wall-clock DDS path, X650 PX4 profile rootfs_fsc_indoor_x650) with the
 # Isaac app application/px4_base/05_px4_single_drone_x650.py instead of 03:
-#   * total mass 2.9 kg, the weighed X650 the CCM was trained for (PEGASUS_X650_TOTAL_MASS=<kg>
+#   * total mass 3.25 kg, the weighed X650 with battery, the CCM was trained for (PEGASUS_X650_TOTAL_MASS=<kg>
 #     overrides; the controller yamls' vehicle_mass must match, the app prints the truth);
 #   * the real-time pacer (machine config SIM_REALTIME=1 / PEGASUS_REALTIME=1) and the
 #     real-time I/O of x650_bare_frame_utils (ROS 2 ground truth spun at 10 Hz, mag 50 / GPS 10 Hz);
@@ -28,5 +28,5 @@ fi
 export INDOOR_SIM_PEGASUS_SCRIPT="$REPO_ROOT/application/px4_base/05_px4_single_drone_x650.py"
 export INDOOR_SIM_VEHICLE_LABEL="X650"
 [[ -f "$INDOOR_SIM_PEGASUS_SCRIPT" ]] || { echo "ERROR: missing $INDOOR_SIM_PEGASUS_SCRIPT" >&2; exit 1; }
-echo "X650 CCM SITL: Isaac app 05_px4_single_drone_x650.py, total mass ${PEGASUS_X650_TOTAL_MASS:-2.9} kg"
+echo "X650 CCM SITL: Isaac app 05_px4_single_drone_x650.py, total mass ${PEGASUS_X650_TOTAL_MASS:-3.25} kg"
 exec "$SCRIPT_DIR/indoor_sim/archive/start_x650_direct_actuator_sitl.sh" "$@"

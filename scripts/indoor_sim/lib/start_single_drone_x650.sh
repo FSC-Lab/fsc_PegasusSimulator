@@ -82,7 +82,7 @@ if [[ -n "$PAYLOAD_MASS" ]] &&
 fi
 
 # Total X650 mass in kg, read by application/px4_base/05_px4_single_drone_x650.py only (empty = its
-# default, the weighed 2.9 kg). Baked into the pane command line like PAYLOAD_MASS.
+# default, the weighed 3.25 kg). Baked into the pane command line like PAYLOAD_MASS.
 if [[ -n "${PEGASUS_X650_TOTAL_MASS:-}" ]] &&
    [[ ! "$PEGASUS_X650_TOTAL_MASS" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "ERROR: PEGASUS_X650_TOTAL_MASS must be a positive decimal number." >&2
