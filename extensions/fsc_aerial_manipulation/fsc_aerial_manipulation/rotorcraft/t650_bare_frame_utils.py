@@ -19,12 +19,16 @@
 
 import os
 
+import numpy as np
+
 from scipy.spatial.transform import Rotation
 from pxr import Gf, UsdPhysics
 
 from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorConfig
+from pegasus.simulator.logic.dynamics.linear_drag import LinearDrag
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
+from pegasus.simulator.logic.sensors import Barometer, IMU, Magnetometer, GPS
 from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
 from fsc_aerial_manipulation.rotorcraft import t650_params
 from fsc_aerial_manipulation.utils.inertia_utils import author_inertia_tensor
@@ -59,6 +63,51 @@ def apply_t650_mass_properties(vehicle, body_mass=None, body_inertia=None) -> No
     )
 
 
+# Real-time budget (2026-10-02): at 250 Hz a physics step has 4 ms of wall time, and on a
+# non-hybrid i5-10600K the T650 needed 4.0-4.2 ms. Two per-step costs buy nothing here:
+#  * the ground-truth ROS 2 backend's rclpy.spin_once on EVERY step (~0.3 ms) although it has
+#    no subscriptions (sub_control False); publishing does not need the spin. It now spins every
+#    ROS2_SPIN_EVERY steps (10 Hz), which still serves the node's parameter services.
+#  * the magnetometer and GPS models at the 250 Hz default (~0.2 ms): every indoor T650 profile
+#    sets SYS_HAS_MAG 0 / EKF2_MAG_TYPE 5 and EKF2_GPS_CTRL 0, so PX4 fuses neither. They now
+#    run at MAG_RATE_HZ / GPS_RATE_HZ (typical real-sensor rates). IMU and barometer stay at 250 Hz.
+ROS2_SPIN_EVERY = 25
+MAG_RATE_HZ = 50.0
+GPS_RATE_HZ = 10.0
+
+
+class _ThrottledROS2Backend(ROS2Backend):
+    """ROS2Backend whose executor spins every ROS2_SPIN_EVERY physics steps instead of every step."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._spin_count = 0
+
+    def update(self, dt: float):
+        self._spin_count += 1
+        if self._spin_count >= ROS2_SPIN_EVERY:
+            self._spin_count = 0
+            super().update(dt)
+
+
+class T650Multirotor(Multirotor):
+    """Multirotor plus an optional rotational (aerodynamic) damping torque on /body:
+    tau_drag = -diag(angular_drag) * omega_body  [N m], omega in body FLU [rad/s].
+    With angular_drag all zero it is the stock Multirotor."""
+
+    def __init__(self, *args, angular_drag=(0.0, 0.0, 0.0), **kwargs):
+        self._angular_drag = np.asarray(angular_drag, dtype=float)
+        self.last_angular_drag_torque = np.zeros(3)
+        super().__init__(*args, **kwargs)
+
+    def update(self, dt: float):
+        super().update(dt)
+        if np.any(self._angular_drag):
+            tau = -self._angular_drag * np.asarray(self._state.angular_velocity, dtype=float)
+            self.last_angular_drag_torque = tau
+            self.apply_torque(tau.tolist(), "/body")
+
+
 def spawn_t650_with_mavlink(
     px4_path,
     px4_default_airframe,
@@ -72,6 +121,8 @@ def spawn_t650_with_mavlink(
     body_inertia=None,
     graphical_sensors=None,
     pub_graphical_sensors: bool = False,
+    linear_drag=None,
+    angular_drag=None,
 ):
     """Spawn the bare T650 airframe with a stock Pegasus ``Multirotor`` plus PX4 MAVLink and
     ROS 2 backends, calibrated against the MN4010 + 15x5" bench test. No PX4 SITL is
@@ -131,7 +182,7 @@ def spawn_t650_with_mavlink(
     })
 
     # ----- ROS 2 backend (state publishing only; PX4 has motor authority) -----
-    ros2_backend = ROS2Backend(
+    ros2_backend = _ThrottledROS2Backend(
         vehicle_id=vehicle_id,
         config={
             "namespace": "uav_",
@@ -153,6 +204,9 @@ def spawn_t650_with_mavlink(
     # [-1, -1, 1, 1]. backend[0] = PX4 (primary).
     config = MultirotorConfig()
     config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
+    config.sensors = [Barometer(), IMU(), Magnetometer({"update_rate": MAG_RATE_HZ}), GPS({"update_rate": GPS_RATE_HZ})]
+    print(f"[T650] sensors: IMU + baro 250 Hz, mag {MAG_RATE_HZ:.0f} Hz, GPS {GPS_RATE_HZ:.0f} Hz (neither fused by PX4); "
+          f"ground-truth ROS 2 executor spun every {ROS2_SPIN_EVERY} steps", flush=True)
     config.thrust_curve = LaggedQuadraticThrustCurve(config={
         "rotor_constant": [t650_params.ROTOR_CONSTANT] * 4,
         "rolling_moment_coefficient": [t650_params.ROLLING_MOMENT_COEFFICIENT] * 4,
@@ -163,16 +217,22 @@ def spawn_t650_with_mavlink(
     })
     if graphical_sensors:
         config.graphical_sensors = list(graphical_sensors)
+    # Aerodynamic drag. None keeps the Pegasus default LinearDrag([0.50, 0.30, 0.0]) N/(m/s)
+    # (body FLU x/y/z, applied at the /body origin); angular_drag None/zero adds no torque.
+    if linear_drag is not None:
+        config.drag = LinearDrag([float(c) for c in linear_drag])
+    angular_drag = tuple(float(c) for c in (angular_drag or (0.0, 0.0, 0.0)))
 
     drone_prim_path = f"/World/quadrotor_{vehicle_id}"
 
-    vehicle = Multirotor(
+    vehicle = T650Multirotor(
         stage_prefix=drone_prim_path,
         usd_file=T650_USD,
         vehicle_id=vehicle_id,
         init_pos=spawn_pos,
         init_orientation=quat_xyzw,
         config=config,
+        angular_drag=angular_drag,
     )
     apply_t650_mass_properties(vehicle, body_mass=body_mass, body_inertia=body_inertia)
 

@@ -336,20 +336,27 @@ class Vehicle(Robot):
         # The linear velocity [x_dot, y_dot, z_dot] of the vehicle's body frame expressed in the inertial frame of reference
         linear_vel = self.get_dc_interface().get_rigid_body_linear_velocity(body)
 
+        # carb.Float3 -> ndarray through its fields: np.array(Float3) walks the sequence protocol
+        # and cost ~0.06 ms per call (5 per physics step, ~0.3 ms of a 4 ms step; profiled
+        # 2026-10-02). Same float64 values.
+        linear_vel = np.array((linear_vel.x, linear_vel.y, linear_vel.z))
+        ang_vel = np.array((ang_vel.x, ang_vel.y, ang_vel.z))
+        position = np.array((pose.p.x, pose.p.y, pose.p.z))
+
         prev_linear_velocity = self._state.linear_velocity.copy()
         prev_linear_acceleration = self._state.linear_acceleration.copy()
 
         # Get the linear acceleration and jerk of the body relative to the inertial frame, expressed in the inertial frame.
         # Note: we must do this approximation, since Isaac Sim does not output the acceleration or jerk of the rigid body directly.
         if dt > 0.0:
-            linear_acceleration = (np.array(linear_vel) - prev_linear_velocity) / dt
+            linear_acceleration = (linear_vel - prev_linear_velocity) / dt
             linear_jerk = (linear_acceleration - prev_linear_acceleration) / dt
         else:
             linear_acceleration = np.zeros(3)
             linear_jerk = np.zeros(3)
 
         # Update the state variable X = [x,y,z]
-        self._state.position = np.array(pose.p)
+        self._state.position = position
 
         # Get the quaternion according in the [qx,qy,qz,qw] standard
         self._state.attitude = np.array(
@@ -357,7 +364,7 @@ class Vehicle(Robot):
         )
 
         # Express the velocity of the vehicle in the inertial frame X_dot = [x_dot, y_dot, z_dot]
-        self._state.linear_velocity = np.array(linear_vel)
+        self._state.linear_velocity = linear_vel
 
         # Cache R_BI = R_IB^{-1} to avoid computing the rotation twice
         R_BI = Rotation.from_quat(self._state.attitude).inv()
@@ -366,7 +373,7 @@ class Vehicle(Robot):
         self._state.linear_body_velocity = R_BI.apply(self._state.linear_velocity)
 
         # omega = [p,q,r] expressed in body frame of reference
-        self._state.angular_velocity = R_BI.apply(np.array(ang_vel))
+        self._state.angular_velocity = R_BI.apply(ang_vel)
 
         # The acceleration of the vehicle expressed in the inertial frame X_ddot = [x_ddot, y_ddot, z_ddot]
         self._state.linear_acceleration = linear_acceleration

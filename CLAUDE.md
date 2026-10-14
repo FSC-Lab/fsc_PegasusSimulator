@@ -4012,3 +4012,59 @@ Traps worth more than the numbers:
   pipefail` killed the launcher silently until made non-fatal.
 Not covered: hardware (no hardware pick-and-place yaml); the contact phases are survived by brevity,
 not controlled. Nothing committed.
+
+## T650: injected aerodynamic drag, run-time mass report, and a principal-axes finding (2026-09-30)
+- **Drag env vars (single-drone T650, `05_px4_single_drone_t650.py` via `start_single_drone_x650.sh`;
+  expanded into the Isaac command, so the tmux-server-env trap does not apply):**
+  - `PEGASUS_LINEAR_DRAG=dx,dy,dz` sets `config.drag = LinearDrag(...)` [N/(m/s), body FLU, applied at
+    the /body origin]. Unset keeps the Pegasus default (0.5, 0.3, 0).
+  - `PEGASUS_ANGULAR_DRAG=cx,cy,cz` makes `T650Multirotor` apply `tau = -diag(c) w_body` on /body each
+    step [N m/(rad/s)].
+  - Startup line: `[T650] DRAG: linear [...] angular [...]`.
+- **`PEGASUS_REPORT_MASS_PROPS=1` [`PEGASUS_MASS_REPORT_FILE=<json>`]:**
+  `rotorcraft/t650_mass_report.py` reads what PhysX actually simulates (omni.physics.tensors: masses,
+  CoM poses incl. the principal-axes quaternion, inertias in the link prim frame) at step 10. It prints
+  `[T650 MASS]` lines: per link, the composite about the composite CoM in the /body frame, and the ratio
+  to the CCM design inertia.
+- **FINDING: `principalAxes` on the `/body/body` MESH prim is ignored by PhysX.**
+  - `author_inertia_tensor` writes eigen-sorted moments + `principalAxes`, so the T650 body is simulated
+    as diag(0.0595, 0.0650, 0.0815) in the body frame (composite with rotors
+    diag(0.0655, 0.0718, 0.0906)), not T650 INERTIA_TENSOR (Ixx 0.077, Iyy 0.0641, Izz 0.0650,
+    Ixy 0.0089).
+  - That is roll -15%, pitch +12%, yaw +39%, Ixy lost.
+  - Even a diagonal tensor is permuted (the eigen-sort reorders the axes).
+  - A zero-g torque probe (Isaac 5.1) confirmed it. The same attributes on the `/body` rigid-body prim
+    ARE applied (composite = design + rotors, +8/+11/+14%).
+  - Not fixed: fixing it changes every T650 plant (single drone and aerial manipulator scripts that use
+    the helper). Re-baseline anything tuned against the current plant if it is fixed.
+
+## T650 single drone at RTF 1 on fsc_lab_machine (2026-10-02)
+- **The pacer is now in `05_px4_single_drone_t650.py`.** `_RealTimePacer`, `_RtfProfiler` and single-step
+  rendering are ported from `06_..._free_flight`, with the same `PEGASUS_REALTIME` /
+  `PEGASUS_RENDER_EVERY` / `PEGASUS_PROFILE_*` knobs. Prints `[T650] REAL-TIME PACER on (...)` and
+  `[T650] RTF x.xxx over the last 10.0 s`.
+- **Measured on fsc_lab_machine** (i5-10600K, 6 cores / 12 threads, NOT hybrid, so no `ISAAC_CPUS`;
+  headless):
+  - **Start:** 0.955 on the ground, 0.94-0.95 in a CCM flight; 4.18 ms per 4 ms step.
+  - **Profile (cProfile):** PhysX fetch ~1.2 ms; Pegasus Python callbacks most of the rest.
+- **Three fixes:**
+  1. **`pegasus.simulator/.../vehicles/vehicle.py` `update_state`:** `np.array(carb.Float3)` walks the
+     sequence protocol, ~0.06 ms per call and 5 calls per step. It now builds the arrays from
+     `.x/.y/.z`; same float64 values, every app benefits. Ground RTF 0.955 -> 1.000, but only ~2% spare
+     and still 0.95 in flight.
+  2. **`t650_bare_frame_utils.py`:** the ground-truth `ROS2Backend` is a `_ThrottledROS2Backend` that
+     spins its executor every 25 steps (10 Hz) instead of every step. It has no subscriptions;
+     publishing happens in the state callbacks, still 250 Hz.
+  3. **Same file:** Magnetometer 50 Hz and GPS 10 Hz instead of 250 Hz. Every indoor T650 profile sets
+     `SYS_HAS_MAG 0` / `EKF2_MAG_TYPE 5` / `EKF2_GPS_CTRL 0`. IMU and baro stay at 250 Hz.
+     Affects 05, `06_px4_single_drone_t650_gate_splat.py` and the archived 04.
+- **Result:** RTF 1.000 in every 10 s window during CCM flights (torque and rotor, circle / figure-8 /
+  tangent circle), pacer sleeping ~11%, worst lag <= 17 ms.
+- **`fsc_lab_machine.conf`** now sets `SIM_REALTIME=1`, `SIM_RTF=1.0`.
+- **Traps:**
+  - Margin matters, not just the average. The one flight at ~2% spare (50 ms catch-ups) grew a 1.83 Hz
+    roll mode and aborted.
+  - `06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py` (and other apps without the pacer) still
+    run unpaced, so `SIM_RTF=1.0` is only right for paced apps.
+  - The T650 launcher moved to `scripts/indoor_sim/archive/start_t650_direct_actuator_sitl.sh`.
+

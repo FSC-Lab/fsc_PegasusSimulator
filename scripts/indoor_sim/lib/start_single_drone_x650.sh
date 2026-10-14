@@ -81,6 +81,14 @@ if [[ -n "$PAYLOAD_MASS" ]] &&
   exit 2
 fi
 
+# Total X650 mass in kg, read by application/px4_base/05_px4_single_drone_x650.py only (empty = its
+# default, the weighed 2.9 kg). Baked into the pane command line like PAYLOAD_MASS.
+if [[ -n "${PEGASUS_X650_TOTAL_MASS:-}" ]] &&
+   [[ ! "$PEGASUS_X650_TOTAL_MASS" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "ERROR: PEGASUS_X650_TOTAL_MASS must be a positive decimal number." >&2
+  exit 2
+fi
+
 # Arm SERVO MODEL, read by application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py only (the
 # whole-body TORQUE plant). This is a PLANT property, not a controller gain --
 # the arm controller closes a 1.5 Hz software CURRENT LOOP around Dynamixel
@@ -334,7 +342,10 @@ echo 'Launching indoor $VEHICLE_LABEL from: $PEGASUS_SCRIPT'
 echo 'Asset: $X650_ASSET'
 PEGASUS_PX4_LOCKSTEP=$LOCKSTEP PEGASUS_EXPECTED_TOTAL_MASS=$EXPECTED_TOTAL_MASS \
 PEGASUS_HEADLESS=$PEGASUS_HEADLESS_ARG \
+PEGASUS_LINEAR_DRAG=\"${PEGASUS_LINEAR_DRAG:-}\" PEGASUS_ANGULAR_DRAG=\"${PEGASUS_ANGULAR_DRAG:-}\" \
+PEGASUS_REPORT_MASS_PROPS=${PEGASUS_REPORT_MASS_PROPS:-0} PEGASUS_MASS_REPORT_FILE=\"${PEGASUS_MASS_REPORT_FILE:-}\" \
 PEGASUS_PAYLOAD_MASS=$PAYLOAD_MASS PEGASUS_ARM_SERVO_MODEL=$ARM_SERVO_MODEL \
+PEGASUS_X650_TOTAL_MASS=\"${PEGASUS_X650_TOTAL_MASS:-}\" \
 PEGASUS_ARM_CURRENT_NOISE_A=$ARM_CURRENT_NOISE_A \
 PEGASUS_ARM_CURRENT_NOISE_BW_HZ=$ARM_CURRENT_NOISE_BW_HZ \
 PEGASUS_ARM_CURRENT_NOISE_SEED=$ARM_CURRENT_NOISE_SEED \
