@@ -1,0 +1,23 @@
+./0918 - T650-AM whole-body-L1-4D-20260919T003515Z-1-001/0918 - T650-AM whole-body-L1-4D/flight_wb_l1_4d_20260918_144828
+./0921 - T650-AM whole-body-L1-4D-20260921T170115Z-1-001/0921 - T650-AM whole-body-L1-4D/flight_wb_l1_4d_circle_20260921_112328
+./0921 - T650-AM whole-body-L1-4D-20260921T170115Z-1-001/0921 - T650-AM whole-body-L1-4D/flight_wb_l1_4d_circle_20260921_115207
+./0921 - T650-AM whole-body-L1-4D-20260921T170115Z-1-001/0921 - T650-AM whole-body-L1-4D/flight_wb_l1_4d_circle_20260921_123637
+./0924 - T650-AM whole-body-L1-4D Circle-20260925T003220Z-1-001/0924 - T650-AM whole-body-L1-4D Circle/flight_wb_l1_4d_circle_20260924_120228
+./0924 - T650-AM whole-body-L1-4D Circle-20260925T003220Z-1-001/0924 - T650-AM whole-body-L1-4D Circle/flight_wb_l1_4d_circle_20260924_120546
+./0924 - T650-AM whole-body-L1-4D Circle-20260925T003220Z-1-001/0924 - T650-AM whole-body-L1-4D Circle/flight_wb_l1_4d_circle_20260924_165654
+./0924 - T650-AM whole-body-L1-4D Circle-20260925T003220Z-1-001/0924 - T650-AM whole-body-L1-4D Circle/flight_wb_l1_4d_circle_20260924_172101
+./0928 - T650-AM whole-body vs decoupled Circle-20260929T003844Z-1-001/0928 - T650-AM whole-body vs decoupled Circle/flight_decoupled_l1_circle_20260928_182835
+./0928 - T650-AM whole-body vs decoupled Circle-20260929T003844Z-1-001/0928 - T650-AM whole-body vs decoupled Circle/flight_decoupled_l1_circle_20260928_183608
+./0928 - T650-AM whole-body vs decoupled Circle-20260929T003844Z-1-001/0928 - T650-AM whole-body vs decoupled Circle/flight_wb_l1_4d_circle_20260928_171154
+./0928 - T650-AM whole-body vs decoupled Circle-20260929T003844Z-1-001/0928 - T650-AM whole-body vs decoupled Circle/flight_wb_l1_4d_circle_20260928_172242
+./0929 - T650-AM whole-body-L1-4D Gamepad-20261001T134925Z-1-001/0929 - T650-AM whole-body-L1-4D Gamepad/flight_wb_l1_4d_ps4_20260929_160027
+./1002 - T650-AM geometric L1 adaptive Circle and Gamepad-20261002T183205Z-1-001/1002 - T650-AM geometric L1 adaptive Circle and Gamepad/flight_decoupled_l1_circle_20261002_134247
+./1002 - T650-AM geometric L1 adaptive Circle and Gamepad-20261002T183205Z-1-001/1002 - T650-AM geometric L1 adaptive Circle and Gamepad/flight_decoupled_l1_circle_ps420261002_134830
+./1005 -  T650-AM whole-body vs decoupled Figure-8-20261005T221433Z-1-001/1005 -  T650-AM whole-body vs decoupled Figure-8/flight_decoupled_l1_figure8_vel010_20261005_163734
+./1005 -  T650-AM whole-body vs decoupled Figure-8-20261005T221433Z-1-001/1005 -  T650-AM whole-body vs decoupled Figure-8/flight_decoupled_l1_figure8_vel013_20261005_165431
+./1005 -  T650-AM whole-body vs decoupled Figure-8-20261005T221433Z-1-001/1005 -  T650-AM whole-body vs decoupled Figure-8/flight_wb_l1_4d_figure8_vel010_20261005_162406
+./1005 -  T650-AM whole-body vs decoupled Figure-8-20261005T221433Z-1-001/1005 -  T650-AM whole-body vs decoupled Figure-8/flight_wb_l1_4d_figure8_vel013_20261005_170129
+./1009 - T650-AM whole-body Pick&Place-20261010T021049Z-1-001/1009 - T650-AM whole-body Pick&Place/flight_wb_l1_4d_pick_and_place_20261009_172557
+./1009 - T650-AM whole-body Pick&Place-20261010T021049Z-1-001/1009 - T650-AM whole-body Pick&Place/flight_wb_l1_4d_pick_and_place_20261009_180228
+./1009 - T650-AM whole-body Pick&Place-20261010T021049Z-1-001/1009 - T650-AM whole-body Pick&Place/flight_wb_l1_4d_pick_and_place_20261009_181817
+./1010 - T650-AM whole-body Pick&Place-20261012T190712Z-1-001/1010 - T650-AM whole-body Pick&Place/flight_wb_l1_4d_pick_and_place_20261010_190719

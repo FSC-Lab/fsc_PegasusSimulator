@@ -38,3 +38,24 @@ target_link_libraries(gs_drop_harness "${GS_LIB}" Qt6::Widgets Qt6::Charts)
 ament_target_dependencies(gs_drop_harness
   rclcpp rclcpp_action sensor_msgs std_msgs std_srvs geometry_msgs
   control_msgs controller_manager_msgs fsc_autopilot_ros2_msgs)
+
+# gs_auto_exit_harness (2026-10-15): the Pick & Drop tab's automatic Exit To Drop,
+# against a fake planner
+add_executable(gs_auto_exit_harness gs_auto_exit_harness.cpp)
+target_include_directories(gs_auto_exit_harness PRIVATE "${GS_SRC}")
+target_compile_definitions(gs_auto_exit_harness PRIVATE ARM_GUI_HAVE_MOCAP)
+target_link_libraries(gs_auto_exit_harness "${GS_LIB}" Qt6::Widgets Qt6::Charts)
+ament_target_dependencies(gs_auto_exit_harness
+  rclcpp rclcpp_action sensor_msgs std_msgs std_srvs geometry_msgs
+  control_msgs controller_manager_msgs fsc_autopilot_ros2_msgs)
+
+# gs_param_retry_harness (2026-10-15): the pick tabs ask again when the planner's
+# reply to a parameter get is lost (a fake planner that drops the first ones)
+find_package(rcl_interfaces REQUIRED)
+add_executable(gs_param_retry_harness gs_param_retry_harness.cpp)
+target_include_directories(gs_param_retry_harness PRIVATE "${GS_SRC}")
+target_compile_definitions(gs_param_retry_harness PRIVATE ARM_GUI_HAVE_MOCAP)
+target_link_libraries(gs_param_retry_harness "${GS_LIB}" Qt6::Widgets Qt6::Charts)
+ament_target_dependencies(gs_param_retry_harness
+  rclcpp rclcpp_action rcl_interfaces sensor_msgs std_msgs std_srvs geometry_msgs
+  control_msgs controller_manager_msgs fsc_autopilot_ros2_msgs)

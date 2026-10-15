@@ -38,7 +38,8 @@ the scene and the two mocap bodies the planner captures:
             it by opening), five mocap markers and two brackets. "holder"
             (2026-10-13, with the arch) and "box" (2026-10-07, one-piece basket
             + wire hanger) stay selectable. See PAYLOAD_MODEL below.
-  bin       (2026-10-14) a transparent plastic box, 371 x 290 x 172 mm, open
+  bin       (2026-10-14) a transparent plastic box, 371 x 290 mm, its walls CUT
+            to 35 mm (2026-10-15, user: no air trapped; was 172 mm), open
             top, static, centred on the PLACE hat with its length along y: the
             payload is DROPPED into it (the planner's pick_place_place_drop).
             PEGASUS_PNP_BIN=0 removes it.
@@ -87,7 +88,7 @@ Knobs (environment):
   PEGASUS_PNP_PICK_PILLAR_HEIGHT / PEGASUS_PNP_PLACE_PILLAR_HEIGHT
                              the pillar tops [m], default the TASK's (drop 0.77, place 1.0; under the hat)
   PEGASUS_PNP_BIN            the TASK's (drop 1, place 0) | 1 | 0: the plastic box on the PLACE hat
-  PEGASUS_PNP_BIN_SIZE       its outer "x,y,z" [m], default "0.371,0.290,0.172"
+  PEGASUS_PNP_BIN_SIZE       its outer "x,y,z" [m], default "0.371,0.290,0.035" (the full box: z 0.172)
   PEGASUS_PNP_BIN_YAW_DEG    its yaw [deg], default 90 (length along y; 0 = along x)
   PEGASUS_PNP_PAYLOAD_MASS   total payload mass [kg], default the TASK's (drop 0.180, place 0.200)
   PEGASUS_PNP_PAYLOAD_YAW_DEG the payload's yaw [deg] = obj_0's; the handle's
@@ -227,13 +228,16 @@ for _n, _h in (("PICK", PICK_PILLAR_HEIGHT), ("PLACE", PLACE_PILLAR_HEIGHT)):
 PICK_PLATFORM_TOP  = PICK_PILLAR_HEIGHT + PLATFORM_ABOVE_PILLAR     # [m] where the payload rests
 PLACE_PLATFORM_TOP = PLACE_PILLAR_HEIGHT + PLATFORM_ABOVE_PILLAR    # [m] where it is set down
 # THE BIN (2026-10-14, user design: the payload is DROPPED into a plastic box
-# instead of being set down): 37.1 x 29 x 17.2 cm outer, open top, centred on
-# the PLACE platform; length along x at first, TURNED to y the same day.
+# instead of being set down): 37.1 x 29 cm outer, open top, centred on the
+# PLACE platform; length along x at first, TURNED to y the same day. Its walls
+# were 17.2 cm; CUT to 3.5 cm on 2026-10-15 (user: the deep box trapped the
+# rotor wash -- the 10-14 flights' 0.6 Hz pitch oscillation over it).
 # Static (it does not move when the payload lands in it), transparent, thin
-# walls. The planner's drop point is pick_place_drop_height above the place
-# point; the place point is where the payload's CG rests inside the bin.
+# walls. The planner's drop point is pick_place_drop_height (the arm GS's
+# Drop Margin, 2026-10-15) above the place point; the place point is where
+# the payload's CG rests on the bin's COVER (the rim; the sim has no cover).
 BIN_ENABLE = (os.environ.get("PEGASUS_PNP_BIN", "") or ("1" if TASK == "drop" else "0")).strip() != "0"
-_BIN_RAW = (os.environ.get("PEGASUS_PNP_BIN_SIZE", "") or "0.371,0.290,0.172").strip()
+_BIN_RAW = (os.environ.get("PEGASUS_PNP_BIN_SIZE", "") or "0.371,0.290,0.035").strip()
 try:
     BIN_SIZE = tuple(float(v) for v in _BIN_RAW.split(","))
     assert len(BIN_SIZE) == 3 and min(BIN_SIZE) > 0.0
@@ -397,10 +401,14 @@ WP_PLACE_POINT_PARAM = "pick_place_place_point"
 # the DROP place (planner 2026-10-14): the claw hovers pick_place_drop_height
 # above the place point and opens there -- the Place EE marker follows it
 WP_DROP_PARAMS = ("pick_place_place_drop", "pick_place_drop_height")
-# the drop phase's altitude and its exit (planner 2026-10-14): a drone marker
-# "4.3 Drop Exit" at the place point's x, y + the exit OFFSET [dx, dy, yaw_deg]
-# (fixed relative to the place pillar, never shifted by Adjust), at the drop altitude
-WP_DROP_EXIT_PARAMS = ("pick_place_drop_exit_offset", "pick_place_drop_altitude")
+# the drop's exit (planner 2026-10-14): a drone marker "4.3 Drop Exit" at the
+# place point's x, y + the exit OFFSET [dx, dy, yaw_deg] (fixed relative to the
+# place pillar, never shifted by Adjust), pick_place_drop_exit_climb above the
+# drop's own body height -- since 2026-10-15 set by the drop margin
+# (pick_place_drop_height), the prescribed pick_place_drop_altitude being 0
+WP_DROP_EXIT_PARAMS = ("pick_place_drop_exit_offset", "pick_place_drop_altitude",
+                       "pick_place_drop_exit_climb")
+WP_PLACE_CLAW_BELOW_BODY = 0.102   # [m] the place pose's claw under the body origin (before Plan only)
 WP_NAMES        = ["Start", "Pick", "Place Start", "Place", "Land Start", "Land"]
 WP_BODY_RGB     = (0.20, 0.55, 1.00)
 WP_CLAW_RGB     = (1.00, 0.60, 0.10)
@@ -1241,10 +1249,23 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         pp = self._wp_params.get(WP_PLACE_POINT_PARAM)
         if (self._wp_params.get(WP_DROP_PARAMS[0]) is True and isinstance(de, list) and len(de) == 3
                 and isinstance(pp, list) and len(pp) in (3, 4)):
-            za = self._wp_params.get(WP_DROP_EXIT_PARAMS[1])
-            z = za if isinstance(za, float) and za > 0.0 else pp[2]
+            # the exit's height = the drop's body height + the climb: planned, the
+            # planner's own drop goal; before Plan, the drop claw + the place pose's
+            # claw-to-body height (or a legacy drop altitude above it)
+            climb = self._wp_params.get(WP_DROP_EXIT_PARAMS[2])
+            climb = climb if isinstance(climb, float) else 0.10
+            g3 = 14 + 7 * 3
+            if planned and fin(g3 + 2):
+                z, src = info[g3 + 2] + climb, "planned drop body + climb"
+            elif "3c" in out:
+                za = self._wp_params.get(WP_DROP_EXIT_PARAMS[1])
+                zb = out["3c"][1][2] + WP_PLACE_CLAW_BELOW_BODY
+                z = max(zb, za if isinstance(za, float) and za > 0.0 else zb) + climb
+                src = "drop claw + body offset + climb (before Plan)"
+            else:
+                z, src = pp[2] + climb, "place point + climb"
             out["dx"] = ("body", np.array([pp[0] + de[0], pp[1] + de[1], z], float), de[2],
-                         "4.3 Drop Exit drone", "place point + offset")
+                         "4.3 Drop Exit drone", src)
         return out
 
     def _wp_make(self, key, kind):

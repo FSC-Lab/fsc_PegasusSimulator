@@ -802,6 +802,7 @@ class AmT650WholeBodyArmSim:
         self._grip_cmd = math.radians(GRIPPER_REST_DEG)     # latest command [rad]
         self._grip_tgt = self._grip_cmd                     # slewed drive target
         self._grip_tgt_sent = None
+        self._grip_restart = False   # a new command: restart the slew from the fingers
         self._grip_n = 0
         if self._grip_idx is not None:
             from std_msgs.msg import Float64
@@ -987,13 +988,27 @@ class AmT650WholeBodyArmSim:
     def _on_gripper_command(self, msg):
         v = float(msg.data)
         if math.isfinite(v):
-            self._grip_cmd = max(-GRIPPER_LIMIT_RAD, min(GRIPPER_LIMIT_RAD, v))
+            v = max(-GRIPPER_LIMIT_RAD, min(GRIPPER_LIMIT_RAD, v))
+            if abs(v - self._grip_cmd) > 1e-6:
+                self._grip_restart = True
+            self._grip_cmd = v
 
     def _step_gripper(self, dt, q_all, qd_all):
         """Slew the gripper drive toward the command; publish its state."""
         if self._grip_idx is None:
             return
         step = GRIPPER_RATE * dt
+        if self._grip_restart:
+            # A NEW command ramps from where the fingers ARE, as a servo's
+            # profile starts from its present position (2026-10-15). From the
+            # old target instead, an OPEN after a stalled close (fingers at
+            # -14 deg on the pad, target -50) left the target below the fingers
+            # for ~1 s: nothing moved, the gripper action server reported the
+            # open as STALLED, and the arm GS (a stalled open = a jam) never
+            # started its automatic Exit To Drop.
+            self._grip_restart = False
+            self._grip_tgt = max(-GRIPPER_LIMIT_RAD, min(GRIPPER_LIMIT_RAD,
+                                                         float(q_all[self._grip_idx])))
         self._grip_tgt += max(-step, min(step, self._grip_cmd - self._grip_tgt))
         if self._grip_tgt_sent is None or abs(self._grip_tgt - self._grip_tgt_sent) > 1e-6:
             from omni.isaac.core.utils.types import ArticulationAction

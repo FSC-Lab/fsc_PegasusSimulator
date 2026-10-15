@@ -5001,3 +5001,68 @@ plastic bin centred on the place hat, length along x.
   "Drop Exit Δ" shows the absolute exit; 07 marker, hardware build checks updated. The Drop row's typed z
   only sets the FLOOR of the drop (refused if the release needs the base above `drop_altitude`); the
   drop flies at the drop altitude.
+- **DROP MARGIN REPLACES THE PRESCRIBED DROP ALTITUDE (2026-10-15, user design; README "The drop
+  margin").** The Drop row's Get = the payload on the bin's COVER, used as measured; the arm GS's new
+  **Drop Margin** box (Pick & Drop, beside the Drop row) writes `pick_place_drop_height` (preset 0.10 m
+  = the 10-14 release: payload centre 1.088, body 1.35); `pick_place_drop_altitude` 0 everywhere (legacy,
+  GS warns if set); task-block place z 1.0325 -> 0.9825; all derived yamls regenerated. Planner: the early
+  smooth climb now applies to EVERY drop (before: only with drop_altitude > 0 -> a straight diagonal across
+  the bin wall); the whole-body hardware stacks refuse an older planner on a drop yaml (probe string
+  "drop margin is negative"). Drop Exit Δ z cell = read-only exit height. gtests 28/28.
+- **SAME DAY, 35 mm TRAY + EXIT STRAIGHT ON TO LAND START + AUTO EXIT + DEFAULT VIEW (user).** Bin walls cut
+  172 -> 35 mm (scene default, rim 0.813; Drop point default z 0.8455; tray2 payload in the tray at 12 deg
+  with a marker ball on the rim, tray3 flat). Drop Start z 0.70 -> 1.0. Planner
+  `pick_place_drop_exit_to_land_start` (true in the task block; drop exit offset removed): Exit To Drop takes
+  off 0.10 and flies on to Land Start, arm folding home, Go To Land Start then done. Arm GS: Drop's OPEN
+  result (new `ControlPanel::gripperOpenFinished`) starts Exit To Drop by itself (`pick_place_auto_exit_drop`),
+  gripper closes at Land Start, Drop Exit row gone; offscreen harness PASS. Pick tabs' default 3-D view az
+  -158 / el 52 / zoom 1.46 (fitted to the user's screenshot), hint line prints the live view. Planner suite
+  64/64. README "Drop Start at 1 m ..."
+  **Then (same day, user) the exit changed again: back out the Side Margin (+x), climb the Vertical Margin,
+  HOLD** (`pick_place_drop_exit_to_land_start` false), started by the GS on OPEN, and the planner now plans
+  the drop's exit FROM THE MEASURED POSITION (the release throws the vehicle back ~0.15 m; from the hold it
+  was pulled back over the bin). Drop Margin preset 0.20; Ready To Drop straight (`drop_climb_lead` 1.0).
+  tray4: payload flat in the tray, claw never closer than 92 mm to the release point after the lurch.
+  **Same day: the BACK MARGIN** (`pick_place_drop_exit_back`, 0.20 in the task block; node default -1 =
+  back out the Side Margin as before): Exit To Drop backs out it, not the hook's Side Margin; arm GS
+  Pick & Drop box under Drop Margin; hardware stacks refuse an older planner; tray6 flown (20 cm out,
+  payload flat). And a SIM-only gripper fix in 06: a new gripper command slews from the MEASURED fingers
+  (an open after a stalled close used to sit still > 0.3 s, the Isaac action server called it a jam and
+  the GS never auto-started Exit To Drop). README "The Back Margin" / "The automatic Exit To Drop".
+  **Grey pick tab = a LOST parameter reply** (planner log "failed to send response ... get_parameters
+  (timeout)"): the panel never re-asked; now it re-sends after 2 s and repeats its follow-up loads until
+  answered (harness `gs_param_retry_harness`, drops the first replies, PASS).
+
+**1014 HARDWARE PICK-AND-DROP FREE FLIGHTS — THE BIN DROVE THE OSCILLATION, THE LOOSE ARM SHOWS AS A YAW
+TORQUE (2026-10-14, user request: analyse).** Two flights, no payload: PD-1 over the full plastic bin, PD-2 with
+the bin cut to a holed ~5 cm tray (PD-2 reverted before the drop point, so the tray is UNTESTED). Analysis, tools
+and figure: `docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261014/` (README).
+- **Bin:** 0.59 Hz pitch oscillation (the law's position-loop mode) 1.8-2.7 deg over the bin vs ~0.2 deg at the
+  SAME point/height/heading/arm pose over the hat on 10-09/10-10; gain/lag-fitted external pitch moment 0.071 vs
+  0.010-0.013 N m, vertical aero force 0.26 vs 0.05-0.13 N, no mean lift change, mocap unaffected, calm again at
+  (0,0) at the same height.
+- **Loose FL arm = a standing CLOCKWISE yaw torque** the rotors hold off (`tools/yaw_history.py`: one fixed rotor
+  model, lever tau_z/T): ~2 mm mid-Sep, 3.2-4.6 mm 09-24..10-09, 5.2 on 10-10, 6.5 PD-1, 8.9 PD-2 (CW pair at 0.77 vs
+  CCW 0.40, ~55 % of the yaw budget). Steps line up with hard landings; vibration unchanged. Check it on the first
+  DIRECT hover after any airframe work.
+- **PD-2's large yaw turn was commanded** (pick yaw 179.6 from a Get, align_yaw), tracked to < 0.6 deg; the turn
+  DIRECTION near +-180 is a sub-degree coin flip (`legHeading`, kTurnKeep 210 deg). Raw VRPN changed to ~245 Hz with
+  1/3 repeated frames on 10-14 (was clean 124 Hz).
+- **PILOT TAKEOVER CUT THE MOTORS -- OUR NODE, FIXED (same day, user request).** In DIRECT the whole-body client
+  called `publishMotorsStopped()` (all-NaN `/fmu/in/actuator_motors`) on every tick PX4 was not armed in OFFBOARD,
+  and a pilot switch to STAB left the node in DIRECT -- so it streamed NaN at 250 Hz into the SAME uORB topic PX4's
+  allocator drives in STAB, where the latest message wins and NaN is a motor STOP (PX4 v1.16 `FunctionMotors`,
+  `output_limit_calc_single`). Hardware: all 6 takeovers from DIRECT since 09-28 streamed it (782-10 142 msgs),
+  3 tipped; every disarm was the pilot's `RC switch`. Fix in fsc_autopilot_ros2 (whole-body + AM geometric+L1
+  clients): the sentinel reaches PX4 only in OFFBOARD; `px4TookOver()` reverts DIRECT -> SAFETY on any
+  non-OFFBOARD PX4 mode the same tick; the next OFFBOARD entry after a takeover re-seeds SAFETY on the current
+  pose. Isaac A/B with a scripted pilot over `/fmu/in/manual_control_input` (`tools/run_takeover.sh`): old build
+  10 923 NaN msgs, fell from 0.98 m and tipped, re-arm refused; fixed 0 msgs, SAFETY in the same tick, STAB hold
+  >= 0.90 m, re-armed and climbed, hand-back 4 mm. The modular, coordinated-admittance and bare-drone clients keep
+  the old pattern. Hand-back still dips ~0.3 m (the known SAFETY re-entry dip). NOT flown on hardware.
+  **Deployment guard (2026-10-15):** the four AM hardware stacks (whole-body 4-D raw/fused, geometric+L1
+  raw/fused) REFUSE to start if the installed node binary lacks the string "PX4 LEFT OFFBOARD" -- a
+  pull without a rebuild would otherwise fly the motor-stopping build silently (no yaml key reveals it).
+  Review open items, not fixed: the arm GS's other-tab Plan can flip `pick_place_place_drop` mid-mission
+  (the planner refuses only while a leg flies); Exit To Drop is enabled the instant Drop is clicked,
+  before the OPEN result; the drop exit starts from one unbounded odometry sample.

@@ -1,0 +1,92 @@
+[
+ {
+  "window": "PD-1 pick hover 1.15 m (pick hat)",
+  "minres_pitch": 0.011145818610695933,
+  "kappa_pitch": 1.1150087092906127,
+  "shift_ms": -15.000343322753906,
+  "minres_roll": 0.006410492895644868,
+  "Fz_aero_rms": 0.10927542888933525,
+  "Fz_aero_3_8": 0.06171327600079365
+ },
+ {
+  "window": "PD-1 Drop Start 0.70 m",
+  "minres_pitch": 0.011475009141978984,
+  "kappa_pitch": 0.7550912107793444,
+  "shift_ms": 5.000114440917969,
+  "minres_roll": 0.015597670736074726,
+  "Fz_aero_rms": 0.1513028324858539,
+  "Fz_aero_3_8": 0.07257911262169534
+ },
+ {
+  "window": "PD-1 OVER FULL BIN 1.35 m",
+  "minres_pitch": 0.07118742515816653,
+  "kappa_pitch": 0.5233481663338678,
+  "shift_ms": 15.000343322753906,
+  "minres_roll": 0.048763303982999676,
+  "Fz_aero_rms": 0.5262471935638228,
+  "Fz_aero_3_8": 0.2180565269220007
+ },
+ {
+  "window": "PD-1 over full bin 1.65 m (after abort)",
+  "minres_pitch": 0.02974503351649404,
+  "kappa_pitch": 0.7063535260634431,
+  "shift_ms": 0.0,
+  "minres_roll": 0.02705777047030596,
+  "Fz_aero_rms": 0.2897153064386096,
+  "Fz_aero_3_8": 0.12954520792396704
+ },
+ {
+  "window": "PD-1 open hover (0,0) 1.68 m",
+  "minres_pitch": 0.018208890339121014,
+  "kappa_pitch": 0.6681583727116069,
+  "shift_ms": -40.00091552734375,
+  "minres_roll": 0.014164334958049293,
+  "Fz_aero_rms": 0.19338964732744254,
+  "Fz_aero_3_8": 0.12866113187621633
+ },
+ {
+  "window": "PP-1 10-09 same point 1.32 m (hat)",
+  "minres_pitch": 0.010075800217993348,
+  "kappa_pitch": 0.7384640127760949,
+  "shift_ms": 5.000114440917969,
+  "minres_roll": 0.011305545833956644,
+  "Fz_aero_rms": 0.07752531124926017,
+  "Fz_aero_3_8": 0.09080677190846133
+ },
+ {
+  "window": "PP-1 10-09 same point 1.31 m #2",
+  "minres_pitch": 0.012790235212226907,
+  "kappa_pitch": 0.8220332296040921,
+  "shift_ms": 0.0,
+  "minres_roll": 0.011070103756930474,
+  "Fz_aero_rms": 0.11668346727676994,
+  "Fz_aero_3_8": 0.09793515951622846
+ },
+ {
+  "window": "PP-2 10-09 same point 1.31 m (hat, basket)",
+  "minres_pitch": 0.02517243029020989,
+  "kappa_pitch": 0.8396128624447797,
+  "shift_ms": 10.000228881835938,
+  "minres_roll": 0.013745519871063976,
+  "Fz_aero_rms": 0.1275668070026554,
+  "Fz_aero_3_8": 0.1714135185859528
+ },
+ {
+  "window": "PP-4 10-10 same point 1.33 m (hat, basket)",
+  "minres_pitch": 0.010257579027760819,
+  "kappa_pitch": 0.5200150725512437,
+  "shift_ms": 5.000114440917969,
+  "minres_roll": 0.00847569618304033,
+  "Fz_aero_rms": 0.10319005598770423,
+  "Fz_aero_3_8": 0.09860117171236438
+ },
+ {
+  "window": "PD-2 hover 1.0 m (start)",
+  "minres_pitch": 0.010514402794468239,
+  "kappa_pitch": 0.9790089384554875,
+  "shift_ms": -5.000114440917969,
+  "minres_roll": 0.013005139654607248,
+  "Fz_aero_rms": 0.1722421066171583,
+  "Fz_aero_3_8": 0.06170016274024768
+ }
+]

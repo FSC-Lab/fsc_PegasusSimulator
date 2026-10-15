@@ -1,0 +1,15 @@
+wb             n= 19932  fields=3
+wbmode         n=   169  fields=1
+ctype          n=   169  fields=1
+vinfo          n=   166  fields=4
+mocap          n=  9940  fields=16
+act_motors     n= 18567  fields=4
+vstatus        n=   166  fields=39
+batt           n=   814  fields=39
+vatt           n= 33119  fields=5
+sc             n= 33112  fields=10
+missing /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/l1_control_debug
+missing /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/mode
+missing /uav_0/whole_body_planner/pick_place/status
+wrote /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261014/npz/hist/flight_wb_l1_4d_circle_20260928_171154.npz
+np1-compatible: /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261014/npz/hist/flight_wb_l1_4d_circle_20260928_171154.npz

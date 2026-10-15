@@ -969,15 +969,17 @@ and step 2:
   1.0 m pillars, the basket SET DOWN on the place hat; arm GS tab **Pick & Place**.
 - `pick_and_drop`: the real payload (`Box_Assembly.stl` -> `Box_Payload_Assembly.usda`: basket, the
   holder without its arch, 5 mocap markers, 180 g), the lab's 0.77 m pillars, and a transparent
-  371 x 290 x 172 mm bin on the place hat, turned so its length runs along y. Clockwise route: pick ->
-  Place Start (0.8, -1, 0.7) -> Ready To Place climbs to the drop altitude 1.35 in one smooth curve (the
-  climb done in the first half, `pick_place_drop_climb_lead` 0.5) and arrives level over the bin, yaw -180
-  -> Place opens the gripper -> Exit To Place climbs 0.10 and flies level to the Drop Exit, (+0.30, +0.20)
-  from the place point = (-0.70, -0.80) (`pick_place_drop_exit_offset`: fixed to the place pillar, Adjust
-  never moves it), heading -270 -> Go To Land Start folds the arm and closes the gripper ->
-  Land Start (-0.5, 0.8, 1.0) -> Land 0.35; arm GS tab **Pick & Drop** (its Drop Exit Δ row = the exit
-  offset, z column = the drop altitude; the tab names the place steps Drop Start / Ready To Drop / Drop /
-  Exit To Drop, and the wrapper opens the arm GS on it).
+  371 x 290 mm bin, walls cut to 35 mm (2026-10-15, was 172), on the place hat, turned so its length runs along y. Clockwise route: pick ->
+  Place Start (0.8, -1, 1.0) -> Ready To Place flies straight to the drop point over the bin, yaw -180
+  (like the set-down's Ready To Place; `pick_place_drop_climb_lead` 1.0) -> Place opens the gripper ->
+  Exit To Place starts by itself once the gripper reports open, from where the drone is, backs out the
+  Back Margin (+x) and climbs the Vertical Margin, and holds there -> Go To Land Start folds the arm and
+  closes the gripper -> Land Start (-0.5, 0.8, 1.0) -> Land 0.35; arm GS tab **Pick & Drop** (it names the
+  place steps Drop Start / Ready To Drop / Drop / Exit To Drop, and the wrapper opens the arm GS on it). The drop's height (2026-10-15): the Drop
+  row = the payload standing on the bin's cover (Get, no hand correction), and the **Drop Margin** box
+  beside it (`pick_place_drop_height`, preset 0.20 m) = how far above that the gripper opens;
+  `pick_place_drop_altitude` is 0. The **Back Margin** box under it (`pick_place_drop_exit_back`,
+  preset 0.20 m) = how far Exit To Drop backs out before it climbs.
 Hardware: `AM_HW_PROFILE=pick_and_drop` (the drop block, `..._t650_pick_and_drop.yaml`) or
 `AM_HW_PROFILE=pick_and_place` (the set-down that flew 10-09/10-10) on the whole-body stack.
 The profile also sets the scene (07's `PEGASUS_PNP_TASK` place / drop); `PEGASUS_PNP_PAYLOAD`,
@@ -1122,9 +1124,9 @@ During the flight (after step 3: DIRECT, planner HOLD)
   watchdog trips first and reverts to SAFETY (hover in place, arm home after 1 s, gripper unchanged).
 - Steps only enable in order; any leg already flown can be flown again.
 - **Pick & Drop** tab (2026-10-14; it replaced the Pick & Place PS4 tab): the same steps, but 4.1 Ready To
-  Place climbs at Place Start and holds over the bin at the drop altitude, 4.2 Place opens the gripper
-  there, 4.3 Exit To Place climbs a little and flies level to the Drop Exit, 5 Go To Land Start folds the
-  arm and closes the gripper.
+  Place climbs at Place Start and holds over the bin, the Drop Margin above the Drop point, 4.2 Place opens the gripper
+  there and 4.3 Exit To Place then starts by itself: back the Back Margin, up the Vertical Margin, hold;
+  5 Go To Land Start folds the arm and closes the gripper.
   A tab's Plan switches the planner to its own place; the other tab then says so and stays disabled.
 
 

@@ -290,3 +290,160 @@ BASE to `pick_place_drop_altitude` (1.35 m); a release point that would need the
 refused ("raise pick_place_drop_altitude"). x, y and yaw matter (where the drop is, the exit's anchor, the
 heading); z does not, as long as it stays under the floor. With the box's cover at ~0.95 m the payload
 reads ~0.99 m, z + 0.05 = 1.04 m -> base 1.30 m < 1.35 m, so the drop flies at 1.35 m either way.
+
+## The drop margin replaces the prescribed drop altitude (2026-10-15, user design)
+
+The Drop row's Get now reads the payload STANDING ON THE BIN'S COVER and is used as measured (no hand
+"z + 0.05"); a new arm GS box beside it, **Drop Margin**, writes the planner's existing
+`pick_place_drop_height`: the gripper opens with the payload's centre that far above the Drop point, and
+that alone sets the drop's height. `pick_place_drop_altitude` (the prescribed body height 1.35 m) is 0 in
+every yaml; the planner keeps it as a legacy override and the GS names it on the status line if a planner
+still holds one.
+- **Preset 0.10 m** = what the 10-14 flights released at: planned drop body 1.35 m, claw 1.248 m, payload
+  centre 1.088 m; with the payload on the cover at ~0.9825 m (rim 0.950 + half basket 32.5 mm) the drop
+  body comes out at ~1.345 m. Task block (hardware 4-D yaml = mirror): place point z 1.0325 -> 0.9825,
+  `pick_place_drop_height` 0 -> 0.10, `pick_place_drop_altitude` 1.35 -> 0; every derived yaml regenerated
+  (sim pick_and_place / pick_and_drop, hardware pick_and_place / pick_and_drop, push_pull, coordinated,
+  modular pick-and-place).
+- **Planner** (fsc_trajectory_planner): the early smooth climb of Ready To Place (`drop_climb_lead`) applied
+  only with `drop_altitude > 0`; it now applies to every drop (`place_drop`), whatever sets the height --
+  without this the release-offset drop would climb from the low Place Start on a straight diagonal across
+  the bin's wall. The negative-height refusal now says "drop margin is negative": both whole-body
+  hardware stacks probe that text and REFUSE to start an older planner on a drop yaml with
+  `pick_place_drop_altitude 0` (checked: new build 0 refusals, a stand-in old binary 1, pick_and_place 0).
+  gtest `TheReleaseOffsetSetsTheDropHeightAndKeepsTheSmoothClimb`; 28/28.
+- **Arm GS** (Pick & Drop tab): Drop Margin button + box (0..0.30 m, amber until sent) in the settings
+  column on the Drop row; the Drop row's planned-goal preview adds it; the Drop Exit Δ row's z cell is now
+  read-only = the planned drop body + `pick_place_drop_exit_climb`.
+- **07 scene**: the "4.3 Drop Exit" marker sits at the planned drop body + exit climb (it used the drop
+  altitude).
+
+## The bin cut to a 35 mm tray (2026-10-15, user: no air trapped), and the box renamed Drop Margin
+
+- Scene default `PEGASUS_PNP_BIN_SIZE` 0.371,0.290,**0.035** (rim 0.813 m); task-block Drop point default z
+  0.9825 -> **0.8455** (payload standing on the rim); derived yamls regenerated. With the 0.10 m Drop Margin
+  the drop body flies ~1.208 m: the same 0.40 m above the rim as 1.35 m over the 172 mm box.
+  `drop_leg_profile.py` takes the rim from `DROP_RIM` (default 0.813; drop1..drop7 need 0.950).
+- The arm GS box "Release Offset" is now **Drop Margin** (user); the planner's refusal text and the hardware
+  stacks' probe became "drop margin is negative".
+- **tray2** (wb, `PNP_DRIVER_ARGS=--drop-place`; tray1 lacked that flag and timed out above the drop point):
+  complete. Ready To Drop 13.3 s, body 0.700 -> 1.208 m, the climb done by 29 % of the path; payload bottom
+  >= 0.907 m over the tray (+0.094 vs the rim); gripper opened 14.3 mm from the drop point. **Payload ends in
+  the tray at (-0.997, -0.958, 0.829), 42 mm toward +y, tilted 12.4 deg** -- by geometry its +y side marker
+  ball (y +153 mm, r 15 mm) is beyond the inner wall (-0.817) and rests on the rim. Same release offset to
+  +y as drop5/drop6 (the claw's roll at the drop); a 35 mm wall stops it at 12 deg on the rim where the
+  172 mm box stood it against the wall at 61 deg. One flight.
+
+## Drop Start at 1 m, the exit straight on to Land Start, the automatic Exit To Drop, the default view (2026-10-15, user design)
+
+- **Drop Start (`pick_place_place_start`) z 0.70 -> 1.0** (the Pick & Place profile's Place Start altitude).
+  The drop itself cannot be 1.0 m: the hanging payload's bottom would be below the 0.813 m rim.
+- **Exit To Drop flies straight on to Land Start** (planner `pick_place_drop_exit_to_land_start`, default
+  false, true in the task block; `pick_place_drop_exit_offset` removed from the yamls): a 0.10 m take-off
+  (`pick_place_drop_exit_climb`), then Go To Land Start's own goal and typed heading (-360), the arm folding
+  home; the planner then marks Go To Land Start done (the dry-run Plan shows it as 0.0 s), next is Execute To
+  Land. `planPickPlaceExit` gained an optional waypoints argument; gtest
+  `TheDropExitTakesOffAndFliesStraightOnToLandStart`; planner suite 64/64. Both whole-body hardware stacks
+  refuse an older planner on a drop yaml with it set.
+- **Arm GS:** 4.2 Drop opens the gripper; the station's new `gripperOpenFinished` (the GripperCommand OPEN
+  succeeded) starts 4.3 Exit To Drop by itself (node parameter `pick_place_auto_exit_drop`, default true) --
+  only after the tab's own Drop, once, and only while the planner holds on the drop point. The gripper closes
+  when the exit ends on Land Start. The Drop Exit row is gone. Offscreen check against a fake planner
+  (`tools/gs_harness/gs_auto_exit_harness.cpp`, ROS domain 77): Drop enabled at the drop point, 1 open, 1
+  automatic exit, a stray open does not repeat it, 1 close at Land Start -- PASS.
+- **Default 3-D view of both pick tabs: az -158, el 52, zoom 1.46** (fitted to the user's screenshot by
+  rendering the real view offscreen; ±5 deg). `Traj3DView::setHomeView` takes an optional zoom; the hint
+  line now prints the live `view: az, el, zoom` so a preferred view can be read off and set exactly.
+- **tray3** (wb, `PNP_DRIVER_ARGS=--drop-place`, the driver skips Go To Land Start when the exit ended
+  there): complete. Plan [3.0, 11.8, 16.0, 13.2, 0.0, 5.8] s, exits [3.2, 19.0] s. Ready To Drop 0.999 ->
+  1.212 m, the climb done by 30 % of the path, payload bottom >= 0.908 m (+0.095 vs the rim). **Payload
+  landed flat in the tray (-0.999, -0.974, 0.813), tilt 0.0 deg.** Exit 19.0 s, ended on Land Start
+  (-0.393, 0.728, 1.001) (the typed (-0.5, 0.8) + the sim's Adjust), max z 1.309; landed.
+
+## Second version of the drop's exit, Drop Margin 0.20, straight Ready To Drop (2026-10-15, user)
+
+- **Drop Margin preset 0.10 -> 0.20** (`pick_place_drop_height`): drop body ~1.31 m, basket bottom ~20 cm
+  above the rim.
+- **Ready To Drop flies straight** (`pick_place_drop_climb_lead` 0.5 -> 1.0 = the set-down's Ready To Place):
+  tray4 1.00 -> 1.30 m in 13.6 s, payload bottom >= 0.981 m over the tray (+0.168 vs the rim).
+- **Exit To Drop = back out the Side Margin (+x at yaw -180), climb the Vertical Margin, HOLD there**
+  (`pick_place_drop_exit_to_land_start` false; the planner's ordinary place exit), still started by the arm
+  GS on the gripper's OPEN result; Go To Land Start then flies on (and closes the gripper). **New in the
+  planner: the drop's exit starts FROM THE MEASURED POSITION** (odometry; heading and arm from the hold):
+  releasing the 180 g payload throws the vehicle back -- measured 144 mm (tray3) / 155 mm (tray4) at +2 s --
+  and an exit from the hold pulled the claw back over the bin (tray3: 40 mm off the release point by +4 s,
+  then a vertical climb there). tray4: exit started 112 mm back, claw closest 92 mm after the lurch
+  (+3.0 s; the swing back happens while the hold is still active, before the gripper reports open), then out
+  to 215 mm and up 200 mm, held at (-0.49, -0.99, 1.50). Payload flat in the tray (0.0 deg). Plan legs
+  [3.0, 11.8, 16.0, 13.5, 16.0, 5.8] s, exits [3.2, 6.2] s. Planner 29/29, GS harness PASS.
+
+## The automatic Exit To Drop did not fire in Isaac: the sim gripper's OPEN reported a jam (2026-10-15)
+
+- **Symptom (user, windowed sim):** 4.2 Drop opened the gripper but 4.3 Exit To Drop never started. Arm GS
+  log: `Gripper OPEN did not complete (aborted, stalled -- mechanism jammed?)`; the Isaac gripper action
+  server: `stalled at -16.3 deg (target +0.0)`. The GS starts the exit only on a SUCCEEDED open (a stalled
+  open is treated as a jam, correctly), so nothing followed.
+- **Cause, in the plant (06):** the gripper bus slews its target at `GRIPPER_RATE` (0.5 rad/s) from the LAST
+  COMMANDED angle. After a close that stalls on the payload (here -16 to -40 deg), that target sits at the
+  close command (-50 deg), so an OPEN first ramps through the empty band down to where the fingers are, and
+  the fingers do not move for (stall angle + 50 deg) / 28.6 deg/s -- 1.2 s from -16 deg. The action
+  server's stall test (< 1 deg over 0.3 s) fires first and aborts the goal.
+- **Fix (06, `_on_gripper_command` / `_step_gripper`):** a NEW command restarts the slew from the MEASURED
+  finger angle, so the fingers move on the first step. The same command repeated (the action server
+  re-sends one target per goal) does not restart it. The real gripper has no such slew, so this is
+  sim-only.
+- **Driver:** `pnp_mission_v2.py --grip-via-action` now also OPENS through the GripperCommand action on a
+  drop (`gripper_action_open`, `--grip-open-m` 0.019 = the GS's `gripper_open`) and aborts unless it
+  SUCCEEDS -- the same rule the GS applies -- so a headless run exercises the GS's path.
+- **tray5** (`PNP_DRIVER_ARGS="--drop-place --grip-via-action --grip-axis-tol 0.003"`): close stalled at
+  -32.5 deg (the grasp); open SUCCEEDED, reached in 1.14 s; exit started 0.5 s later from the measured
+  position (138 mm back from the release hold), backed out 10 cm and climbed 20 cm; payload flat in the
+  tray (-0.977, -0.974, 0.813), tilt 0.0 deg; mission complete.
+- **Payload colliders (user question):** `Box_Payload_Assembly.usda` carries colliders for the basket, the
+  holder, the brackets AND the 5 marker posts + balls, matching the visuals; the ball resting near the tray
+  rim in the user's screenshot is a side marker on the camera side at basket-bottom height, not a gap.
+
+## The Back Margin: the drop's own back-out (2026-10-15, user design)
+
+- **What:** Exit To Drop backs out the **Back Margin** (away from the container, from where the drone is
+  after the release), then climbs the Vertical Margin and holds. Before, it backed out the Side Margin,
+  which is the hook grasp's (Ready To Pick's slide-in; the set-down place's back-out). Default 0.20 m;
+  0 = straight up.
+- **Planner (fsc_trajectory_planner):** `PickPlaceConfig::drop_exit_back` / parameter
+  `pick_place_drop_exit_back` (node default -1 = unset: the drop backs out `pick_place_place_exit_back`,
+  the old behaviour), `pickPlaceExitBack()` picks the distance; the set-down place ignores it. gtest
+  `TheBackMarginSetsTheDropsBackOutIndependentlyOfTheSideMargin` (unset -> 0.10, set -> 0.20, 0 -> straight
+  up, set-down -> Side Margin); pick-place tests 30/30.
+- **Task block (hardware 4-D yaml = mirror):** `pick_place_drop_exit_back: 0.20`; the eight derived yamls
+  regenerated (each differs by that key and its comment only). The modular rig's free-flight `_sim.yaml`
+  was NOT regenerated: it is stale since 10-05 (tilt watchdog, figure-8 keys) and regenerating it would have
+  changed more than this key; without the key it backs out the Side Margin.
+- **Hardware stacks** (both whole-body): refuse a planner build without `pick_place_drop_exit_back` when the
+  drop yaml sets it.
+- **Arm GS, Pick & Drop:** the margins column = Vertical Margin, Side Margin, (Drop Start row empty), Drop
+  Margin, **Back Margin** (Land Start row); same button + box pattern (amber until sent, read from the
+  planner in a request of its own so an older planner does not take the Drop Margin with it). Exit To Drop's
+  and Side Margin's tooltips say which margin each leg uses. Harness `gs_auto_exit_harness` PASS: cells
+  V(2,9) S(3,9) D(5,9) B(6,9), loads 0.20, amber when typed, writes 0.25.
+- **tray6** (`--drop-place --grip-via-action --grip-axis-tol 0.003`): exit "from where the vehicle is now
+  (128 mm from the release hold), backing out 20 cm ..., then climbing 20 cm", 6.5 s, ended at
+  (-0.384, -0.987, 1.502) vs tray5's (-0.464, ..., 1.510) at 0.10; payload flat in the tray
+  (-1.009, -0.978, 0.813), tilt 0.0 deg; mission complete.
+
+## The grey Pick & Drop tab: a lost parameter reply, now retried (2026-10-15, user report)
+
+- **Symptom:** after a relaunch the whole Calibration And Points group stayed grey with the boxes at their
+  widget defaults (margins 0.05, Back Margin 0.20) -- the tab never loaded the planner's parameters.
+- **Cause:** the planner logged `failed to send response to /uav_0/whole_body_trajectory_planner/get_parameters
+  (timeout): client will not receive response` -- DDS dropped its reply to the tab's get while the station was
+  still being discovered. The tab marked the request pending and NEVER asked again. The same thing had
+  greyed the tab earlier the same day (then "fixed" by restarting the GS).
+- **Fix (utils_custom_ground_station, `pick_place_panel`, both pick tabs):** a get unanswered for 2 s is sent
+  again (`kParamsRetry`; a late reply is still accepted while nothing is loaded), and the follow-up loads (pick
+  point, Drop Margin, Back Margin) are repeated until each gets an answer of any kind (an older planner's
+  empty answer counts, so it is not asked forever). Logs `no answer from the planner's parameter service in
+  2 s -- asking again`.
+- **Test:** `tools/gs_harness/gs_param_retry_harness.cpp` -- a fake planner with hand-made parameter services
+  drops (never answers) the first main load and the first Back Margin load: the tab asked each twice and was
+  fully loaded and enabled after 4.5 s (Vertical 0.20, Side 0.10, Drop 0.12, Back 0.15 = the fake's values),
+  PASS; `gs_auto_exit_harness` still PASS. The same lost reply can happen over the lab WiFi.

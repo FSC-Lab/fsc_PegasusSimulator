@@ -6,8 +6,10 @@
 Per run: the body altitude against the fraction of the leg's horizontal path,
 the vertical speed at the end of the climb (a step-like climb stops the drone
 there), the payload's lowest bottom while any part of it is over the bin's outer
-rectangle (rim 0.950 m), and where the payload came to rest.
+rectangle, and where the payload came to rest. The rim: DROP_RIM [m], default
+0.813 (the 35 mm tray of 2026-10-15); the 172 mm box of drop1..drop7 was 0.950.
 """
+import os
 import sys
 
 import numpy as np
@@ -16,7 +18,7 @@ BIN_C = np.array([-1.0, -1.0])      # bin centre on the place hat
 BIN_HALF = np.array([0.145, 0.1855])  # turned 90 deg: 290 mm along x, 371 mm along y
 PAY_HALF = np.array([0.1135, 0.153])  # payload footprint with its marker balls (227 x 306 mm)
 PAY_BOTTOM = 0.0325                 # payload origin above its bottom (rests at 0.813 on a 0.7805 floor)
-RIM = 0.950
+RIM = float(os.environ.get("DROP_RIM", "0.813"))
 
 
 def mark(d, name):

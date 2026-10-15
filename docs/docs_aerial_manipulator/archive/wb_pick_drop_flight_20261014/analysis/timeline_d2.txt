@@ -1,0 +1,67 @@
+    0.00  LOG rosbag2_recorder         Press SPACE for pausing/resuming
+    0.00  LOG rosbag2_recorder         Listening for topics...
+    0.01  LOG rosbag2_recorder         Event publisher thread: Starting
+    0.02  LOG rosbag2_recorder         Recording...
+    0.07  wbmode                       SAFETY
+    0.09  LOG single_drone_gui_node    Publishing coordinates: -0.1, -0.21, 1.0, 0.3
+    0.10  ctype                        Baseline (Safety)
+    0.23  pl_status                    IDLE
+    0.23  pp_status                    NOT IN DIRECT
+    0.30  actlaw                       LOCAL_PD_PLUS_HOLD
+   15.14  LOG fsc_autopilot_ros2       CoM anchor captured: [-0.062 -0.111 -0.038] m (measured CoM minus GS reference).
+   15.14  LOG fsc_autopilot_ros2       ENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).
+   15.14  wbmode                       DIRECT
+   15.14  ctype                        Whole-Body Direct Actuation
+   15.14  LOG fsc_autopilot_ros2       activate 'Whole-Body Direct Actuation' -> OK (switched to Whole-Body Direct Actuation)
+   15.14  LOG whole_body_trajectory_planner DIRECT engaged: hold captured -- base [-0.167 -0.321 0.977] m, q [0.2, 40.0, 40.0, 0.1] deg, EE (inertial) [0.086 -0.322 0.916] m az -89.9 deg
+   15.14  pl_status                    HOLD
+   15.14  pp_status                    NOT PLANNED: press Plan
+   15.14  LOG arm_planner              Whole-body DIRECT: going SILENT, the whole-body planner owns the arm.
+   15.15  LOG fsc_autopilot_ros2       Streamed whole-body reference ACTIVE -- the law tracks the whole-body planner's compatible trajectory.
+   15.15  LOG external_torque_controller External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+   15.15  actlaw                       EXTERNAL_WHOLE_BODY
+   19.33  pp_status                    PLANNING
+   19.37  LOG arm_joint_plot_inverted  Plan: planning the six legs from the current hold -- the status reads READY when done
+   19.56  LOG whole_body_trajectory_planner pick-and-place go_to_start: [1] T = 3.00 s (T_min, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.10 m/s, tau_j 0.71 N.m, rotor 471.4/482.4, solve 10.6 ms
+   19.56  LOG whole_body_trajectory_planner pick-and-place execute_pick: [1] [1] T = 15.93 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.24 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 9.3 ms | [2] T = 3.00 s (T_min, 0 dilations), defec
+   19.56  LOG whole_body_trajectory_planner pick-and-place go_to_place_start: [1] T = 16.31 s (v_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 468.7/485.0, solve 8.6 ms
+   19.56  LOG whole_body_trajectory_planner pick-and-place execute_place: [1] arm sweep T = 13.8 s (8 probes), 2 cycles, peak |v| 0.29 m/s, |qdot| 0.04 rad/s, |v_ee| 0.29 m/s, tau_j 0.71 N.m, rotor 8.8/9.6 N, sigma_nd 0.327, solve 128.1 ms
+   19.56  LOG whole_body_trajectory_planner pick-and-place go_to_land_start: [1] T = 12.56 s (v_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.1/482.4, solve 9.8 ms
+   19.56  LOG whole_body_trajectory_planner pick-and-place execute_land: [1] T = 5.82 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.25 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 10.2 ms
+   19.56  LOG whole_body_trajectory_planner pick-and-place planned: 84.6 s of flight in six legs and two exits.
+   19.56  pp_status                    READY next=go_to_start
+   23.23  pl_status                    CALCULATING
+   23.23  pp_status                    FLYING go_to_start
+   23.23  LOG whole_body_trajectory_planner pick-and-place: planning go_to_start from the current hold; it executes as soon as it is planned
+   23.25  LOG whole_body_trajectory_planner pick-and-place go_to_start: executing -- [1] T = 3.00 s (T_min, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.10 m/s, tau_j 0.71 N.m, rotor 471.4/482.4, solve 12.2 ms
+   23.25  pl_status                    EXECUTING T=3.0s
+   23.25  pp_status                    FLYING go_to_start T=3.0s
+   23.25  LOG arm_joint_plot_inverted  Go To Start: planning go_to_start from the current hold; it executes as soon as it is planned
+   26.25  LOG whole_body_trajectory_planner pick-and-place: go_to_start complete.
+   26.25  pl_status                    HOLD
+   26.25  LOG whole_body_trajectory_planner transition complete: hold captured -- base [-0.098 -0.205 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [0.155 -0.207 0.939] m az -90.0 deg
+   26.25  pp_status                    DONE go_to_start next=execute_pick
+   27.07  LOG gripper_controller       Received & accepted new action goal
+   27.07  pl_status                    CALCULATING
+   27.07  pp_status                    FLYING execute_pick (approach)
+   27.07  LOG whole_body_trajectory_planner pick-and-place: planning execute_pick from the current hold; it executes as soon as it is planned
+   27.09  LOG whole_body_trajectory_planner pick-and-place execute_pick: executing -- [1] T = 15.93 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.24 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 11.2 ms
+   27.09  pl_status                    EXECUTING T=15.9s
+   27.09  pp_status                    FLYING execute_pick (approach) T=15.9s
+   27.10  LOG arm_joint_plot_inverted  Ready To Pick: planning execute_pick from the current hold; it executes as soon as it is planned
+   36.24  LOG fsc_autopilot_ros2       Reference re-seeded to current pose: [0.75 0.45 1.12] m, yaw 110.3 deg
+   36.24  LOG fsc_autopilot_ros2       Returned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.
+   36.25  LOG fsc_autopilot_ros2       SAFETY guard: folding the arm HOME in 1.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.
+   36.25  wbmode                       SAFETY
+   36.25  ctype                        Baseline (Safety)
+   36.25  LOG fsc_autopilot_ros2       activate 'Baseline (Safety)' -> OK (switched to Baseline (Safety))
+   36.25  LOG arm_planner              SAFETY: this node owns the arm reference again, resuming from the measured pose.
+   36.25  LOG whole_body_trajectory_planner SAFETY -- planner silent, targets dropped.
+   36.25  pl_status                    IDLE
+   36.25  pp_status                    NOT IN DIRECT
+   36.55  LOG external_torque_controller External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+   36.55  actlaw                       LOCAL_PD_PLUS_HOLD
+   37.25  LOG fsc_autopilot_ros2       SAFETY guard: arm folding HOME (Homing over 1.500000 s.)
+   48.80  LOG single_drone_gui_node    Publishing coordinates: 1.03, 0.61, 1.2, 109.54
+   58.67  LOG single_drone_gui_node    Publishing coordinates: 0.0, 0.0, 1.2, 109.54
+   65.20  LOG single_drone_gui_node    Publishing coordinates: 0.0, 0.0, 0.35, 109.54

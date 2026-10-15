@@ -1,0 +1,15 @@
+missing /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/wb_control_debug
+missing /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/mode
+ctype          n=   367  fields=1
+vinfo          n=   362  fields=4
+mocap          n= 21737  fields=16
+act_motors     n= 24925  fields=4
+vstatus        n=   350  fields=39
+batt           n=  1720  fields=39
+vatt           n= 69886  fields=5
+sc             n= 69887  fields=10
+l1             n= 24925  fields=3
+gmode          n=   363  fields=1
+missing /uav_0/whole_body_planner/pick_place/status
+wrote /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261014/npz/hist/flight_decoupled_l1_figure8_vel010_20261005_163734.npz
+np1-compatible: /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261014/npz/hist/flight_decoupled_l1_figure8_vel010_20261005_163734.npz

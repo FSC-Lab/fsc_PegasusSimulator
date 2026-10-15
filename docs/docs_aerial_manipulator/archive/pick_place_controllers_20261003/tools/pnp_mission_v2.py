@@ -455,6 +455,40 @@ class Driver(Node):
         if not res.stalled and not self.a.hook_place:
             raise Abort("the gripper closed on NOTHING -- not lifting")
 
+    def gripper_action_open(self, what):
+        """The arm GS's DROP (2026-10-15): a GripperCommand OPEN goal; the GS starts
+        Exit To Drop only when it SUCCEEDS (a stalled open reads as a jam), so a
+        result other than SUCCEEDED aborts the mission here as it would stop the GS."""
+        from control_msgs.action import GripperCommand
+        from action_msgs.msg import GoalStatus
+        self.mark(f"gripper_{what}:start")
+        self.grip_cmd = None                      # the action server drives the bus now
+        goal = GripperCommand.Goal()
+        goal.command.position = self.a.grip_open_m
+        goal.command.max_effort = 50.0
+        if not self.grip_ac.wait_for_server(timeout_sec=5.0):
+            raise Abort(f"no gripper action server at {self.a.grip_action}")
+        fut = self.grip_ac.send_goal_async(goal)
+        t = time.time()
+        while not fut.done() and time.time() - t < 5.0:
+            time.sleep(0.01)
+        gh = fut.result() if fut.done() else None
+        if gh is None or not gh.accepted:
+            raise Abort("gripper OPEN goal not accepted")
+        rf = gh.get_result_async()
+        while not rf.done() and time.time() - t < 12.0:
+            time.sleep(0.01)
+        if not rf.done():
+            raise Abort("gripper OPEN: no result within 12 s")
+        res, status = rf.result().result, rf.result().status
+        self.grip_cmd = GRIP_OPEN                 # hold the open on the bus
+        self.ev(f"gripper {what} (action): status {status} (SUCCEEDED = {GoalStatus.STATUS_SUCCEEDED}) "
+                f"stalled={res.stalled} reached={res.reached_goal} after {time.time() - t:.2f} s, "
+                f"at {np.degrees(self.grip or np.nan):.1f} deg")
+        self.mark(f"gripper_{what}:end")
+        if status != GoalStatus.STATUS_SUCCEEDED:
+            raise Abort("gripper OPEN did not succeed -- the arm GS would not start Exit To Drop")
+
     def exit(self, leg_k, step):
         self.begin(step)
         name = "exit_pick" if leg_k == 1 else "exit_place"
@@ -462,7 +496,8 @@ class Driver(Node):
         self.started_late(step, name)
         self.wait(lambda: self.status.startswith("EXECUTING"), 20, f"{name} EXECUTING")
         k = 83 if leg_k == 1 else 84
-        self.wait(lambda: self.status == "HOLD" and self.info is not None and self.info[k] > 0.5, 40,
+        # (60 s: the drop's exit may fly on to Land Start, 2026-10-15)
+        self.wait(lambda: self.status == "HOLD" and self.info is not None and self.info[k] > 0.5, 60,
                   f"{name} complete")
         self.mark(f"{step}:end")
 
@@ -557,16 +592,25 @@ class Driver(Node):
             time.sleep(a.drop_dwell)
             e = self.arrival[2] * 1e3 if self.arrival is not None else float("nan")
             self.ev(f"place (drop): EE {e:.1f} mm from the drop point -- gripper OPEN")
-            self.gripper(GRIP_OPEN, "open")
+            if a.grip_via_action:
+                self.gripper_action_open("open")      # the arm GS's path: exit on SUCCEEDED
+            else:
+                self.gripper(GRIP_OPEN, "open")
             time.sleep(a.release_dwell)
             self.mark("place:end")
             self.exit(3, "exit_place")
-            # (2026-10-14, user design) the gripper stays OPEN through the exit
-            # and closes on the way to Land Start while the arm folds -- as the
-            # arm GS's Pick & Drop tab does on that button
-            self.grip_cmd = GRIP_CLOSE      # (not waited for: the leg starts at once)
-            self.ev("gripper CLOSE with Go To Land Start (the arm folds on the way)")
-            self.leg("go_to_land_start", "go_to_land_start")
+            if self.info is not None and int(self.info[5]) >= 4:
+                # (2026-10-15, user design) the exit took off and flew on to Land
+                # Start, the arm folding home: Go To Land Start is done -- close
+                # the gripper there, as the arm GS's Pick & Drop tab does
+                self.grip_cmd = GRIP_CLOSE
+                self.ev("exit_place ended on Land Start -- gripper CLOSE, go_to_land_start skipped")
+            else:
+                # (2026-10-14) the gripper stays OPEN through the exit and closes on
+                # the way to Land Start while the arm folds
+                self.grip_cmd = GRIP_CLOSE      # (not waited for: the leg starts at once)
+                self.ev("gripper CLOSE with Go To Land Start (the arm folds on the way)")
+                self.leg("go_to_land_start", "go_to_land_start")
             time.sleep(a.leg_pause)
             self.leg("execute_land", "execute_land")
             self.wait(lambda: self.pp_status.startswith("COMPLETE"), 10, "COMPLETE")
@@ -685,6 +729,8 @@ def main():
                     help="hover above the target this long before Pick / Place [s] (the descent trim's window)")
     ap.add_argument("--stall-s", type=float, default=0.25)
     ap.add_argument("--release-dwell", type=float, default=0.5)
+    ap.add_argument("--grip-open-m", type=float, default=0.019,
+                    help="the GripperCommand OPEN position the arm GS sends [m] (with --grip-via-action)")
     ap.add_argument("--grip-axis-tol", type=float, default=0.0,
                     help="pick: also require |error along the closing axis| <= this before closing [m] (0 = off)")
     ap.add_argument("--grip-via-action", action="store_true",
