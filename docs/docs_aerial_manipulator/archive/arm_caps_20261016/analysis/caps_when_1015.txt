@@ -1,0 +1,36 @@
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/arm_caps_20261016/tools/caps_when.py:29: RuntimeWarning: All-NaN slice encountered
+  flag = "  <- term over a cap" if np.nanmax(tt) > 100 else ("  <- duty at a PWM Limit" if dd.max() >= 99.5 else "")
+
+=== e1: per leg  [DIRECT term % of max_effort | total duty % of PWM Limit]  j1..j4
+  SAFETY before DIRECT               14.6 s  term [ nan  nan  nan  nan]  duty [   9   17   19    4]
+  go_to_start                         3.0 s  term [  71   41   20   18]  duty [  25   30   11   14]
+  execute_pick (approach)             8.7 s  term [  55   43   32   20]  duty [  28   29   21   17]
+  execute_pick (descent)              3.0 s  term [  57   29   13   19]  duty [  24   20    7   15]
+  exit_pick (up the vertical margi    3.2 s  term [  59   31   14   18]  duty [  28   21   11   14]
+  go_to_place_start                  16.1 s  term [  67   53   38   20]  duty [  30   37   29   16]
+  execute_place (approach)           12.9 s  term [  68   50   30   19]  duty [  33   37   20   16]
+  exit_place (up the vertical marg    6.5 s  term [  71   38   20   21]  duty [  28   27   17   16]
+  go_to_land_start                   16.0 s  term [  71   51   31   21]  duty [  35   35   29   17]
+  execute_land                        5.7 s  term [  59   38   19   16]  duty [  25   29   15   13]
+  SAFETY after DIRECT                 3.5 s  term [   8   31    8    5]  duty [  36   41   59    5]
+
+=== d1: per leg  [DIRECT term % of max_effort | total duty % of PWM Limit]  j1..j4
+  SAFETY before DIRECT               17.5 s  term [ nan  nan  nan  nan]  duty [   8   17   18    5]
+  go_to_start                         3.0 s  term [  61   30   24    8]  duty [  27   20   18    3]
+  execute_pick (approach)             8.8 s  term [  63   42   31   12]  duty [  30   28   20    4]
+  execute_pick (descent)              3.0 s  term [  50   29   17   12]  duty [  22   21   15    4]
+  exit_pick (up the vertical margi    3.2 s  term [  59   87   97   14]  duty [  36   70   74   14]
+  go_to_place_start                  16.1 s  term [  77  103  123   24]  duty [  30   80   98   98]  <- term over a cap
+  execute_place (approach)           13.6 s  term [  62   97   87   27]  duty [  28   75   71  102]  <- duty at a PWM Limit
+  exit_place (up the vertical marg    6.5 s  term [  61   40   29   24]  duty [  25   43   27  108]  <- duty at a PWM Limit
+  go_to_land_start                   16.0 s  term [  73   51   30   27]  duty [  27   35   24  106]  <- duty at a PWM Limit
+  execute_land                        5.8 s  term [  55   44   34   26]  duty [  26   32   28   97]
+  SAFETY after DIRECT                 2.5 s  term [   9   27   14    5]  duty [  32   57   58   37]
+
+=== d2: per leg  [DIRECT term % of max_effort | total duty % of PWM Limit]  j1..j4
+  SAFETY before DIRECT               19.3 s  term [ nan  nan  nan  nan]  duty [   8   16   18    5]
+  go_to_start                         3.0 s  term [  76   25   15   15]  duty [  36   16    8   15]
+  execute_pick (approach)             8.9 s  term [  61   42   30   18]  duty [  35   29   20   15]
+  execute_pick (descent)              3.0 s  term [  50   33   15   14]  duty [  25   23    7   15]
+  exit_pick (up the vertical margi    3.2 s  term [  66   48   61   30]  duty [  41   49   80   77]
+  SAFETY after DIRECT                29.8 s  term [  42   21   13    9]  duty [  91   48   59   44]

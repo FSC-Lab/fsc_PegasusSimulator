@@ -447,3 +447,98 @@ still holds one.
   drops (never answers) the first main load and the first Back Margin load: the tab asked each twice and was
   fully loaded and enabled after 4.5 s (Vertical 0.20, Side 0.10, Drop 0.12, Back 0.15 = the fake's values),
   PASS; `gs_auto_exit_harness` still PASS. The same lost reply can happen over the lab WiFi.
+
+## The DECOUPLED rig (geometric + L1, position-mode arm) flies the same pick-and-drop (2026-10-15, user request)
+
+Same scene, payload, tray, planner block (`..._whole_body_l1_4d_..._sim_pick_and_drop.yaml`) and driver
+path as tray5/tray6; only the controller differs (`..._geometric_l1_..._sim_pick_and_place.yaml`, kp/kv_xy
+15/10, kp/kv_z 40/18 -- the 10-03 payload tune). Headless, raw mocap, RTF 1:
+`tools/run_pnp.sh geo <tag>` (run 1) and `tools/run_geo_drops.sh geo_drop2 geo_drop3` (a clean slate
+before each, the simulation closed at the end), `PNP_DRIVER_ARGS="--drop-place --grip-via-action
+--grip-axis-tol 0.003"`. No code or yaml changed: the stack, the scene wrapper and the driver already
+took `WB_SIM_PROFILE=pick_and_drop` for this rig. Scored with the new `tools/drop_score.py` (the drop
+itself, current tray: turned 90 deg, rim 0.813) and `pnp_score.py` (tilt, tracking, steps; its own bin
+constants are the 10-14 box's).
+
+| | WB tray5 / tray6 | **decoupled geo_drop1 / 2 / 3** |
+|---|---|---|
+| mission | complete / complete | **complete 3/3**, 106-111 s of DIRECT (WB 104-105) |
+| peak tilt (DIRECT) | 7.3 / 7.2 deg | 10.2 / 10.1 / 9.3 deg (at the release; exit_pick 8.4-8.7) |
+| claw hover error, Ready To Pick | 5-6 mm rms | 54-55 mm rms (the standing offset) |
+| claw at the close | 6.1 / 2.3 mm | 12.4 / 9.3 / 7.6 mm (the pick's descent TRIM: goal shifted ~(-40, +35) mm) |
+| claw at the open (drop) | 7.0 / 14.0 mm | **51.7 / 58.5 / 31.0 mm** (no trim on a drop) |
+| payload at release, off the tray centre (x, y) | (+21, +23) / (-17, +13) mm | (-28, +47) / (-37, +29) / (+11, +35) mm |
+| body lurch after the release (before the exit) | 157 / 174 mm | 287 / 285 / 262 mm |
+| exit: claw's closest return to the release point | 112 / 119 mm | 54 / 73 / 81 mm |
+| payload at rest | **flat** / **flat** | **in the tray, NOT flat: 12.6 / 7.8 / 11.7 deg**, a marker ball on the rim |
+
+- **The decoupled rig does the whole task**: grasp centred to <= 12 mm, carry without slip (<= 1 mm),
+  drop into the tray, back out, land -- 3 of 3, no abort, no guard.
+- **The drop is where it falls short, and it is the law's standing offset, not chance.** The claw holds
+  ~5 cm off its target in every hover (the unmatched body-fixed lateral force on kp 15, 10-03 / 10-05);
+  it rotates with the heading -- (-40, +35) mm trim at the pick (yaw 0), (+20..+47, -20..-39) mm at the
+  drop (yaw -180). The pick cancels it with the descent trim; a drop has no descent, so the gripper opens
+  wherever the vehicle hangs. Across the vehicle (y) the two side marker balls (y +-153 mm, at the
+  basket's bottom) leave 30 mm a side in the tray, and the release was 29-47 mm +y in all three (the
+  +y also carries the ~10-20 mm the WB runs show from the claw's roll), so a side ball lands on the rim
+  every time. Along the heading (x) the margin is ~87 mm (see the identification below: the front /
+  back balls pass over the 35 mm wall).
+- The release throws the decoupled vehicle further (262-287 mm vs 157-174) and the exit, planned from the
+  measured position, brings the claw back closer to the release point (54-81 mm vs 112-119) -- above
+  the tray at ~1.2 m, no contact.
+- **What would make it drop flat** (not done): a DROP TRIM -- on Drop, shift the hold by the claw's mean
+  error first, settle, then open (the pick's trim logic on the drop point; planner + arm GS change: the
+  planner refuses any descent on a drop today). A config change cannot: a stiffer position pair shrinks
+  the offset but brings back the payload sway (10-03).
+- **Hardware gap**: the two decoupled HARDWARE stacks take `AM_HW_PROFILE` free_flight / pick_and_place
+  only. `pick_and_place` reads the set-down planner block; `free_flight` reads the drop block (the base
+  hardware yaml carries it) but with the free-flight position gains, which sway with a payload. A
+  `pick_and_drop` case (controller `..._geometric_l1_..._t650_pick_and_place.yaml`, planner
+  `..._whole_body_l1_4d_..._t650_pick_and_drop.yaml`) is needed before a decoupled pick-and-drop flight.
+
+### The drop offset, identified (2026-10-15, user request)
+
+The decoupled rig's release error is ~consistent, so it is cancelled by shifting the Drop point --
+nothing else in the task changes. `tools/make_drop_offset_yaml.py` writes a copy of the pick-and-drop
+planner yaml with only `pick_place_place_point` shifted; `run_pnp.sh` takes it as `PNP_PLANNER_YAML`
+(geo). `tools/drop_offset_id.py` measures, per run, where the payload is released relative to the
+COMMANDED drop point (it checks that point against the recorded claw reference at the hold: 0.0 mm in
+every run). The payload rides rigidly in the gripper, so its position at each moment of the hold is
+where it would be released if Drop were pressed then: the four new runs held 5 s (`--drop-dwell 5`).
+
+**Which directions matter (corrected):** only the payload's parts below the 35 mm wall can catch it
+when it lands flat -- the basket (x, y +-55 mm), its arms (y +-117.5) and the two SIDE marker balls
+(y +-153, at the basket's bottom). The front / back balls (x +-113) sit 47.5 mm above the bottom and
+pass over the wall. So the tray leaves **~30 mm a side across the vehicle (y) and ~87 mm along the
+heading (x)**; the y error decides flat or not. The footprint used before (227 x 306 mm, every marker)
+said x was the tight side, which is wrong for this tray. For the same reason the drop's ~4 deg of yaw
+error costs ~1 mm in y: no yaw correction is needed.
+
+Release error relative to the commanded drop point, world mm (drop heading -180):
+
+| run | commanded drop point | release error (x, y) | y clearance to the wall | payload at rest |
+|---|---|---|---|---|
+| geo_drop1 | (-1.000, -1.000) | (-28, +47) | -17 | on the rim, 12.6 deg |
+| geo_drop2 | (-1.000, -1.000) | (-37, +29) | +1 | on the rim, 7.8 deg |
+| geo_drop3 | (-1.000, -1.000) | (+11, +35) | -6 | on the rim, 11.7 deg |
+| geo_off1_a | **(-0.982, -1.037)** | (-32, +45) | +22 | **flat**, (-7, +11) mm off the centre |
+| geo_off1_b | (-0.982, -1.037) | (+25, +39) | +27 | **flat**, (+51, +9) |
+| geo_off1_c | (-0.982, -1.037) | (+3, +44) | +22 | **flat**, (+37, +19) |
+| geo_off1_d | (-0.982, -1.037) | (-35, +34) | +27 | **flat**, (-13, -2) |
+
+Pooled over the seven runs: mean **(-13, +39) mm**, std (25, 6.5) mm. The y part is the steady one
+(std 6.5 mm, so the mean is known to ~2.5 mm); x scatters but has ~87 mm of room. The press time hardly
+matters: the mean is (-14, +37) mm at 2 s after Ready To Drop ends and (-11, +40) at 5 s, the y std
+7.3 -> 4.5 mm.
+
+**Identified drop offset (sim, decoupled rig, drop heading -180): world (+0.013, -0.039) m = 13 mm
+toward the vehicle, 39 mm to its left** -- i.e. Drop point = tray centre + (+0.013, -0.039). With it,
+every one of the seven runs' releases gives +20..+29 mm of y clearance (leave-one-out +18..+29). The
+flown (+0.018, -0.037) is within 5 mm of it and landed flat 4/4. WB needs none (released within
+~25 mm and landed flat).
+
+On hardware this is a STARTING value, not the answer: the offset comes from the airframe's own
+sideways force on the decoupled law's kp 15 (the sim's was identified from September's WB flights;
+the airframe has changed since) and from how the real gripper holds the handle. Applied by hand: after
+the Drop row's Get, add +0.013 to x and -0.039 to y (valid at drop yaw -180; at another heading turn
+it with the heading: 13 mm back, 39 mm left).

@@ -1,0 +1,8 @@
+===== e1 E-1  execute_place 57.58-70.47 s
+drop claw target [-1.19  -1.169  1.287]  base goal [-0.934 -1.17   1.389] yaw -180.0  drop Get (capture) [nan nan nan  0.]
+===== d1 D-1  execute_place 64.04-77.69 s
+drop claw target [-1.16  -1.189  1.286]  base goal [-0.904 -1.191  1.388] yaw -180.0  drop Get (capture) [nan nan nan  0.]
+basket at the click: [-1.212 -1.16   1.121]  tilt 9.0
+basket starts to fall at 78.48 s (+0.12 s after the click), at [-1.206 -1.161  1.108]
+basket at rest [-1.221 -1.095  0.901] tilt 9.1;  rest - basket-at-release (xy) [-14.  67.] mm;  rest - drop Get (xy) [nan nan] mm
+basket - Get over the hold (mm): mean [nan nan]  std [nan nan]  min [nan nan] max [nan nan]

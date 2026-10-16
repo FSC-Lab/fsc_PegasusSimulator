@@ -1,0 +1,27 @@
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q4_damping_20261016/tools/ident_motor.py:61: RuntimeWarning: Degrees of freedom <= 0 for slice
+  r2 = 1 - res.var() / V[m].var()
+/usr/lib/python3/dist-packages/numpy/core/_methods.py:222: RuntimeWarning: invalid value encountered in true_divide
+  arrmean = um.true_divide(arrmean, div, out=arrmean, casting='unsafe',
+/usr/lib/python3/dist-packages/numpy/core/_methods.py:254: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+/usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:3440: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/usr/lib/python3/dist-packages/numpy/core/_methods.py:189: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q4_damping_20261016/tools/ident_motor.py:75: RuntimeWarning: divide by zero encountered in double_scalars
+  bres = KT[j] * (Ke - KE_CFG[j]) / R
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q4_damping_20261016/tools/ident_motor.py:78: RuntimeWarning: invalid value encountered in double_scalars
+  f"   (motor's own Kt*Ke/R = {KT[j]*Ke/R:.3f})")
+run jt  lag ms  R fit  (cfg)  Ke fit  (cfg)  c [V]    R2 moving |qd| rms  residual damping Kt*(Ke-s*Ke_cfg)/R at s=1
+d1  j1       0   1.14   5.26   1.683  2.427  0.006 0.937  31.5%    0.101  -1.500 N*m*s/rad   (motor's own Kt*Ke/R = 3.393)
+d1  j2       4   5.17   4.90   2.461  2.559 -0.128 0.999  11.6%    0.336  -0.046 N*m*s/rad   (motor's own Kt*Ke/R = 1.150)
+d1  j3       4   4.82   4.53   2.544  2.623 -0.039 0.996   6.9%    0.301  -0.041 N*m*s/rad   (motor's own Kt*Ke/R = 1.305)
+d1  j4       0   2.12   4.88   2.622  2.570 -0.011 0.999  42.2%    0.512  +0.059 N*m*s/rad   (motor's own Kt*Ke/R = 3.002)
+e1  j1       0   1.03   5.26   1.595  2.427  0.009 0.930  43.1%    0.107  -1.847 N*m*s/rad   (motor's own Kt*Ke/R = 3.539)
+e1  j2       0   4.92   4.90   2.253  2.559 -0.049 0.995   3.8%    0.121  -0.150 N*m*s/rad   (motor's own Kt*Ke/R = 1.106)
+e1  j3       4   4.05   4.53   2.517  2.623  0.048 0.994   2.2%    0.145  -0.064 N*m*s/rad   (motor's own Kt*Ke/R = 1.534)
+e1  j4       0   0.00   4.88   0.000  2.570  0.000   nan   0.0%      nan  -inf N*m*s/rad   (motor's own Kt*Ke/R = nan)
+d2  j1       0   1.68   5.26   1.653  2.427  0.010 0.936  42.1%    0.105  -1.053 N*m*s/rad   (motor's own Kt*Ke/R = 2.249)
+d2  j2       4   4.80   4.90   2.485  2.559 -0.026 0.999   5.1%    0.388  -0.037 N*m*s/rad   (motor's own Kt*Ke/R = 1.251)
+d2  j3       4   4.28   4.53   2.507  2.623  0.025 0.997   2.9%    0.409  -0.067 N*m*s/rad   (motor's own Kt*Ke/R = 1.446)
+d2  j4       0   2.37   4.88   2.607  2.570 -0.017 1.000  42.9%    0.535  +0.038 N*m*s/rad   (motor's own Kt*Ke/R = 2.670)

@@ -1,0 +1,5 @@
+d1 execute_place (approach)   law j4: stiffness 0.0643 N*m/rad  damping 0.0473 N*m*s/rad  bias +0.009   (fit R2 0.77);  friction relay 0.049 N*m
+d1 go_to_land_start           law j4: stiffness 0.0446 N*m/rad  damping 0.0428 N*m*s/rad  bias +0.008   (fit R2 0.91);  friction relay 0.038 N*m
+d1 execute_land               law j4: stiffness 0.0446 N*m/rad  damping 0.0397 N*m*s/rad  bias +0.005   (fit R2 0.94);  friction relay 0.016 N*m
+pendulum about q4: K 0.272 N*m/rad, I 0.0148 (armature 0.0097) -> f 0.68 Hz, critical damping 0.127 N*m*s/rad
+pendulum about q4: K 0.272 N*m/rad, I 0.0251 (armature 0.02) -> f 0.52 Hz, critical damping 0.165 N*m*s/rad

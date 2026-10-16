@@ -5033,6 +5033,25 @@ plastic bin centred on the place hat, length along x.
   (timeout)"): the panel never re-asked; now it re-sends after 2 s and repeats its follow-up loads until
   answered (harness `gs_param_retry_harness`, drops the first replies, PASS).
 
+**THE DECOUPLED RIG FLIES THE PICK-AND-DROP TOO (2026-10-15, user request; campaign
+`docs/docs_aerial_manipulator/archive/pick_place_drop_20261014/README.md`, last section).** Geometric + L1
+with the 10-03 pick-and-place controller yaml, the same pick-and-drop planner block, scene and driver
+(`tools/run_pnp.sh geo`, `tools/run_geo_drops.sh`; no code or yaml change was needed): **3/3 complete**,
+grasp <= 12 mm (the pick's descent trim cancels the ~5 cm standing offset), carry slip <= 1 mm, peak tilt
+9.3-10.2 deg (WB 7.2-7.3). **The drop is ~5 cm off** (claw 31-59 mm from the drop point at the open: a drop
+has no descent, so no trim), and all three payloads came to rest IN the tray but NOT flat (7.8-12.6 deg, a
+marker ball on the rim; WB tray5/tray6 landed flat). Fix (not done): a drop trim -- shift the hold by the
+claw's mean error, settle, then open (planner + arm GS). `tools/drop_score.py` scores the drop on the
+current tray (pnp_score.py's bin constants are the 10-14 box's). **Hardware gap**: the decoupled hardware
+stacks have no `AM_HW_PROFILE=pick_and_drop` (free_flight reads the drop block with the free-flight gains).
+**Drop offset IDENTIFIED (same day, user request): world (+0.013, -0.039) m at drop yaw -180 = 13 mm toward
+the vehicle, 39 mm to its left** (7 runs; y std 6.5 mm, x scatters +-25 mm but has ~87 mm of room). Shifting
+only the Drop point by (+0.018, -0.037): **4/4 flat** (0/3 without). Only the payload's LOW parts meet the
+35 mm tray wall -- basket +-55, arms y +-117.5, SIDE balls y +-153 at its bottom; the front/back balls
+(x +-113) pass over it -- so the y error decides, ~30 mm a side, and no yaw correction is needed (the old
+227 x 306 footprint wrongly made x the tight side). Tools: `make_drop_offset_yaml.py`, `drop_offset_id.py`,
+`run_pnp.sh`'s `PNP_PLANNER_YAML`. Sim value = a starting point for hardware, not the hardware answer.
+
 **1014 HARDWARE PICK-AND-DROP FREE FLIGHTS — THE BIN DROVE THE OSCILLATION, THE LOOSE ARM SHOWS AS A YAW
 TORQUE (2026-10-14, user request: analyse).** Two flights, no payload: PD-1 over the full plastic bin, PD-2 with
 the bin cut to a holed ~5 cm tray (PD-2 reverted before the drop point, so the tray is UNTESTED). Analysis, tools
@@ -5066,3 +5085,100 @@ and figure: `docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261014/`
   Review open items, not fixed: the arm GS's other-tab Plan can flip `pick_place_place_drop` mid-mission
   (the planner refuses only while a leg flies); Exit To Drop is enabled the instant Drop is clicked,
   before the OPEN result; the drop exit starts from one unbounded odometry sample.
+
+**1015 HARDWARE PICK-AND-DROP — THE LOADED SWING IS THE WRIST ROLL, THE DROP WAS CLICKED INTO THE ARRIVAL RINGING
+(2026-10-15, user request: how to raise the drop success rate).** Bags `1015 - T650-AM whole-body Pick&Drop-*/`: E-1
+`_empty_172318` (no payload, complete — the control), D-1 `_175059` (basket dropped, complete), D-2 `_180850` (basket
+pulled out of the jaws in the pick climb); `_181440` (a Pick & Place SET-DOWN pressed from the wrong tab) deleted.
+Analysis, tools, figures: `docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261015/` (README). NOTHING applied.
+- **The arm's up/down transit motion does not pitch the drone** (E-1, identical motion: 0.1-0.3 deg rms). With the basket:
+  0.74/1.78 deg rms pitch, 2.0 deg roll, at 0.5 Hz = the wrist roll q4 swinging +-18 deg with the basket. q4 stayed
+  stiction-locked 16 s after the pick and broke loose at the end of the 180 deg turn. **Undamped by construction**: the law
+  gives q4 ~0.05 N m/rad + 0.04-0.05 N m s/rad (soft EE heading task), the arm controller's back-EMF feed-forward
+  (observer velocity, scale 1.0 — 83-91 counts rms on j4 vs 4.5 from the law) cancels the motor's ~1.1 N m s/rad (slightly
+  over), the measured-velocity friction relay cancels friction; the basket pendulum about the claw axis needs 0.13-0.17.
+  Same cause for the 60-70 deg q4 stick-slip parking after the release. Fix candidates: j4-only back-EMF scale ~0.7-0.8
+  (needs a per-joint key), carry pose = pick pose (removes q1 12 deg + a 3.7 s j3 cap episode, peak need 1.74 vs 1.42 N m).
+- **Drop**: clicked +0.67 s after the leg end, claw 46-48 mm off (tolerance 50; E-1 still ringing +-47 mm then, 8 mm at
+  +1.8 s); released 38 mm off, rolled 4.5 deg, bounced 67 mm on impact, rested 103 mm off at 9 deg. The GS Drop has NO gate.
+  Proposed auto-drop: >= 2 s after the leg, claw <= 20 mm for 0.5 s, basket (obj_0) within ~25 mm and slow, q4 level.
+- **Load steps**: no payload feed-forward — lift CoM error 241 mm peak (E-1 14.5), release 195 mm.
+- **D-2** = grip 16 mm shallower on the fin (both inside the GS's 20 mm close gate), basket pivoted 3->26 deg and pulled out.
+- **APPLIED 2026-10-16 (user): carry pose = pick pose [0, 32, 38, 0]** in the shared task block (hardware 4-D
+  source + sim mirror, all generated yamls regenerated); the set-down profiles keep [12, 38, 42, 0] by a new override in
+  both generators. Loopback on the real planner (`tools/carry_plan_check.sh`): arm reference exactly the pick pose from
+  the grasp to the end of Exit To Drop. Config only; not flown. The other recommendations are NOT applied.
+- **APPLIED 2026-10-16 (user): the AUTONOMOUS DROP.** Planner `pick_place_drop_auto` (+ `_wait_s` 2.0, `_dwell_s` 0.5,
+  `_claw_tol` 0.020, `_claw_speed` 0.03, `_payload_tol` 0.025, `_payload_speed` 0.04, `_q4_tol_deg` 3.0; node default
+  off, TRUE in the shared task block, inert without `pick_place_place_drop`): `evalDropAuto` at the 10 Hz arrival tick
+  on the claw, obj_0 (fresh / not frozen / un-flipped samples -- `PpSample` gained `tilt`) and q4; publishes
+  `pick_place/drop_now` once per drop hold; the arm GS Pick & Drop tab opens the gripper on it (`onDropNow` ->
+  `dropNow`, shared with the Drop button, which stays the override). Never on a timer; the status names the gate.
+  Hardware stacks refuse a planner without it. Loopback (`tools/drop_auto_check.sh`, real planner + real GS): 8 hold
+  scenarios no release, all-good ONE release 0.7 s after the gates; planner tests 67/67. Not flown.
+- **APPLIED 2026-10-16 (user): AIM THE DROP AT THE BASKET, not the claw** (the replay's recommendation 1 only; the
+  basket-tilt gate was NOT added). Planner `pick_place_drop_aim_payload` (+ `_window_s` 4.0, `_min_s` 2.0,
+  `_max_shift` 0.06; node default off, TRUE in the shared task block): while HOVERING AT DROP START (arm at the drop
+  pose = the carry pose) it averages obj_0 - FK claw in the vehicle frame; Ready To Drop shifts the drop rest so the
+  MEASURED basket lands on the Drop point (D-1: hang [+3, -17] vs the model's [+20, 0] -> [-17, -17] mm at yaw -180)
+  and says so in its reply (`aimed ...` / `NOT aimed: <why>`); aimed, the autonomous drop skips the claw's 20 mm gate
+  (stillness kept, the basket's 25 mm gate is the position gate). **Hover >= 6 s at Drop Start before Ready To
+  Drop** (`_settle_s` 2.0 skips the turn's swing, then the 4 s window). Hardware stacks refuse a planner without it.
+  A same-day review found **a live set of any drop-auto/aim key wiped the plan** (not in the "only gates" list) --
+  fixed, plus a dwell restart after an evaluation gap, stale-joint gating, aim-sample freshness/count/NaN guards and
+  a GS warning when it ignores a release. Loopback `tools/drop_aim_check.sh` 8/8 (basket hung at D-1's offset:
+  shift [-17, -17] mm, basket 0.2 mm from the drop point, live set keeps the plan, one release);
+  `drop_auto_check.sh` 9/9, `carry_plan_check.sh` unchanged, hardware stack checks pass both profiles.
+- **LURCH vs GAINS, Isaac 2026-10-16 (user request; `archive/lift_lurch_gains_20261016/README.md`), 190 g, 2 flights
+  each, NOTHING applied:** shipped (omega_c_r 0.7428, k_R/k_w 1.6/1.2) lift / release lurch 126 / 156 mm, repeats within
+  7 mm; omega_c_r 1.0 no consistent gain; **omega_c_r 1.25 diverged 1 of 2 (1.38 Hz roll from DIRECT entry, before the
+  grasp)**; k_R/k_w 2.134/1.567 lift −25 % / release −15 %, basket flat 17–18 mm from the tray centre, but its 1.5 Hz
+  pitch band rose 0.27 → 0.46° rms in one run (the 10-02 reason for 1.6/1.2). **D repeated to 6 flights:
+  6/6 complete, lift −26 % (mean 93 mm), release −19 % (127 mm), all six baskets flat 17–42 mm off**;
+  the cost is damping, not stability: the release kicks the 1.5 Hz pitch mode under BOTH gain sets
+  (gone in 3–4 s), and in 2 of 6 D flights the lift left a 0.4–0.5° rms wobble that lasted the whole
+  carry (A: fades to 0.1° in 4 s). **APPLIED same day (user): the PICK-AND-DROP flies D, sim AND hardware** —
+  both generators' gain override is per profile now (`make_pick_place_yaml.py` `PROFILES[...]["gains"]`,
+  `make_hw_pick_and_place_yamls.py` `wb_drop` overrides {}), `_sim_pick_and_drop.yaml` + hardware
+  `_pick_and_drop.yaml` regenerated (diff = the two values + header), both pick-and-place yamls
+  byte-identical (still 1.6/1.2), and both whole-body hardware stacks' tuned-law check expects 1.6/1.2 only
+  for `AM_HW_PROFILE=pick_and_place`. No rebuild needed. Not flown on hardware.
+- **THE WRIST ROLL j4 TUNED FROM THE FLIGHTS (2026-10-16, user request;
+  `archive/q4_damping_20261016/README.md`).** j4's electrics are fine: with R pinned, Ke = 2.535 vs the configured
+  2.570 (1.4 % — NOT the "~20 % high" of the 09-11 notes). R and Ke are collinear on j4, whose current is ~∝ q̇,
+  so never fit both there. The FRICTION RELAY was the fault: unloaded slides (R² 0.97, D-1 + D-2 agree) give
+  kinetic 0.0335 / viscous 0.020 / static ~0.045, against a relay of 0.052 N·m that pushed WITH the motion. An
+  offline model built only from those numbers (`tools/j4_model.py`) reproduces BOTH flown failures with no
+  fitted knob: the self-sustained 20° p-p loaded swing and the 60–90° empty-wrist stick-slip hunting. Applied
+  (fsc_open_manipulator, arm hardware yaml): `friction_ff[3]` 7.7776 → **4.455** (0.030 N·m, deliberately UNDER
+  the friction — at exactly 0.0335 the swing returns if the real friction is 25 % lower) + NEW
+  `ExternalTorqueController` key **`passthrough_error_damping_joints` [0, 0, 0, 0.05]**: the pass-through
+  compensates `v_hat − d(v_hat − qd_ref)`, keeping 5 % of the motor's own back-EMF damping (+0.064 N·m·s/rad)
+  on the velocity ERROR, at zero lag, without dragging planned moves. Empty = the old path; live-settable;
+  refused in current mode; `law_debug` 28 → 32 ([28..31] = its duty). Model: the loaded swing is gone in all
+  14 robustness variations; teleop roll error at the end 33° → 2°. The empty-wrist hunting is only halved
+  (36° p-p): the L1 joint feed-forward ramps a stuck joint to breakaway and it overshoots by static friction
+  ÷ the law's 0.05 N·m/rad — law-side, not an arm term. Loopback `test_passthrough_corrections.py` section 8
+  + all previous checks PASS. Both whole-body hardware stacks check the two values and warn if the arm build
+  lacks the key. **Orin: rebuild open_manipulator_x_custom_controller.** Isaac cannot test it (current-mode
+  arm). Not flown.
+- **ARM TORQUE CAPS WIDENED FOR FLIGHT (2026-10-16, user request; `archive/arm_caps_20261016/README.md`).**
+  Audited every loaded hardware flight (10-09..10-15) per joint against all three clipping layers: the law's
+  `wb_tau_max` 3.0 (never first), the arm controller's `max_effort` on the TORQUE term, and the servo PWM Limit on the
+  TOTAL duty. The old caps [0.34, 2.44, 1.42, 0.39] N·m clipped j3 for 2.5 s (10-15 D-1, the loaded fold to the old
+  carry pose) and j2/j3 at the PP-4 set-down; j1's law ripple ran at 88 %; j4's TOTAL duty hit its 180 PWM Limit
+  (back-EMF feed-forward at ~1 rad/s in the swing). New `max_effort` **[85, 420, 260, 57.6] duty = [0.50, 2.81, 1.92,
+  0.39] N·m** (flight yaml only — the PD+ bench configs keep the old): no flown demand clipped. **The servo PWM
+  Limits are now DERIVED by `external_torque_hardware.launch.py` from that yaml**, `(max_effort + ke·0.6)·1.1` (the
+  xacro's own rule) → [212, 587, 414, 189], printed at bring-up; xacro defaults untouched for the bench. Loopback
+  section 9 proves the caps live (duty exactly on the cap, both signs). j2's real limit is HEAT: 244–258 counts
+  10 s mean carrying the basket vs the ~250 of the 08-26 overload — no cap can fix that. Trap hit: `--` inside an
+  XML comment breaks the whole xacro. Not flown.
+- **COMMITTED + PUSHED 2026-10-16 (user request), the pick-and-drop work above only**: fsc_trajectory_planner
+  `main` 2074d3e, fsc_open_manipulator `omx-torque-control` ed67281, fsc_autopilot_ros2 `dev_robotic_arm` f6395dd,
+  Pegasus `dev_robotic_arm` (this record). Older uncommitted work was split out hunk by hunk and stays local:
+  valve turning (planner push_pull.*, the GS Turn box, the valve scene / yaml / stack profile), the coordinated-
+  admittance rig (its fork, yamls, CMake + OSQP FetchContent -- an offline Orin build would fail on it). Each
+  committed tree was built and tested on its own first (planner 65/65 + the aim loopback 8/8, arm pass-through
+  ALL PASS). **Orin: pull the three code repos, rebuild fsc_trajectory_planner, open_manipulator_x_custom_controller,
+  open_manipulator_x_description. Laptop: rebuild utils_custom_ground_station.**

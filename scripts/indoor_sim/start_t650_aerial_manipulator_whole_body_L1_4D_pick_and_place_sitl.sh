@@ -99,7 +99,7 @@ esac
 [[ -x "$LAUNCHER" ]] || { echo "ERROR: missing executable $LAUNCHER" >&2; exit 1; }
 
 if [[ "$PEGASUS_PNP_TASK" == drop ]]; then
-  _PNP_DESC="PICK-AND-DROP: the real payload (Box_Assembly; ${PEGASUS_PNP_PAYLOAD:-assembly}) on the PICK hat, pillar tops ${PEGASUS_PNP_PICK_PILLAR_HEIGHT:-0.77} / ${PEGASUS_PNP_PLACE_PILLAR_HEIGHT:-0.77} m, dropped into the plastic bin (371 x 290 x 172 mm) on the PLACE hat"
+  _PNP_DESC="PICK-AND-DROP: the real payload (Box_Assembly; ${PEGASUS_PNP_PAYLOAD:-assembly}) on the PICK hat, pillar tops ${PEGASUS_PNP_PICK_PILLAR_HEIGHT:-0.77} / ${PEGASUS_PNP_PLACE_PILLAR_HEIGHT:-0.77} m, dropped into the plastic tray (the bin cut to 35 mm walls, 371 x 290 mm, turned 90 deg) on the PLACE hat"
 else
   _PNP_DESC="the ORIGINAL PICK-AND-PLACE (the paper's comparison): the one-piece basket (${PEGASUS_PNP_PAYLOAD:-box}) on the PICK hat, pillar tops ${PEGASUS_PNP_PICK_PILLAR_HEIGHT:-1.0} / ${PEGASUS_PNP_PLACE_PILLAR_HEIGHT:-1.0} m, set down on the PLACE hat"
 fi

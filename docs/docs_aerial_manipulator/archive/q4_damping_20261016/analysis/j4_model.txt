@@ -1,0 +1,17 @@
+VALIDATION against the 10-15 flights (shipped terms: relay 0.052 N*m, d 0, s 1)
+  unloaded, kicked to -30 deg: q4 p-p 63 deg, |q4| max 32, slide speed max 54 deg/s, stuck 53 % of the time
+     flown (D-1 after the drop, D-2 after the pull-out): sticks for 0.6-3.4 s at +-20..60 deg, jumps 60-90 deg at up to ~47 deg/s
+  loaded, kicked to 15 deg, forced 0.0 N*m at 0.51 Hz: q4 p-p over 20-60 s 20 deg (flown D-1 38-58 s: 19-26 deg p-p per 2 s)
+  loaded, kicked to 15 deg, forced 0.01 N*m at 0.51 Hz: q4 p-p over 20-60 s 22 deg (flown D-1 38-58 s: 19-26 deg p-p per 2 s)
+  loaded, kicked to 15 deg, forced 0.02 N*m at 0.51 Hz: q4 p-p over 20-60 s 21 deg (flown D-1 38-58 s: 19-26 deg p-p per 2 s)
+
+CANDIDATES (relay = friction_ff[3]/148.51; d = fraction of the motor's own damping kept on the velocity ERROR in the pass-through)
+relay N*m     d | loaded: p-p <2deg after forced p-p | unloaded hunt p-p stuck% | roll 20deg/s: max err err at 9s
+   0.0524  0.00 |      19.8deg      60.0 s     20.6deg |            63.3deg     53 |                25.9deg    33.1deg
+   0.0335  0.00 |      13.8deg      60.0 s      7.2deg |            46.4deg     78 |                26.3deg    13.5deg
+   0.0524  0.05 |      16.5deg      60.0 s     11.8deg |            54.5deg     61 |                10.8deg    14.6deg
+   0.0335  0.03 |       0.0deg       0.7 s      7.2deg |            40.9deg     82 |                16.6deg     4.0deg
+   0.0335  0.05 |       0.0deg       0.9 s      5.1deg |            40.5deg     81 |                 9.1deg     1.1deg
+   0.0335  0.08 |       0.0deg       1.1 s      5.5deg |            40.4deg     79 |                 4.9deg     2.4deg
+   0.0335  0.12 |       0.0deg      60.0 s      0.0deg |            40.4deg     77 |                 5.1deg     3.5deg
+   0.0335  0.20 |      10.5deg      60.0 s      0.0deg |            40.6deg     73 |                 4.9deg     4.1deg

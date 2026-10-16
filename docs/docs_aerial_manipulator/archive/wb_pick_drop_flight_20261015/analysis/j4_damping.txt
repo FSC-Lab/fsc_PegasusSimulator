@@ -1,0 +1,11 @@
+joint_states names: joint2,joint3,joint1,joint4,gripper_left_joint,gripper_right_joint
+e1 go_to_place_start            |v4| rms 0.009  applied-nominal rms 0.022 N*m  slope vs v -0.651 N*m/(rad/s)  (positive = pushes WITH the motion)  corr -0.37
+e1 execute_place (approach)     |v4| rms 0.009  applied-nominal rms 0.021 N*m  slope vs v -0.629 N*m/(rad/s)  (positive = pushes WITH the motion)  corr -0.34
+e1 exit_place (up the vertical  |v4| rms 0.013  applied-nominal rms 0.023 N*m  slope vs v -0.675 N*m/(rad/s)  (positive = pushes WITH the motion)  corr -0.41
+e1 go_to_land_start             |v4| rms 0.011  applied-nominal rms 0.024 N*m  slope vs v -0.611 N*m/(rad/s)  (positive = pushes WITH the motion)  corr -0.32
+e1 execute_land                 |v4| rms 0.005  applied-nominal rms 0.023 N*m  slope vs v -0.347 N*m/(rad/s)  (positive = pushes WITH the motion)  corr -0.19
+d1 go_to_place_start            |v4| rms 0.231  applied-nominal rms 0.031 N*m  slope vs v +0.017 N*m/(rad/s)  (positive = pushes WITH the motion)  corr +0.14
+d1 execute_place (approach)     |v4| rms 0.471  applied-nominal rms 0.055 N*m  slope vs v +0.018 N*m/(rad/s)  (positive = pushes WITH the motion)  corr +0.16
+d1 exit_place (up the vertical  |v4| rms 0.434  applied-nominal rms 0.045 N*m  slope vs v +0.039 N*m/(rad/s)  (positive = pushes WITH the motion)  corr +0.42
+d1 go_to_land_start             |v4| rms 0.433  applied-nominal rms 0.043 N*m  slope vs v +0.035 N*m/(rad/s)  (positive = pushes WITH the motion)  corr +0.36
+d1 execute_land                 |v4| rms 0.351  applied-nominal rms 0.038 N*m  slope vs v +0.090 N*m/(rad/s)  (positive = pushes WITH the motion)  corr +0.68

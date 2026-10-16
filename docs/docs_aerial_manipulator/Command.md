@@ -982,6 +982,14 @@ and step 2:
   preset 0.20 m) = how far Exit To Drop backs out before it climbs.
 Hardware: `AM_HW_PROFILE=pick_and_drop` (the drop block, `..._t650_pick_and_drop.yaml`) or
 `AM_HW_PROFILE=pick_and_place` (the set-down that flew 10-09/10-10) on the whole-body stack.
+Attitude gains: pick-and-place k_R/k_w 1.6/1.2; pick-and-drop the free-flight 2.134/1.567 since 2026-10-16,
+sim and hardware (smaller lift / release lurch, `archive/lift_lurch_gains_20261016/README.md`).
+Wrist roll j4 (hardware arm yaml, 2026-10-16): `friction_ff[3]` 4.455 + `passthrough_error_damping_joints`
+[0, 0, 0, 0.05] (`archive/q4_damping_20261016/README.md`); rebuild `open_manipulator_x_custom_controller`
+on the Orin -- an old build ignores the new key (the whole-body stacks warn).
+Arm torque caps widened for flight (2026-10-16): `max_effort` [85, 420, 260, 57.6] duty = [0.50, 2.81, 1.92,
+0.39] N.m; the hardware arm launch derives the servo PWM Limits from them ([212, 587, 414, 189], printed at
+bring-up). `archive/arm_caps_20261016/README.md`; same Orin rebuild (plus `open_manipulator_x_description`).
 The profile also sets the scene (07's `PEGASUS_PNP_TASK` place / drop); `PEGASUS_PNP_PAYLOAD`,
 `PEGASUS_PNP_PICK_PILLAR_HEIGHT` / `PEGASUS_PNP_PLACE_PILLAR_HEIGHT`, `PEGASUS_PNP_BIN=0|1` in front of
 step 2 still override it. The CAD payloads are clamped in the sim on an invisible 20 mm grip pad
@@ -1126,7 +1134,16 @@ During the flight (after step 3: DIRECT, planner HOLD)
 - **Pick & Drop** tab (2026-10-14; it replaced the Pick & Place PS4 tab): the same steps, but 4.1 Ready To
   Place climbs at Place Start and holds over the bin, the Drop Margin above the Drop point, 4.2 Place opens the gripper
   there and 4.3 Exit To Place then starts by itself: back the Back Margin, up the Vertical Margin, hold;
-  5 Go To Land Start folds the arm and closes the gripper.
+  5 Go To Land Start folds the arm and closes the gripper. The arm holds the pick pose [0, 32, 38, 0]
+  from the grasp to the drop (carry pose = pick pose since 2026-10-16; the set-down keeps [12, 38, 42, 0]).
+  AUTONOMOUS DROP (2026-10-16, `pick_place_drop_auto`): after Ready To Drop the planner releases by itself
+  once, for 0.5 s, the claw is within 20 mm and still, obj_0 is within 25 mm of the Drop point and still,
+  and q4 is level -- no earlier than 2 s after the leg; the status line names the gate it waits on, and
+  Drop releases at once by hand. Needs the 2026-10-16 planner AND arm GS.
+  AIM AT THE BASKET (2026-10-16, `pick_place_drop_aim_payload`): **hover >= 6 s at Drop Start before
+  Ready To Drop** -- the planner measures where the basket hangs from the claw there and moves the drop so
+  the basket, not the claw, lands on the Drop point (its reply says `aimed ...` or `NOT aimed: <why>`);
+  aimed, the claw only has to be still.
   A tab's Plan switches the planner to its own place; the other tab then says so and stays disabled.
 
 

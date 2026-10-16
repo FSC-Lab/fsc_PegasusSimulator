@@ -20,7 +20,9 @@ Pick-and-Drop flight). The free-flight source's planner task block is the DROP's
   *_pick_and_place.yaml  the set-down block restored by PLANNER OVERRIDES to exactly what
                          flew 10-09/10-10 (AM_HW_PROFILE=pick_and_place): Place Start
                          (0, -1, 1), Land Start / Land (-1, 0, 1 / 0.8), place point z 1.02,
-                         place_drop false, fence floor at the node default 0.6
+                         place_drop false, fence floor at the node default 0.6, and (since
+                         2026-10-16, when the source's carry became the pick pose) the
+                         showcase carry pose [12, 38, 42, 0]
 
 Each output is its source BYTE FOR BYTE plus a header, vehicle_name, and the
 pick-and-place gain overrides -- the SAME overrides the simulation twins carry
@@ -28,8 +30,10 @@ pick-and-place gain overrides -- the SAME overrides the simulation twins carry
 pick_place_controllers_20261003/tools/make_geo_pick_place_yaml.py), so the
 experiment flies the controller the simulation validated:
   whole-body   wb_k_r 2.134 -> 1.6, wb_k_w 1.567 -> 1.2 (H1b's 1.5 Hz pitch mode grew
-               to 8-12 deg in 2 of 8 payload hovers, 2026-10-02), wb_ee_anchor_blend_s 1.0
-               (the planner's world-anchor switch is blended over 1 s)
+               to 8-12 deg in 2 of 8 payload hovers, 2026-10-02) -- PICK-AND-PLACE ONLY since
+               2026-10-16: the PICK-AND-DROP keeps the free-flight 2.134 / 1.567 (smaller
+               lift / release lurch, archive/lift_lurch_gains_20261016) --
+               wb_ee_anchor_blend_s 1.0 (the planner's world-anchor switch is blended over 1 s)
   decoupled    l1geo_kp_x/y 20.11 -> 15, kv_x/y 11.05 -> 10 (the payload-carrying 0.6 Hz
                sway, geo_sway_screen.py 2026-10-03), kp_z 13.5 -> 40, kv_z 10.82 -> 18
                (the lift)
@@ -54,6 +58,9 @@ SET_DOWN = {
     "pick_place_fence_min_z": "0.6",
     "pick_place_place_point": "[-1.0, -1.0, 1.02, -180.0]",
     "pick_place_place_drop": "false",
+    # 2026-10-16: the source's carry pose became the pick / drop pose (the arm held fixed while
+    # carrying, after the 10-15 drop flights); the set-down keeps the showcase pose it flew.
+    "pick_place_carry_pose_deg": "[12.0, 38.0, 42.0, 0.0]",
 }
 
 RIGS = {
@@ -97,9 +104,16 @@ RIGS = {
         planner_overrides={},
         title="DECOUPLED GEOMETRIC + L1, HARDWARE, PICK-AND-PLACE"),
 }
-# the drop flies the same controller as the pick-and-place (same gains, same pick)
-RIGS["wb_drop"]["overrides"] = RIGS["wb"]["overrides"]
+# The drop flies the pick-and-place's controller EXCEPT the attitude pair: since 2026-10-16
+# (user decision) it keeps the free-flight H1b wb_k_r / wb_k_w 2.134 / 1.567 -- the same
+# change as its simulation twin (make_pick_place_yaml.py, profile pick_and_drop).
+# archive/lift_lurch_gains_20261016, Isaac, 190 g, 6 flights: lift lurch -26 %, release
+# -19 %, all six drops flat; cost = in 2 of 6 a 0.4-0.5 deg rms 1.5 Hz pitch wobble lasted
+# the carry (none grew). The pick-and-place keeps 1.6 / 1.2.
+RIGS["wb_drop"]["overrides"] = {}
 RIGS["wb_drop"]["added"] = RIGS["wb"]["added"]
+RIGS["wb_drop"]["note"] = ("# Attitude wb_k_r / wb_k_w = the free-flight H1b 2.134 / 1.567, NOT the pick-and-place's\n"
+                           "# 1.6 / 1.2 (2026-10-16, Pegasus archive/lift_lurch_gains_20261016).")
 
 
 def header(rig, r):
@@ -112,6 +126,8 @@ def header(rig, r):
         lines.append(f"#   {k}: {v}")
     for k in r["added"]:
         lines.append(f"#   + {k}")
+    if r.get("note"):
+        lines.append(r["note"])
     if r["planner_overrides"]:
         lines.append("# Planner task block (the set-down place the hardware flew 10-09/10-10; the source")
         lines.append("# carries the DROP's -- AM_HW_PROFILE=pick_and_drop flies that one):")

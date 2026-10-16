@@ -1,0 +1,6 @@
+e1 j1 DIRECT term: median 0.040  p99 0.168  p99.9 0.217  max 0.299 N*m (cap 0.340);  76 % of its variance above 5 Hz; law part rms 0.065, aux rms 0.014 N*m
+   hold duty at |57.6|: 16 samples, t = 102.5 .. 102.6 s (DIRECT ends 102.5 s, recording ends 106.0 s)
+d1 j1 DIRECT term: median 0.038  p99 0.152  p99.9 0.205  max 0.262 N*m (cap 0.340);  80 % of its variance above 5 Hz; law part rms 0.061, aux rms 0.013 N*m
+   hold duty at |57.6|: 37 samples, t = 109.1 .. 109.3 s (DIRECT ends 109.1 s, recording ends 111.6 s)
+d2 j1 DIRECT term: median 0.041  p99 0.165  p99.9 0.225  max 0.285 N*m (cap 0.340);  78 % of its variance above 5 Hz; law part rms 0.066, aux rms 0.014 N*m
+   hold duty at |57.6|: 90 samples, t = 87.7 .. 88.0 s (DIRECT ends 87.7 s, recording ends 117.4 s)

@@ -1,0 +1,23 @@
+go_to_start        base goal [-0.112 -0.174  1.   ] yaw     0.0   claw [ 0.141 -0.176  0.939]
+execute_pick       base goal [0.624 0.819 1.154] yaw     1.0   claw [0.88  0.822 1.053]
+go_to_place_start  base goal [ 0.688 -1.174  1.   ] yaw  -180.0   claw [ 0.443 -1.225  0.936]
+execute_place      base goal [-0.904 -1.191  1.388] yaw  -180.0   claw [-1.16  -1.189  1.286]
+go_to_land_start   base goal [-0.612  0.626  1.   ] yaw  -360.0   claw [-0.359  0.624  0.939]
+execute_land       base goal [-0.612  0.626  0.35 ] yaw  -360.0   claw [-0.359  0.624  0.289]
+    45.0  yaw_ref     1.0  yaw rate    0.0 deg/s  yaw acc   -0.4 deg/s2   q_d   0.0  32.0  38.0
+    46.0  yaw_ref    -0.5  yaw rate   -3.6 deg/s  yaw acc   -2.7 deg/s2   q_d   0.0  32.0  38.0
+    47.0  yaw_ref    -6.0  yaw rate   -6.9 deg/s  yaw acc   -6.4 deg/s2   q_d   0.2  32.1  38.1
+    48.0  yaw_ref   -14.6  yaw rate  -10.2 deg/s  yaw acc  -14.5 deg/s2   q_d   0.6  32.3  38.2
+    49.0  yaw_ref   -26.2  yaw rate  -12.8 deg/s  yaw acc  815.7 deg/s2   q_d   1.2  32.6  38.4
+    50.0  yaw_ref   -39.9  yaw rate  -14.4 deg/s  yaw acc   -2.7 deg/s2   q_d   2.1  33.1  38.7
+    51.0  yaw_ref   -55.3  yaw rate  -16.1 deg/s  yaw acc   -4.2 deg/s2   q_d   3.3  33.6  39.1
+    52.0  yaw_ref   -71.8  yaw rate  -16.8 deg/s  yaw acc   15.5 deg/s2   q_d   4.6  34.3  39.5
+    53.0  yaw_ref   -88.9  yaw rate  -17.7 deg/s  yaw acc    4.7 deg/s2   q_d   6.0  35.0  40.0
+    54.0  yaw_ref  -106.1  yaw rate  -17.1 deg/s  yaw acc    7.1 deg/s2   q_d   7.3  35.7  40.4
+    55.0  yaw_ref  -122.7  yaw rate  -16.3 deg/s  yaw acc  -37.4 deg/s2   q_d   8.7  36.3  40.9
+    56.0  yaw_ref  -138.1  yaw rate  -15.3 deg/s  yaw acc    2.0 deg/s2   q_d   9.8  36.9  41.3
+    57.0  yaw_ref  -151.9  yaw rate  -12.4 deg/s  yaw acc -191.6 deg/s2   q_d  10.7  37.4  41.6
+    58.0  yaw_ref  -163.7  yaw rate  -10.7 deg/s  yaw acc    3.8 deg/s2   q_d  11.4  37.7  41.8
+    59.0  yaw_ref  -172.6  yaw rate   -7.3 deg/s  yaw acc    2.0 deg/s2   q_d  11.8  37.9  41.9
+    60.0  yaw_ref  -178.3  yaw rate   -3.9 deg/s  yaw acc    5.1 deg/s2   q_d  12.0  38.0  42.0
+    61.0  yaw_ref  -180.0  yaw rate   -0.0 deg/s  yaw acc    1.2 deg/s2   q_d  12.0  38.0  42.0

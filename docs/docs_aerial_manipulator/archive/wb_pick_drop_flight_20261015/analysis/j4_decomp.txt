@@ -1,0 +1,18 @@
+=== e1  (hardware joint order; counts)
+ go_to_place_start            nominal>cap % [0. 0. 0. 0.]   j4: ext rms   2.6 aux rms   1.1 rest(backEMF+trim) rms   1.9  |v4| rms 0.009 rad/s   corr(aux4, v4) +0.89 corr(rest4, v4) +0.98
+                              j2/j3 nominal max  192.9/  72.2 counts (caps 365/192)
+ execute_place (approach)     nominal>cap % [0. 0. 0. 0.]   j4: ext rms   2.1 aux rms   1.1 rest(backEMF+trim) rms   1.9  |v4| rms 0.009 rad/s   corr(aux4, v4) +0.88 corr(rest4, v4) +0.98
+                              j2/j3 nominal max  181.5/  56.7 counts (caps 365/192)
+ exit_place (up the vertical  nominal>cap % [0. 0. 0. 0.]   j4: ext rms   1.9 aux rms   1.6 rest(backEMF+trim) rms   2.6  |v4| rms 0.013 rad/s   corr(aux4, v4) +0.90 corr(rest4, v4) +0.99
+                              j2/j3 nominal max  140.3/  38.7 counts (caps 365/192)
+ go_to_land_start             nominal>cap % [0. 0. 0. 0.]   j4: ext rms   2.8 aux rms   1.3 rest(backEMF+trim) rms   2.2  |v4| rms 0.011 rad/s   corr(aux4, v4) +0.89 corr(rest4, v4) +0.96
+                              j2/j3 nominal max  184.8/  59.0 counts (caps 365/192)
+=== d1  (hardware joint order; counts)
+ go_to_place_start            nominal>cap % [ 0.   0.2 15.7  0. ]   j4: ext rms   2.7 aux rms   3.7 rest(backEMF+trim) rms  44.5  |v4| rms 0.231 rad/s   corr(aux4, v4) +0.88 corr(rest4, v4) +1.00
+                              j2/j3 nominal max  374.2/ 235.4 counts (caps 365/192)
+ execute_place (approach)     nominal>cap % [0. 0. 0. 0.]   j4: ext rms   4.5 aux rms   7.5 rest(backEMF+trim) rms  90.6  |v4| rms 0.471 rad/s   corr(aux4, v4) +0.89 corr(rest4, v4) +1.00
+                              j2/j3 nominal max  354.7/ 167.4 counts (caps 365/192)
+ exit_place (up the vertical  nominal>cap % [0. 0. 0. 0.]   j4: ext rms   4.3 aux rms   6.6 rest(backEMF+trim) rms  82.8  |v4| rms 0.434 rad/s   corr(aux4, v4) +0.90 corr(rest4, v4) +1.00
+                              j2/j3 nominal max  146.9/  55.4 counts (caps 365/192)
+ go_to_land_start             nominal>cap % [0. 0. 0. 0.]   j4: ext rms   4.5 aux rms   6.6 rest(backEMF+trim) rms  82.5  |v4| rms 0.433 rad/s   corr(aux4, v4) +0.87 corr(rest4, v4) +1.00
+                              j2/j3 nominal max  185.0/  57.5 counts (caps 365/192)

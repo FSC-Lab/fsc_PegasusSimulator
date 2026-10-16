@@ -1,0 +1,42 @@
+
+=== wb_pick_place_flight_20261009/npz/p1.npz   DIRECT 159 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       57.6      32.5 ( 56%)   22.6   0.00 |           57.6 |     180      79.2    0.00 |     76     14
+j2  |      364.9     207.4 ( 57%)  173.3   0.00 |          421.4 |     545     421.4    0.00 |    424    166
+j3  |      192.0      69.5 ( 36%)   57.8   0.00 |          207.0 |     330     207.0    0.00 |    268     84
+j4  |       57.6      13.8 ( 24%)   12.3   0.00 |           22.6 |     180      33.7    0.00 |     30      6
+
+=== wb_pick_place_flight_20261009/npz/p2.npz   DIRECT 131 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       57.6      36.1 ( 63%)   27.5   0.00 |           57.6 |     180      65.4    0.00 |    155      6
+j2  |      364.9     354.7 ( 97%)  316.2   0.00 |          371.4 |     545     429.8    0.00 |    454    257
+j3  |      192.0     187.7 ( 98%)  175.0   0.00 |          197.0 |     330     240.3    0.00 |    258    147
+j4  |       57.6      21.6 ( 38%)   19.2   0.00 |           59.1 |     180     194.1    0.01 |     40     13
+
+=== wb_pick_place_flight_20261009/npz/p3.npz   DIRECT 69 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       57.6      28.6 ( 50%)   22.3   0.00 |           57.6 |     180      62.8    0.00 |    183      5
+j2  |      364.9     159.7 ( 44%)  144.8   0.00 |          369.0 |     545     369.0    0.00 |    598    103
+j3  |      192.0      62.4 ( 32%)   56.0   0.00 |          193.2 |     330     193.2    0.00 |    291     50
+j4  |       57.6      14.5 ( 25%)   12.6   0.00 |           57.0 |     180      57.0    0.00 |     92      5
+
+=== wb_pick_place_flight_20261010/npz/p4.npz   DIRECT 69 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       57.6      43.3 ( 75%)   33.3   0.00 |           54.6 |     180      98.9    0.00 |    215      8
+j2  |      364.9     412.7 (113%)  365.3   0.08 |          381.7 |     545     532.0    0.00 |    593    258
+j3  |      192.0     219.9 (114%)  192.9   0.09 |          196.6 |     330     352.5    0.02 |    476    161
+j4  |       57.6      13.4 ( 23%)   11.8   0.00 |           59.8 |     180     138.1    0.00 |    293      7
+
+=== wb_pick_drop_flight_20261014/npz/d1.npz   DIRECT 115 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       57.6      34.6 ( 60%)   26.8   0.00 |           57.6 |     180     150.0    0.00 |    107      6
+j2  |      364.9     195.8 ( 54%)  176.7   0.00 |          370.5 |     545     370.5    0.00 |    417    113
+j3  |      192.0      93.5 ( 49%)   85.3   0.00 |          199.3 |     330     248.4    0.00 |    432     55
+j4  |       57.6      14.0 ( 24%)   11.3   0.00 |            5.9 |     180      33.2    0.00 |     25      2
+
+=== wb_pick_drop_flight_20261014/npz/d2.npz   DIRECT 21 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       57.6      36.1 ( 63%)   27.4   0.00 |           57.6 |     180     132.8    0.00 |    206      6
+j2  |      364.9     175.8 ( 48%)  167.1   0.00 |          362.1 |     545     362.1    0.00 |    440    112
+j3  |      192.0      60.6 ( 32%)   55.5   0.00 |          194.2 |     330     194.2    0.00 |    320     37
+j4  |       57.6      11.6 ( 20%)   11.0   0.00 |           11.8 |     180      29.1    0.00 |     31      4

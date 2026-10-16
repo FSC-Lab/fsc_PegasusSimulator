@@ -1,0 +1,11 @@
+--- d1 j4: DIRECT 89 s
+   |qd| 0.05-0.20 rad/s ( 7.3 %):  residual = +0.250*qd -0.036*sign(qd) +0.016 N*m   | Ke_true (R pinned 4.88) 2.615 vs cfg 2.570  | v_obs/qdot gain 1.007
+   |qd| 0.20-0.50 rad/s (15.1 %):  residual = +0.007*qd +0.004*sign(qd) +0.012 N*m   | Ke_true (R pinned 4.88) 2.556 vs cfg 2.570  | v_obs/qdot gain 0.998
+   |qd| 0.50-5.00 rad/s (19.8 %):  residual = +0.015*qd +0.008*sign(qd) +0.013 N*m   | Ke_true (R pinned 4.88) 2.533 vs cfg 2.570  | v_obs/qdot gain 0.998
+   |qd| 0.05-5.00 rad/s (42.2 %):  residual = +0.036*qd -0.006*sign(qd) +0.013 N*m   | Ke_true (R pinned 4.88) 2.538 vs cfg 2.570  | v_obs/qdot gain 0.998
+--- d2 j4: DIRECT 66 s
+   |qd| 0.05-0.20 rad/s ( 7.4 %):  residual = +0.130*qd -0.014*sign(qd) +0.022 N*m   | Ke_true (R pinned 4.88) 2.495 vs cfg 2.570  | v_obs/qdot gain 1.001
+   |qd| 0.20-0.50 rad/s (14.9 %):  residual = +0.016*qd +0.007*sign(qd) +0.013 N*m   | Ke_true (R pinned 4.88) 2.503 vs cfg 2.570  | v_obs/qdot gain 0.999
+   |qd| 0.50-5.00 rad/s (20.6 %):  residual = -0.032*qd +0.040*sign(qd) +0.009 N*m   | Ke_true (R pinned 4.88) 2.536 vs cfg 2.570  | v_obs/qdot gain 0.999
+   |qd| 0.05-5.00 rad/s (42.9 %):  residual = +0.015*qd +0.007*sign(qd) +0.013 N*m   | Ke_true (R pinned 4.88) 2.531 vs cfg 2.570  | v_obs/qdot gain 0.999
+--- e1 j4: DIRECT 85 s

@@ -1,0 +1,16 @@
+
+== D-1 lift (exit_pick): 41.0 s
+   CoM error peak: along the nose   212 mm, sideways   117 mm, vertical    30 mm;  pitch swing 7.8 deg p-p
+   d_t z (world, N)               step -3.575   63 % reached 1.29 s after the leg start
+   d_r x (model x ~ pitch, N m)   step -0.456   63 % reached 2.96 s after the leg start
+   d_rho j2 (N m)                 step -0.657   63 % reached 2.76 s after the leg start
+   d_rho j3 (N m)                 step -0.543   63 % reached 2.15 s after the leg start
+
+== D-1 release (exit_place): 79.0 s
+   CoM error peak: along the nose   190 mm, sideways    78 mm, vertical    37 mm;  pitch swing 9.4 deg p-p
+   d_t z (world, N)               step +0.793   63 % reached -0.50 s after the leg start
+   d_r x (model x ~ pitch, N m)   step +0.389   63 % reached 1.51 s after the leg start
+   d_rho j2 (N m)                 step +0.445   63 % reached 1.47 s after the leg start
+   d_rho j3 (N m)                 step +0.249   63 % reached 1.51 s after the leg start
+
+observer bandwidths flown (H1b, hardware): omega_c t / r / q = 2.927 / 0.7428 / 0.8479 rad/s -> time constants 0.34 / 1.35 / 1.18 s

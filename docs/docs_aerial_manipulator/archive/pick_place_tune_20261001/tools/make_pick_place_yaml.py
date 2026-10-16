@@ -21,7 +21,8 @@ its scene, 07's PEGASUS_PNP_TASK):
 The output is the mirror file BYTE FOR BYTE, plus
   * a header saying what differs (written above the mirror's own header),
   * vehicle_name -> AM-T650-WB-L1-4D-PNP,
-  * every key in GAIN_OVERRIDES replaced in place (each must exist exactly once),
+  * every key in the profile's "gains" replaced in place (each must exist exactly once;
+    since 2026-10-16 only the pick-and-place has any -- the drop flies the mirror's pair),
   * every key in PLANNER_OVERRIDES replaced in place in the planner section
     (since 2026-10-13: the place point's height, which belongs to the SCENE),
   * the SIM-ONLY pick-and-place keys appended to the trajectory planner section.
@@ -86,7 +87,16 @@ DST_FMT = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_d
 # per-step excursions are slow transients (leg accelerations, payload load /
 # unload), and the payload sits rigidly in the jaws (~0.8 deg rms in-jaw
 # oscillation at both 0.3 and 1.0 N.m of grip).
-GAIN_OVERRIDES = {"wb_k_r": "1.6", "wb_k_w": "1.2"}
+#
+# 2026-10-16 (user decision): the PICK-AND-DROP drops this override and flies the
+# mirror's = the hardware free-flight's H1b pair 2.134 / 1.567 (per-profile "gains"
+# below). archive/lift_lurch_gains_20261016, 190 g, 6 flights against 2: lift lurch
+# -26 % (93 vs 126 mm), release -19 % (127 vs 156 mm), all six drops flat 17-42 mm
+# off the tray centre (1.6 / 1.2: 45-46 mm, once tilted), 6/6 complete. The cost
+# is damping, not stability: in 2 of 6 flights the lift left a 0.4-0.5 deg rms
+# 1.5 Hz pitch wobble through the carry (1.6 / 1.2: fades in 4 s); none grew.
+# The paper's pick-and-place keeps 1.6 / 1.2 (its results were flown with it).
+GAIN_OVERRIDES_PICK_PLACE = {"wb_k_r": "1.6", "wb_k_w": "1.2"}
 
 # Planner keys REPLACED IN PLACE, per demonstration (key -> (YAML value text,
 # python value)). The task block is the mirror's = the hardware file's, EXCEPT
@@ -101,6 +111,7 @@ PROFILES = {
     # FLOWN THEN (the mirror carries the pick-and-drop's since 2026-10-14).
     "pick_and_place": {
         "vehicle": "AM-T650-WB-L1-4D-PNP",
+        "gains": GAIN_OVERRIDES_PICK_PLACE,
         "planner": {
             "pick_place_place_start": ("[0.0, -1.0, 1.0, -180.0]", [0.0, -1.0, 1.0, -180.0]),
             "pick_place_land_start": ("[-1.0, 0.0, 1.0, -360.0]", [-1.0, 0.0, 1.0, -360.0]),
@@ -108,6 +119,10 @@ PROFILES = {
             "pick_place_fence_min_z": ("0.6", 0.6),
             "pick_place_place_point": ("[-1.0, -1.0, 1.02, -180.0]", [-1.0, -1.0, 1.02, -180.0]),
             "pick_place_place_drop": ("false", False),
+            # 2026-10-16: the mirror's carry pose became the pick / drop pose (the arm held
+            # fixed while carrying, after the 10-15 hardware drop flights); the paper's
+            # set-down keeps the showcase carry pose it flew 10-08/09.
+            "pick_place_carry_pose_deg": ("[12.0, 38.0, 42.0, 0.0]", [12.0, 38.0, 42.0, 0.0]),
         },
     },
     # THE PICK-AND-DROP (2026-10-14): the mirror's task block = the hardware
@@ -121,6 +136,7 @@ PROFILES = {
     # was flung at release; drop2/3 at -0.04: -39.7 / -38.9 deg on the grip pad).
     "pick_and_drop": {
         "vehicle": "AM-T650-WB-L1-4D-PND",
+        "gains": {},    # 2026-10-16: the mirror's H1b attitude pair (see GAIN_OVERRIDES_PICK_PLACE)
         "planner": {
             "pick_place_ee_offset": ("[-0.04, 0.0, 0.16]", [-0.04, 0.0, 0.16]),
         },
@@ -323,6 +339,7 @@ HEADER = """# ==================================================================
 
 def build(profile):
     VEHICLE_NAME = PROFILES[profile]["vehicle"]
+    GAIN_OVERRIDES = PROFILES[profile]["gains"]
     PLANNER_OVERRIDES = PROFILES[profile]["planner"]
     src = open(SRC).read()
     missing = [k for k in TASK_KEYS if not re.search(rf"^    {k}:", src, flags=re.M)]
@@ -368,6 +385,7 @@ def build(profile):
 
 def check(text, profile):
     """Parse both, and confirm the only differences are the declared ones."""
+    GAIN_OVERRIDES = PROFILES[profile]["gains"]
     PLANNER_OVERRIDES = PROFILES[profile]["planner"]
     a = yaml.safe_load(open(SRC))
     b = yaml.safe_load(text)

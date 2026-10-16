@@ -21,6 +21,9 @@
 #   PNP_SCENE_ENV="PEGASUS_PNP_FIN_GRIP_MM=0"      the bare fin: the claw closes on air (hook only)
 #   PNP_SCENE_ENV="PEGASUS_PNP_PAYLOAD=box"        the 2026-10-07 one-piece basket + wire hanger
 # PNP_DRIVER_ARGS="..." is passed to pnp_mission_v2.py (e.g. "--clamp-hold 4").
+# PNP_PLANNER_YAML=<path> (geo only, 2026-10-15): the planner block from this file instead of the
+#   whole-body ..._sim_<profile>.yaml -- e.g. a copy with a shifted pick_place_place_point (the drop
+#   offset identification, tools/make_drop_offset_yaml.py).
 # Both fly RAW mocap odometry (the decoupled rig has no fused sim stack): one
 # launch condition. Brings the stack and the scene up in the background,
 # waits for the planner, the payload and PX4, flies pnp_mission_v2.py and
@@ -39,6 +42,7 @@ WB_PNP="$CFG/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_
 GEO_PNP="$CFG/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_and_place.yaml"
 export FASTRTPS_DEFAULT_PROFILES_FILE="$PEG/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml"
 
+GEO_PLANNER="${PNP_PLANNER_YAML:-$CFG/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_${PNP_PROFILE}.yaml}"
 case "$RIG" in
   wb)
     (WB_SIM_PROFILE=$PNP_PROFILE setsid nohup bash "$STACKS/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh" \
@@ -46,10 +50,10 @@ case "$RIG" in
     SCENE=(env PEGASUS_HEADLESS=1 PNP_FEEDBACK=raw WB_SIM_PROFILE=$PNP_PROFILE ${PNP_PAYLOAD_MASS:+PEGASUS_PNP_PAYLOAD_MASS=$PNP_PAYLOAD_MASS} ${PNP_GRIP_FRICTION:+PEGASUS_PNP_GRIP_FRICTION=$PNP_GRIP_FRICTION} ${PNP_SCENE_ENV:-}
            "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh" shiqi_machine) ;;
   geo)
-    (WB_SIM_PROFILE=$PNP_PROFILE WB_SIM_YAML="$GEO_PNP" WB_PLANNER_YAML="$CFG/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_${PNP_PROFILE}.yaml" setsid nohup bash \
+    (WB_SIM_PROFILE=$PNP_PROFILE WB_SIM_YAML="$GEO_PNP" WB_PLANNER_YAML="$GEO_PLANNER" setsid nohup bash \
         "$STACKS/start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh" \
         shiqi_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
-    SCENE=(env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=$PNP_PROFILE WB_SIM_YAML="$GEO_PNP" WB_PLANNER_YAML="$CFG/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_${PNP_PROFILE}.yaml" ${PNP_PAYLOAD_MASS:+PEGASUS_PNP_PAYLOAD_MASS=$PNP_PAYLOAD_MASS} ${PNP_GRIP_FRICTION:+PEGASUS_PNP_GRIP_FRICTION=$PNP_GRIP_FRICTION} ${PNP_SCENE_ENV:-}
+    SCENE=(env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=$PNP_PROFILE WB_SIM_YAML="$GEO_PNP" WB_PLANNER_YAML="$GEO_PLANNER" ${PNP_PAYLOAD_MASS:+PEGASUS_PNP_PAYLOAD_MASS=$PNP_PAYLOAD_MASS} ${PNP_GRIP_FRICTION:+PEGASUS_PNP_GRIP_FRICTION=$PNP_GRIP_FRICTION} ${PNP_SCENE_ENV:-}
            "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_geometric_L1_pick_and_place_sitl.sh" shiqi_machine) ;;
   mod)
     (WB_SIM_PROFILE=pick_and_place setsid nohup bash "$STACKS/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh" \

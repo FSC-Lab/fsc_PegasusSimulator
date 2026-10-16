@@ -1,0 +1,139 @@
+<title>1015 Pick-and-Drop Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: one full-width reading column on black, the lab's flight-report look (same tokens as the 1009 report). */
+:root{color-scheme:dark;--bg:#000000;--ink:#f5f5f2;--ink2:#b9b8ae;--line:#2f2f2d;--blue:#3987e5;--orange:#d95926;--red:#e66767;--aqua:#199e70;--panel:#141413;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+html{background:var(--bg)}
+body{margin:0 auto;max-width:1040px;padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans)}
+h1{font-size:1.7rem;margin:28px 0 4px;letter-spacing:-0.01em}
+h2{font-size:1.2rem;margin:36px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+h3{font-size:1.02rem;margin:22px 0 6px}
+h1,h2,h3{text-wrap:balance}
+.sub{color:var(--ink2);margin:0 0 18px}
+.tscroll{overflow-x:auto;margin:10px 0 14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{color:var(--ink2);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:var(--mono);font-size:12.5px}
+td.hi{color:var(--ink);font-weight:600}
+th.rig-e{border-bottom:2px solid var(--orange)}th.rig-d{border-bottom:2px solid var(--blue)}
+.verdict{background:var(--panel);border-left:4px solid var(--blue);padding:10px 14px;margin:14px 0;border-radius:0 6px 6px 0}
+.good{border-left-color:var(--aqua)}.bad{border-left-color:var(--red)}
+figure{margin:16px 0}
+figure img{width:100%;height:auto;border:1px solid #d0d0d2;border-radius:4px;background:#fcfcfb;filter:invert(1) hue-rotate(180deg)}
+figcaption{color:var(--ink2);font-size:13px;margin-top:6px}
+code{background:var(--panel);padding:1px 5px;border-radius:3px;font-size:13px;font-family:var(--mono);overflow-wrap:anywhere}
+ul,ol{padding-left:22px;margin:8px 0}li{margin:3px 0}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin:14px 0}
+.kv div{border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+.kv b{display:block;font-size:1.3rem;font-variant-numeric:tabular-nums}.kv span{color:var(--ink2);font-size:13px}
+.note{color:var(--ink2);font-size:13.5px}
+nav.toc ol{columns:2 260px;column-gap:24px}
+nav.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}
+nav.toc a:hover,nav.toc a:focus-visible{border-bottom-color:var(--blue);outline:none}
+a{color:var(--blue)}
+</style>
+
+<h1>1015 Pick-and-Drop Flights</h1>
+<p class="sub">T650 aerial manipulator, whole-body 4-D L1 controller, EKF2-fused feedback, 15 October 2026. Three valid bags: one mission with no payload (the control) and two with the 180 g basket.</p>
+
+<div class="kv">
+  <div><b>2 of 3</b><span>missions flew every leg (one of them with the basket)</span></div>
+  <div><b>0.5 Hz</b><span>loaded swing: wrist roll q4 ±18°, vehicle pitch and roll ±3–4°</span></div>
+  <div><b>≈ 0</b><span>net damping on q4 with the basket hanging (needs 0.13–0.17 N·m·s/rad)</span></div>
+  <div><b>103 mm</b><span>basket rest point from the drop point, tilted 9°</span></div>
+</div>
+
+<nav class="toc" aria-label="Contents"><ol>
+  <li><a href="#flights">The flights</a></li>
+  <li><a href="#trigger">Q1 · Trigger the drop on end-effector error</a></li>
+  <li><a href="#transit">Q2 · Arm motion in the two transits</a></li>
+  <li><a href="#comp">Q3 · Arm compensation terms</a></li>
+  <li><a href="#next">What to change, in order</a></li>
+</ol></nav>
+
+<h2 id="flights">1. The flights</h2>
+<div class="tscroll"><table>
+  <tr><th>Run</th><th>Bag</th><th>Payload</th><th>Outcome</th></tr>
+  <tr><td>E-1 17:23</td><td><code>…_empty_20261015_172318</code></td><td>none</td><td>All six legs and both exits; pilot took STAB at 0.35 m at the end of the landing leg. Used as the control.</td></tr>
+  <tr><td>D-1 17:50</td><td><code>…_20261015_175059</code></td><td>basket</td><td>All legs, planner reported COMPLETE. Released at 78.4 s; the basket stayed in the tray, 103 mm from the drop point, tilted 9°.</td></tr>
+  <tr><td>D-2 18:08</td><td><code>…_20261015_180850</code></td><td>basket</td><td>Grasped at 43.2 s; the basket pivoted in the jaws (3° → 26°) during the 20 cm climb and pulled out at 45.3 s. Flown home by hand.</td></tr>
+</table></div>
+<p class="note">A fourth bag, <code>…_181440</code>, was a set-down started from the Pick &amp; Place tab, not a drop. It was deleted.</p>
+
+<h2 id="trigger">2. Q1 · Trigger the drop on end-effector error</h2>
+<div class="verdict good">Yes, but gate on the basket and the wrist as well as the claw, and wait out the arrival swing. The GS opens the gripper on the Drop click with no check at all.</div>
+<ul>
+  <li><b>D-1's click came 0.67 s after the drop leg ended</b>, with the claw 46–48 mm from its target. The planner's tolerance is 50 mm, so it read "within tolerance".</li>
+  <li><b>The claw is still swinging at that point.</b> In E-1 the claw error rang ±47 mm half a second after the leg ended and reached 8 mm only at +1.8 s.</li>
+  <li><b>The basket left the jaws 38 mm from the drop point</b> (−26, +28 mm), moving 0.06 m/s sideways and rolled +4.5° by the wrist swing. It fell 0.2 m, bounced 67 mm in +y on impact (tilting to 22°) and came to rest 103 mm off, tilted 9° with a marker ball on the rim.</li>
+  <li><b>Over the last 1.5 s before the click, the ballistic landing point never came closer than 30 mm.</b> No instant in that window would have hit the centre.</li>
+</ul>
+<p>Proposed trigger, built like the planner's existing automatic descent for the pick (<code>pick_place_descent_on_request: false</code>):</p>
+<ol>
+  <li>At least 2 s after the drop leg ends.</li>
+  <li>Claw error ≤ 20 mm for 0.5 s, claw nearly still.</li>
+  <li>The basket's own mocap position (<code>obj_0</code>) within about 25 mm of the drop point and slow. The basket swings ±40 mm across the claw, so a claw-only gate cannot see where it is.</li>
+  <li>q4 near 0°, so the basket is level when released.</li>
+  <li>On timeout, hold and report. Never open on a timer. The GS Drop button stays as the manual override.</li>
+</ol>
+<figure><img src="{{drop.png}}" alt="Three panels against time from the end of the drop leg: claw error for E-1 and D-1 with the 50 mm tolerance and a 20 mm gate, the basket's x and y offset from the drop point with the ballistic landing estimate, and the wrist roll q4 with the basket's roll.">
+<figcaption>Fig. 1. The drop moment. Top: planner claw error; D-1's click (dot) sits at the 50 mm tolerance edge, E-1 shows the arrival swing. Middle: D-1 basket minus drop point and the ballistic landing estimate. Bottom: wrist roll q4 and the basket's roll, which follows it.</figcaption></figure>
+
+<h2 id="transit">3. Q2 · Arm motion in the two transits</h2>
+<div class="verdict">The arm's up/down motion is not what pitches the drone. E-1 flew the identical arm motion with almost no oscillation. With the basket, the wrist roll q4 swings and drives the vehicle.</div>
+<div class="tscroll"><table>
+  <tr><th>Leg</th><th class="rig-e">Pitch osc. rms, E-1</th><th class="rig-d">Pitch osc. rms, D-1</th><th class="rig-e">Roll osc. rms, E-1</th><th class="rig-d">Roll osc. rms, D-1</th><th class="rig-e">q4 p-p, E-1</th><th class="rig-d">q4 p-p, D-1</th><th class="rig-e">CoM err rms, E-1</th><th class="rig-d">CoM err rms, D-1</th></tr>
+  <tr><td>Lift (exit pick)</td><td class="n">0.06°</td><td class="n hi">1.43°</td><td class="n">0.14°</td><td class="n hi">0.90°</td><td class="n">0.1°</td><td class="n">0.1°</td><td class="n">9 mm</td><td class="n hi">136 mm</td></tr>
+  <tr><td>To Drop Start (180° turn, q1 0→12°, fold up)</td><td class="n">0.11°</td><td class="n hi">0.74°</td><td class="n">0.21°</td><td class="n hi">0.61°</td><td class="n">0.2°</td><td class="n hi">26.4°</td><td class="n">26 mm</td><td class="n hi">95 mm</td></tr>
+  <tr><td>To drop (q1 12→0°, unfold)</td><td class="n">0.26°</td><td class="n hi">1.78°</td><td class="n">0.28°</td><td class="n hi">1.99°</td><td class="n">0.1°</td><td class="n hi">36.7°</td><td class="n">33 mm</td><td class="n hi">68 mm</td></tr>
+</table></div>
+<p class="note">Oscillation = PX4 attitude band-passed 0.3–2 Hz. The lift row is the payload's weight arriving with no feed-forward (section 4).</p>
+<ul>
+  <li><b>The wrist was stuck, then broke loose.</b> q4 sat at exactly 0° (static friction) for 16 s after the pick, while the arm folded and the vehicle turned, and pitch stayed near 0.5°. It broke loose at 57.3 s, as the 180° turn was slowing down.</li>
+  <li><b>j3 was at its cap just before.</b> For the 3.7 s before the break, j3 sat at its 1.42 N·m cap during the loaded fold to the carry pose (it needed 1.74 N·m) and lagged 5°.</li>
+  <li><b>From then until the drop, everything moved at ~0.5 Hz:</b> q4 ±10–20°, the basket 80 mm p-p across the claw, and the vehicle's roll and pitch ±3–4°.</li>
+  <li><b>The swing is left over, not forced.</b> The planned sideways acceleration of the claw on the drop leg is only 0.01 m/s² rms, so the swing on that leg is carried over from the turn, not driven by the leg.</li>
+</ul>
+<figure><img src="{{carry.png}}" alt="Six panels from the pick to the landing, D-1 against E-1: pitch and roll oscillation, wrist roll q4, arm yaw q1, j4 torque command, and the basket's offset across the claw.">
+<figcaption>Fig. 2. The loaded carry (D-1, blue) against the same legs with no payload (E-1, orange), aligned on the leg starts. q4 breaks loose near 57 s and the vehicle's roll and pitch swing with it. After the drop, q4 parks 60–70° off in stick–slip steps.</figcaption></figure>
+
+<h2 id="comp">4. Q3 · Arm compensation terms</h2>
+<div class="verdict bad">Yes. The wrist roll (j4) is effectively undamped, and the payload load steps have no feed-forward.</div>
+<h3>Wrist roll q4: where its damping goes</h3>
+<div class="tscroll"><table>
+  <tr><th>Term on q4 during the loaded swing</th><th>Value</th></tr>
+  <tr><td>Stiffness from the whole-body law (soft end-effector heading task)</td><td class="n">0.045–0.064 N·m/rad</td></tr>
+  <tr><td>Damping from the law</td><td class="n">0.04–0.05 N·m·s/rad</td></tr>
+  <tr><td>Motor's own back-EMF damping</td><td class="n">≈1.1 N·m·s/rad, cancelled</td></tr>
+  <tr><td>Residual after the back-EMF feed-forward (from Present Current)</td><td class="n">−0.02 to −0.09 N·m·s/rad</td></tr>
+  <tr><td>Damping needed for the basket hanging off the wrist (critical)</td><td class="n">0.13–0.17 N·m·s/rad</td></tr>
+  <tr><td>That pendulum's frequency, predicted / measured</td><td class="n">0.52–0.68 / 0.51 Hz</td></tr>
+</table></div>
+<ul>
+  <li><b>The back-EMF term dominates j4's command.</b> The feed-forward is 83–91 duty counts rms on j4 against 4.5 from the law. The measured-velocity friction relay cancels the gearbox friction as well. Net damping on q4 is about zero, slightly negative.</li>
+  <li><b>The same cause parks q4 after the release.</b> With ~0.05 N·m/rad of stiffness against ~0.05 N·m of static friction, q4 can sit about 1 rad off before the law's torque moves it.</li>
+</ul>
+<h3>Load steps and the j3 cap</h3>
+<ul>
+  <li><b>Lift:</b> centre-of-mass error peaked at 241 mm (14.5 mm in E-1) and q2 sagged 9.7°. The observer's joint estimate builds to −0.74 N·m on j2/j3 over the following seconds.</li>
+  <li><b>Release:</b> centre-of-mass error peaked at 195 mm.</li>
+  <li><b>j3 cap:</b> the j3 command was above its 1.42 N·m cap for 3.7 s during the loaded fold-up, peaking at 1.74 N·m.</li>
+  <li><b>No change needed for j2/j3 friction and gravity correction:</b> 0.15–0.20 N·m rms, no clipping outside the fold-up, unloaded tracking unchanged.</li>
+</ul>
+<h3>D-2's pick failure</h3>
+<p>The wrist was not involved: q4 stayed at 0°. The jaws held the fin 16 mm further out than in D-1 (basket 89 vs 73 mm along the claw), about twice the lever. The basket pivoted out during the climb. Both grasps closed inside the GS's 20 mm close gate.</p>
+
+<h2 id="next">5. What to change, in order</h2>
+<ol>
+  <li><b>Damp the wrist.</b> Keep part of j4's own damping: back-EMF compensation scale about 0.7–0.8 on j4 only, 1.0 on j1–j3. This needs a per-joint version of <code>back_emf_ff_scale</code>; lowering <code>back_emf_ke[3]</code> works from config but mislabels a measured constant. Bench check: hold the basket, flick the wrist, watch the swing decay.</li>
+  <li><b>Set the carry pose equal to the pick/drop pose</b> <code>[0, 32, 38, 0]</code>. This removes the 12° q1 sideways swing and the loaded fold that put j3 on its cap. Optionally slow or shorten the loaded 180° turn (peak 17.7°/s).</li>
+  <li><b>Automatic drop trigger in the planner</b> with the gates in section 2, Drop button as override.</li>
+  <li><b>Payload feed-forward</b> switched by the grasp and open results, to cut the 241 mm lift and 195 mm release lurches (a law change).</li>
+  <li><b>Grip:</b> a tighter close gate along the claw axis and a deeper or keyed grip on the fin.</li>
+</ol>
+<p class="note">Basis: one loaded drop and one unloaded control, so treat the numbers as indicative. How long a 20 mm gate would wait with the basket is not measured; the loaded hold before the click was 0.67 s. Nothing in the code or configuration has been changed. Analysis, scripts and numbers: <code>docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261015/</code>.</p>
