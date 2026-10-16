@@ -989,7 +989,7 @@ Wrist roll j4 (hardware arm yaml, 2026-10-16): `friction_ff[3]` 4.455 + `passthr
 on the Orin -- an old build ignores the new key (the whole-body stacks warn).
 Arm torque caps widened for flight (2026-10-16): `max_effort` [85, 420, 260, 57.6] duty = [0.50, 2.81, 1.92,
 0.39] N.m; the hardware arm launch derives the servo PWM Limits from them ([212, 587, 414, 189], printed at
-bring-up). `archive/arm_caps_20261016/README.md`; same Orin rebuild (plus `open_manipulator_x_description`).
+bring-up). `archive/arm_caps_20261016/README.md`; same Orin rebuild.
 The profile also sets the scene (07's `PEGASUS_PNP_TASK` place / drop); `PEGASUS_PNP_PAYLOAD`,
 `PEGASUS_PNP_PICK_PILLAR_HEIGHT` / `PEGASUS_PNP_PLACE_PILLAR_HEIGHT`, `PEGASUS_PNP_BIN=0|1` in front of
 step 2 still override it. The CAD payloads are clamped in the sim on an invisible 20 mm grip pad

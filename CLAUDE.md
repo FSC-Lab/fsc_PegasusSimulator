@@ -5180,5 +5180,8 @@ Analysis, tools, figures: `docs/docs_aerial_manipulator/archive/wb_pick_drop_fli
   valve turning (planner push_pull.*, the GS Turn box, the valve scene / yaml / stack profile), the coordinated-
   admittance rig (its fork, yamls, CMake + OSQP FetchContent -- an offline Orin build would fail on it). Each
   committed tree was built and tested on its own first (planner 65/65 + the aim loopback 8/8, arm pass-through
-  ALL PASS). **Orin: pull the three code repos, rebuild fsc_trajectory_planner, open_manipulator_x_custom_controller,
-  open_manipulator_x_description. Laptop: rebuild utils_custom_ground_station.**
+  ALL PASS). **Orin: pull the three code repos, rebuild fsc_trajectory_planner (autopilot workspace) and
+  open_manipulator_x_custom_controller (~/dev_ws); fsc_autopilot_ros2 needs only the pull (the stack reads its
+  yaml from the source tree), open_manipulator_x_description nothing (comment-only). Laptop: rebuild
+  utils_custom_ground_station. The aim's result is only LOGGED (the GS shows refusals only): the arm GS terminal
+  and the planner pane print `Ready To Drop: ... -- aimed at the basket ...` / `NOT aimed ...`.**

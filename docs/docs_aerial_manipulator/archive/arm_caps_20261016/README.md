@@ -74,5 +74,6 @@ Checked:
   holds, or the servo's temperature (not recorded).
 - **The simulation** clamps every joint at 3.0 N·m and never clipped, so it neither needed nor tests this.
 - Not flown.
-- **On the Orin:** pull fsc_open_manipulator and rebuild `open_manipulator_x_description` and
-  `open_manipulator_x_custom_controller` (one build covers this and the j4 change).
+- **On the Orin:** pull fsc_open_manipulator and rebuild `open_manipulator_x_custom_controller` (it installs
+  the yaml and the launch; one build covers this and the j4 change). `open_manipulator_x_description` needs no
+  rebuild: its xacro already took the `joint*_pwm_limit` arguments, only a comment changed.
