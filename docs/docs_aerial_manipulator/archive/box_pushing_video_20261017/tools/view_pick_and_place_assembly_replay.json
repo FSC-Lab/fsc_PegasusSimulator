@@ -1,0 +1,7 @@
+{
+  "scene": "pick_and_place_assembly",
+  "window": [1244, 1400],
+  "render_every": 10,
+  "camera": {"pos": [0.61, 5.89, 4.39], "target": [0.10, -0.03, 0.68], "focal": 51.9},
+  "note": "2026-10-18 replay framing, fitted on takes/pnpa_rep1 by fit_cam_log.py (every logged prim + both pillars, 0.2 m spheres, 50 px margin): from the north at 32 deg elevation, 7 m -- the pick-and-drop video's direction"
+}

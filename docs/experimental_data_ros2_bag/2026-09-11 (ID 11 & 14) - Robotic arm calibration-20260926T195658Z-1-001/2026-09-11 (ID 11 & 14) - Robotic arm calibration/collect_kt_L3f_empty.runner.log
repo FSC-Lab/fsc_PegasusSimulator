@@ -1,0 +1,18 @@
+== collect_kt_lever L3f [empty] : joint3 -38..+48 deg, j4 +0 deg, 4 cycles, 7.4 s per pass at max_vel 0.5236 rad/s (30 deg/s)  -- THE ARM IS LIVE
+health gate (3 s at the current pose):
+   joint1:   -0.09 deg  current     0.0 counts (sd  0.0, drift  +0.0 over 3 s)
+   joint2:  +39.90 deg  current   118.8 counts (sd  1.1, drift  -0.1 over 3 s)
+   joint3:  +39.99 deg  current    33.9 counts (sd  2.1, drift  -0.0 over 3 s)
+   joint4:   +0.05 deg  current    -6.0 counts (sd  1.9, drift  -0.3 over 3 s)
+[   3.0s] to sweep start -38 (wrist 0)       hold  11.4s
+[  14.4s] cycle 1/4 up   -> +48              hold   7.4s
+[  21.8s] cycle 1/4 down -> -38              hold   7.4s
+[  29.1s] cycle 2/4 up   -> +48              hold   7.4s
+[  36.5s] cycle 2/4 down -> -38              hold   7.4s
+[  43.9s] cycle 3/4 up   -> +48              hold   7.4s
+[  51.3s] cycle 3/4 down -> -38              hold   7.4s
+[  58.6s] cycle 4/4 up   -> +48              hold   7.4s
+[  66.0s] cycle 4/4 down -> -38              hold   7.4s
+[  73.4s] back to HOME (loading pose)        hold  11.4s
+parked at home: joint1   -0.1 deg /    0.0 counts  joint2  +39.9 deg /  118.9 counts  joint3  +40.0 deg /   34.0 counts  joint4   +0.0 deg /   -6.2 counts
+done [empty] -- stop the recorder. Total 87 s.

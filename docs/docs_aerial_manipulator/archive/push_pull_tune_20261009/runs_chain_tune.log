@@ -1,0 +1,51 @@
+  wb_ky_x : 211.9 -> 120.0
+  wb_ky_y : 211.9 -> 120.0
+  wb_ky_z : 211.9 -> 120.0
+  wb_dy_x : 26.82 -> 20.2
+  wb_dy_y : 26.82 -> 20.2
+  wb_dy_z : 26.82 -> 20.2
+[t_ky120] completed
+  wb_ky_x : 211.9 -> 300.0
+  wb_ky_y : 211.9 -> 300.0
+  wb_ky_z : 211.9 -> 300.0
+  wb_dy_x : 26.82 -> 31.9
+  wb_dy_y : 26.82 -> 31.9
+  wb_dy_z : 26.82 -> 31.9
+[t_ky300] ABORTED: left DIRECT while close
+  wb_l1_omega_c_t : 1.0 -> 0.5
+[t_oct05] completed
+  wb_l1_omega_c_t : 1.0 -> 1.5
+[t_oct15] completed
+  wb_l1_omega_c_r : 0.7428 -> 0.5
+[t_ocr05] completed
+  wb_l1_omega_c_r : 0.7428 -> 1.0
+[t_ocr10] completed
+  wb_l1_omega_x : 2.0 -> 1.0
+[t_ox10] completed
+  wb_l1_omega_x : 2.0 -> 4.0
+[t_ox40] completed
+  wb_l1_omega_x_t : 0.2072 -> 0.1
+  wb_l1_omega_x_r : 0.2072 -> 0.1
+  wb_l1_omega_x_q : 0.2072 -> 0.1
+[t_oxt01] completed
+  wb_l1_omega_x_t : 0.2072 -> 0.4
+  wb_l1_omega_x_r : 0.2072 -> 0.4
+  wb_l1_omega_x_q : 0.2072 -> 0.4
+[t_oxt04] completed
+  wb_k_r : 1.6 -> 1.3
+  wb_k_w : 1.2 -> 1.0
+[t_kr13] completed
+  wb_k_r : 1.6 -> 2.134
+  wb_k_w : 1.2 -> 1.567
+[t_kr21] ABORTED: left DIRECT while planner HOLD
+  wb_k_x : 50.03 -> 32.0
+  wb_k_v : 12.58 -> 10.0
+[t_kx32] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 24.0 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, 
+  wb_k_x : 50.03 -> 64.0
+  wb_k_v : 12.58 -> 14.0
+[t_kx64] ABORTED: left DIRECT while planner HOLD
+  push_pull_push_time_s -> 18.0
+[t_T18] completed
+  push_pull_push_time_s -> 12.0
+[t_T12] completed
+CHAIN_TUNE DONE

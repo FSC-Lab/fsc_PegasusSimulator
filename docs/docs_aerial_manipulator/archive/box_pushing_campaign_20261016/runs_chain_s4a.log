@@ -1,0 +1,26 @@
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_stop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 16.3 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, 
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_open] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_abort] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_heavy] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 6.1 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, t
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_flip] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 9.9 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, t
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_stick] 
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[w_exit] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/box_pushing_campaign_20261016/tools/fly.sh: line 42: unexpected EOF while looking for matching `"'
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/box_pushing_campaign_20261016/tools/fly.sh: line 43: syntax error: unexpected end of file
+CHAIN_S4A DONE

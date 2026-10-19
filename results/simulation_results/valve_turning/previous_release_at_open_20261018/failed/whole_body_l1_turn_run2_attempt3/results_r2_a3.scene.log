@@ -1,0 +1,33 @@
+[1;33m  scene knob PEGASUS_VALVE_FRICTION=0.048[0m
+[1;32mplanner + controller: the valve-turning block is loaded (they match the valve-turning yaml)[0m
+[1;35mVALVE-TURNING SCENE (AM-T650-WB-L1-4D-VALVE, raw feedback): vehicle at 0.10,-0.07 facing +x; the HOOBRO console table (1.000 x 0.150 x 0.800 m) centred on (1.20, 0), its length along y; the valve's bearing axis at 1.20,0.00 on the table top, the beam pointing 180 deg, the fin at radius 0.160 m (grip shim 20 mm), bearing damping 0.0 N.m.s/rad + friction 0.048 N.m, rotor 0.204 kg. Mocap: /obj_0/mocap = the rotor (axis + the beam's yaw).[0m
+[Config] Using: /home/shiqi/fsc_PegasusSimulator/scripts/config/shiqi_machine.conf
+[1;35mISAAC SCENE: 07_px4_t650_aerial_manipulator_valve_turning.py (AM-T650-WB-L1-4D-VALVE), not the free-flight 06.[0m
+[1;36mPLANT CONFIG: params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml (WB_SIM_PROFILE=valve_turning)[0m
+Arm servo model taken from params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml
+[1;31mMODEL-UNCERTAINTY INJECTION ACTIVE: mass x1.0, inertia x1.0, CoM shift (-0.017854,0.0,0.0) m[0m
+[1;31mTHRUST-LOSS INJECTION ACTIVE (PLANT SIDE, both modes): k_f x1.037[0m
+[1;33mThe PLANT is perturbed; the controller believes the nominal model.[0m
+Arm count<->torque path off: continuous torque, perfect calibration.
+[1;31mGEARBOX FRICTION ACTIVE on the plant: x1.0,0.70,0.65,1.5 the report's fc/mu (tanh width 0.015 rad/s); arm-side friction compensation true (passthrough_auxiliary_terms).[0m
+[1;35mSIM-TO-REAL MIRROR TERMS (as written, plant time): km x0.2333; lambda 10.0265 1/s; kf sag 0.036/min; force bias (0.55,-0.50,0.0) N; torque bias (0.0,0.0,-0.095) N.m; arm vel lag 0.048 s; arm vel quantum 0.024 rad/s;[0m
+Wall-clock compensation: RTF 1.0 -- nothing to rescale.
+EE marker cube off (no end-effector payload, no /obj_0/mocap).
+[1;35mRunning node confirms wb_l1_four_d = true: the FOUR-DIMENSIONAL attribution is flying.[0m
+Pegasus PX4 lockstep: pushed to the tmux server environment
+Arm servo model: CURRENT LOOP on j2/j3 only (residual 0.0096,0.0062,0.0096,0.0096 A rms per joint @ 5.0 Hz, seed 0)
+  counts/N.m: calibrated 2026-09-11 [162.4, 154.0, 150.5, 153.4] (was [160.0, 173.8, 146.7, 160.0])
+Starting AM-T650 WHOLE-BODY + L1 ADAPTIVE (4-D attribution) direct-actuator SITL with the ROS2 TORQUE-mode arm stack.
+[1;35mDisturbance observer: L1 ADAPTIVE with the FOUR-DIMENSIONAL attribution on the joint rows. Same law, same gains, same plant as the 6-D rig.[0m
+Plant: AM_xfwd on T650 motors; controller: whole-body impedance + L1 augmentation
+[1;36mNOTICE: mirror profile -- the controller flies the HARDWARE config; the plant is the one identified from the 0918/0921/0924 flights.[0m
+  (controller.py's law, C++ port) from the paired fsc_autopilot_ros2 stack;
+  arm torques via fsc_open_manipulator ExternalTorqueController
+  (torque bring-up) through open_manipulator_x_isaac_bridge's effort system;
+  arm ground station: joint_plot_inverted (WB-TORQUE; controller:=external_torque_controller)
+Arm workspace: /home/shiqi/ros2_ws
+MicroXRCEAgent: externally owned and detected
+[Config] Using: /home/shiqi/fsc_PegasusSimulator/scripts/config/shiqi_machine.conf
+Isaac pinned to CPUs 0-15 (PEGASUS_ISAAC_CPUS / ISAAC_CPUS).
+open terminal failed: not a terminal
+[1;33mNo gamepad at /dev/input/js0; the PS4 Remote tab will read 'no data'.[0m

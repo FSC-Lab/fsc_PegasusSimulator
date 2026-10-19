@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
-"""Fly the PUSH-AND-PULL mission in 07's Isaac scene (07_px4_direct_t650_
-aerial_manipulator_push_and_pull.py) with the whole-body 4-D L1 rig -- the arm
-GS's Push & Pull tab, scripted:
+"""Fly the BOX-PUSHING mission in 07's Isaac scene (07_px4_t650_aerial_
+manipulator_box_pushing.py) with the whole-body 4-D L1 rig -- the arm
+GS's Box Pushing tab, scripted:
 
     FASTRTPS_DEFAULT_PROFILES_FILE=<udp-only xml> /usr/bin/python3 pl_mission.py --out run.npz
 
   on the ground: Reset, Adjust, Get (the box, obj_0)
   offboard -> arm -> SAFETY climb to hover_z -> settle -> DIRECT -> settle -> Plan
-  1 Go To Start      the claw 0.20 m above the fin handle, yaw -90
-  2 Ready To Push    OPEN the gripper, hover (the descent trim's window), ready:
-                     straight down onto the handle
+  1 Go To Start      the claw the Vertical Margin (0.15 m) above and the Side
+                     Margin (0.12 m) behind the fin, yaw -90
+  2 Ready To Push    OPEN the gripper, hover (--hover-dwell), ready: the claw
+                     slides down-forward onto the fin
   3 Push             once the claw is within 2 cm of the grasp point and 3 mm
                      across the fin: CLOSE through the GripperCommand action (the
                      GS's path); on the stall, push: CONTACT on, 1.5 s settle,
-                     0.50 m along -y, arm fixed
-  4 Exit To Push     OPEN, wait for the jaws, exit: CONTACT off, up 0.20 m, arm home
-  5 Go To Land       270 deg clockwise to the hover over the landing spot
+                     0.50 m along -y in 24 s, arm fixed
+  4 Exit To Push     (default since 2026-10-19, the GS's sequence) RELEASE, OPEN,
+                     exit on the open report: up 0.20 m, arm home
+  5 Go To Land Start one table-checked transition to Land Start (1.3 m), turning
+                     270 deg clockwise
+  6 Land             straight down to the hover over the landing spot
   -> SAFETY -> land by reference -> disarm
+After an abort near the table -- the planner's own, or one of this driver's
+(e.g. no grasp, a refused step) -- the vehicle leaves by the planner's abort
+and Go To Land Start before landing: never down in place beside the table.
 
 Records the box (ground truth = obj_0's state, the same pose the mocap
 carries), the odometry, the measured claw (claw_0), the streamed reference,
@@ -28,6 +35,7 @@ import argparse
 import threading
 import time
 
+import math
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -50,7 +58,9 @@ LATCHED = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
 DA = "fsc_autopilot_ros2/whole_body_direct_actuation"
 REF_TOPIC = DA + "/reference"
 PL = "whole_body_planner/push_pull"
-STEPS = ["go_to_start", "ready", "close", "push", "release", "exit", "go_to_land"]
+# 2026-10-16: go_to_land became go_to_land_start (one table-checked transition) + land
+STEPS = ["go_to_start", "ready", "close", "push", "release", "exit", "go_to_land_start", "land"]
+I_AT_HANDLE = 61   # push_pull/info with six steps ([53] with five)
 GRIP_CLOSE, GRIP_OPEN = -0.8727, 0.0           # rad (06's gripper bus, +-50 deg)
 
 
@@ -75,6 +85,10 @@ class Driver(Node):
         self.ref = np.array([0.0, 0.0, a.hover_z])
         self.stream_ref = True
         self.grip_cmd = None
+        self.inject = (a.inject.split('@')[0], float(a.inject.split('@')[1])) if a.inject else None
+        self.inject_done = False
+        if self.inject and self.inject[0] not in ('abort', 'open', 'exit'):
+            raise SystemExit(f'--inject {a.inject}: kind must be abort, open or exit')
         self.L = {k: [] for k in ("odom", "dbg", "box", "ee", "ref", "grip", "joints", "arrival", "claw",
                                   "contact", "base_truth", "refd", "cadm")}
         # 2026-10-10: the controller namespace is an option (--da) so the SAME mission
@@ -112,8 +126,8 @@ class Driver(Node):
         from control_msgs.action import GripperCommand
         self.grip_ac = ActionClient(self, GripperCommand, a.grip_action)
         self.cli = {n: self.create_client(Trigger, f"{ns}/rc/{n}") for n in ("offboard", "arm", "disarm")}
-        for n in ("go_to_start", "ready", "push", "exit", "go_to_land", "adjust", "plan", "capture_box",
-                  "reset", "abort"):
+        for n in ("go_to_start", "ready", "push", "exit", "go_to_land_start", "land", "adjust", "plan",
+                  "capture_box", "reset", "abort", "release"):
             self.cli[n] = self.create_client(Trigger, f"{ns}/{PL}/{n}")
         self.direct = self.create_client(SetBool, f"{ns}/{a.da}/set_direct_mode")
         self.clear = self.create_client(Trigger, f"{ns}/whole_body_planner/clear")
@@ -150,7 +164,10 @@ class Driver(Node):
 
     def on_arrival(self, m):
         self.arrival = list(m.data)
-        self.L["arrival"].append([self.now(), *self.arrival[:11], self.step])
+        # [11] box lag, [12] box tilt (2026-10-16); after the step, the turn's PATH FOLLOWING
+        # (2026-10-18, arrival [13..20]: active, rate, progress, lead, tilt, wrist, limit, held)
+        fl = (self.arrival[13:21] + [0.0] * 8)[:8]
+        self.L["arrival"].append([self.now(), *self.arrival[:13], self.step, *fl])
 
     def on_ee(self, m):
         p, q = m.pose.position, m.pose.orientation
@@ -171,6 +188,14 @@ class Driver(Node):
         p, q = m.pose.position, m.pose.orientation
         self.box = np.array([p.x, p.y, p.z, q.w, q.x, q.y, q.z])
         self.L["box"].append([self.now(), *self.box, self.step])
+        # the body's yaw, unwrapped from the push step's start (the valve's
+        # beam angle, 2026-10-15; a pushed box barely turns)
+        yaw = np.arctan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+        prev = getattr(self, "_box_yaw_prev", None)
+        if prev is not None and self.step == STEPS.index("push"):
+            self.turned_since_push = getattr(self, "turned_since_push", 0.0) + \
+                float(np.arctan2(np.sin(yaw - prev), np.cos(yaw - prev)))
+        self._box_yaw_prev = yaw
 
     def on_base_truth(self, m):
         p, q = m.pose.position, m.pose.orientation
@@ -200,8 +225,32 @@ class Driver(Node):
             m.position.x, m.position.y, m.position.z = map(float, self.ref)
             m.yaw, m.yaw_unit = 0.0, PositionControllerReference.DEGREES
             self.ref_pub.publish(m)
+        self.inject_tick()
         if self.grip_cmd is not None:
             self.grip_pub.publish(Float64(data=float(self.grip_cmd)))
+
+    def inject_tick(self):
+        """--inject KIND@S (2026-10-16, the box-pushing campaign's worst cases): S seconds
+        after the push step starts, once -- abort = the arm GS's ABORT button (the planner's
+        abort service; the jaws open on its ABORTING status, as under the GS); open = the
+        jaws open while the planner keeps pushing in CONTACT (the grasp lost); exit = the
+        Exit To Push button pressed mid-slide."""
+        if not self.inject or self.inject_done:
+            return
+        t0 = [t for t, n in self.marks if n == "push:start"]
+        if not t0 or self.now() < t0[-1] + self.inject[1]:
+            return
+        self.inject_done = True
+        kind = self.inject[0]
+        self.ev(f"INJECT {kind} at {self.now() - t0[-1]:.2f} s into the push")
+        self.mark(f"inject_{kind}:start")
+        if kind == "open":
+            self.grip_cmd = GRIP_OPEN
+        else:
+            fut = self.cli[kind].call_async(Trigger.Request())
+            fut.add_done_callback(lambda f: self.ev(
+                f"INJECT {kind}: {'accepted' if f.result() and f.result().success else 'REFUSED'}: "
+                f"{f.result().message if f.result() else 'no response'}"))
 
     # ---- helpers -----------------------------------------------------------
     def ev(self, s):
@@ -233,6 +282,13 @@ class Driver(Node):
 
     def guard(self, what):
         if self.armed and self.mode != "DIRECT" and self.phase == "mission":
+            # the arm GS's rule (2026-10-18): the node left DIRECT (its watchdog) with
+            # the claw on the handle -> open the jaws at once; nothing else releases
+            # them, and the SAFETY hold plus the arm's fold drag a clamped handle
+            if what in ("ready", "close", "push", "push complete", "release", "exit") or \
+                    self.pl_status.startswith(("FLYING ready", "FLYING push", "DONE ready")):
+                self.grip_cmd = GRIP_OPEN
+                self.ev("gripper OPEN (the node left DIRECT with the claw on the handle)")
             raise Abort(f"left DIRECT while {what}")
         if self.phase == "mission" and self.pl_status.startswith(("ABORTING", "ABORTED")):
             raise Abort(f"push-and-pull ABORTED while {what}: {self.pl_status}")
@@ -294,7 +350,7 @@ class Driver(Node):
         T = float(self.status.split("T=")[1].split("s")[0]) if "T=" in self.status else 60.0
         self.ev(f"{name}: executing, T = {T:.1f} s")
         self.wait(lambda: self.status == "HOLD" and self.info is not None and int(self.info[5]) == k
-                  and (at_handle is None or (self.info[53] > 0.5) == at_handle), T + 40, f"{name} complete")
+                  and (at_handle is None or (self.info[I_AT_HANDLE] > 0.5) == at_handle), T + 40, f"{name} complete")
 
     def gripper_open(self, what):
         self.mark(f"gripper_{what}:start")
@@ -376,8 +432,12 @@ class Driver(Node):
                 time.sleep(0.05)
         self.wait(lambda: self.status == "HOLD", 15, "planner HOLD")
         self.trig("plan")
-        self.wait(lambda: self.pl_status.startswith("READY"), 60, "mission READY")
-        self.ev(f"planned step durations {np.round(self.info[8:13], 1).tolist()} s")
+        # 2026-10-16: a REFUSED plan (the box-on-table check, a joint limit, the table
+        # keep-out) ends the run at once with the planner's reason, not a 60 s timeout
+        self.wait(lambda: self.pl_status.startswith(("READY", "INFEASIBLE")), 60, "mission READY")
+        if self.pl_status.startswith("INFEASIBLE"):
+            raise Abort(f"plan refused: {self.pl_status}")
+        self.ev(f"planned step durations {np.round(self.info[8:14], 1).tolist()} s")
         # 1 Go To Start
         self.begin("go_to_start")
         self.step_to_end("go_to_start", 0, at_handle=False)
@@ -409,14 +469,23 @@ class Driver(Node):
                 # swaying base whose finger pads brush the fin drags the box along the fin, so the
                 # captured point walks away while the claw is in fact on the fin. Across the fin
                 # (x, the closing axis) within grip_axis_tol, along it (y) within grip_tol.
-                ok = (self.claw is not None and self.box is not None
-                      and abs(self.claw[0] - self.box[0]) <= a.grip_axis_tol
-                      and abs(self.claw[1] - self.box[1]) <= a.grip_tol)
+                # 2026-10-18: in the BODY's frame (its yaw) minus the grasp point's offset in that
+                # frame (--grip-ee-offset, the planner's push_pull_ee_offset x, y) -- the box sits at
+                # yaw 0 with the grasp point over its origin (the old world-frame test, numerically);
+                # the valve's grasp point is 0.160 m out along the beam in the rotating rotor frame.
+                rel = None
                 if self.claw is not None and self.box is not None:
+                    qw, qx, qy, qz = self.box[3:7]
+                    yw = math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+                    dx, dy = self.claw[0] - self.box[0], self.claw[1] - self.box[1]
+                    rel = (math.cos(yw) * dx + math.sin(yw) * dy - a.grip_ee_offset[0],
+                           -math.sin(yw) * dx + math.cos(yw) * dy - a.grip_ee_offset[1])
+                ok = rel is not None and abs(rel[0]) <= a.grip_axis_tol and abs(rel[1]) <= a.grip_tol
+                if rel is not None:
                     self.arrival = (self.arrival or [0.0] * 10)
                     self.arrival = list(self.arrival)
-                    self.arrival[2] = float(abs(self.claw[1] - self.box[1]))
-                    self.arrival[9] = float(self.claw[0] - self.box[0])
+                    self.arrival[2] = float(abs(rel[1]))
+                    self.arrival[9] = float(rel[0])
             else:
                 ok = (self.arrival is not None and len(self.arrival) >= 10 and int(self.arrival[0]) == 1
                       and self.arrival[1] > 0.5 and self.arrival[2] <= a.grip_tol
@@ -435,38 +504,76 @@ class Driver(Node):
         self.gripper_close()
         self.begin("push")
         self.box_at_push = self.box.copy()
+        self.turned_since_push = 0.0
         self.step_to_end("push", 2, at_handle=True)
         self.mark("push:end")
         d = self.box[:3] - self.box_at_push[:3]
-        self.ev(f"push: the box moved [{d[0] * 1e3:+.0f}, {d[1] * 1e3:+.0f}, {d[2] * 1e3:+.0f}] mm")
+        self.ev(f"push: the box moved [{d[0] * 1e3:+.0f}, {d[1] * 1e3:+.0f}, {d[2] * 1e3:+.0f}] mm, "
+                f"turned {np.degrees(self.turned_since_push) if hasattr(self, 'turned_since_push') else 0.0:+.1f} deg "
+                f"(the valve's beam, 2026-10-15: obj_0 is the rotor there)")
         if a.timetable:
             self.align("push:start", a.slot_release, "release")
         else:
             time.sleep(a.push_hold)
         # 4 Exit To Push: open, wait for the jaws, exit
         self.begin("release")
+        if a.release_at_open:
+            # 2026-10-17, the release-window fix -- the arm GS's sequence: the
+            # planner RELEASES first (the claw's reference back to the CoM
+            # anchor), then the gripper opens, and the exit starts on its OPEN
+            # report, not on a slot
+            self.trig("release")
         self.gripper_open("release")
-        if a.timetable:
+        if a.release_at_open:
+            if self.grip is None or abs(self.grip - GRIP_OPEN) > np.radians(3.0):
+                raise Abort("the gripper did not report OPEN -- no exit (the jaws may hold the handle)")
+        elif a.timetable:
             self.align("release:start", a.slot_exit, "exit")
         else:
             time.sleep(a.release_wait)
         self.begin("exit")
         self.step_to_end("exit", 3, at_handle=False)
         self.mark("exit:end")
-        # 5 Go To Land
+        # 5 Go To Land Start: one table-checked transition to Land Start
         if a.timetable:
-            self.align("exit:start", a.slot_land, "go_to_land")
+            self.align("exit:start", a.slot_land, "go_to_land_start")
         else:
             time.sleep(a.leg_pause)
-        self.begin("go_to_land")
-        self.step_to_end("go_to_land", 4)
-        self.mark("go_to_land:end")
+        self.begin("go_to_land_start")
+        self.step_to_end("go_to_land_start", 4)
+        self.mark("go_to_land_start:end")
+        # 6 Land: straight down to the land hover
+        if a.timetable:
+            self.align("go_to_land_start:start", a.slot_land_step, "land")
+        else:
+            time.sleep(a.leg_pause)
+        self.begin("land")
+        self.step_to_end("land", 5)
+        self.mark("land:end")
         self.wait(lambda: self.pl_status.startswith("COMPLETE"), 10, "COMPLETE")
         time.sleep(a.post_hold)
         self.phase = "done"
 
     def land(self):
         self.phase = "land"
+        # 2026-10-19: an abort of THIS driver's (no grasp, a refused step, a timeout, too
+        # much disturbance) near the table used to land in place -- beside the table, over
+        # the box, possibly with the jaws still closed on the fin. Do what the operator
+        # does: open the jaws, then the planner's ABORT (release hold, climb, arm home);
+        # the branch below then leaves by Go To Land Start.
+        info = self.info
+        near = info is not None and len(info) > I_AT_HANDLE and (
+            info[I_AT_HANDLE] > 0.5 or 0 <= int(info[5]) <= 3 or 0 <= int(info[6]) <= 3)
+        if self.mode == "DIRECT" and near and not self.pl_status.startswith(("ABORTING", "ABORTED")):
+            self.ev("driver abort near the table: gripper OPEN, then the planner's ABORT")
+            try:
+                self.gripper_open("abort")
+                self.trig("abort", must=False)
+                t = time.time()
+                while time.time() - t < 5.0 and not self.pl_status.startswith(("ABORTING", "ABORTED")):
+                    time.sleep(0.05)
+            except Abort as e:
+                self.ev(f"the planner's abort could not be requested: {e}")
         # a planner ABORT (release hold, climb, arm home) plays out in DIRECT
         # before the SAFETY handover, as it does under the GS
         if self.mode == "DIRECT" and self.pl_status.startswith("ABORTING"):
@@ -476,6 +583,35 @@ class Driver(Node):
                 time.sleep(0.05)
             self.ev(f"planner abort finished: {self.pl_status}")
             time.sleep(2.0)
+            # 2026-10-16: an abort leaves the vehicle 0.30 m above the push point, BESIDE
+            # the table -- descending in place there came down on the table / box (Isaac,
+            # h_heavy, 20.6 deg). The operator's procedure, flown here: Get the box, Plan,
+            # Go To Land Start (the planner's table-checked path off the table), then land.
+            if self.a.after_abort_land_start and self.mode == "DIRECT" and self.pl_status.startswith("ABORTED"):
+                try:
+                    # the planner keeps Go To Land Start flyable after an abort (2026-10-16);
+                    # an older one needs Get + Plan first
+                    r = self.trig("go_to_land_start", must=False)
+                    if not r.success:
+                        self.ev(f"after the abort: Go To Land Start refused ({r.message}) -- Get + Plan first")
+                        self.trig("capture_box")
+                        time.sleep(1.0)
+                        self.trig("plan")
+                        t = time.time()
+                        while time.time() - t < 60 and not self.pl_status.startswith(("READY", "INFEASIBLE")):
+                            time.sleep(0.05)
+                        if not self.pl_status.startswith("READY"):
+                            raise Abort(f"re-plan after the abort: {self.pl_status}")
+                        self.start("go_to_land_start")
+                    self.ev("after the abort: Go To Land Start (off the table)")
+                    t = time.time()
+                    while time.time() - t < 90 and self.mode == "DIRECT" and \
+                            not self.pl_status.startswith(("DONE go_to_land_start", "INFEASIBLE", "ABORT")):
+                        time.sleep(0.05)
+                    self.ev(f"after the abort: {self.pl_status}")
+                    time.sleep(2.0)
+                except Abort as e:
+                    self.ev(f"after the abort, Go To Land Start not flown: {e} -- landing in place")
         self.step = -1
         if self.mode == "DIRECT":
             self.ref = self.odom[:3].copy()
@@ -515,8 +651,10 @@ class Driver(Node):
                             box_final=self.box if self.box is not None else np.zeros(7),
                             joint_names=np.array(getattr(self, "joint_names", [])),
                             timetable=np.array([self.a.slot_ready, self.a.slot_descent, self.a.slot_close,
-                                                self.a.slot_release, self.a.slot_exit, self.a.slot_land])
+                                                self.a.slot_release, self.a.slot_exit, self.a.slot_land,
+                                                self.a.slot_land_step])
                             if self.a.timetable else np.zeros(0),
+                            release_at_open=bool(self.a.release_at_open),
                             late_name=np.array([l[0] for l in self.late]),
                             late_s=np.array([l[1] for l in self.late]),
                             aborted=aborted, reason=reason)
@@ -545,11 +683,14 @@ def main():
     ap.add_argument("--grip-live-box", action="store_true",
                     help="gate the close on the measured claw vs the LIVE box pose (x across within grip_axis_tol, y along the fin within grip_tol)")
     ap.add_argument("--grip-timeout", type=float, default=30.0)
+    ap.add_argument("--grip-ee-offset", type=lambda v: [float(x) for x in v.split(",")], default=[0.0, 0.0],
+                    help="with --grip-live-box: the grasp point's x, y in the body's frame [m] (the planner's "
+                         "push_pull_ee_offset; the box 0,0, the valve 0.160,0.0006)")
     ap.add_argument("--grip-action", default="/uav_0/fsc_open_manipulator/gripper_controller/gripper_cmd")
     ap.add_argument("--grip-closed-m", type=float, default=-0.010, help="the GS's gripper_closed [m]")
     ap.add_argument("--settle-timeout", type=float, default=45.0)
     ap.add_argument("--hover-dwell", type=float, default=2.0,
-                    help="hover above the handle this long before Ready's descent [s] (the trim window)")
+                    help="hover above the handle this long before Ready's descent [s]")
     ap.add_argument("--max-disturb", type=float, default=0.008)
     ap.add_argument("--push-hold", type=float, default=1.0, help="hold on the handle after the push [s]")
     ap.add_argument("--release-wait", type=float, default=1.0, help="the GS's push_pull_release_wait_s")
@@ -563,7 +704,7 @@ def main():
     # are offsets from the PREVIOUS step's start mark, sized from the 2026-10-07
     # runs (flown + margin): go_to_start 9.6 s -> ready; open + dwell -> descent 3.0 s
     # -> close; the jaws' stall -> push (never delayed); push 1.5 + 24 s -> release;
-    # open -> exit 6 s -> go_to_land. Only the CLOSE step's own length (the claw's
+    # open -> exit 6 s -> go_to_land_start (23.9 s: one transition) -> land. Only the CLOSE step's own length (the claw's
     # arrival on the fin, 0.3-2 s) varies between runs. A step past its slot is
     # recorded as LATE (npz late_name / late_s).
     ap.add_argument("--timetable", action="store_true",
@@ -573,7 +714,23 @@ def main():
     ap.add_argument("--slot-close", type=float, default=7.0, help="Ready start -> the close step (wait for the claw)")
     ap.add_argument("--slot-release", type=float, default=27.0, help="Push start -> release (gripper open)")
     ap.add_argument("--slot-exit", type=float, default=3.0, help="release start -> Exit To Push")
-    ap.add_argument("--slot-land", type=float, default=8.5, help="Exit start -> Go To Land")
+    ap.add_argument("--slot-land", type=float, default=8.5, help="Exit start -> Go To Land Start")
+    ap.add_argument("--slot-land-step", type=float, default=27.0,
+                    help="Go To Land Start start -> Land (one transition: 23.9 s planned; was 50.5 for the "
+                         "dropped clear leg + arc)")
+    # 2026-10-19: the release-first exit is the DEFAULT -- it is the arm GS's Exit To Push
+    # since 2026-10-17, and the old open-first order is the sequence that crashed once (q3
+    # through 0). --release-at-open is kept (a no-op) for the scripts that pass it.
+    ap.add_argument("--release-at-open", dest="release_at_open", action="store_true", default=True,
+                    help="(the default) call push_pull/release before opening the gripper and start the "
+                         "exit as soon as it is open (the arm GS's Exit To Push); --slot-exit is then unused")
+    ap.add_argument("--open-first-exit", dest="release_at_open", action="store_false",
+                    help="the pre-2026-10-17 exit: open with the claw still world-held, exit after a slot / "
+                         "--release-wait (A/B only)")
+    ap.add_argument("--no-after-abort-land-start", dest="after_abort_land_start", action="store_false",
+                    help="after a planner ABORT, land in place instead of Get + Plan + Go To Land Start first")
+    ap.add_argument("--inject", default="",
+                    help="KIND@S: abort / open / exit, S s after the push starts (worst-case tests, 2026-10-16)")
     ap.add_argument("--out", default="pl_run.npz")
     a = ap.parse_args()
     rclpy.init()

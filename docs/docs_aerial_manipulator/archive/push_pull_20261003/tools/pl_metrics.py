@@ -49,7 +49,7 @@ from fsc_aerial_manipulation.robotic_arm.utils_planner import transition_planner
 
 YAML = os.path.expanduser(
     "~/ros2_ws/src/fsc_autopilot_ros2/config/"
-    "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_push_pull.yaml")
+    "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_box_pushing.yaml")
 P = TP.make_params_t650(armature_diag=[0.010, 0.0194, 0.0097, 0.0097])
 P["base_com"] = np.array([0.0, -0.017854, 0.0])
 L = float(sum(np.linalg.norm(P["l_i"][k]) for k in (1, 2, 3)))     # 0.370 m
@@ -113,7 +113,10 @@ def stats(v):
     return (float(np.sqrt(np.mean(v ** 2))), float(np.max(np.abs(v)))) if len(v) else (np.nan, np.nan)
 
 
-def analyse(path, gains, fc):
+def analyse(path, gains, fc, sign=None):
+    """sign (2026-10-17): None = the box calibration below (the table's normal force, the box's
+    velocity); a pair (sn, sf) = use these for the normal / friction-anchor parts -- the valve-turning
+    builder passes its own (the rotor's origin never moves and no table force is reported there)."""
     z = np.load(path, allow_pickle=True)
     tag = os.path.splitext(os.path.basename(path))[0]
     out = {"run": tag, "aborted": bool(z["aborted"]), "reason": str(z["reason"])}
@@ -133,6 +136,8 @@ def analyse(path, gains, fc):
         if w.sum() > 10:
             vb = np.gradient(interp(ct[w, 0], box, (1, 2, 3)), ct[w, 0], axis=0)
             sf = 1.0 if np.nanmean(np.sum(tf[w] * vb, axis=1)) < 0 else -1.0
+    if sign is not None:
+        sn, sf = float(sign[0]), float(sign[1])
     out["sign"] = (sn, sf)
     F_box = sn * ct[:, 1:4] + sf * ct[:, 4:7]              # on the box, by the vehicle
     M_box_O = sn * ct[:, 13:16] + sf * ct[:, 16:19]

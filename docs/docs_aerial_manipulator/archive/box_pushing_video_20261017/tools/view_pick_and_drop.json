@@ -1,0 +1,7 @@
+{
+  "scene": "pick_and_drop",
+  "window": [1244, 1400],
+  "render_every": 10,
+  "camera": {"pos": [-1.08, -2.07, 2.66], "target": [-0.17, -0.12, 0.57], "focal": 20.9},
+  "note": "2026-10-18 recording view (the scene only; a replay is rendered with a camera fitted on the log)"
+}

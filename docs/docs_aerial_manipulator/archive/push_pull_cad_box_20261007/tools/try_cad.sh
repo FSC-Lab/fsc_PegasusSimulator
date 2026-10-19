@@ -10,7 +10,7 @@ set -o pipefail
 TAG="${1:?tag}"; shift
 C="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 P="$C/../push_pull_20261003"
-Y=~/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_push_pull.yaml
+Y=~/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_box_pushing.yaml
 mkdir -p "$C/runs"
 /usr/bin/python3 "$P/tools/make_push_pull_yaml.py" > /dev/null
 LAW=(); for kv in "$@"; do

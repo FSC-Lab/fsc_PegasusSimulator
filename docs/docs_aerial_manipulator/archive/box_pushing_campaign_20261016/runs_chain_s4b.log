@@ -1,0 +1,34 @@
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_stop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 4.9 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_heavy] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 46 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- grippe
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_stick] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_box_lag -> 0.0
+  push_pull_guard_box_tilt_deg -> 0.0
+  push_pull_guard_q3_min_deg -> 0.0
+[g_stick_nog] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_flip] ABORTED: plan refused: INFEASIBLE: push: the box would end at (1.275, 0.750) -- its trailing end at (1.275, 0.630) is off the table or within 0.030 m 
+  push_pull_push_distance -> 0.90
+  push_pull_push_time_s -> 43.20
+[g_far] ABORTED: plan refused: INFEASIBLE: push: the box would end at (1.275, -0.650) -- its trailing end at (1.275, -0.530) is off the table or within 0.030 
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_abort] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_m400] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_m600] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[g_mu035] completed
+CHAIN_S4B DONE

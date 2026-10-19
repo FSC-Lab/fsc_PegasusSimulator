@@ -250,6 +250,7 @@ BIN_YAW_DEG = am06._envf("PEGASUS_PNP_BIN_YAW_DEG", 90.0)
 BIN_FRICTION = 0.4                      # polypropylene-ish, static = dynamic
 BIN_EDGE = 0.003                        # [m] the drawn edges' square section (visual only)
 BIN_EDGE_RGB = (0.10, 0.12, 0.16)
+BIN_FLOOR_RGB = (0.86, 0.90, 0.94)      # the floor: opaque light plastic (2026-10-18, see _build_bin)
 PICK_PILLAR_XY  = (1.0, 1.0)            # [m] front-left, on the 1 m grid
 PLACE_PILLAR_XY = (-1.0, -1.0)          # [m] back-right
 
@@ -575,8 +576,8 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
     def _build_bin(self, stage):
         """The plastic box the payload is dropped into (2026-10-14): a floor and
         four walls, static colliders under one Xform standing on the PLACE
-        platform, length along the Xform's x (BIN_YAW_DEG turns it). Clear
-        glass to look at; physics is the panels' own material."""
+        platform, length along the Xform's x (BIN_YAW_DEG turns it). Glass
+        walls and an opaque light floor to look at; physics is the panels' own material."""
         root = SCENE_ROOT + "/bin"
         xa = UsdGeom.Xformable(UsdGeom.Xform.Define(stage, root))
         xa.AddTranslateOp().Set(Gf.Vec3d(PLACE_PILLAR_XY[0], PLACE_PILLAR_XY[1], PLACE_PLATFORM_TOP))
@@ -604,6 +605,14 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
         except Exception as exc:              # a look must never stop the scene
             print(f"[AM-T650-PNP] bin: no glass material ({exc}); drawn translucent instead", flush=True)
         for name, (centre, size) in panels.items():
+            if name == "floor":
+                # the FLOOR is opaque light plastic, not glass (user, 2026-10-18: "the drop
+                # pillar is too black"): the white hat seen through the glass floor rendered
+                # as a black disc filling the tray in RTX real-time
+                cube = _box(stage, f"{root}/{name}", centre, size, BIN_FLOOR_RGB)
+                UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
+                _bind_physics(cube.GetPrim(), mat)
+                continue
             cube = _box(stage, f"{root}/{name}", centre, size, (0.75, 0.88, 0.95))
             UsdPhysics.CollisionAPI.Apply(cube.GetPrim())
             _bind_physics(cube.GetPrim(), mat)

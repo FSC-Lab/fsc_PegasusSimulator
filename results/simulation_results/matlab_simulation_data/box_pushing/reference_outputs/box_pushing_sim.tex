@@ -1,0 +1,24 @@
+\begin{table}[H]
+\centering
+\caption{Box pushing in simulation: impedance residual, platform deviation and RMSE of the tracked states over the whole mission.}
+\label{tab:sim_box_push}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{threeparttable}
+\begin{tabular}{l c c c c c c c c c c c c c c c c c c c c c c}
+\toprule
+& \multicolumn{3}{c}{Impedance residual} & \multicolumn{4}{c}{UAV deviation} & \multicolumn{6}{c}{Platform} & \multicolumn{4}{c}{End-effector} & \multicolumn{4}{c}{Joint} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-8} \cmidrule(lr){9-14} \cmidrule(lr){15-18} \cmidrule(lr){19-22}
+Method & $\|e_{imp}\|_{\mathrm{rms}}^{slide}$ & $\|e_{imp}\|_{\max}^{slide}$ & $\|e_{imp}\|_{\mathrm{rms}}^{contact}$ & $\|\varepsilon_{UAV}\|_{\max}$ & $\rho_{UAV,\max}$ & $\|\varepsilon_{UAV}\|_{\mathrm{rms}}$ & $\rho_{UAV,\mathrm{rms}}$ & $r_{0,x}$ & $r_{0,y}$ & $r_{0,z}$ & $\psi_0$ & $\phi_0$ & $\theta_0$ & $r_{e,x}$ & $r_{e,y}$ & $r_{e,z}$ & $\psi_e$ & $q_1$ & $q_2$ & $q_3$ & $q_4$ \\
+ & (N) & (N) & (N) & (mm) & (--) & (mm) & (--) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) \\
+\midrule
+Proposed & 0.681 & 1.738 & 0.678 & 44.71 & 0.121 & 15.79 & 0.043 & 10.73 & 11.16 & 3.09 & 0.70 & 0.85 & 1.01 & 11.32 & 12.51 & 2.81 & 1.48 & 1.00 & 3.21 & 3.78 & 2.79 \\
+Coordinated [Liu 2024] & 2.186 & 4.838 & 2.087 & 114.28 & 0.309 & 30.14 & 0.081 & 17.51 & 22.38 & 10.06 & 1.50 & 0.57 & 0.87 & 15.74 & 26.34 & 11.90 & 0.65 & 0.30 & 0.53 & 0.80 & 0.09 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item[] Each entry is the mean over the completed runs. $e_{imp} = \boldsymbol{F}_{ext} - (\boldsymbol{M}_d \dot{\boldsymbol{e}}_v + \boldsymbol{D}_d \boldsymbol{e}_v + \boldsymbol{K}_d \boldsymbol{e}_y)$ is the impedance residual on the end effector (the measured contact force minus the force the designed impedance would render for the measured deflection), given as the RMS and the maximum of its norm over the 24~s slide and the RMS over the whole contact phase (grasp to release). $\|\varepsilon_{UAV}\| = \|\boldsymbol{r}_{UAV}^{ref} - \boldsymbol{r}_{UAV}\|$ is the platform's deviation from its reference position and $\rho_{UAV} = \|\varepsilon_{UAV}\|/L$ its ratio to the arm's reach $L = 0.37$~m, given as the maximum and the RMS over the window; the remaining columns are RMS tracking errors with the symbols of Table~\ref{tab:sim_free_flight_tracking}. The window is the whole mission (99.8~s), from the start of the Proposed rig's first transit to the end of the landing leg; every run flies the same timetable from Ready on (the methods are aligned at Ready; the coordinated rig's longer first transit starts before the window).
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

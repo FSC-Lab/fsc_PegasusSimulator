@@ -1,0 +1,16 @@
+run,seq,group,open_to_exit,q2max,q3min,arm_dev,drift,tilt,box,outcome,release_at_open
+s3_P_1,OLD,10-16 s3_P,3.010,33.614,26.334,10.347,24.707,3.827,0.829,completed,False
+s3_P_2,OLD,10-16 s3_P,3.005,33.304,25.674,13.859,16.245,1.973,0.455,completed,False
+s3_P_3,OLD,10-16 s3_P,3.008,33.025,26.244,13.443,15.698,2.521,0.464,completed,False
+m_nom_1,OLD,10-17 control,3.002,37.508,19.321,20.994,41.685,3.145,0.092,completed,False
+m_nom_2,OLD,10-17 control,3.000,34.929,25.820,11.300,17.821,2.373,1.329,completed,False
+whole_body_l1_push_run1,OLD,10-17 results,3.003,38.262,20.678,12.183,21.105,2.914,2.253,completed,False
+whole_body_l1_push_run2,OLD,10-17 results,3.003,42.899,11.215,16.785,44.900,2.432,0.014,completed,False
+whole_body_l1_push_run3,OLD,10-17 results,3.010,33.964,24.859,17.354,55.487,5.811,26.340,completed,False
+results_r3_a1,OLD,10-17 results,nan,45.000,-71.005,99.005,1147.297,179.796,4.709,FLIPPED (q3 3.0 deg < 10.0 deg),False
+rel_1,NEW,10-17 release,0.473,31.447,27.861,6.085,30.027,2.302,0.235,completed,True
+rel_2,NEW,10-17 release,0.554,33.657,25.823,11.068,36.733,4.200,0.792,completed,True
+rel_3,NEW,10-17 release,0.392,33.141,26.483,7.897,11.067,2.073,0.304,completed,True
+rel_4,NEW,10-17 release,0.553,36.814,27.110,9.363,39.451,2.748,1.579,completed,True
+rel_5,NEW,10-17 release,0.372,31.789,27.669,10.472,12.886,1.943,0.144,completed,True
+rel_6,NEW,10-17 release,0.312,31.850,27.053,15.189,36.201,2.293,0.191,completed,True

@@ -1,0 +1,6 @@
+{
+  "scene": "box_pushing",
+  "window": [1244, 1400],
+  "render_every": 10,
+  "camera": {"pos": [-2.193, 1.108, 3.37], "target": [0.74, 0.04, 0.56], "focal": 33.0}
+}

@@ -1,0 +1,22 @@
+{
+  "scene": "valve_turning",
+  "window": [
+    1244,
+    1400
+  ],
+  "render_every": 10,
+  "camera": {
+    "pos": [
+      -2.56,
+      1.76,
+      2.83
+    ],
+    "target": [
+      0.2,
+      0.05,
+      1.05
+    ],
+    "focal": 33.0
+  },
+  "note": "2026-10-18 replay framing: the original direction pulled back to 3.7 m so the whole mission (take-off on the ground, the orbit around the valve, the landing hover near the camera) stays in frame -- fitted on takes/valve_rep4 (projection of every vehicle prim + rotor tips, 50 px margin)"
+}

@@ -4,8 +4,8 @@
 #   run_pl.sh <tag>        (after a clean slate in a SEPARATE call:
 #                           scripts/kill_stale_sim_processes.sh -y)
 #
-# WB_SIM_PROFILE=push_pull: the planner block and the controller from
-# ..._l1_4d_..._sim_push_pull.yaml (make_push_pull_yaml.py). Raw mocap
+# WB_SIM_PROFILE=box_pushing: the planner block and the controller from
+# ..._l1_4d_..._sim_box_pushing.yaml (make_push_pull_yaml.py). Raw mocap
 # odometry (PUSH_FEEDBACK=fused for the EKF2 path). PL_DRIVER_ARGS="..." goes
 # to pl_mission.py; the scene's PEGASUS_PUSH_* knobs (env) reach Isaac through
 # the launcher. Brings the stack and the scene up in the background, waits for
@@ -24,7 +24,7 @@ STACK="$STACKS/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_s
 [[ "$FB" == fused ]] && STACK="$STACKS/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh"
 export FASTRTPS_DEFAULT_PROFILES_FILE="$PEG/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml"
 
-(WB_SIM_PROFILE=push_pull setsid nohup bash "$STACK" shiqi_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
+(WB_SIM_PROFILE=box_pushing setsid nohup bash "$STACK" shiqi_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
 
 source /opt/ros/humble/setup.bash
 source "$HOME/ros2_ws/rosdeps/local_setup.bash" 2>/dev/null || true
@@ -41,8 +41,10 @@ for i in $(seq 60); do
 done
 [[ -n "$off" ]] || { echo "the planner has no push_pull_ee_offset -- old binary? rebuild fsc_trajectory_planner"; exit 1; }
 echo "[$(date +%T)] planner up, EE offset $off"
-(setsid nohup env PEGASUS_HEADLESS=1 PUSH_FEEDBACK="$FB" WB_SIM_PROFILE=push_pull \
-   "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_push_and_pull_sitl.sh" --in-terminal shiqi_machine \
+# ARM_GS_AUTO_EXIT_DELAY=0.0: pl_mission.py owns release / open / exit -- the arm GS's
+# automatic exit (2026-10-19) would race it
+(setsid nohup env PEGASUS_HEADLESS=1 PUSH_FEEDBACK="$FB" WB_SIM_PROFILE=box_pushing ARM_GS_AUTO_EXIT_DELAY=0.0 \
+   "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_box_pushing_sitl.sh" --in-terminal shiqi_machine \
    > "$RUNS/$TAG.scene.log" 2>&1 &)
 echo "[$(date +%T)] waiting for the box (Isaac)"
 for i in $(seq 90); do

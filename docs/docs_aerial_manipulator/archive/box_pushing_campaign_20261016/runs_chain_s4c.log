@@ -1,0 +1,13 @@
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[h_heavy] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 43 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- grippe
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[h_stop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 5.6 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[h_abort] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[h_heavy2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 45 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- grippe
+CHAIN_S4C DONE

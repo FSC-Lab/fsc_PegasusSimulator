@@ -1,0 +1,16 @@
+[02:51:34] coordinated_admittance_turn_run1 attempt 1 (results_r1_a1)
+[02:56:41] coordinated_admittance_turn_run1 completed (298 s, beam 355.2 deg)
+[02:56:41] coordinated_admittance_turn_run2 attempt 1 (results_r2_a1)
+[03:00:33] coordinated_admittance_turn_run2 attempt 1 FAILED: [  96.62s] ABORT: left DIRECT while push complete
+[03:00:33] coordinated_admittance_turn_run2 attempt 2 (results_r2_a2)
+[03:05:42] coordinated_admittance_turn_run2 attempt 2 FAILED: beam turned 337.2 deg
+[03:05:42] coordinated_admittance_turn_run2 attempt 3 (results_r2_a3)
+[03:09:38] coordinated_admittance_turn_run2 attempt 3 FAILED: [  96.97s] ABORT: left DIRECT while push complete
+[03:09:38] coordinated_admittance_turn_run3 attempt 1 (results_r3_a1)
+[03:14:53] coordinated_admittance_turn_run3 attempt 1 FAILED: beam turned 273.6 deg
+[03:14:53] coordinated_admittance_turn_run3 attempt 2 (results_r3_a2)
+[03:19:01] coordinated_admittance_turn_run3 attempt 2 FAILED: [ 111.17s] ABORT: left DIRECT while release
+[03:19:01] coordinated_admittance_turn_run3 attempt 3 (results_r3_a3)
+[03:24:10] coordinated_admittance_turn_run3 completed (299 s, beam 479.2 deg)
+[03:24:10] campaign done -- closing the simulation
+BOTH_DONE

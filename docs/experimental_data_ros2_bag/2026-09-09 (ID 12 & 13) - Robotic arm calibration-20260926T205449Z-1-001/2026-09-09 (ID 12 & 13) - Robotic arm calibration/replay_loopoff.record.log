@@ -1,0 +1,15 @@
+stdin is not a terminal device. Keyboard handling disabled.[INFO] [1789001302.005226219] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1789001302.006652232] [rosbag2_storage]: Opened database 'results_robotic_arm/bags/2026-09-09/replay_loopoff/replay_loopoff_0.db3' for READ_WRITE.
+[INFO] [1789001302.007334548] [rosbag2_recorder]: Listening for topics...
+[INFO] [1789001302.007361804] [rosbag2_recorder]: Event publisher thread: Starting
+[INFO] [1789001302.008595821] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[INFO] [1789001302.008696832] [rosbag2_recorder]: Recording...
+[INFO] [1789001302.112815790] [rosbag2_recorder]: Subscribed to topic '/uav_0/fsc_open_manipulator/external_torque_controller/smoothed_reference_joint_trajectory'
+[INFO] [1789001302.114270010] [rosbag2_recorder]: Subscribed to topic '/uav_0/fsc_open_manipulator/external_torque_controller/law_debug'
+[INFO] [1789001302.115188842] [rosbag2_recorder]: Subscribed to topic '/uav_0/fsc_open_manipulator/joint_states'
+[INFO] [1789001302.117829469] [rosbag2_recorder]: Subscribed to topic '/uav_0/fsc_open_manipulator/pwm_state_broadcaster/gpio_states'
+[INFO] [1789001307.754160130] [rosbag2_recorder]: Subscribed to topic '/uav_0/fsc_open_manipulator/external_torque_controller/joint_torque_command'
+[INFO] [1789001307.754196780] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1789001345.610672448] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1789001345.611523305] [rosbag2_recorder]: Event publisher thread: Exiting
+[INFO] [1789001345.611594409] [rosbag2_recorder]: Recording stopped

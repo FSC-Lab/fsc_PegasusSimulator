@@ -1,0 +1,5 @@
+1016 e1   V 24.13->23.63  tilt max DIRECT  4.9  after-land max   5.0  carry pitch 0.3-1 Hz rms 0.23  1.2-2 Hz pitch/roll rms 0.05/0.07  CoM peak lift   26 release   65 mm  obj_0  123 Hz max gap   24 ms
+1016 d1   V 24.09->23.56  tilt max DIRECT  7.2  after-land max   3.6  carry pitch 0.3-1 Hz rms 0.21  1.2-2 Hz pitch/roll rms 0.07/0.06  CoM peak lift  181 release  115 mm  obj_0  123 Hz max gap   26 ms
+1016 d2   V 23.98->23.46  tilt max DIRECT  6.0  after-land max   3.4  carry pitch 0.3-1 Hz rms 0.50  1.2-2 Hz pitch/roll rms 0.10/0.07  CoM peak lift  157 release  177 mm  obj_0  124 Hz max gap   31 ms
+1015 e1   V 24.00->23.54  tilt max DIRECT  4.1  after-land max   7.6  carry pitch 0.3-1 Hz rms 0.19  1.2-2 Hz pitch/roll rms 0.04/0.08  CoM peak lift   15 release   43 mm  obj_0  124 Hz max gap   28 ms
+1015 d1   V 23.93->23.42  tilt max DIRECT  8.4  after-land max   3.9  carry pitch 0.3-1 Hz rms 1.52  1.2-2 Hz pitch/roll rms 0.11/0.09  CoM peak lift  241 release  195 mm  obj_0  124 Hz max gap   22 ms

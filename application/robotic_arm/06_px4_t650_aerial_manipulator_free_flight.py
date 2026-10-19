@@ -87,6 +87,30 @@ REALTIME = os.environ.get("PEGASUS_REALTIME", "0") == "1"
 #                                n=1 each, the cause is NOT isolated (Command.md 7.23). Default 8
 #                                (30 Hz drawing) when PEGASUS_REALTIME=1, else 0 (the burst step).
 RENDER_EVERY = int(os.environ.get("PEGASUS_RENDER_EVERY", "") or (8 if REALTIME else 0))
+#   PEGASUS_RENDER_ADAPTIVE=1    (2026-10-18, windowed + PEGASUS_REALTIME only; default 1) draw a
+#                                frame at the RENDER_EVERY cadence ONLY while the simulated time is
+#                                not behind the wall clock (by more than 2 ms), else skip it -- the
+#                                physics has priority, the viewport is best-effort, and the plant
+#                                stays real time. Measured before this: the valve scene with its
+#                                window ran at RTF 0.81-0.90 in hover and 0.18-0.99 in 2-s bins of
+#                                the turn (frames at a fixed 8 steps cost ~15 ms each, more than the
+#                                ~0.8 ms/step of slack the physics leaves), and the wall-clock law
+#                                lost the contact phase to it (0 of 6 windowed valve turns vs 6 of 7
+#                                headless). With the gate a frame costs the plant at most one
+#                                render of lag, which the physics then pays back before the next
+#                                frame is allowed; the window never goes longer than
+#                                PEGASUS_RENDER_MAX_GAP_S (1.0) without a frame. 0 = the fixed
+#                                cadence (the 2026-10-01 behaviour).
+RENDER_ADAPTIVE = (os.environ.get("PEGASUS_RENDER_ADAPTIVE", "") or "1").strip() != "0"
+RENDER_MAX_GAP_S = float(os.environ.get("PEGASUS_RENDER_MAX_GAP_S", "") or 1.0)
+#   PEGASUS_GC_FREEZE=1          (2026-10-18, default 1) gc.collect() + gc.freeze() once the scene is
+#                                built and playing, so Python's generation-2 collections stop
+#                                re-scanning Kit's and the stage's long-lived object graph every
+#                                few seconds (a windowed flight with the stack up showed a 150-170 ms
+#                                stall every ~10 s, windowed + stack only; the pacer's RTF line now
+#                                reports the longest step, whether it drew a frame, and the GC's
+#                                collections, so the stall is attributable). 0 = leave the GC alone.
+GC_FREEZE = (os.environ.get("PEGASUS_GC_FREEZE", "") or "1").strip() != "0"
 PROFILE_START = float(os.environ.get("PEGASUS_PROFILE_START", "0") or 0.0)
 PROFILE_STEPS = int(os.environ.get("PEGASUS_PROFILE_STEPS", "1500") or 1500)
 PROFILE_OUT = (os.environ.get("PEGASUS_PROFILE_OUT", "") or
@@ -1651,6 +1675,12 @@ class AmT650WholeBodyArmSim:
         steps = 0
         prof = _RtfProfiler(self) if PROFILE_START > 0 else None
         pacer = _RealTimePacer(self) if REALTIME else None
+        if GC_FREEZE:
+            import gc
+            gc.collect()
+            gc.freeze()
+            print(f"[AM-T650-WB] GC: {gc.get_freeze_count()} long-lived objects frozen out of the "
+                  f"collector (PEGASUS_GC_FREEZE=1).", flush=True)
         while (simulation_app.is_running()
                and not self.stop_sim
                and (not STEP_LIMIT or steps < STEP_LIMIT)):
@@ -1658,10 +1688,16 @@ class AmT650WholeBodyArmSim:
                 prof.before_step()
             if HEADLESS or RENDER_EVERY > 0:
                 # one physics step; with a window, draw every RENDER_EVERY steps
-                # (render() redraws without advancing physics)
+                # (render() redraws without advancing physics) -- and under the
+                # pacer only while the plant is not behind the wall clock
+                # (PEGASUS_RENDER_ADAPTIVE): physics first, viewport best-effort
                 self.world.step(render=False)
                 if not HEADLESS and steps % RENDER_EVERY == 0:
-                    self.world.render()
+                    if pacer is None or not RENDER_ADAPTIVE or pacer.render_ok():
+                        t_r = time.perf_counter()
+                        self.world.render()
+                        if pacer is not None:
+                            pacer.note_render(time.perf_counter() - t_r)
             else:
                 self.world.step(render=True)
             steps += 1
@@ -1726,14 +1762,67 @@ class _RealTimePacer:
         self.worst_lag = 0.0
         self.reanchors = 0
         self.slept = 0.0
-        mode = "headless" if HEADLESS else (f"window, 4 ms physics steps, a frame every {RENDER_EVERY}"
+        # adaptive rendering (PEGASUS_RENDER_ADAPTIVE): frames drawn / skipped this
+        # report, the EMA of one frame's wall cost, when the last frame was drawn
+        self.frames = 0
+        self.frames_skipped = 0
+        self.render_cost = 0.0
+        self.last_render_w = self.w0
+        # stall attribution: the longest loop iteration in the report window, whether it drew
+        # a frame, and the garbage collector's collections (count per generation, longest)
+        self.prev_now = self.w0
+        self.max_step_ms = 0.0
+        self.max_step_rendered = False
+        self.rendered_this_step = False
+        self.gc_n = [0, 0, 0]
+        self.gc_max_ms = 0.0
+        self._gc_t0 = None
+        import gc
+        gc.callbacks.append(self._gc_cb)
+        gate = (f" but only while the plant is not behind the wall clock "
+                f"(PEGASUS_RENDER_ADAPTIVE=1, at least one per {RENDER_MAX_GAP_S:.1f} s)"
+                if (not HEADLESS and RENDER_EVERY > 0 and RENDER_ADAPTIVE) else "")
+        mode = "headless" if HEADLESS else (f"window, 4 ms physics steps, a frame every {RENDER_EVERY} steps{gate}"
                                              if RENDER_EVERY > 0 else "window, 4 physics steps per frame")
         print(f"[AM-T650-WB] REAL-TIME PACER on ({mode}): "
               f"simulated time is held to the wall clock (RTF <= 1).", flush=True)
 
+    RENDER_LAG_TOL_S = 0.002
+
+    def render_ok(self):
+        """Draw this frame only if the simulated time is not behind the wall clock by
+        more than RENDER_LAG_TOL_S -- or the window has waited RENDER_MAX_GAP_S."""
+        now = time.perf_counter()
+        behind = (now - self.w0) - (float(self.sim.world.current_time) - self.s0)
+        if behind <= self.RENDER_LAG_TOL_S or now - self.last_render_w >= RENDER_MAX_GAP_S:
+            return True
+        self.frames_skipped += 1
+        return False
+
+    def note_render(self, cost_s):
+        self.frames += 1
+        self.rendered_this_step = True
+        self.last_render_w = time.perf_counter()
+        self.render_cost = cost_s if self.render_cost <= 0.0 else 0.9 * self.render_cost + 0.1 * cost_s
+
+    def _gc_cb(self, phase, info):
+        if phase == "start":
+            self._gc_t0 = time.perf_counter()
+        elif self._gc_t0 is not None:
+            d_ms = 1e3 * (time.perf_counter() - self._gc_t0)
+            self._gc_t0 = None
+            self.gc_n[min(int(info.get("generation", 0)), 2)] += 1
+            self.gc_max_ms = max(self.gc_max_ms, d_ms)
+
     def after_step(self):
         now = time.perf_counter()
         st = float(self.sim.world.current_time)
+        step_ms = 1e3 * (now - self.prev_now)
+        self.prev_now = now
+        if step_ms > self.max_step_ms:
+            self.max_step_ms = step_ms
+            self.max_step_rendered = self.rendered_this_step
+        self.rendered_this_step = False
         ahead = (st - self.s0) - (now - self.w0)
         if ahead > 0.0:
             time.sleep(ahead)
@@ -1747,13 +1836,26 @@ class _RealTimePacer:
             self.worst_lag = max(self.worst_lag, -ahead)
         if now - self.rep_w >= self.REPORT_S:
             rtf = (st - self.rep_s) / (now - self.rep_w)
+            frames = ""
+            if not HEADLESS and RENDER_EVERY > 0:
+                frames = (f", {self.frames} frame(s) = {self.frames / (now - self.rep_w):.1f} fps at "
+                          f"{1e3 * self.render_cost:.1f} ms each, {self.frames_skipped} skipped")
             print(f"[AM-T650-WB] RTF {rtf:.3f} over the last {now - self.rep_w:.1f} s "
                   f"(worst lag {1e3 * self.worst_lag:.1f} ms, {self.reanchors} re-anchor(s), "
-                  f"slept {self.slept:.2f} s)", flush=True)
+                  f"slept {self.slept:.2f} s{frames}; longest step {self.max_step_ms:.0f} ms"
+                  f"{' with a frame' if self.max_step_rendered else ''}; gc gen0/1/2 "
+                  f"{self.gc_n[0]}/{self.gc_n[1]}/{self.gc_n[2]}, longest {self.gc_max_ms:.0f} ms)",
+                  flush=True)
             self.rep_w, self.rep_s = now, st
             self.worst_lag = 0.0
             self.reanchors = 0
             self.slept = 0.0
+            self.frames = 0
+            self.frames_skipped = 0
+            self.max_step_ms = 0.0
+            self.max_step_rendered = False
+            self.gc_n = [0, 0, 0]
+            self.gc_max_ms = 0.0
 
 
 class _RtfProfiler:

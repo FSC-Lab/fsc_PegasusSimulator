@@ -1,0 +1,9 @@
+== sine torque test: peak speed 10 deg/s, amplitude 12 deg, 6 cycles per joint, joints [4] -- THE ARM IS LIVE
+
+--- joint4: centre +0 deg, amplitude 12 deg, 0.1326 Hz -> peak 10.0 deg/s, 45 s
+[   0.0s] to the sine centre for joint4
+[   8.0s] sine ON  joint4  12 deg @ 0.1326 Hz
+[  56.2s] sine OFF joint4 (ramped out)
+[  62.2s] back to HOME
+
+done -- stop the recorder. Total 72 s.

@@ -1,0 +1,167 @@
+<title>1016 Pick-and-Drop Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: one full-width reading column on black, the lab's flight-report look (same tokens as the 1009 / 1015 reports). */
+:root{color-scheme:dark;--bg:#000000;--ink:#f5f5f2;--ink2:#b9b8ae;--line:#2f2f2d;--blue:#3987e5;--orange:#d95926;--red:#e66767;--aqua:#199e70;--amber:#d9a326;--panel:#141413;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace}
+html{background:var(--bg)}
+body{margin:0 auto;max-width:1040px;padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans)}
+h1{font-size:1.7rem;margin:28px 0 4px;letter-spacing:-0.01em}
+h2{font-size:1.2rem;margin:36px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+h3{font-size:1.02rem;margin:22px 0 6px}
+h1,h2,h3{text-wrap:balance}
+.sub{color:var(--ink2);margin:0 0 18px}
+.tscroll{overflow-x:auto;margin:10px 0 14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{color:var(--ink2);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-family:var(--mono);font-size:12.5px}
+td.ref{color:var(--ink2)}
+td.c,th.c{font-variant-numeric:tabular-nums}
+.verdict{background:var(--panel);border-left:4px solid var(--blue);padding:10px 14px;margin:14px 0;border-radius:0 6px 6px 0}
+.good{border-left-color:var(--aqua)}.bad{border-left-color:var(--red)}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid currentColor}
+.pill.ok{color:var(--aqua)}.pill.part{color:var(--amber)}.pill.no{color:var(--ink2)}
+figure{margin:16px 0}
+figure img{width:100%;height:auto;border:1px solid #d0d0d2;border-radius:4px;background:#fcfcfb;filter:invert(1) hue-rotate(180deg)}
+figure.narrow img{max-width:760px}
+figcaption{color:var(--ink2);font-size:13px;margin-top:6px}
+code{background:var(--panel);padding:1px 5px;border-radius:3px;font-size:13px;font-family:var(--mono);overflow-wrap:anywhere}
+ul,ol{padding-left:22px;margin:8px 0}li{margin:3px 0}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;margin:14px 0}
+.kv div{border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+.kv b{display:block;font-size:1.3rem;font-variant-numeric:tabular-nums}.kv span{color:var(--ink2);font-size:13px}
+.note{color:var(--ink2);font-size:13.5px}
+nav.toc ol{columns:2 260px;column-gap:24px}
+nav.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}
+nav.toc a:hover,nav.toc a:focus-visible{border-bottom-color:var(--blue);outline:none}
+a{color:var(--blue)}
+</style>
+
+<h1>1016 Pick-and-Drop Flights</h1>
+<p class="sub">T650 aerial manipulator, whole-body 4-D L1 controller, EKF2-fused feedback, 16 October 2026. Three bags: one mission without a payload (the control) and two with the 180 g basket. These are the first flights with the 16 October changes: the arm held at the pick pose while carrying, the wrist friction and damping fix, wider arm torque caps, stiffer attitude gains, and the automatic, basket-aimed drop.</p>
+
+<div class="kv">
+  <div><b>3 of 3</b><span>missions flew every leg and landed upright</span></div>
+  <div><b>2 of 2</b><span>baskets ended in the tray: D-2 30 mm off and flat, D-1 112 mm off at 25°</span></div>
+  <div><b>0.21–0.50°</b><span>pitch swing while carrying, 0.3–1 Hz rms (15 Oct: 1.52°)</span></div>
+  <div><b>321 counts</b><span>j2's worst 10 s mean current (D-2); the 26 Aug overload came at about 250</span></div>
+</div>
+
+<div class="verdict good">The flying is much better than on 15 October, and both baskets ended in the tray. The wrist swing that drove the 15 October oscillation is gone. The two new drop features were not exercised: Drop was clicked by hand inside the automatic drop's 2 s wait, and Ready To Drop was pressed before the aim could measure the basket. Two new problems showed up: j2 sticks under load while the controller winds its torque up, and D-1's gripper closed on the wrong part of the payload.</div>
+
+<nav class="toc" aria-label="Contents"><ol>
+  <li><a href="#flights">The flights</a></li>
+  <li><a href="#changes">What the 16 October changes did</a></li>
+  <li><a href="#carry">The carry</a></li>
+  <li><a href="#drop">The drop</a></li>
+  <li><a href="#j2">j2 sticks and winds up under load</a></li>
+  <li><a href="#grasp">D-1's grasp</a></li>
+  <li><a href="#legs">Tracking per leg</a></li>
+  <li><a href="#next">What to do next, in order</a></li>
+</ol></nav>
+
+<h2 id="flights">1. The flights</h2>
+<div class="tscroll"><table>
+  <tr><th>Run</th><th>Bag</th><th>Payload</th><th>Outcome</th></tr>
+  <tr><td>E-1 13:44</td><td><code>…_empty_20261016_134438</code></td><td>none</td><td>All six legs and both exits, landed. The pick and the drop steps were flown with nothing in the jaws. Used as the control.</td></tr>
+  <tr><td>D-1 13:51</td><td><code>…_20261016_135100</code></td><td>basket</td><td>All legs, landed. The gripper stalled two-thirds closed (section 6). Released 85 mm from the drop point; came to rest 112 mm off, tilted 25°.</td></tr>
+  <tr><td>D-2 14:00</td><td><code>…_20261016_140020</code></td><td>basket</td><td>All legs, landed. Released 48 mm from the drop point, with the claw still swinging; came to rest 30 mm off, flat (5°).</td></tr>
+</table></div>
+<p class="note">Battery 24.0–24.1 V at take-off, 23.5–23.6 V at the landing, in all three. Peak tilt in DIRECT 4.9 / 7.2 / 6.0°. Mocap for the basket ran at 123 Hz with no gap over 31 ms. No servo hardware error was recorded.</p>
+
+<h2 id="changes">2. What the 16 October changes did</h2>
+<div class="tscroll"><table>
+  <tr><th>Change</th><th>Measured</th><th>Result</th></tr>
+  <tr><td>Arm held at the pick pose [0, 32, 38, 0]° while carrying</td><td>Arm reference constant from the grasp to the drop in both loaded flights. Peak j3 torque in the carry 0.93 / 1.39 N·m (15 Oct: 1.70, while the loaded arm folded to the old carry pose).</td><td><span class="pill ok">Works</span></td></tr>
+  <tr><td>Wrist (j4) friction feed-forward 0.030 N·m and error damping 0.05</td><td>Both active: the error-damping term was 0.45–0.82 duty counts rms. The loaded wrist no longer swings (section 3). Without a payload it still wanders: E-1 −25° to +18° after 70 s, D-1 −45° after the release.</td><td><span class="pill part">Partly</span></td></tr>
+  <tr><td>Arm torque caps [0.50, 2.81, 1.92, 0.39] N·m</td><td>Torque above its cap for 0.02 s in 266 s of DIRECT (j2, D-2). The servo PWM limits were never reached.</td><td><span class="pill ok">Works</span></td></tr>
+  <tr><td>Attitude gains k<sub>R</sub>/k<sub>ω</sub> 2.134 / 1.567 (from the pick-and-drop yaml; the bag does not record them)</td><td>Peak CoM error at the lift 181 / 157 mm (15 Oct: 241 / 184), at the release 115 / 177 mm (15 Oct: 195). The 1.2–2 Hz pitch band stayed at 0.07–0.10° rms (15 Oct: 0.11°), so the 1.5 Hz wobble seen in 2 of 6 Isaac flights did not appear.</td><td><span class="pill ok">Works</span></td></tr>
+  <tr><td>Automatic drop</td><td>Running: the planner status read "auto drop: waiting 0.4 of 2.0 s". Drop was clicked by hand 0.48 / 0.82 / 0.81 s after the drop leg ended, before the 2 s wait was over.</td><td><span class="pill no">Not flown</span></td></tr>
+  <tr><td>Aim the drop at the basket</td><td>Ready To Drop was pressed 0.5–0.6 s after reaching Drop Start. The aim needs at least 6 s of hover, so the planner replied "NOT aimed at the basket: 0.0 s / 0 basket samples" and used the EE-offset model.</td><td><span class="pill no">Not flown</span></td></tr>
+</table></div>
+
+<h2 id="carry">3. The carry</h2>
+<figure>
+  <img src="{{carry.png}}" alt="Four panels from the grasp to the drop click, comparing 15 October D-1 with 16 October D-1 and D-2: vehicle pitch, wrist roll q4, j2 tracking error, and j2 current.">
+  <figcaption>Figure 1. From the grasp to the drop click. Grey: 15 October D-1. Blue: 16 October D-1. Orange: 16 October D-2. The dashed line in the bottom panel is the current at which j2 shut down on 26 August.</figcaption>
+</figure>
+<ul>
+  <li><b>The wrist swing is gone.</b> On 15 October q4 swung ±18° at 0.5 Hz from mid-carry to the drop, and the vehicle pitched ±3–4° with it. Today q4 stays still: its standard deviation over the drop leg is 0.0° in both loaded flights.</li>
+  <li><b>q4 now parks 3–15° off its 0° reference.</b> The soft EE-heading task gives the wrist only about 0.05 N·m per radian, which does not overcome its static friction. That offset did not move the basket in a way that mattered for the drop.</li>
+  <li><b>Pitch swing while carrying</b> (0.3–1 Hz rms): 0.21° in D-1 and 0.50° in D-2, against 1.52° on 15 October and 0.23° in today's empty flight. D-2's extra comes from one event, the j2 breakaway 22.5 s after the grasp (section 5).</li>
+  <li><b>The lift is still the largest transient</b>: pitch reaches ±4–5° within 3 s of the grasp, as on 15 October, and the CoM moves 157–181 mm.</li>
+</ul>
+
+<h2 id="drop">4. The drop</h2>
+<figure class="narrow">
+  <img src="{{drop.png}}" alt="Top view of the basket's path from release to rest, relative to the drop point, for 15 October D-1 and 16 October D-1 and D-2, with the 25 mm payload gate drawn as a circle.">
+  <figcaption>Figure 2. The basket from the moment it leaves the jaws (open circle) to rest (square), relative to the drop point. The dashed circle is the automatic drop's 25 mm payload gate.</figcaption>
+</figure>
+<ul>
+  <li><b>D-2:</b> the claw was 59 mm from its target when Drop was clicked, still swinging after the drop leg. It had been 43 mm off at the end of the leg and was moving away. The basket left the jaws 48 mm from the drop point, fell 0.21 m, bounced through the centre and came to rest 30 mm off, flat.</li>
+  <li><b>D-1:</b> the claw was only 16 mm off, but the basket hung 56 mm behind the claw. The planner's model assumes 20 mm ahead. It left the jaws 85 mm off and came to rest 112 mm off, tilted 25° and 17 mm higher than D-2's basket, which suggests it is resting partly on the tray's edge.</li>
+  <li><b>Both releases were clean.</b> The basket left the jaws 0.08–0.12 s after the click, moving sideways at only 0.05–0.08 m/s.</li>
+</ul>
+<h3>What the new drop gates would have done</h3>
+<p>Had the operator hovered at Drop Start and then waited for the automatic drop, the gates would have seen these numbers (measured over the same hover, basket relative to the claw):</p>
+<div class="tscroll"><table>
+  <tr><th></th><th class="c">D-1</th><th class="c">D-2</th></tr>
+  <tr><td>Basket position against the model, at Drop Start</td><td class="c">79 mm</td><td class="c">28 mm</td></tr>
+  <tr><td>Aim (corrects up to 60 mm)</td><td class="c">refused</td><td class="c">applied</td></tr>
+  <tr><td>25 mm payload gate</td><td class="c">never passes</td><td class="c">passes once the claw settles</td></tr>
+  <tr><td>Result</td><td class="c">no automatic release; operator decides</td><td class="c">release over the drop point</td></tr>
+</table></div>
+<p>So the gates would have held D-1's badly gripped basket instead of dropping it 112 mm off, and would have aimed D-2's. This is how they were designed to behave; it has not been flown.</p>
+
+<h2 id="j2">5. j2 sticks and winds up under load</h2>
+<ul>
+  <li><b>D-2, from 4 s to 22 s after the grasp, j2 stayed 1.1° below its reference.</b> Over that time the controller's j2 torque rose from 1.25 to 2.44 N·m, its j2 disturbance estimate from −0.54 to −1.50 N·m, and the servo current from 190 to 340 counts. The basket itself accounts for about −0.4 N·m, which is where D-1's estimate sat for most of its carry.</li>
+  <li><b>At 60.2 s the joint broke loose</b>: the j2 error jumped to +12.7°, j3 to −7.7°, and the vehicle pitched from 1.6° to 4.7°.</li>
+  <li><b>Heat:</b> j2's worst 10 s mean current was 321 counts in D-2, 225 in D-1 and 244 on 15 October D-1. j2 shut down from overload on 26 August at about 250. No servo error was recorded today.</li>
+  <li><b>D-1 shows the start of the same pattern</b> in the last 12 s before the drop: estimate −0.34 to −0.75 N·m, current 158 to 226 counts.</li>
+  <li><b>Why:</b> the gearbox friction grows with the load torque. While the joint is held, the controller's joint disturbance estimate keeps integrating the difference, so it pushes harder, which raises the friction further, until the joint breaks away. The 16 October wrist model predicted the same mechanism on j4; here it appears on the loaded j2.</li>
+</ul>
+
+<h2 id="grasp">6. D-1's grasp</h2>
+<ul>
+  <li><b>D-1's gripper stalled at −0.0010</b>, about two-thirds closed. D-2 and both 15 October grasps closed fully, at −0.0096 to −0.0098, on the fin.</li>
+  <li>The claw stood at about the same place relative to the basket in both flights (within 10 mm), so the jaws caught something thicker than the fin. The ground station accepted the stall as "gripped".</li>
+  <li>With that grip the basket hung 56 mm behind the claw and tilted 17–21°, against 8–12° in D-2. That hang is what put it 85 mm off at the release.</li>
+</ul>
+
+<h2 id="legs">7. Tracking per leg</h2>
+<h3>CoM error, rms / max (mm)</h3>
+<div class="tscroll"><table>
+  <tr><th>Leg</th><th class="n">15 Oct D-1</th><th class="n">E-1</th><th class="n">D-1</th><th class="n">D-2</th></tr>
+  <tr><td>Lift after the grasp</td><td class="n ref">136 / 241</td><td class="n">19 / 26</td><td class="n">96 / 181</td><td class="n">97 / 157</td></tr>
+  <tr><td>To Drop Start</td><td class="n ref">95 / 210</td><td class="n">40 / 94</td><td class="n">29 / 78</td><td class="n">49 / 91</td></tr>
+  <tr><td>Drop leg</td><td class="n ref">68 / 132</td><td class="n">38 / 73</td><td class="n">37 / 85</td><td class="n">65 / 158</td></tr>
+  <tr><td>Exit after the drop</td><td class="n ref">106 / 195</td><td class="n">27 / 65</td><td class="n">60 / 115</td><td class="n">86 / 177</td></tr>
+  <tr><td>To Land Start</td><td class="n ref">41 / 81</td><td class="n">37 / 79</td><td class="n">46 / 89</td><td class="n">33 / 69</td></tr>
+  <tr><td>Landing</td><td class="n ref">16 / 22</td><td class="n">21 / 36</td><td class="n">15 / 30</td><td class="n">19 / 43</td></tr>
+</table></div>
+<h3>Pitch oscillation, 0.3–2 Hz rms (°)</h3>
+<div class="tscroll"><table>
+  <tr><th>Leg</th><th class="n">15 Oct D-1</th><th class="n">E-1</th><th class="n">D-1</th><th class="n">D-2</th></tr>
+  <tr><td>Lift after the grasp</td><td class="n ref">1.43</td><td class="n">0.10</td><td class="n">2.41</td><td class="n">1.12</td></tr>
+  <tr><td>To Drop Start</td><td class="n ref">0.74</td><td class="n">0.17</td><td class="n">0.23</td><td class="n">0.18</td></tr>
+  <tr><td>Drop leg</td><td class="n ref">1.78</td><td class="n">0.30</td><td class="n">0.20</td><td class="n">0.72</td></tr>
+  <tr><td>Exit after the drop</td><td class="n ref">1.02</td><td class="n">0.28</td><td class="n">0.37</td><td class="n">0.73</td></tr>
+  <tr><td>To Land Start</td><td class="n ref">0.18</td><td class="n">0.38</td><td class="n">0.15</td><td class="n">0.18</td></tr>
+  <tr><td>Landing</td><td class="n ref">0.27</td><td class="n">0.15</td><td class="n">0.22</td><td class="n">0.29</td></tr>
+</table></div>
+<p class="note">The carry legs are now close to the empty flight. The lift and the exit after the drop are still where the load changes, and still the largest errors. D-1's lift pitch (2.41°) is higher than on 15 October even though its CoM error is lower. D-2's drop leg carries the j2 breakaway.</p>
+
+<h2 id="next">8. What to do next, in order</h2>
+<ol>
+  <li><b>Fly the new drop as designed.</b> Hover at least 6 s at Drop Start before Ready To Drop, then let the automatic drop release, keeping the Drop button as the override. Both features are built and running but have not flown.</li>
+  <li><b>Watch j2's current on every loaded flight.</b> D-2 ran above the 26 August overload level for most of its carry. The fix belongs in the arm channel, for example a bound on how far the joint disturbance estimate may grow while the joint is not moving. That needs a decision and has not been tuned.</li>
+  <li><b>Check the grip before lifting.</b> A stall far short of the full close (−0.0010 against −0.0097) meant the wrong grip for this payload. The ground station could refuse it, or at least show the gripper position. D-1's video would show what the jaws caught.</li>
+  <li><b>The empty wrist still wanders</b> after the release (E-1 −25° to +18°, D-1 −45°). The 16 October model predicted this; the cause sits in the controller, not the arm. It has not affected a drop so far.</li>
+</ol>
+
+<p class="note">Data and tools: <code>docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261016/</code> (<code>tools/run_extract.sh</code>, then <code>legs.py</code>, <code>drop16.py</code>, <code>grasp16.py</code>, <code>caps_audit.py</code>, <code>health16.py</code>, <code>fig16.py</code>; raw outputs in <code>analysis/</code>). The previous flights: <a href="https://claude.ai/artifact/HFEWhHb5PTdrsVpxaa9GQG">1015 Pick-and-Drop Flights</a>.</p>

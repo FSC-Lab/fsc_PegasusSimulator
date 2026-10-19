@@ -1,0 +1,6 @@
+takes/
+out/
+preview/
+logs/
+tools/video_view.json
+__pycache__/

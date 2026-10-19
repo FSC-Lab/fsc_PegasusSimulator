@@ -96,7 +96,10 @@ DST_FMT = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_d
 # is damping, not stability: in 2 of 6 flights the lift left a 0.4-0.5 deg rms
 # 1.5 Hz pitch wobble through the carry (1.6 / 1.2: fades in 4 s); none grew.
 # The paper's pick-and-place keeps 1.6 / 1.2 (its results were flown with it).
-GAIN_OVERRIDES_PICK_PLACE = {"wb_k_r": "1.6", "wb_k_w": "1.2"}
+# 2026-10-16: the mirror took the j4 fix (wb_ky_psi / wb_dy_psi 2.5 / 0.93 + wb_l1_stuck_hold_j4,
+# archive/j4_heading_stuck_20261016); the paper's pick-and-place keeps the heading it flew 10-08/09.
+GAIN_OVERRIDES_PICK_PLACE = {"wb_k_r": "1.6", "wb_k_w": "1.2",
+                             "wb_ky_psi": "0.2484", "wb_dy_psi": "0.2903", "wb_l1_stuck_hold_j4": "false"}
 
 # Planner keys REPLACED IN PLACE, per demonstration (key -> (YAML value text,
 # python value)). The task block is the mirror's = the hardware file's, EXCEPT

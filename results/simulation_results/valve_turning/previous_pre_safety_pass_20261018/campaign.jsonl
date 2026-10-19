@@ -1,0 +1,11 @@
+{"time":"2026-10-18T02:36:53-04:00","method":"whole_body_l1","run":1,"attempt":1,"status":"failed","why":"[  67.81s] ABORT: left DIRECT while push complete","rc":0,"wall_s":200,"tag":"results_r1_a1","turned_deg":""}
+{"time":"2026-10-18T02:41:44-04:00","method":"whole_body_l1","run":1,"attempt":2,"status":"completed","why":"","rc":0,"wall_s":281,"tag":"results_r1_a2","turned_deg":"360.4"}
+{"time":"2026-10-18T02:46:34-04:00","method":"whole_body_l1","run":2,"attempt":1,"status":"completed","why":"","rc":0,"wall_s":281,"tag":"results_r2_a1","turned_deg":"363.4"}
+{"time":"2026-10-18T02:51:24-04:00","method":"whole_body_l1","run":3,"attempt":1,"status":"completed","why":"","rc":0,"wall_s":281,"tag":"results_r3_a1","turned_deg":"362.5"}
+{"time":"2026-10-18T02:56:41-04:00","method":"coordinated_admittance","run":1,"attempt":1,"status":"completed","why":"","rc":0,"wall_s":298,"tag":"results_r1_a1","turned_deg":"355.2"}
+{"time":"2026-10-18T03:00:33-04:00","method":"coordinated_admittance","run":2,"attempt":1,"status":"failed","why":"[  96.62s] ABORT: left DIRECT while push complete","rc":0,"wall_s":222,"tag":"results_r2_a1","turned_deg":""}
+{"time":"2026-10-18T03:05:42-04:00","method":"coordinated_admittance","run":2,"attempt":2,"status":"failed","why":"beam turned 337.2 deg","rc":0,"wall_s":299,"tag":"results_r2_a2","turned_deg":"337.2"}
+{"time":"2026-10-18T03:09:38-04:00","method":"coordinated_admittance","run":2,"attempt":3,"status":"failed","why":"[  96.97s] ABORT: left DIRECT while push complete","rc":0,"wall_s":227,"tag":"results_r2_a3","turned_deg":""}
+{"time":"2026-10-18T03:14:53-04:00","method":"coordinated_admittance","run":3,"attempt":1,"status":"failed","why":"beam turned 273.6 deg","rc":0,"wall_s":306,"tag":"results_r3_a1","turned_deg":"273.6"}
+{"time":"2026-10-18T03:19:01-04:00","method":"coordinated_admittance","run":3,"attempt":2,"status":"failed","why":"[ 111.17s] ABORT: left DIRECT while release","rc":0,"wall_s":239,"tag":"results_r3_a2","turned_deg":"462.6"}
+{"time":"2026-10-18T03:24:10-04:00","method":"coordinated_admittance","run":3,"attempt":3,"status":"completed","why":"","rc":0,"wall_s":299,"tag":"results_r3_a3","turned_deg":"479.2"}

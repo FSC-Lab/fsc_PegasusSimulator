@@ -153,6 +153,15 @@ REALTIME_ARG="${PEGASUS_REALTIME:-${SIM_REALTIME:-0}}"
 # With a window, 06 steps physics one 4 ms step at a time and draws a frame every
 # RENDER_EVERY steps (default 8 under the pacer; 0 = the old 4-steps-per-frame burst).
 RENDER_EVERY_ARG="${PEGASUS_RENDER_EVERY:-}"
+# SLACK-GATED RENDERING (2026-10-18): with a window and the pacer, 06 draws a frame only while the
+# plant is not behind the wall clock (default 1; 0 = the fixed cadence), and never waits longer
+# than PEGASUS_RENDER_MAX_GAP_S (1.0) for one. Baked into the pane like the other knobs.
+RENDER_ADAPTIVE_ARG="${PEGASUS_RENDER_ADAPTIVE:-}"
+RENDER_MAX_GAP_ARG="${PEGASUS_RENDER_MAX_GAP_S:-}"
+if [[ -n "$RENDER_ADAPTIVE_ARG" && ! "$RENDER_ADAPTIVE_ARG" =~ ^[01]$ ]]; then
+  echo "ERROR: PEGASUS_RENDER_ADAPTIVE must be 0 or 1 (got '$RENDER_ADAPTIVE_ARG')." >&2
+  exit 1
+fi
 # CPU PINNING (2026-10-01): PEGASUS_ISAAC_CPUS > the machine config's ISAAC_CPUS >
 # unpinned. On a hybrid CPU (shiqi-desktop's i9-14900KF: P-cores = CPUs 0-15,
 # E-cores = 16-31) the scheduler parks Isaac's main thread on an E-core part of the
@@ -358,6 +367,7 @@ PEGASUS_ARM_COMMAND_MODE=$ARM_COMMAND_MODE \
 PEGASUS_EE_MARKER_CUBE=$EE_MARKER_CUBE PEGASUS_EE_MARKER_CUBE_MASS=$EE_MARKER_CUBE_MASS \
 PEGASUS_PROFILE_START=$PROFILE_START PEGASUS_PROFILE_STEPS=$PROFILE_STEPS PEGASUS_PROFILE_OUT=$PROFILE_OUT \
 PEGASUS_REALTIME=$REALTIME_ARG PEGASUS_RENDER_EVERY=$RENDER_EVERY_ARG \
+PEGASUS_RENDER_ADAPTIVE=$RENDER_ADAPTIVE_ARG PEGASUS_RENDER_MAX_GAP_S=$RENDER_MAX_GAP_ARG \
   $ISAAC_TASKSET \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

@@ -33,7 +33,7 @@ WHAT IS AUTHORED:
   fsc:* attributes   the numbers the scene and the planner need (box size, fin
                      geometry), so nothing downstream re-measures the mesh
 The rigid body, the friction and the placement are the scene's job
-(07_px4_direct_t650_aerial_manipulator_push_and_pull.py, PEGASUS_PUSH_HANDLE=cad).
+(07_px4_t650_aerial_manipulator_box_pushing.py, PEGASUS_PUSH_HANDLE=cad).
 """
 import argparse
 import os

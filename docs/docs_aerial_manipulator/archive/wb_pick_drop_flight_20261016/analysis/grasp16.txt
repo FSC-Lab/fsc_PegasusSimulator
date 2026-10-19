@@ -1,0 +1,12 @@
+1016 d1    CLOSE  t  40.88  claw - basket rest (vehicle x fwd / y left / z, mm) [-10.   3. 161.]   gripper +0.0190
+1016 d1    report t  42.52  claw - basket rest (vehicle x fwd / y left / z, mm) [ -7.  12. 160.]   gripper -0.0010
+           model claw - basket = Rz^T(-ee_offset)... claw = point + R(-0.02, 0, 0.16) -> vehicle (-20, 0, 160)   basket tilt at rest 3.9
+1016 d2    CLOSE  t  37.08  claw - basket rest (vehicle x fwd / y left / z, mm) [ -1.  -1. 164.]   gripper +0.0190
+1016 d2    report t  37.70  claw - basket rest (vehicle x fwd / y left / z, mm) [-25.   1. 154.]   gripper -0.0097
+           model claw - basket = Rz^T(-ee_offset)... claw = point + R(-0.02, 0, 0.16) -> vehicle (-20, 0, 160)   basket tilt at rest 3.8
+1015 d1    CLOSE  t  40.40  claw - basket rest (vehicle x fwd / y left / z, mm) [-30.  -2. 163.]   gripper +0.0190
+1015 d1    report t  41.02  claw - basket rest (vehicle x fwd / y left / z, mm) [-15.   7. 161.]   gripper -0.0096
+           model claw - basket = Rz^T(-ee_offset)... claw = point + R(-0.02, 0, 0.16) -> vehicle (-20, 0, 160)   basket tilt at rest 3.1
+1015 d2    CLOSE  t  42.60  claw - basket rest (vehicle x fwd / y left / z, mm) [-27.  -1. 162.]   gripper +0.0190
+1015 d2    report t  43.22  claw - basket rest (vehicle x fwd / y left / z, mm) [-35. -16. 163.]   gripper -0.0098
+           model claw - basket = Rz^T(-ee_offset)... claw = point + R(-0.02, 0, 0.16) -> vehicle (-20, 0, 160)   basket tilt at rest 3.2

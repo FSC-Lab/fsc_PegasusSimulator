@@ -145,12 +145,22 @@ ARM_STATE_TOPIC="/uav_0/isaacsim_manipulator/joint_states"
 ARM_GS_MOUNT_HEIGHT="${ARM_GS_MOUNT_HEIGHT:-1.2}"
 # The tab the arm ground station opens on (2026-10-14; its start_tab parameter, a
 # 0-based index: with the 4-joint arm 0 Setpoints, 1 EE Whole-Body, 2 EE Trajectory,
-# 3 PS4 Remote, 4 Pick & Place, 5 Pick & Drop, 6 Push & Pull). Unset = the
+# 3 PS4 Remote, 4 Pick & Place, 5 Pick & Drop, 6 Box Pushing, 7 Valve Turning). Unset = the
 # station's own default (Setpoints); the pick-and-place wrapper sets it per profile.
 ARM_GS_TAB_ARG=""
 if [[ -n "${ARM_GS_START_TAB:-}" ]]; then
   [[ "$ARM_GS_START_TAB" =~ ^[0-9]+$ ]] || { echo "ERROR: ARM_GS_START_TAB must be a tab index, got '$ARM_GS_START_TAB'" >&2; exit 1; }
   ARM_GS_TAB_ARG="-p start_tab:=$ARM_GS_START_TAB"
+fi
+# The Box Pushing tab's AUTOMATIC exit (2026-10-19; the station's
+# push_pull_auto_exit_delay_s, 1.0 s after DONE push, <= 0 = by hand only). The
+# autonomous drivers (pl_mission.py, run by run_pl.sh / run_pl_cadm.sh) release, open
+# and exit by themselves and set ARM_GS_AUTO_EXIT_DELAY=0.0 so the station does not
+# race them. Unset = the station's default.
+if [[ -n "${ARM_GS_AUTO_EXIT_DELAY:-}" ]]; then
+  [[ "$ARM_GS_AUTO_EXIT_DELAY" =~ ^[0-9]+([.][0-9]+)?$ ]] || { echo "ERROR: ARM_GS_AUTO_EXIT_DELAY must be seconds >= 0, got '$ARM_GS_AUTO_EXIT_DELAY'" >&2; exit 1; }
+  [[ "$ARM_GS_AUTO_EXIT_DELAY" == *.* ]] || ARM_GS_AUTO_EXIT_DELAY="$ARM_GS_AUTO_EXIT_DELAY.0"   # a double parameter
+  ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_exit_delay_s:=$ARM_GS_AUTO_EXIT_DELAY"
 fi
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
@@ -272,7 +282,7 @@ FOUR_D_ANSWER="$(
   # shellcheck source=/dev/null
   source "$FSC_AUTOPILOT_WS/install/setup.bash" >/dev/null 2>&1
   for _ in $(seq 20); do
-    ans="$(timeout 8 ros2 param get "/$ATTRIB_UAV_NS/fsc_autopilot_ros2" wb_l1_four_d 2>/dev/null | tr -d '\r')"
+    ans="$(timeout 8 ros2 param get --no-daemon --spin-time 3 "/$ATTRIB_UAV_NS/fsc_autopilot_ros2" wb_l1_four_d 2>/dev/null | tr -d '\r')"   # --no-daemon: the daemon wedges at bring-up on shiqi-desktop
     case "$ans" in *True*|*true*) echo true; exit 0 ;; *False*|*false*) echo false; exit 0 ;; esac
     sleep 1
   done

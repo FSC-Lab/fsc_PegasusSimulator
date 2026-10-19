@@ -1,0 +1,7 @@
+{
+  "scene": "pick_and_drop",
+  "window": [1244, 1400],
+  "render_every": 10,
+  "camera": {"pos": [0.51, 5.46, 5.10], "target": [0.03, -0.03, 0.79], "focal": 49.3},
+  "note": "2026-10-18 replay framing, fitted on takes/pnd_rep1 by fit_cam_log.py (every logged prim + the pillars and the tray, 0.2 m spheres, 50 px margin): from the north at 38 deg elevation, 7 m, so the pick (vehicle west of the pick pillar) and the drop (vehicle east of the tray) are both seen side-on"
+}

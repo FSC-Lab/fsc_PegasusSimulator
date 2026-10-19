@@ -118,7 +118,10 @@ def make_l1(**over):
              # 4-D attribution (2026-09-16): inert at the defaults
              four_d=False, omega_q=0.2, contact=False,
              collision_threshold_n=0.0,
-             omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0)
+             omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0,
+             # stuck-joint hold (2026-10-16): inert at the defaults
+             stuck_hold_j1=False, stuck_hold_j2=False, stuck_hold_j3=False,
+             stuck_hold_j4=False, stuck_speed=0.02, stuck_filter_s=0.25)
     for k, val in over.items():
         if k not in v:
             raise KeyError(f"unknown L1 gain '{k}'")

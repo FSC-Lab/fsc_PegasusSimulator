@@ -1,0 +1,19 @@
+  push_pull_push_distance -> 0.70
+  push_pull_push_time_s -> 33.60
+[s2_d070_1] completed
+  push_pull_push_distance -> 0.30
+  push_pull_push_time_s -> 14.40
+[s2_d030_1] completed
+  push_pull_push_distance -> 0.70
+  push_pull_push_time_s -> 33.60
+[s2_d070_2] completed
+  push_pull_push_distance -> 0.30
+  push_pull_push_time_s -> 14.40
+[s2_d030_2] completed
+  push_pull_push_distance -> 0.60
+  push_pull_push_time_s -> 28.80
+[s2_d060_1] completed
+  push_pull_push_distance -> 0.60
+  push_pull_push_time_s -> 28.80
+[s2_d060_2] completed
+CHAIN_S2 DONE

@@ -1,0 +1,13 @@
+[21:34:02] coordinated_admittance_push_run1 attempt 1 (results_r1_a1)
+[21:39:07] coordinated_admittance_push_run1 completed (296 s, box 511 mm)
+[21:39:07] coordinated_admittance_push_run2 attempt 1 (results_r2_a1)
+[21:43:58] coordinated_admittance_push_run2 attempt 1 FAILED: [  84.95s] push_pull: ABORTING (SAFETY GUARD: the box is 44 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, th
+[21:43:58] coordinated_admittance_push_run2 attempt 2 (results_r2_a2)
+[21:48:44] coordinated_admittance_push_run2 attempt 2 FAILED: [  84.34s] push_pull: ABORTING (SAFETY GUARD: the box is 45 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, th
+[21:48:44] coordinated_admittance_push_run2 attempt 3 (results_r2_a3)
+[21:53:25] coordinated_admittance_push_run2 attempt 3 FAILED: [  82.45s] push_pull: ABORTING (SAFETY GUARD: the box is 47 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, th
+[21:53:25] coordinated_admittance_push_run3 attempt 1 (results_r3_a1)
+[21:58:08] coordinated_admittance_push_run3 attempt 1 FAILED: [  85.23s] push_pull: ABORTING (SAFETY GUARD: the box is 47 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, th
+[21:58:08] coordinated_admittance_push_run3 attempt 2 (results_r3_a2)
+[22:03:22] coordinated_admittance_push_run3 completed (305 s, box 506 mm)
+[22:03:22] campaign done -- closing the simulation

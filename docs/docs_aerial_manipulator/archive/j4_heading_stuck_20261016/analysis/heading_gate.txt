@@ -1,0 +1,11 @@
+H1b: {'ky_psi': 0.24842496979543618, 'dy_psi': 0.2903373533888682, 'k_R': 2.1341988853715477, 'k_w': 1.5672301544939369, 'omega_x': 0.20723435451980987}
+H1b      EE rms show  11.9 flown  13.5 mm | delay 24/28/32/36/40 14.3/14.6/ABORT/ABORT/ABORT | gust 36.4 | rob16 13.3 rob24 13.6
+psi2.0   EE rms show  11.9 flown  13.4 mm | delay 24/28/32/36/40 14.3/14.6/ABORT/ABORT/ABORT | gust 36.4 | rob16 13.3 rob24 13.6
+psi2.5   EE rms show  11.9 flown  13.4 mm | delay 24/28/32/36/40 14.3/14.6/ABORT/ABORT/ABORT | gust 36.4 | rob16 13.3 rob24 13.6
+psi3.0   EE rms show  11.9 flown  13.4 mm | delay 24/28/32/36/40 14.3/14.6/ABORT/ABORT/ABORT | gust 36.3 | rob16 13.3 rob24 13.6
+psi2.5+hold EE rms show  11.9 flown  13.4 mm | delay 24/28/32/36/40 14.3/14.6/ABORT/ABORT/ABORT | gust 36.4 | rob16 13.3 rob24 13.6
+H1b          heading rms show 0.328 flown 0.308 deg | q4 err show 0.68 deg | |eR| 0.0224 tilt 2.30 tau_pk 1.176 dtau 0.0324 sat 0.00%
+psi2.0       heading rms show 0.373 flown 0.239 deg | q4 err show 0.86 deg | |eR| 0.0224 tilt 2.29 tau_pk 1.176 dtau 0.0321 sat 0.00%
+psi2.5       heading rms show 0.365 flown 0.238 deg | q4 err show 0.85 deg | |eR| 0.0224 tilt 2.29 tau_pk 1.176 dtau 0.0321 sat 0.00%
+psi3.0       heading rms show 0.358 flown 0.237 deg | q4 err show 0.84 deg | |eR| 0.0224 tilt 2.29 tau_pk 1.176 dtau 0.0321 sat 0.00%
+psi2.5+hold  heading rms show 0.348 flown 0.235 deg | q4 err show 0.80 deg | |eR| 0.0224 tilt 2.29 tau_pk 1.176 dtau 0.0321 sat 0.00%

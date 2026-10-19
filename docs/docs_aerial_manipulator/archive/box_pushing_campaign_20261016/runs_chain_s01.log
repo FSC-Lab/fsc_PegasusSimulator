@@ -1,0 +1,28 @@
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s0_base_1] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s1_m250_1] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s1_m600_1] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s1_m500_1] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s0_base_2] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s1_m250_2] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s1_m600_2] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s1_m500_2] completed
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[s0_base_3] completed
+CHAIN_S01 DONE

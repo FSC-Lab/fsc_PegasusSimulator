@@ -1,0 +1,7 @@
+{
+  "scene": "pick_and_place_assembly",
+  "window": [1244, 1400],
+  "render_every": 10,
+  "camera": {"pos": [0.51, 5.46, 5.10], "target": [0.03, -0.03, 0.79], "focal": 49.3},
+  "note": "2026-10-18 recording view (the scene only; the replay camera is fitted on the log)"
+}

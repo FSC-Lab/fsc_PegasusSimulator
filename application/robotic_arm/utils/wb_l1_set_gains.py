@@ -33,7 +33,8 @@ KNOWN = ("observer_type a_t a_r a_q adapt_period_s omega_c_t omega_c_r "
          "four_d omega_q contact contact_hold_translation collision_threshold_n "
          "omega_x_t omega_x_r omega_x_q "
          "max_force_n max_torque_nm max_joint_nm max_wrench_force_n "
-         "max_wrench_torque_nm").split()
+         "max_wrench_torque_nm "
+         "stuck_hold_j1 stuck_hold_j2 stuck_hold_j3 stuck_hold_j4 stuck_speed stuck_filter_s").split()
 
 # LAW gains, given with their full name so there is no chance of confusing
 # e.g. wb_k_r (attitude) with wb_l1_a_r (predictor pole). Any wb_* key already

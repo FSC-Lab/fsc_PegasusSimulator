@@ -1,0 +1,113 @@
+[00:17:19] waiting for the planner's valve-turning block
+[00:17:25] planner up, turn 360.0 deg
+[00:17:25] waiting for the valve (Isaac)
+[00:18:03] valve up; letting PX4 / the arm stack settle
+[00:18:48] flying
+[   0.03s] planner: IDLE
+[   1.06s] push_pull: NOT IN DIRECT
+[   1.08s] box at rest [1.2, 0.0, 0.8]
+[   1.13s] reset: success=True push-and-pull progress and plan cleared (the box capture and the typed points kept)
+[   1.18s] adjust: success=True start mark and land point moved by [0.100, -0.070] m (the box is measured and not moved); press Plan
+[   2.23s] capture_box: success=True captured the box at [1.200, -0.000, 0.800] m, yaw 180.0 deg from /obj_0/mocap (125 samples, spread 1.6 mm); the EE offset is applied in this box frame -- press Plan
+[   3.28s] offboard: success=True Offboard mode request sent
+[   6.34s] arm: success=True Arm command sent
+[   8.34s] climbing to 1.3 m
+[  20.68s] planner: HOLD
+[  20.68s] push_pull: NOT PLANNED: press Plan
+[  20.73s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  20.73s] MARK direct
+[  35.74s] push_pull: PLANNING
+[  35.75s] push_pull: READY next=go_to_start
+[  35.79s] plan: success=True planning the six steps from the current hold -- the status reads READY when done
+[  35.79s] planned step durations [8.0, 3.0, 37.5, 6.3, 23.9, 0.1] s
+[  35.79s] MARK go_to_start:start
+[  35.79s] planner: CALCULATING
+[  35.79s] push_pull: FLYING go_to_start
+[  35.80s] planner: EXECUTING T=8.0s
+[  35.80s] push_pull: FLYING go_to_start T=8.0s
+[  35.84s] go_to_start: success=True go_to_start: planning from the current hold; it executes as soon as it is planned
+[  35.84s] go_to_start: executing, T = 8.0 s
+[  43.80s] planner: HOLD
+[  43.80s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 14 mm from the point above the handle (tolerance 50 mm)
+[  43.81s] MARK go_to_start:end
+[  43.81s] timetable: ready in 2.98 s
+[  43.89s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 13 mm from the point above the handle (tolerance 50 mm)
+[  43.99s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 12 mm from the point above the handle (tolerance 50 mm)
+[  44.09s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 13 mm from the point above the handle (tolerance 50 mm)
+[  44.29s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 12 mm from the point above the handle (tolerance 50 mm)
+[  44.59s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 9 mm from the point above the handle (tolerance 50 mm)
+[  44.69s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 5 mm from the point above the handle (tolerance 50 mm)
+[  44.79s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  44.89s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  44.99s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  45.09s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 10 mm from the point above the handle (tolerance 50 mm)
+[  45.29s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  45.39s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  45.49s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  45.59s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  45.69s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 1 mm from the point above the handle (tolerance 50 mm)
+[  45.79s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 5 mm from the point above the handle (tolerance 50 mm)
+[  45.89s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  45.99s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 9 mm from the point above the handle (tolerance 50 mm)
+[  46.09s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 10 mm from the point above the handle (tolerance 50 mm)
+[  46.19s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 11 mm from the point above the handle (tolerance 50 mm)
+[  46.29s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 10 mm from the point above the handle (tolerance 50 mm)
+[  46.39s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  46.49s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  46.59s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  46.79s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  46.80s] MARK ready:start
+[  46.80s] MARK gripper_open:start
+[  46.80s] gripper open: at -0.0 deg
+[  46.80s] MARK gripper_open:end
+[  46.80s] timetable: ready descent in 2.50 s
+[  46.99s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  47.09s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  47.19s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  47.29s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 5 mm from the point above the handle (tolerance 50 mm)
+[  47.39s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 3 mm from the point above the handle (tolerance 50 mm)
+[  47.49s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  47.59s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  47.69s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 10 mm from the point above the handle (tolerance 50 mm)
+[  47.79s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 11 mm from the point above the handle (tolerance 50 mm)
+[  47.89s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 14 mm from the point above the handle (tolerance 50 mm)
+[  48.19s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 13 mm from the point above the handle (tolerance 50 mm)
+[  48.29s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 11 mm from the point above the handle (tolerance 50 mm)
+[  48.39s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  48.49s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 5 mm from the point above the handle (tolerance 50 mm)
+[  48.59s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  48.69s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 1 mm from the point above the handle (tolerance 50 mm)
+[  48.79s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  48.89s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  49.09s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  49.29s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  49.31s] planner: CALCULATING
+[  49.31s] push_pull: FLYING ready
+[  49.31s] planner: EXECUTING T=3.0s
+[  49.31s] push_pull: FLYING ready T=3.0s
+[  49.36s] ready: success=True ready: planning from the current hold; it executes as soon as it is planned (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[  49.36s] ready: executing, T = 3.0 s
+[  52.31s] planner: HOLD
+[  52.31s] push_pull: DONE ready next=push (CONTACT on: the gripper closes first)
+[  52.31s] MARK ready:end
+[  52.31s] timetable: close in 1.49 s
+[  53.81s] MARK close:start
+[  54.11s] close: claw 3.7 mm from the grasp point, +1.3 mm across the fin after 0.3 s
+[  54.11s] MARK gripper_close:start
+[  55.47s] gripper close (action): stalled=True reached=False position 0.0017 m, at -29.9 deg
+[  55.47s] MARK gripper_close:end
+[  55.47s] MARK push:start
+[  55.48s] planner: CALCULATING
+[  55.48s] push_pull: FLYING push (CONTACT)
+[  55.48s] planner: EXECUTING T=37.5s
+[  55.48s] push_pull: FLYING push (CONTACT) T=37.5s
+[  55.53s] push: success=True push: planning from the current hold; it executes as soon as it is planned -- CONTACT phase on, the push holds 1.5 s, then turns 360 deg about the axis in 36.0 s
+[  55.53s] push: executing, T = 37.5 s
+[  78.93s] planner: IDLE
+[  78.93s] push_pull: NOT IN DIRECT
+[  78.94s] ABORT: left DIRECT while push complete
+[  84.95s] landing by reference
+[  97.01s] disarm: success=True Disarm command sent
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/valve_turning_20261015/tools/../runs/results_r2_a1.npz
+ABORTED: left DIRECT while push complete
+[00:20:26] done

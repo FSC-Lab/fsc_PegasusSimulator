@@ -1,0 +1,8 @@
+push_pull_push_distance=0.50
+push_pull_push_time_s=24.00
+MASS=0.500
+DIST=0.50
+MU_S=0.25
+MU_K=0.25
+BOX_Y0=0.2800
+RELEASE=1

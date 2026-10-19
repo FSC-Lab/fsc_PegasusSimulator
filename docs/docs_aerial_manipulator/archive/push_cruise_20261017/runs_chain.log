@@ -1,0 +1,11 @@
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 20.0
+  push_pull_push_ramp_s -> 3.0
+[c_nom_2] ABORTED: push-and-pull ABORTED while exit: ABORTING (SAFETY GUARD: q3 7.1 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- gripp
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 20.0
+  push_pull_push_ramp_s -> 3.0
+[c_nom_3] ABORTED: push-and-pull ABORTED while exit: ABORTING (SAFETY GUARD: q3 -21.8 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- gri
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 20.0
+  push_pull_push_ramp_s -> 3.0

@@ -9,7 +9,7 @@
 # stack should have been started on, and reads the RUNNING controller's
 # vehicle_name (/uav_0/fsc_autopilot_ros2), which that yaml sets. Returns 0 when
 # they match, 1 when any differs (the stack was started without
-# WB_SIM_PROFILE=push_pull, or the planner binary predates push-and-pull and
+# WB_SIM_PROFILE=box_pushing, or the planner binary predates push-and-pull and
 # has no push_pull_* parameters at all), 2 when either node could not be read.
 # A mismatch always wins over a failed read. (Adjust moves push_pull_land and
 # push_pull_start_mark, so those two are not compared.)
@@ -17,7 +17,18 @@
 # push_pull_world_anchor_on_handle (2026-10-07): a planner built before it has
 # no such parameter, and with world_anchor_ready false would fly the whole grasp
 # CoM-anchored (one run never centred) -- a key missing on the node is a mismatch.
-PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle"
+# push_pull_turn_deg / push_pull_obstacle (2026-10-15, the valve-turning scene): a
+# yaml that sets them is compared on them too (the push yaml does not, so its
+# check is unchanged); a planner built before them has no such parameter.
+# push_pull_push_ramp_s (2026-10-17, the cruise): a planner built before it would
+# fly push_pull_push_time_s as the old min-snap move -- 1.6 x the cruise's peak
+# speed -- so a key missing on the node is a mismatch.
+# The box guards / abort (2026-10-16) are compared too (2026-10-19): a planner built before
+# them passed this check while ignoring them. PL_CHECK_REQUIRE: keys the RUNNING planner must
+# declare whatever the yaml says -- push_pull_capture_max_yaw_spread_deg is the 2026-10-19
+# build (the frozen / flipping box capture gates), which also implies push_pull/release (10-17).
+PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_push_ramp_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle push_pull_turn_deg push_pull_obstacle push_pull_guard_box_lag push_pull_guard_box_tilt_deg push_pull_guard_q3_min_deg push_pull_box_half_length push_pull_abort_from_measured push_pull_guard_tilt_deg push_pull_guard_force_n"
+PL_CHECK_REQUIRE="${PL_CHECK_REQUIRE:-push_pull_capture_max_yaw_spread_deg}"
 
 push_pull_planner_check() {
   local yaml="$1" node="${PL_CHECK_NODE:-/uav_0/whole_body_trajectory_planner}"
@@ -49,7 +60,7 @@ push_pull_planner_check() {
     echo "push-and-pull check: controller vehicle_name '$got_name' vs '$want_name' ($(basename "$yaml"))"
     ctl_bad=1
   fi
-  PL_DUMP="$dump" /usr/bin/python3 - "$yaml" $PL_CHECK_KEYS <<'PY'
+  PL_DUMP="$dump" PL_REQUIRE="$PL_CHECK_REQUIRE" /usr/bin/python3 - "$yaml" $PL_CHECK_KEYS <<'PY'
 import os, sys
 import yaml
 
@@ -72,6 +83,10 @@ for k in sys.argv[2:]:
     gl = g if isinstance(g, list) else [g]
     if g is None or len(wl) != len(gl) or any(abs(float(a) - float(b)) > 1e-9 for a, b in zip(wl, gl)):
         bad.append(f"{k}: running {g} vs yaml {w}")
+for k in os.environ.get("PL_REQUIRE", "").split():
+    if k not in got:
+        bad.append(f"the running planner has no {k} -- its build is older than the box-pushing "
+                   f"safety changes (rebuild fsc_trajectory_planner)")
 if bad:
     print("push-and-pull check: " + "; ".join(bad))
     sys.exit(1)

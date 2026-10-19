@@ -1,0 +1,24 @@
+\begin{table}[H]
+\centering
+\caption{Valve turning in simulation: impedance residual, platform deviation and RMSE of the tracked states over the whole mission.}
+\label{tab:sim_valve_turn}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{threeparttable}
+\begin{tabular}{l c c c c c c c c c c c c c c c c c c c c c c}
+\toprule
+& \multicolumn{3}{c}{Impedance residual} & \multicolumn{4}{c}{UAV deviation} & \multicolumn{6}{c}{Platform} & \multicolumn{4}{c}{End-effector} & \multicolumn{4}{c}{Joint} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-8} \cmidrule(lr){9-14} \cmidrule(lr){15-18} \cmidrule(lr){19-22}
+Method & $\|e_{imp}\|_{\mathrm{rms}}^{turn}$ & $\|e_{imp}\|_{\max}^{turn}$ & $\|e_{imp}\|_{\mathrm{rms}}^{contact}$ & $\|\varepsilon_{UAV}\|_{\max}$ & $\rho_{UAV,\max}$ & $\|\varepsilon_{UAV}\|_{\mathrm{rms}}$ & $\rho_{UAV,\mathrm{rms}}$ & $r_{0,x}$ & $r_{0,y}$ & $r_{0,z}$ & $\psi_0$ & $\phi_0$ & $\theta_0$ & $r_{e,x}$ & $r_{e,y}$ & $r_{e,z}$ & $\psi_e$ & $q_1$ & $q_2$ & $q_3$ & $q_4$ \\
+ & (N) & (N) & (N) & (mm) & (--) & (mm) & (--) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) \\
+\midrule
+Proposed & 0.976 & 2.141 & 0.972 & 55.56 & 0.150 & 20.50 & 0.055 & 14.19 & 14.64 & 2.15 & 1.44 & 1.30 & 1.27 & 9.13 & 9.70 & 3.05 & 2.47 & 2.90 & 7.99 & 8.79 & 4.05 \\
+Coordinated [Liu 2024] & 10.557 & 35.242 & 9.945 & 170.71 & 0.461 & 55.31 & 0.149 & 32.31 & 43.48 & 10.31 & 8.85 & 1.73 & 2.86 & 26.55 & 40.58 & 15.54 & 10.50 & 2.29 & 2.11 & 1.26 & 1.16 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item[] Each entry is the mean over the completed runs. $e_{imp} = \boldsymbol{F}_{ext} - (\boldsymbol{M}_d \dot{\boldsymbol{e}}_v + \boldsymbol{D}_d \boldsymbol{e}_v + \boldsymbol{K}_d \boldsymbol{e}_y)$ is the impedance residual on the end effector (the measured contact force minus the force the designed impedance would render for the measured deflection), given as the RMS and the maximum of its norm over the 36~s turn of the handle through 360$^\circ$ and the RMS over the whole contact phase (grasp to release). $\|\varepsilon_{UAV}\| = \|\boldsymbol{r}_{UAV}^{ref} - \boldsymbol{r}_{UAV}\|$ is the platform's deviation from its reference position and $\rho_{UAV} = \|\varepsilon_{UAV}\|/L$ its ratio to the arm's reach $L = 0.37$~m, given as the maximum and the RMS over the window; the remaining columns are RMS tracking errors with the symbols of Table~\ref{tab:sim_free_flight_tracking}. The window is the whole mission (109.3~s), from the start of the first transit to the end of the landing leg; every run flies the same timetable from Ready on (the methods are aligned at Ready).
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

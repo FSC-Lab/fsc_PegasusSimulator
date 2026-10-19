@@ -1147,22 +1147,22 @@ During the flight (after step 3: DIRECT, planner HOLD)
   A tab's Plan switches the planner to its own place; the other tab then says so and stays disabled.
 
 
-## 17. Push-and-pull scene (whole-body L1 4-D, contact phase)
+## 17. Box-pushing scene (whole-body L1 4-D, contact phase)
 
 **shiqi_machine** -- the HOOBRO console table (1.000 x 0.150 x 0.800 m) in front of the start, its length
-along y; the real 400 g box near its +y end, from the user's CAD (`Box_Push.stl` -> `Box_Push.usda`, 2026-10-07:
-240 x 160 x 100 mm, friction 0.29 = the measured experiment table) with its clamp bracket and a 5 mm fin
+along y; the 500 g box (2026-10-16: the box-pushing campaign's choice, total incl. the handle) near its +y end (centre (1.275, 0.28): back face 0.10 m from that end, pushed 0.50 m to 0.16 m from the far end -- the user's bench layout, 2026-10-17), from the user's CAD (`Box_Push.stl` -> `Box_Push.usda`, 2026-10-07:
+240 x 160 x 100 mm, friction 0.25 = the real box on the experiment table, measured 2026-10-17) with its clamp bracket and a 5 mm fin
 handle on the top centre (grasp 0.233 m above the table; the sim claw cannot close below ~19 mm, so the
 fin's bare part carries an invisible 20 mm grip shim, `PEGASUS_PUSH_FIN_GRIP_MM`). `PEGASUS_PUSH_HANDLE=post`
 gives the 10-06 post (grasp 0.273 m; printable: `archive/push_pull_20261003/handle/`). The airframe carries the T650's landing gear, 7 cm shorter than
 the X650's (`AM_T650.usda`, a copy of `AM_xfwd.usda`; planner `push_pull_gear_depth` 0.2425); the
-vehicle grasps the post and slides the box 0.50 m along the table with the arm held still (folded forward,
-[0, 30, 40, 0] deg). The law's contact phase flag follows the GRIPPER: CONTACT from the jaws' grip (the
+vehicle grasps the fin and slides the box 0.50 m along the table with the arm held still (folded forward,
+[0, 32, 28, 0] deg since 2026-10-16; [0, 26, 34, 0] before). The law's contact phase flag follows the GRIPPER: CONTACT from the jaws' grip (the
 Push press) to the end of the push, before the jaws open, and
 the claw stays held in the world through the push. Flown 2026-10-04: 3 / 3 complete missions, the box
-pushed 495-502 mm and left on the table. `WB_SIM_PROFILE=push_pull` in step 1
+pushed 495-502 mm and left on the table. `WB_SIM_PROFILE=box_pushing` in step 1
 is REQUIRED: step 2 refuses to start unless the running planner and controller came from the
-push-and-pull yaml. Record: `docs/docs_aerial_manipulator/archive/push_pull_20261003/`; the CAD box:
+box-pushing yaml. Record: `docs/docs_aerial_manipulator/archive/push_pull_20261003/`; the CAD box:
 `archive/push_pull_cad_box_20261007/`.
 
 ```bash
@@ -1172,10 +1172,10 @@ push-and-pull yaml. Record: `docs/docs_aerial_manipulator/archive/push_pull_2026
 
 # 1. stack (4-D L1 node, RAW mocap feedback, emulator with obj_0, planner, drone GS). Not the _fused
 #    stack: in contact EKF2 drifts 1-1.5 cm / 1-3 deg and every fused push failed (2026-10-05, record section 8)
-WB_SIM_PROFILE=push_pull ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+WB_SIM_PROFILE=box_pushing ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 
-# 2. the push-and-pull scene + PX4 + torque-mode arm stack + arm GS (+ gamepad if plugged in)
-PUSH_FEEDBACK=raw ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_push_and_pull_sitl.sh shiqi_machine
+# 2. the box-pushing scene + PX4 + torque-mode arm stack + arm GS (+ gamepad if plugged in)
+PUSH_FEEDBACK=raw ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_box_pushing_sitl.sh shiqi_machine
 
 # 3. take off to 1.3 m, hover 3 s, switch to DIRECT (wait for "Ready for takeoff!" in the PX4 pane first)
 FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
@@ -1186,37 +1186,47 @@ FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulat
 Or the whole mission scripted, headless (after step 0): `archive/push_pull_20261003/tools/run_pl.sh <tag>`.
 Score it (impedance residual + rho_UAV): `PYTHONNOUSERSITE=1 /usr/bin/python3 archive/push_pull_20261003/tools/pl_metrics.py runs/<tag>.npz`.
 
-**Operating the arm GS "Push & Pull" tab**
+**Operating the arm GS "Box Pushing" tab**
 
 Before the flight (on the ground, after steps 1-2)
 
-1. **Adjust** -- the vehicle on its start mark; the shift is written into the Start mark and Land.
-2. **Get** on the *Box (obj_0)* row -- captures the box's mocap pose (x, y, z, yaw).
-3. **EE Offset** (sim [0, 0, 0.183] m for the CAD box, box frame), **Safety Margin** (0.20 m), **Push Distance**
-   (0.50 m; negative pulls) -- type, press the button.
+1. **Adjust** -- the vehicle on its start mark; the shift is written into the Start mark, Land Start and Land.
+2. **Get** on the *Box (obj_0)* row -- captures the box's mocap pose (x, y, z, yaw); the boxes are editable.
+3. **EE Offset** (sim [0, 0, 0.183] m for the CAD box, box frame), **Vertical Margin** (0.15 m), **Side Margin**
+   (0.12 m), **Push Distance** (0.50 m) -- type, press the button.
 
 During the flight (after step 3: DIRECT, planner HOLD)
 
-1. **Plan** -- dry-runs all five steps and draws the path. Wait for `READY next=go_to_start`.
+1. **Plan** -- dry-runs all six steps and draws the path. Wait for `READY next=go_to_start`.
 2. **1 Go To Start** -- to the table's left end, turning right to -90 deg; the claw 0.12 m behind and
-   0.10 m above the post's grasp point.
-3. **2 Ready To Push** -- opens the gripper and slides diagonally down-forward onto the handle (CoM-anchored;
-   the claw is world-held from its arrival).
-4. **3 Push** -- closes the gripper once the claw is within 2 cm AND centred across the post to 3 mm;
+   0.15 m above the fin's grasp point.
+3. **2 Ready To Push** -- opens the gripper and, once it reports open, slides diagonally down-forward onto the
+   handle (CoM-anchored; the claw is world-held from its arrival).
+4. **3 Push** -- closes the gripper once the claw is within 2 cm AND centred across the fin to 3 mm;
    once the jaws grip, the law goes to CONTACT (the contact line turns purple) and the box slides
-   0.50 m (1.5 s settle + 12 s); CONTACT ends with the push. If the gripper closes on nothing,
-   nothing moves.
-5. **4 Exit To Push** -- opens the gripper, waits 1 s, up 0.20 m (the gear clears the box), arm home.
-6. **5 Go To Land** -- on clockwise to -360 deg, a hover 0.5 m behind the start (`COMPLETE`).
+   0.50 m (1.5 s settle + 24 s); CONTACT ends with the push. If the gripper closes on nothing,
+   nothing moves (Isaac: the grasp is a stall; hardware, 2026-10-19: a full close on the fin is the
+   grasp, a close stopping wider than -0.005 m a wrong grip).
+5. **4 Exit To Push** -- starts by itself 1 s after `DONE push` (press it to go sooner, ABORT to stop
+   it): releases, opens the gripper and, on its OPEN report, climbs 0.20 m (the gear clears the box), arm home.
+6. **5 Go To Land Start** -- one transition from the exit hold to Land Start (1.3 m, off the table), turning
+   clockwise to -360 deg (~24 s, set by the 270 deg turn); the planner checks the path against the table.
+7. **6 Land** -- straight down to the hover 0.5 m behind the start (`COMPLETE`).
    Touch down with `ps4_teleop_bringup.py land --land-z 0.25` (section 16; the T650 gear rests the body at
    0.235 m -- the default 0.35 would leave it hovering 11 cm up).
 
-- **ABORT** (red, any time): gripper open, contact off; on the handle a 0.5 s hold for the jaws,
-  then 0.30 m up and the arm home. After an abort with the box touched: **Get** and **Plan** again.
-  The planner aborts by itself if the tilt stays above 15 deg for 0.1 s, or the push force the
-  law reads stays above 5 N for 0.3 s.
+- **ABORT** (red, any time): gripper open, contact off; on the handle it holds the MEASURED pose 1.0 s
+  (hardware 1.5) for the jaws, backs 3 cm off against the push, then 0.30 m up and the arm home. **Then press Go To
+  Land Start and Land -- never land in place: the abort leaves the vehicle beside the table.** To
+  push again: **Get** and **Plan**. The planner aborts by itself if the tilt stays above 15 deg (hardware 10) for
+  0.1 s, the force the law reads on the claw stays above 5 N for 0.3 s (from the grasp to the exit), the
+  arm's joint states go silent for 0.5 s, and (2026-10-16) if the BOX is
+  more than 40 mm behind / ahead of its plan or tilts more than 2 deg (0.2 s), its mocap goes
+  silent for 0.5 s, or q3 drops below 10 deg; Plan refuses a push that would leave the box
+  within 3 cm of the table's edge (a box turned 180 deg, a too-long distance). The tab's contact
+  line shows the box lag and tilt live.
 - Scene knobs (env, before step 2): `PEGASUS_PUSH_BOX_MASS`, `PEGASUS_PUSH_FRICTION_STATIC` /
-  `_DYNAMIC` (0.29 / 0.29 with 400 g: 1.14 N to break the box loose and to slide it -- keep the two EQUAL: at
+  `_DYNAMIC` (0.25 / 0.25 with 500 g: 1.23 N to break the box loose and to slide it -- keep the two EQUAL: at
   0.7 / 0.6 the box sticks and then lets go, and the vehicle surges), `PEGASUS_PUSH_BOX_XY`,
   `PEGASUS_PUSH_Q2_LIMIT_DEG` (default `-20,45`, the real arm's q2 range as hard stops; `asset` = -90,50).
   Inside that range the shipped 70 deg pose fails; only the 50 deg pose [0, 26, 24, 0] with
@@ -1254,6 +1264,63 @@ eps_UAV 36.8 max / 17.5 rms mm (rho 0.100 / 0.047 -- the max is the turn to the 
 push 23-37 mm); EE 18.2 mm (free-flight wander; in the slide 10 mm = F / K_y), heading 2.1 deg; box
 492-498 mm, 0-0.5 mm moved in the exit, tilt <= 3.1 deg.
 
+**2026-10-17 -- the results campaign re-flown on the 10-16 final setup** (same commands; the script
+now flies `archive/box_pushing_campaign_20261016/tools/fly.sh`: 500 g, pose [0, 32, 28, 0], guards on,
+the eight-step mission). 3 kept of 4 attempts: e_imp slide 0.73 N rms (max 1.44), contact 0.75;
+eps_UAV 48.1 max / 16.8 rms mm; EE 17.9 mm; box 489-494 mm. **The failed attempt crashed in the
+release window**: the jaws opened, the base drifted 27 mm back, q2 hit its stop, q3 went through 0,
+the q3 guard tripped 1.16 s after the opening and the vehicle flipped. The 10-09/10 runs are in
+`results/simulation_results/box_pushing/previous_20261009_10/`.
+
+**2026-10-17 -- the release-window fix** (record: `archive/box_pushing_release_20261017/README.md`).
+Exit To Push now RELEASES first (planner `push_pull/release`: the claw's reference back to the
+CoM anchor, contact off), opens the gripper only if that succeeds, and starts the exit on the
+gripper's OPEN report (was: open, exit 1 s later). 6/6 Isaac missions: q3 >= 25.8 deg, q2 <= 36.8
+deg, box moved <= 1.6 mm in the exit. Rebuild `fsc_trajectory_planner` (Orin) and
+`utils_custom_ground_station` (laptop); the box-pushing hardware stack refuses an older planner.
+Sim driver: `pl_mission.py --release-at-open`.
+
+**2026-10-16 -- box mass, distance, settings and safety guards** (record:
+`archive/box_pushing_campaign_20261016/README.md`). 500 g (box + handle; weigh it to +-50 g --
+600 g rides the joint stops), 0.50 m, the push pose re-split to [0, 32, 28, 0] (the same fold;
+q3 kept off its +50 stop), the 10-09 gains unchanged (the j4 heading fix and K_y 150 were flown
+and rejected), and the box guards above -- in Isaac a jammed box made the arm buckle and the
+vehicle flip before the 5 N force guard tripped; with the guards every worst case flown aborts
+safely. Hardware: `AM_HW_PROFILE=box_pushing` on the whole-body stack flies
+`..._t650_box_pushing.yaml` (generated by the campaign's `make_hw_box_pushing_yaml.py`; its
+`push_pull_table` is the SIMULATION's -- measure the lab table first). Rebuild
+fsc_trajectory_planner (the guards) and the arm GS.
+
+**2026-10-17 -- a constant-speed push was tried and is NOT used** (record:
+`archive/push_cruise_20261017/README.md`). New planner option `push_pull_push_ramp_s` (0 = the
+min-snap push, shipped): ramps, a constant cruise, ramps, inside `push_pull_push_time_s`. At 20 s /
+3 s ramps (29.4 mm/s) the box stopped far less, but 2 of 3 pushes ended in a q3-guard abort after the
+jaws opened, one a crash; the min-snap push flew 2 / 2 the same day. Keep the ramp at 0. The window
+between the jaws opening and the exit (the open claw still held in the room) is a hazard of the
+min-snap push too: release with the tab's Exit (it releases, opens the jaws and exits on the OPEN
+report), never with the gripper button followed by a wait.
+
+**2026-10-19 -- the hardware flight version** (record: `archive/box_pushing_hardware_20261019/README.md`).
+`AM_HW_PROFILE=box_pushing` on the RAW-mocap whole-body stack (the fused one now refuses it: 0 / 6 fused
+pushes in Isaac; the 10-15/16 hardware bags show `/uav_0/mocap` clean). The yaml is the simulation's push
+tune + three hardware margins: planner tilt guard 10 deg (below the node's instant 15 deg watchdog), the
+arm's fold 2.0 s after a SAFETY revert (the real gripper opens in ~0.7 s) and an abort's 1.5 s hold before
+its climb (the jaws open over two WiFi hops). Exit To Push starts by itself 1 s after the push (the arm
+GS's `push_pull_auto_exit_delay_s`, 0 = by hand; the sim drivers set it 0 through `ARM_GS_AUTO_EXIT_DELAY`). The planner refuses a frozen or
+flipping obj_0 at Get and aborts on a frozen feed in contact; the arm GS takes a full close on the fin as
+the grasp on hardware, descends only on the gripper's OPEN report, and never opens without the release.
+Rebuild `fsc_trajectory_planner`, `fsc_autopilot_ros2` and `open_manipulator_x_custom_controller` (Orin) and
+`utils_custom_ground_station` (laptop). On aarch64 fsc_autopilot_ros2 skips the coordinated-admittance sim fork
+(it fetches OSQP; `-DFSC_BUILD_COORDINATED_ADMITTANCE=ON` to build it).
+```bash
+# laptop: mocap (with the box) + both ground stations, as for pick-and-place
+~/source/fsc_autopilot2_ws/src/fsc_optitrack_processor_ros2/scripts/launch_optitrack.sh 192.168.50.230 uav_0 obj_0
+# Orin: agent, then the flight stack (RAW mocap) and the torque-mode arm stack
+~/dev_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_microxrce_agent.sh udp 8888
+AM_HW_PROFILE=box_pushing ~/dev_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh uav_0
+~/dev_ws/src/fsc_open_manipulator/scripts/indoor_exp/start_open_manipulator_inverted_wb_torque.sh uav_0
+```
+
 ### 17.x Comparison rig: coordinated admittance framework (Liu et al., CEP 146 (2024) 105898)
 
 The paper's method as an INDEPENDENT fork, same scene, same box, same driver timetable (2026-10-10;
@@ -1265,9 +1332,9 @@ The mission stream (fsc_trajectory_planner) supplies only the EE task; how base 
 ```bash
 # 0. clean slate (TWO separate calls), as in 17
 # 1. stack (coordinated flight node + its planner node + fsc_trajectory_planner on this fork's mode topic)
-WB_SIM_PROFILE=push_pull ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_coordinated_admittance_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+WB_SIM_PROFILE=box_pushing ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_coordinated_admittance_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
 # 2. the scene + PX4 + the POSITION-mode arm stack
-PUSH_FEEDBACK=raw ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_coordinated_admittance_push_and_pull_sitl.sh shiqi_machine
+PUSH_FEEDBACK=raw ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_coordinated_admittance_box_pushing_sitl.sh shiqi_machine
 # 3. as in 17 (ps4_teleop_bringup.py up --hover-z 1.3 --settle 0 --da coordinated_admittance_direct_actuation)
 # the whole mission scripted, headless (after step 0); score / summarize:
 bash ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_coordinated_admittance_20261010/tools/run_pl_cadm.sh <tag>
@@ -1291,3 +1358,108 @@ scorer books that as un-rendered impedance; lateral / vertical 0.2-0.4 N. eps_UA
 builder aligns the two methods at Ready (this rig's first transit is ~19 s longer: gentler bounds + a
 15 s dwell). The driver's live-box grasp gate (`--grip-live-box`, 4 mm across / 25 mm along the fin)
 is what this rig needs; the paper-literal gate against the captured box never passed.
+
+## 18. Valve-turning scene (whole-body L1 4-D, contact phase, the push step as a TURN)
+
+**shiqi_machine** -- the box-pushing table (section 17) with the user's VALVE MECHANISM bolted to its
+centre (`Valve_Assembly.stl` -> `Valve_Assembly.usda`, 2026-10-15: a 150 x 50 x 20 mm plate, a 608 bearing,
+a 225 mm beam on it carrying a 5 x 40 x 130 mm FIN handle at radius 0.160 m, fin top 0.204 m above the
+plate; the rotor flown at the printed 204 g, 0.0026 kg m^2 about the axis, on a z REVOLUTE JOINT with a
+CONSERVATIVE Coulomb bearing friction 0.048 N m = 0.30 N at the fin, 1.5x the measured <= 0.2 N, no viscous term). The beam points 180 deg (the fin toward the start at
+(1.040, 0)). Mocap `obj_0` = the ROTOR: origin on the bearing axis at the plate-bottom plane (= the table
+top), yaw = the beam's -- define the hardware rigid body the same way. The mission is the push-and-pull
+mode's with **`push_pull_turn_deg` 360**: Go To Start, Ready (open, slide onto the fin), Push = the jaws
+close and the claw, the base and the heading ROTATE together about the bearing axis for one revolution
+(36 s, arm held, claw world-held, CONTACT on), Exit (open, climb, arm home), Go To Land (270 deg clockwise
+to the hover 0.5 m behind the start). Arm pose [0, 5, 25, 0] since 2026-10-18 (was [0, 10, 20, 0]; the same
+30 deg fold, README section 12) -- the fin is low: the box push's 60 deg fold would put the T650 skids 2.7 cm
+over the beam; here they pass ~14 cm above it, below the fin top, the fin between the skids. `WB_SIM_PROFILE=valve_turning` in step 1 is REQUIRED: step 2 refuses a stack
+on another profile (it compares `push_pull_turn_deg` and `push_pull_obstacle` too). Flown 2026-10-15,
+six headless runs: at the shipped configuration **2 / 2 full revolutions of the valve, 1 / 2 complete
+missions** (v3 complete; v6 turned the beam 363 deg and tripped the 15 deg watchdog at the end of the
+turn). The grasp, circle, release and landing chain work; the CONTACT PHASE is marginal -- the base
+leads its circle ~2.5 mm per deg/s of yaw rate and the world-held arm absorbs it onto its stops (36 s),
+or its ~6 s fore-aft slosh grows past the watchdog (72 s); a CoM-anchored turn wrenched the fin out. A
+tuning campaign, not a scene defect. Record + every flight:
+`docs/docs_aerial_manipulator/archive/valve_turning_20261015/README.md`. **Tuned 2026-10-17/18** (that README's
+section 8): the valve yaml has its own controller tune -- `wb_l1_omega_c_t` 2.0, `wb_ee_anchor_blend_s` 3.0 -- and the
+release must open the jaws with the claw still world-held, THEN Exit (the Valve Turning tab's Exit still releases
+first, like the box push: use the gripper's Open button, wait ~1 s, then Exit). Results: `results/simulation_results/README.md`.
+**Path following (2026-10-18, README section 11):** planner `push_pull_follow` (default false, left off) flies the turn at a governed
+progress that slows or holds on the valve's lag, the tilt or the wrist roll. On the measured bearing it never acts (the nominal failure is
+the arm's angle-locked fold, not the speed); with a speed-sensitive heavy valve it completed where the scheduled turn hit the force guard.
+
+```bash
+# 0. clean slate (TWO separate calls)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. stack (4-D L1 node, RAW mocap feedback, emulator with obj_0, planner, drone GS)
+WB_SIM_PROFILE=valve_turning ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+
+# 2. the valve scene + PX4 + torque-mode arm stack + arm GS (+ gamepad if plugged in)
+VALVE_FEEDBACK=raw ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_valve_turning_sitl.sh shiqi_machine
+
+# 3. take off to 1.3 m, hover 3 s, switch to DIRECT (wait for "Ready for takeoff!" in the PX4 pane first)
+FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
+  /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up --hover-z 1.3 --settle 0
+```
+
+Or the whole mission scripted, headless (after step 0): `archive/valve_turning_20261015/tools/run_valve.sh <tag>`
+(the box push's `pl_mission.py` drives it: the same five services, its "push" step is the turn). Score:
+`PYTHONNOUSERSITE=1 /usr/bin/python3 archive/valve_turning_20261015/tools/valve_score.py runs/<tag>.npz [--plot out.png]`
+(the beam's rotation per step, the claw's radius about the axis, the base's lead vs the planned yaw rate,
+the arm's margin to its stops, the contact truth's tangential force).
+
+**Operating the arm GS "Valve Turning" tab** -- as the Box Pushing tab (section 17), with: **Get** on the Valve row captures the ROTOR
+(the axis + the beam's yaw); **EE Offset** [0.160, 0.0006, 0.179] m (the fin's radius and bearing, the claw
+25 mm under the fin top; rotor frame); **Turn [°]** 360 (in Push Distance's place; this tab's Plan sends it, the Box Pushing tab's Plan sets 0 -- only
+the tab matching the planner's mode is active; the planner refuses a nose off the turn's tangent: `push_pull_yaw_from_box_deg` +90 for a + turn, -90 for -);
+**3 Turn** = the jaws close, CONTACT on, 1.5 s settle, the circle. The plan is refused when the gear would
+come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle) or the table.
+
+- Scene knobs (env, before step 2): `PEGASUS_VALVE_XY` (1.20,0.00), `PEGASUS_VALVE_YAW_DEG` (180),
+  `PEGASUS_VALVE_RISER` (0: a block under the plate -- a higher valve allows a more folded arm),
+  `PEGASUS_VALVE_ROTOR_MASS` (0.204; 0 = the asset's solid-PLA 0.243), `PEGASUS_VALVE_DAMPING` (0.0 N m s/rad),
+  `PEGASUS_VALVE_FRICTION` (0.048 N m; 0 = the frictionless end), `PEGASUS_VALVE_FIN_GRIP_MM` (20, the sim claw cannot clamp 5 mm),
+  `PEGASUS_VALVE_Q2_LIMIT_DEG` (-20,45). The yaml: `archive/valve_turning_20261015/tools/make_valve_turning_yaml.py`
+  (the box push's controller tune imported; regenerate, never hand-edit).
+- **With the Isaac window (2026-10-18):** step 2 without `PEGASUS_HEADLESS=1` (or `VALVE_WINDOWED=1 run_valve.sh`,
+  `tools/chain_win.sh <tag>` for the scripted mission). 06 now draws a frame only while the plant is not behind the
+  wall clock (`PEGASUS_RENDER_ADAPTIVE`, default 1; `PEGASUS_RENDER_MAX_GAP_S` 1.0; the Isaac pane's RTF line prints
+  fps / frame cost / skipped / longest step / GC) and freezes Python's garbage collector once the scene plays
+  (`PEGASUS_GC_FREEZE`, default 1 -- its generation-2 collections were a 170 ms stall every ~10 s with the window and
+  the stack up). Measured (win_gc1): free flight RTF 1.000 at 25-31 fps (was 0.81-0.90), no stall > 23 ms anywhere,
+  the TURN a smooth 0.92-0.98 (headless 0.98), two windowed missions complete (0 of 8 before). Read the pacer's RTF
+  line in the Isaac pane before trusting a windowed contact phase (README 13.3).
+- **The ~4 cm in-turn airframe offset (README 13, 15.3):** the law's CoM parks 20-30 mm ahead along the nose =
+  `T e_R / k_x` of a standing pitch error that tracks the arm's FOLD (not the turn's speed: a 48 s turn and a third
+  of the bearing friction change nothing) -- fold, pitch error, lead, more fold, closed at the stops.
+  omega_c_t 2.927 cuts it ~20 % (3 of 3), not shipped. The free-axis anchor (`wb_ee_anchor_free_axis_weight`,
+  node option, OFF in the valve yaml) lets the lead turn the valve instead of folding the arm (11 of 11, incl.
+  frictionless) but removes the claw's tether on the base (wander x1.5-2, once q1 on its stop and q3 -16 deg);
+  never with 2.927. README 15.6 / 15.9; final config 15.10.
+
+**SAFETY FOR THE VALVE (2026-10-18, README 15) -- what changed, and the hardware run:**
+- **A failed turn used to be a crash**: the node's 15 deg watchdog tripped first and handed over to SAFETY with
+  the jaws still closed on the fin. Now: the planner's tilt guard is **10 deg** (catches 27 of 34 recorded
+  failures 0.1-6 s earlier, 0 false trips in the campaign); **the arm GS (both push-and-pull tabs) and the sim
+  driver open the jaws when the node leaves DIRECT with the claw on the handle**; the valve's ABORT holds the
+  PLANNED pose at the cut, keeps the claw world-held for a 2 s release, then climbs straight
+  (`push_pull_abort_release_world_held`, new; injected aborts clean at 20 s frictionless and at 33 s). An abort
+  that starts with the arm already on its stops is not recoverable -- the guard is what prevents it.
+- **Exit To Turn (arm GS Valve Turning tab) = open the jaws with the claw world-held, Exit 1 s after the OPEN
+  report** (`push_pull_valve_exit_wait_s`); the Box Pushing tab keeps its release-first Exit.
+- **The FUSED (EKF2) feedback lost the valve 3 of 3 in Isaac** (claw ~1 cm off in contact: the jaws closed on
+  nothing once, the fin lost twice, crashes). The fused hardware stack REFUSES `AM_HW_PROFILE=valve_turning`
+  (`ALLOW_FUSED_CONTACT=1` overrides, A/B only) and warns for box_pushing. **Fly the valve on the RAW stack.**
+- **The bearing's friction is a safety parameter**: the shipped turn completes from 0.005 N.m up and only 1 of 3
+  frictionless. The real 608RS is <= 32 mN.m and "probably a few": measure its breakaway torque before the first
+  turn (a weight on a string at the fin, r = 0.160 m: 3 g = 5 mN.m); below ~5 mN.m add friction to the shaft.
+- **Hardware run** (Orin: rebuild `fsc_trajectory_planner` and `fsc_autopilot_ros2`; laptop: rebuild
+  `utils_custom_ground_station`; MEASURE `push_pull_table` / `push_pull_obstacle` into
+  `archive/valve_turning_20261015/tools/make_hw_valve_turning_yaml.py` and regenerate):
+```bash
+# fsc_autopilot_ros2/scripts/indoor_exp/ -- the RAW-mocap whole-body stack, not the _fused one
+AM_HW_PROFILE=valve_turning ./start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh
+```

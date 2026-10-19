@@ -1,0 +1,74 @@
+{
+ "pick": {
+  "wait": 1.4578571319580078,
+  "err_at_press_mm": 38.50958714961408,
+  "err_at_arrival_mm": 29.97062133047674,
+  "avg_mm": 26.610988598089428,
+  "claw_vs_avg_mm": 15.867017196324978,
+  "avg_vec": [
+   12.0,
+   23.7,
+   0.7
+  ],
+  "err_vec": [
+   27.6,
+   26.9,
+   4.1
+  ],
+  "half_window_filled": false
+ },
+ "place": {
+  "wait": 5.00122857093811,
+  "err_at_press_mm": 27.730066557534048,
+  "err_at_arrival_mm": 58.121329965646915,
+  "avg_mm": 42.76191775508113,
+  "claw_vs_avg_mm": 16.815559226971942,
+  "avg_vec": [
+   -38.3,
+   -19.1,
+   11.6
+  ],
+  "err_vec": [
+   -21.5,
+   -17.5,
+   1.6
+  ],
+  "half_window_filled": true
+ },
+ "pick_slide_across_mm": {
+  "max": 30.193033672427948,
+  "p95": 28.536019614424514,
+  "at_close": -0.5837765717043788
+ },
+ "skids": {
+  "body_at_td": [
+   -0.775,
+   -1.081,
+   1.175
+  ],
+  "skid_front_tip_x": -0.9383320264582024,
+  "hat_near_rim_x": -0.9797,
+  "tip_behind_rim_mm": 41.36797354179767,
+  "skid_bottom_above_hat_at_td_mm": 82.67096148431041,
+  "lateral_offset_mm": 22.557815746377496,
+  "skid_inner_face_from_hat_rim_mm": [
+   19.142184253622492,
+   64.25781574637749
+  ],
+  "basket_ahead_of_skid_tip_mm": 65.66797354179765
+ },
+ "arrival_pick": {
+  "max_mm": 42.57263056519206,
+  "t_after": 1.6627521991725303
+ },
+ "arrival_place": {
+  "max_mm": 87.07557525202915,
+  "t_after": 1.0022500801074514
+ },
+ "place_settled_from": 3.0,
+ "descent_before_td": {
+  "com_max": 47.85629832908583,
+  "com_rms": 26.86772937782798,
+  "tilt_max": 3.980889193268981
+ }
+}

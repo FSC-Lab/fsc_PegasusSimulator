@@ -1,0 +1,19 @@
+run   done | phase                | |q4-q4d| rms    max slips | obs j4 share max tau j4 rms | j4 held
+D1    yes  | DIRECT               |       2.38 deg    5.5     9 |         12.1 mN.m     11.8 mN.m |     0 %
+D1    yes  | carry                |       3.08 deg    5.5     9 |          4.8 mN.m      8.6 mN.m |     0 %
+D1    yes  | empty after release  |       2.78 deg    4.4     0 |         12.1 mN.m     15.6 mN.m |     0 %
+D2    yes  | DIRECT               |       2.74 deg    6.1     7 |         14.4 mN.m     13.3 mN.m |     0 %
+D2    yes  | carry                |       2.97 deg    6.1     5 |          8.4 mN.m      8.8 mN.m |     0 %
+D2    yes  | empty after release  |       3.81 deg    5.9     1 |         14.4 mN.m     18.0 mN.m |     0 %
+D3    yes  | DIRECT               |       2.24 deg    5.3    15 |         14.9 mN.m     14.0 mN.m |     0 %
+D3    yes  | carry                |       3.10 deg    5.3    12 |          5.7 mN.m     10.7 mN.m |     0 %
+D3    yes  | empty after release  |       2.29 deg    4.0     1 |         14.9 mN.m     16.8 mN.m |     0 %
+D4    yes  | DIRECT               |       2.22 deg    6.0    17 |         12.8 mN.m     11.8 mN.m |     0 %
+D4    yes  | carry                |       3.60 deg    6.0    17 |          7.1 mN.m     10.8 mN.m |     0 %
+D4    yes  | empty after release  |       1.20 deg    2.3     0 |         12.8 mN.m     14.8 mN.m |     0 %
+D5    yes  | DIRECT               |       2.03 deg    6.1    16 |         11.8 mN.m     10.9 mN.m |     0 %
+D5    yes  | carry                |       3.46 deg    6.1    16 |          6.7 mN.m     10.6 mN.m |     0 %
+D5    yes  | empty after release  |       0.90 deg    1.7     0 |         11.8 mN.m     13.3 mN.m |     0 %
+D6    yes  | DIRECT               |       2.18 deg    6.0     9 |         14.2 mN.m     12.4 mN.m |     0 %
+D6    yes  | carry                |       3.36 deg    6.0     9 |          7.0 mN.m     10.9 mN.m |     0 %
+D6    yes  | empty after release  |       1.62 deg    3.1     0 |         14.2 mN.m     16.3 mN.m |     0 %

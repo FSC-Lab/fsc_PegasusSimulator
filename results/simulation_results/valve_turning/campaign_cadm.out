@@ -1,0 +1,20 @@
+[18:46:41] coordinated_admittance_turn_run1 attempt 1 (final_ca_r1_a1)
+[18:50:43] coordinated_admittance_turn_run1 attempt 1 FAILED: [  99.65s] push_pull: ABORTING (SAFETY GUARD: tilt 11.1 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:50:43] coordinated_admittance_turn_run1 attempt 2 (final_ca_r1_a2)
+[18:54:50] coordinated_admittance_turn_run1 attempt 2 FAILED: [ 109.26s] push_pull: ABORTING (SAFETY GUARD: tilt 10.1 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:54:50] coordinated_admittance_turn_run1 attempt 3 (final_ca_r1_a3)
+[18:58:21] coordinated_admittance_turn_run1 attempt 3 FAILED: [  76.16s] ABORT: left DIRECT while push complete
+[18:58:21] coordinated_admittance_turn_run2 attempt 1 (final_ca_r2_a1)
+[19:02:09] coordinated_admittance_turn_run2 attempt 1 FAILED: [  82.06s] push_pull: ABORTING (SAFETY GUARD: tilt 10.2 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[19:02:09] coordinated_admittance_turn_run2 attempt 2 (final_ca_r2_a2)
+[19:06:17] coordinated_admittance_turn_run2 attempt 2 FAILED: [ 108.77s] ABORT: left DIRECT while push complete
+[19:06:17] coordinated_admittance_turn_run2 attempt 3 (final_ca_r2_a3)
+[19:11:25] coordinated_admittance_turn_run2 attempt 3 FAILED: [ 123.60s] TIMETABLE LATE: go_to_land_start 0.27 s behind its slot
+[19:11:25] coordinated_admittance_turn_run3 attempt 1 (final_ca_r3_a1)
+[19:15:22] coordinated_admittance_turn_run3 attempt 1 FAILED: [ 100.89s] ABORT: left DIRECT while push complete
+[19:15:22] coordinated_admittance_turn_run3 attempt 2 (final_ca_r3_a2)
+[19:20:18] coordinated_admittance_turn_run3 attempt 2 FAILED: [ 103.37s] push_pull: ABORTING (SAFETY GUARD: tilt 10.9 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[19:20:18] coordinated_admittance_turn_run3 attempt 3 (final_ca_r3_a3)
+[19:24:22] coordinated_admittance_turn_run3 attempt 3 FAILED: [  99.94s] push_pull: ABORTING (SAFETY GUARD: tilt 13.2 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[19:24:22] campaign done -- closing the simulation
+BOTH CAMPAIGNS DONE 19:24:32

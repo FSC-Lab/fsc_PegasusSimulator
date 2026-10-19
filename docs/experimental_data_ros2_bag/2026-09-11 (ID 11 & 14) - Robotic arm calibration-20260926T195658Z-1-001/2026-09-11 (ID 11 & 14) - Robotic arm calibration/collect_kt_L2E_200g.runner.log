@@ -1,0 +1,14 @@
+== collect_kt_lever_pose joint2 [200g] : -78..+30 deg, fixed ['+0', 'swept', '-35', '+0'], 4 cycles, 8.7s per pass at 0.5236 rad/s -- THE ARM IS LIVE
+   start pose: joint1 +0.1  joint2 +39.8  joint3 +39.9  joint4 +0.1
+[   0.0s] to sweep start -78                       hold  12.7s
+[  12.8s] cycle 1/4 up   -> +30                    hold   8.7s
+[  21.5s] cycle 1/4 down -> -78                    hold   8.7s
+[  30.3s] cycle 2/4 up   -> +30                    hold   8.7s
+[  39.0s] cycle 2/4 down -> -78                    hold   8.7s
+[  47.8s] cycle 3/4 up   -> +30                    hold   8.7s
+[  56.5s] cycle 3/4 down -> -78                    hold   8.7s
+[  65.3s] cycle 4/4 up   -> +30                    hold   8.7s
+[  74.0s] cycle 4/4 down -> -78                    hold   8.7s
+[  82.8s] back to HOME (loading pose)              hold  12.7s
+parked at home: joint1 -0.1  joint2 +39.4  joint3 +39.7  joint4 +0.1
+done [200g] -- stop the recorder. Total 96 s.

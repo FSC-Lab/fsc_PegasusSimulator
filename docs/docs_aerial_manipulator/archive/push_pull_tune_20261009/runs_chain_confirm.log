@@ -1,0 +1,63 @@
+  wb_ky_x : 211.9 -> 120.0
+  wb_ky_y : 211.9 -> 120.0
+  wb_ky_z : 211.9 -> 120.0
+  wb_dy_x : 26.82 -> 20.2
+  wb_dy_y : 26.82 -> 20.2
+  wb_dy_z : 26.82 -> 20.2
+  wb_l1_omega_x_t : 0.2072 -> 0.1
+  wb_l1_omega_x_r : 0.2072 -> 0.1
+  wb_l1_omega_x_q : 0.2072 -> 0.1
+[c_combo_1] completed
+  wb_ky_x : 211.9 -> 120.0
+  wb_ky_y : 211.9 -> 120.0
+  wb_ky_z : 211.9 -> 120.0
+  wb_dy_x : 26.82 -> 20.2
+  wb_dy_y : 26.82 -> 20.2
+  wb_dy_z : 26.82 -> 20.2
+[c_ky120_2] completed
+  wb_ky_x : 211.9 -> 120.0
+  wb_ky_y : 211.9 -> 120.0
+  wb_ky_z : 211.9 -> 120.0
+  wb_dy_x : 26.82 -> 20.2
+  wb_dy_y : 26.82 -> 20.2
+  wb_dy_z : 26.82 -> 20.2
+  wb_l1_omega_x_t : 0.2072 -> 0.1
+  wb_l1_omega_x_r : 0.2072 -> 0.1
+  wb_l1_omega_x_q : 0.2072 -> 0.1
+[c_combo_2] completed
+  wb_ky_x : 211.9 -> 120.0
+  wb_ky_y : 211.9 -> 120.0
+  wb_ky_z : 211.9 -> 120.0
+  wb_dy_x : 26.82 -> 20.2
+  wb_dy_y : 26.82 -> 20.2
+  wb_dy_z : 26.82 -> 20.2
+[c_ky120_3] completed
+  wb_ky_x : 211.9 -> 120.0
+  wb_ky_y : 211.9 -> 120.0
+  wb_ky_z : 211.9 -> 120.0
+  wb_dy_x : 26.82 -> 20.2
+  wb_dy_y : 26.82 -> 20.2
+  wb_dy_z : 26.82 -> 20.2
+  wb_l1_omega_x_t : 0.2072 -> 0.1
+  wb_l1_omega_x_r : 0.2072 -> 0.1
+  wb_l1_omega_x_q : 0.2072 -> 0.1
+[c_combo_3] completed
+  wb_ky_x : 211.9 -> 80.0
+  wb_ky_y : 211.9 -> 80.0
+  wb_ky_z : 211.9 -> 80.0
+  wb_dy_x : 26.82 -> 16.5
+  wb_dy_y : 26.82 -> 16.5
+  wb_dy_z : 26.82 -> 16.5
+[c_ky80_1] completed
+  wb_ky_x : 211.9 -> 80.0
+  wb_ky_y : 211.9 -> 80.0
+  wb_ky_z : 211.9 -> 80.0
+  wb_dy_x : 26.82 -> 16.5
+  wb_dy_y : 26.82 -> 16.5
+  wb_dy_z : 26.82 -> 16.5
+[c_ky80_2] completed
+  wb_l1_omega_x_t : 0.2072 -> 0.1
+  wb_l1_omega_x_r : 0.2072 -> 0.1
+  wb_l1_omega_x_q : 0.2072 -> 0.1
+[c_ff01_2] completed
+CHAIN_CONFIRM DONE

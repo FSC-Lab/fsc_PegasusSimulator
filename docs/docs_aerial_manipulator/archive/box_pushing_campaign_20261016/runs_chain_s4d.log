@@ -1,0 +1,9 @@
+
+Summary: 1 package finished [28.5s]
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[i_stop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 5.1 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+[i_abort] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+CHAIN_S4D DONE

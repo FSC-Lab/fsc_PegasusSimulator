@@ -1,0 +1,9 @@
+payload columns: t, p(3), q(wxyz)? -> check shape
+D1.npz  basket roll/pitch 0.25-1 Hz rms  0.33 /  0.33 deg   q4 same band  0.34 deg
+D2.npz  basket roll/pitch 0.25-1 Hz rms  0.26 /  0.36 deg   q4 same band  0.21 deg
+D3.npz  basket roll/pitch 0.25-1 Hz rms  0.54 /  0.29 deg   q4 same band  0.57 deg
+D4.npz  basket roll/pitch 0.25-1 Hz rms  0.56 /  0.31 deg   q4 same band  0.59 deg
+D5.npz  basket roll/pitch 0.25-1 Hz rms  0.54 /  0.30 deg   q4 same band  0.58 deg
+D6.npz  basket roll/pitch 0.25-1 Hz rms  0.60 /  0.27 deg   q4 same band  0.61 deg
+J1.npz  basket roll/pitch 0.25-1 Hz rms  0.14 /  0.31 deg   q4 same band  0.03 deg
+J2.npz  basket roll/pitch 0.25-1 Hz rms  0.43 /  0.33 deg   q4 same band  0.46 deg

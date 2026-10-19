@@ -9,8 +9,11 @@ these files plus MATLAB are all you need, with no ROS or custom message definiti
 ```
 free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_<run>.mat   one run, struct `run`
 free_flight_tracking_rmse.mat     struct `rmse` = Table III (one row per selected run)
+pick_and_place/                   the pick-and-place flight: a separate task folder with its own README.md
 ```
 
+- **`pick_and_place/`:** self-contained like the simulation's task folders; copy it alone to plot that task.
+  Written by `results/utils/experiment_pick_and_place.py`, not by this folder's generator.
 - **`<shape>` / `v<speed>`:** as in `matlab_simulation_data` (`v0p13` = 0.13 m/s).
 - **`<method>`:** `whole_body_l1` (Proposed) or `geometric_l1` (Geo-L1, position-mode arm).
 - **`<run>`:** the flight tag (WB-n, DEC-n) used in the lab's comparison reports.

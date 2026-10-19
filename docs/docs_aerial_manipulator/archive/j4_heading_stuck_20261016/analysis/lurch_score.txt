@@ -1,0 +1,14 @@
+run   done | LIFT horiz  vert  pitch | RELEASE horiz  vert  pitch | carry roll  pitch | 1.5 Hz worst5s  tilt | basket off  tilt
+           |         mm    mm deg pp |            mm    mm deg pp |    deg rms    rms | deg rms deg rms   max |         mm   deg
+D1    T    |         87    15    4.5 |           127    27   10.7 |       0.19   0.59 |   0.29    1.14   7.4 |         18   0.0
+D2    T    |        104    17    5.7 |           137    26   11.8 |       0.29   0.73 |   0.46    1.68   7.8 |         17   0.0
+D3    T    |         91    22    4.4 |           121    26   10.1 |       0.27   0.64 |   0.36    1.29   6.4 |         36   0.0
+D4    T    |         89    18    3.5 |           129    27    9.6 |       0.24   0.55 |   0.29    1.11   6.5 |         24   0.0
+D5    T    |         96    15    3.8 |           127    26    9.9 |       0.27   0.61 |   0.31    1.24   6.3 |         30   0.0
+D6    T    |         93    16    3.4 |           123    24    8.0 |       0.23   0.54 |   0.20    0.73   5.3 |         42   0.0
+J1    T    |        114    23    5.0 |           136    25   11.5 |       0.23   0.59 |   0.35    1.39   7.8 |         11   0.0
+J2    T    |         83    21    3.8 |           123    26    9.8 |       0.28   0.64 |   0.34    1.10   6.0 |         35   0.0
+
+per variant (mean of its flights)
+  D: n=6 done 6  lift 93 mm / 4.2 deg  release 127 mm / 10.0 deg  carry 0.25/0.61  1.5Hz 0.32 (worst 5 s 1.68)  tilt 6.6  basket 28 mm 0.0 deg
+  J: n=2 done 2  lift 99 mm / 4.4 deg  release 130 mm / 10.7 deg  carry 0.25/0.62  1.5Hz 0.35 (worst 5 s 1.39)  tilt 6.9  basket 23 mm 0.0 deg

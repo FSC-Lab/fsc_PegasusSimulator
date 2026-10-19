@@ -94,7 +94,30 @@ GAIN_SETS = [
          omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5, omega_x=20.0,
          four_d=True, omega_q=0.2, contact=False,
          omega_x_t=2.0, omega_x_r=0.5, omega_x_q=0.5),
+    # 2026-10-16: the stuck-joint hold. APPENDED, so the sets above draw the
+    # same random numbers as before. Their joint velocities follow
+    # STUCK_SCHEDULE (below) so each flagged joint is both stuck and moving
+    # inside the 40 steps; a short stuck_filter_s lets the low-passed q_dot
+    # cross the threshold within the rollout. The 6-D set uses the raw q_dot
+    # (filter 0) and covers the Layer-2 row hold alone.
+    dict(tag="four-d-stuck", a_t=2.0, a_r=2.0, a_q=2.0, adapt_period_s=0.0,
+         omega_c_t=2.0, omega_c_r=0.5, omega_c_q=0.5, omega_x=6.0,
+         four_d=True, omega_q=0.5, contact=False,
+         stuck_hold_j1=True, stuck_hold_j4=True, stuck_speed=0.05,
+         stuck_filter_s=0.012),
+    dict(tag="stuck-6d", a_t=3.0, a_r=3.0, a_q=3.0, adapt_period_s=0.0,
+         omega_c_t=2.0, omega_c_r=1.0, omega_c_q=2.0, omega_i=1.0,
+         omega_x=15.0, lc_var_f=100.0, lc_var_m=0.25, lc_var_q=0.0025,
+         decompose=True, stuck_hold_j4=True, stuck_speed=0.05,
+         stuck_filter_s=0.0),
 ]
+
+
+def STUCK_SCHEDULE(s):
+    """(q1_dot, q4_dot) at step s of a stuck-hold rollout [rad/s]."""
+    q1 = 0.0 if s < 10 else (0.4 if s < 20 else 0.01)
+    q4 = 0.3 if s < 15 else (0.0 if s < 30 else -0.25)
+    return q1, q4
 
 
 def _rand_rotation(rng, max_tilt_rad):
@@ -175,6 +198,9 @@ def main():
         dq = rng.uniform(-0.012, 0.012, size=n)
         steps = []
         for s in range(ROLLOUT_STEPS):
+            if "stuck" in tag:
+                X = X.copy()
+                X[18 + n + 0], X[18 + n + 3] = STUCK_SCHEDULE(s)
             dyn = C.dynamics(X, params)
             R0 = X[3:12].reshape(3, 3, order="F")
             xi = _xi_of(X, dyn, n)
@@ -202,6 +228,7 @@ def main():
                 "d_int_f": _j(est["d_int_f"]),
                 "w_q_hat": _j(est["w_q_hat"]),
                 "chi_free": bool(est["chi_free"]),
+                "stuck_held": [bool(b) for b in est["stuck_held"]],
             })
             obs.propagate(dyn, xi, u, DT)
 
@@ -241,12 +268,13 @@ def main():
     for r in data["rollouts"]:
         last = r["steps"][-1]
         n_contact = sum(1 for s in r["steps"] if not s["chi_free"])
+        n_held = sum(1 for s in r["steps"] if any(s["stuck_held"]))
         print(f"  {r['tag']:<16s} |d^c|={np.abs(last['d_sigma_c']).max():9.4f}"
               f"  |d_f|={np.abs(last['d_f']).max():8.4f}"
               f"  |F_y|={np.abs(last['F_y']).max():8.4f}"
               f"  |w_e|={np.abs(last['w_e']).max():8.4f}"
               f"  |F_raw|={np.abs(last['F_raw']).max():8.4f}"
-              f"  contact steps={n_contact:2d}"
+              f"  contact steps={n_contact:2d}  held steps={n_held:2d}"
               f"  adapted={last['adapted']}")
     return 0
 

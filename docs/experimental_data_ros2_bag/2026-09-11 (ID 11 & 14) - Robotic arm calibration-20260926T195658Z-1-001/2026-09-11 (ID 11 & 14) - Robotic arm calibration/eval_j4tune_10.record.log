@@ -1,0 +1,12 @@
+stdin is not a terminal device. Keyboard handling disabled.[INFO] [1789169770.483629521] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1789169770.485485390] [rosbag2_storage]: Opened database '/home/shiqi/ros2_ws/results_robotic_arm/bags/2026-09-11/eval_j4tune_10/eval_j4tune_10_0.db3' for READ_WRITE.
+[INFO] [1789169770.486103569] [rosbag2_recorder]: Event publisher thread: Starting
+[INFO] [1789169770.486183771] [rosbag2_recorder]: Listening for topics...
+[INFO] [1789169770.486973734] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[INFO] [1789169770.487034207] [rosbag2_recorder]: Recording...
+[INFO] [1789169771.591209173] [rosbag2_recorder]: Subscribed to topic '/fsc_open_manipulator/joint_states'
+[INFO] [1789169771.591649404] [rosbag2_recorder]: Subscribed to topic '/fsc_open_manipulator/torque_controller/smoothed_reference_joint_trajectory'
+[INFO] [1789169771.592652420] [rosbag2_recorder]: Subscribed to topic '/fsc_open_manipulator/pwm_state_broadcaster/gpio_states'
+[INFO] [1789169771.592670477] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+terminate called after throwing an instance of 'rosbag2_storage_plugins::SqliteException'
+  what():  Error when processing SQL statement. SQLite error (5): database is locked

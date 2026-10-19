@@ -1,0 +1,7 @@
+
+FRICTION=0.048
+DAMPING=0.0
+ROTOR_MASS=0.204
+RELEASE=0
+DRIVER_ARGS= --timetable --slot-release 39.0 --slot-land-step 40.0 
+WINDOWED=0

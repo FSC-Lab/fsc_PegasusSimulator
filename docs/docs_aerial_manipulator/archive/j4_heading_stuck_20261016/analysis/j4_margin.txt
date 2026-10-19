@@ -1,0 +1,7 @@
+K_psi  0.248 D_psi 0.290: extra delay before the linear wrist loop rings >240 ms
+K_psi  1.000 D_psi 0.586: extra delay before the linear wrist loop rings 140 ms
+K_psi  1.500 D_psi 0.718: extra delay before the linear wrist loop rings 108 ms
+K_psi  2.000 D_psi 0.829: extra delay before the linear wrist loop rings 88 ms
+K_psi  2.500 D_psi 0.927: extra delay before the linear wrist loop rings 76 ms
+K_psi  3.000 D_psi 1.015: extra delay before the linear wrist loop rings 68 ms
+K_psi  4.000 D_psi 1.172: extra delay before the linear wrist loop rings 56 ms

@@ -1,0 +1,166 @@
+=========== rosout_134438.txt
+    0.04 [PL] pick-and-place adjust: drone points moved by [-0.163, -0.192, 0.000] m, yaw 0.0 deg (written into Start, Place Start, Land Start, Land; Place and the drop exit not moved); press Plan
+    2.92 [GS] Adjust: drone points moved by [-0.163, -0.192, 0.000] m, yaw 0.0 deg (written into Start, Place Start, Land Start, Land; Place and the drop exit not moved); press Plan
+   18.73 [PL] DIRECT engaged: hold captured -- base [-0.190 -0.251 0.983] m, q [0.1, 40.1, 40.0, -0.1] deg, EE (inertial) [0.062 -0.244 0.923] m az -88.1 deg
+   20.91 [GS] Plan: planning the six legs from the current hold -- the status reads READY when done
+   21.10 [PL] pick-and-place planned: 76.2 s of flight in six legs and two exits.
+   23.72 [PL] pick-and-place: planning go_to_start from the current hold; it executes as soon as it is planned
+   23.73 [PL] pick-and-place go_to_start: executing -- [1] T = 3.00 s (T_min, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.05 m/s, tau_j 0.71 N.m, rotor 471.4/482.1, solve 9.0 ms
+   23.75 [GS] Go To Start: planning go_to_start from the current hold; it executes as soon as it is planned
+   26.73 [PL] pick-and-place: go_to_start complete.
+   26.74 [PL] transition complete: hold captured -- base [-0.163 -0.192 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [0.090 -0.193 0.939] m az -90.0 deg
+   27.32 [PL] pick-and-place: planning execute_pick from the current hold; it executes as soon as it is planned
+   27.33 [PL] pick-and-place execute_pick: executing -- [1] T = 9.01 s (v_max, 0 dilations), defect 2.3e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.5/482.1, solve 10.2 ms
+   27.35 [GS] Ready To Pick: planning execute_pick from the current hold; it executes as soon as it is planned
+   36.36 [PL] pick-and-place: execute_pick above its target -- descending once the claw is within tolerance.
+   36.36 [PL] transition complete: hold captured -- base [0.544 0.782 1.150] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.800 0.794 1.048] m az -86.9 deg
+   36.84 [PL] pick-and-place execute_pick: claw within tolerance above the target -- descending (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error).
+   36.84 [PL] pick-and-place: descend_pick: descending onto the target (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   36.89 [GS] Pick: descend_pick: descending onto the target (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   39.86 [PL] pick-and-place: execute_pick complete.
+   39.86 [PL] transition complete: hold captured -- base [0.644 0.787 1.150] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.900 0.800 1.048] m az -86.9 deg
+   40.00 [GS] Pick: EE 4 mm from the target -- gripper CLOSE
+   40.59 [GS] Pick: closed around the stem (hook grasp) -- Exit To Pick at once (automatic)
+   40.60 [PL] pick-and-place: exit_pick: climbing 20 cm straight up to the clearance point
+   40.61 [PL] pick-and-place exit_pick: executing -- T = 3.23 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.72 N.m, rotor 468.2/485.4, solve 11.9 ms
+   40.62 [GS] Exit To Pick (automatic, gripped): exit_pick: climbing 20 cm straight up to the clearance point
+   43.85 [PL] pick-and-place: exit_pick complete.
+   43.85 [PL] transition complete: hold captured -- base [0.644 0.787 1.350] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.900 0.800 1.248] m az -86.9 deg
+   44.32 [PL] pick-and-place: planning go_to_place_start from the current hold; it executes as soon as it is planned
+   44.33 [PL] pick-and-place go_to_place_start: executing -- [1] T = 16.24 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.28 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 9.4 ms
+   44.35 [GS] Go To Drop Start: planning go_to_place_start from the current hold; it executes as soon as it is planned
+   60.59 [PL] pick-and-place: go_to_place_start complete.
+   60.59 [PL] transition complete: hold captured -- base [0.637 -1.192 1.000] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.381 -1.190 0.898] m az 90.0 deg
+   61.18 [PL] pick-and-place execute_place: NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 s with the arm at the drop pose and obj_0 tracked) -- the EE-offset mode
+   61.18 [PL] pick-and-place: planning execute_place from the current hold; it executes as soon as it is planned -- NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 
+   61.20 [GS] Ready To Drop: planning execute_place from the current hold; it executes as soon as it is planned -- NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 s
+   61.30 [PL] pick-and-place execute_place: executing -- [1] arm sweep T = 13.5 s (8 probes), 2 cycles, peak |v| 0.30 m/s, |qdot| 0.00 rad/s, |v_ee| 0.30 m/s, tau_j 0.71 N.m, rotor 9.0/9.4 N, sigma_nd 0.327, solve 117.1 ms
+   74.81 [PL] pick-and-place: execute_place complete.
+   74.81 [PL] transition complete: hold captured -- base [-0.934 -1.192 1.390] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-1.190 -1.190 1.288] m az 90.0 deg
+   75.29 [GS] Drop: gripper OPEN -- the payload is released
+   75.92 [GS] Drop: gripper open -- Exit To Drop at once (automatic)
+   75.92 [PL] pick-and-place: exit_place: from where the vehicle is now (20 mm from the release hold), backing out 20 cm (away from the drop point), then climbing 20 cm straight up to the clearance point
+   75.94 [PL] pick-and-place exit_place: executing -- [1] T = 3.23 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 471.4/482.1, solve 9.6 ms | [2] T = 3.23 s (a_max, 0 dilations), defect 2.
+   75.96 [GS] Exit To Drop (automatic, dropped): exit_place: from where the vehicle is now (20 mm from the release hold), backing out 20 cm (away from the drop point), then climbing 20 cm straight up to the clearance point
+   82.40 [PL] pick-and-place: exit_place complete.
+   82.40 [PL] transition complete: hold captured -- base [-0.749 -1.205 1.586] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-1.005 -1.203 1.484] m az 90.0 deg
+   83.14 [PL] pick-and-place: planning go_to_land_start from the current hold; it executes as soon as it is planned
+   83.15 [PL] pick-and-place go_to_land_start: executing -- [1] T = 15.96 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.27 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 10.2 ms
+   83.18 [GS] Go To Land Start: planning go_to_land_start from the current hold; it executes as soon as it is planned
+   99.13 [PL] pick-and-place: go_to_land_start complete.
+   99.13 [PL] transition complete: hold captured -- base [-0.663 0.608 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [-0.410 0.607 0.939] m az -90.0 deg
+   99.14 [GS] Exit To Place complete -- gripper CLOSE
+   99.98 [PL] pick-and-place: planning execute_land from the current hold; it executes as soon as it is planned
+   99.99 [PL] pick-and-place execute_land: executing -- [1] T = 5.82 s (a_max, 0 dilations), defect 0.0e+00 m, sigma_nd 0.887, peak |v| 0.25 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 9.2 ms
+  100.00 [GS] Execute To Land: planning execute_land from the current hold; it executes as soon as it is planned
+  105.81 [PL] pick-and-place: execute_land complete.
+  105.82 [PL] transition complete: hold captured -- base [-0.663 0.608 0.350] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [-0.410 0.607 0.289] m az -90.0 deg
+  105.93 [PL] SAFETY -- planner silent, targets dropped.
+=========== rosout_135100.txt
+   20.07 [GS] Plan: planning the six legs from the current hold -- the status reads READY when done
+   20.83 [PL] DIRECT engaged: hold captured -- base [-0.163 -0.311 0.983] m, q [0.1, 40.1, 40.0, 0.0] deg, EE (inertial) [0.089 -0.292 0.923] m az -85.5 deg
+   20.83 [PL] pick-and-place planned: 76.5 s of flight in six legs and two exits.
+   21.18 [PL] pick-and-place: planning go_to_start from the current hold; it executes as soon as it is planned
+   21.19 [PL] pick-and-place go_to_start: executing -- [1] T = 3.00 s (T_min, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.09 m/s, tau_j 0.71 N.m, rotor 471.2/482.5, solve 13.9 ms
+   21.20 [GS] Go To Start: planning go_to_start from the current hold; it executes as soon as it is planned
+   24.20 [PL] pick-and-place: go_to_start complete.
+   24.20 [PL] transition complete: hold captured -- base [-0.104 -0.206 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [0.149 -0.207 0.939] m az -90.0 deg
+   25.75 [PL] pick-and-place: planning execute_pick from the current hold; it executes as soon as it is planned
+   25.77 [PL] pick-and-place execute_pick: executing -- [1] T = 8.79 s (v_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.5/482.1, solve 12.1 ms
+   25.78 [GS] Ready To Pick: planning execute_pick from the current hold; it executes as soon as it is planned
+   34.56 [PL] pick-and-place: execute_pick above its target -- descending once the claw is within tolerance.
+   34.56 [PL] transition complete: hold captured -- base [0.524 0.786 1.150] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.780 0.800 1.048] m az -86.5 deg
+   35.05 [PL] pick-and-place execute_pick: claw within tolerance above the target -- descending (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error).
+   35.05 [PL] pick-and-place: descend_pick: descending onto the target (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   35.09 [GS] Pick: descend_pick: descending onto the target (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   38.08 [PL] pick-and-place: execute_pick complete.
+   38.08 [PL] transition complete: hold captured -- base [0.624 0.792 1.150] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.880 0.806 1.048] m az -86.5 deg
+   40.88 [GS] Pick: EE 2 mm from the target -- gripper CLOSE
+   42.52 [GS] Pick: gripped -- Exit To Pick at once (automatic)
+   42.52 [PL] pick-and-place: exit_pick: climbing 20 cm straight up to the clearance point
+   42.54 [PL] pick-and-place exit_pick: executing -- T = 3.23 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.72 N.m, rotor 468.2/485.4, solve 10.8 ms
+   42.56 [GS] Exit To Pick (automatic, gripped): exit_pick: climbing 20 cm straight up to the clearance point
+   45.77 [PL] pick-and-place: exit_pick complete.
+   45.77 [PL] transition complete: hold captured -- base [0.624 0.792 1.350] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.880 0.806 1.248] m az -86.5 deg
+   46.89 [PL] pick-and-place: planning go_to_place_start from the current hold; it executes as soon as it is planned
+   46.91 [PL] pick-and-place go_to_place_start: executing -- [1] T = 16.27 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.28 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 10.7 ms
+   46.91 [GS] Go To Drop Start: planning go_to_place_start from the current hold; it executes as soon as it is planned
+   63.19 [PL] pick-and-place: go_to_place_start complete.
+   63.19 [PL] transition complete: hold captured -- base [0.696 -1.206 1.000] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.439 -1.204 0.898] m az 90.0 deg
+   63.70 [PL] pick-and-place execute_place: NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 s with the arm at the drop pose and obj_0 tracked) -- the EE-offset mode
+   63.70 [PL] pick-and-place: planning execute_place from the current hold; it executes as soon as it is planned -- NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 
+   63.73 [GS] Ready To Drop: planning execute_place from the current hold; it executes as soon as it is planned -- NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 s
+   63.87 [PL] pick-and-place execute_place: executing -- [1] arm sweep T = 14.0 s (8 probes), 2 cycles, peak |v| 0.30 m/s, |qdot| 0.00 rad/s, |v_ee| 0.30 m/s, tau_j 0.71 N.m, rotor 9.0/9.4 N, sigma_nd 0.327, solve 160.4 ms
+   77.88 [PL] pick-and-place: execute_place complete.
+   77.88 [PL] transition complete: hold captured -- base [-0.944 -1.199 1.390] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-1.200 -1.198 1.289] m az 90.0 deg
+   78.70 [GS] Drop: gripper OPEN -- the payload is released
+   79.11 [GS] Drop: gripper open -- Exit To Drop at once (automatic)
+   79.11 [PL] pick-and-place: exit_place: from where the vehicle is now (36 mm from the release hold), backing out 20 cm (away from the drop point), then climbing 20 cm straight up to the clearance point
+   79.14 [PL] pick-and-place exit_place: executing -- [1] T = 3.23 s (a_max, 0 dilations), defect 2.5e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 471.4/482.1, solve 12.3 ms | [2] T = 3.23 s (a_max, 0 dilations), defect 2
+   79.14 [GS] Exit To Drop (automatic, dropped): exit_place: from where the vehicle is now (36 mm from the release hold), backing out 20 cm (away from the drop point), then climbing 20 cm straight up to the clearance point
+   85.60 [PL] pick-and-place: exit_place complete.
+   85.60 [PL] transition complete: hold captured -- base [-0.732 -1.215 1.620] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-0.988 -1.213 1.519] m az 90.0 deg
+   86.03 [PL] pick-and-place: planning go_to_land_start from the current hold; it executes as soon as it is planned
+   86.05 [PL] pick-and-place go_to_land_start: executing -- [1] T = 15.96 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.27 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 11.7 ms
+   86.06 [GS] Go To Land Start: planning go_to_land_start from the current hold; it executes as soon as it is planned
+  102.02 [PL] pick-and-place: go_to_land_start complete.
+  102.02 [PL] transition complete: hold captured -- base [-0.604 0.594 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [-0.351 0.593 0.939] m az -90.0 deg
+  102.05 [GS] Exit To Place complete -- gripper CLOSE
+  102.40 [PL] pick-and-place: planning execute_land from the current hold; it executes as soon as it is planned
+  102.42 [PL] pick-and-place execute_land: executing -- [1] T = 5.82 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.25 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 13.2 ms
+  102.44 [GS] Execute To Land: planning execute_land from the current hold; it executes as soon as it is planned
+  107.69 [PL] SAFETY -- planner silent, targets dropped.
+=========== rosout_140020.txt
+   16.97 [PL] DIRECT engaged: hold captured -- base [-0.125 -0.251 0.994] m, q [0.1, 40.1, 40.0, 0.0] deg, EE (inertial) [0.128 -0.245 0.934] m az -88.2 deg
+   18.28 [GS] Plan: planning the six legs from the current hold -- the status reads READY when done
+   18.48 [PL] pick-and-place planned: 76.4 s of flight in six legs and two exits.
+   19.92 [PL] pick-and-place: planning go_to_start from the current hold; it executes as soon as it is planned
+   19.93 [PL] pick-and-place go_to_start: executing -- [1] T = 3.00 s (T_min, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.04 m/s, tau_j 0.70 N.m, rotor 471.6/482.0, solve 10.3 ms
+   19.94 [GS] Go To Start: planning go_to_start from the current hold; it executes as soon as it is planned
+   22.93 [PL] pick-and-place: go_to_start complete.
+   22.94 [PL] transition complete: hold captured -- base [-0.103 -0.203 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [0.150 -0.205 0.939] m az -90.0 deg
+   24.28 [PL] pick-and-place: planning execute_pick from the current hold; it executes as soon as it is planned
+   24.29 [PL] pick-and-place execute_pick: executing -- [1] T = 8.69 s (v_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.856, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.4/482.1, solve 13.5 ms
+   24.31 [GS] Ready To Pick: planning execute_pick from the current hold; it executes as soon as it is planned
+   32.99 [PL] pick-and-place: execute_pick above its target -- descending once the claw is within tolerance.
+   33.00 [PL] transition complete: hold captured -- base [0.524 0.773 1.149] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.780 0.788 1.047] m az -86.3 deg
+   33.59 [PL] pick-and-place execute_pick: claw within tolerance above the target -- descending (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error).
+   33.60 [PL] pick-and-place: descend_pick: descending onto the target (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   33.63 [GS] Pick: descend_pick: descending onto the target (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   36.62 [PL] pick-and-place: execute_pick complete.
+   36.62 [PL] transition complete: hold captured -- base [0.624 0.779 1.149] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.880 0.794 1.047] m az -86.3 deg
+   37.08 [GS] Pick: EE 13 mm from the target -- gripper CLOSE
+   37.70 [GS] Pick: closed around the stem (hook grasp) -- Exit To Pick at once (automatic)
+   37.71 [PL] pick-and-place: exit_pick: climbing 20 cm straight up to the clearance point
+   37.72 [PL] pick-and-place exit_pick: executing -- T = 3.23 s (a_max, 0 dilations), defect 2.5e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.72 N.m, rotor 468.2/485.4, solve 9.5 ms
+   37.73 [GS] Exit To Pick (automatic, gripped): exit_pick: climbing 20 cm straight up to the clearance point
+   40.95 [PL] pick-and-place: exit_pick complete.
+   40.96 [PL] transition complete: hold captured -- base [0.624 0.779 1.349] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.880 0.794 1.247] m az -86.3 deg
+   41.76 [PL] pick-and-place: planning go_to_place_start from the current hold; it executes as soon as it is planned
+   41.77 [PL] pick-and-place go_to_place_start: executing -- [1] T = 16.28 s (w_max, 0 dilations), defect 1.6e-16 m, sigma_nd 0.856, peak |v| 0.28 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 10.7 ms
+   41.78 [GS] Go To Drop Start: planning go_to_place_start from the current hold; it executes as soon as it is planned
+   58.06 [PL] pick-and-place: go_to_place_start complete.
+   58.06 [PL] transition complete: hold captured -- base [0.697 -1.203 1.000] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [0.441 -1.202 0.898] m az 90.0 deg
+   58.64 [PL] pick-and-place execute_place: NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 s with the arm at the drop pose and obj_0 tracked) -- the EE-offset mode
+   58.64 [PL] pick-and-place: planning execute_place from the current hold; it executes as soon as it is planned -- NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 
+   58.66 [GS] Ready To Drop: planning execute_place from the current hold; it executes as soon as it is planned -- NOT aimed at the basket: 0.0 s / 0 basket samples at Drop Start (need 2.0 s, 16.0, the newest under 0.5 s old: hover >= 4.0 s
+   58.77 [PL] pick-and-place execute_place: executing -- [1] arm sweep T = 14.0 s (8 probes), 2 cycles, peak |v| 0.30 m/s, |qdot| 0.00 rad/s, |v_ee| 0.30 m/s, tau_j 0.71 N.m, rotor 9.0/9.4 N, sigma_nd 0.327, solve 122.0 ms
+   72.78 [PL] pick-and-place: execute_place complete.
+   72.78 [PL] transition complete: hold captured -- base [-0.944 -1.179 1.387] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-1.200 -1.177 1.286] m az 90.0 deg
+   73.59 [GS] Drop: gripper OPEN -- the payload is released
+   74.21 [GS] Drop: gripper open -- Exit To Drop at once (automatic)
+   74.21 [PL] pick-and-place: exit_place: from where the vehicle is now (56 mm from the release hold), backing out 20 cm (away from the drop point), then climbing 20 cm straight up to the clearance point
+   74.23 [PL] pick-and-place exit_place: executing -- [1] T = 3.23 s (a_max, 0 dilations), defect 2.5e-16 m, sigma_nd 0.856, peak |v| 0.14 m/s, tau_j 0.71 N.m, rotor 471.4/482.1, solve 8.8 ms | [2] T = 3.23 s (a_max, 0 dilations), defect 2.
+   74.24 [GS] Exit To Drop (automatic, dropped): exit_place: from where the vehicle is now (56 mm from the release hold), backing out 20 cm (away from the drop point), then climbing 20 cm straight up to the clearance point
+   80.70 [PL] pick-and-place: exit_place complete.
+   80.70 [PL] transition complete: hold captured -- base [-0.706 -1.200 1.623] m, q [0.0, 32.0, 38.0, 0.0] deg, EE (inertial) [-0.962 -1.198 1.521] m az 90.0 deg
+   82.95 [PL] pick-and-place: planning go_to_land_start from the current hold; it executes as soon as it is planned
+   82.97 [PL] pick-and-place go_to_land_start: executing -- [1] T = 15.96 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.856, peak |v| 0.27 m/s, tau_j 0.71 N.m, rotor 471.0/482.6, solve 12.0 ms
+   82.98 [GS] Go To Land Start: planning go_to_land_start from the current hold; it executes as soon as it is planned
+   98.94 [PL] pick-and-place: go_to_land_start complete.
+   98.94 [PL] transition complete: hold captured -- base [-0.603 0.597 1.000] m, q [0.0, 40.0, 40.0, 0.0] deg, EE (inertial) [-0.350 0.595 0.939] m az -90.0 deg
+   98.96 [GS] Exit To Place complete -- gripper CLOSE
+   99.39 [PL] pick-and-place: planning execute_land from the current hold; it executes as soon as it is planned
+   99.41 [PL] pick-and-place execute_land: executing -- [1] T = 5.82 s (a_max, 0 dilations), defect 1.1e-16 m, sigma_nd 0.887, peak |v| 0.25 m/s, tau_j 0.71 N.m, rotor 468.2/485.4, solve 11.3 ms
+   99.42 [GS] Execute To Land: planning execute_land from the current hold; it executes as soon as it is planned
+  104.34 [PL] SAFETY -- planner silent, targets dropped.

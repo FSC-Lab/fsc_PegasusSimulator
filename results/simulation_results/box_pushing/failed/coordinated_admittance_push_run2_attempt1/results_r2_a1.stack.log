@@ -1,0 +1,6 @@
+[Config] Using: /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/scripts/config/shiqi_machine.conf
+Controller + planner yaml: params_single_aerial_manipulator_coordinated_admittance_direct_actuation_t650_sim_box_pushing.yaml (profile box_pushing)
+Ground-station interpreter: python3 (Python 3.10.12)
+[1;36mEmulated mocap: frequency:=60.0 position_noise_std:=0.0005 velocity_noise_std:=0.022 noise_seed:=0[0m
+Coordinated planner base_com = [0.0,-0.017854,0.0] (the planner section's base_com)
+open terminal failed: not a terminal

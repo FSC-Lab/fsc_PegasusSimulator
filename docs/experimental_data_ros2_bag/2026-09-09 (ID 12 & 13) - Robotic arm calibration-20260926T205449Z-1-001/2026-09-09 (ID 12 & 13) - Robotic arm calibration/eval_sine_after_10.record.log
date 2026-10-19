@@ -1,0 +1,13 @@
+stdin is not a terminal device. Keyboard handling disabled.[INFO] [1788998861.984171984] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1788998861.985791578] [rosbag2_storage]: Opened database '/home/shiqi/ros2_ws/results_robotic_arm/bags/2026-09-09/eval_sine_after_10/eval_sine_after_10_0.db3' for READ_WRITE.
+[INFO] [1788998861.986621004] [rosbag2_recorder]: Listening for topics...
+[INFO] [1788998861.986640701] [rosbag2_recorder]: Event publisher thread: Starting
+[INFO] [1788998861.989565576] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[INFO] [1788998861.991313925] [rosbag2_recorder]: Subscribed to topic '/fsc_open_manipulator/joint_states'
+[INFO] [1788998861.991428371] [rosbag2_recorder]: Recording...
+[INFO] [1788998861.995540005] [rosbag2_recorder]: Subscribed to topic '/fsc_open_manipulator/torque_controller/smoothed_reference_joint_trajectory'
+[INFO] [1788998861.998704628] [rosbag2_recorder]: Subscribed to topic '/fsc_open_manipulator/pwm_state_broadcaster/gpio_states'
+[INFO] [1788998861.998756408] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1788999125.102826013] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1788999125.103549057] [rosbag2_recorder]: Event publisher thread: Exiting
+[INFO] [1788999125.103590036] [rosbag2_recorder]: Recording stopped

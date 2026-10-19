@@ -1,0 +1,7 @@
+[21:19:47] whole_body_l1_push_run1 attempt 1 (results_r1_a1)
+[21:24:29] whole_body_l1_push_run1 completed (273 s, box 498 mm)
+[21:24:29] whole_body_l1_push_run2 attempt 1 (results_r2_a1)
+[21:29:10] whole_body_l1_push_run2 completed (272 s, box 489 mm)
+[21:29:10] whole_body_l1_push_run3 attempt 1 (results_r3_a1)
+[21:33:52] whole_body_l1_push_run3 completed (273 s, box 492 mm)
+[21:33:52] campaign done -- closing the simulation

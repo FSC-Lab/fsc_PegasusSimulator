@@ -1,0 +1,834 @@
+U2D2 port: /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTAOAFC5-if00-port0
+           (/dev/serial/by-id -> /dev/ttyUSB0)
+
+Arm bring-up started. The ground station is a SEPARATE command — in another
+terminal, whenever you want it:
+  scripts/indoor_exp/start_ground_station_inverted.sh 
+Stop everything (arm + station) with:
+  scripts/indoor_exp/stop_open_manipulator_stack.sh
+
+[INFO] [launch]: All log files can be found below /home/shiqi/.ros/log/2026-09-11-13-34-54-024407-shiqi-ThinkPad-70038
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [ros2_control_node-1]: process started with pid [70040]
+[INFO] [robot_state_publisher-2]: process started with pid [70042]
+[INFO] [spawner-3]: process started with pid [70044]
+[robot_state_publisher-2] [INFO] [1789148094.200620438] [fsc_open_manipulator.robot_state_publisher]: got segment dummy_mimic_fix
+[robot_state_publisher-2] [INFO] [1789148094.200700284] [fsc_open_manipulator.robot_state_publisher]: got segment end_effector_link
+[robot_state_publisher-2] [INFO] [1789148094.200709379] [fsc_open_manipulator.robot_state_publisher]: got segment gripper_left_link
+[robot_state_publisher-2] [INFO] [1789148094.200712519] [fsc_open_manipulator.robot_state_publisher]: got segment gripper_right_link
+[robot_state_publisher-2] [INFO] [1789148094.200715302] [fsc_open_manipulator.robot_state_publisher]: got segment link1
+[robot_state_publisher-2] [INFO] [1789148094.200718192] [fsc_open_manipulator.robot_state_publisher]: got segment link2
+[robot_state_publisher-2] [INFO] [1789148094.200720699] [fsc_open_manipulator.robot_state_publisher]: got segment link3
+[robot_state_publisher-2] [INFO] [1789148094.200723270] [fsc_open_manipulator.robot_state_publisher]: got segment link4
+[robot_state_publisher-2] [INFO] [1789148094.200725684] [fsc_open_manipulator.robot_state_publisher]: got segment link5
+[robot_state_publisher-2] [INFO] [1789148094.200728149] [fsc_open_manipulator.robot_state_publisher]: got segment world
+[ros2_control_node-1] [WARN] [1789148094.214614734] [fsc_open_manipulator.controller_manager]: [Deprecated] Passing the robot description parameter directly to the control_manager node is deprecated. Use '~/robot_description' topic from 'robot_state_publisher' instead.
+[ros2_control_node-1] [INFO] [1789148094.215028919] [resource_manager]: Loading hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [INFO] [1789148094.218756194] [resource_manager]: Initialize hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] transmission_to_joint_matrix_ 
+[ros2_control_node-1] [0][0] 1.000000, [0][1] 0.000000, [0][2] 0.000000, [0][3] 0.000000, [0][4] 0.000000, 
+[ros2_control_node-1] [1][0] 0.000000, [1][1] 1.000000, [1][2] 0.000000, [1][3] 0.000000, [1][4] 0.000000, 
+[ros2_control_node-1] [2][0] 0.000000, [2][1] 0.000000, [2][2] 1.000000, [2][3] 0.000000, [2][4] 0.000000, 
+[ros2_control_node-1] [3][0] 0.000000, [3][1] 0.000000, [3][2] 0.000000, [3][3] 1.000000, [3][4] 0.000000, 
+[ros2_control_node-1] [4][0] 0.000000, [4][1] 0.000000, [4][2] 0.000000, [4][3] 0.000000, [4][4] 1.000000, 
+[ros2_control_node-1] [5][0] 0.000000, [5][1] 0.000000, [5][2] 0.000000, [5][3] 0.000000, [5][4] 0.000000, 
+[ros2_control_node-1] joint_to_transmission_matrix_ 
+[ros2_control_node-1] [0][0] 1.000000, [0][1] 0.000000, [0][2] 0.000000, [0][3] 0.000000, [0][4] 0.000000, [0][5] 0.000000, 
+[ros2_control_node-1] [1][0] 0.000000, [1][1] 1.000000, [1][2] 0.000000, [1][3] 0.000000, [1][4] 0.000000, [1][5] 0.000000, 
+[ros2_control_node-1] [2][0] 0.000000, [2][1] 0.000000, [2][2] 1.000000, [2][3] 0.000000, [2][4] 0.000000, [2][5] 0.000000, 
+[ros2_control_node-1] [3][0] 0.000000, [3][1] 0.000000, [3][2] 0.000000, [3][3] 1.000000, [3][4] 0.000000, [3][5] 0.000000, 
+[ros2_control_node-1] [4][0] 0.000000, [4][1] 0.000000, [4][2] 0.000000, [4][3] 0.000000, [4][4] 1.000000, [4][5] 0.000000, 
+[ros2_control_node-1] [INFO] [1789148094.218883513] [dynamixel_hardware_interface]: error_timeout_ms parameter not found, using default value of 500ms
+[ros2_control_node-1] [INFO] [1789148094.218892085] [dynamixel_hardware_interface]: port_name /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTAOAFC5-if00-port0 / baudrate 1000000
+[ros2_control_node-1] Dynamixel Information File List.
+[ros2_control_node-1] num: 30, name: mx_28.model
+[ros2_control_node-1] num: 220, name: omy_hat.model
+[ros2_control_node-1] num: 230, name: omy_end.model
+[ros2_control_node-1] num: 231, name: omy_end_rh_p12_rn.model
+[ros2_control_node-1] num: 260, name: hx5_d20_rr.model
+[ros2_control_node-1] num: 261, name: hx5_d20_rl.model
+[ros2_control_node-1] num: 6001, name: hx5_d20_r_synctable_1_device_1.model
+[ros2_control_node-1] num: 6002, name: hx5_d20_r_synctable_1_device_2.model
+[ros2_control_node-1] num: 6003, name: hx5_d20_r_synctable_1_device_3.model
+[ros2_control_node-1] num: 6004, name: hx5_d20_r_synctable_1_device_4.model
+[ros2_control_node-1] num: 6005, name: hx5_d20_r_synctable_1_device_5.model
+[ros2_control_node-1] num: 6006, name: hx5_d20_r_synctable_2_device_1.model
+[ros2_control_node-1] num: 6007, name: hx5_d20_r_synctable_2_device_2.model
+[ros2_control_node-1] num: 6008, name: hx5_d20_r_synctable_2_device_3.model
+[ros2_control_node-1] num: 6009, name: hx5_d20_r_synctable_2_device_4.model
+[ros2_control_node-1] num: 6010, name: hx5_d20_r_synctable_2_device_5.model
+[ros2_control_node-1] num: 6011, name: hx5_d20_r_synctable_3_device_1.model
+[ros2_control_node-1] num: 6012, name: hx5_d20_r_synctable_3_device_2.model
+[ros2_control_node-1] num: 6013, name: hx5_d20_r_synctable_3_device_3.model
+[ros2_control_node-1] num: 6014, name: hx5_d20_r_synctable_3_device_4.model
+[ros2_control_node-1] num: 6015, name: hx5_d20_r_synctable_3_device_5.model
+[ros2_control_node-1] num: 6016, name: hx5_d20_r_synctable_4_device_1.model
+[ros2_control_node-1] num: 6017, name: hx5_d20_r_synctable_4_device_2.model
+[ros2_control_node-1] num: 6018, name: hx5_d20_r_synctable_4_device_3.model
+[ros2_control_node-1] num: 6019, name: hx5_d20_r_synctable_4_device_4.model
+[ros2_control_node-1] num: 6020, name: hx5_d20_r_synctable_4_device_5.model
+[ros2_control_node-1] num: 6021, name: hx5_d20_r_synctable_5_device_1.model
+[ros2_control_node-1] num: 6022, name: hx5_d20_r_synctable_5_device_2.model
+[ros2_control_node-1] num: 6023, name: hx5_d20_r_synctable_5_device_3.model
+[ros2_control_node-1] num: 6024, name: hx5_d20_r_synctable_5_device_4.model
+[ros2_control_node-1] num: 6025, name: hx5_d20_r_synctable_5_device_5.model
+[ros2_control_node-1] num: 311, name: mx_64.model
+[ros2_control_node-1] num: 321, name: mx_106.model
+[ros2_control_node-1] num: 350, name: xl320.model
+[ros2_control_node-1] num: 536, name: sensorxel_joy.model
+[ros2_control_node-1] num: 537, name: ffw_g40_imu.model
+[ros2_control_node-1] num: 600, name: sensorxel_joy.model
+[ros2_control_node-1] num: 601, name: ffw_g10_led.model
+[ros2_control_node-1] num: 602, name: ffw_g10_rcu.model
+[ros2_control_node-1] num: 620, name: ffw_sg2_steer_1.model
+[ros2_control_node-1] num: 621, name: ffw_sg2_steer_2.model
+[ros2_control_node-1] num: 622, name: ffw_sg2_steer_3.model
+[ros2_control_node-1] num: 623, name: ffw_sg2_drive_1.model
+[ros2_control_node-1] num: 624, name: ffw_sg2_drive_2.model
+[ros2_control_node-1] num: 625, name: ffw_sg2_drive_3.model
+[ros2_control_node-1] num: 1000, name: xh430_w350.model
+[ros2_control_node-1] num: 1001, name: xd430_t350.model
+[ros2_control_node-1] num: 1010, name: xh430_w210.model
+[ros2_control_node-1] num: 1011, name: xd430_t210.model
+[ros2_control_node-1] num: 1020, name: xm430_w350.model
+[ros2_control_node-1] num: 1030, name: xm430_w210.model
+[ros2_control_node-1] num: 1040, name: xh430_v350.model
+[ros2_control_node-1] num: 1050, name: xh430_v210.model
+[ros2_control_node-1] num: 1060, name: xl430_w250.model
+[ros2_control_node-1] num: 1070, name: xc430_w150.model
+[ros2_control_node-1] num: 1070, name: xc430_w150.model
+[ros2_control_node-1] num: 1080, name: xc430_w240.model
+[ros2_control_node-1] num: 1080, name: xc430_w240.model
+[ros2_control_node-1] num: 1090, name: 2xl430_w250.model
+[ros2_control_node-1] num: 1100, name: xh540_w270.model
+[ros2_control_node-1] num: 1101, name: xd540_t270.model
+[ros2_control_node-1] num: 1110, name: xh540_w150.model
+[ros2_control_node-1] num: 1111, name: xd540_t150.model
+[ros2_control_node-1] num: 1120, name: xm540_w270.model
+[ros2_control_node-1] num: 1130, name: xm540_w150.model
+[ros2_control_node-1] num: 1140, name: xh540_v270.model
+[ros2_control_node-1] num: 1150, name: xh540_v150.model
+[ros2_control_node-1] num: 1160, name: 2xc430_w250.model
+[ros2_control_node-1] num: 1170, name: xw540_t260.model
+[ros2_control_node-1] num: 1180, name: xw540_t140.model
+[ros2_control_node-1] num: 1190, name: xl330_m077.model
+[ros2_control_node-1] num: 1200, name: xl330_m288.model
+[ros2_control_node-1] num: 1210, name: xc330_t181.model
+[ros2_control_node-1] num: 1220, name: xc330_t288.model
+[ros2_control_node-1] num: 1230, name: xc330_m181.model
+[ros2_control_node-1] num: 1240, name: xc330_m288.model
+[ros2_control_node-1] num: 1270, name: xw430_t333.model
+[ros2_control_node-1] num: 1310, name: xw540_h260.model
+[ros2_control_node-1] num: 1700, name: xc335_t332.model
+[ros2_control_node-1] num: 2000, name: ph42_020_s300.model
+[ros2_control_node-1] num: 2010, name: ph54_100_s500.model
+[ros2_control_node-1] num: 2020, name: ph54_200_s500.model
+[ros2_control_node-1] num: 2100, name: pm42_010_s260.model
+[ros2_control_node-1] num: 2110, name: pm54_040_s250.model
+[ros2_control_node-1] num: 2120, name: pm54_060_s250.model
+[ros2_control_node-1] num: 4000, name: ym070_210_m001.model
+[ros2_control_node-1] num: 4010, name: ym070_210_b001.model
+[ros2_control_node-1] num: 4020, name: ym070_210_r051.model
+[ros2_control_node-1] num: 4030, name: ym070_210_r099.model
+[ros2_control_node-1] num: 4040, name: ym070_210_a051.model
+[ros2_control_node-1] num: 4050, name: ym070_210_a099.model
+[ros2_control_node-1] num: 4120, name: ym080_230_m001.model
+[ros2_control_node-1] num: 4130, name: ym080_230_b001.model
+[ros2_control_node-1] num: 4140, name: ym080_230_r051.model
+[ros2_control_node-1] num: 4150, name: ym080_230_r099.model
+[ros2_control_node-1] num: 4160, name: ym080_230_a051.model
+[ros2_control_node-1] num: 4170, name: ym080_230_a099.model
+[ros2_control_node-1] num: 35074, name: rh_p12_rn.model
+[ros2_control_node-1] num: 43289, name: m42_10_s260_ra.model
+[ros2_control_node-1] num: 46097, name: m54_40_s250_ra.model
+[ros2_control_node-1] num: 46353, name: m54_60_s250_ra.model
+[ros2_control_node-1] num: 51201, name: h42_20_s300_ra.model
+[ros2_control_node-1] num: 53769, name: h54_100_s500_ra.model
+[ros2_control_node-1] num: 54025, name: h54_200_s500_ra.model
+[ros2_control_node-1] [INFO] [1789148094.219076580] [dynamixel_hardware_interface]: $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+[ros2_control_node-1] [INFO] [1789148094.219080104] [dynamixel_hardware_interface]: $$$$$ Init Dxl Comm Port
+[ros2_control_node-1] [INFO] [1789148094.219083034] [dynamixel_hardware_interface]: Revolute to Prismatic gripper conversion enabled.
+[ros2_control_node-1] Succeeded to open the port [/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTAOAFC5-if00-port0]! (attempt 1/5)
+[ros2_control_node-1] Succeeded to change the baudrate [1000000]!
+[ros2_control_node-1] [comm_id:011][ID:011] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:011][ID:011] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789148094.222529013] [dynamixel_hardware_interface]: [ID:11] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.222538300] [dynamixel_hardware_interface]: [ID:11] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.222542411] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789148094.223569114] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Max Position Limit	data: 2446
+[ros2_control_node-1] [INFO] [1789148094.224549331] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789148094.225622105] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Min Position Limit	data: 1650
+[ros2_control_node-1] [INFO] [1789148094.226546849] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: PWM Limit	data: 180
+[ros2_control_node-1] [INFO] [1789148094.227552399] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789148094.228544881] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789148094.229548348] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Velocity P Gain	data: 50
+[ros2_control_node-1] [INFO] [1789148094.230539474] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789148094.231558722] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Velocity I Gain	data: 0
+[ros2_control_node-1] [INFO] [1789148094.232510270] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789148094.233498682] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Position P Gain	data: 400
+[ros2_control_node-1] [INFO] [1789148094.234498490] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Position I Gain	data: 0
+[ros2_control_node-1] [INFO] [1789148094.235495829] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Position D Gain	data: 0
+[ros2_control_node-1] [comm_id:012][ID:012] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:012][ID:012] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789148094.239521496] [dynamixel_hardware_interface]: [ID:12] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.239526135] [dynamixel_hardware_interface]: [ID:12] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.239528699] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789148094.240498363] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Max Position Limit	data: 2616
+[ros2_control_node-1] [INFO] [1789148094.241545319] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789148094.242544972] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Min Position Limit	data: 1138
+[ros2_control_node-1] [INFO] [1789148094.243545842] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: PWM Limit	data: 545
+[ros2_control_node-1] [INFO] [1789148094.244545332] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789148094.245545584] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789148094.246544949] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789148094.247544471] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789148094.248544718] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Position P Gain	data: 800
+[ros2_control_node-1] [INFO] [1789148094.249544093] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Position I Gain	data: 100
+[ros2_control_node-1] [INFO] [1789148094.250544815] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Position D Gain	data: 100
+[ros2_control_node-1] [comm_id:013][ID:013] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:013][ID:013] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789148094.254549551] [dynamixel_hardware_interface]: [ID:13] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.254553150] [dynamixel_hardware_interface]: [ID:13] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.254555154] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789148094.255544862] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Max Position Limit	data: 2616
+[ros2_control_node-1] [INFO] [1789148094.256544581] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789148094.257544175] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Min Position Limit	data: 1593
+[ros2_control_node-1] [INFO] [1789148094.258544360] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: PWM Limit	data: 330
+[ros2_control_node-1] [INFO] [1789148094.259544504] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789148094.260543888] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789148094.261543215] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789148094.262507116] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789148094.263507618] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Position P Gain	data: 800
+[ros2_control_node-1] [INFO] [1789148094.264508608] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Position I Gain	data: 100
+[ros2_control_node-1] [INFO] [1789148094.265509902] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Position D Gain	data: 100
+[ros2_control_node-1] [comm_id:014][ID:014] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:014][ID:014] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789148094.269515637] [dynamixel_hardware_interface]: [ID:14] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.269520266] [dynamixel_hardware_interface]: [ID:14] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789148094.269522606] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789148094.270508417] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Max Position Limit	data: 3072
+[ros2_control_node-1] [INFO] [1789148094.271508680] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789148094.272545605] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Min Position Limit	data: 1024
+[ros2_control_node-1] [INFO] [1789148094.273545986] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: PWM Limit	data: 180
+[ros2_control_node-1] [INFO] [1789148094.274509154] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789148094.275508914] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789148094.276545571] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789148094.277509405] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789148094.278508312] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Position P Gain	data: 800
+[ros2_control_node-1] [INFO] [1789148094.279508212] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Position I Gain	data: 100
+[ros2_control_node-1] [INFO] [1789148094.280544997] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Position D Gain	data: 100
+[ros2_control_node-1] [comm_id:015][ID:015] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:015][ID:015] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789148094.284548177] [dynamixel_hardware_interface]: [InitItem][comm_id:15][ID:15] item_name: Operating Mode	data: 5
+[ros2_control_node-1] [INFO] [1789148094.285544290] [dynamixel_hardware_interface]: [InitItem][comm_id:15][ID:15] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789148094.286544089] [dynamixel_hardware_interface]: [InitItem][comm_id:15][ID:15] item_name: Goal Current	data: 200
+[ros2_control_node-1] [INFO] [1789148094.287547321] [dynamixel_hardware_interface]: $$$$$ Init Dxl Read Items
+[ros2_control_node-1] Dynamixel Read Type : bulk read
+[ros2_control_node-1] ID : 11	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 12	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 13	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 14	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 15	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 13
+[ros2_control_node-1] [ID:011] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:012] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:013] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:014] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:015] Add BulkRead item : [Indirect Item Data][634][13]
+[ros2_control_node-1] FastBulkRead handler set up successfully.
+[ros2_control_node-1] Success to set BulkRead handler using indirect address
+[ros2_control_node-1] [INFO] [1789148094.367688853] [dynamixel_hardware_interface]: $$$$$ Init Dxl Write Items
+[ros2_control_node-1] Dynamixel Write Type : bulk write
+[ros2_control_node-1] ID : 11	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 12	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 13	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 14	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 15	Write items : 	Goal Position
+[ros2_control_node-1] [ID:011] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:012] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:013] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:014] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:015] Add Indirect Address Write Item : [Goal Position]
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 4
+[ros2_control_node-1] Success to set BulkWrite handler using indirect address
+[ros2_control_node-1] [INFO] [1789148094.382717831] [resource_manager]: Successful initialization of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789148094.382854704] [resource_manager]: 'configure' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [INFO] [1789148094.382866368] [resource_manager]: Successful 'configure' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789148094.382882117] [resource_manager]: 'activate' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [WARN] [1789148094.385620595] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint1'. Skipping sync!
+[ros2_control_node-1] [WARN] [1789148094.385636681] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint2'. Skipping sync!
+[ros2_control_node-1] [WARN] [1789148094.385642441] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint3'. Skipping sync!
+[ros2_control_node-1] [WARN] [1789148094.385647258] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint4'. Skipping sync!
+[ros2_control_node-1] [INFO] [1789148094.385658033] [dynamixel_hardware_interface]: Sync joint state to command (joint: gripper_left_joint, position, -0.00836376 <- position, -0.00836376
+[ros2_control_node-1] [INFO] [1789148094.385665598] [dynamixel_hardware_interface]: Sync joint state to command (joint: gripper_right_joint, position, 0 <- position, 0
+[ros2_control_node-1] [INFO] [1789148094.385793803] [dynamixel_hardware_interface]: Enabling torque for Dynamixels
+[ros2_control_node-1] [comm_id:011][ID:011] Torque ON
+[ros2_control_node-1] [comm_id:012][ID:012] Torque ON
+[ros2_control_node-1] [comm_id:013][ID:013] Torque ON
+[ros2_control_node-1] [comm_id:014][ID:014] Torque ON
+[ros2_control_node-1] [comm_id:015][ID:015] Torque ON
+[ros2_control_node-1] [INFO] [1789148094.391522832] [dynamixel_hardware_interface]: Dynamixel Hardware Start!
+[ros2_control_node-1] [INFO] [1789148094.391545330] [resource_manager]: Successful 'activate' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789148094.396882226] [fsc_open_manipulator.controller_manager]: update rate is 250 Hz
+[ros2_control_node-1] [INFO] [1789148094.396912532] [fsc_open_manipulator.controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+[ros2_control_node-1] [INFO] [1789148094.396996182] [fsc_open_manipulator.controller_manager]: Successful set up FIFO RT scheduling policy with priority 50.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3001]
+[ros2_control_node-1] [ERROR] [1789148094.397108991] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789148094.397139239] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 0.000949ms/500ms)
+[ros2_control_node-1] [ERROR] [1789148094.397158846] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 0.000949ms/500ms)
+[ros2_control_node-1] [INFO] [1789148094.418093693] [fsc_open_manipulator.controller_manager]: Loading controller 'joint_state_broadcaster'
+[spawner-3] [INFO] [1789148094.435110047] [fsc_open_manipulator.spawner_joint_state_broadcaster]: [94mLoaded [1mjoint_state_broadcaster[0m
+[ros2_control_node-1] [INFO] [1789148094.435917885] [fsc_open_manipulator.controller_manager]: Configuring controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789148094.435999035] [fsc_open_manipulator.joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[spawner-3] [INFO] [1789148094.448030202] [fsc_open_manipulator.spawner_joint_state_broadcaster]: [92mConfigured and activated [1mjoint_state_broadcaster[0m
+[INFO] [spawner-3]: process has finished cleanly [pid 70044]
+[INFO] [spawner-4]: process started with pid [70117]
+[INFO] [spawner-5]: process started with pid [70119]
+[INFO] [spawner-6]: process started with pid [70121]
+[ros2_control_node-1] [INFO] [1789148094.803711635] [fsc_open_manipulator.controller_manager]: Loading controller 'torque_controller'
+[ros2_control_node-1] [INFO] [1789148094.816560407] [fsc_open_manipulator.controller_manager]: Loading controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789148094.823748760] [fsc_open_manipulator.controller_manager]: Loading controller 'pwm_state_broadcaster'
+[spawner-4] [INFO] [1789148094.825795704] [fsc_open_manipulator.spawner_torque_controller]: [94mLoaded [1mtorque_controller[0m
+[ros2_control_node-1] [INFO] [1789148094.831736699] [fsc_open_manipulator.controller_manager]: Configuring controller 'torque_controller'
+[ros2_control_node-1] [INFO] [1789148094.832193727] [fsc_open_manipulator.torque_controller]: Velocity observer ON (20.0 Hz, zeta 1.00, w*dt 0.00): D term on the OBSERVER, logging to '~/velocity_observer'
+[spawner-5] [INFO] [1789148094.832448195] [fsc_open_manipulator.spawner_gripper_controller]: [94mLoaded [1mgripper_controller[0m
+[ros2_control_node-1] [INFO] [1789148094.833267188] [fsc_open_manipulator.torque_controller]: measured_states_topic is empty: not publishing measured joint state. Use <ns>/joint_states from joint_state_broadcaster instead.
+[ros2_control_node-1] [INFO] [1789148094.833287178] [fsc_open_manipulator.torque_controller]: Configured for 4 joints in TORQUE mode. Send targets to 'torque_controller/target_joint_setpoint', sine specs to 'torque_controller/sine_reference_trajectory', or call 'torque_controller/go_home'.
+[ros2_control_node-1] [INFO] [1789148094.833299951] [fsc_open_manipulator.torque_controller]: per-joint nm_to_effort: [160.0, 173.8, 146.7, 160.0] counts/Nm
+[ros2_control_node-1] [WARN] [1789148094.833320572] [fsc_open_manipulator.torque_controller]: COMMAND MODE = PWM (Operating Mode 16). Goal PWM is a VOLTAGE command and NOTHING regulates current: stall current is duty*V/R, bounded only by max_effort here and by the servo's PWM Limit. supply 12.0 V, full scale 885, back_emf_ff_scale 1.00, compensating the REFERENCE (qd_ref -- damping on the reference error) velocity.
+[ros2_control_node-1]     joint1: Kt 2.32 Nm/A, R 4.90 ohm, Ke 2.32 V/(rad/s) -> 155.5 counts/Nm, 171.3 counts/(rad/s); free damping Kt*Ke/R = 1.101 Nm/(rad/s)
+[ros2_control_node-1]     joint2: Kt 2.14 Nm/A, R 4.90 ohm, Ke 2.14 V/(rad/s) -> 169.0 counts/Nm, 157.8 counts/(rad/s); free damping Kt*Ke/R = 0.934 Nm/(rad/s)
+[ros2_control_node-1]     joint3: Kt 2.53 Nm/A, R 4.30 ohm, Ke 2.53 V/(rad/s) -> 125.1 counts/Nm, 186.9 counts/(rad/s); free damping Kt*Ke/R = 1.493 Nm/(rad/s)
+[ros2_control_node-1]     joint4: Kt 2.32 Nm/A, R 4.90 ohm, Ke 2.32 V/(rad/s) -> 155.5 counts/Nm, 171.3 counts/(rad/s); free damping Kt*Ke/R = 1.101 Nm/(rad/s)
+[spawner-6] [INFO] [1789148094.844294414] [fsc_open_manipulator.spawner_pwm_state_broadcaster]: [94mLoaded [1mpwm_state_broadcaster[0m
+[ros2_control_node-1] [INFO] [1789148094.849438089] [fsc_open_manipulator.torque_controller]: Mounting verified: 'aerial' -- URDF and mounting_mode agree. Gravity left at the world default [0.00 0.00 -9.81] m/s^2; the base orientation is already in the model.
+[ros2_control_node-1] [INFO] [1789148094.849461016] [fsc_open_manipulator.torque_controller]: Model-based feed-forward ready | mode=computed_torque | nq=6 nv=6 | 4 commanded joint(s), 0 extra joint(s) in the dynamics | nm_to_effort=160.000 | mounting=aerial
+[ros2_control_node-1] [INFO] [1789148094.851850184] [fsc_open_manipulator.controller_manager]: Configuring controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789148094.851904738] [fsc_open_manipulator.gripper_controller]: Action status changes will be monitored at 20.000000 Hz.
+[ros2_control_node-1] [INFO] [1789148094.855832412] [fsc_open_manipulator.controller_manager]: Configuring controller 'pwm_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789148094.857733334] [fsc_open_manipulator.pwm_state_broadcaster]: configure successful
+[ros2_control_node-1] [INFO] [1789148094.863561003] [fsc_open_manipulator.torque_controller]: Activated in torque mode; homing over 2.02 s.
+[ros2_control_node-1] [INFO] [1789148094.867559102] [fsc_open_manipulator.torque_controller]: Loop health: 1 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.0 ms, observer resyncs 0 | this controller's update(): mean 0 us, max 0 us.
+[spawner-4] [INFO] [1789148094.868107023] [fsc_open_manipulator.spawner_torque_controller]: [92mConfigured and activated [1mtorque_controller[0m
+[spawner-5] [INFO] [1789148094.876136634] [fsc_open_manipulator.spawner_gripper_controller]: [92mConfigured and activated [1mgripper_controller[0m
+[ros2_control_node-1] [INFO] [1789148094.879699327] [fsc_open_manipulator.pwm_state_broadcaster]: activate successful
+[spawner-6] [INFO] [1789148094.884582441] [fsc_open_manipulator.spawner_pwm_state_broadcaster]: [92mConfigured and activated [1mpwm_state_broadcaster[0m
+[INFO] [spawner-4]: process has finished cleanly [pid 70117]
+[INFO] [spawner-5]: process has finished cleanly [pid 70119]
+[INFO] [spawner-6]: process has finished cleanly [pid 70121]
+[ros2_control_node-1] [INFO] [1789148124.867670463] [fsc_open_manipulator.torque_controller]: Loop health: 7501 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.1 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 69 us.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3002]
+[ros2_control_node-1] [ERROR] [1789148129.596233856] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789148129.596278020] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 2.69744ms/500ms)
+[ros2_control_node-1] [ERROR] [1789148129.596336283] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 2.69744ms/500ms)
+[ros2_control_node-1] [INFO] [1789148154.871809594] [fsc_open_manipulator.torque_controller]: Loop health: 15002 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 69 us.
+[ros2_control_node-1] [INFO] [1789148184.874934422] [fsc_open_manipulator.torque_controller]: Loop health: 22503 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 69 us.
+[ros2_control_node-1] [INFO] [1789148214.875090910] [fsc_open_manipulator.torque_controller]: Loop health: 30003 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 69 us.
+[ros2_control_node-1] [INFO] [1789148244.875223326] [fsc_open_manipulator.torque_controller]: Loop health: 37503 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789148274.875340619] [fsc_open_manipulator.torque_controller]: Loop health: 45003 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789148304.875547193] [fsc_open_manipulator.torque_controller]: Loop health: 52503 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 83 us.
+[ros2_control_node-1] [INFO] [1789148334.875757986] [fsc_open_manipulator.torque_controller]: Loop health: 60003 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 83 us.
+[ros2_control_node-1] [INFO] [1789148364.878928397] [fsc_open_manipulator.torque_controller]: Loop health: 67504 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148394.879223135] [fsc_open_manipulator.torque_controller]: Loop health: 75004 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148424.879297041] [fsc_open_manipulator.torque_controller]: Loop health: 82504 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148454.879499494] [fsc_open_manipulator.torque_controller]: Loop health: 90004 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148484.883703910] [fsc_open_manipulator.torque_controller]: Loop health: 97505 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148514.886985944] [fsc_open_manipulator.torque_controller]: Loop health: 105006 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148544.887225464] [fsc_open_manipulator.torque_controller]: Loop health: 112506 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148574.887450880] [fsc_open_manipulator.torque_controller]: Loop health: 120006 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148604.887689557] [fsc_open_manipulator.torque_controller]: Loop health: 127506 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148634.890948790] [fsc_open_manipulator.torque_controller]: Loop health: 135007 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148664.891191251] [fsc_open_manipulator.torque_controller]: Loop health: 142507 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148694.891403783] [fsc_open_manipulator.torque_controller]: Loop health: 150007 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148724.891662500] [fsc_open_manipulator.torque_controller]: Loop health: 157507 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148754.894943774] [fsc_open_manipulator.torque_controller]: Loop health: 165008 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148784.895227340] [fsc_open_manipulator.torque_controller]: Loop health: 172508 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148814.895462667] [fsc_open_manipulator.torque_controller]: Loop health: 180008 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148844.895753842] [fsc_open_manipulator.torque_controller]: Loop health: 187508 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148874.899032211] [fsc_open_manipulator.torque_controller]: Loop health: 195009 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148904.899309219] [fsc_open_manipulator.torque_controller]: Loop health: 202509 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148934.899570410] [fsc_open_manipulator.torque_controller]: Loop health: 210009 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148964.902922535] [fsc_open_manipulator.torque_controller]: Loop health: 217510 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789148994.903188880] [fsc_open_manipulator.torque_controller]: Loop health: 225010 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149024.903441980] [fsc_open_manipulator.torque_controller]: Loop health: 232510 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149054.907749253] [fsc_open_manipulator.torque_controller]: Loop health: 240011 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149084.911040813] [fsc_open_manipulator.torque_controller]: Loop health: 247512 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149114.911325174] [fsc_open_manipulator.torque_controller]: Loop health: 255012 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149144.911693178] [fsc_open_manipulator.torque_controller]: Loop health: 262512 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149174.914997398] [fsc_open_manipulator.torque_controller]: Loop health: 270013 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149204.915284617] [fsc_open_manipulator.torque_controller]: Loop health: 277513 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149234.915535115] [fsc_open_manipulator.torque_controller]: Loop health: 285013 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149251.139599903] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789149264.918900298] [fsc_open_manipulator.torque_controller]: Loop health: 292514 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149294.919196890] [fsc_open_manipulator.torque_controller]: Loop health: 300014 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149314.645776387] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789149319.648867509] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789149324.283668241] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789149324.919475800] [fsc_open_manipulator.torque_controller]: Loop health: 307514 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149354.922873194] [fsc_open_manipulator.torque_controller]: Loop health: 315015 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149384.923169959] [fsc_open_manipulator.torque_controller]: Loop health: 322515 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149414.923457967] [fsc_open_manipulator.torque_controller]: Loop health: 330015 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149444.923787430] [fsc_open_manipulator.torque_controller]: Loop health: 337515 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149474.927062913] [fsc_open_manipulator.torque_controller]: Loop health: 345016 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149504.927377843] [fsc_open_manipulator.torque_controller]: Loop health: 352516 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149534.927752082] [fsc_open_manipulator.torque_controller]: Loop health: 360016 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149564.931036447] [fsc_open_manipulator.torque_controller]: Loop health: 367517 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149594.931353556] [fsc_open_manipulator.torque_controller]: Loop health: 375017 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149624.931657318] [fsc_open_manipulator.torque_controller]: Loop health: 382517 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 84 us.
+[ros2_control_node-1] [INFO] [1789149654.934995223] [fsc_open_manipulator.torque_controller]: Loop health: 390018 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 93 us.
+[ros2_control_node-1] [INFO] [1789149684.935298474] [fsc_open_manipulator.torque_controller]: Loop health: 397518 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 4 us, max 93 us.
+[ros2_control_node-1] [INFO] [1789149714.935661440] [fsc_open_manipulator.torque_controller]: Loop health: 405018 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 98 us.
+[ros2_control_node-1] [INFO] [1789149744.938938640] [fsc_open_manipulator.torque_controller]: Loop health: 412519 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149774.939202685] [fsc_open_manipulator.torque_controller]: Loop health: 420019 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149804.939551740] [fsc_open_manipulator.torque_controller]: Loop health: 427519 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149834.942861713] [fsc_open_manipulator.torque_controller]: Loop health: 435020 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149864.943218844] [fsc_open_manipulator.torque_controller]: Loop health: 442520 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149894.943518198] [fsc_open_manipulator.torque_controller]: Loop health: 450020 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149924.946842396] [fsc_open_manipulator.torque_controller]: Loop health: 457521 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 103 us.
+[ros2_control_node-1] [INFO] [1789149954.947173094] [fsc_open_manipulator.torque_controller]: Loop health: 465021 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789149984.947535781] [fsc_open_manipulator.torque_controller]: Loop health: 472521 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150014.947805046] [fsc_open_manipulator.torque_controller]: Loop health: 480021 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150044.951136666] [fsc_open_manipulator.torque_controller]: Loop health: 487522 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150074.951447627] [fsc_open_manipulator.torque_controller]: Loop health: 495022 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150104.951716452] [fsc_open_manipulator.torque_controller]: Loop health: 502522 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150134.955016312] [fsc_open_manipulator.torque_controller]: Loop health: 510023 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150164.955295032] [fsc_open_manipulator.torque_controller]: Loop health: 517523 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150194.955619406] [fsc_open_manipulator.torque_controller]: Loop health: 525023 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150224.958888976] [fsc_open_manipulator.torque_controller]: Loop health: 532524 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150254.959226152] [fsc_open_manipulator.torque_controller]: Loop health: 540024 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150284.959513491] [fsc_open_manipulator.torque_controller]: Loop health: 547524 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150314.959862753] [fsc_open_manipulator.torque_controller]: Loop health: 555024 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150344.963150745] [fsc_open_manipulator.torque_controller]: Loop health: 562525 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150374.963490948] [fsc_open_manipulator.torque_controller]: Loop health: 570025 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150404.963743403] [fsc_open_manipulator.torque_controller]: Loop health: 577525 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 5 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150434.967097134] [fsc_open_manipulator.torque_controller]: Loop health: 585026 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150464.967353903] [fsc_open_manipulator.torque_controller]: Loop health: 592526 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150494.967839244] [fsc_open_manipulator.torque_controller]: Loop health: 600026 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150524.971109394] [fsc_open_manipulator.torque_controller]: Loop health: 607527 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150554.971308691] [fsc_open_manipulator.torque_controller]: Loop health: 615027 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150584.971606437] [fsc_open_manipulator.torque_controller]: Loop health: 622527 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150614.974935509] [fsc_open_manipulator.torque_controller]: Loop health: 630028 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150644.975276174] [fsc_open_manipulator.torque_controller]: Loop health: 637528 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150674.975561394] [fsc_open_manipulator.torque_controller]: Loop health: 645028 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150704.978916872] [fsc_open_manipulator.torque_controller]: Loop health: 652529 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150726.892391717] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789150734.979174003] [fsc_open_manipulator.torque_controller]: Loop health: 660029 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150739.722079651] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789150764.979508359] [fsc_open_manipulator.torque_controller]: Loop health: 667529 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150794.983843001] [fsc_open_manipulator.torque_controller]: Loop health: 675030 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150824.987224867] [fsc_open_manipulator.torque_controller]: Loop health: 682531 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150854.987451871] [fsc_open_manipulator.torque_controller]: Loop health: 690031 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150884.987813556] [fsc_open_manipulator.torque_controller]: Loop health: 697531 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150914.991122496] [fsc_open_manipulator.torque_controller]: Loop health: 705032 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150944.991437992] [fsc_open_manipulator.torque_controller]: Loop health: 712532 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789150974.991748294] [fsc_open_manipulator.torque_controller]: Loop health: 720032 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151004.995087852] [fsc_open_manipulator.torque_controller]: Loop health: 727533 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151034.995416393] [fsc_open_manipulator.torque_controller]: Loop health: 735033 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151064.995749790] [fsc_open_manipulator.torque_controller]: Loop health: 742533 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151094.999033689] [fsc_open_manipulator.torque_controller]: Loop health: 750034 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151124.999401611] [fsc_open_manipulator.torque_controller]: Loop health: 757534 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151154.999697810] [fsc_open_manipulator.torque_controller]: Loop health: 765034 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151185.003049110] [fsc_open_manipulator.torque_controller]: Loop health: 772535 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151215.003329536] [fsc_open_manipulator.torque_controller]: Loop health: 780035 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151245.003726908] [fsc_open_manipulator.torque_controller]: Loop health: 787535 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151275.006963351] [fsc_open_manipulator.torque_controller]: Loop health: 795036 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151305.007413801] [fsc_open_manipulator.torque_controller]: Loop health: 802536 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151335.007667547] [fsc_open_manipulator.torque_controller]: Loop health: 810036 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151365.010963202] [fsc_open_manipulator.torque_controller]: Loop health: 817537 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151395.011328866] [fsc_open_manipulator.torque_controller]: Loop health: 825037 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151425.011597360] [fsc_open_manipulator.torque_controller]: Loop health: 832537 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151455.014940722] [fsc_open_manipulator.torque_controller]: Loop health: 840038 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151485.015357006] [fsc_open_manipulator.torque_controller]: Loop health: 847538 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151515.015690570] [fsc_open_manipulator.torque_controller]: Loop health: 855038 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 6 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151545.016061542] [fsc_open_manipulator.torque_controller]: Loop health: 862538 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151575.019205996] [fsc_open_manipulator.torque_controller]: Loop health: 870039 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151605.019612308] [fsc_open_manipulator.torque_controller]: Loop health: 877539 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151635.019936525] [fsc_open_manipulator.torque_controller]: Loop health: 885039 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151665.023530102] [fsc_open_manipulator.torque_controller]: Loop health: 892540 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151695.027501037] [fsc_open_manipulator.torque_controller]: Loop health: 900041 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151725.027884831] [fsc_open_manipulator.torque_controller]: Loop health: 907541 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151755.031159113] [fsc_open_manipulator.torque_controller]: Loop health: 915042 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151785.031467367] [fsc_open_manipulator.torque_controller]: Loop health: 922542 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151815.031804887] [fsc_open_manipulator.torque_controller]: Loop health: 930042 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151845.035166798] [fsc_open_manipulator.torque_controller]: Loop health: 937543 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151875.035460495] [fsc_open_manipulator.torque_controller]: Loop health: 945043 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151905.035763862] [fsc_open_manipulator.torque_controller]: Loop health: 952543 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151935.039085955] [fsc_open_manipulator.torque_controller]: Loop health: 960044 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151965.039516168] [fsc_open_manipulator.torque_controller]: Loop health: 967544 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789151995.039808095] [fsc_open_manipulator.torque_controller]: Loop health: 975044 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152025.043117371] [fsc_open_manipulator.torque_controller]: Loop health: 982545 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152055.043413856] [fsc_open_manipulator.torque_controller]: Loop health: 990045 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152085.043688347] [fsc_open_manipulator.torque_controller]: Loop health: 997545 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3002]
+[ros2_control_node-1] [ERROR] [1789152099.395708957] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789152099.395772349] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 2.59392ms/500ms)
+[ros2_control_node-1] [ERROR] [1789152099.395861724] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 2.59392ms/500ms)
+[ros2_control_node-1] [INFO] [1789152115.046904378] [fsc_open_manipulator.torque_controller]: Loop health: 1005046 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152145.047232228] [fsc_open_manipulator.torque_controller]: Loop health: 1012546 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152175.047408404] [fsc_open_manipulator.torque_controller]: Loop health: 1020046 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152205.047586547] [fsc_open_manipulator.torque_controller]: Loop health: 1027546 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152235.050839909] [fsc_open_manipulator.torque_controller]: Loop health: 1035047 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152265.051079451] [fsc_open_manipulator.torque_controller]: Loop health: 1042547 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152295.051335517] [fsc_open_manipulator.torque_controller]: Loop health: 1050047 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152325.051575799] [fsc_open_manipulator.torque_controller]: Loop health: 1057547 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152355.054831329] [fsc_open_manipulator.torque_controller]: Loop health: 1065048 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152385.055125635] [fsc_open_manipulator.torque_controller]: Loop health: 1072548 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152415.055529214] [fsc_open_manipulator.torque_controller]: Loop health: 1080048 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152445.055808821] [fsc_open_manipulator.torque_controller]: Loop health: 1087548 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152475.056175126] [fsc_open_manipulator.torque_controller]: Loop health: 1095048 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152505.059157553] [fsc_open_manipulator.torque_controller]: Loop health: 1102549 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152535.059435268] [fsc_open_manipulator.torque_controller]: Loop health: 1110049 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152565.059683317] [fsc_open_manipulator.torque_controller]: Loop health: 1117549 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152595.062998564] [fsc_open_manipulator.torque_controller]: Loop health: 1125050 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152598.958435846] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789152625.063252656] [fsc_open_manipulator.torque_controller]: Loop health: 1132550 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152626.540343685] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789152655.063535045] [fsc_open_manipulator.torque_controller]: Loop health: 1140050 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152685.066856883] [fsc_open_manipulator.torque_controller]: Loop health: 1147551 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152715.067121880] [fsc_open_manipulator.torque_controller]: Loop health: 1155051 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152743.659486075] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789152745.067438357] [fsc_open_manipulator.torque_controller]: Loop health: 1162551 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152775.067726066] [fsc_open_manipulator.torque_controller]: Loop health: 1170051 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152805.070998201] [fsc_open_manipulator.torque_controller]: Loop health: 1177552 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152835.071413535] [fsc_open_manipulator.torque_controller]: Loop health: 1185052 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152845.447713440] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789152846.943766654] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789152865.071558163] [fsc_open_manipulator.torque_controller]: Loop health: 1192552 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152883.935584130] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789152895.074866852] [fsc_open_manipulator.torque_controller]: Loop health: 1200053 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152925.075184093] [fsc_open_manipulator.torque_controller]: Loop health: 1207553 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152955.075457934] [fsc_open_manipulator.torque_controller]: Loop health: 1215053 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152985.075765855] [fsc_open_manipulator.torque_controller]: Loop health: 1222553 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 111 us.
+[ros2_control_node-1] [INFO] [1789152985.723944956] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789152987.219640683] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153015.079053766] [fsc_open_manipulator.torque_controller]: Loop health: 1230054 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153033.691049861] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153045.079362300] [fsc_open_manipulator.torque_controller]: Loop health: 1237554 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153075.079701351] [fsc_open_manipulator.torque_controller]: Loop health: 1245054 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153105.082976811] [fsc_open_manipulator.torque_controller]: Loop health: 1252555 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153135.083308160] [fsc_open_manipulator.torque_controller]: Loop health: 1260055 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153135.479400595] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153136.975174612] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153165.083593639] [fsc_open_manipulator.torque_controller]: Loop health: 1267555 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153171.955171047] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153195.086892940] [fsc_open_manipulator.torque_controller]: Loop health: 1275056 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153225.087226696] [fsc_open_manipulator.torque_controller]: Loop health: 1282556 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153253.011609722] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153254.511573800] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153255.087529437] [fsc_open_manipulator.torque_controller]: Loop health: 1290056 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153285.091784031] [fsc_open_manipulator.torque_controller]: Loop health: 1297557 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153289.363602795] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153315.095100238] [fsc_open_manipulator.torque_controller]: Loop health: 1305058 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153345.095455472] [fsc_open_manipulator.torque_controller]: Loop health: 1312558 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153370.419031960] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153371.914935643] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153375.095742580] [fsc_open_manipulator.torque_controller]: Loop health: 1320058 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153405.099005978] [fsc_open_manipulator.torque_controller]: Loop health: 1327559 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153417.015371027] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153435.099324812] [fsc_open_manipulator.torque_controller]: Loop health: 1335059 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153465.099667175] [fsc_open_manipulator.torque_controller]: Loop health: 1342559 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153495.103275186] [fsc_open_manipulator.torque_controller]: Loop health: 1350060 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153498.071783045] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153499.571757211] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153525.103288652] [fsc_open_manipulator.torque_controller]: Loop health: 1357560 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153555.103566001] [fsc_open_manipulator.torque_controller]: Loop health: 1365060 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153585.106902974] [fsc_open_manipulator.torque_controller]: Loop health: 1372561 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153602.012715026] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789153602.942869959] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789153604.226169484] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789153615.107202025] [fsc_open_manipulator.torque_controller]: Loop health: 1380061 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153645.107634473] [fsc_open_manipulator.torque_controller]: Loop health: 1387561 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153668.823176891] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153675.107878382] [fsc_open_manipulator.torque_controller]: Loop health: 1395061 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153705.111235629] [fsc_open_manipulator.torque_controller]: Loop health: 1402562 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153735.111497158] [fsc_open_manipulator.torque_controller]: Loop health: 1410062 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153765.115800941] [fsc_open_manipulator.torque_controller]: Loop health: 1417563 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153770.611540717] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153772.107450249] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153795.119071852] [fsc_open_manipulator.torque_controller]: Loop health: 1425064 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153810.259353493] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153825.119381296] [fsc_open_manipulator.torque_controller]: Loop health: 1432564 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153855.119847842] [fsc_open_manipulator.torque_controller]: Loop health: 1440064 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153885.122997879] [fsc_open_manipulator.torque_controller]: Loop health: 1447565 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153912.047549361] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153913.547411788] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789153915.123395610] [fsc_open_manipulator.torque_controller]: Loop health: 1455065 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153945.123640606] [fsc_open_manipulator.torque_controller]: Loop health: 1462565 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789153960.063784918] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789153975.128070673] [fsc_open_manipulator.torque_controller]: Loop health: 1470066 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 137 us.
+[ros2_control_node-1] [INFO] [1789154005.131313575] [fsc_open_manipulator.torque_controller]: Loop health: 1477567 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154035.131566806] [fsc_open_manipulator.torque_controller]: Loop health: 1485067 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154061.855151490] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154063.351005945] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789154065.134881499] [fsc_open_manipulator.torque_controller]: Loop health: 1492568 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 158 us.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3002]
+[ros2_control_node-1] [ERROR] [1789154084.407693064] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789154084.407757188] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 2.55624ms/500ms)
+[ros2_control_node-1] [ERROR] [1789154084.407858613] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 2.55624ms/500ms)
+[ros2_control_node-1] [INFO] [1789154095.135229569] [fsc_open_manipulator.torque_controller]: Loop health: 1500068 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 7 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154098.667042349] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154125.135555194] [fsc_open_manipulator.torque_controller]: Loop health: 1507568 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3002]
+[ros2_control_node-1] [ERROR] [1789154131.895948631] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789154131.896001595] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 2.55076ms/500ms)
+[ros2_control_node-1] [ERROR] [1789154131.896092761] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 2.55076ms/500ms)
+[ros2_control_node-1] [INFO] [1789154155.135587868] [fsc_open_manipulator.torque_controller]: Loop health: 1515068 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154179.722969803] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154181.222931589] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789154185.135595379] [fsc_open_manipulator.torque_controller]: Loop health: 1522568 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154215.135719709] [fsc_open_manipulator.torque_controller]: Loop health: 1530068 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154216.171660907] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154245.138844062] [fsc_open_manipulator.torque_controller]: Loop health: 1537569 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154275.138957015] [fsc_open_manipulator.torque_controller]: Loop health: 1545069 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154297.227691260] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154298.723515253] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789154305.139077295] [fsc_open_manipulator.torque_controller]: Loop health: 1552569 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154335.139245633] [fsc_open_manipulator.torque_controller]: Loop health: 1560069 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154343.207734604] [fsc_open_manipulator.torque_controller]: Sine start, ramping in over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154365.139491479] [fsc_open_manipulator.torque_controller]: Loop health: 1567569 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154395.139593247] [fsc_open_manipulator.torque_controller]: Loop health: 1575069 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154424.263793491] [fsc_open_manipulator.torque_controller]: Sine stop: ramping out over 1.50 s.
+[ros2_control_node-1] [INFO] [1789154425.139698453] [fsc_open_manipulator.torque_controller]: Loop health: 1582569 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154425.759788941] [fsc_open_manipulator.torque_controller]: Sine stopped; holding centres.
+[ros2_control_node-1] [INFO] [1789154455.142996522] [fsc_open_manipulator.torque_controller]: Loop health: 1590070 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154485.143039011] [fsc_open_manipulator.torque_controller]: Loop health: 1597570 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154515.143220805] [fsc_open_manipulator.torque_controller]: Loop health: 1605070 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154545.143451389] [fsc_open_manipulator.torque_controller]: Loop health: 1612570 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154575.143681730] [fsc_open_manipulator.torque_controller]: Loop health: 1620070 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154605.143964991] [fsc_open_manipulator.torque_controller]: Loop health: 1627570 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3002]
+[ros2_control_node-1] [ERROR] [1789154631.768053035] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789154631.768110717] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 2.70184ms/500ms)
+[ros2_control_node-1] [ERROR] [1789154631.768163705] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 2.70184ms/500ms)
+[ros2_control_node-1] [INFO] [1789154635.146982910] [fsc_open_manipulator.torque_controller]: Loop health: 1635071 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154665.147213294] [fsc_open_manipulator.torque_controller]: Loop health: 1642571 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154695.147510913] [fsc_open_manipulator.torque_controller]: Loop health: 1650071 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154725.147645976] [fsc_open_manipulator.torque_controller]: Loop health: 1657571 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154755.151821782] [fsc_open_manipulator.torque_controller]: Loop health: 1665072 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154777.761547843] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789154780.363184327] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789154781.858040976] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789154783.512066192] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789154785.155001888] [fsc_open_manipulator.torque_controller]: Loop health: 1672573 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154815.155281579] [fsc_open_manipulator.torque_controller]: Loop health: 1680073 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154845.155504238] [fsc_open_manipulator.torque_controller]: Loop health: 1687573 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154875.155714815] [fsc_open_manipulator.torque_controller]: Loop health: 1695073 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154905.158950559] [fsc_open_manipulator.torque_controller]: Loop health: 1702574 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154935.159207425] [fsc_open_manipulator.torque_controller]: Loop health: 1710074 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154965.159409484] [fsc_open_manipulator.torque_controller]: Loop health: 1717574 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789154995.159667606] [fsc_open_manipulator.torque_controller]: Loop health: 1725074 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155025.162931125] [fsc_open_manipulator.torque_controller]: Loop health: 1732575 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155055.163239015] [fsc_open_manipulator.torque_controller]: Loop health: 1740075 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155085.163554223] [fsc_open_manipulator.torque_controller]: Loop health: 1747575 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155115.163934025] [fsc_open_manipulator.torque_controller]: Loop health: 1755075 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155145.166879982] [fsc_open_manipulator.torque_controller]: Loop health: 1762576 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155175.167150864] [fsc_open_manipulator.torque_controller]: Loop health: 1770076 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155205.167358128] [fsc_open_manipulator.torque_controller]: Loop health: 1777576 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155235.167691854] [fsc_open_manipulator.torque_controller]: Loop health: 1785076 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155246.325673683] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789155265.171092270] [fsc_open_manipulator.torque_controller]: Loop health: 1792577 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155295.171151436] [fsc_open_manipulator.torque_controller]: Loop health: 1800077 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155325.171418872] [fsc_open_manipulator.torque_controller]: Loop health: 1807577 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155355.171662207] [fsc_open_manipulator.torque_controller]: Loop health: 1815077 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155385.174974567] [fsc_open_manipulator.torque_controller]: Loop health: 1822578 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155415.175319872] [fsc_open_manipulator.torque_controller]: Loop health: 1830078 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155429.251285207] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789155445.175433455] [fsc_open_manipulator.torque_controller]: Loop health: 1837578 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155475.175769077] [fsc_open_manipulator.torque_controller]: Loop health: 1845078 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155505.179005666] [fsc_open_manipulator.torque_controller]: Loop health: 1852579 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155535.179208405] [fsc_open_manipulator.torque_controller]: Loop health: 1860079 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155565.179528823] [fsc_open_manipulator.torque_controller]: Loop health: 1867579 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155595.179800600] [fsc_open_manipulator.torque_controller]: Loop health: 1875079 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155625.183085972] [fsc_open_manipulator.torque_controller]: Loop health: 1882580 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155655.183353376] [fsc_open_manipulator.torque_controller]: Loop health: 1890080 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155685.183572234] [fsc_open_manipulator.torque_controller]: Loop health: 1897580 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155715.186852350] [fsc_open_manipulator.torque_controller]: Loop health: 1905081 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155745.187162843] [fsc_open_manipulator.torque_controller]: Loop health: 1912581 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155775.187325327] [fsc_open_manipulator.torque_controller]: Loop health: 1920081 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155805.187609971] [fsc_open_manipulator.torque_controller]: Loop health: 1927581 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155835.190906197] [fsc_open_manipulator.torque_controller]: Loop health: 1935082 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155865.191267517] [fsc_open_manipulator.torque_controller]: Loop health: 1942582 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155895.191411369] [fsc_open_manipulator.torque_controller]: Loop health: 1950082 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155925.191689232] [fsc_open_manipulator.torque_controller]: Loop health: 1957582 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155955.194975615] [fsc_open_manipulator.torque_controller]: Loop health: 1965083 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789155980.498954287] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789155985.014130013] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789155985.195271354] [fsc_open_manipulator.torque_controller]: Loop health: 1972583 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156015.195596200] [fsc_open_manipulator.torque_controller]: Loop health: 1980083 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156045.195787150] [fsc_open_manipulator.torque_controller]: Loop health: 1987583 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156075.199090377] [fsc_open_manipulator.torque_controller]: Loop health: 1995084 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156105.199515818] [fsc_open_manipulator.torque_controller]: Loop health: 2002584 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156135.199654107] [fsc_open_manipulator.torque_controller]: Loop health: 2010084 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156165.202921369] [fsc_open_manipulator.torque_controller]: Loop health: 2017585 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156195.203362179] [fsc_open_manipulator.torque_controller]: Loop health: 2025085 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156225.203818697] [fsc_open_manipulator.torque_controller]: Loop health: 2032585 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156255.207285398] [fsc_open_manipulator.torque_controller]: Loop health: 2040086 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156285.207780514] [fsc_open_manipulator.torque_controller]: Loop health: 2047586 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156315.211367015] [fsc_open_manipulator.torque_controller]: Loop health: 2055087 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156345.211659890] [fsc_open_manipulator.torque_controller]: Loop health: 2062587 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156375.215169667] [fsc_open_manipulator.torque_controller]: Loop health: 2070088 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156405.215471571] [fsc_open_manipulator.torque_controller]: Loop health: 2077588 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156413.611213627] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789156424.698813087] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789156435.218864373] [fsc_open_manipulator.torque_controller]: Loop health: 2085089 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156465.219518727] [fsc_open_manipulator.torque_controller]: Loop health: 2092589 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156495.219736036] [fsc_open_manipulator.torque_controller]: Loop health: 2100089 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156525.223115061] [fsc_open_manipulator.torque_controller]: Loop health: 2107590 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156555.223461050] [fsc_open_manipulator.torque_controller]: Loop health: 2115090 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156585.226942493] [fsc_open_manipulator.torque_controller]: Loop health: 2122591 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156615.227305014] [fsc_open_manipulator.torque_controller]: Loop health: 2130091 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156645.227657462] [fsc_open_manipulator.torque_controller]: Loop health: 2137591 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156675.231031044] [fsc_open_manipulator.torque_controller]: Loop health: 2145092 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156705.231380384] [fsc_open_manipulator.torque_controller]: Loop health: 2152592 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156735.231900215] [fsc_open_manipulator.torque_controller]: Loop health: 2160092 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156765.235200771] [fsc_open_manipulator.torque_controller]: Loop health: 2167593 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156795.235485227] [fsc_open_manipulator.torque_controller]: Loop health: 2175093 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156825.235831208] [fsc_open_manipulator.torque_controller]: Loop health: 2182593 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156855.239139100] [fsc_open_manipulator.torque_controller]: Loop health: 2190094 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156885.239551114] [fsc_open_manipulator.torque_controller]: Loop health: 2197594 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156915.242850649] [fsc_open_manipulator.torque_controller]: Loop health: 2205095 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156945.243220371] [fsc_open_manipulator.torque_controller]: Loop health: 2212595 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789156975.243512772] [fsc_open_manipulator.torque_controller]: Loop health: 2220095 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157005.246920799] [fsc_open_manipulator.torque_controller]: Loop health: 2227596 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157035.247193396] [fsc_open_manipulator.torque_controller]: Loop health: 2235096 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157065.247551156] [fsc_open_manipulator.torque_controller]: Loop health: 2242596 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157095.250909865] [fsc_open_manipulator.torque_controller]: Loop health: 2250097 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157125.251248775] [fsc_open_manipulator.torque_controller]: Loop health: 2257597 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157155.251564536] [fsc_open_manipulator.torque_controller]: Loop health: 2265097 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157185.254890287] [fsc_open_manipulator.torque_controller]: Loop health: 2272598 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157215.255242749] [fsc_open_manipulator.torque_controller]: Loop health: 2280098 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157245.255608132] [fsc_open_manipulator.torque_controller]: Loop health: 2287598 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157275.258891542] [fsc_open_manipulator.torque_controller]: Loop health: 2295099 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157305.259173159] [fsc_open_manipulator.torque_controller]: Loop health: 2302599 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157335.259495587] [fsc_open_manipulator.torque_controller]: Loop health: 2310099 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157365.262841971] [fsc_open_manipulator.torque_controller]: Loop health: 2317600 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157395.263164673] [fsc_open_manipulator.torque_controller]: Loop health: 2325100 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157425.263508755] [fsc_open_manipulator.torque_controller]: Loop health: 2332600 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157455.263784639] [fsc_open_manipulator.torque_controller]: Loop health: 2340100 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157485.267116789] [fsc_open_manipulator.torque_controller]: Loop health: 2347601 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157515.267409786] [fsc_open_manipulator.torque_controller]: Loop health: 2355101 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157545.267738868] [fsc_open_manipulator.torque_controller]: Loop health: 2362601 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157575.271091442] [fsc_open_manipulator.torque_controller]: Loop health: 2370102 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157605.271388306] [fsc_open_manipulator.torque_controller]: Loop health: 2377602 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157635.271680032] [fsc_open_manipulator.torque_controller]: Loop health: 2385102 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157665.275002399] [fsc_open_manipulator.torque_controller]: Loop health: 2392603 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157695.275319095] [fsc_open_manipulator.torque_controller]: Loop health: 2400103 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157725.275668779] [fsc_open_manipulator.torque_controller]: Loop health: 2407603 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157755.278925778] [fsc_open_manipulator.torque_controller]: Loop health: 2415104 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157785.279272615] [fsc_open_manipulator.torque_controller]: Loop health: 2422604 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157815.279567828] [fsc_open_manipulator.torque_controller]: Loop health: 2430104 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157845.282872517] [fsc_open_manipulator.torque_controller]: Loop health: 2437605 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157875.283312854] [fsc_open_manipulator.torque_controller]: Loop health: 2445105 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157905.283489967] [fsc_open_manipulator.torque_controller]: Loop health: 2452605 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157935.286858856] [fsc_open_manipulator.torque_controller]: Loop health: 2460106 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157965.287139416] [fsc_open_manipulator.torque_controller]: Loop health: 2467606 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789157995.287389963] [fsc_open_manipulator.torque_controller]: Loop health: 2475106 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158025.287721979] [fsc_open_manipulator.torque_controller]: Loop health: 2482606 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158055.291043191] [fsc_open_manipulator.torque_controller]: Loop health: 2490107 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158085.291369687] [fsc_open_manipulator.torque_controller]: Loop health: 2497607 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158115.291632258] [fsc_open_manipulator.torque_controller]: Loop health: 2505107 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158145.294949639] [fsc_open_manipulator.torque_controller]: Loop health: 2512608 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158175.295293142] [fsc_open_manipulator.torque_controller]: Loop health: 2520108 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158205.295552423] [fsc_open_manipulator.torque_controller]: Loop health: 2527608 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158235.298918133] [fsc_open_manipulator.torque_controller]: Loop health: 2535109 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158265.299188952] [fsc_open_manipulator.torque_controller]: Loop health: 2542609 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158295.299560030] [fsc_open_manipulator.torque_controller]: Loop health: 2550109 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158325.302812072] [fsc_open_manipulator.torque_controller]: Loop health: 2557610 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158355.303144897] [fsc_open_manipulator.torque_controller]: Loop health: 2565110 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158385.303471448] [fsc_open_manipulator.torque_controller]: Loop health: 2572610 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158415.303775626] [fsc_open_manipulator.torque_controller]: Loop health: 2580110 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158445.307106644] [fsc_open_manipulator.torque_controller]: Loop health: 2587611 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158475.307451519] [fsc_open_manipulator.torque_controller]: Loop health: 2595111 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158505.307770802] [fsc_open_manipulator.torque_controller]: Loop health: 2602611 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158535.311024731] [fsc_open_manipulator.torque_controller]: Loop health: 2610112 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158565.311373733] [fsc_open_manipulator.torque_controller]: Loop health: 2617612 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158595.311649763] [fsc_open_manipulator.torque_controller]: Loop health: 2625112 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158625.315017473] [fsc_open_manipulator.torque_controller]: Loop health: 2632613 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158655.315284203] [fsc_open_manipulator.torque_controller]: Loop health: 2640113 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158685.315635793] [fsc_open_manipulator.torque_controller]: Loop health: 2647613 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158715.318944237] [fsc_open_manipulator.torque_controller]: Loop health: 2655114 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158745.319208206] [fsc_open_manipulator.torque_controller]: Loop health: 2662614 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158745.742107678] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789158748.706708081] [fsc_open_manipulator.gripper_controller]: Received & accepted new action goal
+[ros2_control_node-1] [INFO] [1789158775.319601922] [fsc_open_manipulator.torque_controller]: Loop health: 2670114 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158805.322870632] [fsc_open_manipulator.torque_controller]: Loop health: 2677615 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158835.323206787] [fsc_open_manipulator.torque_controller]: Loop health: 2685115 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158865.323516887] [fsc_open_manipulator.torque_controller]: Loop health: 2692615 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158895.323790571] [fsc_open_manipulator.torque_controller]: Loop health: 2700115 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158925.327105526] [fsc_open_manipulator.torque_controller]: Loop health: 2707616 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158955.327369483] [fsc_open_manipulator.torque_controller]: Loop health: 2715116 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158985.327736665] [fsc_open_manipulator.torque_controller]: Loop health: 2722616 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 8 us, max 158 us.
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [robot_state_publisher-2]: sending signal 'SIGINT' to process[robot_state_publisher-2]
+[INFO] [ros2_control_node-1]: sending signal 'SIGINT' to process[ros2_control_node-1]
+[ros2_control_node-1] [INFO] [1789158989.857877802] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ros2_control_node-1] [INFO] [1789158989.857955767] [fsc_open_manipulator.controller_manager]: Shutdown request received....
+[ros2_control_node-1] [INFO] [1789158989.857999229] [fsc_open_manipulator.controller_manager]: Shutting down all controllers in the controller manager.
+[ros2_control_node-1] [INFO] [1789158989.858025357] [fsc_open_manipulator.controller_manager]: Deactivating controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789158989.858069411] [fsc_open_manipulator.controller_manager]: Shutting down controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789158989.858104902] [fsc_open_manipulator.controller_manager]: Deactivating controller 'torque_controller'
+[ros2_control_node-1] [INFO] [1789158989.858124639] [fsc_open_manipulator.torque_controller]: Deactivated; zero effort written to all joints. Loop health: 2723748 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0.
+[ros2_control_node-1] [INFO] [1789158989.858152575] [fsc_open_manipulator.torque_controller]: This controller's update(): mean 8 us, max 158 us.
+[ros2_control_node-1] [INFO] [1789158989.858193361] [fsc_open_manipulator.controller_manager]: Shutting down controller 'torque_controller'
+[ros2_control_node-1] [INFO] [1789158989.858218335] [fsc_open_manipulator.controller_manager]: Deactivating controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789158989.858242864] [fsc_open_manipulator.controller_manager]: Shutting down controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789158989.858262829] [fsc_open_manipulator.controller_manager]: Deactivating controller 'pwm_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789158989.858282462] [fsc_open_manipulator.controller_manager]: Shutting down controller 'pwm_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789158989.859467347] [resource_manager]: 'deactivate' hardware 'OpenManipulatorXSystem' 
+[robot_state_publisher-2] [INFO] [1789158989.859991922] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ros2_control_node-1] [comm_id:011][ID:011] Torque OFF
+[ros2_control_node-1] [comm_id:012][ID:012] Torque OFF
+[ros2_control_node-1] [comm_id:013][ID:013] Torque OFF
+[ros2_control_node-1] [comm_id:014][ID:014] Torque OFF
+[ros2_control_node-1] [comm_id:015][ID:015] Torque OFF
+[ros2_control_node-1] [INFO] [1789158989.864360832] [dynamixel_hardware_interface]: Dynamixel Hardware Stop!
+[ros2_control_node-1] [INFO] [1789158989.864390403] [resource_manager]: Successful 'deactivate' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789158989.864399228] [resource_manager]: 'shutdown' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [INFO] [1789158989.864406172] [resource_manager]: Successful 'shutdown' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789158989.864417188] [fsc_open_manipulator.controller_manager]: Shutting down the controller manager.
+[ros2_control_node-1] [INFO] [1789158989.866079244] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ros2_control_node-1] [INFO] [1789158989.882015642] [dynamixel_hardware_interface]: Dynamixel Hardware Stop!
+[ros2_control_node-1] Dynamixel destructor start
+[ros2_control_node-1] Dynamixel destructor end
+[INFO] [robot_state_publisher-2]: process has finished cleanly [pid 70042]
+[INFO] [ros2_control_node-1]: process has finished cleanly [pid 70040]

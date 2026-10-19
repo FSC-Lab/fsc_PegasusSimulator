@@ -1,0 +1,471 @@
+U2D2 port: /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTAOAFC5-if00-port0
+           (/dev/serial/by-id -> /dev/ttyUSB0)
+WHOLE-BODY TORQUE (flight topology). The arm is LIVE on activation and MOVES TO HOME:
+[0, 40, 40, 0] deg (inverted — the EE folds reached-out under the mount).
+BASELINE (SAFETY): this controller's own PD+ holds the arm. DIRECT, from the drone
+ground station's whole-body button: the flight node's coupled law owns it and this
+side adds nothing. Whoever streams owns the arm; there is no mode to set here.
+TORQUE MODE: EEPROM limits do NOT bind (Mode 16) — the controller's software
+limits are the only position guard, and a stopped controller = LIMP ARM.
+CLEAR THE WORKSPACE — starting now.
+
+============================================================================
+ Whole-body arm side (flight topology) -- arm at /uav_0/fsc_open_manipulator
+ controller: external_torque_controller. Baseline mode: its own PD+ holds the
+             arm. Whole-body DIRECT: pure pass-through of the coupled law's
+             torques from /uav_0/fsc_autopilot_ros2. The switch is the stream
+             itself; SAFETY/DIRECT is the drone ground station's button.
+ command mode: pwm
+ The flight node reads the arm reference at
+   /uav_0/fsc_open_manipulator/external_torque_controller/smoothed_reference_joint_trajectory
+ and streams torques to
+   /uav_0/fsc_open_manipulator/external_torque_controller/joint_torque_command
+ -> "THE EXTERNAL LAW NOW OWNS THE ARM" in the log = whole-body DIRECT.
+    "THE LOCAL PD+ HOLD NOW OWNS THE ARM" = baseline mode, which is also what
+    you get if the flight stack is down or in the wrong namespace.
+
+ GROUND STATION — separate terminal (laptop); no flag needed:
+   scripts/indoor_exp/start_ground_station_inverted.sh /uav_0/fsc_open_manipulator
+
+ Ctrl-C here stops the arm but NOT the station or the flight stack.
+ To take the arm side down from any terminal:
+   scripts/indoor_exp/stop_open_manipulator_stack.sh
+============================================================================
+
+[INFO] [launch]: All log files can be found below /home/shiqi/.ros/log/2026-09-09-20-46-45-999277-shiqi-ThinkPad-49220
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [ros2_control_node-1]: process started with pid [49235]
+[INFO] [robot_state_publisher-2]: process started with pid [49237]
+[INFO] [spawner-3]: process started with pid [49239]
+[robot_state_publisher-2] [INFO] [1789001206.202647891] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment dummy_mimic_fix
+[robot_state_publisher-2] [INFO] [1789001206.202726857] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment end_effector_link
+[robot_state_publisher-2] [INFO] [1789001206.202733385] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment gripper_left_link
+[robot_state_publisher-2] [INFO] [1789001206.202737515] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment gripper_right_link
+[robot_state_publisher-2] [INFO] [1789001206.202741105] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment link1
+[robot_state_publisher-2] [INFO] [1789001206.202744965] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment link2
+[robot_state_publisher-2] [INFO] [1789001206.202748857] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment link3
+[robot_state_publisher-2] [INFO] [1789001206.202752700] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment link4
+[robot_state_publisher-2] [INFO] [1789001206.202756045] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment link5
+[robot_state_publisher-2] [INFO] [1789001206.202759695] [uav_0.fsc_open_manipulator.robot_state_publisher]: got segment world
+[ros2_control_node-1] [WARN] [1789001206.206942585] [uav_0.fsc_open_manipulator.controller_manager]: [Deprecated] Passing the robot description parameter directly to the control_manager node is deprecated. Use '~/robot_description' topic from 'robot_state_publisher' instead.
+[ros2_control_node-1] [INFO] [1789001206.207257156] [resource_manager]: Loading hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [INFO] [1789001206.210021367] [resource_manager]: Initialize hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] transmission_to_joint_matrix_ 
+[ros2_control_node-1] [0][0] 1.000000, [0][1] 0.000000, [0][2] 0.000000, [0][3] 0.000000, [0][4] 0.000000, 
+[ros2_control_node-1] [1][0] 0.000000, [1][1] 1.000000, [1][2] 0.000000, [1][3] 0.000000, [1][4] 0.000000, 
+[ros2_control_node-1] [2][0] 0.000000, [2][1] 0.000000, [2][2] 1.000000, [2][3] 0.000000, [2][4] 0.000000, 
+[ros2_control_node-1] [3][0] 0.000000, [3][1] 0.000000, [3][2] 0.000000, [3][3] 1.000000, [3][4] 0.000000, 
+[ros2_control_node-1] [4][0] 0.000000, [4][1] 0.000000, [4][2] 0.000000, [4][3] 0.000000, [4][4] 1.000000, 
+[ros2_control_node-1] [5][0] 0.000000, [5][1] 0.000000, [5][2] 0.000000, [5][3] 0.000000, [5][4] 0.000000, 
+[ros2_control_node-1] joint_to_transmission_matrix_ 
+[ros2_control_node-1] [0][0] 1.000000, [0][1] 0.000000, [0][2] 0.000000, [0][3] 0.000000, [0][4] 0.000000, [0][5] 0.000000, 
+[ros2_control_node-1] [1][0] 0.000000, [1][1] 1.000000, [1][2] 0.000000, [1][3] 0.000000, [1][4] 0.000000, [1][5] 0.000000, 
+[ros2_control_node-1] [2][0] 0.000000, [2][1] 0.000000, [2][2] 1.000000, [2][3] 0.000000, [2][4] 0.000000, [2][5] 0.000000, 
+[ros2_control_node-1] [3][0] 0.000000, [3][1] 0.000000, [3][2] 0.000000, [3][3] 1.000000, [3][4] 0.000000, [3][5] 0.000000, 
+[ros2_control_node-1] [4][0] 0.000000, [4][1] 0.000000, [4][2] 0.000000, [4][3] 0.000000, [4][4] 1.000000, [4][5] 0.000000, 
+[ros2_control_node-1] [INFO] [1789001206.210115031] [dynamixel_hardware_interface]: error_timeout_ms parameter not found, using default value of 500ms
+[ros2_control_node-1] [INFO] [1789001206.210121679] [dynamixel_hardware_interface]: port_name /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTAOAFC5-if00-port0 / baudrate 1000000
+[ros2_control_node-1] Dynamixel Information File List.
+[ros2_control_node-1] num: 30, name: mx_28.model
+[ros2_control_node-1] num: 220, name: omy_hat.model
+[ros2_control_node-1] num: 230, name: omy_end.model
+[ros2_control_node-1] num: 231, name: omy_end_rh_p12_rn.model
+[ros2_control_node-1] num: 260, name: hx5_d20_rr.model
+[ros2_control_node-1] num: 261, name: hx5_d20_rl.model
+[ros2_control_node-1] num: 6001, name: hx5_d20_r_synctable_1_device_1.model
+[ros2_control_node-1] num: 6002, name: hx5_d20_r_synctable_1_device_2.model
+[ros2_control_node-1] num: 6003, name: hx5_d20_r_synctable_1_device_3.model
+[ros2_control_node-1] num: 6004, name: hx5_d20_r_synctable_1_device_4.model
+[ros2_control_node-1] num: 6005, name: hx5_d20_r_synctable_1_device_5.model
+[ros2_control_node-1] num: 6006, name: hx5_d20_r_synctable_2_device_1.model
+[ros2_control_node-1] num: 6007, name: hx5_d20_r_synctable_2_device_2.model
+[ros2_control_node-1] num: 6008, name: hx5_d20_r_synctable_2_device_3.model
+[ros2_control_node-1] num: 6009, name: hx5_d20_r_synctable_2_device_4.model
+[ros2_control_node-1] num: 6010, name: hx5_d20_r_synctable_2_device_5.model
+[ros2_control_node-1] num: 6011, name: hx5_d20_r_synctable_3_device_1.model
+[ros2_control_node-1] num: 6012, name: hx5_d20_r_synctable_3_device_2.model
+[ros2_control_node-1] num: 6013, name: hx5_d20_r_synctable_3_device_3.model
+[ros2_control_node-1] num: 6014, name: hx5_d20_r_synctable_3_device_4.model
+[ros2_control_node-1] num: 6015, name: hx5_d20_r_synctable_3_device_5.model
+[ros2_control_node-1] num: 6016, name: hx5_d20_r_synctable_4_device_1.model
+[ros2_control_node-1] num: 6017, name: hx5_d20_r_synctable_4_device_2.model
+[ros2_control_node-1] num: 6018, name: hx5_d20_r_synctable_4_device_3.model
+[ros2_control_node-1] num: 6019, name: hx5_d20_r_synctable_4_device_4.model
+[ros2_control_node-1] num: 6020, name: hx5_d20_r_synctable_4_device_5.model
+[ros2_control_node-1] num: 6021, name: hx5_d20_r_synctable_5_device_1.model
+[ros2_control_node-1] num: 6022, name: hx5_d20_r_synctable_5_device_2.model
+[ros2_control_node-1] num: 6023, name: hx5_d20_r_synctable_5_device_3.model
+[ros2_control_node-1] num: 6024, name: hx5_d20_r_synctable_5_device_4.model
+[ros2_control_node-1] num: 6025, name: hx5_d20_r_synctable_5_device_5.model
+[ros2_control_node-1] num: 311, name: mx_64.model
+[ros2_control_node-1] num: 321, name: mx_106.model
+[ros2_control_node-1] num: 350, name: xl320.model
+[ros2_control_node-1] num: 536, name: sensorxel_joy.model
+[ros2_control_node-1] num: 537, name: ffw_g40_imu.model
+[ros2_control_node-1] num: 600, name: sensorxel_joy.model
+[ros2_control_node-1] num: 601, name: ffw_g10_led.model
+[ros2_control_node-1] num: 602, name: ffw_g10_rcu.model
+[ros2_control_node-1] num: 620, name: ffw_sg2_steer_1.model
+[ros2_control_node-1] num: 621, name: ffw_sg2_steer_2.model
+[ros2_control_node-1] num: 622, name: ffw_sg2_steer_3.model
+[ros2_control_node-1] num: 623, name: ffw_sg2_drive_1.model
+[ros2_control_node-1] num: 624, name: ffw_sg2_drive_2.model
+[ros2_control_node-1] num: 625, name: ffw_sg2_drive_3.model
+[ros2_control_node-1] num: 1000, name: xh430_w350.model
+[ros2_control_node-1] num: 1001, name: xd430_t350.model
+[ros2_control_node-1] num: 1010, name: xh430_w210.model
+[ros2_control_node-1] num: 1011, name: xd430_t210.model
+[ros2_control_node-1] num: 1020, name: xm430_w350.model
+[ros2_control_node-1] num: 1030, name: xm430_w210.model
+[ros2_control_node-1] num: 1040, name: xh430_v350.model
+[ros2_control_node-1] num: 1050, name: xh430_v210.model
+[ros2_control_node-1] num: 1060, name: xl430_w250.model
+[ros2_control_node-1] num: 1070, name: xc430_w150.model
+[ros2_control_node-1] num: 1070, name: xc430_w150.model
+[ros2_control_node-1] num: 1080, name: xc430_w240.model
+[ros2_control_node-1] num: 1080, name: xc430_w240.model
+[ros2_control_node-1] num: 1090, name: 2xl430_w250.model
+[ros2_control_node-1] num: 1100, name: xh540_w270.model
+[ros2_control_node-1] num: 1101, name: xd540_t270.model
+[ros2_control_node-1] num: 1110, name: xh540_w150.model
+[ros2_control_node-1] num: 1111, name: xd540_t150.model
+[ros2_control_node-1] num: 1120, name: xm540_w270.model
+[ros2_control_node-1] num: 1130, name: xm540_w150.model
+[ros2_control_node-1] num: 1140, name: xh540_v270.model
+[ros2_control_node-1] num: 1150, name: xh540_v150.model
+[ros2_control_node-1] num: 1160, name: 2xc430_w250.model
+[ros2_control_node-1] num: 1170, name: xw540_t260.model
+[ros2_control_node-1] num: 1180, name: xw540_t140.model
+[ros2_control_node-1] num: 1190, name: xl330_m077.model
+[ros2_control_node-1] num: 1200, name: xl330_m288.model
+[ros2_control_node-1] num: 1210, name: xc330_t181.model
+[ros2_control_node-1] num: 1220, name: xc330_t288.model
+[ros2_control_node-1] num: 1230, name: xc330_m181.model
+[ros2_control_node-1] num: 1240, name: xc330_m288.model
+[ros2_control_node-1] num: 1270, name: xw430_t333.model
+[ros2_control_node-1] num: 1310, name: xw540_h260.model
+[ros2_control_node-1] num: 1700, name: xc335_t332.model
+[ros2_control_node-1] num: 2000, name: ph42_020_s300.model
+[ros2_control_node-1] num: 2010, name: ph54_100_s500.model
+[ros2_control_node-1] num: 2020, name: ph54_200_s500.model
+[ros2_control_node-1] num: 2100, name: pm42_010_s260.model
+[ros2_control_node-1] num: 2110, name: pm54_040_s250.model
+[ros2_control_node-1] num: 2120, name: pm54_060_s250.model
+[ros2_control_node-1] num: 4000, name: ym070_210_m001.model
+[ros2_control_node-1] num: 4010, name: ym070_210_b001.model
+[ros2_control_node-1] num: 4020, name: ym070_210_r051.model
+[ros2_control_node-1] num: 4030, name: ym070_210_r099.model
+[ros2_control_node-1] num: 4040, name: ym070_210_a051.model
+[ros2_control_node-1] num: 4050, name: ym070_210_a099.model
+[ros2_control_node-1] num: 4120, name: ym080_230_m001.model
+[ros2_control_node-1] num: 4130, name: ym080_230_b001.model
+[ros2_control_node-1] num: 4140, name: ym080_230_r051.model
+[ros2_control_node-1] num: 4150, name: ym080_230_r099.model
+[ros2_control_node-1] num: 4160, name: ym080_230_a051.model
+[ros2_control_node-1] num: 4170, name: ym080_230_a099.model
+[ros2_control_node-1] num: 35074, name: rh_p12_rn.model
+[ros2_control_node-1] num: 43289, name: m42_10_s260_ra.model
+[ros2_control_node-1] num: 46097, name: m54_40_s250_ra.model
+[ros2_control_node-1] num: 46353, name: m54_60_s250_ra.model
+[ros2_control_node-1] num: 51201, name: h42_20_s300_ra.model
+[ros2_control_node-1] num: 53769, name: h54_100_s500_ra.model
+[ros2_control_node-1] num: 54025, name: h54_200_s500_ra.model
+[ros2_control_node-1] [INFO] [1789001206.210256642] [dynamixel_hardware_interface]: $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+[ros2_control_node-1] [INFO] [1789001206.210258910] [dynamixel_hardware_interface]: $$$$$ Init Dxl Comm Port
+[ros2_control_node-1] [INFO] [1789001206.210260995] [dynamixel_hardware_interface]: Revolute to Prismatic gripper conversion enabled.
+[ros2_control_node-1] Succeeded to open the port [/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTAOAFC5-if00-port0]! (attempt 1/5)
+[ros2_control_node-1] Succeeded to change the baudrate [1000000]!
+[ros2_control_node-1] [comm_id:011][ID:011] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:011][ID:011] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789001206.213642484] [dynamixel_hardware_interface]: [ID:11] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.213656510] [dynamixel_hardware_interface]: [ID:11] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.213661221] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789001206.214661177] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Max Position Limit	data: 2446
+[ros2_control_node-1] [INFO] [1789001206.215661311] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789001206.216603120] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Min Position Limit	data: 1650
+[ros2_control_node-1] [INFO] [1789001206.217653857] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: PWM Limit	data: 180
+[ros2_control_node-1] [INFO] [1789001206.218601335] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789001206.219652682] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789001206.220607443] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Velocity P Gain	data: 50
+[ros2_control_node-1] [INFO] [1789001206.221652159] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789001206.222600403] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Velocity I Gain	data: 0
+[ros2_control_node-1] [INFO] [1789001206.223600597] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789001206.224604693] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Position P Gain	data: 400
+[ros2_control_node-1] [INFO] [1789001206.225609135] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Position I Gain	data: 0
+[ros2_control_node-1] [INFO] [1789001206.226622526] [dynamixel_hardware_interface]: [InitItem][comm_id:11][ID:11] item_name: Position D Gain	data: 0
+[ros2_control_node-1] [comm_id:012][ID:012] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:012][ID:012] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789001206.230639914] [dynamixel_hardware_interface]: [ID:12] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.230659234] [dynamixel_hardware_interface]: [ID:12] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.230668358] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789001206.231616592] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Max Position Limit	data: 2616
+[ros2_control_node-1] [INFO] [1789001206.232620153] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789001206.233611640] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Min Position Limit	data: 1138
+[ros2_control_node-1] [INFO] [1789001206.234614635] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: PWM Limit	data: 545
+[ros2_control_node-1] [INFO] [1789001206.235663032] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789001206.236612160] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789001206.237661426] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789001206.238608323] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789001206.239607192] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Position P Gain	data: 800
+[ros2_control_node-1] [INFO] [1789001206.240609625] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Position I Gain	data: 100
+[ros2_control_node-1] [INFO] [1789001206.241607152] [dynamixel_hardware_interface]: [InitItem][comm_id:12][ID:12] item_name: Position D Gain	data: 100
+[ros2_control_node-1] [comm_id:013][ID:013] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:013][ID:013] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789001206.245620846] [dynamixel_hardware_interface]: [ID:13] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.245633890] [dynamixel_hardware_interface]: [ID:13] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.245640230] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789001206.246608388] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Max Position Limit	data: 2616
+[ros2_control_node-1] [INFO] [1789001206.247628262] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789001206.248602988] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Min Position Limit	data: 1593
+[ros2_control_node-1] [INFO] [1789001206.249603219] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: PWM Limit	data: 330
+[ros2_control_node-1] [INFO] [1789001206.250605097] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789001206.251622084] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789001206.252604650] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789001206.253604267] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789001206.254602597] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Position P Gain	data: 800
+[ros2_control_node-1] [INFO] [1789001206.255628253] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Position I Gain	data: 100
+[ros2_control_node-1] [INFO] [1789001206.256624078] [dynamixel_hardware_interface]: [InitItem][comm_id:13][ID:13] item_name: Position D Gain	data: 100
+[ros2_control_node-1] [comm_id:014][ID:014] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:014][ID:014] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789001206.260653241] [dynamixel_hardware_interface]: [ID:14] override [unit info] for 'Present PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.260668507] [dynamixel_hardware_interface]: [ID:14] override [unit info] for 'Goal PWM' = multiplier:1, signed:true, offset:0
+[ros2_control_node-1] [INFO] [1789001206.260676335] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Operating Mode	data: 16
+[ros2_control_node-1] [INFO] [1789001206.261619112] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Max Position Limit	data: 3072
+[ros2_control_node-1] [INFO] [1789001206.262675787] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Current Limit	data: 500
+[ros2_control_node-1] [INFO] [1789001206.263629230] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Min Position Limit	data: 1024
+[ros2_control_node-1] [INFO] [1789001206.264632126] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: PWM Limit	data: 180
+[ros2_control_node-1] [INFO] [1789001206.265617892] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Drive Mode	data: 0
+[ros2_control_node-1] [INFO] [1789001206.266616638] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Profile Acceleration	data: 50
+[ros2_control_node-1] [INFO] [1789001206.267616392] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789001206.268617506] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Profile Velocity	data: 200
+[ros2_control_node-1] [INFO] [1789001206.269614535] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Position P Gain	data: 800
+[ros2_control_node-1] [INFO] [1789001206.270613324] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Position I Gain	data: 100
+[ros2_control_node-1] [INFO] [1789001206.271618548] [dynamixel_hardware_interface]: [InitItem][comm_id:14][ID:14] item_name: Position D Gain	data: 100
+[ros2_control_node-1] [comm_id:015][ID:015] Request ping	 - Ping succeeded. Dynamixel model number : 1020 (xm430_w350.model)
+[ros2_control_node-1] [InitTorqueStates][comm_id:015][ID:015] Current torque state: OFF
+[ros2_control_node-1] [INFO] [1789001206.275624573] [dynamixel_hardware_interface]: [InitItem][comm_id:15][ID:15] item_name: Operating Mode	data: 5
+[ros2_control_node-1] [INFO] [1789001206.276616579] [dynamixel_hardware_interface]: [InitItem][comm_id:15][ID:15] item_name: Return Delay Time	data: 0
+[ros2_control_node-1] [INFO] [1789001206.277615681] [dynamixel_hardware_interface]: [InitItem][comm_id:15][ID:15] item_name: Goal Current	data: 200
+[ros2_control_node-1] [INFO] [1789001206.278622562] [dynamixel_hardware_interface]: $$$$$ Init Dxl Read Items
+[ros2_control_node-1] Dynamixel Read Type : bulk read
+[ros2_control_node-1] ID : 11	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 12	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 13	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 14	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage	Present PWM	Present Temperature
+[ros2_control_node-1] ID : 15	Read items : 	Present Position	Present Velocity	Present Current	Torque Enable	Present Input Voltage
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:011] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:012] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:013] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present PWM]
+[ros2_control_node-1] [ID:014] Add Indirect Address Read Item : [Present Temperature]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Position]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Velocity]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Current]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Torque Enable]
+[ros2_control_node-1] [ID:015] Add Indirect Address Read Item : [Present Input Voltage]
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 16
+[ros2_control_node-1] set fast bulk read (indirect addr) : addr 634, size 13
+[ros2_control_node-1] [ID:011] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:012] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:013] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:014] Add BulkRead item : [Indirect Item Data][634][16]
+[ros2_control_node-1] [ID:015] Add BulkRead item : [Indirect Item Data][634][13]
+[ros2_control_node-1] FastBulkRead handler set up successfully.
+[ros2_control_node-1] Success to set BulkRead handler using indirect address
+[ros2_control_node-1] [INFO] [1789001206.358798168] [dynamixel_hardware_interface]: $$$$$ Init Dxl Write Items
+[ros2_control_node-1] Dynamixel Write Type : bulk write
+[ros2_control_node-1] ID : 11	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 12	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 13	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 14	Write items : 	Goal PWM
+[ros2_control_node-1] ID : 15	Write items : 	Goal Position
+[ros2_control_node-1] [ID:011] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:012] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:013] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:014] Add Indirect Address Write Item : [Goal PWM]
+[ros2_control_node-1] [ID:015] Add Indirect Address Write Item : [Goal Position]
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 2
+[ros2_control_node-1] set bulk write (indirect addr) : addr 224, size 4
+[ros2_control_node-1] Success to set BulkWrite handler using indirect address
+[ros2_control_node-1] [INFO] [1789001206.374144902] [resource_manager]: Successful initialization of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789001206.374272663] [resource_manager]: 'configure' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [INFO] [1789001206.374281539] [resource_manager]: Successful 'configure' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789001206.374295533] [resource_manager]: 'activate' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [WARN] [1789001206.376707427] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint1'. Skipping sync!
+[ros2_control_node-1] [WARN] [1789001206.376719020] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint2'. Skipping sync!
+[ros2_control_node-1] [WARN] [1789001206.376722681] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint3'. Skipping sync!
+[ros2_control_node-1] [WARN] [1789001206.376725993] [dynamixel_hardware_interface]: No position interface found in command interfaces for joint 'joint4'. Skipping sync!
+[ros2_control_node-1] [INFO] [1789001206.376736893] [dynamixel_hardware_interface]: Sync joint state to command (joint: gripper_left_joint, position, -0.0090201 <- position, -0.0090201
+[ros2_control_node-1] [INFO] [1789001206.376741915] [dynamixel_hardware_interface]: Sync joint state to command (joint: gripper_right_joint, position, 0 <- position, 0
+[ros2_control_node-1] [INFO] [1789001206.376850816] [dynamixel_hardware_interface]: Enabling torque for Dynamixels
+[ros2_control_node-1] [comm_id:011][ID:011] Torque ON
+[ros2_control_node-1] [comm_id:012][ID:012] Torque ON
+[ros2_control_node-1] [comm_id:013][ID:013] Torque ON
+[ros2_control_node-1] [comm_id:014][ID:014] Torque ON
+[ros2_control_node-1] [comm_id:015][ID:015] Torque ON
+[ros2_control_node-1] [INFO] [1789001206.383619355] [dynamixel_hardware_interface]: Dynamixel Hardware Start!
+[ros2_control_node-1] [INFO] [1789001206.383641158] [resource_manager]: Successful 'activate' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789001206.390254364] [uav_0.fsc_open_manipulator.controller_manager]: update rate is 250 Hz
+[ros2_control_node-1] [INFO] [1789001206.390283123] [uav_0.fsc_open_manipulator.controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+[ros2_control_node-1] [INFO] [1789001206.391140588] [uav_0.fsc_open_manipulator.controller_manager]: Successful set up FIFO RT scheduling policy with priority 50.
+[ros2_control_node-1] FastBulkRead Rx Fail [Dxl Size : 5] [Error code : -3001]
+[ros2_control_node-1] [ERROR] [1789001206.391265013] [dynamixel_hardware_interface]: Communication Fail --> BULK_READ_FAIL
+[ros2_control_node-1] [ERROR] [1789001206.391294672] [dynamixel_hardware_interface]: Dynamixel Read Fail (Duration: 0.000523ms/500ms)
+[ros2_control_node-1] [ERROR] [1789001206.391315883] [dynamixel_hardware_interface]: Dynamixel Write Fail (Duration: 0.000523ms/500ms)
+[spawner-3] [INFO] [1789001206.436949734] [uav_0.fsc_open_manipulator.spawner_joint_state_broadcaster]: waiting for service /uav_0/fsc_open_manipulator/controller_manager/list_controllers to become available...
+[ros2_control_node-1] [INFO] [1789001206.688842765] [uav_0.fsc_open_manipulator.controller_manager]: Loading controller 'joint_state_broadcaster'
+[spawner-3] [INFO] [1789001206.694174108] [uav_0.fsc_open_manipulator.spawner_joint_state_broadcaster]: [94mLoaded [1mjoint_state_broadcaster[0m
+[ros2_control_node-1] [INFO] [1789001206.775096743] [uav_0.fsc_open_manipulator.controller_manager]: Configuring controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789001206.775212727] [uav_0.fsc_open_manipulator.joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[spawner-3] [INFO] [1789001206.786372884] [uav_0.fsc_open_manipulator.spawner_joint_state_broadcaster]: [92mConfigured and activated [1mjoint_state_broadcaster[0m
+[INFO] [spawner-3]: process has finished cleanly [pid 49239]
+[INFO] [spawner-4]: process started with pid [49312]
+[INFO] [spawner-5]: process started with pid [49314]
+[INFO] [spawner-6]: process started with pid [49316]
+[ros2_control_node-1] [INFO] [1789001207.167611361] [uav_0.fsc_open_manipulator.controller_manager]: Loading controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789001207.174571609] [uav_0.fsc_open_manipulator.controller_manager]: Loading controller 'external_torque_controller'
+[spawner-6] [INFO] [1789001207.181992869] [uav_0.fsc_open_manipulator.spawner_pwm_state_broadcaster]: waiting for service /uav_0/fsc_open_manipulator/controller_manager/list_controllers to become available...
+[spawner-5] [INFO] [1789001207.182524005] [uav_0.fsc_open_manipulator.spawner_gripper_controller]: [94mLoaded [1mgripper_controller[0m
+[ros2_control_node-1] [INFO] [1789001207.189897889] [uav_0.fsc_open_manipulator.controller_manager]: Configuring controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789001207.189930434] [uav_0.fsc_open_manipulator.gripper_controller]: Action status changes will be monitored at 20.000000 Hz.
+[spawner-4] [INFO] [1789001207.199401124] [uav_0.fsc_open_manipulator.spawner_external_torque_controller]: [94mLoaded [1mexternal_torque_controller[0m
+[ros2_control_node-1] [INFO] [1789001207.202801824] [uav_0.fsc_open_manipulator.controller_manager]: Configuring controller 'external_torque_controller'
+[ros2_control_node-1] [INFO] [1789001207.202912537] [uav_0.fsc_open_manipulator.external_torque_controller]: Breakaway compensation on joint2: escape cap 28.8 + 0.300*|tau_ff| counts at 0 counts/s (stick < 0.012, release > 0.050 rad/s), dither 48.0 counts @ 100 Hz
+[ros2_control_node-1] [INFO] [1789001207.202942085] [uav_0.fsc_open_manipulator.external_torque_controller]: Breakaway compensation on joint3: escape cap 0.0 + 0.000*|tau_ff| counts at 0 counts/s (stick < 0.012, release > 0.050 rad/s), dither 19.2 counts @ 100 Hz
+[ros2_control_node-1] [INFO] [1789001207.202955145] [uav_0.fsc_open_manipulator.external_torque_controller]: Breakaway compensation on joint4: escape cap 0.0 + 0.000*|tau_ff| counts at 0 counts/s (stick < 0.012, release > 0.050 rad/s), dither 14.4 counts @ 100 Hz
+[spawner-5] [INFO] [1789001207.203070647] [uav_0.fsc_open_manipulator.spawner_gripper_controller]: [92mConfigured and activated [1mgripper_controller[0m
+[ros2_control_node-1] [INFO] [1789001207.203511405] [uav_0.fsc_open_manipulator.external_torque_controller]: Velocity observer ON (20.0 Hz, zeta 1.00, w*dt 0.00): D term on the OBSERVER, logging to '~/velocity_observer'
+[ros2_control_node-1] [INFO] [1789001207.205191901] [uav_0.fsc_open_manipulator.external_torque_controller]: measured_states_topic is empty: not publishing measured joint state. Use <ns>/joint_states from joint_state_broadcaster instead.
+[ros2_control_node-1] [INFO] [1789001207.205222708] [uav_0.fsc_open_manipulator.external_torque_controller]: Configured for 4 joints in TORQUE mode. Send targets to 'external_torque_controller/target_joint_setpoint', sine specs to 'external_torque_controller/sine_reference_trajectory', or call 'external_torque_controller/go_home'.
+[ros2_control_node-1] [INFO] [1789001207.205240878] [uav_0.fsc_open_manipulator.external_torque_controller]: per-joint nm_to_effort: [160.0, 173.8, 146.7, 160.0] counts/Nm
+[ros2_control_node-1] [WARN] [1789001207.205272160] [uav_0.fsc_open_manipulator.external_torque_controller]: COMMAND MODE = PWM (Operating Mode 16). Goal PWM is a VOLTAGE command and NOTHING regulates current: stall current is duty*V/R, bounded only by max_effort here and by the servo's PWM Limit. supply 12.0 V, full scale 885, back_emf_ff_scale 1.00, pass-through compensates the OBSERVER (v_hat -- faithful torque source) velocity.
+[ros2_control_node-1]     joint1: Kt 2.32 Nm/A, R 4.90 ohm, Ke 2.32 V/(rad/s) -> 155.5 counts/Nm, 171.3 counts/(rad/s); free damping Kt*Ke/R = 1.101 Nm/(rad/s)
+[ros2_control_node-1]     joint2: Kt 2.14 Nm/A, R 4.90 ohm, Ke 2.42 V/(rad/s) -> 169.0 counts/Nm, 178.1 counts/(rad/s); free damping Kt*Ke/R = 1.054 Nm/(rad/s)
+[ros2_control_node-1]     joint3: Kt 2.53 Nm/A, R 4.30 ohm, Ke 2.48 V/(rad/s) -> 125.1 counts/Nm, 182.8 counts/(rad/s); free damping Kt*Ke/R = 1.460 Nm/(rad/s)
+[ros2_control_node-1]     joint4: Kt 2.32 Nm/A, R 4.90 ohm, Ke 2.66 V/(rad/s) -> 155.5 counts/Nm, 195.9 counts/(rad/s); free damping Kt*Ke/R = 1.259 Nm/(rad/s)
+[ros2_control_node-1] [INFO] [1789001207.224702260] [uav_0.fsc_open_manipulator.external_torque_controller]: Mounting verified: 'aerial' -- URDF and mounting_mode agree.
+[ros2_control_node-1] [INFO] [1789001207.224734193] [uav_0.fsc_open_manipulator.external_torque_controller]: Local hold is PD+ : g(q) from the URDF x gravity_scale [1.00 0.76 0.95 1.00], plus the base class's integral/friction/dither. It holds the arm whenever nothing is streaming on '~/joint_torque_command'; while something IS, this controller adds NOTHING to it.
+[ros2_control_node-1] [INFO] [1789001207.225742434] [uav_0.fsc_open_manipulator.external_torque_controller]: External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD+ hold; command mode PWM, nm_to_effort[0] 160.0).
+[ros2_control_node-1] [INFO] [1789001207.233651193] [uav_0.fsc_open_manipulator.external_torque_controller]: Activated in torque mode; homing over 18.82 s.
+[ros2_control_node-1] [INFO] [1789001207.237666975] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 1 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.0 ms, observer resyncs 0 | this controller's update(): mean 0 us, max 0 us.
+[spawner-4] [INFO] [1789001207.238160325] [uav_0.fsc_open_manipulator.spawner_external_torque_controller]: [92mConfigured and activated [1mexternal_torque_controller[0m
+[INFO] [spawner-5]: process has finished cleanly [pid 49314]
+[INFO] [spawner-4]: process has finished cleanly [pid 49312]
+[ros2_control_node-1] [INFO] [1789001209.936673909] [uav_0.fsc_open_manipulator.controller_manager]: Loading controller 'pwm_state_broadcaster'
+[spawner-6] [INFO] [1789001209.946106791] [uav_0.fsc_open_manipulator.spawner_pwm_state_broadcaster]: [94mLoaded [1mpwm_state_broadcaster[0m
+[ros2_control_node-1] [INFO] [1789001209.946562098] [uav_0.fsc_open_manipulator.controller_manager]: Configuring controller 'pwm_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789001209.947343446] [uav_0.fsc_open_manipulator.pwm_state_broadcaster]: configure successful
+[ros2_control_node-1] [INFO] [1789001209.953529011] [uav_0.fsc_open_manipulator.pwm_state_broadcaster]: activate successful
+[spawner-6] [INFO] [1789001209.957967018] [uav_0.fsc_open_manipulator.spawner_pwm_state_broadcaster]: [92mConfigured and activated [1mpwm_state_broadcaster[0m
+[INFO] [spawner-6]: process has finished cleanly [pid 49316]
+[ros2_control_node-1] [INFO] [1789001237.241035297] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 7502 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.1 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001267.241319240] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 15002 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.1 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001278.477684068] [uav_0.fsc_open_manipulator.external_torque_controller]: LIVE back_emf_velocity_source -> reference
+[ros2_control_node-1] [INFO] [1789001297.241561506] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 22502 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.1 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001298.605564961] [uav_0.fsc_open_manipulator.external_torque_controller]: LIVE current_loop_bandwidth_hz -> 0.00  (damping kept at 5 Hz: 100%)
+[ros2_control_node-1] [INFO] [1789001308.485002327] [uav_0.fsc_open_manipulator.external_torque_controller]: External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+[ros2_control_node-1] [INFO] [1789001327.241907375] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 30002 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.2 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [WARN] [1789001344.273950211] [uav_0.fsc_open_manipulator.external_torque_controller]: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+[ros2_control_node-1] [INFO] [1789001357.245221960] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 37503 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.2 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001387.245553492] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 45003 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.2 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001413.541992713] [uav_0.fsc_open_manipulator.external_torque_controller]: LIVE current_loop_bandwidth_hz -> 1.50  (damping kept at 5 Hz: 96%)
+[ros2_control_node-1] [INFO] [1789001417.245880034] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 52503 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001423.433500693] [uav_0.fsc_open_manipulator.external_torque_controller]: External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+[ros2_control_node-1] [INFO] [1789001447.249225963] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 60004 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [WARN] [1789001459.229510705] [uav_0.fsc_open_manipulator.external_torque_controller]: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+[ros2_control_node-1] [INFO] [1789001477.249514799] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 67504 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001507.249823259] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 75004 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001537.253186711] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 82505 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001567.253490110] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 90005 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001597.253812013] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 97505 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 4.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001627.257147439] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 105006 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001657.257478505] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 112506 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001687.257776636] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 120006 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001717.261119971] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 127507 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001747.261445944] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 135007 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001777.261777049] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 142507 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001807.265170028] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 150008 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 74 us.
+[ros2_control_node-1] [INFO] [1789001837.265457053] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 157508 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789001867.265826307] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 165008 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789001897.269049928] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 172509 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789001927.269530740] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 180009 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789001957.269724839] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 187509 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789001987.273071200] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 195010 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002017.273385201] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 202510 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002047.273678476] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 210010 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002077.277083078] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 217511 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002107.277383394] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 225011 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002137.277820784] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 232511 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002167.281084071] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 240012 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.3 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 77 us.
+[ros2_control_node-1] [INFO] [1789002197.281360162] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 247512 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002227.281678194] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 255012 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002257.285128837] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 262513 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002287.285431076] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 270013 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002317.285719282] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 277513 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 3 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002347.289096461] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 285014 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002377.289454057] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 292514 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002407.289768894] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 300014 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002437.293096817] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 307515 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002467.293481343] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 315015 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002497.293779912] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 322515 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002527.297206978] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 330016 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002557.297462464] [uav_0.fsc_open_manipulator.external_torque_controller]: Loop health: 337516 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0 | this controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002578.117456819] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ros2_control_node-1] [INFO] [1789002578.117513122] [uav_0.fsc_open_manipulator.controller_manager]: Shutdown request received....
+[ros2_control_node-1] [INFO] [1789002578.117538264] [uav_0.fsc_open_manipulator.controller_manager]: Shutting down all controllers in the controller manager.
+[ros2_control_node-1] [INFO] [1789002578.117553212] [uav_0.fsc_open_manipulator.controller_manager]: Deactivating controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789002578.117573454] [uav_0.fsc_open_manipulator.controller_manager]: Shutting down controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789002578.117587988] [uav_0.fsc_open_manipulator.controller_manager]: Deactivating controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789002578.117600558] [uav_0.fsc_open_manipulator.controller_manager]: Shutting down controller 'gripper_controller'
+[ros2_control_node-1] [INFO] [1789002578.117609753] [uav_0.fsc_open_manipulator.controller_manager]: Deactivating controller 'external_torque_controller'
+[ros2_control_node-1] [INFO] [1789002578.117617697] [uav_0.fsc_open_manipulator.external_torque_controller]: Deactivated; zero effort written to all joints. Loop health: 342721 cycles, 0 late (> 2x nominal 4.0 ms = 0.00%), max period 5.8 ms, observer resyncs 0.
+[ros2_control_node-1] [INFO] [1789002578.117630776] [uav_0.fsc_open_manipulator.external_torque_controller]: This controller's update(): mean 2 us, max 92 us.
+[ros2_control_node-1] [INFO] [1789002578.117639517] [uav_0.fsc_open_manipulator.controller_manager]: Shutting down controller 'external_torque_controller'
+[ros2_control_node-1] [INFO] [1789002578.117647930] [uav_0.fsc_open_manipulator.controller_manager]: Deactivating controller 'pwm_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789002578.117661064] [uav_0.fsc_open_manipulator.controller_manager]: Shutting down controller 'pwm_state_broadcaster'
+[ros2_control_node-1] [INFO] [1789002578.117674520] [resource_manager]: 'deactivate' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [comm_id:011][ID:011] Torque OFF
+[ros2_control_node-1] [comm_id:012][ID:012] Torque OFF
+[ros2_control_node-1] [comm_id:013][ID:013] Torque OFF
+[ros2_control_node-1] [comm_id:014][ID:014] Torque OFF
+[ros2_control_node-1] [comm_id:015][ID:015] Torque OFF
+[ros2_control_node-1] [INFO] [1789002578.122285186] [dynamixel_hardware_interface]: Dynamixel Hardware Stop!
+[ros2_control_node-1] [INFO] [1789002578.122301467] [resource_manager]: Successful 'deactivate' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789002578.122305324] [resource_manager]: 'shutdown' hardware 'OpenManipulatorXSystem' 
+[ros2_control_node-1] [INFO] [1789002578.122308766] [resource_manager]: Successful 'shutdown' of hardware 'OpenManipulatorXSystem'
+[ros2_control_node-1] [INFO] [1789002578.122313109] [uav_0.fsc_open_manipulator.controller_manager]: Shutting down the controller manager.
+[ros2_control_node-1] [INFO] [1789002578.134030301] [dynamixel_hardware_interface]: Dynamixel Hardware Stop!
+[ros2_control_node-1] Dynamixel destructor start
+[ros2_control_node-1] Dynamixel destructor end
+[INFO] [ros2_control_node-1]: process has finished cleanly [pid 49235]
+[robot_state_publisher-2] [INFO] [1789002601.223980148] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [robot_state_publisher-2]: process has finished cleanly [pid 49237]

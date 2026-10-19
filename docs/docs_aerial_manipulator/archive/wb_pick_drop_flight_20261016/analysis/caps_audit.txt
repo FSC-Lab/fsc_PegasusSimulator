@@ -1,0 +1,21 @@
+
+=== ../npz/e1.npz   DIRECT 87 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       85.0      39.1 ( 46%)   32.9   0.00 |           85.0 |     212     112.3    0.00 |    131      6
+j2  |      420.0     193.7 ( 46%)  167.6   0.00 |          286.4 |     587     286.4    0.00 |    285    117
+j3  |      260.0      69.6 ( 27%)   61.3   0.00 |          223.6 |     414     223.6    0.00 |    179     54
+j4  |       57.6      11.4 ( 20%)   10.1   0.00 |           75.4 |     189     116.6    0.00 |     26      4
+
+=== ../npz/d1.npz   DIRECT 90 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       85.0      64.7 ( 76%)   42.5   0.00 |           85.0 |     212     147.1    0.00 |    138      9
+j2  |      420.0     283.1 ( 67%)  251.9   0.00 |          450.4 |     587     450.4    0.00 |    279    225
+j3  |      260.0     141.9 ( 55%)  131.5   0.00 |          258.6 |     414     258.6    0.00 |    242    120
+j4  |       57.6      15.6 ( 27%)   11.3   0.00 |           36.7 |     189     126.1    0.00 |     31      4
+
+=== ../npz/d2.npz   DIRECT 88 s   servo hardware-error samples 0
+jt  | max_effort DIRECT term peak  p99.9 >cap s | SAFETY duty pk | PWM lim duty peak >=lim s | I peak  I 10s
+j1  |       85.0      52.5 ( 62%)   37.1   0.00 |           85.0 |     212      85.0    0.00 |     97      7
+j2  |      420.0     446.0 (106%)  368.4   0.02 |          319.5 |     587     561.0    0.00 |    416    321
+j3  |      260.0     209.9 ( 81%)  184.4   0.00 |          229.5 |     414     299.5    0.00 |    227    162
+j4  |       57.6      13.0 ( 23%)   10.6   0.00 |           75.0 |     189      89.2    0.00 |     78      4

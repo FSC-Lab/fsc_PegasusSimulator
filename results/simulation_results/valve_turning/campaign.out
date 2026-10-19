@@ -1,0 +1,7 @@
+[18:31:40] whole_body_l1_turn_run1 attempt 1 (final_wb_r1_a1)
+[18:36:37] whole_body_l1_turn_run1 completed (287 s, beam 359.9 deg)
+[18:36:37] whole_body_l1_turn_run2 attempt 1 (final_wb_r2_a1)
+[18:41:34] whole_body_l1_turn_run2 completed (288 s, beam 359.9 deg)
+[18:41:34] whole_body_l1_turn_run3 attempt 1 (final_wb_r3_a1)
+[18:46:31] whole_body_l1_turn_run3 completed (288 s, beam 361.5 deg)
+[18:46:31] campaign done -- closing the simulation

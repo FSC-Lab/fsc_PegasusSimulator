@@ -1,0 +1,9 @@
+
+Summary: 1 package finished [29.9s]
+applied
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_box_pushing.yaml
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_box_pushing.yaml
+push_pull_abort_from_measured: Boolean value is: True
+push_pull_abort_back: Double value is: 0.03
+push_pull_abort_release_wait_s: Double value is: 1.0
+ABORT FIX READY

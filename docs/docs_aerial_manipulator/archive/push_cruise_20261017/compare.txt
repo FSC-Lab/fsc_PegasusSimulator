@@ -1,0 +1,28 @@
+== normal 500 g
+  min-snap 24 s  s3_P_1    y   97 | stop 22.2% rs  5 | v 46.5/ 68.9 | lag  24.7 | e_imp  0.62 | tilt  3.6 q2<= 39.1 q3 17.6..43.3 tq3 0.0 | -
+  min-snap 24 s  s3_P_2    y   98 | stop 18.9% rs  4 | v 46.5/ 66.2 | lag  18.1 | e_imp  0.46 | tilt  3.2 q2<= 40.9 q3 16.9..42.3 tq3 0.0 | -
+  min-snap 24 s  s3_P_3    y   99 | stop 19.7% rs  7 | v 46.5/ 76.3 | lag  18.4 | e_imp  0.63 | tilt  3.9 q2<= 38.8 q3 18.1..43.6 tq3 0.0 | -
+  cruise 20 s    c_nom_1   y   99 | stop  6.7% rs  4 | v 29.4/132.9 | lag  23.4 | e_imp  0.67 | tilt  4.3 q2<= 41.8 q3 18.4..46.7 tq3 0.0 | -
+  cruise 20 s    c_nom_2   N   98 | stop  6.0% rs  0 | v 29.4/ 59.2 | lag  22.8 | e_imp     - | tilt  3.4 q2<= 37.9 q3 21.4..48.4 tq3 0.5 |  25.0 s q3 7.1 deg < 10.0 deg (the
+  cruise 20 s    c_nom_3   N   98 | stop 15.3% rs 10 | v 29.4/ 75.3 | lag  24.2 | e_imp     - | tilt  4.1 q2<= 36.2 q3 20.7..50.0 tq3 1.1 |  25.6 s q3 -21.8 deg < 10.0 deg (t
+== normal 500 g, min-snap flown 10-17 (same-day control)
+  min-snap 10-17  m_nom_1   y   99 | stop 18.8% rs  3 | v 46.5/ 71.9 | lag  18.2 | e_imp  0.92 | tilt  3.2 q2<= 37.9 q3 20.0..47.2 tq3 0.0 | -
+  min-snap 10-17  m_nom_2   y   98 | stop 21.2% rs  5 | v 46.5/ 62.9 | lag  22.4 | e_imp  0.63 | tilt  3.0 q2<= 40.1 q3 16.9..41.8 tq3 0.0 | -
+== sticky box (mu_s 0.5 / mu_k 0.29)
+  min-snap 24 s  g_stick   y   99 | stop 25.9% rs  5 | v 46.5/ 76.4 | lag  22.3 | e_imp  0.81 | tilt  3.1 q2<= 36.3 q3 23.1..47.3 tq3 0.0 | -
+  cruise 20 s    c_stick (not flown)
+== 600 g
+  min-snap 24 s  g_m600    y   99 | stop 21.3% rs  3 | v 46.5/ 74.2 | lag  21.0 | e_imp  0.89 | tilt  3.8 q2<= 44.1 q3 12.5..49.0 tq3 0.3 | -
+  cruise 20 s    c_m600 (not flown)
+== jammed after 0.2 m
+  min-snap 24 s  h_stop    N   39 | stop 11.6% rs  3 | v 46.4/ 67.0 | lag  42.4 | e_imp     - | tilt  6.7 q2<= 39.5 q3 17.3..45.6 tq3 0.5 |  13.3 s box tilted 5.6 deg > 2.0 d
+  min-snap 24 s  i_stop    N   40 | stop 16.2% rs  1 | v 46.5/ 65.5 | lag  41.6 | e_imp     - | tilt  6.0 q2<= 39.1 q3 18.3..45.7 tq3 0.6 |  13.4 s box tilted 5.1 deg > 2.0 d
+  cruise 20 s    c_stop (not flown)
+== 1 kg, mu 0.6
+  min-snap 24 s  h_heavy   N    0 | stop 97.8% rs  1 | v 22.6/  6.0 | lag  43.5 | e_imp     - | tilt  7.5 q2<= 42.5 q3 15.5..45.0 tq3 1.1 |   8.1 s the box is 43 mm BEHIND it
+  min-snap 24 s  h_heavy2  N    0 | stop 100.0% rs  0 | v 22.7/  0.1 | lag  44.8 | e_imp     - | tilt  6.1 q2<= 39.6 q3 20.2..38.8 tq3 0.7 |   8.1 s the box is 45 mm BEHIND it
+  cruise 20 s    c_heavy (not flown)
+== ABORT button 10 s in
+  min-snap 24 s  h_abort   N   17 | stop  0.0% rs  0 | v 35.2/ 55.8 | lag  18.9 | e_imp     - | tilt  2.9 q2<= 41.5 q3 17.6..39.2 tq3 0.4 |  10.0 s inject
+  min-snap 24 s  i_abort   N   19 | stop 23.6% rs  2 | v 35.2/ 57.6 | lag  22.7 | e_imp     - | tilt  2.9 q2<= 37.7 q3 19.5..46.9 tq3 0.4 |  10.0 s inject
+  cruise 20 s    c_abort (not flown)

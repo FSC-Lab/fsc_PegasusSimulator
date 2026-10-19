@@ -1,0 +1,12 @@
+== collect_kt_sine joint3 [empty_v10] : centre +5, amp 43 deg (-38..+48), PEAK 10 deg/s = 0.1745 rad/s -> 0.0370 Hz, 3 cycles, j4 +0 -- THE ARM IS LIVE
+health gate (3 s at the current pose):
+   joint1:   -0.06 deg  current    -1.0 counts (sd  0.0, drift  +0.0 over 3 s)
+   joint2:  +39.90 deg  current   117.3 counts (sd  0.9, drift  +0.1 over 3 s)
+   joint3:  +39.99 deg  current    33.9 counts (sd  2.3, drift  +0.3 over 3 s)
+   joint4:   -0.01 deg  current     0.6 counts (sd  2.2, drift  -0.1 over 3 s)
+[   3.0s] to sine centre +5 (wrist 0)  hold 6.2s
+[   9.2s] SINE on: 3 cycles at 0.0370 Hz = 81s
+[  90.3s] SINE off, ramping out
+[  96.3s] back to HOME (loading pose)
+parked at home: joint1   -0.1 deg /   -0.7 counts  joint2  +39.9 deg /  117.1 counts  joint3  +40.0 deg /   33.9 counts  joint4   -0.0 deg /    2.3 counts
+done [empty_v10] -- stop the recorder. Total 107 s.

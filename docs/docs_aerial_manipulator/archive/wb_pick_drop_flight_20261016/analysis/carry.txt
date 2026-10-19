@@ -1,0 +1,45 @@
+
+===== e1 E-1 no payload
+exit_pick (up the vertical margin): 40.6-43.9 s   pitch f 0.31 Hz   roll f 0.31 Hz   q4 f 1.53 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.7  2.8 -0.8 -0.1]  std: [0.4 0.  0.  0. ]  q4 min/max -0.1 0.0
+go_to_place_start: 44.3-60.6 s   pitch f 0.37 Hz   roll f 0.61 Hz   q4 f 1.72 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.6  1.8 -1.1 -0.1]  std: [0.3 0.7 0.2 0. ]  q4 min/max -0.2 0.0
+execute_place (approach): 61.2-74.8 s   pitch f 0.37 Hz   roll f 0.59 Hz   q4 f 0.22 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.7  2.  -1.  -7.5]  std: [ 0.3  1.   1.  10.2]  q4 min/max -22.9 0.0
+
+===== d1 D-1 basket
+exit_pick (up the vertical margin): 42.5-45.8 s   pitch f 0.62 Hz   roll f 0.62 Hz   q4 f 0.31 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 1.  -0.4 -2.5  9.9]  std: [0.7 4.6 1.5 5.2]  q4 min/max 1.8 14.9
+   basket - claw in the claw frame, mm  mean: [  25.    40.2 -167.6]  std: [20.  25.1 12.7]  p-p: [73.7 78.6 52. ]
+   basket lateral swing f 0.31 Hz;  basket tilt mean 17.4 deg
+go_to_place_start: 46.9-63.2 s   pitch f 0.43 Hz   roll f 0.37 Hz   q4 f 0.25 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.6  1.3 -2.   8.8]  std: [0.4 0.8 1.4 4.1]  q4 min/max 5.8 14.9
+   basket - claw in the claw frame, mm  mean: [   8.8   41.2 -181.7]  std: [ 4.7 11.2  3.3]  p-p: [34.9 54.  19.3]
+   basket lateral swing f 0.25 Hz;  basket tilt mean 20.6 deg
+execute_place (approach): 63.7-77.9 s   pitch f 0.49 Hz   roll f 0.49 Hz   q4 f 1.62 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.7  1.6 -0.5  5.9]  std: [0.5 0.  0.  0. ]  q4 min/max 5.8 6.0
+   basket - claw in the claw frame, mm  mean: [   7.2   35.5 -184.7]  std: [5.7 5.1 3.5]  p-p: [33.1 31.4 17.2]
+   basket lateral swing f 0.35 Hz;  basket tilt mean 19.1 deg
+
+===== d2 D-2 basket
+exit_pick (up the vertical margin): 37.7-41.0 s   pitch f 0.62 Hz   roll f 0.31 Hz   q4 f 0.31 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.8 -2.5 -3.9 -5.1]  std: [0.7 4.6 1.7 1.6]  q4 min/max -5.8 0.1
+   basket - claw in the claw frame, mm  mean: [  81.6  -27.4 -145.8]  std: [ 7.9 11.   5.9]  p-p: [27.  36.8 24. ]
+   basket lateral swing f 0.31 Hz;  basket tilt mean 11.6 deg
+go_to_place_start: 41.8-58.1 s   pitch f 0.25 Hz   roll f 0.31 Hz   q4 f 0.25 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.6 -1.1 -0.3 -1.6]  std: [0.4 0.  4.  4.4]  q4 min/max -5.7 3.5
+   basket - claw in the claw frame, mm  mean: [  72.2  -21.7 -151.7]  std: [9.1 6.2 4.8]  p-p: [139.3 115.6  30.3]
+   basket lateral swing f 0.67 Hz;  basket tilt mean 9.8 deg
+execute_place (approach): 58.6-72.8 s   pitch f 0.35 Hz   roll f 0.28 Hz   q4 f 0.28 Hz
+   q_d  start/end (deg): [ 0. 32. 38.  0.] [ 0. 32. 38.  0.]
+   q-qd mean (deg):      [ 0.7  4.6 -2.   3.4]  std: [0.3 2.5 2.1 0. ]  q4 min/max 3.3 3.4
+   basket - claw in the claw frame, mm  mean: [  63.9  -13.2 -159.7]  std: [6.4 6.4 4. ]  p-p: [37.5 31.7 23.5]
+   basket lateral swing f 0.35 Hz;  basket tilt mean 7.7 deg

@@ -235,8 +235,21 @@ class L1Gains:
                  four_d=False, omega_q=0.2, contact=False,
                  collision_threshold_n=0.0,
                  omega_x_t=0.0, omega_x_r=0.0, omega_x_q=0.0,
-                 contact_hold_translation=False):
+                 contact_hold_translation=False,
+                 stuck_hold_j1=False, stuck_hold_j2=False, stuck_hold_j3=False,
+                 stuck_hold_j4=False, stuck_speed=0.02, stuck_filter_s=0.25):
         self.n = int(n)
+        # 2026-10-16 (wb_l1_observer.hpp, stuck_hold): while a flagged joint is
+        # STUCK -- |q_dot| low-passed at stuck_filter_s below stuck_speed -- its
+        # rows of the Layer-2 filter and of the 4-D feedforward filter keep
+        # their state, so an estimate cannot ramp the push on a joint held by
+        # static friction until it breaks free. q_dot = (T^-1 xi) joint rows.
+        self.stuck_hold = np.array([bool(stuck_hold_j1), bool(stuck_hold_j2),
+                                    bool(stuck_hold_j3), bool(stuck_hold_j4)])[:self.n]
+        self.stuck_speed = float(stuck_speed)
+        self.stuck_filter_s = float(stuck_filter_s)
+        if self.stuck_speed <= 0.0:
+            raise ValueError("stuck_speed must be > 0")
         # per-block C_x on d_int^f (4-D only); <= 0 falls back to omega_x, the
         # note's scalar form. F_hat^f always uses the scalar.
         self.omega_x_blocks = np.concatenate([
@@ -323,6 +336,9 @@ class L1DisturbanceObserver:
         self._F_f = np.zeros(4)            # C_x F_hat
         self._d_int_f = np.zeros(ng)       # C_x T^-T w_hat_int
         self._collision_latched = False
+        # ---- stuck-joint hold state ----
+        self._qdot_lp = np.zeros(self.n)    # q_dot low-passed at stuck_filter_s
+        self._stuck_held = np.zeros(self.n, dtype=bool)
 
     @property
     def initialized(self):
@@ -337,7 +353,7 @@ class L1DisturbanceObserver:
                 "p_tilde": np.zeros(ng), "adapted": False,
                 "F_raw": np.zeros(4), "F_f": np.zeros(4),
                 "d_int_f": np.zeros(ng), "w_q_hat": self._w_q_hat.copy(),
-                "chi_free": True}
+                "chi_free": True, "stuck_held": np.zeros(self.n, dtype=bool)}
 
     # ------------------------------------------------------- Layer 1 + Layer 2
     def update(self, dyn, R_0, xi, dt):
@@ -370,9 +386,18 @@ class L1DisturbanceObserver:
             self._d_hold = np.exp(-g.a * self._t_since_adapt) * self._d_c
             self._t_since_adapt = 0.0
 
+        # ---- stuck-joint hold: decided BEFORE either filter (as in the C++) ---
+        self._stuck_held = np.zeros(self.n, dtype=bool)
+        if np.any(g.stuck_hold):
+            qdot = np.linalg.solve(dyn["T"], xi)[6:]
+            av = np.exp(-dt / g.stuck_filter_s) if g.stuck_filter_s > 0.0 else 0.0
+            self._qdot_lp = av * self._qdot_lp + (1.0 - av) * qdot
+            self._stuck_held = g.stuck_hold & (np.abs(self._qdot_lp) < g.stuck_speed)
+
         # ---- Layer 2: the low-pass filter that sets robustness --------------
         alpha = np.exp(-g.omega_c * dt)
         d_f_new = alpha * self._d_f + (1.0 - alpha) * self._d_c
+        d_f_new[6:][self._stuck_held] = self._d_f[6:][self._stuck_held]
         # contact_hold_translation: the translational rows hold while the phase
         # flag says contact (the collision latch is the previous tick's, as in
         # the C++).
@@ -454,7 +479,8 @@ class L1DisturbanceObserver:
                 # four-dimensional outputs: zero on this path
                 "F_raw": np.zeros(4), "F_f": np.zeros(4),
                 "d_int_f": np.zeros(6 + self.n),
-                "w_q_hat": self._w_q_hat.copy(), "chi_free": True}
+                "w_q_hat": self._w_q_hat.copy(), "chi_free": True,
+                "stuck_held": self._stuck_held.copy()}
 
     # ------------------------------------------- the four-dimensional variant
     def _attribute_four_d(self, dyn, R_0, dt, d_f, Je):
@@ -521,6 +547,7 @@ class L1DisturbanceObserver:
         # eq. outputs4: d_hat_int^f = C_x T^-T w_hat_int -> u3's feedforward.
         d_int_raw = np.linalg.solve(dyn["T"].T, w_int)
         axb = np.exp(-g.omega_x_blocks * dt)
+        axb[6:][self._stuck_held] = 1.0       # a stuck joint's row keeps its state
         self._d_int_f = axb * self._d_int_f + (1.0 - axb) * d_int_raw
         d_int_f = self._d_int_f.copy()
         d_int_f[0:3] = np.clip(d_int_f[0:3], -g.max_force_n, g.max_force_n)
@@ -532,7 +559,7 @@ class L1DisturbanceObserver:
                 "w_hat": w_int, "w_e": Se.T @ F_f,
                 "F_raw": F_raw, "F_f": F_f, "d_int_f": d_int_f,
                 "w_q_hat": self._w_q_hat.copy(), "chi_free": bool(chi_free),
-                "J_yq": J_yq}
+                "stuck_held": self._stuck_held.copy(), "J_yq": J_yq}
 
     # --------------------------------------------------------------- propagate
     def propagate(self, dyn, xi, u, dt):
@@ -780,6 +807,68 @@ def _selftest():
         estt = obs4t.attribute(dyn0, np.eye(3), dt, d_c=d_c_true)
     check("   collision fallback: released once the wrench is gone",
           1.0 - float(estt["chi_free"]), 0.0)
+
+    # ---- 7. the stuck-joint hold (2026-10-16) --------------------------------
+    # A joint held by static friction: the law applies 0.03 N.m on j4 and the
+    # joint never moves, so the plant momentum stays put while the predictor
+    # expected it to accelerate. Without the hold the j4 rows ramp toward the
+    # "disturbance" -0.03 N.m (the feedforward then re-applies it: the wind-up);
+    # with it they stay bit-constant while the deadbeat still reads it, the
+    # other rows are untouched, and once the joint moves the rows resume.
+    print("7. stuck-joint hold on j4")
+    q7 = np.radians([0.0, 32.0, 38.0, 0.0])
+    X7 = np.concatenate([np.zeros(3), np.eye(3).reshape(9, order="F"), q7, np.zeros(10)])
+    dyn7 = C.dynamics(X7, p)
+    u7 = dyn7["g_tilde"].copy()
+    u7[9] += 0.03
+    base7 = dict(four_d=True, omega_q=0.2, omega_x=0.2072, omega_c_q=0.8479)
+    runs = {}
+    for tag, extra in (("off", {}), ("hold", dict(stuck_hold_j4=True))):
+        obs7 = L1DisturbanceObserver(L1Gains(**base7, **extra))
+        H = []
+        for _ in range(int(2.0 / dt)):
+            e7 = obs7.update(dyn7, np.eye(3), np.zeros(10), dt)
+            obs7.propagate(dyn7, np.zeros(10), u7, dt)
+            H.append(e7)
+        runs[tag] = (obs7, H)
+    Ho, Hh = runs["off"][1], runs["hold"][1]
+    print(f"     after 2 s stuck: d_int_f j4 = {Ho[-1]['d_int_f'][9]:+.4f} N.m without the hold, "
+          f"{Hh[-1]['d_int_f'][9]:+.4f} with it; deadbeat d^c j4 = {Hh[-1]['d_sigma_c'][9]:+.4f}")
+    check("   without the hold the j4 feedforward winds up (> 5 mN.m)",
+          0.005 / max(abs(Ho[-1]["d_int_f"][9]), 1e-12), 1.0)
+    check("   hold: j4 rows of d_int_f and d_f bit-constant while stuck",
+          max(abs(e["d_int_f"][9]) + abs(e["d_f"][9]) for e in Hh), 0.0)
+    check("   hold: the deadbeat still reads the residual (-0.03 N.m)",
+          abs(Hh[-1]["d_sigma_c"][9] + 0.03), 1e-6)
+    check("   hold: flagged every tick", float(sum(not e["stuck_held"][3] for e in Hh)), 0.0)
+    check("   hold: every other row identical to no hold",
+          max(np.abs(np.delete(a["d_int_f"] - b["d_int_f"], 9)).max()
+              + np.abs(np.delete(a["d_f"] - b["d_f"], 9)).max() for a, b in zip(Ho, Hh)), 0.0)
+    obs7 = runs["hold"][0]
+    V7 = np.zeros(10); V7[9] = 0.2                        # j4 now turning at 0.2 rad/s
+    xi7 = dyn7["T"] @ V7
+    held_k = None
+    for k in range(int(1.0 / dt)):
+        e7 = obs7.update(dyn7, np.eye(3), xi7, dt)
+        u7m = dyn7["g_tilde"] - dyn7["C_tilde"].T @ xi7      # balanced ...
+        u7m[9] += 0.03                                         # ... plus the same residual
+        obs7.propagate(dyn7, xi7, u7m, dt)
+        if held_k is None and not e7["stuck_held"][3]:
+            held_k = k
+    print(f"     released {(held_k + 1) * dt * 1e3:.0f} ms after j4 starts turning; d_int_f j4 now {e7['d_int_f'][9]:+.5f}")
+    check("   hold: released once the joint moves (within 0.25 s)", (held_k + 1) * dt / 0.25, 1.0)
+    check("   hold: the j4 rows resume (moved off the held value)", 1e-6 / max(abs(e7["d_int_f"][9]), 1e-12), 1.0)
+    # all flags off is the old observer bit for bit, on a MOVING state
+    oa = L1DisturbanceObserver(L1Gains(**base7))
+    ob = L1DisturbanceObserver(L1Gains(**base7, stuck_speed=5.0, stuck_filter_s=0.01))
+    Xm = X7.copy(); Xm[22:26] = [0.1, -0.2, 0.3, 0.05]
+    dm = C.dynamics(Xm, p); xim = dm["T"] @ np.concatenate([Xm[16:19], Xm[19:22], Xm[22:26]])
+    worst = 0.0
+    for _ in range(100):
+        ea, eb = oa.update(dm, np.eye(3), xim, dt), ob.update(dm, np.eye(3), xim, dt)
+        oa.propagate(dm, xim, u7, dt); ob.propagate(dm, xim, u7, dt)
+        worst = max(worst, np.abs(ea["d_int_f"] - eb["d_int_f"]).max(), np.abs(ea["d_f"] - eb["d_f"]).max())
+    check("   all flags off: bit-identical to the observer before", worst, 0.0)
 
     print("\n" + ("ALL CHECKS PASSED" if ok else "SOME CHECKS FAILED"))
     return 0 if ok else 1
