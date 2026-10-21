@@ -17,19 +17,23 @@ bridge are the free-flight ones) and subclasses its sim class to add the scene:
 
   field     4.5 m (x, forward) by 4.2 m (y), centred on the origin -- not
             drawn: the room's own floor
-  vehicle   spawned near the centre FACING +x (yaw 0, the arm on the nose), a
-            little off the origin, (0.10, -0.07) m, as a real start mark is
+  vehicle   spawned FACING +x (yaw 0, the arm on the nose), a little off its
+            start mark (-0.60, 0), at (-0.50, -0.07) m, as a real start is
   table     THE LAB'S CONSOLE TABLE, HOOBRO BB52UXG01G1 (amazon.ca B0G62DWL11):
             39.4 x 5.9 x 31.5 in = 1.000 m long x 0.150 m deep x 0.800 m tall,
-            IN FRONT of the vehicle, its length along y: centred on (1.275, 0)
-            -- x 1.200..1.350, y -0.50..0.50, top at 0.800 m (2026-10-16: was
-            centred on (1.20, 0); moved so the reference leg's outer corner,
-            +y end on the side facing the start, is at the round (1.20, 0.50)).
+            IN FRONT of the vehicle, its length along y: centred on (0.675, 0)
+            -- x 0.600..0.750, y -0.50..0.50, top at 0.800 m, the reference
+            leg's outer corner (+y end, on the side facing the start) at the
+            round (0.60, 0.50). 2026-10-21 (user, after the first lab trial):
+            the whole layout -- table, box, start mark, Land -- moved 0.60 m
+            back (-x), the reference corner at (1.20, 0.50) put the table near
+            the field's edge; the start-to-table distance is unchanged.
+            (2026-10-16: centred on (1.275, 0); before that (1.20, 0).)
             A 18 mm top, four 25 mm legs and a lower shelf, all static colliders.
   box       (PEGASUS_PUSH_HANDLE=cad, the default since 2026-10-07) the user's
             CAD box, assets/Box_Push.usda: ONE dynamic rigid body, 500 g in
             total (2026-10-16), a 240 (y, along the push) x 160 (x) x 100 mm box
-            centred at (1.275, 0.28) -- its back face 0.10 m from the table's +y
+            centred at (0.675, 0.28) -- its back face 0.10 m from the table's +y
             end (2026-10-17, the bench layout) -- with a printed clamp bracket on
             its top centre whose FIN is 5 mm thick along x (the jaws close along
             it) and 60 mm long along y, topping out 258 mm above the table. The
@@ -45,8 +49,9 @@ closes the gripper and, once it grips, switches the law to CONTACT and slides th
 box 0.50 m along the table (-y) in 24 s with the arm held still; Exit To Push
 releases (the claw's reference back to the CoM), opens the gripper and, when it
 reports open, climbs and folds the arm home; Go To Land Start turns on clockwise
-to -360 deg on one transition to 1.3 m off the table; Land descends to the hover
-over the landing spot 0.5 m behind the start.
+to -360 deg on one transition back to 1.3 m over the start mark; Land descends to
+the hover over the start mark, where the vehicle took off (2026-10-21; it landed
+0.5 m behind the start before).
 
 FRICTION, SIZED FOR A SAFE DEMONSTRATION (2026-10-03):
   * box on table: static 0.25 = dynamic 0.25 on BOTH surfaces (default average
@@ -104,7 +109,7 @@ Knobs (environment):
                                  campaign's choice; 0.400 until then, 0.200 until 2026-10-05)
   PEGASUS_PUSH_FRICTION_STATIC   box / table static friction, default 0.25 (measured 2026-10-17; was 0.29, 0.6)
   PEGASUS_PUSH_FRICTION_DYNAMIC  box / table dynamic friction, default 0.25 (measured 2026-10-17; was 0.29, 0.6)
-  PEGASUS_PUSH_BOX_XY            the box centre "x,y" [m], default "1.275,0.28" (the table's centre line; its
+  PEGASUS_PUSH_BOX_XY            the box centre "x,y" [m], default "0.675,0.28" (the table's centre line; its
                                  back face 0.10 m from the +y end, so the 0.50 m push ends 0.16 m from the -y
                                  end -- the user's bench layout, 2026-10-17; 0.25 = centred, before)
   PEGASUS_PUSH_BOX_YAW_DEG       the box's yaw [deg], default 0
@@ -116,7 +121,8 @@ Knobs (environment):
   PEGASUS_PUSH_POST_TOP          the post's top above the table [m], default 0.298 (grasp 25 mm below; 0.255 for the 60 deg fold)
   PEGASUS_PUSH_HANDLE_THICKNESS  the handle's thickness across the jaws [m], default 0.020
   PEGASUS_PUSH_GRIP_TORQUE       gripper drive torque cap [N.m], default 0.3
-  PEGASUS_PUSH_SPAWN_XY          where the vehicle starts, "x,y" [m], default "0.10,-0.07"
+  PEGASUS_PUSH_SPAWN_XY          where the vehicle starts, "x,y" [m], default "-0.50,-0.07" (the start mark
+                                 (-0.60, 0) of the planner yaml + (0.10, -0.07), so Adjust measures a shift)
   PEGASUS_PUSH_SPAWN_YAW_DEG     its heading [deg], default 0 (+x)
   PEGASUS_PUSH_WAYPOINTS=0       hide the waypoint markers and labels
   PEGASUS_PUSH_STOPPER_Y         worst-case test: a static block across the table, its +y face at this y [m],
@@ -163,13 +169,13 @@ def _xy(env, default):
 
 
 # ── the scene ──────────────────────────────────────────────────────────────
-SPAWN_XY = _xy("PEGASUS_PUSH_SPAWN_XY", "0.10,-0.07")
+SPAWN_XY = _xy("PEGASUS_PUSH_SPAWN_XY", "-0.50,-0.07")   # start mark (-0.60, 0) + (0.10, -0.07) (2026-10-21; was 0.10,-0.07)
 SPAWN_YAW_DEG = am06._envf("PEGASUS_PUSH_SPAWN_YAW_DEG", 0.0)
 
 # THE TABLE: HOOBRO BB52UXG01G1, 39.4" W x 5.9" D x 31.5" H (the product page,
 # 2026-10-03) = 1.000 x 0.150 x 0.800 m. Its LENGTH runs along y (left-right in
 # front of the start), its depth along x.
-TABLE_CENTER_XY = (1.275, 0.0)       # the +y leg facing the start: outer corner (1.20, 0.50)
+TABLE_CENTER_XY = (0.675, 0.0)       # the +y leg facing the start: outer corner (0.60, 0.50) (2026-10-21; was 1.275)
 TABLE_LENGTH_Y  = 1.000                 # [m] 39.4 in
 TABLE_DEPTH_X   = 0.150                 # [m] 5.9 in
 TABLE_HEIGHT    = 0.800                 # [m] 31.5 in, to the top surface
@@ -186,7 +192,7 @@ TABLE_SHELF_THICK = 0.015               # [m]
 # 5 mm a side -- it still rests on it.
 BOX_SIZE  = (0.160, 0.240, 0.095)       # [m] x, y, z
 BOX_MASS  = am06._envf("PEGASUS_PUSH_BOX_MASS", 0.500)       # [kg] box + handle (2026-10-16: 500 g, archive/box_pushing_campaign_20261016; 0.400 from 2026-10-05, 0.200 before)
-BOX_XY    = _xy("PEGASUS_PUSH_BOX_XY", "1.275,0.28")   # back face 0.10 m from the +y end (2026-10-17; was 0.25)
+BOX_XY    = _xy("PEGASUS_PUSH_BOX_XY", "0.675,0.28")   # back face 0.10 m from the +y end (2026-10-17; was 0.25; x 1.275 until 2026-10-21)
 BOX_YAW_DEG = am06._envf("PEGASUS_PUSH_BOX_YAW_DEG", 0.0)
 BOX_DROP_GAP = 0.0005                   # [m] spawned this far above the table
 # the worst-case stopper (2026-10-16): PEGASUS_PUSH_STOPPER_Y = its +y face [m]; unset = none
@@ -310,8 +316,8 @@ WP_SHOW = ((0, "body", "1 Go To Start drone"), (1, "claw", "2 Grasp EE"),
            (2, "claw", "3 Pushed EE"), (4, "body", "5 Land Start drone"),
            (5, "body", "6 Land drone"))
 
-CAMERA_POS    = [-1.2, 2.6, 2.2]        # behind-left of the start, high
-CAMERA_TARGET = [1.0, 0.1, 0.9]
+CAMERA_POS    = [-1.8, 2.6, 2.2]        # behind-left of the start, high (2026-10-21: -0.6 in x with the layout)
+CAMERA_TARGET = [0.4, 0.1, 0.9]
 
 # THE T650 LANDING GEAR (2026-10-06, user): the experiment drone is the T650, its
 # gear ~7 cm shorter than the X650 gear AM_xfwd.usda carries (bottom plate to

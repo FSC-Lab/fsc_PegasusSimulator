@@ -20,6 +20,12 @@ between the rigs are the DIRECT law and the arm transport:
 Checks: the sim_ plant keys and the planner sections are identical to the
 source's, no wb_ key survives, every cadm_ key the node requires is present.
 
+THE RAW-MOCAP GUARD's two keys (2026-10-21, GUARD_KEYS below) are DROPPED, each
+with the comment run directly above it: they belong to the WHOLE-BODY box-pushing
+stacks, which launch the estimator with mocap_guard:=true. This rig's stack does
+not, and a planner given push_pull_mocap_guard_topic with no guard publishing
+refuses every step ("no mocap-guard status").
+
     /usr/bin/python3 make_coordinated_yaml.py [--profile mirror|box_pushing] [--check]
 
 (box_pushing was named push_pull until 2026-10-16; --profile push_pull still works.)
@@ -166,6 +172,27 @@ PLANNER_TAIL_OVERRIDES = {"box_pushing": {"v_max": "0.20", "a_max": "0.08", "w_m
 # the whole-body valve yaml's, verbatim
 PLANNER_TAIL_OVERRIDES["valve_turning"] = dict(PLANNER_TAIL_OVERRIDES["box_pushing"])
 
+# THE RAW-MOCAP GUARD (2026-10-21, fsc_PegasusSimulator archive/mocap_safety_guard_20261021):
+# keys the whole-body box-pushing yaml carries (make_push_pull_yaml.py's planner block and
+# ADDITIONS) that this rig must NOT inherit -- the planner key makes the planner refuse every
+# step unless the estimator runs its guard (mocap_guard:=true), which only the whole-body
+# box-pushing stacks launch. Dropped from the copied node and planner sections, each with
+# the comment run directly above it; the planner identity check allows exactly these.
+GUARD_KEYS = ("push_pull_mocap_guard_topic", "system_mocap_guard_topic")
+GUARD_RE = re.compile(r"^\s+(" + "|".join(map(re.escape, GUARD_KEYS)) + r"):")
+
+
+def drop_guard_keys(lines):
+    """`lines` without the GUARD_KEYS lines and the comment run directly above each."""
+    out = []
+    for l in lines:
+        if GUARD_RE.match(l):
+            while out and out[-1].startswith("    #"):
+                out.pop()
+            continue
+        out.append(l)
+    return out
+
 HEADER = """# ============================================================================
 # !! SIMULATION CONFIG -- GENERATED, DO NOT HAND-EDIT.                        !!
 # ============================================================================
@@ -287,8 +314,8 @@ def build(profile):
     lines = text.split("\n")
     i_node = lines.index("/**/fsc_autopilot_ros2:")
     i_plan = next(i for i, l in enumerate(lines) if l.startswith("# ===") and "4. WHOLE-BODY TRAJECTORY PLANNER" in "\n".join(lines[i:i + 3]))
-    body = lines[i_node:i_plan]
-    tail = lines[i_plan:]
+    body = drop_guard_keys(lines[i_node:i_plan])
+    tail = drop_guard_keys(lines[i_plan:])
     tail_over = PLANNER_TAIL_OVERRIDES.get(profile, {})
     for k, v in tail_over.items():
         hit = [i for i, l in enumerate(tail) if re.match(rf"^\s+{k}:", l)]
@@ -337,7 +364,9 @@ def build(profile):
             k0 = dict(re.findall(r"^[ \t]+(\w+):[ \t]*([^#\n]*)", s0, re.M))
             k1 = dict(re.findall(r"^[ \t]+(\w+):[ \t]*([^#\n]*)", s1, re.M))
             diff = {k for k in set(k0) | set(k1) if k0.get(k, "").strip() != k1.get(k, "").strip()}
-            assert diff <= set(tail_over), f"{sect} section differs beyond the declared overrides: {diff - set(tail_over)}"
+            allowed = set(tail_over) | set(GUARD_KEYS)
+            assert diff <= allowed, f"{sect} section differs beyond the declared overrides: {diff - allowed}"
+    assert not any(GUARD_RE.match(l) for l in out_text.split("\n")), f"a raw-mocap guard key survived: {GUARD_KEYS}"
     for k in ("alloc_thrust_coeff", "alloc_rotor0_km", "vehicle_mass", "posctl_k_vel_x", "ude_gain",
               "system_wd_max_drift_m", "system_wd_max_tilt_deg", "vehicle_thrust_scaling"):
         sv = re.search(rf"^\s+{k}:\s*([^#\n]*)", text, re.M).group(1).strip()

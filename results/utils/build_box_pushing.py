@@ -277,11 +277,18 @@ def task_of(ypath, apath):
                 k, v = line.strip().split("=", 1)
                 args[k] = v
     tab = pp.get("table", [1.125, 1.275, -0.5, 0.5, 0.80])
+    # THE PUSH SPEED (2026-10-21): a yaml with push_pull_push_mean_speed has no push time --
+    # the planner's rule, max(|distance| / speed, floor); older runs carry push_pull_push_time_s
+    dist = float(pp.get("push_distance", 0.50))
+    if float(pp.get("push_mean_speed", 0.0) or 0.0) > 0.0:
+        push_time = max(abs(dist) / float(pp["push_mean_speed"]), float(pp.get("push_min_time_s", 0.0)))
+    else:
+        push_time = float(pp.get("push_time_s", 24.0))
     return dict(mass_kg=float(args.get("MASS", 0.400)), mu_s=float(args.get("MU_S", 0.29)),
                 box_y0_m=float(args["BOX_Y0"]) if "BOX_Y0" in args else float("nan"),
                 release_at_open=args.get("RELEASE", "0") == "1",
-                mu_k=float(args.get("MU_K", 0.29)), distance_m=float(pp.get("push_distance", 0.50)),
-                push_time_s=float(pp.get("push_time_s", 24.0)), settle_s=float(pp.get("push_settle_s", 1.5)),
+                mu_k=float(args.get("MU_K", 0.29)), distance_m=dist,
+                push_time_s=push_time, settle_s=float(pp.get("push_settle_s", 1.5)),
                 ramp_s=float(pp.get("push_ramp_s", 0.0)),
                 pose_deg=pp.get("push_pose_deg", [0.0, 26.0, 34.0, 0.0]),
                 approach_back_m=float(pp.get("approach_back", 0.12)), approach_dz_m=float(pp.get("approach_dz", 0.10)),

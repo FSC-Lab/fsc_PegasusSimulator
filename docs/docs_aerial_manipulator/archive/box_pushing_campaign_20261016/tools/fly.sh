@@ -25,7 +25,14 @@ MU_S=${MU_S:-0.25}; MU_K=${MU_K:-0.25}
 read T Y0 SLOT < <(python3 -c "d=$DIST; v=$SPEED; T=d/v; print(f'{T:.2f} {0.50-0.10-0.12:.4f} {T+3.0:.2f}')")
 Y0=${BOX_Y0:-$Y0}   # BOX_Y0 overrides the start (the 0.70 m push: 0.36, 4 cm off the far edge)
 /usr/bin/python3 "$P/tools/make_push_pull_yaml.py" > /dev/null
-ARGS=("push_pull_push_distance=$DIST" "push_pull_push_time_s=$T" "$@")   # later args win
+# 2026-10-21: a planner that owns the push speed (push_pull_push_mean_speed in the yaml --
+# THE PUSH SPEED, the yaml has no push_pull_push_time_s any more) gets the SPEED and no
+# time floor; an older yaml / planner the time d / v
+if grep -q "^    push_pull_push_mean_speed:" $Y; then
+  ARGS=("push_pull_push_distance=$DIST" "push_pull_push_mean_speed=$SPEED" "push_pull_push_min_time_s=0.0" "$@")
+else
+  ARGS=("push_pull_push_distance=$DIST" "push_pull_push_time_s=$T" "$@")
+fi   # later args win
 LAW=(); for kv in "${ARGS[@]}"; do
   if [[ $kv == push_pull_* ]]; then k=${kv%%=*}; v=${kv#*=}
     grep -q "^    $k:" $Y || { echo "no planner key $k"; exit 1; }
@@ -39,7 +46,7 @@ REL=1; [[ " ${PL_DRIVER_ARGS:-} " == *" --open-first-exit "* ]] && REL=0
 { printf '%s\n' "${ARGS[@]}"; echo "MASS=$MASS"; echo "DIST=$DIST"; echo "MU_S=$MU_S"; echo "MU_K=$MU_K"; echo "BOX_Y0=$Y0"; echo "RELEASE=$REL"; } > "$C/runs/$TAG.args"
 cd "$P" && PL_RUNS_DIR="$C/runs" PUSH_FEEDBACK=${PUSH_FEEDBACK:-raw} PEGASUS_PUSH_BOX_MASS=$MASS \
   PEGASUS_PUSH_FRICTION_STATIC=$MU_S PEGASUS_PUSH_FRICTION_DYNAMIC=$MU_K \
-  PEGASUS_PUSH_BOX_XY="${PEGASUS_PUSH_BOX_XY:-1.275,$Y0}" \
+  PEGASUS_PUSH_BOX_XY="${PEGASUS_PUSH_BOX_XY:-0.675,$Y0}" \
   PL_DRIVER_ARGS="--timetable --slot-release $SLOT ${PL_DRIVER_ARGS:-}" \
   bash tools/run_pl.sh $TAG > "$C/runs/$TAG.console.log" 2>&1
 /usr/bin/python3 "$P/tools/make_push_pull_yaml.py" > /dev/null

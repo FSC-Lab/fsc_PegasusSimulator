@@ -215,7 +215,7 @@
     # Modelled as white Gaussian noise per published sample on position and
     # linear velocity. In the raw stack the law reads these directly; in the
     # fused stack they are EKF2's external-vision input, as on hardware.
-    sim_feedback_mocap_rate_hz: 60.0
+    sim_feedback_mocap_rate_hz: 120.0
     sim_feedback_pos_noise_m: 0.0005
     sim_feedback_vel_noise_mps: 0.022
     sim_feedback_noise_seed: 0

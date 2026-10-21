@@ -127,6 +127,15 @@ ADDITIONS = {
     # PX4's attitude kept for the loop, its slow error toward the odometry
     # orientation removed through a first-order filter at this bandwidth.
     "wb_attitude_odometry_correction_rad_s": ("wb_attitude_from_odometry", "0.0"),
+    # system_mocap_guard_topic (2026-10-21, THE RAW-MOCAP GUARD; plain node parameter,
+    # default "" = off; archive/mocap_safety_guard_20261021): the estimator's guard
+    # health. While it is fresh and not MOCAP, EKF2 not fusing vision (the guard stops
+    # forwarding bad mocap to PX4 on purpose) does not trip the feedback-loss failsafe,
+    # and DIRECT entry requires it fresh and MOCAP -- so set it ONLY where the stack
+    # launches the estimator with mocap_guard:=true (both box-pushing stacks do; with
+    # the guard off the node would refuse DIRECT). The coordinated-admittance and valve
+    # generators leave it out.
+    "system_mocap_guard_topic": ("system_fb_land_speed", '"state_estimator/mocap_guard"'),
 }
 # what the generator refuses: the startup phase flag must stay free (the
 # planner owns it), and the threshold fallback off (an unannounced-collision
@@ -141,7 +150,7 @@ PLANNER_BLOCK = """
     # -- the HOOBRO BB52UXG01G1 console table (1.000 x 0.150 x 0.800 m) in front
     # of the start, its length along y; THE BOX (since 2026-10-16/17): the user's
     # CAD box Box_Push.usda, 500 g (box + bracket), 240 (along the push) x 160 x
-    # 100 mm, centre at (1.275, 0.28) -- its back face 0.10 m from the table's +y
+    # 100 mm, centre at (0.675, 0.28) -- its back face 0.10 m from the table's +y
     # end -- with a clamp bracket whose 5 mm thick, 60 mm long FIN stands on its
     # top centre (mocap obj_0 = the box centre + yaw); friction 0.25 / 0.25, from
     # the real box on the real table (1.23 N). (History: 2026-10-06 a 400 g 95 mm
@@ -183,12 +192,14 @@ PLANNER_BLOCK = """
     # (pl_40 / pl_41 pushed it 45-52 mm) -- the planner's keep-out knows only the
     # table. At the push pose [0, 32, 28, 0] the skids are 22 mm above the 100 mm
     # box top at the grasp and 172 mm at Go To Start, straddling the table and the
-    # bracket (0.28 m apart inside). Exit To Push climbs 0.20 m straight up with
+    # bracket (0.28 m apart inside). Exit To Push climbs 0.25 m straight up with
     # the jaws open (gear clear of the box top and the fin), then folds the arm
-    # home. 2026-10-16 (user): the Vertical Margin 0.10 -> 0.15.
+    # home. 2026-10-16 (user): the Vertical Margin 0.10 -> 0.15. 2026-10-21 (user):
+    # the exit climb 0.20 -> 0.25 -- at 0.20 the skids ended 68 mm (sim gear) /
+    # ~62 mm (the real T650's) above the fin top before the arm folds; ~0.12 m now.
     push_pull_approach_dz: 0.15
     push_pull_approach_back: 0.12
-    push_pull_exit_dz: 0.20
+    push_pull_exit_dz: 0.25
     # WHEN the law's contact phase switches -- the GRIPPER is the signal
     # (2026-10-06, user): on at the Push press, which the GS sends on the jaws'
     # stall (the box joins the chain), free when the push completes, before the
@@ -197,15 +208,32 @@ PLANNER_BLOCK = """
     # residual 1.7-4.1 N there vs 1.1-1.4 N with the gripper timing.)
     push_pull_contact_at_ready: false
     push_pull_contact_off_at_push_end: true
-    # The push: 0.50 m along the nose (-y), >= 24 s (peak ~0.05 m/s), after a
-    # 1.5 s hold. The box's friction is ~1.23 N (0.25 x 500 g), the same to break
-    # it loose as to keep it sliding (a box that sticks and then lets go surged
-    # the base 7 cm in pl_5). PUSH ONLY since 2026-10-09 (a pull ends loaded and
-    # its release is a jolt; < 0 would pull). 24 s, not 12 (2026-10-07): at 12 s
-    # the box's stick-slip lurches (13-22 cm/s vs 8-10 planned) grew the tilt to
-    # 8 deg; at 24 s they stay at 9-14 cm/s, tilt <= 6.4 deg.
+    # The push: the Push Distance along the nose (-y), after a 1.5 s hold. The
+    # box's friction is ~1.23 N (0.25 x 500 g), the same to break it loose as to
+    # keep it sliding (a box that sticks and then lets go surged the base 7 cm in
+    # pl_5). PUSH ONLY since 2026-10-09 (a pull ends loaded and its release is a
+    # jolt; < 0 would pull).
     push_pull_push_distance: 0.50
-    push_pull_push_time_s: 24.0
+    # THE PUSH SPEED (2026-10-21, user): the operator types only the Push
+    # Distance; its TIME is max(|distance| / this mean speed, the floor) -- the
+    # ONE source (push_pull_push_time_s is a turn's only; there is no speed in
+    # the planner's code), shown under the arm GS's Push Distance. The min-snap
+    # push peaks at ~2.19 x the mean. 21 mm/s = the speed every validated 0.50 m
+    # push flew (24 s; 2026-10-07: at 12 s the box's stick-slip lurches grew the
+    # tilt to 8 deg), and the 2026-10-21 sweep's choice (240 g, 0.10 m, Isaac,
+    # 8 / 13 / 21 / 30 mm/s x 3, archive/box_pushing_speed_20261021): the box
+    # stuck least short of 30 mm/s, lowest slide impedance residual, box tilt
+    # ~0.1 deg (30 mm/s: 0.3-0.7), 6.3 s clamped for 0.10 m. The floor keeps a
+    # short push from accelerating at 7.51 v^2 / d (30 mm/s over 0.10 m = 3.3 s
+    # flew clean).
+    push_pull_push_mean_speed: 0.021
+    push_pull_push_min_time_s: 3.0
+    # THE TESTED RANGE (2026-10-21, user): the arm GS shows the push's numbers GREEN
+    # inside it and RED outside ("retype the Push Distance"). Display only. Distance
+    # 0.10 m = the 10-21 sweep's (12 / 12), 0.50 m = the standard validated push;
+    # mean speed 8-30 mm/s = the sweep's range (3 / 3 at each).
+    push_pull_push_distance_ok: [0.10, 0.50]
+    push_pull_push_speed_ok: [0.008, 0.030]
     push_pull_push_settle_s: 1.5
     push_pull_push_ramp_s: 0.0
     push_pull_exit_time_s: 3.0
@@ -237,10 +265,20 @@ PLANNER_BLOCK = """
     push_pull_world_anchor_ready: false
     push_pull_world_anchor_on_handle: true
     push_pull_descent_trim: false
-    # Land: 0.5 m behind the start, yaw -360 = 270 deg CLOCKWISE on from the push
+    # Land: back over the START MARK (2026-10-21, user: no 0.5 m backward offset;
+    # it was 0.5 m behind it), yaw -360 = 270 deg CLOCKWISE on from the push
     # heading -90 (the whole mission turns one full circle clockwise). Adjust
-    # (vehicle on its start mark) writes the measured x, y shift into both.
-    push_pull_land: [-0.5, 0.0, 0.8, -360.0]
+    # (vehicle on its start mark) writes the measured x, y shift into both, so the
+    # vehicle lands where it took off.
+    # 2026-10-21 (user, after the first lab trial): the WHOLE layout moved 0.60 m
+    # back (-x) -- start mark (0, 0) -> (-0.60, 0), the table keep-out
+    # 1.200..1.350 -> 0.600..0.750 (the scene moves the table, the box and the
+    # spawn with it): the table had sat near the field's edge. The start-to-table
+    # distance, and so every leg to the box, is unchanged.
+    # Land hover 0.30 m (2026-10-21, user; was 0.8): the T650 skids sit 0.2425 m
+    # (sim) / 0.248 m (hardware) under the body origin, so ~5 cm above the floor,
+    # the arm at home (the claw ~0.24 m up); touch down from there in SAFETY.
+    push_pull_land: [-0.6, 0.0, 0.3, -360.0]
     # THE WAY TO LAND START (2026-10-16, user design): Go To Land Start is ONE
     # transition from the exit hold to Land Start -- high (1.3 m), off the
     # table, the heading turning -90 -> -360 on the way -- like Go To Start;
@@ -249,14 +287,15 @@ PLANNER_BLOCK = """
     # Adjust like Land. (Flown first and dropped the same day, user: a leg
     # along -y off the table + a quarter circle, ~48 s, and a continuous loop
     # out past the table, 22 s -- not simple.)
-    push_pull_land_start: [-0.5, 0.0, 1.3, -360.0]
-    push_pull_start_mark: [0.0, 0.0, 1.0, 0.0]
+    push_pull_land_start: [-0.6, 0.0, 1.3, -360.0]
+    push_pull_start_mark: [-0.6, 0.0, 1.0, 0.0]
     # THE TABLE keep-out [x_min, x_max, y_min, y_max, z_top] (world): the gear
     # (push_pull_gear_depth under the body origin, 0.25 m radius) and every arm point over the
-    # top keep 5 cm clearance on every planned path. 2026-10-16: moved +0.075 m in x
-    # (was 1.125..1.275) so the reference leg -- the +y end, on the side facing the
-    # start -- has its outer corner at the round (1.20, 0.50) m for a ruler.
-    push_pull_table: [1.200, 1.350, -0.5, 0.5, 0.80]
+    # top keep 5 cm clearance on every planned path. The reference leg -- the +y end,
+    # on the side facing the start -- has its outer corner at the round (0.60, 0.50) m
+    # for a ruler (2026-10-21, -0.60 m with the layout; 2026-10-16 to 10-21:
+    # 1.200..1.350, corner (1.20, 0.50); before that 1.125..1.275).
+    push_pull_table: [0.600, 0.750, -0.5, 0.5, 0.80]
     push_pull_table_clearance: 0.05
     # THE LANDING GEAR (2026-10-06): the T650's -- skids 0.2425 m under the body
     # origin, the scene's AM_T650.usda (the X650 gear of AM_xfwd.usda: 0.313).
@@ -266,6 +305,10 @@ PLANNER_BLOCK = """
     # Isaac has no ceiling (the hardware generator, make_hw_box_pushing_yaml.py,
     # writes the lab's 1.8 m)
     push_pull_fence_max_z: 2.2
+    # The fence FLOOR on the body origin, every step (node default 0.6): below the
+    # 0.30 m Land hover (the check is strict, so not equal to it) and above the
+    # T650's resting body height (0.235 sim / ~0.247 hardware). 2026-10-21.
+    push_pull_fence_min_z: 0.25
     # SAFETY GUARDS -> ABORT (contact off, release, climb 0.30 m, arm home):
     # tilt > 15 deg for 0.1 s; the task force the law reads > 5 N for 0.3 s while
     # in contact (~4x the box's friction; the bench's along-arm capacity ~6 N).
@@ -305,6 +348,12 @@ PLANNER_BLOCK = """
     push_pull_guard_box_persist_s: 0.20
     push_pull_guard_box_stale_s: 0.50
     push_pull_guard_q3_min_deg: 10.0
+    # THE RAW-MOCAP GUARD (2026-10-21, archive/mocap_safety_guard_20261021): the
+    # estimator's guard health. A confirmed mocap fault aborts into a hover (with
+    # the claw on the box; a LOST one in any step), and every step and Plan wait for
+    # the mocap. The box-pushing stacks launch the estimator with mocap_guard:=true;
+    # with the guard off a planner given this topic refuses every step.
+    push_pull_mocap_guard_topic: "state_estimator/mocap_guard"
 """
 
 HEADER = """# =============================================================================
@@ -324,7 +373,8 @@ HEADER = """# ==================================================================
 #     EE heading, PINNED: the mirror's 2026-10-16 j4 fix is not adopted for the push)
 #   * controller additions: wb_l1_contact_hold_translation false,
 #     wb_attitude_from_odometry false, wb_attitude_odometry_correction_rad_s 0.0
-#     (written out; see the generator)
+#     (written out; see the generator), system_mocap_guard_topic (the raw-mocap
+#     guard, 2026-10-21: the box-pushing stacks run the estimator's guard)
 #   * the push-and-pull planner block (end of the planner section)
 # wb_l1_contact stays false at startup: the PLANNER switches it to CONTACT from
 # the Push press (sent by the arm GS once the jaws grip) to the end of the push

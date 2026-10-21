@@ -1,0 +1,18 @@
+[10:29:16] start v08_1
+  push_pull_push_distance -> 0.10
+  push_pull_push_time_s -> 12.50
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v08_1] completed
+[10:33:39] start v13_1
+  push_pull_push_distance -> 0.10
+  push_pull_push_time_s -> 7.69
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v13_1] completed
+[10:37:52] start v21_1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5

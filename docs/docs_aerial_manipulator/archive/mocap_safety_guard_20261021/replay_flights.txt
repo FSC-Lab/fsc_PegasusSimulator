@@ -1,0 +1,46 @@
+flight                                          air s  gap ms bridge bridge s reasons        CONF LOST jumps frozen
+dec_circle_20260928_182835                       80.6    37.2      1     0.00 frozen:1          0    0     0      1
+dec_circle_20260928_183608                       66.8    23.8      0     0.00                   0    0     0      0
+dec_circle_20261002_134247                      102.9    18.4      0     0.00                   0    0     0      0
+dec_circle_ps420261002_134830                    97.3    19.1      0     0.00                   0    0     0      0
+dec_figure8_vel010_20261005_163734              142.0    22.5      0     0.00                   0    0     0      0
+dec_figure8_vel013_20261005_165431              100.4    19.3      0     0.00                   0    0     0      0
+wb_20260918_144828                               98.4    24.6      3     3.47 frozen:3          1    1     8    139
+wb_circle_20260921_112328                        99.5    25.1      0     0.00                   0    0     0      0
+wb_circle_20260921_115207                        74.5    23.6      3     0.05 jump:3            0    0     3      0
+wb_circle_20260921_123637                        41.2    17.1     20     0.16 jump:20           0    0    22      0
+wb_circle_20260924_120228                        77.2    45.3      1     4.88 frozen:1          1    1   131    167
+wb_circle_20260924_120546                        68.7    47.4      1     2.55 frozen:1          1    1     0    153
+wb_circle_20260924_165654                        63.9    13.1      0     0.00                   0    0     0      0
+wb_circle_20260924_172101                        70.2    23.4      0     0.00                   0    0     0      0
+wb_circle_20260928_171154                        76.7    43.8      0     0.00                   0    0     0      0
+wb_circle_20260928_172242                        60.8    23.6      0     0.00                   0    0     0      0
+wb_figure8_vel010_20261005_162406               160.0    17.8      0     0.00                   0    0     0      0
+wb_figure8_vel013_20261005_170129               147.9    22.6      0     0.00                   0    0     0      0
+wb_pick_and_place_20261009_172557               181.6    19.2      0     0.00                   0    0     0      0
+wb_pick_and_place_20261009_180228               154.2    24.3      3     0.09 jump:3            0    0    11      0
+wb_pick_and_place_20261009_181817                75.0    18.5      0     0.00                   0    0     0      0
+wb_pick_and_place_20261010_190719                75.7    20.1      1     0.06 jump:1            0    0     7      0
+wb_ps4_20260929_160027                          125.3    28.3      0     0.00                   0    0     0      0
+20261015_e1                                      92.2    27.8      0     0.00                   0    0     0      0
+20261015_d1                                      95.5    19.9      0     0.00                   0    0     0      0
+20261015_d2                                      74.3    21.5      0     0.00                   0    0     0      0
+20261016_e1                                      95.1    23.6      0     0.00                   0    0     0      0
+20261016_d1                                      96.9    26.6      0     0.00                   0    0     0      0
+20261016_d2                                      98.1    30.6      0     0.00                   0    0     0      0
+
+29 flights, 2793 s airborne, 3 confirmed episodes, 3 lost episodes
+
+confirmed / lost episodes and the largest jump per flight (t from lift-off):
+  wb_20260918_144828                             confirmed at   41.07 s,  0.13 s after the episode began (frozen)
+  wb_20260918_144828                             lost      at   41.07 s,  0.98 s after the episode began (frozen)
+  wb_20260918_144828                             largest jump at   43.37 s:   175.3 mm, 1 deg
+  wb_circle_20260921_115207                      largest jump at   30.34 s:    43.3 mm, 14 deg
+  wb_circle_20260921_123637                      largest jump at   23.49 s:   188.7 mm, 112 deg
+  wb_circle_20260924_120228                      confirmed at   72.32 s,  0.13 s after the episode began (frozen)
+  wb_circle_20260924_120228                      lost      at   72.32 s,  0.98 s after the episode began (frozen)
+  wb_circle_20260924_120228                      largest jump at   76.28 s:  2367.9 mm, 40 deg
+  wb_circle_20260924_120546                      confirmed at   66.12 s,  0.14 s after the episode began (frozen)
+  wb_circle_20260924_120546                      lost      at   66.12 s,  0.98 s after the episode began (frozen)
+  wb_pick_and_place_20261009_180228              largest jump at  149.38 s:   198.0 mm, 119 deg
+  wb_pick_and_place_20261010_190719              largest jump at   75.69 s:   202.5 mm, 3 deg

@@ -1,0 +1,19 @@
+[22:49:27] start sf240_ng1
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  push_pull_box_half_length -> 0.0
+  push_pull_guard_box_lag -> 0.0
+  push_pull_guard_box_tilt_deg -> 0.0
+[sf240_ng1] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -2.0 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)
+[22:53:08] start sf500_ng1
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  push_pull_box_half_length -> 0.0
+  push_pull_guard_box_lag -> 0.0
+  push_pull_guard_box_tilt_deg -> 0.0
+[sf500_ng1] completed
+[22:57:40] CHAIN2 DONE

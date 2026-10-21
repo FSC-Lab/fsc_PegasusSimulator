@@ -1,0 +1,47 @@
+[22:20:13] start sf240_1
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  push_pull_box_half_length -> 0.0
+[sf240_1] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 2.3 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+[22:24:30] start sf500_1
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  push_pull_box_half_length -> 0.0
+[sf500_1] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 3.5 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+[22:28:47] start sf240_2
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  push_pull_box_half_length -> 0.0
+[sf240_2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 2.5 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+[22:33:03] start sf500_2
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  push_pull_box_half_length -> 0.0
+[sf500_2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 3.9 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+[22:37:19] start l240_1
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[l240_1] completed
+[22:41:50] start l240_2
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[l240_2] ABORTED: set_direct_mode(true) refused: DIRECT entry refused: arm joint states stale; arm reference never received on 'fsc_open_manipulator/external_t
+[22:44:32] start l240_3
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[l240_3] completed
+[22:49:03] CHAIN DONE

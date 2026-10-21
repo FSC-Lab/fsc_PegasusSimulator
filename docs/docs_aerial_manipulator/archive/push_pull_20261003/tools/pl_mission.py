@@ -30,6 +30,18 @@ carries), the odometry, the measured claw (claw_0), the streamed reference,
 the planner's arrival error and info, the gripper, the joints and the
 whole-body node's debug array, tagged by step, for pl_score.py. Refuses to
 start against an armed vehicle (a clean relaunch is needed between flights).
+
+THE RAW-MOCAP GUARD (2026-10-21, ../../mocap_safety_guard_20261021): the
+estimator's guard health ({ns}/state_estimator/mocap_guard, [0] state 0 MOCAP /
+1 BRIDGING / 2 CONFIRMED / 3 LOST, [1] cause, [2] age, ...) is recorded in the
+npz as `guard` rows [time, step, *data], its state changes as events. With
+--mocap-fault TYPE@STEP+DELAY[:DURATION][,BODY] (repeatable) the driver starts a
+mocap fault in the Isaac emulator DELAY s after the mission mark STEP -- one
+ATOMIC set_parameters call on its fault_* parameters (a refused value starts
+nothing), marked mocap_fault_<TYPE>:start, the emulator's answer in the npz:
+    --mocap-fault freeze@push+4:2.5      the drone's pose frozen 2.5 s, 4 s into the push
+    --mocap-fault jump@go_to_start+3:0   one jumped sample, 3 s into Go To Start
+    --mocap-fault stop@exit+1:0.4        no drone mocap for 0.4 s, 1 s into the exit
 """
 import argparse
 import threading
@@ -44,6 +56,8 @@ from rclpy.qos import (DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityP
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
+from rcl_interfaces.srv import SetParametersAtomically
+from rclpy.parameter import Parameter as RosParameter
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float32MultiArray, Float64, Float64MultiArray, String
 from std_srvs.srv import SetBool, Trigger
@@ -62,10 +76,42 @@ PL = "whole_body_planner/push_pull"
 STEPS = ["go_to_start", "ready", "close", "push", "release", "exit", "go_to_land_start", "land"]
 I_AT_HANDLE = 61   # push_pull/info with six steps ([53] with five)
 GRIP_CLOSE, GRIP_OPEN = -0.8727, 0.0           # rad (06's gripper bus, +-50 deg)
+# the Isaac mocap emulator's fault types (isaacsim_optitrack_ros2_emulator, 2026-10-21):
+# stop = nothing published, freeze = the last message republished (fresh stamps), jump =
+# position + fault_offset_m and yaw + fault_yaw_deg; none ends an active fault at once
+MOCAP_FAULT_TYPES = ("stop", "freeze", "jump", "none")
+GUARD_STATES = {0: "MOCAP", 1: "BRIDGING", 2: "CONFIRMED", 3: "LOST"}
+GUARD_CAUSES = {0: "none", 1: "stale", 2: "frozen", 3: "jump", 4: "test"}
 
 
 class Abort(Exception):
     pass
+
+
+def parse_mocap_fault(spec, default_body):
+    """--mocap-fault TYPE@STEP+DELAY[:DURATION][,BODY] -> dict. STEP is a mark this
+    driver records: a bare name (go_to_start, push, ...) also matches its ':start' mark."""
+    s, body = spec.strip(), default_body
+    if "," in s:
+        s, body = (x.strip() for x in s.split(",", 1))
+    try:
+        typ, rest = s.split("@", 1)
+        step, tail = rest.rsplit("+", 1)            # a mark name never carries '+'
+        delay, _, dur = tail.partition(":")
+        typ, step, delay = typ.strip(), step.strip(), float(delay)
+        dur = float(dur) if dur.strip() else (0.0 if typ == "jump" else 1.0)
+    except ValueError:
+        raise SystemExit(f"--mocap-fault {spec!r}: expected TYPE@STEP+DELAY[:DURATION][,BODY], "
+                         f"e.g. freeze@push+4:2.5")
+    if typ not in MOCAP_FAULT_TYPES:
+        raise SystemExit(f"--mocap-fault {spec!r}: TYPE must be one of {', '.join(MOCAP_FAULT_TYPES)}")
+    if not step or not body:
+        raise SystemExit(f"--mocap-fault {spec!r}: STEP and BODY must not be empty")
+    if not (math.isfinite(delay) and delay >= 0.0 and math.isfinite(dur) and 0.0 <= dur <= 1.0e6):
+        raise SystemExit(f"--mocap-fault {spec!r}: DELAY must be >= 0 and DURATION in [0, 1e6] s")
+    marks = {step} if ":" in step else {step, step + ":start"}
+    return {"spec": spec, "type": typ, "step": step, "marks": marks, "delay": delay,
+            "duration": dur, "body": body, "state": "pending", "result": "not reached"}
 
 
 class Driver(Node):
@@ -90,7 +136,20 @@ class Driver(Node):
         if self.inject and self.inject[0] not in ('abort', 'open', 'exit'):
             raise SystemExit(f'--inject {a.inject}: kind must be abort, open or exit')
         self.L = {k: [] for k in ("odom", "dbg", "box", "ee", "ref", "grip", "joints", "arrival", "claw",
-                                  "contact", "base_truth", "refd", "cadm")}
+                                  "contact", "base_truth", "refd", "cadm", "guard")}
+        # --mocap-fault (2026-10-21, the raw-mocap guard's tests): faults started through the
+        # Isaac mocap emulator's runtime fault_* parameters; the client exists only when asked
+        self.mocap_faults = [parse_mocap_fault(s, ns.strip("/").split("/")[-1] or "uav_0")
+                             for s in a.mocap_fault]
+        if len(a.mocap_fault_offset) != 3:
+            raise SystemExit(f"--mocap-fault-offset needs 3 values [dx, dy, dz], got {a.mocap_fault_offset}")
+        # ATOMICALLY: a plain SetParameters applies each value on its own, so a refused fault_body
+        # still let fault_type start the fault on the emulator's default body (the drone) -- found
+        # in the 2026-10-21 loopback. All or nothing; the emulator checks a body in the same call.
+        self.mf_cli = (self.create_client(SetParametersAtomically,
+                                          f"{a.emulator_node.rstrip('/')}/set_parameters_atomically")
+                       if self.mocap_faults else None)
+        self.guard_state = None
         # 2026-10-10: the controller namespace is an option (--da) so the SAME mission
         # flies on the coordinated-admittance rig (Liu et al. CEP 2024): mode topic,
         # set_direct_mode and the debug array (--dbg-topic, --dbg-len) follow it; the
@@ -119,6 +178,8 @@ class Driver(Node):
         sub(Float64MultiArray, "/push_pull_truth/contact",
             lambda m: self.L["contact"].append([self.now(), *m.data, self.step]), 50)
         sub(PoseStamped, f"{ns}/state/pose", self.on_base_truth, qos_profile_sensor_data)
+        # the estimator's raw-mocap guard health (2026-10-21; BEST_EFFORT, silent with the guard off)
+        sub(Float64MultiArray, f"{ns}/state_estimator/mocap_guard", self.on_guard, qos_profile_sensor_data)
         self.ref_pub = self.create_publisher(PositionControllerReference,
                                              f"{ns}/fsc_autopilot_ros2/position_controller/reference", 10)
         self.grip_pub = self.create_publisher(Float64, f"{ns}/isaacsim_manipulator/gripper_command", 10)
@@ -218,6 +279,16 @@ class Driver(Node):
             self.L["joints"].append([self.now(), *m.position[:4], *eff, self.step])
             self.joint_names = list(m.name)
 
+    def on_guard(self, m):
+        d = list(m.data)
+        self.L["guard"].append([self.now(), self.step, *d])
+        code = lambda i: int(round(d[i])) if len(d) > i and math.isfinite(d[i]) else -1   # noqa: E731
+        st = code(0)
+        if st != self.guard_state:            # log the edges only
+            age = f", last good sample {d[2]:.2f} s ago" if len(d) > 2 else ""
+            self.ev(f"mocap guard: {GUARD_STATES.get(st, st)} (cause {GUARD_CAUSES.get(code(1), code(1))}{age})")
+            self.guard_state = st
+
     def tick(self):
         if self.stream_ref and self.mode != "DIRECT":
             m = PositionControllerReference()
@@ -226,8 +297,57 @@ class Driver(Node):
             m.yaw, m.yaw_unit = 0.0, PositionControllerReference.DEGREES
             self.ref_pub.publish(m)
         self.inject_tick()
+        self.mocap_fault_tick()
         if self.grip_cmd is not None:
             self.grip_pub.publish(Float64(data=float(self.grip_cmd)))
+
+    def mocap_fault_tick(self):
+        """--mocap-fault TYPE@STEP+DELAY[:DURATION][,BODY] (2026-10-21, the raw-mocap guard's
+        tests): DELAY s after the mark STEP (its latest, as --inject), ONE atomic set_parameters
+        call on the Isaac mocap emulator -- fault_body, fault_duration_s, for a jump
+        fault_offset_m and fault_yaw_deg, then fault_type, whose set STARTS the fault (the
+        emulator applies the whole call before its next publish tick); a refused value refuses
+        the whole call, so no fault starts. Non-blocking; each fault fires once."""
+        for f in self.mocap_faults:
+            if f["state"] != "pending":
+                continue
+            t_mark = [t for t, n in self.marks if n in f["marks"]]
+            if not t_mark or self.now() < t_mark[-1] + f["delay"]:
+                continue
+            if not self.mf_cli.service_is_ready():
+                f.setdefault("t_due", self.now())
+                if self.now() - f["t_due"] < 2.0:
+                    continue                      # discovery: allow it 2 s past its time
+                f["state"], f["result"] = "failed", "NOT INJECTED: the emulator's set_parameters_atomically is not available"
+                self.ev(f"MOCAP FAULT {f['spec']}: {f['result']} ({self.a.emulator_node})")
+                continue
+            ps = [RosParameter("fault_body", RosParameter.Type.STRING, f["body"]),
+                  RosParameter("fault_duration_s", RosParameter.Type.DOUBLE, float(f["duration"]))]
+            if f["type"] == "jump":
+                ps += [RosParameter("fault_offset_m", RosParameter.Type.DOUBLE_ARRAY,
+                                    [float(x) for x in self.a.mocap_fault_offset]),
+                       RosParameter("fault_yaw_deg", RosParameter.Type.DOUBLE, float(self.a.mocap_fault_yaw_deg))]
+            ps.append(RosParameter("fault_type", RosParameter.Type.STRING, f["type"]))   # LAST: it starts it
+            req = SetParametersAtomically.Request()
+            req.parameters = [p.to_parameter_msg() for p in ps]
+            f["state"], f["t_sent"] = "sent", self.now()
+            what = (f"{f['type']} on {f['body']}, " +
+                    ("one sample" if f["type"] == "jump" and f["duration"] == 0.0 else f"{f['duration']:g} s") +
+                    (f" (offset {self.a.mocap_fault_offset} m, yaw {self.a.mocap_fault_yaw_deg:g} deg)"
+                     if f["type"] == "jump" else ""))
+            self.ev(f"MOCAP FAULT {what}: {self.now() - t_mark[-1]:.2f} s after {f['step']} (phase {self.phase})")
+            self.mark(f"mocap_fault_{f['type']}:start")
+            fut = self.mf_cli.call_async(req)
+            fut.add_done_callback(lambda fu, f=f: self.mocap_fault_done(f, fu))
+
+    def mocap_fault_done(self, f, fut):
+        if fut.exception() is not None or fut.result() is None:
+            f["state"], f["result"] = "failed", f"call failed: {fut.exception() or 'no response'}"
+        else:
+            r = fut.result().result
+            f["state"] = "accepted" if r.successful else "refused"
+            f["result"] = "accepted" if r.successful else f"REFUSED (no fault started): {r.reason}"
+        self.ev(f"MOCAP FAULT {f['spec']}: {f['result']}")
 
     def inject_tick(self):
         """--inject KIND@S (2026-10-16, the box-pushing campaign's worst cases): S seconds
@@ -643,6 +763,11 @@ class Driver(Node):
             w = max(len(r) for r in v)
             arr[k] = np.array([list(r) + [np.nan] * (w - len(r)) for r in v],
                               dtype=np.float32 if k == "dbg" else np.float64)
+        # --mocap-fault (2026-10-21): what was asked and what the emulator answered; only when asked
+        if self.mocap_faults:
+            arr["mocap_fault_spec"] = np.array([f["spec"] for f in self.mocap_faults])
+            arr["mocap_fault_result"] = np.array([f["result"] for f in self.mocap_faults])
+            arr["mocap_fault_t_sent"] = np.array([f.get("t_sent", np.nan) for f in self.mocap_faults])
         np.savez_compressed(path, **arr, events=np.array(self.events),
                             marks_t=np.array([m[0] for m in self.marks]),
                             marks_name=np.array([m[1] for m in self.marks]),
@@ -731,6 +856,23 @@ def main():
                     help="after a planner ABORT, land in place instead of Get + Plan + Go To Land Start first")
     ap.add_argument("--inject", default="",
                     help="KIND@S: abort / open / exit, S s after the push starts (worst-case tests, 2026-10-16)")
+    # 2026-10-21, the raw-mocap guard's tests (../../mocap_safety_guard_20261021)
+    ap.add_argument("--mocap-fault", action="append", default=[], metavar="SPEC",
+                    help="TYPE@STEP+DELAY[:DURATION][,BODY], repeatable: DELAY s after the mission mark STEP, "
+                         "start a mocap fault in the Isaac emulator. TYPE stop | freeze | jump (none ends one). "
+                         "STEP a mark this driver records -- go_to_start, ready, close, push, release, exit, "
+                         "go_to_land_start, land (= their ':start'), or a full mark such as push:end, direct, "
+                         "gripper_close:end, mocap_fault_freeze:start. DURATION [s] default 1.0 (jump 0 = one "
+                         "sample). BODY default the vehicle (uav_0). The emulator runs ONE fault at a time: a "
+                         "new one ends the active one. E.g. freeze@push+4:2.5, jump@go_to_start+3:0, "
+                         "stop@exit+1:0.4")
+    ap.add_argument("--mocap-fault-offset", type=lambda v: [float(x) for x in v.split(",")],
+                    default=[0.18, 0.0, 0.0], help="a jump's position offset dx,dy,dz [m] (the emulator's "
+                                                   "fault_offset_m; default 0.18,0,0)")
+    ap.add_argument("--mocap-fault-yaw-deg", type=float, default=110.0,
+                    help="a jump's yaw [deg] (the emulator's fault_yaw_deg; default 110)")
+    ap.add_argument("--emulator-node", default="/isaacsim_mocap_emulator",
+                    help="the Isaac mocap emulator node whose fault_* parameters --mocap-fault sets")
     ap.add_argument("--out", default="pl_run.npz")
     a = ap.parse_args()
     rclpy.init()

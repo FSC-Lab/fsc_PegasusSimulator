@@ -23,11 +23,19 @@
 # push_pull_push_ramp_s (2026-10-17, the cruise): a planner built before it would
 # fly push_pull_push_time_s as the old min-snap move -- 1.6 x the cruise's peak
 # speed -- so a key missing on the node is a mismatch.
+# push_pull_push_mean_speed / _min_time_s (2026-10-21, THE PUSH SPEED): a straight push's
+# time is the distance at this speed; a planner built before it would fly its built-in
+# push_pull_push_time_s instead -- a key missing on the node is a mismatch.
+# push_pull_mocap_guard_topic (2026-10-21, THE RAW-MOCAP GUARD, archive/
+# mocap_safety_guard_20261021): the box-pushing yaml points the planner at the estimator's
+# guard health (a confirmed mocap fault aborts into a hover); a planner built before it
+# ignores the key -- a key missing on the node is a mismatch. A STRING key: compared exactly
+# (every other key here is numeric / boolean and compared to 1e-9).
 # The box guards / abort (2026-10-16) are compared too (2026-10-19): a planner built before
 # them passed this check while ignoring them. PL_CHECK_REQUIRE: keys the RUNNING planner must
 # declare whatever the yaml says -- push_pull_capture_max_yaw_spread_deg is the 2026-10-19
 # build (the frozen / flipping box capture gates), which also implies push_pull/release (10-17).
-PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_push_ramp_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle push_pull_turn_deg push_pull_obstacle push_pull_guard_box_lag push_pull_guard_box_tilt_deg push_pull_guard_q3_min_deg push_pull_box_half_length push_pull_abort_from_measured push_pull_guard_tilt_deg push_pull_guard_force_n"
+PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_push_mean_speed push_pull_push_min_time_s push_pull_push_ramp_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle push_pull_turn_deg push_pull_obstacle push_pull_guard_box_lag push_pull_guard_box_tilt_deg push_pull_guard_q3_min_deg push_pull_box_half_length push_pull_abort_from_measured push_pull_guard_tilt_deg push_pull_guard_force_n push_pull_mocap_guard_topic"
 PL_CHECK_REQUIRE="${PL_CHECK_REQUIRE:-push_pull_capture_max_yaw_spread_deg}"
 
 push_pull_planner_check() {
@@ -74,6 +82,15 @@ def planner_params(doc):
 
 want = planner_params(yaml.safe_load(open(sys.argv[1])))
 got = planner_params(yaml.safe_load(os.environ["PL_DUMP"]))
+
+
+def differs(a, b):
+    # strings (push_pull_mocap_guard_topic) exactly; numbers / booleans to 1e-9, as before
+    if isinstance(a, str) or isinstance(b, str):
+        return str(a) != str(b)
+    return abs(float(a) - float(b)) > 1e-9
+
+
 bad = []
 for k in sys.argv[2:]:
     w, g = want.get(k), got.get(k)
@@ -81,7 +98,7 @@ for k in sys.argv[2:]:
         continue                      # the node default is what the yaml means
     wl = w if isinstance(w, list) else [w]
     gl = g if isinstance(g, list) else [g]
-    if g is None or len(wl) != len(gl) or any(abs(float(a) - float(b)) > 1e-9 for a, b in zip(wl, gl)):
+    if g is None or len(wl) != len(gl) or any(differs(a, b) for a, b in zip(wl, gl)):
         bad.append(f"{k}: running {g} vs yaml {w}")
 for k in os.environ.get("PL_REQUIRE", "").split():
     if k not in got:

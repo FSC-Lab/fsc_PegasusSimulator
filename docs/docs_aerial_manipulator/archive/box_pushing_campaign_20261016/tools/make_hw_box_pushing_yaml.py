@@ -13,8 +13,8 @@ The output is the hardware file BYTE FOR BYTE plus a header, vehicle_name and EX
 controller overrides, additions and planner block of the SIMULATION box-pushing yaml --
 imported from ../../push_pull_20261003/tools/make_push_pull_yaml.py, so the two can never
 drift: the experiment flies the controller and the task the simulation validated. The
-hardware substitutions are lab facts and three hardware safety margins (HW_PLANNER,
-HW_NODE below):
+hardware substitutions are lab facts, one measured airframe number and three hardware
+safety margins (HW_PLANNER, HW_NODE below):
   push_pull_fence_max_z   2.2 (the sim's open world) -> 1.8 (the lab ceiling; the push
                           mission tops out at ~1.67 m in an abort climb from the exit)
   push_pull_guard_tilt_deg 15 -> 10 (2026-10-19): the node's own DIRECT watchdog
@@ -37,8 +37,16 @@ HW_NODE below):
                           GS opens the jaws on the same revert, and the real gripper takes
                           0.60-0.64 s to 90 % open, 0.65-0.70 s to settle (10-15/16 bags).
                           At 1.0 s the fold could start with the jaws still on the fin.
-  push_pull_table         KEPT at the simulation's table -- place the lab table by
-                          ruler at it (reference leg corner (1.20, 0.50), top 0.80 m) or
+  push_pull_gear_depth    0.2425 -> 0.248 (2026-10-20, user request): the gear's depth
+                          under the drone's mocap pivot, MEASURED on the real T650 --
+                          its pivot reads z 0.245-0.248 m resting on the floor (the 10-20
+                          pick-and-drop bag: 0.2453 over the first 2 s, 0.2477 over the
+                          whole wait before lift-off). The sim
+                          keeps the AM_T650.usda asset's 0.2425; 0.248 is the conservative
+                          end (the planner keeps the gear 0.05 m above the table top).
+  push_pull_table        KEPT at the simulation's table -- place the lab table by
+                          ruler at it (reference leg corner (0.60, 0.50) since 2026-10-21,
+                          was (1.20, 0.50); top 0.80 m; the drone's start mark (-0.60, 0)) or
                           MEASURE it and set it here: the planner's gear / arm keep-out
                           AND the box-on-table check both use it. The stack prints it.
 Everything else -- plant, allocator, SAFETY, observer bounds, the node guards -- is the
@@ -74,6 +82,8 @@ HW_PLANNER = {
                                  "planner's abort opens the jaws first (sim 15; 51 Isaac pushes <= 6.1 deg)"),
     "push_pull_abort_release_wait_s": ("1.5", "the jaws open over two WiFi hops (planner -> GS "
                                        "-> arm) + 0.65-0.70 s -- hold before the climb (sim 1.0)"),
+    "push_pull_gear_depth": ("0.248", "MEASURED: the real T650's mocap pivot reads z 0.245-0.248 m "
+                             "resting on the floor (10-20 bag) (sim asset 0.2425)"),
 }
 # hardware margins in the NODE section (the hardware free-flight file's own value
 # replaced): key -> (value, why)
@@ -89,10 +99,11 @@ HEADER = f"""# =================================================================
 # push-and-pull block are the SIMULATION box-pushing yaml's, imported (so they cannot
 # drift); the hardware substitutions:
 {chr(10).join(f"#   {k} {v[0]} -- {v[1]}" for k, v in {**HW_NODE, **HW_PLANNER}.items())}
-# push_pull_table is the SIMULATION's table [1.200, 1.350, -0.5, 0.5, 0.80]: place the lab
-# table by ruler there (the reference leg's outer corner at (1.20, 0.50) in the mocap frame,
-# top 0.80 m) or MEASURE it and set it in the generator (the gear / arm keep-out and the
-# box-on-table check both use it).
+# push_pull_table is the SIMULATION's table [0.600, 0.750, -0.5, 0.5, 0.80]: place the lab
+# table by ruler there (the reference leg's outer corner at (0.60, 0.50) in the mocap frame,
+# top 0.80 m; 2026-10-21, was (1.20, 0.50)) or MEASURE it and set it in the generator (the
+# gear / arm keep-out and the box-on-table check both use it). The drone's start mark is
+# (-0.60, 0) (push_pull_start_mark): put the vehicle there, facing +x, and press Adjust.
 # =============================================================================
 """
 

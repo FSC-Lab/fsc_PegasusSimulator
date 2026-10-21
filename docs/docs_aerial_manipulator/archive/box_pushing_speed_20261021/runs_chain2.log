@@ -1,0 +1,71 @@
+[10:54:09] start v21_1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v21_1] completed
+[10:59:06] start v30_1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.030
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v30_1] completed
+[11:03:16] start v08_2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.008
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v08_2] completed
+[11:07:34] start v13_2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.013
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v13_2] completed
+[11:11:48] start v21_2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v21_2] completed
+[11:15:59] start v30_2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.030
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v30_2] completed
+[11:20:09] start v08_3
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.008
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v08_3] completed
+[11:24:27] start v13_3
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.013
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v13_3] completed
+[11:28:41] start v21_3
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v21_3] completed
+[11:32:52] start v30_3
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.030
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v30_3] completed
+[11:37:04] CHAIN2 DONE

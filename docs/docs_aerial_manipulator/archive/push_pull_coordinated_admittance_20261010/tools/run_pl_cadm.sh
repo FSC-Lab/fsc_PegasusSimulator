@@ -51,7 +51,7 @@ echo "[$(date +%T)] planner up, EE offset $off"
 # automatic exit (2026-10-19) would race it
 (setsid nohup env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=box_pushing ARM_GS_AUTO_EXIT_DELAY=0.0 PEGASUS_PUSH_BOX_MASS=$MASS \
    PEGASUS_PUSH_FRICTION_STATIC=$MU_S PEGASUS_PUSH_FRICTION_DYNAMIC=$MU_K \
-   PEGASUS_PUSH_BOX_XY="${PEGASUS_PUSH_BOX_XY:-1.275,$BOX_Y0}" \
+   PEGASUS_PUSH_BOX_XY="${PEGASUS_PUSH_BOX_XY:-0.675,$BOX_Y0}" \
    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_coordinated_admittance_box_pushing_sitl.sh" --in-terminal shiqi_machine \
    > "$RUNS/$TAG.scene.log" 2>&1 &)
 echo "[$(date +%T)] waiting for the box (Isaac)"

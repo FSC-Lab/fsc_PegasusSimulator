@@ -1,0 +1,63 @@
+--- audio (s since start) ---
+   0.12  SAY-START OptiTrack normal
+   0.73  SAY-END OptiTrack normal
+   3.05  SIREN-START
+   4.25  SAY-START Mocap regained
+   4.87  SAY-END Mocap regained
+   9.05  SIREN-START
+   9.88  SAY-START Mocap lost. Pilot, take over and land.
+  12.00  SAY-END Mocap lost. Pilot, take over and land.
+  12.02  SIREN-START
+  13.23  SIREN-END
+  13.25  SAY-START No OptiTrack
+  13.87  SAY-END No OptiTrack
+  17.92  SIREN-START
+  19.13  SIREN-END
+  19.15  SAY-START Mocap lost. Pilot, take over and land.
+  21.27  SAY-END Mocap lost. Pilot, take over and land.
+  26.05  SAY-START OptiTrack regained
+  26.67  SAY-END OptiTrack regained
+  30.05  SAY-START Mocap regained
+  30.67  SAY-END Mocap regained
+  38.05  SIREN-START
+  38.88  SAY-START Mocap lost
+  39.50  SAY-END Mocap lost
+  48.05  SAY-START Mocap regained
+  48.66  SAY-END Mocap regained
+  52.92  SIREN-START
+  53.95  SAY-START Mocap lost. Pilot, take over and land.
+  56.07  SAY-END Mocap lost. Pilot, take over and land.
+  56.09  SIREN-START
+  57.30  SIREN-END
+  57.32  SAY-START No OptiTrack
+  57.93  SAY-END No OptiTrack
+  60.05  SAY-START OptiTrack regained
+  60.67  SAY-END OptiTrack regained
+  60.69  SAY-START Mocap regained
+  61.31  SAY-END Mocap regained
+--- GS flight log ---
+[14:39:57] OptiTrack normal
+[14:39:57] Mocap guard active (raw-mocap safety guard on the Orin)
+[14:39:57] Vehicle armed
+[14:39:57] Mode changed:  -> STATE_OFFBOARD
+[14:40:00] Mocap guard CONFIRMED (frozen, last good sample 0.50 s ago): flying on the EKF2 bridge
+[14:40:01] Mocap guard: mocap healthy again, blending back
+[14:40:06] Mocap guard CONFIRMED (frozen, last good sample 0.50 s ago): flying on the EKF2 bridge
+[14:40:07] No OptiTrack: nothing on /vrpn_mocap/uav_0/pose for 0.4 s
+[14:40:07] Mocap guard LOST (frozen, last good sample 0.50 s ago): EKF2 only, the position drifts -- pilot, take over and land
+[14:40:19] Mode changed: STATE_OFFBOARD -> STATE_STAB
+[14:40:23] OptiTrack regained
+[14:40:27] Mocap guard: mocap healthy again, blending back
+[14:40:31] Mocap guard: no status for 1 s on /uav_0/state_estimator/mocap_guard
+[14:40:33] Mocap guard: status again
+[14:40:35] Mocap guard CONFIRMED (stale, last good sample 0.50 s ago): flying on the EKF2 bridge
+[14:40:35] Vehicle disarmed
+[14:40:35] Mode changed: STATE_STAB -> STATE_OFFBOARD
+[14:40:36] Mocap guard LOST (stale, last good sample 0.50 s ago): EKF2 only, the position drifts -- pilot, take over and land
+[14:40:45] Mocap guard: mocap healthy again, blending back
+[14:40:45] Vehicle armed
+[14:40:50] No OptiTrack: nothing on /vrpn_mocap/uav_0/pose for 0.4 s
+[14:40:50] Mocap guard CONFIRMED (frozen, last good sample 0.50 s ago): flying on the EKF2 bridge
+[14:40:51] Mocap guard LOST (frozen, last good sample 0.50 s ago): EKF2 only, the position drifts -- pilot, take over and land
+[14:40:57] OptiTrack regained
+[14:40:57] Mocap guard: mocap healthy again, blending back

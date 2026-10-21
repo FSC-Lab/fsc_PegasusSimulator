@@ -1,0 +1,24 @@
+PASS healthy: odometry flows (240 msgs in 2 s)
+PASS healthy: odometry = the mocap (max err 0.0000 mm)
+PASS healthy: forwarded to PX4 (240 in 2 s)
+PASS healthy: health MOCAP (100 msgs, 50 Hz)
+PASS freeze: state sequence [0, 1, 2, 3]
+PASS freeze: BRIDGING after 0.08365130424499512
+PASS freeze: CONFIRMED after 0.22358012199401855
+PASS freeze: LOST after 1.0836644172668457
+PASS freeze: cause = frozen
+PASS freeze: the bridge publishes (180 msgs)
+PASS freeze: the bridged odometry follows the TRUE motion (max err 0.08 mm)
+PASS freeze: frozen samples forwarded to PX4 after 0.1 s: 0
+PASS recovery: MOCAP again after 1.0216333866119385 s (1 s window)
+PASS recovery: no step in the odometry (largest step 1.93 mm)
+PASS recovery: odometry = the mocap again
+PASS flip: never CONFIRMED
+PASS flip: the flipped sample NOT forwarded to PX4
+PASS flip: odometry never shows the flip (max err 0.44 mm)
+PASS test fault: TEST FAULT: every mocap sample is treated as bad for 1.000000 s -- not forwarded to PX4, the odometry bridged
+PASS test fault: states seen [0, 1, 2, 3] (LOST then MOCAP)
+PASS test fault: cause = test
+PASS EKF2 silent + mocap frozen: no odometry (0 msgs)
+PASS EKF2 silent: health says source NONE
+ALL PASS

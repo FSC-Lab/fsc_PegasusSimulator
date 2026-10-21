@@ -86,5 +86,5 @@ case "${PUSH_FEEDBACK:-raw}" in
 esac
 [[ -x "$LAUNCHER" ]] || { echo "ERROR: missing executable $LAUNCHER" >&2; exit 1; }
 
-echo -e "\033[1;35mBOX-PUSHING SCENE ($AM_ISAAC_SCENE_LABEL, ${PUSH_FEEDBACK:-raw} feedback): vehicle at ${PEGASUS_PUSH_SPAWN_XY:-0.10,-0.07} facing +x; the HOOBRO console table (1.000 x 0.150 x 0.800 m) centred on (1.275, 0), its length along y; a ${PEGASUS_PUSH_BOX_MASS:-0.500} kg box (${PEGASUS_PUSH_HANDLE:-cad} handle: cad = the CAD box 240 x 160 x 100 mm + clamp bracket + 5 mm fin, grip shim ${PEGASUS_PUSH_FIN_GRIP_MM:-20} mm) at ${PEGASUS_PUSH_BOX_XY:-1.275,0.28}. Mocap: /obj_0/mocap = the box (centre + yaw).\033[0m"
+echo -e "\033[1;35mBOX-PUSHING SCENE ($AM_ISAAC_SCENE_LABEL, ${PUSH_FEEDBACK:-raw} feedback): vehicle at ${PEGASUS_PUSH_SPAWN_XY:--0.50,-0.07} facing +x; the HOOBRO console table (1.000 x 0.150 x 0.800 m) centred on (0.675, 0), reference leg corner (0.60, 0.50), its length along y; a ${PEGASUS_PUSH_BOX_MASS:-0.500} kg box (${PEGASUS_PUSH_HANDLE:-cad} handle: cad = the CAD box 240 x 160 x 100 mm + clamp bracket + 5 mm fin, grip shim ${PEGASUS_PUSH_FIN_GRIP_MM:-20} mm) at ${PEGASUS_PUSH_BOX_XY:-0.675,0.28}. Mocap: /obj_0/mocap = the box (centre + yaw).\033[0m"
 exec "$LAUNCHER" "$@"

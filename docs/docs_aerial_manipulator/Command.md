@@ -1149,8 +1149,9 @@ During the flight (after step 3: DIRECT, planner HOLD)
 
 ## 17. Box-pushing scene (whole-body L1 4-D, contact phase)
 
-**shiqi_machine** -- the HOOBRO console table (1.000 x 0.150 x 0.800 m) in front of the start, its length
-along y; the 500 g box (2026-10-16: the box-pushing campaign's choice, total incl. the handle) near its +y end (centre (1.275, 0.28): back face 0.10 m from that end, pushed 0.50 m to 0.16 m from the far end -- the user's bench layout, 2026-10-17), from the user's CAD (`Box_Push.stl` -> `Box_Push.usda`, 2026-10-07:
+**shiqi_machine** -- the HOOBRO console table (1.000 x 0.150 x 0.800 m) 1.20 m in front of the start mark
+(-0.60, 0), its length along y, the reference leg's outer corner at (0.60, 0.50) (2026-10-21: the whole layout
+moved 0.60 m back, it was (1.20, 0.50) with the start mark at the origin); the 500 g box (2026-10-16: the box-pushing campaign's choice, total incl. the handle) near its +y end (centre (0.675, 0.28): back face 0.10 m from that end, pushed 0.50 m to 0.16 m from the far end -- the user's bench layout, 2026-10-17), from the user's CAD (`Box_Push.stl` -> `Box_Push.usda`, 2026-10-07:
 240 x 160 x 100 mm, friction 0.25 = the real box on the experiment table, measured 2026-10-17) with its clamp bracket and a 5 mm fin
 handle on the top centre (grasp 0.233 m above the table; the sim claw cannot close below ~19 mm, so the
 fin's bare part carries an invisible 20 mm grip shim, `PEGASUS_PUSH_FIN_GRIP_MM`). `PEGASUS_PUSH_HANDLE=post`
@@ -1186,14 +1187,23 @@ FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulat
 Or the whole mission scripted, headless (after step 0): `archive/push_pull_20261003/tools/run_pl.sh <tag>`.
 Score it (impedance residual + rho_UAV): `PYTHONNOUSERSITE=1 /usr/bin/python3 archive/push_pull_20261003/tools/pl_metrics.py runs/<tag>.npz`.
 
+**Raw-mocap guard (2026-10-21)** -- for box pushing the raw stack runs the estimator with `mocap_guard:=true`. A frozen,
+jumped or stopped drone mocap switches the odometry to EKF2 + the offset frozen at the last good sample; after 0.15 s with
+the claw on the box the planner aborts (release, climb, arm home) and the vehicle hovers; every step waits for the mocap,
+and the arm GS's Mocap lamp reads LOST -- LAND WITH THE RC. Inject a fault in the sim:
+`ros2 param set --no-daemon --spin-time 5 /isaacsim_mocap_emulator fault_type freeze` (`fault_duration_s`, default 1 s),
+or `pl_mission.py --mocap-fault freeze@push+2:3`. Record: `archive/mocap_safety_guard_20261021/`.
+
 **Operating the arm GS "Box Pushing" tab**
 
 Before the flight (on the ground, after steps 1-2)
 
-1. **Adjust** -- the vehicle on its start mark; the shift is written into the Start mark, Land Start and Land.
+1. **Adjust** -- the vehicle on its start mark (-0.60, 0), facing +x; the shift is written into Start, Land Start and Land.
 2. **Get** on the *Box (obj_0)* row -- captures the box's mocap pose (x, y, z, yaw); the boxes are editable.
 3. **EE Offset** (sim [0, 0, 0.183] m for the CAD box, box frame), **Vertical Margin** (0.15 m), **Side Margin**
-   (0.12 m), **Push Distance** (0.50 m) -- type, press the button.
+   (0.12 m), **Push Distance** (0.50 m) -- type, press the button. The **Monitor** under the points shows
+   the push time, contact time and mean speed it gives (amber until sent): the time is the distance at the
+   planner's `push_pull_push_mean_speed`, the one setting (yaml).
 
 During the flight (after step 3: DIRECT, planner HOLD)
 
@@ -1204,14 +1214,15 @@ During the flight (after step 3: DIRECT, planner HOLD)
    handle (CoM-anchored; the claw is world-held from its arrival).
 4. **3 Push** -- closes the gripper once the claw is within 2 cm AND centred across the fin to 3 mm;
    once the jaws grip, the law goes to CONTACT (the contact line turns purple) and the box slides
-   0.50 m (1.5 s settle + 24 s); CONTACT ends with the push. If the gripper closes on nothing,
+   the Push Distance (1.5 s settle + the push time); the Monitor shows the box's travel and speed live,
+   then the push's numbers. CONTACT ends with the push. If the gripper closes on nothing,
    nothing moves (Isaac: the grasp is a stall; hardware, 2026-10-19: a full close on the fin is the
    grasp, a close stopping wider than -0.005 m a wrong grip).
 5. **4 Exit To Push** -- starts by itself 1 s after `DONE push` (press it to go sooner, ABORT to stop
-   it): releases, opens the gripper and, on its OPEN report, climbs 0.20 m (the gear clears the box), arm home.
+   it): releases, opens the gripper and, on its OPEN report, climbs 0.25 m (the gear clears the box), arm home.
 6. **5 Go To Land Start** -- one transition from the exit hold to Land Start (1.3 m, off the table), turning
    clockwise to -360 deg (~24 s, set by the 270 deg turn); the planner checks the path against the table.
-7. **6 Land** -- straight down to the hover 0.5 m behind the start (`COMPLETE`).
+7. **6 Land** -- straight down to the hover over the start mark, where it took off (`COMPLETE`).
    Touch down with `ps4_teleop_bringup.py land --land-z 0.25` (section 16; the T650 gear rests the body at
    0.235 m -- the default 0.35 would leave it hovering 11 cm up).
 
@@ -1223,8 +1234,8 @@ During the flight (after step 3: DIRECT, planner HOLD)
   arm's joint states go silent for 0.5 s, and (2026-10-16) if the BOX is
   more than 40 mm behind / ahead of its plan or tilts more than 2 deg (0.2 s), its mocap goes
   silent for 0.5 s, or q3 drops below 10 deg; Plan refuses a push that would leave the box
-  within 3 cm of the table's edge (a box turned 180 deg, a too-long distance). The tab's contact
-  line shows the box lag and tilt live.
+  within 3 cm of the table's edge (a box turned 180 deg, a too-long distance). A guard trip
+  names itself in the status line.
 - Scene knobs (env, before step 2): `PEGASUS_PUSH_BOX_MASS`, `PEGASUS_PUSH_FRICTION_STATIC` /
   `_DYNAMIC` (0.25 / 0.25 with 500 g: 1.23 N to break the box loose and to slide it -- keep the two EQUAL: at
   0.7 / 0.6 the box sticks and then lets go, and the vehicle surges), `PEGASUS_PUSH_BOX_XY`,
@@ -1320,6 +1331,16 @@ Rebuild `fsc_trajectory_planner`, `fsc_autopilot_ros2` and `open_manipulator_x_c
 AM_HW_PROFILE=box_pushing ~/dev_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh uav_0
 ~/dev_ws/src/fsc_open_manipulator/scripts/indoor_exp/start_open_manipulator_inverted_wb_torque.sh uav_0
 ```
+
+**2026-10-21 -- the push speed is the one setting** (record: `archive/box_pushing_speed_20261021/README.md`).
+The operator types only the Push Distance; the push takes `max(distance / push_pull_push_mean_speed,
+push_pull_push_min_time_s)` -- **21 mm/s**, floor 3 s, in the yaml (no value in the planner's code; `push_pull_push_time_s`
+is now the valve turn's only). The arm GS's Monitor shows the push time, contact time, mean speed, box travel and box
+speed (now vs plan): GREEN inside the tested range, RED outside -- retype (`push_pull_push_distance_ok` 0.10-0.50 m,
+`push_pull_push_speed_ok` 8-30 mm/s, yaml, display only); the Push Distance box is amber until sent. 21 mm/s from a 240 g / 0.10 m sweep in Isaac, 12 / 12
+complete: 8 mm/s left the box stuck 29 % of the push, 30 mm/s tipped it 0.3-0.7 deg; 0.10 m takes 4.8 s, the jaws
+hold it 6.3 s. Rebuild `fsc_trajectory_planner` (Orin) and `utils_custom_ground_station` (laptop); the stack refuses
+a planner without the speed.
 
 ### 17.x Comparison rig: coordinated admittance framework (Liu et al., CEP 146 (2024) 105898)
 

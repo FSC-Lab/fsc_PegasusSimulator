@@ -5898,3 +5898,251 @@ policy): 132 bag .db3 (~9.4 GB incl. the 10-05..10-16 flight bags and the 09-09/
 calibration bags), 88 .mat + 2 .zip MATLAB exports, the 10-10 flight video; metadata.yaml and
 analysis files are in. Both planner loopbacks PASS on the HARDWARE box yaml (`PL_YAML=`), the
 Orin self-check. Record: `archive/box_pushing_hardware_20261019/README.md` section 6.
+
+**1019 PICK-AND-DROP "WIFI" FAILURE = THE PX4 <-> AGENT LINK, NOT WIFI (2026-10-19, user request:
+analyse; record `docs/docs_aerial_manipulator/archive/wb_pick_drop_wifi_20261019/README.md`).** Bag
+`..._20261019_170849` (fused stack, Agent over UDP/Ethernet). During the pick's lift, as the basket's
+weight came on (j2 slipped 12 deg at -54 deg/s), every `/fmu/out` topic stopped at 44.889 s for 2.4 s and
+again at 47.759 s for 18.0 s, and PX4 stopped receiving the Orin too (offboard-loss failsafe at 47.29 s).
+Through the whole blackout the WiFi carried every ROS topic at full rate in both directions (Orin->laptop
+p99 1.7 ms, laptop->Orin p99 4.2 ms). **The recorder is on the laptop** (laptop-published `/uav_0/mocap`
+0.2 ms after its stamp; Orin topics share WiFi delay spikes the laptop topics do not), so a gap in Orin
+topics in these bags IS a WiFi gap -- and there was none. The flight node tripped POSITION FEEDBACK LOST
+-> SAFETY at 45.89 s; the planner then reported NOT IN DIRECT, which is why the arm GS's Pick & Drop steps
+were dead (by design outside DIRECT). PX4 alone (no offboard, no mocap) then drifted ~4 m, climbed to 1.5 m
+and flipped at 57 s; rolled upright by hand at 62-65 s; the stream returned at 65.75 s already disarmed.
+CPU: no saturated core (flight executor 250 Hz worst 5.0 ms; arm 1 late in 37 503; estimator relay p99
+3.6 ms; the node's CPU-4 middleware threads stayed fresh in the blackout). Box-pushing code: no
+interference (realtime scripts unchanged, stack additions profile-gated, the one shared planner hunk
+inert without push-and-pull). **NOT the first occurrence**: the same signature (PX4 topics absent, Orin
+topics flowing) hit 10-05 (decoupled, 4.8 s, on the ground just after landing), 10-09 PP-2 (5.2 s, in
+flight) and 10-09 PP-3 (after disarm) -- today is the second in flight, fourth overall; none in the nine
+flights 10-10..10-16. The Agent's FIFO->SCHED_OTHER fix (`71ec97a`) explains why those stayed dead, not
+what cut the link; two of four on the ground argue against load/EMI. 09-12's 4.1 s gap was every Orin
+topic at once = WiFi, a different signature.
+**Not settled by the bag** (cable/connector/EMI vs Agent vs PX4 client): Orin kernel log for
+`enP8p1s0` link events + `carrier_changes`, the Agent pane scrollback, and the PX4 ulog, all for
+17:09:34-17:09:56 EDT. The HV bag (`_172008`, hover) is clean on every count.
+**10-20 follow-up (new antennas, new PX4-Orin Ethernet cable, reinforced PDB;
+`archive/wb_pick_drop_comm_20261020/README.md`):** one full pick-and-drop, NO loss on any link --
+sensor_combined 0 of 43 221 samples missing (largest step 2.6 ms; every earlier bag since 10-09 had
+1-7 stalls of 20-75 ms), timesync RTT max 1.5 ms, WiFi largest gaps 14 / 22 ms. The basket lift drew
+the 10-19 cut's load (25.0 vs 24.7 A) and held. One flight is not proof: the cut was 2 in-flight in
+~15 bags, and 10-10..10-16 were clean too.
+
+**BOX PUSHING: THE BOX GOING OVER THE TABLE'S SIDE EDGE WHILE CLAMPED, AND A 240 g BOX
+(2026-10-19, user request; `docs/docs_aerial_manipulator/archive/box_pushing_sidefall_20261019/README.md`).**
+User asked whether guide rails are needed along the table's long edges, whether the real box
+emptied to ~240 g is a safer first test, and to test the side-edge worst case. 13 headless
+flights on the 10-16/17 final config with the HARDWARE guard values (tilt 10 deg, abort release
+hold 1.5 s). The table is 150 mm deep, the box 160 mm: it overhangs 5 mm a side and its CoM is
+over the edge after 75 mm sideways (normal whole-body drift <= 7 mm). Forced by placing the box at
+15 deg yaw with the plan-time on-table check off (`push_pull_box_half_length 0`), so the clamped
+claw drags it over the +x side edge.
+- **Box guards ON (shipped): 4 / 4 caught at the onset**, 240 and 500 g alike: the box-tilt guard
+  (2 deg / 0.2 s) trips 7-13 mm after the CoM crosses the edge, the claw carries <= 0.26 N of the
+  weight, jaws open in 0.24-0.57 s, vehicle <= 3.3 deg.
+- **Box guards OFF: 240 g CRASHED, 500 g completed** (one run each, does not rank the masses). The
+  danger is NOT the weight (claw <= 0.8 N in every run): the clamped box leans on the claw past the
+  edge, then rotates about the table edge, drags the claw down and buckles the arm (q2 +45, q3
+  through 0 at ~60 deg/s to -43); the **q3 guard trips at -2 deg** (0.2 s persistence too slow for
+  that rate, as in the 10-17 crash); SAFETY with the arm on the elbow branch, flipped 3.5 s later.
+  **The box-tilt guard is load-bearing for the side edge.** Not built: a q3 RATE term in that guard.
+- **240 g normal pushes 3 / 3** (one more refused DIRECT before take-off: the arm stack never came
+  up): contact force 0.50-0.59 vs 1.06-1.29 N, claw deflection 5-7.5 vs ~10.5 mm, arm further from
+  its stops, impedance residual unchanged (~0.6-0.8 N, the controller's floor -- on hardware below
+  the ~1.3 N force-reading noise, so a 240 g flight is a shakedown, not a result). Box tilt while
+  clamped <= 0.67 deg (500 g had one 2.22 deg spike < 0.2 s at the grasp, no trip).
+- Answers given: rails not required for the first test (the box guard covers the side edge; a rail
+  also adds an over-constraint -- the push follows the box's measured yaw, so a 2 deg rail mismatch
+  presses the box into the rail with ~1.2 N per 10 mm at K_y 120 and tips it over a low rail at
+  ~1.7-1.9 N); 240 g lowers the push loads but not the side-edge risk. Hardware check: the box
+  body's tilt must read quiet (well under 1 deg) with the claw over the fin.
+
+**BOX PUSHING: HARDWARE GEAR DEPTH MEASURED, AND AN INFEASIBLE READY FROM ZEROED GS VALUES
+(2026-10-20, user report from the flight test).** The arm GS's Box Pushing tab refused Plan with
+"ready goal: the landing gear would be -0.053 m above the table top". Not the X650 gear: the
+number reproduces exactly from the hardware box yaml (T650 gear 0.2425, pose [0, 32, 28, 0],
+table 0.80) with **EE offset 0** -- the claw aimed at obj_0's origin (box centre, inside the box).
+The tab showed EE 0/0/0, Vertical 0.200, Side 0.000 = the planner node's BUILT-IN DEFAULTS, not
+the yaml's 0.183 / 0.15 / 0.12, so they were changed after launch (GS buttons or `ros2 param
+set`; nothing writes them automatically; the tab's boxes would read 0.050 if never loaded).
+Check them right after launch. Gear: the real T650's mocap pivot rests at z 0.2453 (first 2 s) /
+0.2477 (whole wait) in the 10-20 bag, so `push_pull_gear_depth` 0.2425 -> **0.248** in the
+HARDWARE box yaml only, as a new HW_PLANNER entry of
+`archive/box_pushing_campaign_20261016/tools/make_hw_box_pushing_yaml.py` (regenerated, diff =
+that line + header, `--check` UP TO DATE); the sim keeps the asset's 0.2425. Planner loopback on
+the hardware yaml ALL PASS. Still open for the user: the lab table-top height (Get read the box
+at z 0.858 vs 0.85 on a 0.80 m table -- EE z 0.175 if the table is 0.80, else set
+`push_pull_table` z_top). Uncommitted in fsc_autopilot_ros2 + Pegasus.
+
+**BOX PUSHING: THE WHOLE LAYOUT MOVED 0.60 m BACK (2026-10-21, user, after the first lab
+trial: the table at x 1.20 sat near the field's edge).** Table reference-leg outer corner
+(1.20, 0.50) -> **(0.60, 0.50)** (keep-out `push_pull_table` [0.600, 0.750, -0.5, 0.5, 0.80],
+scene `TABLE_CENTER_XY` (0.675, 0)), box centre **(0.675, 0.28)**, start mark
+`push_pull_start_mark` (0, 0) -> **(-0.6, 0, 1.0, 0)**, `push_pull_land` /
+`push_pull_land_start` x -0.5 -> **-0.6 = the start mark** (user, same day: land where it took
+off, no 0.5 m backward offset; -1.1 for a few hours before that), scene spawn (0.10, -0.07) -> **(-0.50, -0.07)** (= start
+mark + the usual placement error, so Adjust has a shift to measure), Isaac camera -0.6 in x. A
+rigid translation: start-to-table 1.20 m, so every leg is unchanged (loopback step times
+identical: 10.3-10.4 / 3.2 / 25.5 / 6.0 / 23.9 / 5.1 s). Changed: the scene 07 box_pushing,
+`make_push_pull_yaml.py` (WB sim yaml regenerated), the CA box yaml (regenerated),
+`make_hw_box_pushing_yaml.py` text + the HARDWARE yaml (regenerated, `--check` UP TO DATE), both
+whole-body hardware stacks' table note (now also print the start mark), `fly.sh` / `run_pl_cadm.sh`
+box default, the 4-D box launcher banner, fsc_trajectory_planner `test_push_pull_loopback.py`
+(box from the yaml's table, odometry from the yaml's start mark; ALL PASS on the sim AND the
+hardware yaml), Command.md section 17, and `~/Documents/box_pushing_workflow` (html rebuilt; its
+PDF and the Isaac snapshots still show the old numbers / place). NOT moved: the valve-turning
+scene and yaml (own table at 1.125..1.275, start mark (0, 0)). Not flown in Isaac yet; nothing
+committed. Same day: the workflow page gained a KEY PARAMETERS section (placement, task settings,
+the planner's own waypoints 0-6 + step times) and five dimensioned layout figures
+(`layout_{3d,plan,detail,side,front}.png`), drawn by `make_layout_figures.py` from
+`layout_waypoints.json`, which `extract_waypoints.py` reads off the real planner offline (private
+ROS domain, the loopback test's rig, no Isaac) -- re-run both after any layout change.
+Then (user, same day) the Land hover 0.8 -> **0.30 m** (`push_pull_land` z; skids ~5 cm above the
+floor), which needed **`push_pull_fence_min_z: 0.25`** in the box-pushing block (node default 0.6
+would refuse it; the fence check is strict, so not 0.30). Land step 5.1 -> 7.4 s. The planner
+loopback's second mission ([9]) re-planned from the planner's HOLD -- now the 0.30 m Land hover --
+and the planner rightly refused Go To Start ("landing gear -0.044 m above the table top"): a
+re-plan after Land without leaving DIRECT is refused by design. The test now leaves DIRECT, climbs
+to 1.3 m and re-enters (the hold is captured from odometry at DIRECT entry); ALL PASS on the sim
+and hardware yamls.
+
+**BOX PUSHING TAB: A MONITOR ROW, FIRST ITEM THE LANDING GEAR ABOVE THE TABLE TOP (2026-10-21, user
+request; `docs/docs_aerial_manipulator/archive/box_pushing_monitor_20261021/README.md`).** Under the
+points of the arm GS's Box Pushing tab (`push_pull_panel.{hpp,cpp}`, `updateGearMonitor()`):
+"Gear − table top", **now** (planner `whole_body_planner/current_base` z − `push_pull_gear_depth` −
+`push_pull_table` top) and **plan min** (the same, lowest over `push_pull/drone_path` where the gear
+is over the table, after Plan). "Over the table" is the planner's own rule (body within
+`push_pull_gear_radius + push_pull_table_margin_xy` of the table); over it green ≥
+`push_pull_table_clearance`, amber below, red under the top, grey elsewhere. The five parameters
+load in their own request (an older planner still loads the tab). Nominal: 0.258 at the takeoff
+hover (grey), 0.123 at the grasp/push (hw 0.117). Checked offscreen against the real planner on
+domain 77 (`tools/gs_monitor_check.sh`, PASS); the note label's size policy is Ignored so it
+cannot widen the points' columns (a first build did). Workflow page snapshots refreshed from
+that harness. Rebuild utils_custom_ground_station on the laptop. Nothing committed.
+
+**BOX PUSHING: THE PUSH SPEED IS THE ONE SETTING, AND THE ARM GS MONITORS THE PUSH (2026-10-21,
+user design; campaign `docs/docs_aerial_manipulator/archive/box_pushing_speed_20261021/README.md`,
+Command.md section 17).** The operator types only the **Push Distance**; a straight push's time is
+`max(|distance| / push_pull_push_mean_speed, push_pull_push_min_time_s)` -- ONE yaml key, no value in
+the planner's code (0 = not set: Plan / Push refused with the key named). `push_pull_push_time_s` is
+now a TURN's duration only (valve turning; its yaml keeps it).
+- **fsc_trajectory_planner** (uncommitted): `PushPullConfig::push_speed/push_min_time`,
+  `pushPullPushTime()` (push and cruise legs); `push_pull/info` appends [69] speed, [70] floor,
+  [71] settle, [72] the time (73 values); `push_pull/arrival_error` appends the PUSH MONITOR
+  [21..29] (a push started / ended, elapsed, planned duration, settle, the box's travel and speed
+  along the push from obj_0, the claw reference's) -- display only, the box guards still act.
+  gtest `PushTimeComesFromTheMeanSpeed`, push suite 18/18; box loopback ALL PASS (checks info [72]
+  and the monitor's summary).
+- **Arm GS Box Pushing tab** (uncommitted): the Monitor now has its OWN sub-grid (sharing the
+  points' column 0 clipped "Gear − table top" in the live window) with "now | plan" columns and
+  units in the labels: Gear − table top [m], **Push time [s], Contact time [s] (settle + push),
+  Mean speed [mm/s], Box travelled [mm], Box speed [mm/s]**. A typed, unsent distance previews
+  the plan column in AMBER; in the push the rows are live; after it they hold the push's numbers
+  until the next push or Reset. Box lag / tilt are NO LONGER shown on the contact line (user: the
+  guards keep acting, a trip names itself in the status). Valve Turning tab: no push rows.
+  Harness `tools/gs_push_check.sh` (real planner, domain 77) PASS incl. an 840 px window; checked
+  live in Isaac on a 30 mm/s push (`gs_live_v30_1_*.png`).
+- **Configs:** `make_push_pull_yaml.py` writes the speed + floor instead of the 24 s (sim, hardware,
+  CA box yamls regenerated); both whole-body hardware stacks expect them and REFUSE a planner build
+  without `push_pull_push_mean_speed`; the scene's planner check compares both keys;
+  `box_pushing_campaign_20261016/tools/fly.sh` (the results campaign's) and
+  `results/utils/build_box_pushing.py` know the speed.
+- **THE SWEEP (240 g, 0.10 m, Isaac, hardware guards):** (8 / 13 / 21 / 30 mm/s x 3, headless RTF 1, raw mocap, the hardware's tilt guard 10 deg and
+  abort hold 1.5 s; 12 / 12 complete): box stuck 29 / 13 / 4 / 2 % of the push, slide impedance residual
+  0.71 / 0.72 / 0.54 / 0.65 N rms, box tilt 0.2 / 0.1 / 0.2 / 0.5 deg (guard 2), travel 99 / 100 / 99 / 96 of
+  100 mm. **21 mm/s shipped** (= every validated 0.50 m push's 0.50 m / 24 s), floor 3.0 s (30 mm/s over
+  0.10 m = 3.3 s flew clean). The release window is still the weak spot at ANY speed: 1 run in 12
+  (13 mm/s) jumped q2 to its 45 stop and q3 to 9.9 deg within 0.25 s of the release, recovered, no trip;
+  the other 11 stayed >= 18.6 deg. The q3 minimum over the push step is at the GRASP, speed-independent.
+  Workflow page (~/Documents/box_pushing_workflow) updated: 240 g, Push Distance 0.10, 21 mm/s, new snapshots.
+  NOT flown on hardware; nothing committed.
+- **Trap hit:** a generator that writes a key the INSTALLED planner lacks makes the scene's planner
+  check refuse Isaac and the driver hangs ~10 min. Never edit a generator while a chain flies
+  (fly.sh regenerates the yaml every flight); rebuild the planner first.
+- **Green / red (same day, user):** the plan column is GREEN inside the tested range and RED outside,
+  with a note naming what to retype -- new planner keys `push_pull_push_distance_ok: [0.10, 0.50]`
+  and `push_pull_push_speed_ok: [0.008, 0.030]` (display only, gate-only = no stale plan; [] = no
+  colour; info [73..76], 77 values). Push time / contact time are green only if both are; a
+  NEGATIVE distance (a pull) is red whatever the range; the live / held rows are uncoloured. The
+  amber "not sent" cue stays on the Push Distance box. gs_push_check.sh checks 0.05 / -0.10 / 0.60
+  red and 0.10 / 0.50 green: PASS. Demo without a sim: scratchpad gs_try.sh (real planner on the
+  hardware yaml + real GS + fake box, ROS domain 77).
+- **Order and names (same day, user):** Monitor top to bottom = Push Time, Contact Time, Mean Speed,
+  Box Speed, Box Travelled (Title Case, user), then **Table Offset** (renamed from "Gear − table top"); the points row
+  "Start mark" is now **Start**. gs_push_check.sh checks the order (and was made to chain its steps:
+  fixed times from the start let a stalled event loop fire a type and its check back to back -- a
+  stale frame that looked like a GS bug).
+
+**RAW-MOCAP SAFETY GUARD FOR BOX PUSHING (2026-10-21, user design, minimal scope; record
+`docs/docs_aerial_manipulator/archive/mocap_safety_guard_20261021/README.md`, Command.md section 17).**
+If the drone's raw mocap freezes, jumps or stops, EKF2 carries the vehicle to a HOVER, a push in
+contact is aborted automatically, and the pilot lands with the RC. No automatic descent, no new
+buttons, no safe-altitude parameter, no Orin-side jaw open (the arm GS opens the jaws on ABORTING;
+with the WiFi down too the abort climbs clamped -- accepted).
+- **Estimator** (`fsc_drone_state_estimator_ros2`, NEW branch `dev_robotic_arm`): `MocapGuard` +
+  `MocapGuardHub` in the RAW executable only (`mocap_guard:=true`, default false = the old
+  pass-through; the FUSED executable is unchanged, so pick-and-drop is unaffected). Ladder on the
+  age of the last good sample: 50 ms BRIDGING / 0.15 s CONFIRMED / 1.0 s LOST / 1 s good to recover;
+  frozen = bit-identical > 50 ms and >= 3 samples, jump = 20 mm + 1 m/s dt + 1/2 2 m/s^2 dt^2 or
+  10 deg + 90 deg/s dt from the LAST GOOD sample. Bridge = EKF2 + the offset frozen at the last good
+  sample; nothing forwarded to PX4 from the first bad sample until recovery; the blend back is
+  limited to 0.10 m/s (`mocap_guard_blend_speed`). Health `state_estimator/mocap_guard` (16 values,
+  layout in mocap_odom_bridge.hpp), test service `.../mocap_guard/test_fault`. gtest 10/10 incl.
+  exact parity with `tools/guard_reference.py` on the 09-18 / 09-21 / 09-24 / 09-28 recordings.
+- **Planner** `push_pull_mocap_guard_topic`: CONFIRMED with the claw on the box (or Ready / Push
+  flying), or LOST with any step flying -> the existing ABORT, climbing STRAIGHT up; steps and Plan
+  refused while not MOCAP or while the guard is silent; status "HOVERING on EKF2: take over with the
+  RC and land". **Flight node** `system_mocap_guard_topic`: EKF2's vision loss does not trip the
+  feedback failsafe while the guard bridges; DIRECT refused unless MOCAP; `system_fb_land_speed` may
+  be 0 (hold). **Arm GS** Box Pushing tab: a Mocap lamp + details in the Monitor. **Emulator**: fault
+  injection (`fault_type` stop / freeze / jump). Both keys only in the box-pushing yamls; the raw
+  stacks start the guard for box pushing only; the hardware raw stack refuses binaries without it.
+- **Isaac** (240 g, 0.10 m, freeze 3 s mid-push, 4 runs): the ladder fires exactly every time. **EKF2
+  dead-reckoning in contact drifts 190-590 mm in 3.9 s in this sim** -- the hover on EKF2 lasts seconds,
+  the pilot must take over within ~2 s. Final code 2/2: vehicle stays in DIRECT, tilt <= 10 deg, eases
+  back; the box is dragged 64-182 mm by the open jaws but stays upright. The first builds tipped the box
+  and once left DIRECT (fixes: straight climb, no forwarding until recovery, speed-limited blend).
+- **THE EXPERIMENT'S RATES (user, same day): mocap 120 Hz, PX4 `sensor_combined` / `vehicle_attitude`
+  400 Hz.** The guard needs nothing (its thresholds came from 120 Hz flights). The emulator's launch
+  file never applied `frequency:=` (params.yaml's node-specific 250 won) -- every sim before ran 250 Hz
+  mocap whatever its yaml said; FIXED (no override = still 250), and `sim_feedback_mocap_rate_hz`
+  60 -> 120 in the mirror + every live config derived from it (measured 120.1 Hz in flight; the guard
+  flown again there: nominal clean, freeze -> abort, DIRECT kept, box upright). **The sim's PX4 publishes
+  `sensor_combined` / `vehicle_attitude` / `vehicle_odometry` at 100 Hz, NOT 400**: this v1.16 build's
+  uXRCE client sets every topic's interval to 10 ms (`UXRCE_DEFAULT_POLL_RATE`), and the sim's IMU is
+  the 250 Hz physics step. Raising it = rebuilding PX4 SITL, every sim rig changes -- user's call, not done.
+  `ros2 topic hz` sees nothing on this desktop (daemon); use the record's `tools/rate_probe.py`.
+- **The pilot HEARS it from the drone GS** (ros2_ground_station_gui `dev_robotic_arm`, added later
+  that day, user's choice of GS): siren + "Mocap fault" at CONFIRMED; **"Mocap lost. Pilot, take
+  over and land."** at LOST, ~1 s into the fault (cuts a sounding siren, jumps the alarm queue),
+  repeated every 8 s until PX4 leaves OFFBOARD or disarms; "Mocap regained". Silent without the
+  guard. The arm GS's "beep" is the X11 bell (usually inaudible) — the lamp is its visual role.
+  Check: the record's `tools/drone_gs_voice/run.sh`. Laptop: pull only (runs from source).
+- Uncommitted, NOT flown on hardware. Orin: switch the estimator to `dev_robotic_arm` and rebuild it,
+  the planner and fsc_autopilot_ros2 (`FSC_ESTIMATOR_BIN` if the estimator lives elsewhere); laptop:
+  utils_custom_ground_station. First hardware check: the `test_fault` service in a hover away from the
+  table. The fused stack with a box-pushing yaml now refuses every step (no guard there).
+
+**BOX PUSHING: EXIT TO PUSH CLIMBS 0.25 m (2026-10-21, user: keep the landing gear off the handle).**
+`push_pull_exit_dz` 0.20 -> 0.25 in `make_push_pull_yaml.py`'s planner block (a planner parameter, not on the
+arm GS; the GS's Vertical Margin 0.15 is the APPROACH height). Regenerated sim, hardware and coordinated-admittance
+box-pushing yamls (diff = that value). At 0.20 the skids ended 68 mm (sim gear) / ~62 mm (real T650) above the
+fin top before the arm folds; now ~12 cm. Planner loopback ALL PASS on the sim and hardware yamls (claw up
+0.250 m before the arm moves); the workflow page's waypoints and figures re-extracted. FLOWN in Isaac
+(headless, 240 g, 0.10 m, run `exit25_nom1`): mission complete, climb 252 mm, skids 118 mm above the fin top
+at the end of the climb (68 at 0.20) and 115 mm when Go To Land Start moves off, box untouched (0.0 mm, 0 deg),
+tilt <= 2.7 deg in the exit. One flight.
+
+**BOX PUSHING 2026-10-21: REVIEWED, PUSHED, TWO DEFECTS OPEN (record
+`docs/docs_aerial_manipulator/archive/box_pushing_review_20261021/README.md`).** Four read-only
+reviews of the day's work, then everything pushed on the user's instruction: estimator
+`dev_robotic_arm` c196507 (NEW remote branch), planner main c4fd5c3, autopilot dev_robotic_arm
+4d44739, arm omx-torque-control f5dde69, emulator d7f88e6, drone GS 485d8ac (the spoken
+mocap-guard alarm). **Fix before the hardware flight:** (1) estimator -- a second mocap fault
+during the blend back steps the odometry by the blend left (`advance()` freezes d0 from the RAW
+mocap, not from what was published); (2) planner -- a push slower than distance / t_max (40 s)
+is flown at t_max while the GS shows the longer time in green. Also: the 1.0 s default
+`mocap_guard_test_fault_s` reaches LOST (use 0.5 s for the hover test), and the 0.30 m Land
+hover sits below the SAFETY UDE gate (0.4 m) with the ~0.2 m revert dip.

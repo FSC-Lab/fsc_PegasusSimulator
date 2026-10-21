@@ -206,7 +206,7 @@
     sim_arm_vel_quant_rad_s: 0.024
     sim_ee_marker_cube: false
     sim_ee_marker_cube_mass_kg: 0.03
-    sim_feedback_mocap_rate_hz: 60.0
+    sim_feedback_mocap_rate_hz: 120.0
     sim_feedback_pos_noise_m: 0.0005
     sim_feedback_vel_noise_mps: 0.022
     sim_feedback_noise_seed: 0

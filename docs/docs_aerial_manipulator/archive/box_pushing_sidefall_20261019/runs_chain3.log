@@ -1,0 +1,7 @@
+[22:57:59] start l240_2b
+  push_pull_push_distance -> 0.50
+  push_pull_push_time_s -> 24.00
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[l240_2b] completed
+[23:02:29] CHAIN3 DONE
