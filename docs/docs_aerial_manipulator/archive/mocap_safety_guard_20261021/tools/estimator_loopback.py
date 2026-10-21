@@ -15,8 +15,12 @@ and checks, in order:
     frozen sample forwarded to PX4 beyond the first ~50 ms
   3 recovery: back to MOCAP after the 1 s recovery window, the odometry blended back
   4 a one-sample FLIP: rejected (not forwarded), bridged for a moment, never CONFIRMED
-  5 the test_fault service: the ladder runs, reason "test"
+  5 the test_fault service (0.5 s default): BRIDGING -> CONFIRMED -> MOCAP, never LOST, reason "test"
   6 EKF2 silent during a fault: no odometry at all (the flight node's timeout then trips)
+  7 a second fault DURING the blend back (2026-10-21 review): EKF2 drifts 0.225 m in a
+    1.5 s freeze, so the recovery blends back over ~2.2 s; 0.6 s into it a 0.3 s freeze --
+    the odometry must not step (the old bridge jumped by the blend left, ~0.16 m) and
+    must end on the mocap again
 With --guard-off: checks the plain pass-through (no health topic, every sample forwarded).
 """
 
@@ -53,6 +57,8 @@ class Loop(Node):
         self.frozen = None
         self.flip_once = False
         self.ekf_on = True
+        self.ekf_drift = np.zeros(3)     # EKF2's dead-reckoning error, grown at drift_rate
+        self.drift_rate = np.zeros(3)
         self.lock = threading.Lock()
         self.odom, self.health, self.fwd = [], [], []
         self.mocap_pub = self.create_publisher(Mocap, f"{ns}/mocap", 10)
@@ -98,7 +104,9 @@ class Loop(Node):
         if not self.ekf_on:
             return
         t = self.now()
-        p = truth(t) - OFFSET
+        with self.lock:
+            self.ekf_drift = self.ekf_drift + self.drift_rate / 100.0
+            p = truth(t) - OFFSET + self.ekf_drift
         v = (truth(t + 1e-3) - truth(t - 1e-3)) / 2e-3
         o = VehicleOdometry()
         o.timestamp = int(t * 1e6)
@@ -218,7 +226,8 @@ def main():
     time.sleep(3.0)
     he = window(n.health, t_f, n.now())
     states = sorted(set(int(h[1]) for h in he))
-    check(3 in states and 0 in states, f"test fault: states seen {states} (LOST then MOCAP)")
+    check(2 in states and 3 not in states and 0 in states,
+          f"test fault: states seen {states} (CONFIRMED then MOCAP, never LOST)")
     check(all(int(h[2]) == 4 for h in he if h[1] > 0), "test fault: cause = test")
     # 6 EKF2 silent during a fault
     n.ekf_on = False
@@ -234,6 +243,45 @@ def main():
         n.mode = "normal"
     n.ekf_on = True
     time.sleep(2.0)
+    # 7 a second fault during the blend back
+    t7 = n.now()
+    with n.lock:
+        n.drift_rate = np.array([0.15, 0.0, 0.0])
+        n.mode = "freeze"
+    time.sleep(1.5)
+    with n.lock:
+        n.drift_rate = np.zeros(3)
+        n.mode = "normal"
+    t_e = n.now()
+    back = None
+    while back is None and n.now() < t_e + 3.0:
+        back = next((h[0] for h in window(n.health, t_e, n.now()) if int(h[1]) == 0), None)
+        time.sleep(0.01)
+    check(back is not None, f"re-fault: the first fault recovered ({None if back is None else round(back - t_e, 2)} s)")
+    time.sleep(0.6)
+    blending = [h for h in window(n.health, back or t_e, n.now()) if int(h[4]) == 2]
+    check(blending, f"re-fault: a blend back was running when the second fault came ({len(blending)} health msgs)")
+    with n.lock:
+        n.mode = "freeze"
+    time.sleep(0.3)
+    with n.lock:
+        n.mode = "normal"
+    time.sleep(1.3 + 3.5)    # recover (1 s of good samples), then the rest of the blend
+    he = window(n.health, t7, n.now())
+    starts = sum(1 for i in range(1, len(he)) if int(he[i][1]) > 0 and int(he[i - 1][1]) == 0)
+    check(starts >= 2, f"re-fault: two episodes seen ({starts})")
+    # judged on the odometry's OFFSET from the truth (at each message's stamp): the
+    # blend back moves it smoothly; a freeze's first ~50-80 ms (published before it is
+    # recognised as frozen) dips it by up to v x that time, ~20 mm here, and the bridge
+    # then takes it back -- that is the frozen detector's latency, not a step. The old
+    # bridge lost the blend left at the second fault: ~160 mm in one message.
+    od = window(n.odom, t7, n.now())
+    off = [np.array(r[1:4]) - truth(r[4]) for r in od]
+    jumps = max((np.linalg.norm(off[i] - off[i - 1]) for i in range(1, len(off))), default=0.0)
+    check(jumps < 0.030, f"re-fault: the odometry's offset never steps (largest {jumps * 1e3:.2f} mm "
+                         "between messages, freeze-onset latency included)")
+    e = err_vs_truth(window(n.odom, n.now() - 0.5, n.now()))
+    check(e < 1e-5, f"re-fault: odometry = the mocap again at the end (max err {e * 1e3:.4f} mm)")
     print("ALL PASS" if ok else "SOME FAILED", flush=True)
     import os
     os._exit(0 if ok else 1)

@@ -1193,6 +1193,9 @@ the claw on the box the planner aborts (release, climb, arm home) and the vehicl
 and the arm GS's Mocap lamp reads LOST -- LAND WITH THE RC. Inject a fault in the sim:
 `ros2 param set --no-daemon --spin-time 5 /isaacsim_mocap_emulator fault_type freeze` (`fault_duration_s`, default 1 s),
 or `pl_mission.py --mocap-fault freeze@push+2:3`. Record: `archive/mocap_safety_guard_20261021/`.
+Hardware hover test: `ros2 service call /uav_0/state_estimator/mocap_guard/test_fault std_srvs/srv/Trigger` (0.5 s:
+CONFIRMED and back, never LOST). Rebuild before flying: Orin `fsc_drone_state_estimator_ros2` (branch `dev_robotic_arm`),
+`fsc_trajectory_planner`, `fsc_autopilot_ros2`; laptop `utils_custom_ground_station`.
 
 **Operating the arm GS "Box Pushing" tab**
 

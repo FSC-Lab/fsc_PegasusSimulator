@@ -6135,14 +6135,17 @@ fin top before the arm folds; now ~12 cm. Planner loopback ALL PASS on the sim a
 at the end of the climb (68 at 0.20) and 115 mm when Go To Land Start moves off, box untouched (0.0 mm, 0 deg),
 tilt <= 2.7 deg in the exit. One flight.
 
-**BOX PUSHING 2026-10-21: REVIEWED, PUSHED, TWO DEFECTS OPEN (record
+**BOX PUSHING 2026-10-21: REVIEWED, PUSHED, THE TWO DEFECTS FIXED IN A SECOND PUSH (record
 `docs/docs_aerial_manipulator/archive/box_pushing_review_20261021/README.md`).** Four read-only
 reviews of the day's work, then everything pushed on the user's instruction: estimator
 `dev_robotic_arm` c196507 (NEW remote branch), planner main c4fd5c3, autopilot dev_robotic_arm
 4d44739, arm omx-torque-control f5dde69, emulator d7f88e6, drone GS 485d8ac (the spoken
-mocap-guard alarm). **Fix before the hardware flight:** (1) estimator -- a second mocap fault
-during the blend back steps the odometry by the blend left (`advance()` freezes d0 from the RAW
-mocap, not from what was published); (2) planner -- a push slower than distance / t_max (40 s)
-is flown at t_max while the GS shows the longer time in green. Also: the 1.0 s default
-`mocap_guard_test_fault_s` reaches LOST (use 0.5 s for the hover test), and the 0.30 m Land
-hover sits below the SAFETY UDE gate (0.4 m) with the ~0.2 m revert dip.
+mocap-guard alarm). **Found and then FIXED (second push, same day):** (1) estimator -- a second mocap fault during
+the blend back stepped the odometry by the blend left (`advance()` froze d0 from the RAW mocap,
+not from what was published): the loopback's new case 7 measured 161 mm on the old build, 17.8 mm
+(= the frozen detector's onset latency) after; (2) planner -- a push slower than distance / t_max
+(40 s) was flown at t_max while the GS showed the longer time in green: now refused; and the
+`mocap_guard_test_fault_s` default 1.0 -> 0.5 s (1.0 reached LOST, "take over and land").
+Still open, decisions: Exit refused during a short BRIDGING gap (the GS calls it once), a fault
+during Exit waits the release hold, steps allowed during the blend back, LOST has no time bound,
+and the 0.30 m Land hover sits below the SAFETY UDE gate (0.4 m) with the ~0.2 m revert dip.

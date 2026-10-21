@@ -5,11 +5,12 @@ Four read-only reviewers on the uncommitted work of 2026-10-20/21: the planner
 raw-mocap guard (`fsc_drone_state_estimator_ros2`, the emulator, the whole-body client and
 stacks in `fsc_autopilot_ros2`), and the configs/tooling (generators, yamls, scene, scripts).
 Nothing was built or run. The two findings marked **verified** were re-read in the code
-afterwards. **None of them is fixed yet**; the code was pushed as it was, on the user's
-instruction (estimator `c196507`, planner `c4fd5c3`, autopilot `4d44739`, arm `f5dde69`,
-emulator `d7f88e6`, drone GS `485d8ac`).
+afterwards. The code was first pushed as it was (estimator `c196507`, planner `c4fd5c3`,
+autopilot `4d44739`, arm `f5dde69`, emulator `d7f88e6`, drone GS `485d8ac`); the same day,
+on the user's request, items 1, 2 and 7 and three GS display items were **FIXED** in a second
+push (see "Fixed" at the end).
 
-## Fix before the hardware flight
+## Fix before the hardware flight (both FIXED, see the end)
 
 1. **Estimator: a second fault during the blend back steps the odometry** (verified).
    `mocap_odom_bridge.cpp`, `advance()`: at an episode start `d0_ = d_`, the offset of
@@ -80,3 +81,16 @@ by another path; ladder parity with `guard_reference.py`; the flight client's DI
 and failsafe excuse; every generated yaml byte-identical to its generator; the hardware
 stack's expected-value list passes on the hardware yaml; the layout move consistent in the
 scene, yamls and tools, and absent from the valve rig.
+
+## Fixed (2026-10-21, second push)
+
+| finding | fix | verified by |
+|---|---|---|
+| 1 estimator: blend lost at a second fault | `advance()`: at an episode start during a blend, `d0 = d + w(t_last good) * blend_delta` -- the offset of what was published | `tools/estimator_loopback.py` NEW case 7 (EKF2 drifts 0.225 m in a 1.5 s freeze, a 0.3 s freeze 0.6 s into the 2.2 s blend back): the unfixed estimator stepped **161 mm** in one message; fixed, the largest offset change is **17.8 mm** = the frozen detector's own onset latency (the odometry stands still for ~50-80 ms before a freeze is recognised, minor finding 7, unchanged), and it ends on the mocap; all 28 checks PASS; gtest `test_mocap_guard` 10/10 |
+| 2 planner: slow push clamped to `t_max` | `planPushPullPush()` refuses a straight min-snap push whose time exceeds `PlanOptions::T_max`, naming `push_pull_push_mean_speed` and the distance | gtest `PushPull.PushTimeComesFromTheMeanSpeed` (0.40 m at 8 mm/s refused naming t_max; at 10.5 mm/s planned at its own 38.1 s); push suite 18/18; box-pushing loopback ALL PASS on the sim AND the hardware yaml |
+| 7 test fault reached LOST | `mocap_guard_test_fault_s` default 1.0 -> **0.5** s (header + launch): CONFIRMED and back, never LOST; above 1.0 s it exercises LOST on purpose | loopback case 5 now expects states {0, 1, 2}, PASS |
+| GS: a typed pull of the planner's distance showed green | the preview compares the SIGNED distance | `gs_push_check.sh` PASS (real planner, offscreen) |
+| GS: "nan m is outside" before the parameters load | an unknown value is uncoloured, not red | same |
+| GS: the contact-line tooltip | describes the box-pushing timing (grasp -> end of the push) | -- |
+
+Still open (decisions, not code): 3, 4, 5, 6, 8 and the low items above.
