@@ -1,0 +1,60 @@
+
+================ 161745
+  raw VRPN uav_0: 8777 samples 120.0 Hz; gaps > 30 ms: 
+  processor /uav_0/mocap: 8520 samples, frozen runs (>= 3 identical): none
+  one-sample steps > 20 mm or > 10 deg: 0
+  guard: at bag start episodes 0 rejected 0; at end episodes 0 rejected 0; worst state MOCAP; mocap rate in the guard 118..121/s
+  odometry continuity: largest one-sample step 7.5 mm at 44.44s; p99.9 6.3 mm; odom gaps > 30 ms: 0 (max 23 ms)
+  odometry: largest one-sample rotation 1.29 deg, max tilt 4.8 deg
+  EKF2 cs_ev_pos while armed: 1..1 (44 samples at 1 Hz); inertial dead reckoning ever: 0
+
+================ 162604
+  raw VRPN uav_0: 85108 samples 120.0 Hz; gaps > 30 ms: 6.87s 91ms, 9.44s 100ms, 37.14s 91ms
+  processor /uav_0/mocap: 85208 samples, frozen runs (>= 3 identical): 6.87-6.95s (4 samples, 75 ms), 9.44-9.53s (5 samples, 92 ms), 37.14-37.21s (4 samples, 77 ms)
+  one-sample steps > 20 mm or > 10 deg: 1: 9.55s 28mm/1deg tilt 1
+  guard: at bag start episodes 1 rejected 1; at end episodes 1 rejected 0; worst state MOCAP; mocap rate in the guard 16..132/s
+    episode #2 at 9.55s: cause frozen, duration 8 ms, worst state MOCAP, rejected +1 (src during: [0, 2])
+    episode #1 at 683.36s: cause stale, duration 2 ms, worst state MOCAP, rejected +0 (src during: [0])
+    frozen run 6.87s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 8); in the law's odometry 4 times (samples 8)
+    frozen run 9.44s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 9); in the law's odometry 4 times (samples 10)
+    frozen run 37.14s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 10); in the law's odometry 4 times (samples 10)
+  odometry continuity: largest one-sample step 27.9 mm at 9.55s; p99.9 8.0 mm; odom gaps > 30 ms: 159 (max 481260 ms)
+  odometry: largest one-sample rotation 3.73 deg, max tilt 15.3 deg
+  EKF2 cs_ev_pos while armed: 1..1 (43 samples at 1 Hz); inertial dead reckoning ever: 0
+
+================ 164338
+  raw VRPN uav_0: 10782 samples 119.6 Hz; gaps > 30 ms: 40.51s 92ms, 46.42s 92ms, 79.57s 100ms, 86.12s 99ms
+  processor /uav_0/mocap: 10788 samples, frozen runs (>= 3 identical): 40.51-40.60s (5 samples, 88 ms), 46.42-46.50s (4 samples, 80 ms), 79.57-79.66s (5 samples, 89 ms), 86.12-86.21s (5 samples, 89 ms)
+  one-sample steps > 20 mm or > 10 deg: 2: 76.36s 91mm/180deg tilt 165, 76.37s 88mm/180deg tilt 1
+  guard: at bag start episodes 3 rejected 3; at end episodes 7 rejected 7; worst state BRIDGING; mocap rate in the guard 110..124/s
+    episode #4 at 40.61s: cause frozen, duration 7 ms, worst state MOCAP, rejected +1 (src during: [0, 2])
+    episode #5 at 76.37s: cause jump, duration 8 ms, worst state MOCAP, rejected +1 (src during: [0, 2])
+    episode #6 at 79.67s: cause frozen, duration 10 ms, worst state BRIDGING, rejected +1 (src during: [0, 1, 2])
+    episode #7 at 86.23s: cause frozen, duration 10 ms, worst state MOCAP, rejected +1 (src during: [0, 2])
+    frozen run 40.51s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 10); in the law's odometry 4 times (samples 11)
+    frozen run 46.42s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 9); in the law's odometry 4 times (samples 9)
+    frozen run 79.57s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 10); in the law's odometry 4 times (samples 11)
+    frozen run 86.12s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 10); in the law's odometry 4 times (samples 11)
+  odometry continuity: largest one-sample step 13.7 mm at 34.19s; p99.9 8.5 mm; odom gaps > 30 ms: 5 (max 46 ms)
+  odometry: largest one-sample rotation 3.71 deg, max tilt 4.0 deg
+  EKF2 cs_ev_pos while armed: 1..1 (85 samples at 1 Hz); inertial dead reckoning ever: 0
+
+================ 165311
+  raw VRPN uav_0: 7091 samples 120.0 Hz; gaps > 30 ms: 
+  processor /uav_0/mocap: 6798 samples, frozen runs (>= 3 identical): none
+  one-sample steps > 20 mm or > 10 deg: 0
+  guard: at bag start episodes 2 rejected 2; at end episodes 2 rejected 2; worst state MOCAP; mocap rate in the guard 119..126/s
+  odometry continuity: largest one-sample step 11.0 mm at 10.26s; p99.9 8.7 mm; odom gaps > 30 ms: 0 (max 21 ms)
+  odometry: largest one-sample rotation 3.37 deg, max tilt 6.0 deg
+  EKF2 cs_ev_pos while armed: 1..1 (51 samples at 1 Hz); inertial dead reckoning ever: 0
+
+================ 170123
+  raw VRPN uav_0: 11533 samples 120.0 Hz; gaps > 30 ms: 76.65s 100ms
+  processor /uav_0/mocap: 11535 samples, frozen runs (>= 3 identical): 76.65-76.74s (5 samples, 91 ms)
+  one-sample steps > 20 mm or > 10 deg: 0
+  guard: at bag start episodes 1 rejected 0; at end episodes 2 rejected 1; worst state BRIDGING; mocap rate in the guard 111..124/s
+    episode #2 at 76.75s: cause frozen, duration 9 ms, worst state BRIDGING, rejected +1 (src during: [0, 1, 2])
+    frozen run 76.65s: frozen pose forwarded to PX4 4 times in the run (PX4 samples in it 9); in the law's odometry 4 times (samples 10)
+  odometry continuity: largest one-sample step 19.8 mm at 6.80s; p99.9 12.3 mm; odom gaps > 30 ms: 4 (max 98 ms)
+  odometry: largest one-sample rotation 6.62 deg, max tilt 6.1 deg
+  EKF2 cs_ev_pos while armed: 1..1 (93 samples at 1 Hz); inertial dead reckoning ever: 0

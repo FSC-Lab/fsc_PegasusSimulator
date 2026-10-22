@@ -1,0 +1,50 @@
+
+HW hover above handle, CoM anchor  5.1 s, at 0.55 Hz
+  swing (q2-q3)/2 [deg]    amp   0.000  (rms   0.003)  phase vs swing     +0 deg
+  body roll [deg]          amp   0.193  (rms   0.468)  phase vs swing    -40 deg
+  body pitch [deg]         amp   0.214  (rms   0.518)  phase vs swing   +177 deg
+  |e_R| [mrad]             amp   6.825  (rms  22.597)  phase vs swing    +63 deg
+  tau_body x [N.m]         amp   0.010  (rms   0.119)  phase vs swing    +33 deg
+  tau_body y [N.m]         amp   0.022  (rms   0.127)  phase vs swing    +18 deg
+  CoM err y [mm]           amp  10.110  (rms  14.666)  phase vs swing   +150 deg
+  CoM err x [mm]           amp   4.666  (rms  10.763)  phase vs swing    -62 deg
+
+HW world-held, jaws open + contact  9.3 s, at 0.54 Hz
+  swing (q2-q3)/2 [deg]    amp  10.264  (rms  10.233)  phase vs swing     +0 deg
+  body roll [deg]          amp   1.619  (rms   1.665)  phase vs swing   +149 deg
+  body pitch [deg]         amp   0.692  (rms   1.171)  phase vs swing    -29 deg
+  |e_R| [mrad]             amp  15.943  (rms  30.281)  phase vs swing    -94 deg
+  tau_body x [N.m]         amp   0.180  (rms   0.216)  phase vs swing    -25 deg
+  tau_body y [N.m]         amp   0.085  (rms   0.171)  phase vs swing   +149 deg
+  CoM err y [mm]           amp  14.625  (rms  14.401)  phase vs swing     -3 deg
+  CoM err x [mm]           amp  20.866  (rms  21.301)  phase vs swing   +174 deg
+
+SIM v21_1 world-held + contact  10.1 s, at 0.70 Hz
+  swing (q2-q3)/2 [deg]    amp   4.184  (rms   5.392)  phase vs swing     +0 deg
+  body roll [deg]          amp   0.016  (rms   0.126)  phase vs swing    +98 deg
+  body pitch [deg]         amp   0.657  (rms   1.038)  phase vs swing     +7 deg
+  |e_R| [mrad]             amp   0.575  (rms   7.251)  phase vs swing     -5 deg
+  tau_body x [N.m]         amp   0.008  (rms   0.035)  phase vs swing   -110 deg
+  tau_body y [N.m]         amp   0.071  (rms   0.123)  phase vs swing   -157 deg
+  CoM err y [mm]           amp   4.690  (rms   6.346)  phase vs swing    +11 deg
+  CoM err x [mm]           amp   0.166  (rms   1.290)  phase vs swing   -154 deg
+
+SIM v21_2 world-held + contact  10.2 s, at 0.59 Hz
+  swing (q2-q3)/2 [deg]    amp   5.223  (rms   5.902)  phase vs swing     +0 deg
+  body roll [deg]          amp   0.046  (rms   0.181)  phase vs swing   -155 deg
+  body pitch [deg]         amp   0.831  (rms   1.110)  phase vs swing    +23 deg
+  |e_R| [mrad]             amp   1.561  (rms   6.827)  phase vs swing   +133 deg
+  tau_body x [N.m]         amp   0.003  (rms   0.037)  phase vs swing    -71 deg
+  tau_body y [N.m]         amp   0.087  (rms   0.129)  phase vs swing   -142 deg
+  CoM err y [mm]           amp   6.584  (rms   7.895)  phase vs swing    +17 deg
+  CoM err x [mm]           amp   0.642  (rms   2.905)  phase vs swing   -122 deg
+
+SIM v21_3 world-held + contact  10.1 s, at 0.69 Hz
+  swing (q2-q3)/2 [deg]    amp   4.707  (rms   5.299)  phase vs swing     +0 deg
+  body roll [deg]          amp   0.176  (rms   0.269)  phase vs swing   +158 deg
+  body pitch [deg]         amp   0.777  (rms   0.951)  phase vs swing     +5 deg
+  |e_R| [mrad]             amp   1.844  (rms   7.450)  phase vs swing   -132 deg
+  tau_body x [N.m]         amp   0.019  (rms   0.046)  phase vs swing    -22 deg
+  tau_body y [N.m]         amp   0.076  (rms   0.107)  phase vs swing   -158 deg
+  CoM err y [mm]           amp   5.816  (rms   6.777)  phase vs swing    +15 deg
+  CoM err x [mm]           amp   1.442  (rms   4.847)  phase vs swing   -178 deg

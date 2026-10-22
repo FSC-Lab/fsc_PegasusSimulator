@@ -1,0 +1,189 @@
+<title>1021 Box-Pushing Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: one full-width reading column, sections stacked, tables and the figure fill the column.
+   Single dark look on purpose (the user's reports always run on black). */
+:root {
+  --bg: #000000;
+  --panel: #141413;
+  --line: #2b2a27;
+  --ink: #ecebe6;
+  --muted: #a6a59d;
+  --hw: #3987e5;        /* hardware series */
+  --sim: #e0703f;       /* Isaac series */
+  --trip: #ef5b52;      /* the guard trip / a safety item */
+  --f-head: "IBM Plex Sans Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.6 var(--f-body);
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+h1, h2, h3 { font-family: var(--f-head); text-wrap: balance; line-height: 1.2; }
+h1 { font-size: 2rem; font-weight: 600; margin: 0 0 6px; letter-spacing: 0.01em; }
+h2 { font-size: 1.35rem; font-weight: 600; margin: 40px 0 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 6px; color: var(--ink); }
+p { margin: 8px 0; }
+.sub { color: var(--muted); font-size: 0.92rem; margin: 0 0 18px; }
+.sub span + span::before { content: " · "; }
+code { font-family: var(--f-mono); font-size: 0.88em; overflow-wrap: anywhere; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+li::marker { color: var(--muted); }
+.verdict { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; margin: 18px 0 8px; }
+.verdict h3 { margin: 0 0 6px; font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.verdict ul { margin: 0; }
+.tscroll { overflow-x: auto; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--f-head); font-weight: 600; color: var(--muted); font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; border-bottom-color: #3a3935; }
+td.n { white-space: nowrap; font-family: var(--f-mono); font-size: 0.86rem; }
+td.hw { color: var(--ink); }
+.k { font-family: var(--f-mono); font-size: 0.84rem; white-space: nowrap; }
+.bad { color: var(--trip); }
+.cls { display: inline-block; font-family: var(--f-mono); font-size: 0.78rem; padding: 1px 7px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); }
+.cls.push { border-color: var(--hw); color: var(--ink); }
+figure { margin: 18px 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; filter: invert(1) hue-rotate(180deg); }
+figcaption { color: var(--muted); font-size: 0.86rem; margin-top: 8px; }
+.key { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--hw); vertical-align: middle; margin-right: 4px; }
+.key.sim { border-top: 2px dashed var(--sim); }
+ol.fixes { list-style: none; padding-left: 0; counter-reset: fix; }
+ol.fixes > li { counter-increment: fix; display: grid; grid-template-columns: 2.2rem minmax(0, 1fr); gap: 0 10px; padding: 12px 0; border-bottom: 1px solid var(--line); margin: 0; }
+ol.fixes > li::before { content: counter(fix); font-family: var(--f-head); font-weight: 600; font-size: 1.25rem; color: var(--muted); line-height: 1.3; }
+.fix-t, .fix-b { grid-column: 2; min-width: 0; }
+ol.fixes > li::before { grid-row: 1 / span 2; }
+.fix-t { font-weight: 600; }
+.fix-t .cls { margin-left: 8px; vertical-align: 1px; font-weight: 400; }
+.fix-b { color: var(--ink); }
+.fix-b .why { color: var(--muted); }
+.ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.ladder > div { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.ladder .s { font-family: var(--f-mono); font-size: 0.78rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.ladder .m { font-family: var(--f-head); font-weight: 600; font-size: 1.15rem; margin: 2px 0 4px; }
+.ladder p { margin: 0; font-size: 0.88rem; color: var(--muted); }
+@media (max-width: 760px) { .ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { td.n { white-space: normal; } }
+@media (max-width: 440px) { .ladder { grid-template-columns: minmax(0, 1fr); } h1 { font-size: 1.6rem; } }
+.foot { color: var(--muted); font-size: 0.84rem; margin-top: 36px; }
+</style>
+
+<h1>1021 Box-Pushing Flights</h1>
+<p class="sub"><span>T650-AM, whole-body 4-D L1 on raw mocap</span><span>240 g box, 0.10 m push at 21 mm/s</span><span>5 bags, 2026-10-21</span></p>
+
+<div class="verdict">
+<h3>Result</h3>
+<ul>
+<li>The box was pushed <b>107 mm</b> (97 mm at rest) and stayed upright. Vehicle tilt stayed under 5.7°, with no actuator saturation.</li>
+<li>The exit was <b>not the normal Exit</b>. The planner's q3 guard tripped 0.78 s after the push ended and ran an abort. The vehicle was then flown home and landed.</li>
+<li>The new mocap guard caught every real mocap fault (8 VRPN pauses, 1 drone flip) with no false abort.</li>
+<li><b>500 g / 0.50 m: not yet.</b> In contact the arm swings about twice as much as in Isaac, and the swing already used the whole q3 range.</li>
+</ul>
+</div>
+
+<h2>1. The bags</h2>
+<div class="tscroll"><table>
+<thead><tr><th>Bag</th><th>Class</th><th>What happened</th></tr></thead>
+<tbody>
+<tr><td class="n">_170123</td><td><span class="cls push">box_pushing</span></td><td>The formal push. Every step was flown and the box moved. The exit was a q3-guard abort, then Go To Land Start and Land.</td></tr>
+<tr><td class="n">_164338</td><td><span class="cls">free_flight</span></td><td>Go To Start over a typed box point, a 16 s hover above it, Go To Land Start, Land. No grasp and no push.</td></tr>
+<tr><td class="n">_161745</td><td><span class="cls">stale</span></td><td>Plan refused twice: the box point was off the table in the yaml (x 0.600–0.750). Landed.</td></tr>
+<tr><td class="n">_162604</td><td><span class="cls">stale</span></td><td>The same refused Plan, then 11 min on the ground while the box was put on the table. No metadata.yaml.</td></tr>
+<tr><td class="n">_165311</td><td><span class="cls">stale</span></td><td>Plan refused: the box was at x 0.576, off the table in the yaml. Flown home from the drone ground station.</td></tr>
+</tbody></table></div>
+<p>The box moved from x 0.576 (refused) to x 0.637 (accepted) between the last two flights. The yaml still describes Isaac's table, so the real table's position is unconfirmed.</p>
+
+<h2>2. The mocap guard on hardware</h2>
+<div class="tscroll"><table>
+<thead><tr><th>Event</th><th>Count</th><th>Guard response</th><th>Effect on the controller</th></tr></thead>
+<tbody>
+<tr><td>VRPN pause, the last pose republished frozen (75–100 ms)</td><td class="n">8</td><td>Caught as frozen after 50 ms, bridged on EKF2 for 5–25 ms, then blended back over 9–24 mm.</td><td>The first ~50 ms of frozen pose still reaches the law. A velocity spike of 0.5–2 m/s follows.</td></tr>
+<tr><td>Drone rigid-body flip (91 mm, 180°)</td><td class="n">1</td><td>Rejected on its own sample.</td><td>The odometry never saw the flip. A 3.75 m/s velocity spike for one sample gave 1–2 ticks of +61 N thrust command; tilt did not change.</td></tr>
+<tr><td>CONFIRMED or LOST</td><td class="n">0</td><td>Not reached.</td><td>The abort-on-fault path is still tested only in Isaac.</td></tr>
+</tbody></table></div>
+<p>The pauses came about once every 30–40 s of flight; none fell inside the contact phase. EKF2 fused vision for the whole of every flight. The velocity spikes come from the mocap processor, which differentiates across the gap. The guard checks position only, so they pass through.</p>
+
+<h2>3. The push against Isaac</h2>
+<p>Isaac runs <code>v21_1..3</code> fly the same task: 240 g box, 0.10 m push at 21 mm/s, the same push pose, the hardware guard values.</p>
+<div class="tscroll"><table>
+<thead><tr><th>Metric</th><th>Hardware</th><th>Isaac (3 runs)</th></tr></thead>
+<tbody>
+<tr><td>Box travel</td><td class="n">107 mm at push end, 97 at rest</td><td class="n">98–101 mm</td></tr>
+<tr><td>Box stuck during the slide</td><td class="n">20 %</td><td class="n">0–11 %</td></tr>
+<tr><td>Box peak speed (plan 47 mm/s)</td><td class="n">103 mm/s</td><td class="n">58–75 mm/s</td></tr>
+<tr><td>Box lag behind the plan (guard 40 mm)</td><td class="n">24 mm</td><td class="n">10–15 mm</td></tr>
+<tr><td>Arm swing (q2−q3)/2 while the claw is held in the room</td><td class="n bad">10.5° rms, 0.55 Hz</td><td class="n">5.5° rms, 0.6–0.7 Hz</td></tr>
+<tr><td>CoM error along the arm, same window</td><td class="n">14–15 mm rms</td><td class="n">6–8 mm rms</td></tr>
+<tr><td>q2 max (hardware limit 45°)</td><td class="n bad">45.3°</td><td class="n">39.6–42.4°</td></tr>
+<tr><td>q3 min (guard 10°; below 0° is the elbow-singular branch)</td><td class="n bad">−7.3°</td><td class="n">13.2–18.1°</td></tr>
+<tr><td>Vehicle tilt</td><td class="n">5.7°</td><td class="n">2.6–3.3°</td></tr>
+</tbody></table></div>
+
+<figure>
+<img src="{{FIG}}" alt="Four stacked plots against time from the push start: q2, q3, box travel along the push with the plan, and the CoM error along the arm. The hardware run swings about twice as far as the Isaac run, reaches the q2 limit and the q3 stop, and q3 falls below the 10 degree guard after the push ends.">
+<figcaption><span class="key"></span>hardware <code>_170123</code> &nbsp; <span class="key sim"></span>Isaac <code>v21_2</code>, aligned at the push start. Dotted lines are the hardware's phase boundaries; the red line is the q3-guard trip.</figcaption>
+</figure>
+
+<h3>What happened, in order</h3>
+<ul>
+<li><b>36.5 s.</b> The claw reached the handle and was held in the room (the planner's world anchor). Until then the arm had stayed locked at 32.2°/29.9°. From here on it absorbs the base's motion along the arm, as a q2/q3 antiphase swing. Isaac shows the same swing at half the amplitude.</li>
+<li><b>38.9 s.</b> The jaws closed, 2.4 s after arrival. The swing was already 6° rms.</li>
+<li><b>39.6–41.1 s, the settle.</b> The clamped box was pushed 10.5 mm backward before the push began.</li>
+<li><b>41.1–45.8 s, the slide.</b> The box stuck for ~1.8 s, then surged at ~100 mm/s to catch up. q3 reached its 50° stop and q2 its 45° limit.</li>
+<li><b>45.84 s.</b> The push ended. The contact flag went off, but the jaws stayed closed: the ground station's automatic Exit was due 1.0 s later.</li>
+<li><b>46.62 s.</b> q3 fell to 5.0°, below its 10° guard, and the planner aborted. The jaws opened within 30 ms. The abort planned from the measured pose, so it held the arm buckled (q2 on 45°, q3 ≈ 2°, −7.3° at worst) for ~10 s while climbing 0.30 m, then folded it home. The vehicle stayed calm (tilt ≤ 3.5°).</li>
+</ul>
+<p>Two more findings from the same flight:</p>
+<ul>
+<li><b>The box's mocap body mis-solved during contact.</b> At 40.85 s it reported a 96° tilt and a 61 mm jump for 3 samples. Only the box guards' 0.2 s persistence kept that from aborting the push.</li>
+<li><b>The claw sat below its reference.</b> Under the world hold it was 8–10 mm low (Isaac 0–3 mm), so the arm lifted the box by about 1 N. The cause is joint stiction that the arm's feed-forward had learned while the joints were stuck (item 9).</li>
+</ul>
+
+<h2>4. Friction</h2>
+<p>The bench calibration (μ 0.25) is good enough; this flight cannot refine it. Averaged over the slide, the law's force estimate reads about 0.25 N of push resistance, while the arm was also lifting the box by about 0.8 N. That gives μ ≈ 0.16 ± 0.1: consistent with the bench's 0.20–0.28, but less precise. (In Isaac the same estimate reads within 0.1–0.2 N of the true contact force.) The box's stick-slip came from the arm swing, not from friction: the clamped box moved 10 mm backward before any push started.</p>
+
+<h2>5. Next steps</h2>
+<h3>Before the next push: configuration, lab and procedure</h3>
+<ol class="fixes">
+<li><div class="fix-t">Release sooner after the push ends <span class="cls">config</span></div>
+<div class="fix-b">Set the arm GS's <code>push_pull_auto_exit_delay_s</code> from 1.0 to about 0.2 s. <span class="why">Today's trip came 0.78 s after the push ended, and the swing's half-period is ~0.9 s. Once the jaws open, the arm stops absorbing the base's motion. This removes the window the trip happened in, but not the swing; a release during a swing is so far tested only in Isaac (6 of 6).</span></div></li>
+<li><div class="fix-t">Measure the real table into <code>push_pull_table</code> <span class="cls">lab + config</span></div>
+<div class="fix-b">The hardware yaml still carries Isaac's table (x 0.600–0.750, top 0.80 m). <span class="why">The planner refused the box at x 0.576 and accepted it at 0.637. Its edge check and its landing-gear clearance both use this box.</span></div></li>
+<li><div class="fix-t">Re-define the box's rigid body in Motive <span class="cls">lab</span></div>
+<div class="fix-b">Use an asymmetric marker set. <span class="why">The body mis-solved 3 samples in contact (96°, 61 mm) and ~10 times at 15.7–17.9 s, with the vehicle 1.7 m away. A 24 s push gives five times today's exposure.</span></div></li>
+<li><div class="fix-t">Exercise the mocap-fault abort once on hardware <span class="cls">flight test</span></div>
+<div class="fix-b">Trigger the estimator's <code>mocap_guard/test_fault</code> (0.5 s) in a hover away from the table. <span class="why">No bag reached CONFIRMED or LOST, so the abort path has only ever run in Isaac.</span></div></li>
+</ol>
+
+<h3>Before 500 g / 0.50 m: simulation and code</h3>
+<ol class="fixes" style="counter-reset: fix 4">
+<li><div class="fix-t">Damp the arm swing while the claw is held in the room <span class="cls">sim campaign → config</span></div>
+<div class="fix-b">This is the main item. <span class="why">The swing is 10.5° rms on hardware vs 5.5° in Isaac. It used q3's full 5–50° range, touched q2's limit, and drove the box's stick-slip. Isaac reproduces the mode, so candidates can be ranked there first: more damping on the EE task, a partial world hold in contact, a shorter world-held wait before the jaws close. Already rejected in Isaac: EE damping D_y 40 and CoM damping k_v 20/25, which left DIRECT in free flight.</span></div></li>
+<li><div class="fix-t">After a joint-guard abort, fold the arm off the buckled pose <span class="cls">planner code + Isaac test</span></div>
+<div class="fix-b">Once the jaws are open, drive the arm toward the push pose instead of holding the measured one. <span class="why">Today's abort held q3 at about 2° (−7.3° at worst) with q2 on its limit for ~10 s. The Isaac jammed-box case can test it.</span></div></li>
+<li><div class="fix-t">Gate the box's mocap samples before the box guards use them <span class="cls">planner code</span></div>
+<div class="fix-b">Reject a sample that jumps more than 20 mm or 10° from the last good one, as the drone guard does. <span class="why">Today a 25 ms mis-solve reached both box guards and the push monitor.</span></div></li>
+<li><div class="fix-t">Clean the velocity after a mocap pause or flip <span class="cls">estimator or processor code</span></div>
+<div class="fix-b">Use EKF2's velocity while the guard blends back, or stop the processor republishing a frozen pose. <span class="why">After the flip, a 3.75 m/s spike gave 1–2 ticks of +61 N thrust command. It was harmless in free flight today; in contact it also kicks the arm torques.</span></div></li>
+<li><div class="fix-t">Keep the arm's feed-forward from learning stiction (why the claw sits 8–10 mm low) <span class="cls">law code, low priority</span></div>
+<div class="fix-b">The cause is found; the joint trim is not it. <span class="why">From 28.9 to 36.9 s, with the claw riding the CoM, q2/q3 did not move (std 0.01°). Static friction held them, and the observer booked that friction as a joint disturbance: +0.15 N·m on j2 and +0.11 on j3. The arm's feed-forward learned it through its 10 s filter (<code>wb_l1_omega_x_q</code> 0.1) and subtracted it from the command. The world hold set the joints moving at 37.3 s. Within ~1 s the friction no longer held them, but the feed-forward kept subtracting ~0.1 N·m on each joint, so the arm sagged. Rebuilt from the logged residual, this predicts −9.2 mm; −9.3 mm was measured. The trim cannot explain it: the offset appeared 2 s before contact, and in free flight the trim does not reach the control law. After the grasp the box (2.35 N) held the claw where the jaws closed. The offset is harmless for this grasp. Two untested fixes: clear the arm rows of the feed-forward when the world hold starts, or give those rows a faster filter. Isaac cannot test either, because its friction model has no stiction.</span></div></li>
+</ol>
+
+<h3>The way up to 500 g / 0.50 m, one change per flight</h3>
+<div class="ladder">
+<div><div class="s">Step 1</div><div class="m">240 g · 0.10 m</div><p>Today's test again, with fixes 1–3.</p></div>
+<div><div class="s">Step 2</div><div class="m">240 g · 0.25–0.30 m</div><p>A long contact at the same force.</p></div>
+<div><div class="s">Step 3</div><div class="m">500 g · 0.10 m</div><p>Twice the force, a short push.</p></div>
+<div><div class="s">Step 4</div><div class="m">500 g · 0.50 m</div><p>The formal test. Box starts at y ≈ 0.28: from today's y 0.10 the planner refuses this push.</p></div>
+</div>
+<p>Move up a step only after a flight that ends with the normal Exit, with no guard trip, and with the arm inside Isaac's envelope for the same task (q3 ≥ 13°, q2 ≤ 42°).</p>
+
+<p class="foot">Data, tools and the full write-up: <code>docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261021/</code>. Bags: <code>docs/experimental_data_ros2_bag/1021 - T650-AM whole-body Box-Pushing [Success]-…/</code>, sorted into stale / free_flight / box_pushing.</p>

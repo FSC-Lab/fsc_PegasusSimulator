@@ -1,0 +1,590 @@
+
+================ 161745   duration 73.5 s
+     0.39  PX4 ARMED STAB
+    10.91  PX4 ARMED OFFBOARD
+    43.49  PX4 ARMED STAB
+    45.17  PX4 disarmed STAB
+     0.01  NODE SAFETY
+    17.28  NODE DIRECT
+    33.28  NODE SAFETY
+     0.00  CTRL Baseline (Safety)
+    17.28  CTRL Whole-Body Direct Actuation
+    33.28  CTRL Baseline (Safety)
+     0.05  PLANNER IDLE
+    17.28  PLANNER HOLD
+    33.28  PLANNER IDLE
+     0.08  PUSH NOT IN DIRECT
+    17.28  PUSH NOT PLANNED: press Plan
+    19.96  PUSH PLANNING
+    19.97  PUSH INFEASIBLE: push: the box would end at (1.002, 0.006) -- its trailing end at (1.002, 0.126) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0.500). Is the box's yaw right (the push follows
+    23.82  PUSH PLANNING
+    23.83  PUSH INFEASIBLE: push: the box would end at (1.002, 0.006) -- its trailing end at (1.002, 0.126) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0.500). Is the box's yaw right (the push follows
+    33.28  PUSH NOT IN DIRECT
+     0.99  GUARD MOCAP cause=0 src=0 ekf=1  age=0.005 rej=0 ep=0 rate=120
+          GUARD final: rejected=0 episodes=0 last cause=0.0 dur=nan
+  airborne (z>0.40) 8.8 .. 44.2 s, z max 1.170, tilt max airborne 4.8 deg, xy span x[-0.96,-0.71] y[-0.43,-0.23]
+  box start (-0.655,2.436,0.076) end (-0.656,2.436,0.075) moved 2 mm
+    17.28  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    19.97  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull plan refused: push: the box would end at (1.002, 0.006) -- its trailing end at (1.002, 0.126) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0.
+    23.83  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull plan refused: push: the box would end at (1.002, 0.006) -- its trailing end at (1.002, 0.126) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0.
+    33.28  ROSOUT[30] uav_0.fsc_autopilot_ros2: Reference re-seeded to current pose: [-0.80 -0.30 0.97] m, yaw 1.2 deg
+    33.28  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+    33.28  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+    33.58  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+    35.28  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: arm folding HOME (Homing over 1.500000 s.)[0m
+
+================ 162604   duration 712.0 s
+     0.38  PX4 ARMED STAB
+    10.00  PX4 ARMED OFFBOARD
+    42.51  PX4 ARMED STAB
+    43.74  PX4 disarmed STAB
+     0.01  NODE SAFETY
+    16.83  NODE DIRECT
+    34.33  NODE SAFETY
+     0.00  CTRL Baseline (Safety)
+    16.83  CTRL Whole-Body Direct Actuation
+    34.33  CTRL Baseline (Safety)
+     0.19  PLANNER IDLE
+    16.83  PLANNER HOLD
+    34.33  PLANNER IDLE
+     0.20  PUSH NOT IN DIRECT
+    16.83  PUSH NOT PLANNED: press Plan
+    20.15  PUSH PLANNING
+    20.16  PUSH INFEASIBLE: push: the box would end at (1.007, -0.000) -- its trailing end at (1.007, 0.120) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0.500). Is the box's yaw right (the push follow
+    34.33  PUSH NOT IN DIRECT
+     0.05  GUARD MOCAP cause=0 src=0 ekf=1  age=0.005 rej=1 ep=1 rate=120
+     9.55  GUARD MOCAP cause=0 src=2 ekf=1  age=0.008 rej=2 ep=2 rate=112
+    10.07  GUARD MOCAP cause=0 src=0 ekf=1  age=0.003 rej=2 ep=2 rate=112
+   529.36  GUARD MOCAP cause=0 src=0 ekf=0  age=0.003 rej=0 ep=0 rate=16
+   529.52  GUARD MOCAP cause=0 src=0 ekf=1  age=0.005 rej=0 ep=0 rate=35
+          GUARD final: rejected=0 episodes=1 last cause=1.0 dur=0.002
+  airborne (z>0.40) 8.2 .. 42.8 s, z max 1.081, tilt max airborne 15.3 deg, xy span x[-0.92,-0.75] y[-0.38,0.04]
+  box start (0.823,1.957,0.073) end (0.637,0.119,0.848) moved 1847 mm
+     0.05  ROSOUT[30] rosbag2_recorder: New publisher discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', offering incompatible QoS. No messages will be sent to it. Last incompatible poli
+     0.13  ROSOUT[30] uav_0.whole_body_trajectory_planner: New subscription discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', requesting incompatible QoS. No messages will be sent to it. Last incompatible
+     0.14  ROSOUT[30] rosbag2_recorder: A new publisher for subscribed topic /uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory was found offering RMW_QOS_POLICY_DURABILITY_VOLATILE, but rosbag2 already subscr
+     6.91  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+     6.91  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+     6.91  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+     9.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+     9.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+     9.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+     9.53  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (frozen, last good sample 17 ms ago) -- the odometry is now EKF2 + [0.7 2.3 -2.0] mm[0m
+     9.54  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (frozen) -- blending the odometry back over 0.5 s from 23.8 mm away[0m
+    16.83  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    20.16  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull plan refused: push: the box would end at (1.007, -0.000) -- its trailing end at (1.007, 0.120) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0
+    34.32  ROSOUT[30] uav_0.fsc_autopilot_ros2: Reference re-seeded to current pose: [-0.75 -0.26 0.96] m, yaw 2.6 deg
+    34.32  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+    34.33  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+    34.63  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+    36.33  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: arm folding HOME (Homing over 1.500000 s.)[0m
+    37.18  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    37.18  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+    37.18  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+   529.23  ROSOUT[30] uav_0.uav_0_node: [1;35mMOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg; the bridge = EKF2 (fmu/out/vehicle_odometry) + the offset at the last good sample; health
+   529.24  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;36mLAW CHECK: observer-driven share of u3 is CAPPED per joint at [0.000 0.000 0.000 0.060] N.m (0 = uncapped) -- wb_u3_estimate_max_j*; bounds the estimate/feedforward pair against a joint held by
+   529.24  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;36mLAW CHECK: u3 coupling feedforward carries the observer estimate (wb_u3_internal_ff true, source 4D INTERNAL d_int^f = C_x T^-T w_hat_int) -- the arm pre-compensates u + d_hat, not u alone.[0m
+   529.24  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;36mLAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed is not what is held.[0m
+   529.24  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;35mDISTURBANCE OBSERVER: L1 ADAPTIVE (not the GMO). A_s=-[2.00 2.00 2.00] Ts=0.0000s omega_c=[1.00 0.74 0.85] omega_i=2.00 omega_x=2.0 L_c var=[100 0.25 0.0025] attribution=ON (attributed F_y) bou
+   529.24  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;35mATTRIBUTION: FOUR-DIMENSIONAL, on the joint rows (the note's Sept 2026 revision). omega_q=0.200 rad/s, task phase flag=free, collision threshold=0.00 N (off). F_hat_y is ZERO in free flight by 
+   529.24  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;32mLAW CHECK: joint-posture PID is OFF (all gains 0) -- u3 carries no term outside the published law.[0m
+   529.33  ROSOUT[30] rosbag2_recorder: New publisher discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', offering incompatible QoS. No messages will be sent to it. Last incompatible poli
+   529.36  ROSOUT[30] uav_0.fsc_autopilot_ros2: Using odometry feedback with inertia-frame velocity!
+   530.19  ROSOUT[30] uav_0.fsc_open_manipulator.arm_joint_plot_inverted: Controller 'position_controller' has not reported its limits after 20 s; using the GUI fallback range and retrying every 5 s.
+   532.29  ROSOUT[30] uav_0.whole_body_trajectory_planner: New subscription discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', requesting incompatible QoS. No messages will be sent to it. Last incompatible
+   533.34  ROSOUT[30] uav_0.fsc_open_manipulator.arm_joint_plot_inverted: Pick & Place: no answer from the planner's parameter service in 2 s -- asking again
+   533.34  ROSOUT[30] uav_0.fsc_open_manipulator.arm_joint_plot_inverted: Pick & Drop: no answer from the planner's parameter service in 2 s -- asking again
+   658.86  ROSOUT[30] uav_0.fsc_open_manipulator.controller_manager: [Deprecated] Passing the robot description parameter directly to the control_manager node is deprecated. Use '~/robot_description' topic from 'robot_state_publisher' instead.
+   665.59  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: Friction feed-forward on the MEASURED velocity (blend width 0.030 rad/s): the Coulomb/viscous terms follow the joint's own motion, not the reference.
+   665.73  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: COMMAND MODE = PWM (Operating Mode 16). Goal PWM is a VOLTAGE command and NOTHING regulates current: stall current is duty*V/R, bounded only by max_effort here and by the servo's PWM Limit. supply 12.
+   665.73  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: CURRENT TRIM CLOSED at 1.50 Hz -- Mode 16 bypasses the servo's own current controller, so nothing else regulates current. It runs in the pass-through AND the local hold: it is an actuator linearizatio
+   665.73  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: PASS-THROUGH ERROR DAMPING joint4: keeps 0.050 of the motor's back-EMF damping on (v - qd_ref) = 0.0638 N*m*s/rad at back_emf_ff_scale 1.00. Needs back_emf_velocity_source: observer.
+   666.22  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- friction/viscous/dither ON, gravity-scale corre
+   683.35  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (stale, last good sample 56 ms ago) -- the odometry is now EKF2 + [0.3 -0.2 0.6] mm[0m
+   683.35  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.00 s (stale) -- blending the odometry back over 0.0 s from 0.0 mm away[0m
+
+================ 164338   duration 90.1 s
+     1.21  PX4 ARMED STAB
+    13.47  PX4 ARMED OFFBOARD
+    85.98  PX4 ARMED STAB
+    87.90  PX4 disarmed STAB
+     0.00  NODE SAFETY
+    19.72  NODE DIRECT
+    85.99  NODE SAFETY
+     0.89  CTRL Baseline (Safety)
+    19.72  CTRL Whole-Body Direct Actuation
+    85.99  CTRL Baseline (Safety)
+     0.79  PLANNER IDLE
+    19.72  PLANNER HOLD
+    25.15  PLANNER CALCULATING
+    25.18  PLANNER EXECUTING T=13.8s
+    39.00  PLANNER HOLD
+    55.49  PLANNER CALCULATING
+    55.51  PLANNER EXECUTING T=23.8s
+    79.36  PLANNER HOLD
+    80.03  PLANNER CALCULATING
+    80.05  PLANNER EXECUTING T=7.4s
+    85.99  PLANNER IDLE
+     0.81  PUSH NOT IN DIRECT
+    19.72  PUSH NOT PLANNED: press Plan
+    22.55  PUSH PLANNING
+    22.64  PUSH READY next=go_to_start
+    25.15  PUSH FLYING go_to_start
+    25.18  PUSH FLYING go_to_start T=13.8s
+    39.00  PUSH DONE go_to_start next=ready (the gripper opens first) -- claw 51 mm from the point above the handle (tolerance 50 mm)
+    55.49  PUSH FLYING go_to_land_start
+    55.51  PUSH FLYING go_to_land_start T=23.8s
+    79.36  PUSH DONE go_to_land_start next=land
+    80.03  PUSH FLYING land
+    80.05  PUSH FLYING land T=7.4s
+    85.99  PUSH NOT IN DIRECT
+     0.81  GUARD MOCAP cause=0 src=0 ekf=1  age=0.002 rej=3 ep=3 rate=124
+    40.61  GUARD MOCAP cause=0 src=2 ekf=1  age=0.002 rej=4 ep=4 rate=112
+    41.13  GUARD MOCAP cause=0 src=0 ekf=1  age=0.008 rej=4 ep=4 rate=112
+    76.37  GUARD MOCAP cause=0 src=2 ekf=1  age=0.001 rej=5 ep=5 rate=120
+    76.89  GUARD MOCAP cause=0 src=0 ekf=1  age=0.004 rej=5 ep=5 rate=120
+    79.67  GUARD BRIDGING cause=2 src=1 ekf=1  age=0.020 rej=6 ep=6 rate=113
+    79.69  GUARD MOCAP cause=0 src=2 ekf=1  age=0.004 rej=6 ep=6 rate=113
+    80.19  GUARD MOCAP cause=0 src=0 ekf=1  age=0.002 rej=6 ep=6 rate=113
+    86.23  GUARD MOCAP cause=0 src=2 ekf=1  age=0.003 rej=7 ep=7 rate=113
+    86.73  GUARD MOCAP cause=0 src=0 ekf=1  age=0.004 rej=7 ep=7 rate=113
+          GUARD final: rejected=7 episodes=7 last cause=2.0 dur=0.010
+  airborne (z>0.40) 12.4 .. 86.8 s, z max 1.321, tilt max airborne 164.5 deg, xy span x[-1.05,0.66] y[-0.48,0.56]
+  box start (0.732,2.428,0.074) end (0.732,2.429,0.073) moved 1 mm
+     0.00  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mMOCAP GUARD: MOCAP -> BRIDGING (frozen, last good 0.03 s ago). The mocap is no longer forwarded to PX4: EKF2 not fusing vision does not trip the feedback-loss failsafe while this lasts (the odo
+     0.01  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+     0.01  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+     0.01  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    19.72  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    32.73  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    32.73  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    32.86  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    32.86  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    33.15  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    33.15  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    33.66  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    33.66  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    33.71  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    33.71  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    34.03  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    34.03  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    34.46  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    34.46  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    34.91  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    34.91  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    35.36  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    35.36  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    35.80  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    35.80  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    36.26  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    36.26  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    36.61  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    36.61  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    37.11  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    37.11  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    37.56  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    37.56  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    38.03  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    38.03  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    38.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    38.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    39.86  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    39.86  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    40.33  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    40.33  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    40.55  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    40.55  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+    40.55  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    41.00  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    41.00  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    41.08  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    41.08  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    41.56  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    41.56  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    41.90  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    41.90  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    41.95  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    41.95  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    42.28  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    42.28  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    42.73  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    42.73  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    42.93  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    42.93  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    43.21  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    43.21  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    43.60  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (frozen, last good sample 17 ms ago) -- the odometry is now EKF2 + [4.7 8.6 2.3] mm[0m
+    43.60  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (frozen) -- blending the odometry back over 0.5 s from 4.5 mm away[0m
+    45.03  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    45.03  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    45.53  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    45.53  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    45.71  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    45.71  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    45.98  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    45.98  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    46.13  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    46.13  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    46.33  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    46.33  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    46.46  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    46.46  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+    46.46  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    46.51  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    46.51  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    47.21  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    47.21  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    47.65  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    47.65  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    48.00  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    48.00  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    48.16  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    48.16  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    48.36  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    48.36  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    48.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    48.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    48.56  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    48.56  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    49.11  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    49.11  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    49.23  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    49.23  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    49.68  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    49.68  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    50.10  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    50.10  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    50.25  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    50.25  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    50.50  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    50.50  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    50.78  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    50.78  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    51.15  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    51.15  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    51.28  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    51.28  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    51.41  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    51.41  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    51.71  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    51.71  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    52.21  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    52.21  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    52.66  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    52.66  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    53.66  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    53.66  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    54.28  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    54.28  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    54.75  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    54.75  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    55.20  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    55.20  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    55.38  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    55.38  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    55.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    55.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    55.75  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    55.75  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    56.06  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    56.06  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    56.26  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    56.26  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    56.73  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    56.73  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    56.91  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    56.91  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    57.43  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    57.43  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    57.58  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    57.58  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    58.20  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    58.20  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    58.75  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    58.75  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    59.06  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    59.06  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    59.53  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    59.53  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    60.16  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    60.16  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    60.61  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    60.61  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    60.88  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    60.88  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    61.38  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    61.38  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    62.03  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    62.03  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    62.46  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    62.47  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    62.83  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    62.83  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    63.08  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    63.08  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    63.51  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    63.51  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    64.05  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    64.05  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    64.56  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    64.56  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    64.83  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    64.83  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    65.58  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    65.58  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    66.12  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    66.12  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    66.61  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    66.61  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    67.15  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    67.15  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    67.63  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    67.63  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    68.28  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    68.28  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    68.71  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    68.71  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    69.18  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    69.18  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    69.45  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    69.45  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    69.96  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    69.96  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    70.45  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    70.45  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    70.90  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    70.90  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    71.43  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    71.43  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    71.88  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    71.88  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    73.56  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    73.56  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    73.63  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    73.63  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    74.65  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    74.65  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    75.73  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    75.73  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    76.36  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (jump, last good sample 9 ms ago) -- the odometry is now EKF2 + [6.4 -1.3 4.2] mm[0m
+    76.37  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (jump) -- blending the odometry back over 0.5 s from 4.6 mm away[0m
+    76.39  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 0.000 -0.000] N.m, -24.25 N thrust
+    77.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    77.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    77.53  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    77.53  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    78.21  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    78.21  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    78.28  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    78.28  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    78.35  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    78.35  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    79.61  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    79.61  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+    79.61  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    79.67  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (frozen, last good sample 18 ms ago) -- the odometry is now EKF2 + [-1.3 2.2 6.3] mm[0m
+    79.67  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mMOCAP GUARD: MOCAP -> BRIDGING (frozen, last good 0.02 s ago). The mocap is no longer forwarded to PX4: EKF2 not fusing vision does not trip the feedback-loss failsafe while this lasts (the odo
+    79.67  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (frozen) -- blending the odometry back over 0.5 s from 2.9 mm away[0m
+    79.68  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 0.000 -0.000] N.m, -11.66 N thrust
+    79.78  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    79.78  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    81.51  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    81.51  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    81.86  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    81.86  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    82.03  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    82.03  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    82.11  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    82.11  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    82.25  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    82.25  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    82.33  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    82.33  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    82.53  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    82.53  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    83.05  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    83.05  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    83.60  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    83.60  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    83.75  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    83.75  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    84.28  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    84.28  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    84.61  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    84.61  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    84.93  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    84.93  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    85.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    85.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    85.99  ROSOUT[40] uav_0.fsc_autopilot_ros2: [1;31mPX4 LEFT OFFBOARD while in whole-body DIRECT (nav_state 15, armed): the pilot or a PX4 failsafe has the vehicle. Releasing the rotors to PX4 and reverting to SAFETY -- nothing reaches the motor
+    85.99  ROSOUT[30] uav_0.fsc_autopilot_ros2: Reference re-seeded to current pose: [-1.00 -0.20 0.36] m, yaw 0.3 deg
+    85.99  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+    85.99  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+    86.03  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    86.03  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    86.16  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    86.16  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+    86.16  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    86.22  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (frozen, last good sample 16 ms ago) -- the odometry is now EKF2 + [1.4 0.3 0.4] mm[0m
+    86.23  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (frozen) -- blending the odometry back over 0.5 s from 6.9 mm away[0m
+    86.23  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    86.23  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    86.28  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+    86.48  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    86.48  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    86.86  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    86.86  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    87.23  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    87.23  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    87.51  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    87.51  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    87.91  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    87.91  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    87.99  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: arm folding HOME (Homing over 5.739354 s.)[0m
+    88.21  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    88.21  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    88.36  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    88.36  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    88.83  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    88.83  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    89.43  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    89.43  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+
+================ 165311   duration 59.4 s
+     0.18  PX4 ARMED STAB
+    10.66  PX4 ARMED OFFBOARD
+    48.80  PX4 ARMED STAB
+    50.36  PX4 disarmed STAB
+     0.20  NODE SAFETY
+    16.84  NODE DIRECT
+    48.80  NODE SAFETY
+     0.16  CTRL Baseline (Safety)
+    16.83  CTRL Whole-Body Direct Actuation
+    48.80  CTRL Baseline (Safety)
+     3.19  PLANNER IDLE
+    16.84  PLANNER HOLD
+    40.08  PLANNER PENDING
+    40.08  PLANNER CALCULATING
+    40.09  PLANNER PLANNED T=5.9s
+    43.76  PLANNER EXECUTING T=5.9s
+    48.80  PLANNER IDLE
+     0.18  PUSH NOT IN DIRECT
+    16.84  PUSH NOT PLANNED: press Plan
+    19.47  PUSH PLANNING
+    19.49  PUSH INFEASIBLE: push: the box would end at (0.577, -0.011) -- its trailing end at (0.576, 0.109) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0.500). Is the box's yaw right (the push follow
+    48.81  PUSH NOT IN DIRECT
+     0.14  GUARD MOCAP cause=0 src=0 ekf=1  age=0.001 rej=2 ep=2 rate=120
+          GUARD final: rejected=2 episodes=2 last cause=2.0 dur=0.012
+  airborne (z>0.40) 9.1 .. 47.9 s, z max 1.300, tilt max airborne 6.0 deg, xy span x[-1.10,-0.86] y[-0.38,-0.01]
+  box start (0.576,0.089,0.852) end (0.576,0.090,0.852) moved 1 mm
+    16.83  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    19.49  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull plan refused: push: the box would end at (0.577, -0.011) -- its trailing end at (0.576, 0.109) is off the table or within 0.030 m of its edge (push_pull_table x 0.600..0.750, y -0.500..0
+    48.80  ROSOUT[40] uav_0.fsc_autopilot_ros2: [1;31mPX4 LEFT OFFBOARD while in whole-body DIRECT (nav_state 15, armed): the pilot or a PX4 failsafe has the vehicle. Releasing the rotors to PX4 and reverting to SAFETY -- nothing reaches the motor
+    48.80  ROSOUT[30] uav_0.fsc_autopilot_ros2: Reference re-seeded to current pose: [-1.03 -0.29 0.32] m, yaw -2.1 deg
+    48.80  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+    48.80  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+    49.10  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+    50.80  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: arm folding HOME (Homing over 1.500000 s.)[0m
+
+================ 170123   duration 96.1 s
+     0.94  PX4 ARMED STAB
+     7.20  PX4 ARMED OFFBOARD
+    93.59  PX4 ARMED STAB
+    94.81  PX4 disarmed STAB
+     0.12  NODE SAFETY
+    12.58  NODE DIRECT
+    93.60  NODE SAFETY
+     0.13  CTRL Baseline (Safety)
+    12.58  CTRL Whole-Body Direct Actuation
+    93.60  CTRL Baseline (Safety)
+     0.28  PLANNER IDLE
+    12.59  PLANNER HOLD
+    16.88  PLANNER CALCULATING
+    16.90  PLANNER EXECUTING T=14.4s
+    31.32  PLANNER HOLD
+    33.31  PLANNER CALCULATING
+    33.33  PLANNER EXECUTING T=3.2s
+    36.50  PLANNER HOLD
+    39.55  PLANNER CALCULATING
+    39.58  PLANNER EXECUTING T=6.3s
+    45.84  PLANNER HOLD
+    46.62  PLANNER CALCULATING
+    46.66  PLANNER EXECUTING T=12.3s
+    58.93  PLANNER HOLD
+    60.61  PLANNER CALCULATING
+    60.63  PLANNER EXECUTING T=24.1s
+    84.71  PLANNER HOLD
+    85.64  PLANNER CALCULATING
+    85.66  PLANNER EXECUTING T=7.4s
+    93.10  PLANNER HOLD
+    93.60  PLANNER IDLE
+     0.32  PUSH NOT IN DIRECT
+    12.59  PUSH NOT PLANNED: press Plan
+    14.95  PUSH PLANNING
+    15.03  PUSH READY next=go_to_start
+    16.88  PUSH FLYING go_to_start
+    16.90  PUSH FLYING go_to_start T=14.4s
+    31.32  PUSH DONE go_to_start next=ready (the gripper opens first) -- claw 28 mm from the point above the handle (tolerance 50 mm)
+    33.31  PUSH FLYING ready
+    33.33  PUSH FLYING ready T=3.2s
+    36.51  PUSH DONE ready next=push (CONTACT on: the gripper closes first)
+    39.55  PUSH FLYING push (CONTACT)
+    39.58  PUSH FLYING push (CONTACT) T=6.3s
+    45.84  PUSH DONE push next=exit (the gripper opens first)
+    46.62  PUSH ABORTING (SAFETY GUARD: q3 5.0 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+    58.93  PUSH ABORTED (SAFETY GUARD: q3 5.0 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- holding higher, arm home, contact off; go_to_land_start to leave the table, or Get the box and press Plan
+    60.61  PUSH FLYING go_to_land_start
+    60.63  PUSH FLYING go_to_land_start T=24.1s
+    84.71  PUSH DONE go_to_land_start next=land (off the table after the abort)
+    85.64  PUSH FLYING land
+    85.66  PUSH FLYING land T=7.4s
+    93.10  PUSH COMPLETE -- touch down with SAFETY -> land (off the table after the abort)
+    93.60  PUSH NOT IN DIRECT
+    32.75  GRIP status [2, 2, 2]
+    33.26  GRIP status [4, 4, 4]
+    38.93  GRIP status [4, 4]
+    39.48  GRIP status [4, 4]
+    46.65  GRIP status [4]
+    47.15  GRIP status [4]
+     0.93  GUARD MOCAP cause=0 src=0 ekf=1  age=0.007 rej=0 ep=1 rate=122
+    76.75  GUARD BRIDGING cause=2 src=1 ekf=1  age=0.025 rej=1 ep=2 rate=112
+    76.77  GUARD MOCAP cause=0 src=2 ekf=1  age=0.003 rej=1 ep=2 rate=112
+    77.27  GUARD MOCAP cause=0 src=0 ekf=1  age=0.002 rej=1 ep=2 rate=112
+          GUARD final: rejected=1 episodes=2 last cause=2.0 dur=0.009
+  airborne (z>0.40) 6.4 .. 91.1 s, z max 1.480, tilt max airborne 6.1 deg, xy span x[-1.14,0.70] y[-0.48,0.51]
+  box start (0.641,0.100,0.851) end (0.645,0.003,0.846) moved 97 mm
+     0.02  ROSOUT[30] rosbag2_recorder: New publisher discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', offering incompatible QoS. No messages will be sent to it. Last incompatible poli
+     0.03  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mMOCAP GUARD: MOCAP -> BRIDGING (stale, last good 0.05 s ago). The mocap is no longer forwarded to PX4: EKF2 not fusing vision does not trip the feedback-loss failsafe while this lasts (the odom
+     0.11  ROSOUT[30] uav_0.whole_body_trajectory_planner: New subscription discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', requesting incompatible QoS. No messages will be sent to it. Last incompatible
+     0.23  ROSOUT[30] rosbag2_recorder: A new publisher for subscribed topic /uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory was found offering RMW_QOS_POLICY_DURABILITY_VOLATILE, but rosbag2 already subscr
+     0.93  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (stale, last good sample 51 ms ago) -- the odometry is now EKF2 + [-1.3 0.6 3.3] mm[0m
+     0.93  ROSOUT[30] uav_0.uav_0_node: mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+     0.93  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (stale) -- blending the odometry back over 0.0 s from 0.0 mm away[0m
+    12.58  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    37.26  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 0.000 -0.000] N.m, -1.16 N thrust
+    38.78  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 -0.000 0.000] N.m, -5.16 N thrust
+    39.55  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;35mcontact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)[0m
+    43.04  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [-0.000 -0.000 -0.000] N.m, -0.94 N thrust
+    45.19  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 -0.000 -0.000] N.m, -0.63 N thrust
+    45.84  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;35mcontact phase flag -> free (chi = 1: F_hat_y = 0)[0m
+    46.27  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 0.000 0.000] N.m, -3.18 N thrust
+    46.62  ROSOUT[30] uav_0.whole_body_trajectory_planner: arm is NOT at rest at capture: max |qdot| = 0.072 rad/s (> 0.05 rad/s). Settle the arm before engaging DIRECT.
+    46.62  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull: ABORT: contact off, release back then up 0.30 m and the arm home, from the MEASURED pose (back 0.03 m against the push first)
+    46.62  ROSOUT[40] uav_0.whole_body_trajectory_planner: push-and-pull SAFETY GUARD: q3 5.0 deg < 10.0 deg (the arm buckling toward its elbow-singular branch) -- ABORT: contact off, release back then up 0.30 m and the arm home, from the MEASURED pose (back 
+    46.66  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull ABORT: [1] settle 1.5 s | [2] T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.786, peak |v| 0.02 m/s, tau_j 0.90 N.m, rotor 465.4/487.9, solve 12.2 ms | [3] T = 3.95 s (a_m
+    49.57  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [-0.000 -0.000 0.000] N.m, -2.07 N thrust
+    51.36  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 -0.000 0.000] N.m, -3.33 N thrust
+    55.36  ROSOUT[30] uav_0.fsc_autopilot_ros2: Wrench allocator saturated: unallocated [0.000 0.000 0.000] N.m, -0.17 N thrust
+    58.93  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull: ABORT complete -- holding, arm home.
+    76.69  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    76.69  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/uav_0/pose
+    76.69  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    76.74  ROSOUT[30] uav_0.uav_0_node: [1;33mMOCAP GUARD: BRIDGING (frozen, last good sample 17 ms ago) -- the odometry is now EKF2 + [-0.5 0.9 5.7] mm[0m
+    76.75  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mMOCAP GUARD: MOCAP -> BRIDGING (frozen, last good 0.02 s ago). The mocap is no longer forwarded to PX4: EKF2 not fusing vision does not trip the feedback-loss failsafe while this lasts (the odo
+    76.75  ROSOUT[30] uav_0.uav_0_node: [1;32mMOCAP GUARD: mocap back after 0.01 s (frozen) -- blending the odometry back over 0.5 s from 8.7 mm away[0m
+    93.59  ROSOUT[40] uav_0.fsc_autopilot_ros2: [1;31mPX4 LEFT OFFBOARD while in whole-body DIRECT (nav_state 15, armed): the pilot or a PX4 failsafe has the vehicle. Releasing the rotors to PX4 and reverting to SAFETY -- nothing reaches the motor
+    93.59  ROSOUT[30] uav_0.fsc_autopilot_ros2: Reference re-seeded to current pose: [-0.99 -0.26 0.30] m, yaw 1.3 deg
+    93.59  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+    93.60  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+    93.89  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+    95.60  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: arm folding HOME (Homing over 3.805728 s.)[0m

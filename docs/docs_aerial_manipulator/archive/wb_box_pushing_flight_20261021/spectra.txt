@@ -1,0 +1,11 @@
+HW 170123 hover above handle (CoM)   5.2s | base x  10.0mm @0.19Hz  y  14.5mm @0.19Hz  z 27.3mm @0.19Hz | CoM err y  14.6mm @0.19Hz | (q2-q3)/2   0.0deg @2.11Hz
+HW 170123 world-held, jaws open      1.6s | base x   5.1mm @0.62Hz  y   7.6mm @0.62Hz  z  3.8mm @1.23Hz | CoM err y   6.3mm @0.62Hz | (q2-q3)/2   6.2deg @0.62Hz
+HW 170123 world-held, clamped+push   7.0s | base x  20.7mm @0.57Hz  y  26.9mm @0.14Hz  z  5.6mm @0.57Hz | CoM err y  15.4mm @0.57Hz | (q2-q3)/2  10.6deg @0.57Hz
+HW 170123 world-held all             9.3s | base x  22.0mm @0.54Hz  y  27.9mm @0.11Hz  z  7.6mm @0.11Hz | CoM err y  14.4mm @0.54Hz | (q2-q3)/2  10.2deg @0.54Hz
+HW 164338 hover above 'handle' (CoM)  15.8s | base x   6.0mm @0.13Hz  y  12.9mm @0.13Hz  z  1.6mm @0.70Hz | CoM err y  12.9mm @0.13Hz | (q2-q3)/2   0.1deg @0.13Hz
+SIM v21_1 world-held, clamped+push  10.1s | base x   1.4mm @0.10Hz  y  19.8mm @0.10Hz  z  3.1mm @0.70Hz | CoM err y   6.3mm @0.70Hz | (q2-q3)/2   5.4deg @0.70Hz
+SIM v21_1 hover before go_to_start   8.0s | base x   3.8mm @0.25Hz  y   1.8mm @1.38Hz  z  1.2mm @0.75Hz | CoM err y   1.8mm @1.38Hz | (q2-q3)/2   0.2deg @0.25Hz
+SIM v21_2 world-held, clamped+push  10.2s | base x   3.1mm @0.20Hz  y  22.3mm @0.10Hz  z  2.5mm @0.59Hz | CoM err y   7.9mm @0.59Hz | (q2-q3)/2   5.9deg @0.59Hz
+SIM v21_2 hover before go_to_start   8.0s | base x   1.3mm @0.25Hz  y   1.9mm @0.25Hz  z  0.7mm @0.88Hz | CoM err y   1.9mm @0.25Hz | (q2-q3)/2   0.0deg @0.12Hz
+SIM v21_3 world-held, clamped+push  10.1s | base x   5.2mm @0.30Hz  y  22.4mm @0.10Hz  z  4.8mm @0.60Hz | CoM err y   6.8mm @0.69Hz | (q2-q3)/2   5.3deg @0.69Hz
+SIM v21_3 hover before go_to_start   8.0s | base x   0.9mm @0.25Hz  y   2.3mm @0.12Hz  z  1.3mm @0.62Hz | CoM err y   2.4mm @0.12Hz | (q2-q3)/2   0.0deg @0.12Hz
