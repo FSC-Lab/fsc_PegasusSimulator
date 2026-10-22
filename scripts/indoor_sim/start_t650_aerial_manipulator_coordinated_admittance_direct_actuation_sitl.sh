@@ -84,6 +84,13 @@ if [[ -n "${ARM_GS_AUTO_EXIT_DELAY:-}" ]]; then
   [[ "$ARM_GS_AUTO_EXIT_DELAY" == *.* ]] || ARM_GS_AUTO_EXIT_DELAY="$ARM_GS_AUTO_EXIT_DELAY.0"   # a double parameter
   ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_exit_delay_s:=$ARM_GS_AUTO_EXIT_DELAY"
 fi
+# The Box Pushing tab's AUTOMATIC Ready To Push + Push (2026-10-21; the station's
+# push_pull_auto_ready / push_pull_auto_push, both true by default). The autonomous drivers
+# fly those steps themselves and set ARM_GS_AUTO_STEPS=false. Unset = the station's default.
+if [[ -n "${ARM_GS_AUTO_STEPS:-}" ]]; then
+  [[ "$ARM_GS_AUTO_STEPS" == "true" || "$ARM_GS_AUTO_STEPS" == "false" ]] || { echo "ERROR: ARM_GS_AUTO_STEPS must be true or false, got '$ARM_GS_AUTO_STEPS'" >&2; exit 1; }
+  ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_ready:=$ARM_GS_AUTO_STEPS -p push_pull_auto_push:=$ARM_GS_AUTO_STEPS"
+fi
 # The aerial position-mode config with arm_planner's mode topic pointed at THIS
 # rig's flight node (a copy of position_controller_isaac_aerial.yaml, one line).
 ARM_CONFIG="${FSC_CADM_ARM_CONFIG:-$ARM_WS/src/fsc_open_manipulator/open_manipulator_x_isaac_bridge/config/position_controller_isaac_aerial_cadm.yaml}"

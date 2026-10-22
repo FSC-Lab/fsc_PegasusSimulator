@@ -44,11 +44,14 @@ safety margins (HW_PLANNER, HW_NODE below):
                           whole wait before lift-off). The sim
                           keeps the AM_T650.usda asset's 0.2425; 0.248 is the conservative
                           end (the planner keeps the gear 0.05 m above the table top).
-  push_pull_table        KEPT at the simulation's table -- place the lab table by
-                          ruler at it (reference leg corner (0.60, 0.50) since 2026-10-21,
-                          was (1.20, 0.50); top 0.80 m; the drone's start mark (-0.60, 0)) or
-                          MEASURE it and set it here: the planner's gear / arm keep-out
-                          AND the box-on-table check both use it. The stack prints it.
+  THE TABLE              (2026-10-22, user) PLACED FROM THE BOX: push_pull_table_from_box
+                          (imported) -- the keep-out and the box-on-table check use the
+                          table's footprint the Get places (1.000 x 0.150 m, the box's back
+                          face 0.10 m in from its left end, the top 0.05 m under the box
+                          centre); push_pull_table is ignored. Put the table where the floor
+                          is flat, the box at its left end (seen from the vehicle), the
+                          vehicle on its middle line >= 0.75 m in front; Adjust on the
+                          ground. (Until 2026-10-21: the sim's table, placed by ruler.)
 Everything else -- plant, allocator, SAFETY, observer bounds, the node guards -- is the
 hardware free-flight file's. Regenerate after any edit to either source; never hand-edit
 the output. --check verifies the file on disk.
@@ -99,11 +102,12 @@ HEADER = f"""# =================================================================
 # push-and-pull block are the SIMULATION box-pushing yaml's, imported (so they cannot
 # drift); the hardware substitutions:
 {chr(10).join(f"#   {k} {v[0]} -- {v[1]}" for k, v in {**HW_NODE, **HW_PLANNER}.items())}
-# push_pull_table is the SIMULATION's table [0.600, 0.750, -0.5, 0.5, 0.80]: place the lab
-# table by ruler there (the reference leg's outer corner at (0.60, 0.50) in the mocap frame,
-# top 0.80 m; 2026-10-21, was (1.20, 0.50)) or MEASURE it and set it in the generator (the
-# gear / arm keep-out and the box-on-table check both use it). The drone's start mark is
-# (-0.60, 0) (push_pull_start_mark): put the vehicle there, facing +x, and press Adjust.
+# THE TABLE IS PLACED FROM THE BOX (2026-10-22, push_pull_table_from_box): put the table
+# where the floor is flat, the box at its LEFT end (seen from the vehicle), centred across
+# it, its back face 0.10 m in from the end; the vehicle on the table's middle line, facing
+# it, >= 0.75 m in front. Press Adjust on the ground (the start and the landing = where it
+# is), Get the box, take off, Plan. push_pull_table is ignored; Plan refuses a start more
+# than 0.30 m off the table's middle line. Go To Start goes round the table's box end.
 # =============================================================================
 """
 

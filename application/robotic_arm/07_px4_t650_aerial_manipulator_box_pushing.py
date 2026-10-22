@@ -92,7 +92,12 @@ AM_T650.usda: two skids along the body's x, 0.28 m apart inside, bottoms 0.2425 
 under the origin): the grasp point 1.033 m (25 mm under the fin top) puts the body
 origin at 1.165 m and the skids 122 mm above the table top and 22 mm above the
 box top -- and they straddle the 150 mm table and the bracket laterally anyway.
-The planner checks every step against the table (push_pull_table, 5 cm clearance).
+The planner checks every step against the table (5 cm clearance) -- since 2026-10-22
+the table it PLACES FROM THE BOX (push_pull_table_from_box: the box at the table's
++y end, its back face 0.10 m in, as this scene sets it), and Go To Start goes round
+the table's box end, 0.70 m from it seen from above (push_pull_go_to_start_bypass).
+Moving the box with PEGASUS_PUSH_BOX_XY therefore moves the planner's table with it,
+while this scene's table stays put: keep the box at the table's end.
 
   mocap     obj_0 = the box (the box's centre and yaw), live -- what the
             planner's Get captures (push_pull_box_topic). The claw goes to it +
@@ -109,10 +114,11 @@ Knobs (environment):
                                  campaign's choice; 0.400 until then, 0.200 until 2026-10-05)
   PEGASUS_PUSH_FRICTION_STATIC   box / table static friction, default 0.25 (measured 2026-10-17; was 0.29, 0.6)
   PEGASUS_PUSH_FRICTION_DYNAMIC  box / table dynamic friction, default 0.25 (measured 2026-10-17; was 0.29, 0.6)
-  PEGASUS_PUSH_BOX_XY            the box centre "x,y" [m], default "0.675,0.28" (the table's centre line; its
+  PEGASUS_PUSH_BOX_XY            the box centre "x,y" [m], default by the rule from the table (field: + a small
+                                 error; nominal: "0.675,0.28") -- the table's centre line; its
                                  back face 0.10 m from the +y end, so the 0.50 m push ends 0.16 m from the -y
                                  end -- the user's bench layout, 2026-10-17; 0.25 = centred, before)
-  PEGASUS_PUSH_BOX_YAW_DEG       the box's yaw [deg], default 0
+  PEGASUS_PUSH_BOX_YAW_DEG       the box's yaw [deg], default the table's (+ 1.5 deg in the field layout)
   PEGASUS_PUSH_HANDLE            cad (default, 2026-10-07: the user's CAD box + clamp bracket + fin,
                                  assets/Box_Push.usda), post (2026-10-06: a post on the box's top centre) or fin
   PEGASUS_PUSH_BOX_USD           the CAD box asset, default assets/Box_Push.usda (handle cad)
@@ -121,8 +127,14 @@ Knobs (environment):
   PEGASUS_PUSH_POST_TOP          the post's top above the table [m], default 0.298 (grasp 25 mm below; 0.255 for the 60 deg fold)
   PEGASUS_PUSH_HANDLE_THICKNESS  the handle's thickness across the jaws [m], default 0.020
   PEGASUS_PUSH_GRIP_TORQUE       gripper drive torque cap [N.m], default 0.3
-  PEGASUS_PUSH_SPAWN_XY          where the vehicle starts, "x,y" [m], default "-0.50,-0.07" (the start mark
-                                 (-0.60, 0) of the planner yaml + (0.10, -0.07), so Adjust measures a shift)
+  PEGASUS_PUSH_LAYOUT            field (default, 2026-10-22: the table a few cm off and turned 2 deg, the box by
+                                 the rule + a small error, the vehicle ~1.6 m in front -- placed by hand) or
+                                 nominal (the exact 2026-10-21 layout; the campaign drivers set it)
+  PEGASUS_PUSH_TABLE_POSE        the table's centre and yaw "x,y,yaw_deg", default "0.715,-0.03,2.0" (field) /
+                                 "0.675,0.0,0.0" (nominal)
+  PEGASUS_PUSH_SPAWN_XY          where the vehicle starts, "x,y" [m], default 1.6 m in front of the table's
+                                 middle + (-5, +6) cm (field) / "-0.50,-0.07" (nominal: the start mark
+                                 (-0.60, 0) + (0.10, -0.07))
   PEGASUS_PUSH_SPAWN_YAW_DEG     its heading [deg], default 0 (+x)
   PEGASUS_PUSH_WAYPOINTS=0       hide the waypoint markers and labels
   PEGASUS_PUSH_STOPPER_Y         worst-case test: a static block across the table, its +y face at this y [m],
@@ -168,14 +180,37 @@ def _xy(env, default):
         raise SystemExit(f"{env} must be 'x,y' in metres, got {raw!r}")
 
 
+def _xyz(env, default):
+    raw = (os.environ.get(env, "") or default).strip()
+    try:
+        v = tuple(float(s) for s in raw.split(","))
+        assert len(v) == 3
+        return v
+    except (ValueError, AssertionError):
+        raise SystemExit(f"{env} must be 'x,y,yaw_deg' (metres, degrees), got {raw!r}")
+
+
 # ── the scene ──────────────────────────────────────────────────────────────
-SPAWN_XY = _xy("PEGASUS_PUSH_SPAWN_XY", "-0.50,-0.07")   # start mark (-0.60, 0) + (0.10, -0.07) (2026-10-21; was 0.10,-0.07)
-SPAWN_YAW_DEG = am06._envf("PEGASUS_PUSH_SPAWN_YAW_DEG", 0.0)
+# THE LAYOUT (2026-10-22, user): in the lab the table goes wherever the floor is
+# flat and the box and the vehicle are placed by hand -- never exactly. field
+# (default): the table a few cm off its nominal spot and turned 2 deg, the box by
+# the rule (its back face 0.10 m in from the table's +y end, centred across it)
+# with a small error of its own, the vehicle ~1.6 m in front of the table on its
+# middle line, a few cm off. nominal: the exact 2026-10-21 layout (table centre
+# (0.675, 0), box (0.675, 0.28), vehicle (-0.50, -0.07)) -- the campaign drivers
+# (run_pl.sh, run_pl_cadm.sh) set it so their records stay comparable. The
+# planner places its table from the box (push_pull_table_from_box) either way.
+LAYOUT = (os.environ.get("PEGASUS_PUSH_LAYOUT", "") or "field").strip()
+if LAYOUT not in ("field", "nominal"):
+    raise SystemExit(f"PEGASUS_PUSH_LAYOUT must be field or nominal, got {LAYOUT!r}")
+FIELD = LAYOUT == "field"
 
 # THE TABLE: HOOBRO BB52UXG01G1, 39.4" W x 5.9" D x 31.5" H (the product page,
 # 2026-10-03) = 1.000 x 0.150 x 0.800 m. Its LENGTH runs along y (left-right in
-# front of the start), its depth along x.
-TABLE_CENTER_XY = (0.675, 0.0)       # the +y leg facing the start: outer corner (0.60, 0.50) (2026-10-21; was 1.275)
+# front of the start), its depth along x -- turned by its yaw about its centre.
+_TABLE = _xyz("PEGASUS_PUSH_TABLE_POSE", "0.715,-0.03,2.0" if FIELD else "0.675,0.0,0.0")
+TABLE_CENTER_XY = (_TABLE[0], _TABLE[1])   # nominal (0.675, 0): the +y leg's outer corner at (0.60, 0.50) (2026-10-21; was 1.275)
+TABLE_YAW_DEG = _TABLE[2]
 TABLE_LENGTH_Y  = 1.000                 # [m] 39.4 in
 TABLE_DEPTH_X   = 0.150                 # [m] 5.9 in
 TABLE_HEIGHT    = 0.800                 # [m] 31.5 in, to the top surface
@@ -192,9 +227,35 @@ TABLE_SHELF_THICK = 0.015               # [m]
 # 5 mm a side -- it still rests on it.
 BOX_SIZE  = (0.160, 0.240, 0.095)       # [m] x, y, z
 BOX_MASS  = am06._envf("PEGASUS_PUSH_BOX_MASS", 0.500)       # [kg] box + handle (2026-10-16: 500 g, archive/box_pushing_campaign_20261016; 0.400 from 2026-10-05, 0.200 before)
-BOX_XY    = _xy("PEGASUS_PUSH_BOX_XY", "0.675,0.28")   # back face 0.10 m from the +y end (2026-10-17; was 0.25; x 1.275 until 2026-10-21)
-BOX_YAW_DEG = am06._envf("PEGASUS_PUSH_BOX_YAW_DEG", 0.0)
+
+
+def table_to_world_inv(p):
+    """A world point in the table's frame."""
+    c, s_ = np.cos(np.radians(TABLE_YAW_DEG)), np.sin(np.radians(TABLE_YAW_DEG))
+    dx, dy = p[0] - TABLE_CENTER_XY[0], p[1] - TABLE_CENTER_XY[1]
+    return (c * dx + s_ * dy, -s_ * dx + c * dy)
+
+
+def table_to_world(lx, ly):
+    """A point of the table's frame (x across its depth, y along its length, the
+    centre at 0) in the world."""
+    c, s_ = np.cos(np.radians(TABLE_YAW_DEG)), np.sin(np.radians(TABLE_YAW_DEG))
+    return (TABLE_CENTER_XY[0] + c * lx - s_ * ly, TABLE_CENTER_XY[1] + s_ * lx + c * ly)
+
+
+# the box by the rule: its back face 0.10 m in from the table's +y end (2026-10-17; was
+# centred), centred across it -- in the field layout off by (1.0, -1.5) cm and 1.5 deg
+_BOX_LOCAL = (0.010 if FIELD else 0.0, 0.5 * 1.000 - 0.10 - 0.5 * 0.240 + (-0.015 if FIELD else 0.0))
+BOX_XY    = _xy("PEGASUS_PUSH_BOX_XY", "%.4f,%.4f" % table_to_world(*_BOX_LOCAL))
+BOX_YAW_DEG = am06._envf("PEGASUS_PUSH_BOX_YAW_DEG", TABLE_YAW_DEG + (1.5 if FIELD else 0.0))
 BOX_DROP_GAP = 0.0005                   # [m] spawned this far above the table
+# THE VEHICLE: field -- 1.6 m in front of the table's near side on its middle line
+# (user, 2026-10-22: "roughly 1.6 m away from the table, not 1.2 m"), off by
+# (-5, +6) cm; nominal -- the start mark (-0.60, 0) + (0.10, -0.07) (2026-10-21)
+_SPAWN_DEFAULT = (np.add(table_to_world(-(0.5 * 0.150 + 1.60), 0.0), (-0.05, 0.06)) if FIELD
+                  else (-0.50, -0.07))
+SPAWN_XY = _xy("PEGASUS_PUSH_SPAWN_XY", "%.4f,%.4f" % tuple(_SPAWN_DEFAULT))
+SPAWN_YAW_DEG = am06._envf("PEGASUS_PUSH_SPAWN_YAW_DEG", 0.0)
 # the worst-case stopper (2026-10-16): PEGASUS_PUSH_STOPPER_Y = its +y face [m]; unset = none
 STOPPER_Y = (float(os.environ["PEGASUS_PUSH_STOPPER_Y"])
              if os.environ.get("PEGASUS_PUSH_STOPPER_Y", "").strip() else None)
@@ -316,8 +377,8 @@ WP_SHOW = ((0, "body", "1 Go To Start drone"), (1, "claw", "2 Grasp EE"),
            (2, "claw", "3 Pushed EE"), (4, "body", "5 Land Start drone"),
            (5, "body", "6 Land drone"))
 
-CAMERA_POS    = [-1.8, 2.6, 2.2]        # behind-left of the start, high (2026-10-21: -0.6 in x with the layout)
-CAMERA_TARGET = [0.4, 0.1, 0.9]
+CAMERA_POS    = [-2.3, 2.7, 2.4]        # behind-left of the start, high (2026-10-22: the field layout's 1.6 m start; was -1.8, 2.6, 2.2)
+CAMERA_TARGET = [0.1, 0.0, 0.9]
 
 # THE T650 LANDING GEAR (2026-10-06, user): the experiment drone is the T650, its
 # gear ~7 cm shorter than the X650 gear AM_xfwd.usda carries (bottom plate to
@@ -425,9 +486,16 @@ class AmT650BoxPushing(am06.AmT650WholeBodyArmSim):
         # the table: static colliders (no rigid body). Its TOP carries the same
         # friction as the box's underside, so the box / table contact (default
         # average combine) is exactly FRICTION_STATIC / _DYNAMIC.
-        cx, cy = TABLE_CENTER_XY
+        # (2026-10-22) its parts under ONE Xform at its centre, turned by its yaw
+        # (the field layout), the parts in the table's own frame
+        table = UsdGeom.Xform.Define(stage, SCENE_ROOT + "/table")
+        txf = UsdGeom.Xformable(table)
+        txf.AddTranslateOp().Set(Gf.Vec3d(float(TABLE_CENTER_XY[0]), float(TABLE_CENTER_XY[1]), 0.0))
+        txf.AddRotateZOp().Set(float(TABLE_YAW_DEG))
+        troot = SCENE_ROOT + "/table"
+        cx, cy = 0.0, 0.0
         wood, metal = (0.42, 0.30, 0.20), (0.15, 0.15, 0.15)
-        top = _box(stage, SCENE_ROOT + "/table_top",
+        top = _box(stage, troot + "/table_top",
                    (cx, cy, TABLE_HEIGHT - 0.5 * TABLE_TOP_THICK),
                    (TABLE_DEPTH_X, TABLE_LENGTH_Y, TABLE_TOP_THICK), wood)
         parts = [top]
@@ -435,17 +503,18 @@ class AmT650BoxPushing(am06.AmT650WholeBodyArmSim):
         for i, (sx, sy) in enumerate(((1, 1), (1, -1), (-1, 1), (-1, -1))):
             lx = cx + sx * (0.5 * TABLE_DEPTH_X - 0.5 * TABLE_LEG)
             ly = cy + sy * (0.5 * TABLE_LENGTH_Y - 0.5 * TABLE_LEG)
-            parts.append(_box(stage, f"{SCENE_ROOT}/table_leg{i}", (lx, ly, 0.5 * leg_h),
+            parts.append(_box(stage, f"{troot}/table_leg{i}", (lx, ly, 0.5 * leg_h),
                               (TABLE_LEG, TABLE_LEG, leg_h), metal))
-        parts.append(_box(stage, SCENE_ROOT + "/table_shelf",
+        parts.append(_box(stage, troot + "/table_shelf",
                           (cx, cy, TABLE_SHELF_Z - 0.5 * TABLE_SHELF_THICK),
                           (TABLE_DEPTH_X, TABLE_LENGTH_Y - 2 * TABLE_LEG, TABLE_SHELF_THICK), wood))
         # THE STOPPER (2026-10-16, worst-case test only; unset = none): a static
         # block across the table's whole depth, its +y face at STOPPER_Y, so a box
         # pushed toward -y jams against it -- the "box blocked mid-push" case.
         if STOPPER_Y is not None:
-            parts.append(_box(stage, SCENE_ROOT + "/stopper",
-                              (cx, STOPPER_Y - 0.5 * STOPPER_SIZE[1], TABLE_HEIGHT + 0.5 * STOPPER_SIZE[2]),
+            parts.append(_box(stage, troot + "/stopper",   # along the table (its frame's y)
+                              (cx, STOPPER_Y - TABLE_CENTER_XY[1] - 0.5 * STOPPER_SIZE[1],
+                               TABLE_HEIGHT + 0.5 * STOPPER_SIZE[2]),
                               STOPPER_SIZE, (0.8, 0.1, 0.1)))
             print(f"\033[1;33m[07 box pushing] STOPPER on the table, its +y face at y = {STOPPER_Y:.3f} m "
                   f"({STOPPER_SIZE[2] * 1e3:.0f} mm tall) -- a worst-case test\033[0m", flush=True)
@@ -605,9 +674,10 @@ class AmT650BoxPushing(am06.AmT650WholeBodyArmSim):
         print(f"\033[1;35m[AM-T650-PUSH] BOX-PUSHING SCENE: vehicle at ({SPAWN_XY[0]:.2f}, "
               f"{SPAWN_XY[1]:.2f}) m, yaw {SPAWN_YAW_DEG:.0f} deg (+x forward). TABLE (HOOBRO "
               f"BB52UXG01G1) {TABLE_LENGTH_Y:.3f} m long along y x {TABLE_DEPTH_X:.3f} m deep x "
-              f"{TABLE_HEIGHT:.3f} m tall, centred on ({TABLE_CENTER_XY[0]:.2f}, {TABLE_CENTER_XY[1]:.2f}): "
-              f"x {TABLE_CENTER_XY[0] - 0.5 * TABLE_DEPTH_X:.3f}..{TABLE_CENTER_XY[0] + 0.5 * TABLE_DEPTH_X:.3f}, "
-              f"y {TABLE_CENTER_XY[1] - 0.5 * TABLE_LENGTH_Y:.3f}..{TABLE_CENTER_XY[1] + 0.5 * TABLE_LENGTH_Y:.3f}. "
+              f"{TABLE_HEIGHT:.3f} m tall, {LAYOUT} layout: centred on ({TABLE_CENTER_XY[0]:.3f}, "
+              f"{TABLE_CENTER_XY[1]:.3f}), turned {TABLE_YAW_DEG:.1f} deg; the box at ({BOX_XY[0]:.3f}, "
+              f"{BOX_XY[1]:.3f}) yaw {BOX_YAW_DEG:.1f} deg; the vehicle "
+              f"{-(table_to_world_inv(SPAWN_XY)[0]) - 0.5 * TABLE_DEPTH_X:.2f} m in front of the table. "
               f"BOX {BOX_MASS * 1e3:.0f} g = {BOX_SIZE[0] * 1e3:.0f} x {BOX_SIZE[1] * 1e3:.0f} x "
               f"{BOX_SIZE[2] * 1e3:.0f} mm (x, y, z) + "
               + (f"the CAD clamp bracket with a {CAD.get('fin_thickness_m', 0) * 1e3:.0f} x "

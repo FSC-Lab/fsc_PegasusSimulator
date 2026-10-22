@@ -139,6 +139,10 @@ class Case:
         self.posture_kp, self.posture_kd, self.posture_ki, self.posture_imax = \
             2.0, 0.25, 0.05, 0.8
         self.ee_ref = "world"       # "world" (paper) | "relative" (to the CoM)
+        self.ee_free_w = 0.0        # 2026-10-21: the C++ wb_ee_anchor_free_axis_weight on a
+                                    # world-held reference -- r_ed also rides w * (a . e_x) a,
+                                    # a = the horizontal unit of R_0 * ee_free_axis (MODEL frame)
+        self.ee_free_axis = (0.0, 1.0, 0.0)
         self.joint_pot = 0.0        # joint-space potential in TASK space (Q3b), N.m/rad
         self.int_ff = False         # book the ESTIMATED INTERNAL disturbance into u3's
                                     # coupling feedforward (Q3c): the base wrench the arm
@@ -396,6 +400,17 @@ class Law:
             r_ed_ddot = ref["r_ed_ddot"] + e_ax
         else:
             r_ed, r_ed_dot, r_ed_ddot = ref["r_ed"], ref["r_ed_dot"], ref["r_ed_ddot"]
+            # FREE-AXIS ANCHOR (2026-10-21, mirrors wb_controller.cpp's ee_anchor_free_weight
+            # on a world-held reference; the axis' own turning terms dropped -- a hover)
+            wf = float(getattr(case, "ee_free_w", 0.0))
+            if wf > 0.0:
+                aw = R_0 @ np.asarray(case.ee_free_axis, float)
+                h = np.array([aw[0], aw[1], 0.0])
+                if np.linalg.norm(h) > 1e-6:
+                    a_ = h / np.linalg.norm(h)
+                    r_ed = r_ed + wf * float(a_ @ e_x) * a_
+                    r_ed_dot = r_ed_dot + wf * float(a_ @ e_vx) * a_
+                    r_ed_ddot = r_ed_ddot + wf * float(a_ @ e_ax) * a_
 
         e_xE = r_e - r_ed
         e_RE3 = float(-(b1ec.T @ b2e))

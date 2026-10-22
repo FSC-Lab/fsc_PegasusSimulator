@@ -1,0 +1,64 @@
+
+[hw] k_x/k_v 20/10: 0/2 pass
+   seed 0                             ABORT at 16.6 s
+   seed 1                             swing  7.33 deg rms (amp 11.48 @ 0.08 Hz) q1 3.11 q4 0.09 | q2  19.4.. 46.2 q3   9.5.. 43.9 | CoM  20.6 mm EE   5.9 mm tilt  2.9 |e_R|  24.3 mrad tau 2.03
+
+[hw] k_R/k_w 2.134/1.567 (pick-and-drop): 0/2 pass
+   seed 0                             ABORT at 7.3 s
+   seed 1                             swing  7.44 deg rms (amp  8.12 @ 0.08 Hz) q1 1.57 q4 1.48 | q2  17.9.. 49.1 q3   5.5.. 47.9 | CoM  18.5 mm EE   5.9 mm tilt  4.3 |e_R|  34.8 mrad tau 2.07
+
+[hw] k_x/k_v 32/12.58: 0/2 pass
+   seed 0                             ABORT at 14.8 s
+   seed 1                             swing  7.47 deg rms (amp 10.65 @ 0.08 Hz) q1 2.43 q4 0.32 | q2  18.4.. 47.2 q3   7.6.. 46.5 | CoM  19.3 mm EE   6.0 mm tilt  3.4 |e_R|  29.8 mrad tau 2.10
+
+[hw] D_y 10: 0/2 pass
+   seed 0                             ABORT at 7.8 s
+   seed 1                             swing  7.47 deg rms (amp  8.85 @ 0.08 Hz) q1 1.77 q4 0.42 | q2  18.4.. 47.7 q3   8.2.. 47.3 | CoM  18.4 mm EE   4.6 mm tilt  4.2 |e_R|  33.7 mrad tau 1.62
+
+[hw] K_y 80 / D_y 16.5: 0/2 pass
+   seed 0                             ABORT at 7.2 s
+   seed 1                             swing  7.47 deg rms (amp  8.22 @ 0.08 Hz) q1 1.65 q4 0.84 | q2  18.1.. 47.7 q3   8.5.. 47.9 | CoM  18.8 mm EE   6.8 mm tilt  4.3 |e_R|  33.8 mrad tau 1.95
+
+[hw] omega_c_r 0.5: 0/2 pass
+   seed 0                             ABORT at 8.1 s
+   seed 1                             swing  7.52 deg rms (amp  8.42 @ 0.08 Hz) q1 1.80 q4 0.83 | q2  17.8.. 47.8 q3   8.6.. 48.2 | CoM  18.7 mm EE   6.0 mm tilt  4.2 |e_R|  33.5 mrad tau 2.10
+
+[hw] D_y 30: 0/2 pass
+   seed 0                             ABORT at 6.9 s
+   seed 1                             swing  7.57 deg rms (amp  9.26 @ 0.08 Hz) q1 1.69 q4 0.83 | q2  17.1.. 48.4 q3   7.4.. 49.5 | CoM  19.2 mm EE   7.3 mm tilt  4.4 |e_R|  33.7 mrad tau 2.40
+
+[hw] k_v 16: 0/2 pass
+   seed 0                             ABORT at 7.9 s
+   seed 1                             swing  7.60 deg rms (amp  9.63 @ 0.08 Hz) q1 1.91 q4 0.80 | q2  18.0.. 49.4 q3   4.8.. 47.0 | CoM  18.5 mm EE   6.0 mm tilt  4.2 |e_R|  39.1 mrad tau 2.13
+
+[hw] baseline (push yaml): 0/2 pass
+   seed 0                             ABORT at 7.4 s
+   seed 1                             swing  7.61 deg rms (amp  8.67 @ 0.08 Hz) q1 1.72 q4 0.88 | q2  18.0.. 48.9 q3   7.0.. 48.1 | CoM  18.8 mm EE   6.0 mm tilt  4.3 |e_R|  33.7 mrad tau 2.15
+
+[hw] K_psi/D_psi 2.5/0.93: 0/2 pass
+   seed 0                             ABORT at 8.8 s
+   seed 1                             swing  7.61 deg rms (amp  8.67 @ 0.08 Hz) q1 1.71 q4 1.16 | q2  18.0.. 48.9 q3   7.0.. 48.1 | CoM  18.8 mm EE   6.0 mm tilt  4.3 |e_R|  33.7 mrad tau 2.14
+
+[hw] k_x/k_v 32/16: 0/2 pass
+   seed 0                             ABORT at 14.7 s
+   seed 1                             swing  7.68 deg rms (amp 12.00 @ 0.08 Hz) q1 2.71 q4 0.46 | q2  19.0.. 47.5 q3   5.5.. 45.5 | CoM  20.0 mm EE   5.9 mm tilt  3.3 |e_R|  35.0 mrad tau 2.13
+
+[hw] k_w 1.5: 0/2 pass
+   seed 0                             ABORT at 7.6 s
+   seed 1                             swing  7.71 deg rms (amp 10.17 @ 0.08 Hz) q1 2.11 q4 1.25 | q2  18.2.. 48.8 q3   5.9.. 47.7 | CoM  19.4 mm EE   5.9 mm tilt  3.9 |e_R|  34.3 mrad tau 2.11
+
+[hw] K_y 200 / D_y 26: 0/2 pass
+   seed 0                             ABORT at 7.7 s
+   seed 1                             swing  7.72 deg rms (amp 10.13 @ 0.08 Hz) q1 1.82 q4 0.75 | q2  16.5.. 49.5 q3   6.9.. 49.9 | CoM  18.9 mm EE   5.2 mm tilt  4.3 |e_R|  33.6 mrad tau 2.36
+
+[hw] k_w 1.8: 0/2 pass
+   seed 0                             ABORT at 7.4 s
+   seed 1                             swing  8.00 deg rms (amp 10.85 @ 0.08 Hz) q1 2.47 q4 1.58 | q2  17.6.. 49.6 q3   4.2.. 47.2 | CoM  20.1 mm EE   5.9 mm tilt  3.7 |e_R|  34.8 mrad tau 2.13
+
+[hw] mrd x1.2: 0/2 pass
+   seed 0                             ABORT at 7.6 s
+   seed 1                             swing  8.07 deg rms (amp  9.67 @ 0.08 Hz) q1 1.85 q4 0.80 | q2  16.5.. 50.1 q3   5.1.. 49.6 | CoM  19.2 mm EE   6.1 mm tilt  4.4 |e_R|  34.1 mrad tau 2.08
+
+[hw] omega_c_t 2.0: 0/2 pass
+   seed 0                             ABORT at 7.5 s
+   seed 1                             swing  8.16 deg rms (amp  8.04 @ 0.08 Hz) q1 1.62 q4 1.18 | q2  16.1.. 49.6 q3   4.3.. 49.4 | CoM  20.1 mm EE   6.1 mm tilt  4.9 |e_R|  39.8 mrad tau 2.16

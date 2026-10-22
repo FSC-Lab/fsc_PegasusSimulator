@@ -1,0 +1,36 @@
+
+hw noise (4.5 cm/s, 5 Hz band)
+   seed 0                             ABORT at 7.4 s
+   seed 1                             swing  7.61 deg rms (amp  8.67 @ 0.08 Hz) q1 1.72 q4 0.88 | q2  18.0.. 48.9 q3   7.0.. 48.1 | CoM  18.8 mm EE   6.0 mm tilt  4.3 |e_R|  33.7 mrad tau 2.15
+
+same noise, claw follows vehicle
+   seed 0                             swing  0.86 deg rms (amp  0.48 @ 0.92 Hz) q1 0.08 q4 0.01 | q2  27.1.. 33.0 q3  27.6.. 30.2 | CoM  23.5 mm EE  23.5 mm tilt  3.9 |e_R|  36.3 mrad tau 1.09
+   seed 1                             swing  0.75 deg rms (amp  0.26 @ 0.75 Hz) q1 0.06 q4 0.00 | q2  28.5.. 33.2 q3  27.2.. 29.7 | CoM  20.5 mm EE  20.4 mm tilt  3.7 |e_R|  33.7 mrad tau 1.09
+
+Isaac level (2.2 cm/s, 5 Hz)
+   seed 0                             swing  4.42 deg rms (amp  3.29 @ 0.17 Hz) q1 0.84 q4 0.02 | q2  24.7.. 42.8 q3  12.4.. 36.2 | CoM  11.1 mm EE   3.0 mm tilt  2.3 |e_R|  17.7 mrad tau 1.45
+   seed 1                             swing  3.72 deg rms (amp  2.40 @ 0.83 Hz) q1 0.08 q4 0.00 | q2  23.6.. 38.3 q3  18.3.. 38.8 | CoM   9.4 mm EE   2.9 mm tilt  2.7 |e_R|  17.1 mrad tau 1.41
+
+4.5 cm/s spread to 50 Hz (white-ish FD noise)
+   seed 0                             swing  3.01 deg rms (amp  1.98 @ 0.17 Hz) q1 0.55 q4 0.05 | q2  26.1.. 39.1 q3  17.8.. 34.2 | CoM   7.5 mm EE   2.1 mm tilt  1.9 |e_R|  26.3 mrad tau 1.99
+   seed 1                             swing  2.68 deg rms (amp  1.67 @ 0.83 Hz) q1 0.09 q4 0.00 | q2  25.3.. 37.3 q3  21.1.. 35.3 | CoM   6.7 mm EE   2.2 mm tilt  2.2 |e_R|  26.5 mrad tau 2.02
+
+no velocity noise (other noise on)
+   seed 0                             swing  1.31 deg rms (amp  1.01 @ 0.17 Hz) q1 0.12 q4 0.00 | q2  27.9.. 33.1 q3  25.2.. 32.0 | CoM   2.4 mm EE   0.9 mm tilt  1.6 |e_R|   4.8 mrad tau 1.01
+   seed 1                             swing  1.18 deg rms (amp  1.17 @ 0.58 Hz) q1 0.15 q4 0.00 | q2  27.4.. 32.2 q3  26.6.. 32.6 | CoM   2.3 mm EE   0.9 mm tilt  1.6 |e_R|   4.9 mrad tau 1.02
+
+no noise at all (force bias only)
+   seed 0                             swing  0.61 deg rms (amp  0.17 @ 0.17 Hz) q1 0.01 q4 0.00 | q2  29.5.. 32.4 q3  26.3.. 30.1 | CoM   0.9 mm EE   0.6 mm tilt  1.2 |e_R|   0.6 mrad tau 0.93
+   seed 1                             swing  0.61 deg rms (amp  0.17 @ 0.17 Hz) q1 0.01 q4 0.00 | q2  29.5.. 32.4 q3  26.3.. 30.1 | CoM   0.9 mm EE   0.6 mm tilt  1.2 |e_R|   0.6 mrad tau 0.93
+
+hw noise, observer 3x slower
+   seed 0                             ABORT at 15.6 s
+   seed 1                             swing  6.56 deg rms (amp  7.82 @ 0.08 Hz) q1 2.30 q4 0.58 | q2  15.6.. 41.7 q3  11.1.. 48.1 | CoM  16.1 mm EE   6.0 mm tilt  3.7 |e_R|  30.0 mrad tau 1.91
+
+hw noise, observer 3x faster
+   seed 0                             ABORT at 13.1 s
+   seed 1                             swing 23.57 deg rms (amp 24.82 @ 0.17 Hz) q1 11.19 q4 94.14 | q2 -58.7.. 53.6 q3 -42.1.. 50.5 | CoM 128.1 mm EE 195.9 mm tilt 32.7 |e_R| 177.8 mrad tau 3.54
+
+hw noise, odo lag 30 ms
+   seed 0                             ABORT at 7.6 s
+   seed 1                             swing  7.94 deg rms (amp  8.69 @ 0.08 Hz) q1 1.79 q4 0.74 | q2  17.4.. 48.7 q3   6.1.. 49.9 | CoM  21.4 mm EE   6.9 mm tilt  4.3 |e_R|  32.5 mrad tau 2.06

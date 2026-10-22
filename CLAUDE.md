@@ -6149,3 +6149,261 @@ not from what was published): the loopback's new case 7 measured 161 mm on the o
 Still open, decisions: Exit refused during a short BRIDGING gap (the GS calls it once), a fault
 during Exit waits the release hold, steps allowed during the blend back, LOST has no time bound,
 and the 0.30 m Land hover sits below the SAFETY UDE gate (0.4 m) with the ~0.2 m revert dip.
+
+**1021 FIRST HARDWARE BOX PUSH (240 g, 0.10 m, 21 mm/s) -- BOX PUSHED, EXIT WAS A q3-GUARD ABORT,
+THE WORLD-HELD ARM SWING IS 2x THE SIM'S (2026-10-21, user request: analyse; record
+`docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261021/README.md`, figure
+`fig_hw_vs_sim.png`).** Five bags: `_161745` / `_162604` / `_165311` STALE (Plan refused: the box
+sat off the yaml's SIM table x 0.600..0.750 -- at x 1.00 and 0.576; `_162604` has no metadata.yaml
+and 11 min of ground time), `_164338` FREE FLIGHT (Go To Start over a typed box point, hover, land),
+`_170123` the PUSH. **Mocap guard:** never CONFIRMED/LOST, no false abort; 8 real 75-100 ms VRPN
+pauses (processor republishes the pose with zero velocity) caught as frozen after 50 ms and bridged
+5-25 ms; one real drone flip (91 mm / 180 deg) rejected on its own sample. Gaps: the first ~50 ms
+of each pause still reach the law, and the processor's FD velocity spikes after a pause/flip pass
+through (3.75 m/s for one sample after the flip -> 1-2 ticks of u1 +61 N; tilt unchanged).
+**Push:** box 107 mm at the push end, pulled back to ~91 mm, 97 mm at rest; the q3 guard tripped
+0.78 s after the push ended (jaws still closed, before the GS's 1.0 s auto exit). The abort from
+the MEASURED pose then held q2 on its +45 limit and q3 ~2 deg (-7.3 at worst) for ~10 s of climb
+before folding home -- calm, but at the elbow-singular boundary. **Mechanism = the documented
+world-held swing**: the arm is locked until the EE anchor goes WORLD, then absorbs the base's motion
+along the arm; the same 0.55-0.7 Hz mode is in Isaac at half amplitude ((q2-q3)/2 10.5 vs 5.5 deg
+rms, CoM error along the arm 14-15 vs 6-8 mm). It used the whole q3 window (5..50 deg), touched the
+q2 hardware limit, rocked the clamped box 10 mm BACKWARD before the push, stick-slipped it (20 %
+stuck, 103 mm/s surge vs sim 0-11 % / 58-75). Also: the claw sat 8-10 mm below its reference
+under the world hold (spring lifts the box ~1 N) -- **CAUSE FOUND (10-21 evening,
+`tools/claw_offset.py`): STICTION learned by the arm's u3 feed-forward, NOT the 4-D trim.** Under
+the CoM anchor q2/q3 were frozen 8 s; the joint residual read the static friction holding them
+(j2 +0.15 / j3 +0.11 N.m), `d_int_f` (omega_x_q 0.1, tau 10 s) learned and subtracted it; the
+world hold unstuck the arm, the friction vanished in ~1 s, the stale ff sagged the arm: predicted
+-9.2 mm vs -9.3 measured, 2 s BEFORE contact (the trim does nothing in free flight). Isaac has no
+stiction, hence 0-3 mm. Harmless for the grasp; fix (untested) = clear/fast-filter the arm rows of
+`d_int_f` at the world-hold switch -- `wb_l1_stuck_hold_j2/j3` would freeze the value the slow
+fold already taught. LEFT OPEN by the user (low priority, ~1 N lift at any box mass). `obj_0` mis-solved 3 samples IN CONTACT (96 deg,
+61 mm) -- only the box guards' 0.2 s persistence prevented a false abort. **Friction:** the flight
+cannot refine the bench mu (F_hat reads ~0.25 N push resistance with the box lifted ~0.8 N, mu
+~0.16 +-0.1 -- consistent, not more precise); the stick-slip is the swing, not friction.
+**500 g / 0.50 m NOT recommended yet**: measure the real table into `push_pull_table` and start the
+box at y ~0.28; then a one-change ladder (shorter post-push wait, longer 240 g push, 500 g short,
+then the formal test); swing damping / joint-guard abort / obj_0 gate / guard velocity are sim+code
+work. Nothing changed in any repo.
+
+**ARM GS AUTOMATIC EXIT 1.0 -> 0.2 s AFTER THE PUSH (2026-10-21, fix 1 of the 1021 flight report;
+record `docs/docs_aerial_manipulator/archive/box_pushing_release_delay_20261021/README.md`).**
+`push_pull_auto_exit_delay_s` default 1.0 -> 0.2 in utils_custom_ground_station (`push_pull_panel.*`;
+the hardware station passes no value, so the code default flies) -- laptop rebuild only. Checked by
+the offscreen panel harness (new case X7: the undeclared default fires between 0.12 and 0.62 s) and
+6 interleaved Isaac flights of the 10-21 task with the STATION running the exit (new
+`pl_mission.py --gs-exit`; `run_pl.sh` takes `ARM_GS_AUTO_EXIT_DELAY` from the environment, default
+0.0 = unchanged): 0.2 s 3/3 normal exits, jaws opening 0.22-0.24 s after the push, q3 >= 23.4 deg,
+q2 <= 37.6 deg, box moved <= 4.7 mm; 1.0 s 3/3 too, but one run swung q2 to 44.5 / q3 to 16.8 inside
+the clamped second and pushed the box 22.7 mm more (the hardware mechanism at half amplitude). Not
+proof for hardware: the real jaws open in ~0.5 s and the release blend is 1.0 s, so with 0.2 s the
+jaws are open at ~+0.75 s vs the 10-21 trip at +0.78 s -- the swing damping (fix 5) is the real cure.
+**Harness trap found:** after a close the driver holds the close target on the gripper bus at 50 Hz;
+in `--gs-exit` it fought the station's open (Isaac's gripper server called it stalled and the station
+rightly refused to climb) -- the driver now stops publishing at the push end. Workflow page
+(`~/Documents/box_pushing_workflow`) text + lamp picture updated. Uncommitted.
+
+**BOX PUSHING: THE ROOM-HELD ARM SWING IS NOT A GAIN PROBLEM -- THE FREE-AXIS ANCHOR HALVES IT, AND
+READY/PUSH NOW START BY THEMSELVES (2026-10-21 evening, user request; record
+`docs/docs_aerial_manipulator/archive/box_pushing_gain_tune_20261021/README.md`).** A world-held
+hover BENCH (`tools/wh_bench.py`: circle_bench.py's exact law + mirror plant, unmodified, fed the
+10-21 flight's own reference with the claw held in the room, RAW-mocap velocity noise 4.5 cm/s
+measured on the bags -- Isaac injects 2.2) reproduces the 10-21 swing (q2 14-49, q3 7-48, q1 11 deg,
+then q3 through 0) while the same noise with the claw following the vehicle gives 0.8 deg. **25 gain
+candidates x 2-3 seeds: none keeps 20 s of room hold inside q3 >= 10 / q2 <= 45** (attitude
+k_R/k_w incl. pick-and-drop's, k_x/k_v, K_y/D_y, heading, M_r_d, observer omega_c; best k_x 32 +
+observer x0.5 = 10 % better). The swing is the arm taking up the vehicle's WANDER (it tracks the
+low-frequency feedback error; the observer bandwidth is the only gain that moves it), not an
+underdamped mode. **The lever is the existing law option `wb_ee_anchor_free_axis_weight`** (valve,
+10-18; off in the box yamls): in contact the claw's target rides w x the CoM error along the nose =
+the push direction = along the arm. Bench: 0.75 -> 3/3, 2.6 deg, q3 >= 19; 1.0 -> 0.9 deg. Mirrored
+into `wb_entry_sim.py` as `Case.ee_free_w` (default 0). **Station automation** (utils_custom_ground_station
+`push_pull_panel.*`, box tab only, defaults ON): Ready To Push starts 1.0 s after the FLYING->DONE
+go_to_start edge (`push_pull_auto_ready`, `_delay_s`; a settle refusal retried 0.5 s for
+`_timeout_s` 10 s), Push on the FLYING->DONE ready edge (`push_pull_auto_push`: the close at the
+first gate entry, the push on the grasp), Exit 0.2 s after the push -- Go To Start is the one press;
+edge-only (a restarted station never acts), any press / ABORT / Reset / lost DIRECT cancels.
+Harness cases G1-G5 pass; sim drivers keep the steps (`ARM_GS_AUTO_STEPS=false` in run_pl.sh /
+run_pl_cadm.sh, forwarded by the 4-D and CA launchers; `pl_mission.py --gs-auto` lets the station
+run them). **Isaac, 9/9 normal exits:** automation alone -> open-jaw room hold before the grasp
+0.85-1.2 s (driver 2.1-2.4, hardware 3.05), push travel 98.6-101.0 mm (driver 90.9-98.5); + free-axis
+0.75 -> swing 2.2-2.8 vs 4.7-5.4 deg, q3 >= 19.4, q2 <= 39.0, but push travel 91-108 mm and one
+clamped box dragged 19 mm back in the settle. **Free-axis NOT applied to any yaml (the user's call:
+push accuracy vs joint margin); never flown on hardware.** Workflow page updated. Uncommitted.
+
+**THE FREE-AXIS ANCHOR APPLIED TO BOX PUSHING, AND THE BOX-LAG GUARD MOVED ONTO THE LAW'S TARGET
+(2026-10-21 night, the user accepted the push-distance cost; record
+`docs/docs_aerial_manipulator/archive/box_pushing_gain_tune_20261021/README.md` section 5).**
+`push_pull_20261003/tools/make_push_pull_yaml.py` ADDITIONS `wb_ee_anchor_free_axis_weight: 0.75`
+(after `wb_ee_anchor_com`); sim + hardware box yamls regenerated (diff = that line), the CA and valve
+yamls unchanged (`--check`); the as-flown A/B yaml's controller section = the shipped one.
+- **A guard interaction, found before shipping:** the planner's box-lag guard measured the box against
+  the BARE plan, and with the anchor the box follows the vehicle's drift on purpose -- Isaac a75_1 read
+  34.6 of the 40 mm limit (no anchor 6-13), the 10-21 hardware push re-estimated with the anchor 37.5.
+  fsc_trajectory_planner (uncommitted) now adds the law's shift (`wb_control_debug` [117] x nose.u,
+  fresh <= 0.25 s, else 0 = the old guard) and names it in the trip message ("law free-axis shift");
+  loopback [9f] ALL PASS on the sim + hardware yamls, push gtests 18/18. Both WB hardware stacks list
+  the weight (45 / 43 tuned) and REFUSE a planner without it when the yaml's weight and box-lag guard
+  are > 0 (negative-tested). Gain-tune `fly.sh` FREE_W now replaces the yaml's value.
+- **Isaac on the shipped yaml (hardware guard values, station automation):** 240 g / 0.10 m complete,
+  swing 1.9 deg, q3 >= 25.1, box 99.9 mm, guard 7.8 mm. **Jams are caught 0.7-1.1 s later**: the stuck
+  box drags the vehicle back, the target follows, the compensated lag excuses part of it -- 1 kg / mu
+  0.6 tripped the TILT guard at 9.2 s (10-16 box lag 8.1 s), the stopper the box-lag guard at 14.0 s
+  (10-16 box tilt 13.3 s). Both ended level; the arm stayed further from its stops than without the
+  anchor (stopper q2 40.5 vs 45.0). The compensated reading ~ the arm's real compression (bare lag + the
+  CoM error); the 10 deg tilt guard is the backstop for a heavy box (tilt ~ atan(F/mg)). A bare guard at
+  55 mm (jams ~0.5 s sooner) was rejected: its margin is the drift itself. One flight per case; never
+  flown on hardware. Orin: rebuild `fsc_trajectory_planner`; laptop: `utils_custom_ground_station`.
+
+**VALVE RESISTANCE: A HANGING WEIGHT MAKES THE TURN WORSE, A ROTARY DAMPER HELPS (2026-10-21, user
+request: a drum on the shaft lifting a payload to tune the valve's torque; record
+`docs/docs_aerial_manipulator/archive/valve_load_20261021/README.md`).** 07 valve scene gained
+`PEGASUS_VALVE_LOAD_TORQUE` (= m g r_drum, constant, resisting the turn, string slack past the
+start), `_LOAD_DIR`, `_LOAD_TAKEUP_DEG`, `PEGASUS_VALVE_RATCHET` (one-way pawl; LEAKS after an abort
+in the model), all default off, forwarded by the valve wrapper. One run each, shipped valve config,
+0.048 N·m bearing: **every constant load 0.10-0.40 N·m peaked at 9.9-11.5° tilt in the turn (5 of
+5; unloaded/damped ≤ 5.9°), 4 of 5 tripped the 10° guard mid-turn** with a growing ~1 Hz q1/q4
+antiphase swing (the first 15 s track like the baseline; the mid-turn posture does NOT shift);
+at 0.40 the arm swung to q3 1° and buckled through 0 in the abort, flipping the vehicle. **Without a
+ratchet the weight back-spins the beam into the open claw** (552° at up to 1060°/s, q3 -69).
+**Rotary damper `PEGASUS_VALVE_DAMPING` 0.5 N·m·s/rad (0.22 N·m at 25°/s) completed with the best
+turn on record**: base lead 22 mm (38-58), arm on a stop 4 % (9-13 %), swing 7.8° (10.2-11.6), tilt
+unchanged; 2.0 aborted on 10-18 (force guard) — window below ~1.0. One damper flight: repeat and
+bracket 0.25/1.0 before building. **Harness defect fixed:** `pl_mission.py`'s default exit became
+release-first on 10-19, so `try_valve.sh RELEASE_AT_OPEN=0` silently flew the exit known to fail on
+the free handle; it now passes `--open-first-exit` by name (corrected baseline completes as on 10-18).
+
+**REPORT ITEMS 6, 7, 8 OF THE 10-21 BOX-PUSH REPORT APPLIED (2026-10-21 night; code checks
+only, no flights, per the user).** Uncommitted in fsc_trajectory_planner, fsc_autopilot_ros2
+(yamls + hardware stacks), fsc_drone_state_estimator_ros2 (dev_robotic_arm) and Pegasus.
+- **6, the abort unbuckle** (`archive/box_abort_unbuckle_20261021/`): planner key
+  `push_pull_abort_unbuckle` (true in the box yamls). An abort held on the MEASURED arm brings
+  q2/q3 to the push pose's in the first motion leg after the release wait (retreat, else climb;
+  the climb carries it if the claw would drop > 10 mm); q1/q4 kept until the fold. gtest +
+  loopback [9h] on sim and hardware yamls.
+- **7, the box sample gate** (`archive/box_mocap_gate_20261021/`): `push_pull_box_gate_jump_m`
+  0.020 / `_jump_deg` 10 in the box yamls; gtest + loopback [9g]. Get now REFUSES a capture
+  window in which the gate dropped any sample (the gate keeps the branch it holds, not
+  necessarily the true one).
+- **8, the velocity after a mocap pause / flip** (`archive/mocap_velocity_clean_20261021/`):
+  estimator `mocap_guard_vel_holdoff_s` 0.1 s -- for that long after a bad or repeated mocap
+  sample, and during the blend back, the published odometry carries EKF2's velocity. Replay of
+  the 10-21 flip and pauses through the built node: spikes 3.76/1.22/0.55 -> 0.25/0.04/0.13 m/s.
+- Both whole-body hardware stacks refuse a planner without the two planner keys; the raw stack
+  refuses an estimator without the hold-off. **Orin: rebuild fsc_trajectory_planner and
+  fsc_drone_state_estimator_ros2; pull fsc_autopilot_ros2 (yaml + scripts).**
+
+**BOX PUSHING: CONTACT-PHASE STABILITY TUNE — THE FREE AXIS FROM THE ROOM HOLD, AND WHAT REALLY
+WANDERS THE VEHICLE (2026-10-22 night, user request; record
+`docs/docs_aerial_manipulator/archive/box_pushing_contact_stability_tune_20261021/` — PLAN.md by the
+planning session, README.md the results; Command.md §17).** First, the evening's uncommitted code (box
+sample gate, abort unbuckle, box-lag guard on the law's target, T_max refusal, the GS's automatic Ready /
+Push / 0.2 s Exit, the estimator's velocity hold-off) was checked: every diff read, all gtests and
+loopbacks pass on the sim AND hardware box yamls, plus a new `tools/vel_holdoff_check.py` (the 2.5 m/s
+post-pause spike never reaches the odometry). Then ~60 headless Isaac flights + bench rounds:
+- **The hardware wander is PX4's attitude-estimate error, not mocap velocity noise.** On the 10-21 bags the
+  raw-mocap velocity error is 41–48 mm/s broadband but only 2–4 mm/s below 2 Hz (EKF2's is worse there,
+  8–15); PX4's tilt vs the mocap attitude is 0.42–0.56° rms at 0.1–0.6 Hz → 37 N misdirected by 0.27–0.37 N
+  = the law's own d_hat_t variation (0.25–0.38 N). The 10-21 gain tune's 4.5 cm/s band-limited velocity
+  noise matched the amplitude by the wrong mechanism, and the gain ranking FLIPS with the model (a faster
+  translational observer hurts against noise, helps against a slow force). Isaac's clean IMU never makes
+  this error: new default-off scene knob `PEGASUS_PLANT_FORCE_NOISE` (yaml `sim_plant_force_noise_n/_bw_hz/
+  _seed`, a slow random horizontal world force; base launcher validates + bakes it). At 0.32 N/axis,
+  0.12 Hz the anchor-OFF config reproduces the 10-21 flight: swing 9.1 vs 10.2°, hover 20 vs 19 mm, the same
+  q3-guard abort. Also added (default off, kept for the record): the emulator's `velocity_noise_bw_hz`
+  (+ the 4-D stack's `sim_feedback_vel_noise_bw_hz`).
+- **SHIPPED: `wb_ee_anchor_free_axis_on_world: true`** (new whole-body client option, default false, parity
+  untouched): the free-axis anchor latches when the claw is held in the ROOM on the handle, not only at the
+  grasp — the open-jaw wait was the window the 0.75 weight never covered. Hardware-like Isaac, paired force
+  seeds 1–8: old config 4/8 with FOUR crashes (each the arm buckling in the Ready window, q3 to −46..−60°, the
+  node leaving DIRECT at 22–48° tilt); new 6/8 with none (one q3-guard abort with DIRECT kept, one missed grasp),
+  Ready swing 10.8 → 3.4° p-p, slide e_imp 1.79 → 1.51 N. Stopper, 1 kg, side-edge fall and mocap freeze all
+  still abort safely. Price: under a large drift the open claw rides 75 % of it along the fin and can shove
+  the box before the grasp (seed 8: 91 mm, then closed on nothing); and the planner engages the room hold on
+  arrival whatever the claw's error (seed 7: 76 mm off → the arm pulled the base away) — a planner gate item.
+  Generator ADDITIONS; both hardware stacks expect the key and refuse a node without it. Orin: rebuild
+  fsc_autopilot_ros2.
+- **NOT shipped:** omega_c_t 2.0 (bench −25 % wander, Isaac inside scatter, worst long-slide q3 11.1°);
+  settle 1.0 s (no regression, below the 1.5×-scatter bar); weight 0.9 and blend 0.5 s (the claw misses the
+  close gate 1/5 each); exit 1.5 s (its failure was in the release window anyway); every other gain within
+  2–4 % under either model.
+- **Still open:** the release window (push end → jaws open) — the clamped arm absorbs vertical/lateral drift
+  there (1 q3 trip in ~28 free-axis runs, ended safely); and the q3 guard is too slow for a FAST collapse
+  (anchor-off aborts overshot to −50..−70° and left DIRECT) — a q3-rate term is the next safety item.
+- Traps: editing fly.sh while a flight's fly.sh runs (byte-offset) — pause the queue first; the driver's
+  hover-settle gate (|v| < 0.10 m/s for 3 s) never passes with hardware-level velocity noise (the campaign's
+  copy low-passes it); the queue runner splits a job's ENV on spaces (multi-token driver args joined by '|').
+
+**BOX PUSHING: A RATE-AWARE q3 GUARD (2026-10-22 morning, user request; record
+`docs/docs_aerial_manipulator/archive/box_pushing_contact_stability_tune_20261021/README.md` section 6,
+Command.md §17).** Every box-pushing crash in the records is the arm folding through q3 = 0 into the
+elbow-singular branch, and the static q3 guard (10 Hz tick, q3 < 10° for 0.2 s) fires only after the
+fold has passed the limit. Replayed on the night's runs (`tools/q3_rate_guard_replay.py`): folds run
+51–141°/s in the runs the guard caught and 259–356°/s in the three crashes, where the static guard would
+have fired only after the node had left DIRECT. fsc_trajectory_planner (uncommitted) now also runs
+`plQ3RateGuard` on EVERY arm joint sample: q3 predicted `push_pull_guard_q3_lookahead_s` (0.2) ahead
+from its own low-passed rate; below `push_pull_guard_q3_min_deg` while falling faster than
+`_rate_min_deg_s` (5) for `_rate_persist_s` (0.05) → the existing push-and-pull abort (gate-only keys;
+0 = off; the static check stays). Replay: 0.24–0.35 s before the static check, at q3 12–21°; no trip in
+the shipped config's completed runs; 7 of 46 older-config runs would have aborted. On in the three
+box-pushing yamls (generator), both whole-body hardware stacks expect it and refuse an older planner,
+the Isaac scene's check compares it. Loopback [9i] + ALL PASS on sim and hardware yamls. **Open:** the
+abort's first action (claw back to the CoM anchor) blends over 1.0 s — whether it stops a ~300°/s fold
+is untested. **Isaac check (4 flights, same morning):** on the old config's crash seeds 6/7 the guard
+fired at q3 18.2/16.3° (44–50°/s), the arm bottomed at 14.9/8.8°, tilt ≤ 4.8°, the abort climbed, folded
+and the vehicle landed (last night the same seeds left DIRECT at q3 −18°, tilt 33°); no trip in the
+completed runs; one shipped-config run aborted on the box-tilt guard in the Exit (the known open-claw
+drag). Folds were caught while still slow — a fold already at ~300°/s was not seen. Not on hardware.
+Orin: rebuild fsc_trajectory_planner.
+
+**BOX PUSHING: THE TABLE PLACED FROM THE BOX, GO TO START ROUND IT (2026-10-22, user design after
+the 10-21 lab flights refused Plan three times on the sim's room-fixed `push_pull_table`).** The lab
+table goes wherever the floor is flat; the box always sits at its LEFT end (seen from the vehicle),
+centred across it, back face 0.10 m in; the vehicle on the table's middle line, in front. Uncommitted
+in fsc_trajectory_planner, fsc_autopilot_ros2 (yamls + both whole-body hardware stacks),
+fsc_open_manipulator (GS) and Pegasus; NOT flown in Isaac or on hardware.
+- **Planner (`push_pull.{hpp,cpp}`, node):** `TableKeepOut` gained a frame (origin + yaw, `toLocal`/
+  `toWorld`); `tableFromBox()`; new keys `push_pull_table_from_box` (table = 1.000 x 0.150 from
+  `push_pull_table_size`, its box end `push_pull_box_half_length` + `push_pull_table_box_gap` behind the
+  box centre along the push, top `push_pull_box_half_height` 0.05 under obj_0 -- ~8 mm high on the lab
+  box, the safe side), `push_pull_start_middle_tol` 0.30 (Plan refuses a start off the table's middle
+  line -- also the catch for a box yaw read 180 deg off, which puts the derived middle 0.56 m along),
+  `push_pull_go_to_start_bypass` + `push_pull_bypass_clearance` 0.70. With the table from the box:
+  Adjust has no `push_pull_adjust_max` bound (the start = where the vehicle is), Land / Land Start yaws
+  turn with the box (offset from the push heading kept: -360 = 270 deg clockwise, landing facing the
+  table), the box-on-table check runs in the table's frame, `wp.table` carries the plan's table so
+  every later step (and an abort that drops the capture) checks against it. Bypass = a degree-8 Bezier
+  (CoM, smooth-trapezoid phase, heading + climb on the same phase, flatState exact) along the table's
+  side, past its box end, onto the push line `bypass_clearance` past the end, at rest there, then the
+  usual transition straight in while the arm unfolds; the curve is sample-checked >= 0.70 m (refused
+  otherwise); a hold already within 0.70 m (a re-fly) flies the old straight transition, noted in the
+  summary. Go To Start 10.3 -> ~19 s from the Isaac start. Info appends the table [77..86] (87 values).
+- **Checks:** gtests 26/26 (6 new `PushPullLayout.*`: placement, 3 layout refusals, landing yaws at
+  box yaw 0/30/-100/170, clearance + rest + FD chain over 9 start positions, near/far fallbacks,
+  mission); loopback ALL PASS on the sim and hardware yamls, new [4b] = the vehicle comes within
+  0.65 m of the table only at the approach height; box-point loopback PASS; GS monitor offscreen PASS
+  (the arm GS's Table Offset now reads the planner's table from info); hardware stack dry runs OK
+  (53 / 51 tuned values) and both REFUSE a planner build without `push_pull_table_from_box`.
+- Generators: `make_push_pull_yaml.py` planner block (sim, hardware, CA box yamls regenerated, diff =
+  the 7 keys); `make_hw_box_pushing_yaml.py` header text; the Isaac scene check compares the keys.
+- **FINAL (same day, after the user checked it in Isaac):** the way home goes round the table's RIGHT
+  (far) end as Go To Start's MIRROR IMAGE -- on along the push line at the exit height over the pushed box
+  (a keep-out swept along the push up to the fin's top, `push_pull_handle_top_above_grasp` 0.025, checked
+  STRICT: the exit leaves the gear ~0.11 m over it) to 0.70 m past the far end, then across and back along
+  the table's front (corner at the start's distance) to Land Start; ~25 s. `roundTableCurve` handles
+  either table end. Isaac scene: `PEGASUS_PUSH_LAYOUT=field` (default: table (+4, -3) cm and 2 deg, box
+  by the rule + (1, -1.5) cm / 1.5 deg, vehicle 1.6 m in front + (-5, +6) cm -> 1.65 m) or `nominal`
+  (the 10-21 layout; `run_pl.sh` / `run_pl_cadm.sh` pin it); knob `PEGASUS_PUSH_TABLE_POSE`; the table
+  is built under one turned Xform. Typed start / land x -0.6 -> -1.0. Hardware stacks probe
+  `push_pull_handle_top_above_grasp`. The paragraph below describes the intermediate (back-out) version.
+- **Same day, user: the way home round the table too, landing at yaw -180 (no full turn).**
+  `push_pull_go_to_start_bypass` also makes Go To Land Start Go To Start backwards: from a hold within
+  0.70 m of the table (the exit, an abort's climb) straight back along the push line at that height to
+  0.70 m past the box end, then the same curve (`roundTableCurve`, shared: a beside end and a past-end
+  end -> the L; two ends on one side or both past -> straight; else refused) to Land Start. Land /
+  Land Start yaw -360 -> **-180** in the box yaml generator (relative to the box: 90 deg clockwise
+  from the push heading, landing facing away from the table). Way home 23.9 -> 20.0 s (0.10 m push)
+  / 22 s (0.50 m). gtests 27/27 (new `GoToLandStartGoesRoundTheTableToo`); loopback [8]/[8b] ALL PASS
+  on the sim and hardware yamls (turn -90 clockwise only; below the exit height >= 0.68 m from the
+  table). Rebuild on the Orin: fsc_trajectory_planner; laptop: utils_custom_ground_station.

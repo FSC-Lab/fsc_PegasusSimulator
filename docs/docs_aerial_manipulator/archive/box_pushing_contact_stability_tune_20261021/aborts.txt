@@ -1,0 +1,7 @@
+r_stop       trip  13.4 s into the push      | q3 min  22.9 q2 max  39.1 | tilt after the trip max  9.9 | node stayed in DIRECT | box tilt 13.2 travel  184.6 mm | the box is 51 mm BEHIND its plan (> 40 mm: jammed or too hea
+r_heavy      trip   8.8 s into the push      | q3 min  17.3 q2 max  45.0 | tilt after the trip max  9.6 | node stayed in DIRECT | box tilt  8.1 travel    2.4 mm | tilt 10.6 deg > 10.0 deg) -- gripper open, contact off, clim
+r_side       trip  15.6 s into the push      | q3 min  22.8 q2 max  38.7 | tilt after the trip max  3.2 | node stayed in DIRECT | box tilt 158.9 travel  309.9 mm | box tilted 2.5 deg > 2.0 deg (tipping, not sliding)) -- grip
+r_freeze     trip   2.3 s into the push      | q3 min  21.6 q2 max  41.2 | tilt after the trip max 13.4 | node stayed in DIRECT | box tilt 10.8 travel  -13.0 mm | mocap CONFIRMED (frozen, last good sample 0.23 s ago)) -- gr
+j_fwx15_2    trip   7.2 s into the push      | q3 min   5.9 q2 max  44.7 | tilt after the trip max  2.9 | node stayed in DIRECT | box tilt  0.3 travel  105.9 mm | q3 6.7 deg < 10.0 deg (the arm buckling toward its elbow-sin
+g_cal0_1     trip   7.4 s into the push      | q3 min -71.5 q2 max  45.0 | tilt after the trip max 33.5 | node LEFT DIRECT | box tilt  0.8 travel   78.9 mm | q3 -2.8 deg < 10.0 deg (the arm buckling toward its elbow-si
+cal45_2      trip   0.0 s into the push      | q3 min -67.5 q2 max  45.0 | tilt after the trip max 77.4 | node LEFT DIRECT | box tilt  0.4 travel  -13.7 mm | q3 2.4 deg < 10.0 deg (the arm buckling toward its elbow-sin

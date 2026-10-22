@@ -1201,7 +1201,13 @@ CONFIRMED and back, never LOST). Rebuild before flying: Orin `fsc_drone_state_es
 
 Before the flight (on the ground, after steps 1-2)
 
-1. **Adjust** -- the vehicle on its start mark (-0.60, 0), facing +x; the shift is written into Start, Land Start and Land.
+0. **Layout (2026-10-22: the table is placed from the box)** -- put the table where the floor is flat; the box at
+   its LEFT end (seen from the vehicle), centred across it, its back face 0.10 m in from the end; the vehicle on
+   the table's middle line, facing it, ~1.6 m in front (at least 0.75 m). Isaac places all three a little off
+   by default (`PEGASUS_PUSH_LAYOUT=field`; `nominal` = the exact 10-21 layout, which the campaign drivers use). Plan refuses a start more than 0.30 m off the
+   middle line, and Go To Start flies round the table's box end (body >= 0.70 m from it, seen from above).
+1. **Adjust** -- the vehicle where it will take off (since 2026-10-22 anywhere: the start, Land Start and Land
+   become where it is; the landing yaw, -180, is relative to the box -- 90 deg clockwise from the push).
 2. **Get** on the *Box (obj_0)* row -- captures the box's mocap pose (x, y, z, yaw); the boxes are editable.
 3. **EE Offset** (sim [0, 0, 0.183] m for the CAD box, box frame), **Vertical Margin** (0.15 m), **Side Margin**
    (0.12 m), **Push Distance** (0.50 m) -- type, press the button. The **Monitor** under the points shows
@@ -1213,18 +1219,22 @@ During the flight (after step 3: DIRECT, planner HOLD)
 1. **Plan** -- dry-runs all six steps and draws the path. Wait for `READY next=go_to_start`.
 2. **1 Go To Start** -- to the table's left end, turning right to -90 deg; the claw 0.12 m behind and
    0.15 m above the fin's grasp point.
-3. **2 Ready To Push** -- opens the gripper and, once it reports open, slides diagonally down-forward onto the
+3. **2 Ready To Push** -- starts by itself 1 s after `DONE go_to_start` (2026-10-21; press it to go sooner):
+   opens the gripper and, once it reports open, slides diagonally down-forward onto the
    handle (CoM-anchored; the claw is world-held from its arrival).
-4. **3 Push** -- closes the gripper once the claw is within 2 cm AND centred across the fin to 3 mm;
+4. **3 Push** -- starts by itself at `DONE ready` (2026-10-21): closes the gripper once the claw is within 2 cm AND centred across the fin to 3 mm;
    once the jaws grip, the law goes to CONTACT (the contact line turns purple) and the box slides
    the Push Distance (1.5 s settle + the push time); the Monitor shows the box's travel and speed live,
    then the push's numbers. CONTACT ends with the push. If the gripper closes on nothing,
    nothing moves (Isaac: the grasp is a stall; hardware, 2026-10-19: a full close on the fin is the
    grasp, a close stopping wider than -0.005 m a wrong grip).
-5. **4 Exit To Push** -- starts by itself 1 s after `DONE push` (press it to go sooner, ABORT to stop
+5. **4 Exit To Push** -- starts by itself 0.2 s after `DONE push` (2026-10-21; press it to go sooner, ABORT to stop
    it): releases, opens the gripper and, on its OPEN report, climbs 0.25 m (the gear clears the box), arm home.
-6. **5 Go To Land Start** -- one transition from the exit hold to Land Start (1.3 m, off the table), turning
-   clockwise to -360 deg (~24 s, set by the 270 deg turn); the planner checks the path against the table.
+6. **5 Go To Land Start** -- (2026-10-22) round the table's RIGHT (far) end, Go To Start's mirror image: on along
+   the push line at the exit height, over the pushed box (the gear kept 0.05 m over the fin's top), to 0.70 m
+   past the far end, then across and back along the table's front to Land Start (1.3 m over the take-off spot),
+   turning 90 deg clockwise to yaw -180 (relative to the box; ~25 s). Until 2026-10-22: one transition across
+   the table, 270 deg clockwise to -360, ~24 s.
 7. **6 Land** -- straight down to the hover over the start mark, where it took off (`COMPLETE`).
    Touch down with `ps4_teleop_bringup.py land --land-z 0.25` (section 16; the T650 gear rests the body at
    0.235 m -- the default 0.35 would leave it hovering 11 cm up).
@@ -1235,7 +1245,7 @@ During the flight (after step 3: DIRECT, planner HOLD)
   push again: **Get** and **Plan**. The planner aborts by itself if the tilt stays above 15 deg (hardware 10) for
   0.1 s, the force the law reads on the claw stays above 5 N for 0.3 s (from the grasp to the exit), the
   arm's joint states go silent for 0.5 s, and (2026-10-16) if the BOX is
-  more than 40 mm behind / ahead of its plan or tilts more than 2 deg (0.2 s), its mocap goes
+  more than 40 mm behind / ahead of its plan (2026-10-21: the plan plus the law's free-axis shift) or tilts more than 2 deg (0.2 s), its mocap goes
   silent for 0.5 s, or q3 drops below 10 deg; Plan refuses a push that would leave the box
   within 3 cm of the table's edge (a box turned 180 deg, a too-long distance). A guard trip
   names itself in the status line.
@@ -1302,8 +1312,8 @@ and rejected), and the box guards above -- in Isaac a jammed box made the arm bu
 vehicle flip before the 5 N force guard tripped; with the guards every worst case flown aborts
 safely. Hardware: `AM_HW_PROFILE=box_pushing` on the whole-body stack flies
 `..._t650_box_pushing.yaml` (generated by the campaign's `make_hw_box_pushing_yaml.py`; its
-`push_pull_table` is the SIMULATION's -- measure the lab table first). Rebuild
-fsc_trajectory_planner (the guards) and the arm GS.
+`push_pull_table` is the SIMULATION's -- measure the lab table first; SUPERSEDED 2026-10-22: the table
+is placed from the box, see step 0 above). Rebuild fsc_trajectory_planner (the guards) and the arm GS.
 
 **2026-10-17 -- a constant-speed push was tried and is NOT used** (record:
 `archive/push_cruise_20261017/README.md`). New planner option `push_pull_push_ramp_s` (0 = the
@@ -1344,6 +1354,36 @@ speed (now vs plan): GREEN inside the tested range, RED outside -- retype (`push
 complete: 8 mm/s left the box stuck 29 % of the push, 30 mm/s tipped it 0.3-0.7 deg; 0.10 m takes 4.8 s, the jaws
 hold it 6.3 s. Rebuild `fsc_trajectory_planner` (Orin) and `utils_custom_ground_station` (laptop); the stack refuses
 a planner without the speed.
+
+**2026-10-21 -- the free-axis anchor against the arm's swing** (record: `archive/box_pushing_gain_tune_20261021/README.md`).
+The first hardware push ended in a q3-guard abort: with the claw held in the room the arm absorbed the vehicle's drift
+and swung, and no gain fixed it. In contact the claw's target now follows 75 % of that drift along the push
+(`wb_ee_anchor_free_axis_weight` 0.75, both box-pushing yamls): in Isaac the swing halves and q3 stays >= 19 deg; the
+price is the push distance, ±1 cm (worst ±2.5 cm on hardware) whatever the distance. The box-lag guard measures the box
+against that shifted target; in Isaac a jammed box was then caught ~1 s later (the stuck box drags the vehicle back and
+the target follows), by the 10 deg tilt guard or the box-lag guard, both safely. Ready To Push and Push start by themselves (Go To Start is the one press), Exit 0.2 s
+after the push. Rebuild `fsc_trajectory_planner` (Orin) and `utils_custom_ground_station` (laptop); the stack refuses
+an older planner.
+
+**2026-10-22 -- the free axis from the claw's room hold** (record: `archive/box_pushing_contact_stability_tune_20261021/README.md`).
+The free-axis anchor now also latches during the open-jaw wait on the handle (`wb_ee_anchor_free_axis_on_world: true`,
+both box-pushing yamls), not only once the jaws grip -- that wait was where the 10-21 swing started. Tested in a
+hardware-like Isaac condition: the real wander comes from PX4's attitude-estimate error (~0.5 deg), emulated as a slow
+random plant force (`sim_plant_force_noise_n/_bw_hz/_seed`, 0.32 N / 0.12 Hz); with the anchor off that reproduces the
+10-21 abort. On paired seeds 1-8 the old config completed 4/8 with four crashes (the arm buckling in the Ready window);
+the new one 6/8 with none (one safe q3-guard abort, one missed grasp). Jams, the side-edge fall and a mocap freeze still
+abort safely. No gain changed. Rebuild `fsc_autopilot_ros2` (Orin); the stack
+refuses an older node.
+
+**2026-10-22 -- the q3 rate guard** (same record, section 6). The planner now also predicts q3 0.2 s ahead from its own
+rate on every arm joint sample, and aborts the push when the prediction falls below 10 deg while q3 falls faster than
+5 deg/s for 50 ms (`push_pull_guard_q3_lookahead_s: 0.2`, `_rate_min_deg_s`, `_rate_persist_s`, `_rate_filter_s`; all
+three box-pushing yamls; 0 = off, the old check stays). Replayed on the 10-22 runs it fires 0.24-0.35 s before the
+static check, at q3 12-21 deg; in the three crashes the static check would have fired only after DIRECT was lost.
+The abort it starts is unchanged. Isaac check (4 flights): on the old config's crash seeds 6 and 7 it caught the fold at q3
+16-18 deg, the arm stayed above 8.8 deg and the vehicle aborted and landed (last night both left DIRECT at ~33 deg
+tilt); no trip on the completed runs. Rebuild `fsc_trajectory_planner` (Orin); both whole-body hardware stacks refuse an
+older planner.
 
 ### 17.x Comparison rig: coordinated admittance framework (Liu et al., CEP 146 (2024) 105898)
 

@@ -1,0 +1,7 @@
+z_final_6    trip                            | q3 min  21.9 q2 max  40.8 | tilt after the trip max 15.0 | node stayed in DIRECT | box tilt  0.3 travel  512.7 mm | 
+z_final_7    trip   0.0 s into the push      | q3 min  -6.5 q2 max  45.0 | tilt after the trip max  4.0 | node stayed in DIRECT | box tilt  0.4 travel   37.7 mm | q3 6.5 deg < 10.0 deg (the arm buckling toward its elbow-sin
+z_final_8    trip   0.0 s into the push      | q3 min  17.4 q2 max  40.1 | tilt after the trip max  2.6 | node stayed in DIRECT | box tilt  0.4 travel   93.7 mm | timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=H
+z_nom_1      trip                            | q3 min  25.9 q2 max  40.7 | tilt after the trip max 14.8 | node stayed in DIRECT | box tilt  0.4 travel  107.5 mm | 
+z_ship_6     trip                            | q3 min -54.5 q2 max  45.0 | tilt after the trip max 33.7 | node stayed in DIRECT | box tilt  0.0 travel   -5.4 mm | left DIRECT while the GS closing the gripper
+z_ship_7     trip                            | q3 min -51.1 q2 max  45.0 | tilt after the trip max 32.5 | node stayed in DIRECT | box tilt  0.1 travel  -64.4 mm | left DIRECT while the GS closing the gripper
+z_ship_8     trip   0.0 s into the push      | q3 min -60.4 q2 max  45.0 | tilt after the trip max 47.6 | node LEFT DIRECT | box tilt  0.3 travel   55.5 mm | q3 5.4 deg < 10.0 deg (the arm buckling toward its elbow-sin

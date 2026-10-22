@@ -1,0 +1,22 @@
+[22:07:42] start v75_n1 (MASS=0.240 DIST=0.10 SPEED=0.021)
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v75_n1] completed
+[22:11:48] start v75_heavy (MASS=1.000 MU_S=0.6 MU_K=0.6 DIST=0.50)
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.020833333333333332
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v75_heavy] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.7 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[22:15:53] start v75_stop (MASS=0.500 DIST=0.50 PEGASUS_PUSH_STOPPER_Y=-0.04)
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.020833333333333332
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[v75_stop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 51 mm BEHIND its plan (> 40 mm: jammed or too heavy) [law free-
+[22:20:02] CHAIN DONE

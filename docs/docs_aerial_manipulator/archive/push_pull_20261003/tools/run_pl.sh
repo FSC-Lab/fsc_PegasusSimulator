@@ -22,6 +22,9 @@ STACKS="$HOME/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim"
 FB="${PUSH_FEEDBACK:-raw}"
 STACK="$STACKS/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack.sh"
 [[ "$FB" == fused ]] && STACK="$STACKS/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh"
+# the exact 2026-10-21 layout (2026-10-22: the scene defaults to the hand-placed "field"
+# layout); its records stay comparable. PEGASUS_PUSH_LAYOUT=field to fly the other.
+export PEGASUS_PUSH_LAYOUT="${PEGASUS_PUSH_LAYOUT:-nominal}"
 export FASTRTPS_DEFAULT_PROFILES_FILE="$PEG/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml"
 
 (WB_SIM_PROFILE=box_pushing setsid nohup bash "$STACK" shiqi_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
@@ -41,9 +44,13 @@ for i in $(seq 60); do
 done
 [[ -n "$off" ]] || { echo "the planner has no push_pull_ee_offset -- old binary? rebuild fsc_trajectory_planner"; exit 1; }
 echo "[$(date +%T)] planner up, EE offset $off"
-# ARM_GS_AUTO_EXIT_DELAY=0.0: pl_mission.py owns release / open / exit -- the arm GS's
-# automatic exit (2026-10-19) would race it
-(setsid nohup env PEGASUS_HEADLESS=1 PUSH_FEEDBACK="$FB" WB_SIM_PROFILE=box_pushing ARM_GS_AUTO_EXIT_DELAY=0.0 \
+# ARM_GS_AUTO_EXIT_DELAY=0.0 (the default): pl_mission.py owns release / open / exit -- the
+# arm GS's automatic exit (2026-10-19) would race it. > 0 with PL_DRIVER_ARGS=--gs-exit
+# (2026-10-21): the GS's own automatic exit runs it, as on hardware, and the driver watches.
+# ARM_GS_AUTO_STEPS=false (the default): the driver flies Ready / close / Push itself -- the
+# station's automatic Ready + Push (2026-10-21) would race it; true with --gs-auto: the station
+# runs them and the driver watches
+(setsid nohup env PEGASUS_HEADLESS=1 PUSH_FEEDBACK="$FB" WB_SIM_PROFILE=box_pushing ARM_GS_AUTO_EXIT_DELAY="${ARM_GS_AUTO_EXIT_DELAY:-0.0}" ARM_GS_AUTO_STEPS="${ARM_GS_AUTO_STEPS:-false}" \
    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_box_pushing_sitl.sh" --in-terminal shiqi_machine \
    > "$RUNS/$TAG.scene.log" 2>&1 &)
 echo "[$(date +%T)] waiting for the box (Isaac)"

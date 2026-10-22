@@ -136,6 +136,36 @@ ADDITIONS = {
     # the guard off the node would refuse DIRECT). The coordinated-admittance and valve
     # generators leave it out.
     "system_mocap_guard_topic": ("system_fb_land_speed", '"state_estimator/mocap_guard"'),
+    # wb_ee_anchor_free_axis_weight 0.75 (2026-10-21, THE ROOM-HELD ARM SWING; plain node
+    # parameter, default 0 = off; archive/box_pushing_gain_tune_20261021): while the contact
+    # flag is on (latched until the release) the claw's room-held target also rides this
+    # share of the CoM error along the vehicle's nose -- the push direction, along the arm --
+    # so the arm stops absorbing the vehicle's drift along it. The 10-21 hardware push ended
+    # in a q3-guard abort from that swing ((q2-q3)/2 10.5 deg rms, q3 to 4.5 deg, q2 to 45);
+    # 25 gain candidates could not fix it (the swing tracks the feedback's low-frequency
+    # error, not a damping deficit). Bench at the hardware's raw-mocap noise: 0 -> 0/3 seeds
+    # inside q3 >= 10 / q2 <= 45, 0.75 -> 3/3, swing 7.7 -> 2.6 deg. Isaac, 3 + 3 flights:
+    # swing 4.7-5.4 -> 2.2-2.8 deg, q3 >= 19.4, q2 <= 39.0. THE PRICE, accepted by the user
+    # 2026-10-21: the box follows that share of the drift, so the PUSH DISTANCE is off by
+    # 0.75 x the vehicle's drift when the jaws open (Isaac 91-108 mm of 100 vs 98.6-101;
+    # hardware expected +-1 cm typical, +-2.5 cm worst; it does not grow with the distance).
+    # The planner's box-lag guard measures the box against this shifted target
+    # (wb_control_debug [117]; fsc_trajectory_planner 2026-10-21) -- against the bare plan
+    # the drift read as lag (Isaac 34.6 of the 40 mm limit).
+    "wb_ee_anchor_free_axis_weight": ("wb_ee_anchor_com", "0.75"),
+    # wb_ee_anchor_free_axis_on_world true (2026-10-22, THE CONTACT-PHASE TUNE; plain node
+    # parameter, default false; archive/box_pushing_contact_stability_tune_20261021): the free
+    # axis above latches as soon as the claw is held in the ROOM on the handle (the planner's
+    # world anchor at the end of Ready), not only once the contact flag goes on at the grasp.
+    # The open-jaw wait between the arrival and the grasp was the one window the 0.75 weight did
+    # not cover, and it is where the 10-21 hardware flight's swing started. Hardware-like Isaac
+    # (PX4's measured attitude-estimate error emulated as a 0.32 N, 0.12 Hz plant force; the
+    # anchor-off config then fails exactly like the flight), paired force seeds 1-8: the old
+    # config 4/8 with FOUR crashes (each one the arm buckling in the Ready window, the node leaving
+    # DIRECT at 22-48 deg), this 6/8 with none (one q3-guard abort and one missed grasp, both safe);
+    # jams, the side-edge fall and the mocap freeze still abort safely. Price: under a large drift
+    # the open claw rides 75 % of it along the fin and can shove the box before the grasp (1 / 8).
+    "wb_ee_anchor_free_axis_on_world": ("wb_ee_anchor_free_axis_weight", "true"),
 }
 # what the generator refuses: the startup phase flag must stay free (the
 # planner owns it), and the threshold fallback off (an unannounced-collision
@@ -269,7 +299,11 @@ PLANNER_BLOCK = """
     # it was 0.5 m behind it), yaw -360 = 270 deg CLOCKWISE on from the push
     # heading -90 (the whole mission turns one full circle clockwise). Adjust
     # (vehicle on its start mark) writes the measured x, y shift into both, so the
-    # vehicle lands where it took off.
+    # vehicle lands where it took off. Since 2026-10-22 (the table placed from the
+    # box) the yaws are RELATIVE to the box (as typed from the push heading -90,
+    # however the table stands in the room), and the landing yaw is -180 (user,
+    # 2026-10-22: no full turn) -- 90 deg CLOCKWISE from the push heading, landing
+    # facing away from the table (it was -360: 270 deg, facing the table).
     # 2026-10-21 (user, after the first lab trial): the WHOLE layout moved 0.60 m
     # back (-x) -- start mark (0, 0) -> (-0.60, 0), the table keep-out
     # 1.200..1.350 -> 0.600..0.750 (the scene moves the table, the box and the
@@ -278,7 +312,7 @@ PLANNER_BLOCK = """
     # Land hover 0.30 m (2026-10-21, user; was 0.8): the T650 skids sit 0.2425 m
     # (sim) / 0.248 m (hardware) under the body origin, so ~5 cm above the floor,
     # the arm at home (the claw ~0.24 m up); touch down from there in SAFETY.
-    push_pull_land: [-0.6, 0.0, 0.3, -360.0]
+    push_pull_land: [-1.0, 0.0, 0.3, -180.0]
     # THE WAY TO LAND START (2026-10-16, user design): Go To Land Start is ONE
     # transition from the exit hold to Land Start -- high (1.3 m), off the
     # table, the heading turning -90 -> -360 on the way -- like Go To Start;
@@ -287,16 +321,67 @@ PLANNER_BLOCK = """
     # Adjust like Land. (Flown first and dropped the same day, user: a leg
     # along -y off the table + a quarter circle, ~48 s, and a continuous loop
     # out past the table, 22 s -- not simple.)
-    push_pull_land_start: [-0.6, 0.0, 1.3, -360.0]
-    push_pull_start_mark: [-0.6, 0.0, 1.0, 0.0]
+    # 2026-10-22 (user): ROUND THE TABLE like Go To Start, backwards (with
+    # push_pull_go_to_start_bypass below): back along the push's line, at the
+    # exit height, to 0.70 m past the table's box end, then the curve round the
+    # table to Land Start, turning -90 -> -180 (90 deg clockwise) on the way;
+    # (Same day, user: round the RIGHT side -- on along the push's line, over the
+    # pushed box (checked: the gear keeps 0.05 m over the handle's top,
+    # push_pull_handle_top_above_grasp), past the table's FAR end, then round
+    # that corner of the table back to Land Start; ~26 s after a 0.10 m push,
+    # less for a longer push.)
+    push_pull_land_start: [-1.0, 0.0, 1.3, -180.0]
+    # 2026-10-22 (user): the vehicle starts ~1.6 m in front of the table (was 1.2):
+    # the typed start / Land Start / land x -0.6 -> -1.0. With the table placed
+    # from the box these are only the values shown before Adjust; Adjust writes
+    # where the vehicle is.
+    push_pull_start_mark: [-1.0, 0.0, 1.0, 0.0]
     # THE TABLE keep-out [x_min, x_max, y_min, y_max, z_top] (world): the gear
     # (push_pull_gear_depth under the body origin, 0.25 m radius) and every arm point over the
     # top keep 5 cm clearance on every planned path. The reference leg -- the +y end,
     # on the side facing the start -- has its outer corner at the round (0.60, 0.50) m
     # for a ruler (2026-10-21, -0.60 m with the layout; 2026-10-16 to 10-21:
     # 1.200..1.350, corner (1.20, 0.50); before that 1.125..1.275).
+    # IGNORED since 2026-10-22 (push_pull_table_from_box below); kept for a run
+    # with it false -- it is still the Isaac table.
     push_pull_table: [0.600, 0.750, -0.5, 0.5, 0.80]
     push_pull_table_clearance: 0.05
+    # THE TABLE IS PLACED FROM THE BOX (2026-10-22, user, after the 10-21 lab
+    # flights: the table goes wherever the floor is flat, and a room-fixed keep-out
+    # refused the box -- Plan said the box would end off the table, three times):
+    # the keep-out is the table's footprint placed by the Get. The rule on the
+    # floor: the box at the table's LEFT end (seen from the vehicle), centred
+    # across it, its back face 0.10 m in from the end; the vehicle on the table's
+    # middle line, in front of it, any distance >= 0.75 m. So: the table 1.000 m
+    # along the push x 0.150 m deep, its end 0.12 (the box's half length,
+    # push_pull_box_half_length below) + 0.10 m behind the box centre, its top
+    # 0.05 m under the box centre (obj_0 at the 100 mm box's centre; the lab Get
+    # read z 0.858 on the ~0.80 m table, so the derived top sits ~8 mm HIGH --
+    # the safe side). Plan refuses a start (Adjust, the vehicle on the ground)
+    # more than 0.30 m off the table's middle line: the layout rule, and the
+    # catch for a box or mocap body read 180 deg off (that places the table's
+    # middle 0.56 m along). Adjust then takes the start wherever the vehicle is
+    # (no push_pull_adjust_max), and the landing yaws (push_pull_land and
+    # push_pull_land_start, above) turn with the box.
+    push_pull_table_from_box: true
+    push_pull_table_size: [1.0, 0.15]
+    push_pull_table_box_gap: 0.10
+    push_pull_box_half_height: 0.05
+    push_pull_start_middle_tol: 0.30
+    # GO TO START GOES ROUND THE TABLE (2026-10-22, user): from the takeoff hover
+    # (gear ~4 cm BELOW the table top) a smooth curve round the table's box end --
+    # along its side, past its end, onto its line -- the body >= 0.70 m from the
+    # table seen from above (the T650's prop tips ~0.52 m + 0.18), climbing to the
+    # approach height and turning to the push heading on the way; at rest on the
+    # push's line 0.70 m past the table's end, then straight in along the push
+    # while the arm unfolds. Go To Start 10.3 -> 19 s from the Isaac start
+    # (1.1 m in front). Needs the start >= 0.75 m from the table's side. The
+    # same switch sends Go To Land Start round the table, backwards.
+    push_pull_go_to_start_bypass: true
+    push_pull_bypass_clearance: 0.70
+    # the way home flies over the pushed box: a keep-out up to the fin's top, 25 mm
+    # above the grasp point (push_pull_ee_offset puts the claw 25 mm under it)
+    push_pull_handle_top_above_grasp: 0.025
     # THE LANDING GEAR (2026-10-06): the T650's -- skids 0.2425 m under the body
     # origin, the scene's AM_T650.usda (the X650 gear of AM_xfwd.usda: 0.313).
     # The table check keeps the gear this far above the table top wherever its
@@ -341,6 +426,13 @@ PLANNER_BLOCK = """
     push_pull_abort_from_measured: true
     push_pull_abort_back: 0.03
     push_pull_abort_release_wait_s: 1.0
+    # THE UNBUCKLE (2026-10-21, the first hardware push; archive/box_abort_unbuckle_20261021):
+    # the q3-guard trip held q2 on its +45 limit and q3 at ~2 deg -- the elbow-singular
+    # boundary, -6.3 at worst while the jaws opened -- for 9 s until the fold. Once the
+    # release wait ends, the retreat brings q2 / q3 back to the push pose's (q1 / q4 kept:
+    # they move the claw across the fin); the claw goes 25 mm back and 9 mm up against the
+    # base, along the fin, before the climb.
+    push_pull_abort_unbuckle: true
     push_pull_box_half_length: 0.12
     push_pull_box_edge_margin: 0.03
     push_pull_guard_box_lag: 0.040
@@ -348,6 +440,26 @@ PLANNER_BLOCK = """
     push_pull_guard_box_persist_s: 0.20
     push_pull_guard_box_stale_s: 0.50
     push_pull_guard_q3_min_deg: 10.0
+    # THE q3 RATE GUARD (2026-10-22, archive/box_pushing_contact_stability_tune_20261021
+    # section 6): the check above fires only after the fold has passed 10 deg -- the arm folds
+    # at 51-356 deg/s, and in three Isaac crashes it would have fired only after the node left
+    # DIRECT. This one predicts q3 0.2 s ahead from its own rate on every joint sample and
+    # aborts while q3 is still above the limit (replayed: 0.25-0.35 s earlier, at q3 12-21 deg;
+    # no trip in the shipped config's completed runs).
+    push_pull_guard_q3_lookahead_s: 0.2
+    push_pull_guard_q3_rate_min_deg_s: 5.0
+    push_pull_guard_q3_rate_persist_s: 0.05
+    push_pull_guard_q3_rate_filter_s: 0.02
+    # THE BOX SAMPLE GATE (2026-10-21, the first hardware push; archive/box_mocap_gate_20261021):
+    # obj_0 mis-solved -- a 94-96 deg roll with the origin 61 mm off, or a 180 deg flip -- 80
+    # samples in 24 short runs over that flight, 2 of them with the claw on the box, where they
+    # reached both box guards and the push monitor. A sample farther than 20 mm / 10 deg from
+    # the last good one (the allowance growing with the gap: the drone mocap guard's test) is
+    # dropped before Get, the box guards and the monitor read it. Replayed on the 10-21 bags it
+    # drops every mis-solve and nothing else; a feed that keeps jumping ages out and aborts
+    # through box_stale_s above.
+    push_pull_box_gate_jump_m: 0.020
+    push_pull_box_gate_jump_deg: 10.0
     # THE RAW-MOCAP GUARD (2026-10-21, archive/mocap_safety_guard_20261021): the
     # estimator's guard health. A confirmed mocap fault aborts into a hover (with
     # the claw on the box; a LOST one in any step), and every step and Plan wait for
@@ -374,7 +486,10 @@ HEADER = """# ==================================================================
 #   * controller additions: wb_l1_contact_hold_translation false,
 #     wb_attitude_from_odometry false, wb_attitude_odometry_correction_rad_s 0.0
 #     (written out; see the generator), system_mocap_guard_topic (the raw-mocap
-#     guard, 2026-10-21: the box-pushing stacks run the estimator's guard)
+#     guard, 2026-10-21: the box-pushing stacks run the estimator's guard),
+#     wb_ee_anchor_free_axis_weight 0.75 (2026-10-21: in contact the claw's target
+#     rides 75 % of the vehicle's drift along the push -- the arm swing halved, the
+#     push distance +-1-2.5 cm)
 #   * the push-and-pull planner block (end of the planner section)
 # wb_l1_contact stays false at startup: the PLANNER switches it to CONTACT from
 # the Push press (sent by the arm GS once the jaws grip) to the end of the push

@@ -288,6 +288,18 @@ for KV in "PEGASUS_PLANT_FORCE_BIAS:sim_plant_force_bias" \
   done
   [[ -n "$LIST" ]] && export "$VAR=$LIST"
 done
+# sim_plant_force_noise_n / _bw_hz / _seed (2026-10-22, the box-pushing contact tune): a slow random
+# horizontal force on the body -- the mechanical effect of PX4's attitude-estimate error on hardware.
+# All three or none -> PEGASUS_PLANT_FORCE_NOISE "n,bw_hz,seed". Absent = off (every earlier run).
+if [[ -z "${PEGASUS_PLANT_FORCE_NOISE:-}" ]]; then
+  LIST=""
+  for K in n bw_hz seed; do
+    V="$(yaml_scalar "sim_plant_force_noise_$K")"
+    [[ -n "$V" ]] || { LIST=""; break; }
+    LIST="${LIST:+$LIST,}$V"
+  done
+  [[ -n "$LIST" ]] && export PEGASUS_PLANT_FORCE_NOISE="$LIST"
+fi
 # sim_arm_armature_j1..j4: the servos' reflected rotor inertia on the PLANT
 # (PhysX joint armature, kg m^2), all four or none -> PEGASUS_ARM_ARMATURE.
 # Absent = 06's 0.020 on every joint. The mirror yaml carries the ground-bench
@@ -306,6 +318,7 @@ MIRROR_TXT=""
 [[ -n "${PEGASUS_PLANT_ROTOR_LAMBDA:-}" ]] && MIRROR_TXT+=" lambda ${PEGASUS_PLANT_ROTOR_LAMBDA} 1/s;"
 [[ -n "${PEGASUS_PLANT_KF_SAG_PER_MIN:-}" && "${PEGASUS_PLANT_KF_SAG_PER_MIN}" != "0.0" ]] && MIRROR_TXT+=" kf sag ${PEGASUS_PLANT_KF_SAG_PER_MIN}/min;"
 [[ -n "${PEGASUS_PLANT_FORCE_BIAS:-}" ]] && MIRROR_TXT+=" force bias (${PEGASUS_PLANT_FORCE_BIAS}) N;"
+[[ -n "${PEGASUS_PLANT_FORCE_NOISE:-}" ]] && MIRROR_TXT+=" force noise (${PEGASUS_PLANT_FORCE_NOISE}: N, Hz, seed);"
 [[ -n "${PEGASUS_PLANT_TORQUE_BIAS:-}" ]] && MIRROR_TXT+=" torque bias (${PEGASUS_PLANT_TORQUE_BIAS}) N.m;"
 [[ -n "${PEGASUS_ARM_VEL_LAG_S:-}" && "${PEGASUS_ARM_VEL_LAG_S}" != "0.0" ]] && MIRROR_TXT+=" arm vel lag ${PEGASUS_ARM_VEL_LAG_S} s;"
 [[ -n "${PEGASUS_ARM_VEL_QUANT:-}" && "${PEGASUS_ARM_VEL_QUANT}" != "0.0" ]] && MIRROR_TXT+=" arm vel quantum ${PEGASUS_ARM_VEL_QUANT} rad/s;"

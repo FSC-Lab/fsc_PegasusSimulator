@@ -20,6 +20,10 @@
 //      push -> DONE push edge -- release, open, exit on the OPEN report; never on a
 //      latched DONE push without the edge, never after ABORTING / NOT IN DIRECT /
 //      a manual Exit inside the delay, never with the delay 0
+//   G  (2026-10-21) the AUTOMATIC Ready To Push + Push: Ready push_pull_auto_ready_delay_s
+//      after the FLYING go_to_start -> DONE go_to_start edge (a settle refusal retried),
+//      Push on the FLYING ready -> DONE ready edge (the close at the gate, the push on the
+//      grasp); never on a latched DONE without the edge, never after ABORT in the delay
 //
 // Prints "GSVAL <key> <value>" lines; the last is "GSVAL result PASS|FAIL ...".
 #include <QApplication>
@@ -33,6 +37,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -68,6 +73,7 @@ struct Rig
   int close_outcome{ControlPanel::kCloseReached};   // -1: no result at all
   double close_pos{-0.0092};
   bool push_ok{true};
+  int ready_refusals{0};   // the next N ready calls are refused "wait for it to settle" (A2)
   State state{State::kOnHandle};
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pl_status, status;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr info, arrival;
@@ -88,7 +94,8 @@ struct Rig
   {
     node = std::make_shared<rclcpp::Node>("gs_grasp_harness", gov + "/fsc_open_manipulator");
     node->declare_parameter<bool>("simulation", simulation);
-    node->declare_parameter<double>("push_pull_auto_exit_delay_s", auto_exit_s);
+    // NaN = leave it undeclared: the panel then uses its OWN default (the X7 case, 2026-10-21)
+    if (std::isfinite(auto_exit_s)) {node->declare_parameter<double>("push_pull_auto_exit_delay_s", auto_exit_s);}
     node->declare_parameter<double>("push_pull_release_timeout_s", 1.0);
     node->declare_parameter<double>("push_pull_grip_timeout_s", 1.0);
     // the fake planner: its parameters make the tab load (and count as box pushing)
@@ -113,6 +120,12 @@ struct Rig
       srvs.push_back(planner->create_service<Trigger>(
           base + "/" + name, [this, name](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr r) {
             events.push_back(name);
+            if (name == "ready" && ready_refusals > 0) {
+              --ready_refusals;
+              r->success = false;
+              r->message = "the claw is 62 mm from the point above the handle (> 50 mm) -- wait for it to settle";
+              return;
+            }
             r->success = name != "push" || push_ok;
             r->message = r->success ? "(fake) ok" : "(fake) refused";
             if (name == "push" && !push_ok) {push_ok = true;}   // refused once
@@ -158,7 +171,8 @@ struct Rig
     m.data[5] = state == State::kAboveHandle ? 0.0 : state == State::kPushed ? 2.0 : 1.0;
     m.data[6] = state == State::kPushing ? 2.0 : -1.0;   // the push flying, else nothing
     // the steps' durations [s] (test_push_pull_loopback.py on the sim box-pushing yaml)
-    const double t_step[6] = {10.4, 3.2, 25.5, 6.0, 23.9, 5.1};
+    // the 0.10 m push at 21 mm/s (the 2026-10-21 workflow; was the 0.50 m plan's 25.5 s push)
+    const double t_step[6] = {10.7, 3.2, 6.3, 6.0, 23.9, 7.4};
     for (int k = 0; k < 6; ++k) {m.data[8 + k] = t_step[k];}
     m.data[14] = 1.0;                 // box captured
     m.data[61] = on ? 1.0 : 0.0;      // at the handle
@@ -166,7 +180,7 @@ struct Rig
     info->publish(m);
     std_msgs::msg::String s;
     s.data = !override_status.empty() ? override_status
-             : state == State::kPushing ? "FLYING push (CONTACT) T=25.5s"
+             : state == State::kPushing ? "FLYING push (CONTACT) T=6.3s"
              : state == State::kPushed ? "DONE push next=exit (the gripper opens first)"
              : on ? "DONE ready next=push (CONTACT on: the gripper closes first)"
                   : "DONE go_to_start next=ready (the gripper opens first) -- claw 3 mm from the point above the handle";
@@ -397,6 +411,68 @@ int main(int argc, char * argv[])
           check(r.count("open") == 1, "X6_jaws_opened_once_on_the_DIRECT_loss");
         });
     }, finish, 1.0, 1800});
+  // 2026-10-21: the station's DEFAULT delay is 0.2 s (was 1.0; the first hardware push tripped
+  // the q3 guard 0.78 s after the push ended) -- nothing at 0.12 s, the whole exit by 0.62 s
+  cases.push_back({"X7_default_delay_is_0p2_s", false, State::kPushing,
+    [&](Rig &) {}, "", 120,
+    [&](Rig & r) {
+      check(r.count("release") == 0 && r.count("open") == 0, "X7_nothing_at_0p12_s");
+      check(r.lamp().find("0.2 s") != std::string::npos, "X7_lamp_names_0p2_s");
+      if (const char * dir = std::getenv("GS_GRASP_SHOT_DEFAULT")) {   // the workflow page's picture (0.2 s)
+        r.panel->grab().save(QString::fromLocal8Bit(dir) + "/gs_auto_exit_pending.png");
+      }
+      QTimer::singleShot(500, r.panel, [&]() {
+          check(r.count("release") == 1 && r.count("open") == 1 && r.count("exit") == 1,
+            "X7_release_open_exit_by_0p62_s");
+        });
+    }, finish, std::numeric_limits<double>::quiet_NaN(), 1200});
+
+  // ---- 2026-10-21: the AUTOMATIC Ready To Push + Push --------------------------------
+  // the planner's FLYING go_to_start -> DONE go_to_start edge: Ready starts by itself after
+  // push_pull_auto_ready_delay_s (1.0 s, the default), the descent on the OPEN report
+  const auto go_done = [](Rig & r) {r.publishState();};
+  cases.push_back({"G1_auto_ready_after_go_to_start", false, State::kAboveHandle,
+    [&](Rig & r) {r.publishState("FLYING go_to_start T=10.7s");}, "", 500,
+    [&](Rig & r) {
+      check(r.count("open") == 0 && r.count("ready") == 0, "G1_nothing_inside_the_1s_delay");
+      check(r.lamp().find("starts by itself in 1.0 s") != std::string::npos, "G1_lamp_says_it_will_start");
+      if (const char * dir = std::getenv("GS_GRASP_SHOT_DEFAULT")) {
+        r.panel->grab().save(QString::fromLocal8Bit(dir) + "/gs_auto_ready_pending.png");
+      }
+      QTimer::singleShot(1500, r.panel, [&]() {
+          check(r.count("open") == 1 && r.count("ready") == 1, "G1_open_then_ready_by_2s");
+          check(r.at("open") < r.at("open_report") && r.at("open_report") < r.at("ready"),
+            "G1_descent_only_on_the_open_report");
+        });
+    }, go_done, 1.0, 2300});
+  cases.push_back({"G2_auto_ready_retries_a_settle_refusal", false, State::kAboveHandle,
+    [&](Rig & r) {r.ready_refusals = 2; r.publishState("FLYING go_to_start T=10.7s");}, "", 2800,
+    [&](Rig & r) {
+      check(r.count("ready") == 3, "G2_two_refusals_then_the_ready");
+      check(r.count("open") == 1, "G2_the_gripper_opened_once");
+    }, go_done, 1.0, 600});
+  // the planner's FLYING ready -> DONE ready edge: Push starts by itself -- the gripper closes
+  // at the first arrival sample in the gate, and the push follows the grasp
+  cases.push_back({"G3_auto_push_after_ready", false, State::kOnHandle,
+    [&](Rig & r) {r.publishState("FLYING ready T=3.2s");}, "", 1200,
+    [&](Rig & r) {
+      check(r.count("close") == 1, "G3_the_gripper_closed_by_itself");
+      check(r.count("push") == 1 && r.at("close") < r.at("push"), "G3_the_push_followed_the_grasp");
+    }, go_done, 1.0, 600});
+  cases.push_back({"G4_latched_done_ready_no_auto_push", false, State::kOnHandle,
+    [&](Rig &) {}, "", 1500,
+    [&](Rig & r) {
+      check(r.count("close") == 0 && r.count("push") == 0, "G4_restarted_station_does_not_push_by_itself");
+    }, nullptr, 1.0, 300});
+  cases.push_back({"G5_abort_inside_the_ready_delay", false, State::kAboveHandle,
+    [&](Rig & r) {r.publishState("FLYING go_to_start T=10.7s");}, "", 300,
+    [&](Rig & r) {
+      QPushButton * b = r.button("ABORT");
+      if (b) {b->click();}
+      QTimer::singleShot(1500, r.panel, [&]() {
+          check(r.count("ready") == 0, "G5_no_ready_after_ABORT");
+        });
+    }, go_done, 1.0, 1900});
 
   size_t next = 0;
   std::function<void()> run_next;

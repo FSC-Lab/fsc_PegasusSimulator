@@ -562,98 +562,162 @@ class Driver(Node):
         self.begin("go_to_start")
         self.step_to_end("go_to_start", 0, at_handle=False)
         self.mark("go_to_start:end")
-        if a.timetable:
-            self.align("go_to_start:start", a.slot_ready, "ready")
-        # 2 Ready To Push: open, hover (the trim window), then down onto the fin
-        self.begin("ready")
-        self.gripper_open("open")
-        if a.timetable:
-            self.align("ready:start", a.slot_descent, "ready descent")
+        if a.gs_auto:
+            # 2026-10-21: the ARM GS's AUTOMATIC Ready To Push and Push (run_pl.sh with
+            # ARM_GS_AUTO_STEPS=true): after Go To Start the station opens the gripper and
+            # descends by itself, closes the first time the claw is in its gate and pushes on
+            # the grasp -- exactly the hardware sequence. The driver only watches and marks.
+            self.grip_cmd = None
+            self.wait(lambda: self.pl_status.startswith("FLYING ready"), 25, "the GS's automatic Ready To Push")
+            self.step = STEPS.index("ready")
+            self.mark("ready:start")
+            self.wait(lambda: self.pl_status.startswith("DONE ready"), 30, "Ready To Push complete")
+            self.mark("ready:end")
+            moved = np.linalg.norm(self.box[:3] - self.box0[:3])
+            if moved > a.max_disturb:
+                self.ev(f"WARNING: the box was disturbed {moved * 1e3:.1f} mm by the descent (the GS closes anyway)")
+            self.step = STEPS.index("close")
+            self.mark("close:start")
+            g0 = self.grip
+            self.wait(lambda: self.grip is not None and g0 is not None and self.grip < g0 - np.radians(1.0),
+                      20, "the GS closing the gripper")
+            self.mark("gripper_close:start")
+            self.wait(lambda: self.pl_status.startswith("FLYING push"), 15, "the GS's automatic Push")
+            self.mark("gripper_close:end")
+            self.step = STEPS.index("push")
+            self.mark("push:start")
+            self.box_at_push = self.box.copy()
+            self.turned_since_push = 0.0
+            self.wait(lambda: self.pl_status.startswith("DONE push"), 60, "push complete")
+            mt = lambda n: [t_ for t_, n_ in self.marks if n_ == n][-1]   # noqa: E731
+            self.ev(f"the GS's automatic steps: Ready flew {mt('ready:start') - mt('go_to_start:end'):.2f} s after "
+                    f"Go To Start, the jaws closed {mt('gripper_close:start') - mt('ready:end'):.2f} s after Ready")
         else:
-            time.sleep(a.hover_dwell)
-        self.step_to_end("ready", 1, at_handle=True)
-        moved = np.linalg.norm(self.box[:3] - self.box0[:3])
-        if moved > a.max_disturb:
-            raise Abort(f"the box was disturbed {moved * 1e3:.1f} mm by the descent -- not closing")
-        self.mark("ready:end")
-        if a.timetable:
-            self.align("ready:start", a.slot_close, "close")
-        # 3 Push: close once the claw is there, push on the stall (the jaws' stall
-        # itself is never delayed: a gripped box must be pushed in CONTACT at once)
-        self.begin("close")
-        t, since = time.time(), None
-        while True:
-            if a.grip_live_box:
-                # --grip-live-box (2026-10-10, the coordinated-admittance rig): gate on the measured
-                # claw against the LIVE box (obj_0), not the planner's captured grasp point -- a
-                # swaying base whose finger pads brush the fin drags the box along the fin, so the
-                # captured point walks away while the claw is in fact on the fin. Across the fin
-                # (x, the closing axis) within grip_axis_tol, along it (y) within grip_tol.
-                # 2026-10-18: in the BODY's frame (its yaw) minus the grasp point's offset in that
-                # frame (--grip-ee-offset, the planner's push_pull_ee_offset x, y) -- the box sits at
-                # yaw 0 with the grasp point over its origin (the old world-frame test, numerically);
-                # the valve's grasp point is 0.160 m out along the beam in the rotating rotor frame.
-                rel = None
-                if self.claw is not None and self.box is not None:
-                    qw, qx, qy, qz = self.box[3:7]
-                    yw = math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
-                    dx, dy = self.claw[0] - self.box[0], self.claw[1] - self.box[1]
-                    rel = (math.cos(yw) * dx + math.sin(yw) * dy - a.grip_ee_offset[0],
-                           -math.sin(yw) * dx + math.cos(yw) * dy - a.grip_ee_offset[1])
-                ok = rel is not None and abs(rel[0]) <= a.grip_axis_tol and abs(rel[1]) <= a.grip_tol
-                if rel is not None:
-                    self.arrival = (self.arrival or [0.0] * 10)
-                    self.arrival = list(self.arrival)
-                    self.arrival[2] = float(abs(rel[1]))
-                    self.arrival[9] = float(rel[0])
+            if a.timetable:
+                self.align("go_to_start:start", a.slot_ready, "ready")
+            # 2 Ready To Push: open, hover (the trim window), then down onto the fin
+            self.begin("ready")
+            self.gripper_open("open")
+            if a.timetable:
+                self.align("ready:start", a.slot_descent, "ready descent")
             else:
-                ok = (self.arrival is not None and len(self.arrival) >= 10 and int(self.arrival[0]) == 1
-                      and self.arrival[1] > 0.5 and self.arrival[2] <= a.grip_tol
-                      and abs(self.arrival[9]) <= a.grip_axis_tol)
-            since = (since or time.time()) if ok else None
-            if since and time.time() - since >= a.grip_dwell_in:
-                break
-            if time.time() - t > a.grip_timeout:
-                raise Abort(f"the claw never came within {a.grip_tol * 1e3:.0f} mm / "
-                            f"{a.grip_axis_tol * 1e3:.0f} mm across the fin (last "
-                            f"{self.arrival[2] * 1e3:.0f} / {self.arrival[9] * 1e3:.1f} mm)")
-            self.guard("close")
-            time.sleep(0.02)
-        self.ev(f"close: claw {self.arrival[2] * 1e3:.1f} mm from the grasp point, "
-                f"{self.arrival[9] * 1e3:+.1f} mm across the fin after {time.time() - t:.1f} s")
-        self.gripper_close()
-        self.begin("push")
-        self.box_at_push = self.box.copy()
-        self.turned_since_push = 0.0
-        self.step_to_end("push", 2, at_handle=True)
+                time.sleep(a.hover_dwell)
+            self.step_to_end("ready", 1, at_handle=True)
+            moved = np.linalg.norm(self.box[:3] - self.box0[:3])
+            if moved > a.max_disturb:
+                raise Abort(f"the box was disturbed {moved * 1e3:.1f} mm by the descent -- not closing")
+            self.mark("ready:end")
+            if a.timetable:
+                self.align("ready:start", a.slot_close, "close")
+            # 3 Push: close once the claw is there, push on the stall (the jaws' stall
+            # itself is never delayed: a gripped box must be pushed in CONTACT at once)
+            self.begin("close")
+            t, since = time.time(), None
+            while True:
+                if a.grip_live_box:
+                    # --grip-live-box (2026-10-10, the coordinated-admittance rig): gate on the measured
+                    # claw against the LIVE box (obj_0), not the planner's captured grasp point -- a
+                    # swaying base whose finger pads brush the fin drags the box along the fin, so the
+                    # captured point walks away while the claw is in fact on the fin. Across the fin
+                    # (x, the closing axis) within grip_axis_tol, along it (y) within grip_tol.
+                    # 2026-10-18: in the BODY's frame (its yaw) minus the grasp point's offset in that
+                    # frame (--grip-ee-offset, the planner's push_pull_ee_offset x, y) -- the box sits at
+                    # yaw 0 with the grasp point over its origin (the old world-frame test, numerically);
+                    # the valve's grasp point is 0.160 m out along the beam in the rotating rotor frame.
+                    rel = None
+                    if self.claw is not None and self.box is not None:
+                        qw, qx, qy, qz = self.box[3:7]
+                        yw = math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+                        dx, dy = self.claw[0] - self.box[0], self.claw[1] - self.box[1]
+                        rel = (math.cos(yw) * dx + math.sin(yw) * dy - a.grip_ee_offset[0],
+                               -math.sin(yw) * dx + math.cos(yw) * dy - a.grip_ee_offset[1])
+                    ok = rel is not None and abs(rel[0]) <= a.grip_axis_tol and abs(rel[1]) <= a.grip_tol
+                    if rel is not None:
+                        self.arrival = (self.arrival or [0.0] * 10)
+                        self.arrival = list(self.arrival)
+                        self.arrival[2] = float(abs(rel[1]))
+                        self.arrival[9] = float(rel[0])
+                else:
+                    ok = (self.arrival is not None and len(self.arrival) >= 10 and int(self.arrival[0]) == 1
+                          and self.arrival[1] > 0.5 and self.arrival[2] <= a.grip_tol
+                          and abs(self.arrival[9]) <= a.grip_axis_tol)
+                since = (since or time.time()) if ok else None
+                if since and time.time() - since >= a.grip_dwell_in:
+                    break
+                if time.time() - t > a.grip_timeout:
+                    raise Abort(f"the claw never came within {a.grip_tol * 1e3:.0f} mm / "
+                                f"{a.grip_axis_tol * 1e3:.0f} mm across the fin (last "
+                                f"{self.arrival[2] * 1e3:.0f} / {self.arrival[9] * 1e3:.1f} mm)")
+                self.guard("close")
+                time.sleep(0.02)
+            self.ev(f"close: claw {self.arrival[2] * 1e3:.1f} mm from the grasp point, "
+                    f"{self.arrival[9] * 1e3:+.1f} mm across the fin after {time.time() - t:.1f} s")
+            self.gripper_close()
+            self.begin("push")
+            self.box_at_push = self.box.copy()
+            self.turned_since_push = 0.0
+            self.step_to_end("push", 2, at_handle=True)
         self.mark("push:end")
         d = self.box[:3] - self.box_at_push[:3]
         self.ev(f"push: the box moved [{d[0] * 1e3:+.0f}, {d[1] * 1e3:+.0f}, {d[2] * 1e3:+.0f}] mm, "
                 f"turned {np.degrees(self.turned_since_push) if hasattr(self, 'turned_since_push') else 0.0:+.1f} deg "
                 f"(the valve's beam, 2026-10-15: obj_0 is the rotor there)")
-        if a.timetable:
-            self.align("push:start", a.slot_release, "release")
+        if a.gs_exit:
+            # 2026-10-21: the ARM GS's AUTOMATIC Exit To Push owns release -> open -> exit
+            # (run_pl.sh with ARM_GS_AUTO_EXIT_DELAY > 0), exactly as on hardware; the
+            # driver only watches and marks: release:start = the jaws start opening (the
+            # GS opens on the planner's release reply, a few ms after it), exit:start =
+            # the planner flying the exit.
+            self.step = STEPS.index("release")
+            # stop holding the close on the bus: the plant keeps its last target, and
+            # the GS's own OPEN (through the gripper action server) must be the only
+            # command -- held here it fought the open (the first --gs-exit flight)
+            self.grip_cmd = None
+            g0, t = self.grip, time.time()
+            while self.grip is None or g0 is None or abs(self.grip - g0) < np.radians(1.0):
+                if time.time() - t > 6.0:
+                    raise Abort("the arm GS never started its automatic exit (jaws still closed "
+                                "6 s after the push) -- is ARM_GS_AUTO_EXIT_DELAY > 0?")
+                self.guard("release")
+                time.sleep(0.005)
+            self.mark("release:start")
+            self.mark("gripper_release:start")
+            self.wait(lambda: self.grip is not None and abs(self.grip - GRIP_OPEN) <= np.radians(3.0),
+                      5, "the GS's gripper OPEN")
+            self.mark("gripper_release:end")
+            self.wait(lambda: self.pl_status.startswith("FLYING exit"), 5, "the GS's Exit To Push")
+            self.step = STEPS.index("exit")
+            self.mark("exit:start")
+            self.wait(lambda: self.status == "HOLD" and self.info is not None and int(self.info[5]) == 3
+                      and self.info[I_AT_HANDLE] < 0.5, 40, "exit complete")
+            self.mark("exit:end")
+            mt = lambda n: [t_ for t_, n_ in self.marks if n_ == n][-1]   # noqa: E731
+            self.ev(f"the GS's automatic exit: the jaws start opening {mt('release:start') - mt('push:end'):.2f} s "
+                    f"after the push ended, the exit flies {mt('exit:start') - mt('push:end'):.2f} s after")
         else:
-            time.sleep(a.push_hold)
-        # 4 Exit To Push: open, wait for the jaws, exit
-        self.begin("release")
-        if a.release_at_open:
-            # 2026-10-17, the release-window fix -- the arm GS's sequence: the
-            # planner RELEASES first (the claw's reference back to the CoM
-            # anchor), then the gripper opens, and the exit starts on its OPEN
-            # report, not on a slot
-            self.trig("release")
-        self.gripper_open("release")
-        if a.release_at_open:
-            if self.grip is None or abs(self.grip - GRIP_OPEN) > np.radians(3.0):
-                raise Abort("the gripper did not report OPEN -- no exit (the jaws may hold the handle)")
-        elif a.timetable:
-            self.align("release:start", a.slot_exit, "exit")
-        else:
-            time.sleep(a.release_wait)
-        self.begin("exit")
-        self.step_to_end("exit", 3, at_handle=False)
-        self.mark("exit:end")
+            if a.timetable:
+                self.align("push:start", a.slot_release, "release")
+            else:
+                time.sleep(a.push_hold)
+            # 4 Exit To Push: open, wait for the jaws, exit
+            self.begin("release")
+            if a.release_at_open:
+                # 2026-10-17, the release-window fix -- the arm GS's sequence: the
+                # planner RELEASES first (the claw's reference back to the CoM
+                # anchor), then the gripper opens, and the exit starts on its OPEN
+                # report, not on a slot
+                self.trig("release")
+            self.gripper_open("release")
+            if a.release_at_open:
+                if self.grip is None or abs(self.grip - GRIP_OPEN) > np.radians(3.0):
+                    raise Abort("the gripper did not report OPEN -- no exit (the jaws may hold the handle)")
+            elif a.timetable:
+                self.align("release:start", a.slot_exit, "exit")
+            else:
+                time.sleep(a.release_wait)
+            self.begin("exit")
+            self.step_to_end("exit", 3, at_handle=False)
+            self.mark("exit:end")
         # 5 Go To Land Start: one table-checked transition to Land Start
         if a.timetable:
             self.align("exit:start", a.slot_land, "go_to_land_start")
@@ -819,6 +883,12 @@ def main():
     ap.add_argument("--max-disturb", type=float, default=0.008)
     ap.add_argument("--push-hold", type=float, default=1.0, help="hold on the handle after the push [s]")
     ap.add_argument("--release-wait", type=float, default=1.0, help="the GS's push_pull_release_wait_s")
+    ap.add_argument("--gs-auto", action="store_true",
+                    help="2026-10-21: the arm GS's automatic Ready To Push + Push (and, implied, its "
+                         "automatic Exit) run steps 2-4 (ARM_GS_AUTO_STEPS=true); the driver only watches")
+    ap.add_argument("--gs-exit", action="store_true",
+                    help="2026-10-21: the arm GS's automatic Exit To Push runs release / open / exit "
+                         "(start the stack with ARM_GS_AUTO_EXIT_DELAY > 0); the driver only watches")
     ap.add_argument("--direct-settle", type=float, default=15.0)
     ap.add_argument("--leg-pause", type=float, default=2.0)
     ap.add_argument("--post-hold", type=float, default=5.0)
@@ -875,6 +945,8 @@ def main():
                     help="the Isaac mocap emulator node whose fault_* parameters --mocap-fault sets")
     ap.add_argument("--out", default="pl_run.npz")
     a = ap.parse_args()
+    if a.gs_auto:
+        a.gs_exit = True          # the GS that ran the push runs its exit too
     rclpy.init()
     d = Driver(a)
     spin = threading.Thread(target=rclpy.spin, args=(d,), daemon=True)

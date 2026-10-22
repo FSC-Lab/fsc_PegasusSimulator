@@ -425,6 +425,13 @@ def _env3(name):
 
 PLANT_FORCE_BIAS = _env3("PEGASUS_PLANT_FORCE_BIAS")
 PLANT_TORQUE_BIAS = _env3("PEGASUS_PLANT_TORQUE_BIAS")
+# PEGASUS_PLANT_FORCE_NOISE "std_N,bw_hz,seed" (2026-10-22, the box-pushing contact tune; empty /
+# std 0 = off, every earlier run): a slow random HORIZONTAL force on the body, world x and y each an
+# exact-discretization AR(1) with that std and corner -- the mechanical effect of PX4's slow
+# attitude-estimate error on hardware (the thrust tilted by the error: measured 0.42-0.56 deg rms
+# on the 10-21 flight -> 0.27-0.37 N, the size of the law's own disturbance estimate there). The
+# clean Isaac IMU never makes that error, so without this the sim's hover wanders 2-5 mm, not 14-19.
+PLANT_FORCE_NOISE = _env3("PEGASUS_PLANT_FORCE_NOISE")
 ARM_VEL_LAG_S = _envf("PEGASUS_ARM_VEL_LAG_S", 0.0)
 ARM_VEL_QUANT = _envf("PEGASUS_ARM_VEL_QUANT", 0.0)
 for _nm, _v in (("PEGASUS_PLANT_KM_SCALE", PLANT_KM_SCALE), ("PEGASUS_PLANT_ROTOR_LAMBDA", PLANT_ROTOR_LAMBDA)):
@@ -1141,6 +1148,10 @@ class AmT650WholeBodyArmSim:
         if PLANT_KF_SAG_PER_MIN > 0.0:
             print(f"\033[1;35m[AM-T650-WB] BATTERY SAG: k_f falls {PLANT_KF_SAG_PER_MIN*100:.2f} %/min "
                   f"from lift-off (the 0918/0924 packs measured -2.6..-4.5 %/min).\033[0m", flush=True)
+        if PLANT_FORCE_NOISE[0] > 0.0 and PLANT_FORCE_NOISE[1] > 0.0:
+            print(f"[AM-T650-WB] PLANT FORCE NOISE: a slow random horizontal world force, "
+                  f"{PLANT_FORCE_NOISE[0]:.3f} N per axis below {PLANT_FORCE_NOISE[1]:.2f} Hz (seed "
+                  f"{int(PLANT_FORCE_NOISE[2])}) -- PX4's attitude-estimate error on hardware", flush=True)
         if np.any(PLANT_FORCE_BIAS) or np.any(PLANT_TORQUE_BIAS):
             print(f"\033[1;35m[AM-T650-WB] STANDING WRENCH BIAS on the body (FLU): force "
                   f"{PLANT_FORCE_BIAS.round(3).tolist()} N, torque {PLANT_TORQUE_BIAS.round(3).tolist()} N.m "
@@ -1537,6 +1548,15 @@ class AmT650WholeBodyArmSim:
                 kf_now = self._plant_kf0 * max(0.5, 1.0 - PLANT_KF_SAG_PER_MIN
                                                 * (self._t - self._t_airborne0) / 60.0)
                 self._thrust_curve._rotor_constant = [kf_now] * 4
+        if PLANT_FORCE_NOISE[0] > 0.0 and PLANT_FORCE_NOISE[1] > 0.0:
+            if getattr(self, "_fn_rng", None) is None:
+                self._fn_rng = np.random.default_rng(int(PLANT_FORCE_NOISE[2]))
+                self._fn_x = self._fn_rng.standard_normal(2) * PLANT_FORCE_NOISE[0]
+            a = math.exp(-2.0 * math.pi * PLANT_FORCE_NOISE[1] * dt)
+            self._fn_x = a * self._fn_x + math.sqrt(1.0 - a * a) * PLANT_FORCE_NOISE[0] * self._fn_rng.standard_normal(2)
+            f_body = R0.T @ np.array([self._fn_x[0], self._fn_x[1], 0.0])
+            self._dc.apply_body_force(self._body, carb._carb.Float3(*f_body.tolist()),
+                                      carb._carb.Float3(0.0, 0.0, 0.0), False)
         if np.any(PLANT_FORCE_BIAS):
             self._dc.apply_body_force(self._body, carb._carb.Float3(*PLANT_FORCE_BIAS.tolist()),
                                       carb._carb.Float3(0.0, 0.0, 0.0), False)

@@ -1,0 +1,10 @@
+configuration                               done | Ready q3 push q3 rel q3 q2 max | Rdy sw sld sw e_imp   CoM |   travel 0.10 / 0.50 m | failures
+shipped (anchor 0.75 from the grasp)       4/5   |     11.9    12.5   21.8   42.7 |   10.8   3.63  1.79  24.4 |       95-103 / 499-499 | h_ship_5: left DIRECT while the GS closing the gripper
++ free axis from the room hold (FW)        5/5   |     24.0    15.3   21.3   40.7 |    3.4   3.27  1.51  21.2 |      105-121 / 481-496 | 
++ omega_c_t 2.0                            3/3   |     21.3    19.8   20.3   38.7 |    9.9   3.54  1.57  20.8 |             95-112 / - | 
+FW + omega_c_t 2.0                         5/5   |     25.3    11.1   22.4   42.9 |    4.0   4.16  1.59  20.6 |      104-111 / 468-501 | 
+FW + settle 1.0 s (CANDIDATE)              5/5   |     21.6    14.2   20.7   42.1 |    5.1   3.19  1.39  21.1 |       92-111 / 478-515 | 
+FW + exit 1.5 s                            4/5   |     22.7    13.0    5.9   44.1 |    3.3   3.77  1.59  23.4 |      104-111 / 491-511 | j_fwx15_2: push-and-pull ABORTED while the GS's Exit To Pus
+FW + weight 0.9                            4/5   |     23.7    21.4   27.0   36.0 |    4.1   2.17  2.00  25.4 |       75-105 / 507-507 | k_w09_5: timeout (15 s): the GS's automatic Push  [mode=D
+FW + settle 1.0 + blend 0.5 s              4/5   |     20.1    15.6   26.3   40.5 |    4.8   3.11  1.57  23.0 |       98-125 / 516-516 | l_wb05_5: timeout (15 s): the GS's automatic Push  [mode=D
+anchor OFF (the 10-21 hardware config)     0/1   |     10.6    17.3  -71.5   45.0 |    nan    nan   nan   nan |                  - / - | g_cal0_1: push-and-pull ABORTED while release: ABORTING (S

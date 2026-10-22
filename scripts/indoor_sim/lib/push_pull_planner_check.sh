@@ -35,7 +35,19 @@
 # them passed this check while ignoring them. PL_CHECK_REQUIRE: keys the RUNNING planner must
 # declare whatever the yaml says -- push_pull_capture_max_yaw_spread_deg is the 2026-10-19
 # build (the frozen / flipping box capture gates), which also implies push_pull/release (10-17).
-PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_push_mean_speed push_pull_push_min_time_s push_pull_push_ramp_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle push_pull_turn_deg push_pull_obstacle push_pull_guard_box_lag push_pull_guard_box_tilt_deg push_pull_guard_q3_min_deg push_pull_box_half_length push_pull_abort_from_measured push_pull_guard_tilt_deg push_pull_guard_force_n push_pull_mocap_guard_topic"
+# push_pull_box_gate_jump_m / _deg (2026-10-21, THE BOX SAMPLE GATE, archive/box_mocap_gate_20261021):
+# a planner built before it lets an obj_0 mis-solve reach the box guards -- a key missing on the
+# node is a mismatch.
+# push_pull_abort_unbuckle (2026-10-21, archive/box_abort_unbuckle_20261021): a planner built
+# before it holds a buckled arm through the whole abort -- a key missing on the node is a mismatch.
+# push_pull_guard_q3_lookahead_s (2026-10-22, THE q3 RATE GUARD, archive/
+# box_pushing_contact_stability_tune_20261021 section 6): a planner built before it catches the
+# arm's fold only after q3 passed the limit -- a key missing on the node is a mismatch.
+# push_pull_table_from_box / _table_size / _table_box_gap / _box_half_height / _start_middle_tol,
+# push_pull_go_to_start_bypass / _bypass_clearance (2026-10-22, the table placed from the box and
+# Go To Start round it): a planner built before them checks the room-fixed table and flies Go To
+# Start straight over the table -- a key missing on the node is a mismatch.
+PL_CHECK_KEYS="push_pull_ee_offset push_pull_push_pose_deg push_pull_table push_pull_push_distance push_pull_yaw_from_box_deg push_pull_push_time_s push_pull_push_mean_speed push_pull_push_min_time_s push_pull_push_ramp_s push_pull_world_anchor_ready push_pull_world_anchor_on_handle push_pull_turn_deg push_pull_obstacle push_pull_guard_box_lag push_pull_guard_box_tilt_deg push_pull_guard_q3_min_deg push_pull_box_half_length push_pull_abort_from_measured push_pull_guard_tilt_deg push_pull_guard_force_n push_pull_mocap_guard_topic push_pull_box_gate_jump_m push_pull_box_gate_jump_deg push_pull_abort_unbuckle push_pull_guard_q3_lookahead_s push_pull_table_from_box push_pull_table_size push_pull_table_box_gap push_pull_box_half_height push_pull_start_middle_tol push_pull_go_to_start_bypass push_pull_bypass_clearance push_pull_handle_top_above_grasp"
 PL_CHECK_REQUIRE="${PL_CHECK_REQUIRE:-push_pull_capture_max_yaw_spread_deg}"
 
 push_pull_planner_check() {

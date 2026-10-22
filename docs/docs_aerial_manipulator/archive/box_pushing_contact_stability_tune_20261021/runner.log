@@ -1,0 +1,775 @@
+[00:04:00] start p0_nom_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[p0_nom_1] completed
+[00:08:12] start cal_n45_1 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0 NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+[cal_n45_1] ABORTED: hover did not settle
+[00:11:46] start cal_n45_2 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0 NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+[cal_n45_2] ABORTED: hover did not settle
+[00:15:39] start cal45_1 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0 NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+[cal45_1] ABORTED: push-and-pull ABORTED while close: ABORTING (SAFETY GUARD: q3 -1.3 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- gri
+[00:19:38] start cal45_2 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0 NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+[cal45_2] ABORTED: the gripper closed on NOTHING -- not pushing
+[00:22:55] start p1_ship_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+[p1_ship_1] completed
+[00:27:02] start p2_fw_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  wb_ee_anchor_free_axis_on_world -> true
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+[p2_fw_1] completed
+[00:31:09] start p1_ship_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+[p1_ship_2] completed
+[00:35:16] start p2_fw_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  wb_ee_anchor_free_axis_on_world -> true
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+[p2_fw_2] ABORTED: push-and-pull ABORTED while the GS's Exit To Push: ABORTING (SAFETY GUARD: q3 -4.7 deg < 10.0 deg (the arm buckling toward its elbow-singular
+[00:39:18] start p1_ship_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+[p1_ship_3] completed
+[00:43:24] start p2_fw_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto NOISE=0.045 NOISE_BW=5 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  wb_ee_anchor_free_axis_on_world -> true
+  sim_feedback_vel_noise_mps -> 0.045
+  sim_feedback_vel_noise_bw_hz -> 5.0
+[p2_fw_3] completed
+[00:48:10] start f_cal0_1 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.23 sim_plant_force_noise_bw_hz=0.2 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.23
+  sim_plant_force_noise_bw_hz -> 0.2
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_weight -> 0.0
+[f_cal0_1] completed
+[00:52:23] start f_ship_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.23 sim_plant_force_noise_bw_hz=0.2 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.23
+  sim_plant_force_noise_bw_hz -> 0.2
+  sim_plant_force_noise_seed -> 1
+[f_ship_1] completed
+[00:56:30] start g_cal0_1 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_weight -> 0.0
+[g_cal0_1] ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: q3 -2.8 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- g
+[01:00:11] start g_ship_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+[g_ship_1] completed
+[01:04:17] start g_fw_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+[g_fw_1] completed
+[01:08:24] start g_oc2_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 omega_c_t=2.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[g_oc2_1] completed
+[01:12:30] start g_fwoc2_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true omega_c_t=2.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[g_fwoc2_1] completed
+[01:16:36] start g_ship_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[g_ship_2] completed
+[01:20:41] start g_fw_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+[g_fw_2] completed
+[01:24:47] start g_oc2_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 omega_c_t=2.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[g_oc2_2] completed
+[01:28:52] start g_fwoc2_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true omega_c_t=2.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[g_fwoc2_2] completed
+[01:32:57] start g_ship_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+[g_ship_3] completed
+[01:37:05] start g_fw_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_ee_anchor_free_axis_on_world -> true
+[g_fw_3] completed
+[01:41:13] start g_oc2_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 omega_c_t=2.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[g_oc2_3] completed
+[01:45:22] start g_fwoc2_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_ee_anchor_free_axis_on_world=true omega_c_t=2.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[g_fwoc2_3] completed
+[01:49:31] start h_ship_4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+[h_ship_4] completed
+[01:53:56] start h_fw_4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_ee_anchor_free_axis_on_world -> true
+[h_fw_4] completed
+[01:58:20] start h_fwoc2_4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_ee_anchor_free_axis_on_world=true omega_c_t=2.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[h_fwoc2_4] completed
+[02:02:46] start h_ship_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+[h_ship_5] ABORTED: left DIRECT while the GS closing the gripper
+[02:06:11] start h_fw_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> true
+[h_fw_5] completed
+[02:10:36] start h_fwoc2_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=true omega_c_t=2.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_l1_omega_c_t : 1.0 -> 2.0
+[h_fwoc2_5] completed
+[02:15:01] start i_fws10_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[i_fws10_1] completed
+[02:19:08] start i_fws10_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[i_fws10_2] completed
+[02:23:14] start i_fws10_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[i_fws10_3] completed
+[02:27:22] start j_fwx15_4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_ee_anchor_free_axis_on_world=true push_pull_exit_time_s=1.5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_exit_time_s -> 1.5
+[j_fwx15_4] completed
+[02:31:46] start j_fwx15_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=true push_pull_exit_time_s=1.5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_exit_time_s -> 1.5
+[j_fwx15_5] completed
+[02:36:11] start j_fwx15_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_exit_time_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_exit_time_s -> 1.5
+[j_fwx15_1] completed
+[02:40:19] start j_fwx15_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true push_pull_exit_time_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_exit_time_s -> 1.5
+[j_fwx15_2] ABORTED: push-and-pull ABORTED while the GS's Exit To Push: ABORTING (SAFETY GUARD: q3 6.7 deg < 10.0 deg (the arm buckling toward its elbow-singular 
+[02:44:23] start j_fwx15_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_ee_anchor_free_axis_on_world=true push_pull_exit_time_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_exit_time_s -> 1.5
+[j_fwx15_3] completed
+[02:48:31] start k_w09_4 | MASS=0.500 DIST=0.50 SPEED=0.021 FREE_W=0.9 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_ee_anchor_free_axis_weight -> 0.9
+[k_w09_4] completed
+[02:52:56] start k_w09_5 | MASS=0.500 DIST=0.50 SPEED=0.021 FREE_W=0.9 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_ee_anchor_free_axis_weight -> 0.9
+[k_w09_5] ABORTED: timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=HOLD push_pull=DONE ready next=push (CONTACT on: the gripper closes first)]
+[02:57:20] start k_w09_1 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0.9 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_ee_anchor_free_axis_weight -> 0.9
+[k_w09_1] completed
+[03:01:27] start k_w09_2 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0.9 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_ee_anchor_free_axis_weight -> 0.9
+[k_w09_2] completed
+[03:05:36] start k_w09_3 | MASS=0.240 DIST=0.10 SPEED=0.021 FREE_W=0.9 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_ee_anchor_free_axis_on_world -> true
+  wb_ee_anchor_free_axis_weight -> 0.9
+[k_w09_3] completed
+[03:10:34] start l_w_4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[l_w_4] completed
+[03:14:59] start l_w_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[l_w_5] completed
+[03:19:24] start l_wb05_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0 wb_ee_anchor_blend_s=0.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+  wb_ee_anchor_blend_s -> 0.5
+[l_wb05_1] completed
+[03:23:30] start l_wb05_2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0 wb_ee_anchor_blend_s=0.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+  wb_ee_anchor_blend_s -> 0.5
+[l_wb05_2] completed
+[03:27:35] start l_wb05_3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0 wb_ee_anchor_blend_s=0.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+  wb_ee_anchor_blend_s -> 0.5
+[l_wb05_3] completed
+[03:31:42] start l_wb05_4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0 wb_ee_anchor_blend_s=0.5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+  wb_ee_anchor_blend_s -> 0.5
+[l_wb05_4] completed
+[03:36:08] start l_wb05_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0 wb_ee_anchor_blend_s=0.5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+  wb_ee_anchor_blend_s -> 0.5
+[l_wb05_5] ABORTED: timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=HOLD push_pull=DONE ready next=push (CONTACT on: the gripper closes first)]
+[03:40:32] start r_stop | MASS=0.500 DIST=0.50 SPEED=0.021 PEGASUS_PUSH_STOPPER_Y=-0.04 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[r_stop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 51 mm BEHIND its plan (> 40 mm: jammed or too heavy) [law free-
+[03:44:41] start r_heavy | MASS=1.000 MU_S=0.6 MU_K=0.6 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[r_heavy] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.6 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[03:48:46] start r_side | MASS=0.240 DIST=0.50 SPEED=0.021 PEGASUS_PUSH_BOX_YAW_DEG=15 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0 push_pull_box_half_length=0.0
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+  push_pull_box_half_length -> 0.0
+[r_side] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: box tilted 2.5 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+[03:52:59] start r_freeze | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--mocap-fault|freeze@push+2.0:3.0 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[r_freeze] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.23 s ago)) -- gripper open, co
+[03:56:54] start r_mu20 | MASS=0.240 DIST=0.10 SPEED=0.021 MU_S=0.20 MU_K=0.20 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[r_mu20] completed
+[04:00:58] start r_mu30 | MASS=0.240 DIST=0.10 SPEED=0.021 MU_S=0.30 MU_K=0.30 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 wb_ee_anchor_free_axis_on_world=true push_pull_push_settle_s=1.0
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  wb_ee_anchor_free_axis_on_world -> true
+  push_pull_push_settle_s -> 1.0
+[r_mu30] completed
+[04:05:03] queue empty -- simulation closed
+[04:06:08] start z_final_7 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=7
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 7
+[z_final_7] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING (SAFETY GUARD: q3 6.5 deg < 10.0 deg (the arm buckling toward its elbow-sing
+[04:10:07] start z_final_6 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=6
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 6
+[z_final_6] completed
+[04:14:33] start z_final_8 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=8
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 8
+[z_final_8] ABORTED: timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=HOLD push_pull=DONE ready next=push (CONTACT on: the gripper closes first)]
+[04:18:48] start z_nom_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[z_nom_1] completed
+[04:22:53] queue empty -- simulation closed
+[04:23:58] start z_ship_7 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=7 wb_ee_anchor_free_axis_on_world=false
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 7
+  wb_ee_anchor_free_axis_on_world -> false
+[z_ship_7] ABORTED: left DIRECT while the GS closing the gripper
+[04:27:15] start z_ship_6 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=6 wb_ee_anchor_free_axis_on_world=false
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 6
+  wb_ee_anchor_free_axis_on_world -> false
+[z_ship_6] ABORTED: left DIRECT while the GS closing the gripper
+[04:30:38] start z_ship_8 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=8 wb_ee_anchor_free_axis_on_world=false
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 8
+  wb_ee_anchor_free_axis_on_world -> false
+[z_ship_8] ABORTED: push-and-pull ABORTED while the GS's automatic Push: ABORTING (SAFETY GUARD: q3 5.4 deg < 10.0 deg (the arm buckling toward its elbow-singula
+[04:34:07] queue empty -- simulation closed
+[04:36:07] STOP
+[04:36:14] RUNNER DONE
+[09:43:57] --- q3 rate guard validation (2026-10-22 morning) ---
+[09:44:03] start v_ship_5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ee_anchor_free_axis_on_world=false
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+  wb_ee_anchor_free_axis_on_world -> false
+[v_ship_5] completed
+[09:48:33] start v_ship_6 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=6 wb_ee_anchor_free_axis_on_world=false
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 6
+  wb_ee_anchor_free_axis_on_world -> false
+[v_ship_6] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING (SAFETY GUARD: q3 18.3 deg falling at 43.7 deg/s -> 9.6 deg in 0.20 s < 10.0
+[09:52:36] start v_ship_7 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=7 wb_ee_anchor_free_axis_on_world=false
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 7
+  wb_ee_anchor_free_axis_on_world -> false
+[v_ship_7] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING (SAFETY GUARD: q3 16.5 deg falling at 49.6 deg/s -> 6.6 deg in 0.20 s < 10.0
+[09:56:33] start v_fw_1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 wb_ee_anchor_free_axis_on_world=true
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  wb_ee_anchor_free_axis_on_world -> true
+[v_fw_1] ABORTED: push-and-pull ABORTED while exit complete: ABORTING (SAFETY GUARD: box tilted 6.3 deg > 2.0 deg (tipping, not sliding)) -- gripper open, cont
+[10:00:38] queue empty -- simulation closed
+[10:01:08] STOP
+[10:01:13] RUNNER DONE
