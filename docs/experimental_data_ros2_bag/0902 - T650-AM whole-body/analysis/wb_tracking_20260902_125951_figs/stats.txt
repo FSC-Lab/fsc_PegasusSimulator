@@ -1,0 +1,34 @@
+=================== wb_tracking_20260902_125951 ===================
+DIRECT windows: [(np.float64(16.0), np.float64(102.0))]
+HOLD windows:   [(np.float64(16.0), np.float64(27.8)), (np.float64(45.3), np.float64(78.9)), (np.float64(90.6), np.float64(102.0))]
+EXEC windows:   [(np.float64(39.3), np.float64(45.3)), (np.float64(85.4), np.float64(90.6))]
+
+ARM TORQUE EXECUTION (model convention, N.m):
+joint |  corr(recv,flight) slope |  corr(deliv,flight) slope  mean(fl) mean(del)
+  j1 |  +0.994 +0.992        |  +nan +0.000 (off +0.000)   -0.209  +0.000
+  j2 |  +0.990 +0.989        |  +0.000 -0.000 (off +0.570)   +0.056  +0.570
+  j3 |  +0.999 +1.001        |  +0.000 -0.000 (off +0.225)   -0.599  +0.225
+  j4 |  +0.994 +0.997        |  +nan +0.000 (off +0.000)   +1.064  +0.000
+
+REFERENCE CHECKS:
+  x_cd FD vs x_cd_dot: rms diff = 0.0020 m/s (stream), max |v| = 0.249 m/s, max |a| = 0.144 m/s2
+  max inter-sample step x_cd = 2.8 mm; r_ed = 2.9 mm; q_d = 0.10 deg
+  max |qdot_d| = 8.7 deg/s
+
+STEADY-STATE (mean over last 60% of each HOLD window):
+ window        | CoM err mm (x,y,z) | EE e_y mm (x,y,z) | e_y_hd | headerr deg | q-q_d deg | d_t N (x,y,z) | d_r N.m | u1 N
+   16.0-  27.8 |  -282.9   -72.2   +24.3 |  +276.6   +56.3   -45.5 | -0.017 |   -3.48 |  -0.1  -0.0  -0.0  -0.2 | -3.15 +0.23 +0.14 | -0.155 -0.033 -0.102 |  36.75
+   45.3-  78.9 |  -390.0  -565.5   +33.6 |  +361.0  +576.9    +6.4 | -0.203 |   +2.22 |  -0.4  -0.2 +22.5 -13.0 | -3.24 +0.16 -0.59 | -0.632 -1.286 -0.454 |  37.50
+   90.6- 102.0 |  -299.3  -530.6   +24.6 |  +270.5  +534.8   +14.2 | -0.205 |   +0.52 |  -0.4  -0.2 +22.5 -13.0 | -3.27 +0.24 -1.54 | -1.038 -2.053 -0.405 |  37.18
+
+HOLD CONVERGENCE (|CoM err| horizontal, mean per third of window, mm) + e_R norm:
+   16.0-  27.8: |e_com|   141.2 ->   283.8 ->   279.7 mm   |e_R| 0.120 -> 0.169 -> 0.117
+   45.3-  78.9: |e_com|  1440.4 ->   849.6 ->   609.4 mm   |e_R| 0.564 -> 0.329 -> 0.251
+   90.6- 102.0: |e_com|   659.0 ->   630.6 ->   587.1 mm   |e_R| 0.254 -> 0.259 -> 0.232
+
+BASE-CoM RESIDUAL from steady d_r (model x = pitch-ish axis, forward = +y):
+   16.0-  27.8  q=(-0,40,40,-0)deg  d_r=(-0.155,-0.033) N.m  => CoM residual model (dx,dy)=(+0.9,-4.2) mm
+   45.3-  78.9  q=(-0,40,40,-0)deg  d_r=(-0.632,-1.286) N.m  => CoM residual model (dx,dy)=(+34.3,-16.9) mm
+   90.6- 102.0  q=(-0,40,40,-0)deg  d_r=(-1.038,-2.053) N.m  => CoM residual model (dx,dy)=(+55.2,-27.9) mm
+
+ANTI-DAMPING CHECK: tau_model_x vs v_fwd slope = -0.173 N.m/(m/s), r = -0.22 (0901 was -0.36; positive/small = healthy)

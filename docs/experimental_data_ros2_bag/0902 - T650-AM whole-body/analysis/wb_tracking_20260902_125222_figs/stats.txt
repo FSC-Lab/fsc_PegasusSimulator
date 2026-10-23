@@ -1,0 +1,28 @@
+=================== wb_tracking_20260902_125222 ===================
+DIRECT windows: [(np.float64(12.8), np.float64(14.8))]
+HOLD windows:   [(np.float64(12.8), np.float64(14.8))]
+EXEC windows:   []
+
+ARM TORQUE EXECUTION (model convention, N.m):
+joint |  corr(recv,flight) slope |  corr(deliv,flight) slope  mean(fl) mean(del)
+  j1 |  +0.831 +0.838        |  +nan -0.000 (off -0.031)   +0.248  -0.031
+  j2 |  +0.921 +0.913        |  -0.000 -0.000 (off +0.541)   +0.891  +0.541
+  j3 |  +0.853 +0.853        |  +0.000 +0.000 (off +0.225)   -0.039  +0.225
+  j4 |  +0.907 +0.986        |  +nan +0.000 (off +0.000)   +0.004  +0.000
+
+REFERENCE CHECKS:
+  x_cd FD vs x_cd_dot: rms diff = 0.0000 m/s (stream), max |v| = 0.000 m/s, max |a| = 0.000 m/s2
+  max inter-sample step x_cd = 0.0 mm; r_ed = 0.0 mm; q_d = 0.00 deg
+  max |qdot_d| = 0.0 deg/s
+
+STEADY-STATE (mean over last 60% of each HOLD window):
+ window        | CoM err mm (x,y,z) | EE e_y mm (x,y,z) | e_y_hd | headerr deg | q-q_d deg | d_t N (x,y,z) | d_r N.m | u1 N
+   12.8-  14.8 |  +314.0  +306.4  +134.0 |  -318.9  -279.3  -138.5 | -0.054 |   +6.48 |  +0.3  -0.0  -0.0  -0.2 | -1.23 +0.13 -1.17 | +0.027 +0.058 +0.007 |  37.98
+
+HOLD CONVERGENCE (|CoM err| horizontal, mean per third of window, mm) + e_R norm:
+   12.8-  14.8: |e_com|     3.8 ->   162.6 ->   633.9 mm   |e_R| 0.070 -> 0.325 -> 0.457
+
+BASE-CoM RESIDUAL from steady d_r (model x = pitch-ish axis, forward = +y):
+   12.8-  14.8  q=(0,40,40,-0)deg  d_r=(+0.027,+0.058) N.m  => CoM residual model (dx,dy)=(-1.5,+0.7) mm
+
+ANTI-DAMPING CHECK: tau_model_x vs v_fwd slope = -0.103 N.m/(m/s), r = -0.20 (0901 was -0.36; positive/small = healthy)

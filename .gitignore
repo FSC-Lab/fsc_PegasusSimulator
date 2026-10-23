@@ -65,3 +65,7 @@ application/robotic_arm/assets/
 # rule -- those under GitHub's 100 MB file limit are committed deliberately.
 *.npy
 docs/docs_aerial_manipulator/**/*.db3
+
+# Bag recordings over GitHub's 100 MB per-file limit: kept local / on Google Drive.
+/docs/experimental_data_ros2_bag/0822 - T650-AM whole-body SITL first flights/wb_flight2_bag/wb_flight2_bag_0.db3
+/docs/experimental_data_ros2_bag/0825 - T650-AM geometric L1 adaptive direct actuation-20260825T173657Z-1-001/0825 - T650-AM geometric L1 adaptive direct actuation/debug_recording_aerial_manipulator_geometric_l120260825_104544/debug_recording_aerial_manipulator_geometric_l120260825_104544_0.db3
