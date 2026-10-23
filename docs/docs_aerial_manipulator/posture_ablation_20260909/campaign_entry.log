@@ -1,0 +1,37 @@
+  wb_k_x : 16.0 -> 16.0
+  wb_k_v : 12.0 -> 12.0
+  wb_l1_omega_c_r : 0.5 -> 2.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ entry_B_A  k_x=16.0 k_v=12.0 omega_c_r=2.0 ############
+=== [l1/entry_B_A] 0. clean slate ===
+=== [l1/entry_B_A] 1. controller stack ===
+=== [l1/entry_B_A] 2. Pegasus / PX4 / arm ===
+=== [l1/entry_B_A] 3. waiting for odometry ===
+=== [l1/entry_B_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/entry_B_A] 3c. waiting for the arm ===
+=== [l1/entry_B_A] 4. flying ===
+=== [l1/entry_B_A] done (driver rc=1) ===
+[  39.05s] planner -> PENDING
+[  39.05s] planner -> CALCULATING
+[  39.10s] mode -> SAFETY
+[  39.14s] planner -> IDLE
+[  59.03s] service rc/disarm requested
+[  59.03s] PHASE DONE  ref=[0.0, 0.0, 0.35] mode='SAFETY'
+[  59.05s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+ABORTED: pos=(0.01,-0.02,0.45) tilt=35.9 deg |v|=0.16
+############ entry_B_A rc=1 ############
+  wb_k_x : 16.0 -> 16.0
+  wb_k_v : 12.0 -> 12.0
+  wb_l1_omega_c_r : 2.0 -> 2.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ entry_B_B  k_x=16.0 k_v=12.0 omega_c_r=2.0 ############
+=== [l1/entry_B_B] 0. clean slate ===
+=== [l1/entry_B_B] 1. controller stack ===
+=== [l1/entry_B_B] 2. Pegasus / PX4 / arm ===
+=== [l1/entry_B_B] 3. waiting for odometry ===
+=== [l1/entry_B_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/entry_B_B] 3c. waiting for the arm ===
+=== [l1/entry_B_B] 4. flying ===
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml

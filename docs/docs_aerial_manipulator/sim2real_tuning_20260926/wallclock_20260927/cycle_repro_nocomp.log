@@ -1,0 +1,16 @@
+=== [l1_4d/repro_nocomp] 0. clean slate ===
+=== [l1_4d/repro_nocomp] 1. controller stack ===
+=== [l1_4d/repro_nocomp] 2. Pegasus / PX4 / arm ===
+=== [l1_4d/repro_nocomp] 3. waiting for odometry ===
+=== [l1_4d/repro_nocomp] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d/repro_nocomp] 3c. waiting for the arm ===
+=== [l1_4d/repro_nocomp] 4. flying (standard) ===
+=== [l1_4d/repro_nocomp] done (driver rc=1) ===
+[  43.39s] !! ABORT ENVELOPE: pos=(-0.00,-0.21,0.83) tilt=36.7 deg |v|=0.75
+[  43.39s] service set_direct_mode(false) requested
+[  43.39s] PHASE LAND  ref=[0.0, -0.0, 1.0] mode='SAFETY'
+[  43.41s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Already in SAFETY mode')
+[  63.41s] service rc/disarm requested
+[  63.41s] PHASE DONE  ref=[0.0, -0.0, 0.35] mode='SAFETY'
+[  63.43s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+ABORTED: pos=(-0.00,-0.21,0.83) tilt=36.7 deg |v|=0.75

@@ -1,0 +1,3 @@
+mismatch_A friction=1.05 mass=1.05 comp=1 driver='--hold-between 16'
+matched_B friction=1.00 mass=1.00 comp=1 driver='--hold-between 16'
+uncomp_C friction=1.05 mass=1.05 comp=0 driver='--hold-between 16'

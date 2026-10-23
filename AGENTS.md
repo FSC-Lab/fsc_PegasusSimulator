@@ -128,7 +128,7 @@ The current ROS 2 direct-actuator work is deliberately staged. Do not begin by
 tuning the free-flight controller when motor order, signs, or torque response are
 in doubt.
 
-1. Run `scripts/indoor_sim/start_x650_pinned_direct_actuator_test.sh`. It launches PX4,
+1. Run `scripts/indoor_sim/archive/start_x650_pinned_direct_actuator_test.sh`. It launches PX4,
    Micro XRCE-DDS Agent, the temporary external ROS pulse node, and
    `application/px4_base/04_x650_pinned_direct_actuator_test.py`.
 2. The pinned fixture clamps translation in a physics callback but never resets
@@ -139,7 +139,7 @@ in doubt.
    diagnostic only. Compare the force-at-rotor predicted torque against measured
    angular acceleration in `/tmp/x650_pinned_torque.csv`.
 4. Only after all six roll, pitch, and yaw pulses have matching torque/acceleration
-   signs, run `scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh` for free flight. The
+   signs, run `scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh` for free flight. The
    hover plant uses the real `10.51 1/s` rotor lag.
 
 The pulse node is external at
@@ -149,7 +149,7 @@ confirms arming, and only then sends nonzero motors. After the sequence it holds
 zero and uses PX4's force-disarm code because a rotating pinned vehicle may still
 be classified as airborne.
 
-For the free-flight test, `scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh` launches
+For the free-flight test, `scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh` launches
 the external `apl20_ros/autopilot_node` with
 `/home/longhao/source/fsc_autopilot_ws/src/apl20/apl20_ros/config/x650.yaml`.
 The controller owns position, velocity, attitude, rate, and control-allocation
@@ -221,7 +221,7 @@ Run the APL20 X650 directional-thrust test with the GUI as follows; append
 cd "$HOME/Source/fsc_PegasusSimulator"
 FSC_AUTOPILOT_WS="$HOME/Workspaces/fsc_autopilot_ws" \
 X650_HOVER_X=1 X650_HOVER_Y=-1 X650_HOVER_ALT=1.5 \
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
 ```
 
 The target uses ENU coordinates. The verified `(1, -1, 1.5)` m run converged to
@@ -250,12 +250,12 @@ Focused runbooks are in `docs/single_drone_standard_sequence.md`,
 
 For a standard indoor Iris with a parameter database isolated from outdoor
 simulation, use
-`scripts/indoor_sim/start_single_drone_iris.sh`. It stores parameters under
+`scripts/indoor_sim/archive/start_single_drone_iris.sh`. It stores parameters under
 PX4's `build/px4_sitl_default/rootfs_fsc_indoor/` while retaining PX4 instance 0,
 TCP port 4560, MAVLink system ID 1, and namespace `/uav_0`.
 
 For the equivalent bare X650 with the measured `10.51 1/s` motor lag, use
-`scripts/indoor_sim/start_single_drone_x650.sh`. Its independent
+`scripts/indoor_sim/lib/start_single_drone_x650.sh`. Its independent
 `rootfs_fsc_indoor_x650/` profile combines the indoor external-vision parameters
 with the validated X650 attitude/rate gains. Both indoor launchers verify Isaac
 ground truth on `/uav_0/state/pose` and `/uav_0/state/twist_inertial`.

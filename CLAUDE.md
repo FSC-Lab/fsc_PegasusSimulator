@@ -26,10 +26,10 @@ Isaac through Pegasus's primary MAVLink backend.
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/`
 - `scripts/indoor_sim/start_aerial_manipulator.sh`
 
-- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/x650_vehicle.py` —
+- `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/robotic_arm/utils_vehicle/x650_vehicle.py` —
   `VehicleMod(Vehicle)`, thin subclass adding `usd_prim_path`/configurable `body_path` for a
   custom USD asset.
-- `.../robotic_arm/x650_multirotor.py` — `MultirotorMod(BaseMultirotor, VehicleMod)`, adds
+- `.../robotic_arm/utils_vehicle/x650_multirotor.py` — `MultirotorMod(BaseMultirotor, VehicleMod)`, adds
   configurable rotor prim paths/joint names. Compliant with this file's vehicle-model checklist
   below (`config=None` resolved inside `__init__`, no mutable defaults).
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/x650_rotorcraft_utils.py`
@@ -41,12 +41,12 @@ Isaac through Pegasus's primary MAVLink backend.
   ROS2 `MatlabControllerNode`: subscribes `state/pose`/`state/twist*`/`joint_states`, publishes
   `rotor_velocity_command`/`joint_torque_cmd`. Run standalone (`python3 controller.py --ros-args
   -r __ns:=/uav_0`), not launched by the Isaac Sim script itself.
-- `.../robotic_arm/postprocessor.py` (1227 lines) — **not** a runtime component. A one-shot
+- `.../robotic_arm/utils_model/postprocessor.py` (1227 lines) — **not** a runtime component. A one-shot
   OnShape→USD asset-cleanup pipeline (reparent/rename/realign frames/set mass+inertia/add
   colliders/apply joint drives/export), meant to be pasted into Isaac Sim's Script Editor after
   CAD import, not imported by anything else.
 - `.../robotic_arm/__init__.py` is empty — import submodules directly
-  (`fsc_aerial_manipulation.robotic_arm.x650_vehicle`, etc.), not via the package.
+  (`fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_vehicle`, etc.), not via the package.
 - `application/robotic_arm/01_aerial_manipulator_hover.py` (761 lines) — the working demo
   entrypoint: DC-interface joint control, ROS2 pub/sub for torque/rotor commands, arm
   position-hold→effort-control handoff.
@@ -64,9 +64,1652 @@ Isaac through Pegasus's primary MAVLink backend.
   the run, prestreams for one second, confirms Offboard, then auto-arms. The controller runs
   under `--ros-args -r __ns:=/uav_0`, matching `PX4_UXRCE_DDS_NS=uav_0`. The actual Isaac
   entrypoint is `01_aerial_manipulator_hover.py`.
+- `.../robotic_arm/utils_planner/compatible_trajectory.py` (new, 2026-08-06; moved into
+  `utils_planner/` 2026-08-08) — offline planner for the
+  dynamically-compatible EE+CoM trajectory, Python port of `MATLAB
+  Code/utils/utils_planning/plan_compatible_trajectory.m`: prescribes the EE task (3-axis
+  position span+arc, orientation sweep yaw/tilt/wrist) plus an independent platform heading,
+  and SOLVES the CoM reference x_cd(t) (deg-16 polynomial, Picard fixed point over thrust-dir ↔
+  arm-kinematics coupling). Pure numpy, testable without Isaac. Two deliberate deviations from
+  the MATLAB original: (1) **z-x-z, not z-y-z** — the AM_realign asset's joints 2/3 rotate
+  about +x (MATLAB model: +y), so R_e = Rz·Rx·Rz and the joint recovery is a z-x-z
+  decomposition; (2) planned once in a **canonical frame** (EE start at origin, zero heading)
+  and cached, then anchored by translation+yaw in `build_traj` — exact since gravity is along
+  z. Uses the exact `com_i` link CoMs from `make_params()`, not the MATLAB's l_i/2
+  approximation. Wired into `controller_free.py` as `TRAJ_TYPE = "compatible"`
+  (`TRAJ_CONFIG["compatible"]` holds the task/planner knobs; angle amplitudes sized to this
+  asset's authored joint limits — q1 ±35°, q2/q3 −90..+50°, checked by the planner's
+  `q_lim_deg` warning) and into `02_aerial_manipulator_free.py` as `MODE = "compatible"` (now
+  the default; EE_FORCE_ENABLE set False for the plain tracking test). The plan's t=0 arm pose
+  `q0 = [0, b0/2, b0/2, 0]` is exported as `tr["q_hold"]` so the existing takeoff hold
+  pre-positions the arm — run with `TAKEOFF_ARM_HOLD = True`. Offline validation (2026-08-06,
+  system python): Picard converges in 7 iters, dynamic defect 3.7e-6 m, cond(J_3y) ≈ 15 the
+  whole plan (vs ~96 at q=0), all reference derivative chains FD-consistent to ~1e-10, ref
+  eval ~0.2 ms/call at 250 Hz. Only wired into the GMO controller/demo, not
+  `controller_track.py` (its generate_reference has no "compatible" branch).
+  **4-phase showcase flight added same day** (`TRAJ_TYPE="compatible_showcase"`, now the
+  demo's default MODE): takeoff with the arm **FOLDED at the singularity-certified HOME pose
+  β=80° (q_hold=[0,40°,40°,0])** → fly-in forward (**along world +y**, see `path_yaw_deg`
+  below) while UNFOLDING (β→50°) → PINNED phase (EE position+heading exactly fixed — wrist
+  stays 0 so b1_de is β-independent — while the platform yaws ±15° and the arm folds/unfolds
+  50→75→50°) → fly-out to above the landing spot while FOLDING BACK to home →
+  **pure vertical descent to a LANDING, arm at home throughout**. HOME POSE (2026-08-06,
+  user's request, derived from `refs_matlab/utils/utils_singularity/singularity_sweep.m`
+  mapped onto this asset): the elbow/yaw singular branches live at **NEGATIVE q2/q3 in this
+  asset's sign convention** (MATLAB's +y joint axes flip sign vs the asset's +x; deepest
+  valley q3≈−52°, and the previously measured cond≈880 at q2=q3=−43° IS the elbow branch),
+  while on the positive fold line nondimensional σ_min(J_3y0/Lchar) RISES monotonically with
+  β (0.38 at q=0 → 0.52 at 80° = 5.2× the analysis' 0.10 keep-out margin, worst-case over
+  q1 ±35°/q4 ±180°; task envelope worst 0.48). The planner now computes/prints this
+  certification per plan (`diag min_sigma_nd`, warns <0.10). Arm fold direction (measured,
+  easy to get backwards): β=q2+q3 and LARGER β tucks the EE UP toward the body (base→EE reach
+  0.279 m at β=0, 0.205 at 50°, 0.16 at 80°) — folded home = compact + ground-safe (~0.26 m
+  EE clearance at rest) + best-conditioned. `land_drop` resized 1.03→1.17 m (same home pose
+  at both ends ⇒ EE drop = CoM drop; the old value belonged to the asymmetric schedule).
+  **TASK SHAPE reworked 2026-08-07 (user request)**: (a) the pinned point sits 0.35 m BELOW
+  both the fly-in start and fly-out end, each transit arcing ~0.15 m over first, so the SIDE
+  view shows climb-over→dip→climb-over→descend (EE z 1.48→1.62→1.13→1.62→1.48→land) while
+  `Ay=0` keeps both transits DEAD STRAIGHT in bird view (measured 0.0 mm lateral deviation);
+  (b) the pinned phase is a TRUE GIMBAL — EE position AND heading frozen inertially while the
+  platform sweeps a FULL sine cycle 0→+30°→0→−30°→0 (new `_scal_sincycle` helper, min-snap
+  phased so endpoint rates vanish), returning to forward so fly-out continues straight;
+  `yaw_work_deg` dropped to 0 to free all of q1 for this. **TWO KINEMATIC BOUNDS worth
+  knowing**: (1) a FULL 360° platform spin is IMPOSSIBLE with the EE yaw locked — R_e^0 =
+  R_0ᵀR_e forces q1 = −ψ and q1 is limited to ±35°; q4 cannot help because the two z-rotations
+  in Rz(q1)Rx(β)Rz(q4) only trade at β=0 (the wrist singularity). Dropping the yaw lock would
+  allow a full circle. (2) the drone barely TRANSLATES while pinned — q1 counter-rotating the
+  yaw also counter-rotates the arm's offset, so R_0·r_0e is invariant and a pure yaw moves the
+  base NOT AT ALL; all pinned translation comes from the arm's FOLD changing r_0e, only
+  ~0.03 m horizontally / ~0.06 m vertically over β 50–80° (measured CoM span 0.059 m). This is
+  a workspace bound, not a tuning knob.
+  **Takeoff-hold target is SLEWED (`ARM_HOLD_RATE`=0.5 rad/s), not stepped**: the raw 0→40°
+  spawn step overshot the ζ≈0.5 PD into q2's +50° hard stop (measured 50.0° at t=0.35 s);
+  the slew caps the transient at 26° and peak hold torque 2.62→0.86 N·m.
+  Ground contact is NOT in the control model, so `02_aerial_manipulator_free.py` gained a
+  `LAND_*` block: below `LAND_HOLD_Z`=1.0 m the arm reverts to the software PD hold **tracking
+  the stowed pose** (NOT the takeoff q_hold — that would swing the arm down at touchdown) and
+  the GMO freezes; after the plan ends the rotors ramp off over `LAND_DISARM_TIME`=2 s.
+  **The vehicle's resting body height is 0.305 m / CoM 0.290 m — MEASURED from a landing run,
+  not the 0.613 m spawn height** (the drone lifts off at t=0 and is never seen resting at
+  spawn; sizing `land_drop` off the spawn value left the reference 27 cm high and the rotor
+  ramp turned it into a drop). Planner
+  extensions this required, all in `compatible_trajectory.py`: (a) segmented prescribed task
+  (`_prescribed_task_showcase`, selected by the `T_fly_in` cfg key); (b) **min-snap (septic)
+  segment phases** — the compatible CoM's velocity depends on the prescribed JERK via the
+  thrust-direction map, so min-jerk phases (jerk jumps at joins) would make the solved CoM
+  velocity discontinuous at phase boundaries; (c) **piecewise polynomial p_c, one per phase,
+  with constrained fits** (value pinned + zero vel/acc at both segment ends) — a single
+  global polynomial fits move–hold–move poorly (4 mm defect, shifted q0), and unconstrained
+  per-segment fits RING in their endpoint derivatives, which the Picard loop amplifies
+  through p_c'' (deg 20 constrained even diverges — deg 12 is the sweet spot). The classic
+  single-segment mode keeps the plain unconstrained fit (flight-validated, ~40x lower
+  defect). Headless-validated (2026-08-06, 34 s run): pinned-phase EE held to 0.28 mm / yaw
+  err 1e-5 while the base flew an 11.7 cm path; per-phase EE error ≤0.7 mm; touchdown settles
+  3.9 cm at ≤0.34 m/s onto the resting height with final thrust back at hover (32.7 N ≈ mg)
+  and zero drift after; joints peak q1 30°, q2/q3 44° (limit 50°).
+  **`path_yaw_deg` (added 2026-08-06, default 90° for the showcase)** — decouples TRAVEL
+  direction from HEADING: `_eval_task` rotates only the prescribed EE *position* about z,
+  leaving R_e/b1_de/b1_d untouched. Needed because the controller's b1_d steers BODY +x but
+  this asset's mechanical front (arm side) is BODY +y, so the demo would otherwise fly
+  sideways-on. At 90° the vehicle travels along world +y — face-first — while the attitude
+  reference stays on +x (it never yaws to follow the path; the only yaw is the ±15° pinned
+  counterpoint). Valid because the canonical EE start is the origin and gravity is
+  z-invariant. **TEMPORARY**: the user plans to re-author the USDA so the front is body +x,
+  after which this goes back to 0.0. A USDA-only rotation is NOT sufficient — `make_params`
+  (both controllers), `RotorMixer.rotor_positions`, `M_r_d`, and the planner's z-x-z joint
+  recovery all encode the body frame and must change together, and the measured pickplace
+  `EE_SAG` would go stale. Re-validated headless at 90°: identical quality to the +x version
+  (pinned EE 0.28 mm, touchdown 3.9 cm settle, no crash).
+  **Spawn-at-home (2026-08-07, user request off the singularity-sweep Fig 3)**: the arm now
+  SPAWNS at the folded home pose (`02`'s `Q_SPAWN` = the plan's `q0` = [0,40°,46°,0], resolved
+  from the cached pure-numpy `get_plan` pre-Isaac; zeros for hover/circle, `q_hold` for
+  circle_bent) instead of hanging at q=0 — at q=0 the gripper pad reaches 0.282 m below the
+  base, only 2.3 cm off the floor at the 0.305 m resting height, and the old zero-then-slew
+  start swept it near the ground through the first ~1.5 s of climb; at home the lowest arm
+  point (the elbow) keeps 0.14 m clearance. The arm now holds home continuously
+  spawn→takeoff→fly-in, and the landing hold already tracked home through touchdown. The home
+  POSE itself is unchanged (the user's sketched link2-horizontal fold needs q2≈79° vs the +50°
+  stop; β=96 would raise the elbow only 1.5 cm while erasing the stop margin the measured
+  ~7.5° q2 handover overshoot needs — β=86 is the feasible optimum, σ_nd 0.529). Two
+  hard-won implementation facts: (a) authoring `PhysicsJointStateAPI` state attrs pre-reset
+  does NOT take effect in 02's startup sequence (the asset authors no state values; the
+  pre-reset `world.step()` calls in `_wait_for_prim` let PhysX capture its reset-snapshot at
+  q=0 and `world.reset()` restores that over the authored attrs — measured q(t0)=0), so the
+  pose is written post-`_art.initialize()` via `set_joint_positions`; (b) **PhysX roots the
+  AM_realign articulation tree at an ARM link**, so that teleport swings the BODY around the
+  arm — it came out rolled −(q2+q3) = −86° about x and 0.21 m displaced, the anchored
+  reference chased the sideways thrust axis and the vehicle tumbled at t=1 s. The write is
+  therefore followed by a RIGID RE-SEAT (measure body pose before/after, left-apply the world
+  correction to the articulation root via `set_world_pose`; exact no-op on a body-rooted
+  tree). The old `_zero_arm_joint_states` was deleted — the asset authors zero state anyway,
+  it was always a no-op. Headless-validated (34 s, 2026-08-07): arm within 2.0° of home for
+  the whole climb (vs the old 64° hanging→folded swing), q2 peak 47.2° at handover, pinned EE
+  0.43 mm mean / 1.17 mm max, touchdown at exactly 0.305 m, zero final drift, final q = home.
+  **TRAJECTORY CATALOGUE RENAMED + EXTENDED (2026-08-08, user request — supersedes every
+  older mode name above)**: `utils_planner` now names every free-flight mode `<shape>_<who>`
+  (`<shape>` hover/circle/figure8/poly; `<who>` `drone` = arm LOCKED at one pose, `whole` =
+  whole body moves). Renames: `hover`→`hover_drone`, `circle`→`circle_drone` (old
+  `circle_bent` became its optional `q_hold` config knob), `compatible_showcase`→`poly_whole`
+  (remark: showcase_end_effector_gimbal); the classic single-phase `compatible` entry was
+  DELETED from the catalogue (the offline planner in `compatible_trajectory.py` is untouched
+  — it is poly_whole's engine, and its classic-task branch still evaluates for legacy cfgs).
+  FOUR NEW modes, implemented in `trajectory_library.py` + new `utils_planner/arm_sweep.py`:
+  (a) `hover_whole` (remark: showcase_drone_gimbal) — the base HOVERS pinned at the takeoff
+  setpoint while a prescribed EE command sweeps the arm (fold β 80→50→80 two full min-snap
+  cycles + arm-yaw q1 ±25° in quadrature → the EE traces a closed loop; measured span 12 cm
+  lateral / 5 cm vertical / ±25° EE yaw). Dynamically EXACT, not an approximation: arm motion
+  is internal, so a fixed system-CoM reference plus a moving EE reference is fully compatible
+  — the visible "drone gimbal" is the base counter-moving a few cm about the held CoM.
+  (b) `circle_whole` / `figure8_whole` — the _drone base path plus a β 50..80° fold sweep
+  (q1 = 0 keeps b1_de exactly on the tangent); the EE reference is the FK-exact swept offset
+  (arm_sweep.py: central-difference Jacobian ε=1e-6 + directional second difference ε=1e-4
+  on the exact `_arm_kin` chain, anchored as d(t)=Rz(Δψ)(d0+Rz(ψ0)[u(q(t))−u(q0)]) so d(0)
+  EQUALS the measured anchor → zero initial EE error; ~0.4 ms/eval vs the 4 ms 250 Hz budget).
+  (c) `figure8_drone` — Gerono lemniscate x=A·sinθ, y=(B/2)·sin2θ (A=1.2 m, B=0.7, T=24 s),
+  θ = 2π·minjerk, same Faà-di-Bruno 4-derivative chain as the circle; tangent heading is
+  parameterized by θ (defined at the zero-speed rest endpoints), and |de/dθ| ≥ B > 0 so the
+  tangent never degenerates. Unlike the circle, the yaw RATE REVERSES at the crossing.
+  (d) `poly_drone` — the showcase waypoints flown by the BASE alone: min-snap septic segments
+  (new `minsnap()` with 4 derivatives — jerk-continuous joins, one order smoother than the
+  circle's minjerk) fly-in→hold→fly-out over the same target/land_wp/timings as poly_whole,
+  the same ±30° mid-phase platform-yaw full sine cycle, arm locked at the folded home
+  [0,40°,46°,0]; ends hovering at land_wp and LANDS (`LAND_ENABLE` is now poly_whole OR
+  poly_drone). The intended A/B: with the arm locked the yaw cycle SWINGS the EE around the
+  base — nothing can be pinned. New API `P.initial_arm_pose(traj_type, params=None)` replaces
+  02's `_takeoff_arm_pose()` for Q_SPAWN; EVERY mode with a non-zero arm pose exports
+  `tr["q_hold"]`. Consumers updated: `02_aerial_manipulator_free.py` (MODE default
+  "poly_whole"; waypoint markers + npz phase table know poly_drone),
+  `px4_direct_actuator_aerial_manipulator_gmo.py` (MODE="hover_drone"),
+  `utils/px4_gmo_gain_sweep.py`, controller_free's self-test, `Command.md`,
+  `Flight State Machine.md`. `controller_track`'s EMBEDDED catalogue (used by
+  01_track) keeps its OWN old names — it never imported utils_planner, so the rename does
+  not touch it. **SUPERSEDED 2026-08-09 for pick/push**: those two controllers were merged
+  away (see the CONTROLLER MERGE entry below) and their catalogues now live in
+  utils_planner alongside everything else. Offline-validated (system
+  python, 2026-08-08): FD-consistency of every derivative chain in all 8 modes (max interior
+  err ≤2e-4, FD-limited), poly_drone joins continuous through JERK, sweeps inside joint
+  limits (q2/q3 peak 40° vs 50 limit, q1 25 vs 35, peak rates ≤57°/s), headings unit-norm,
+  all endpoints at rest, controller_free self-test passes (hover thrust = mg exactly).
+  NOT yet flown in Isaac.
+
+**CONTROLLER MERGE (2026-08-09) — one law, per-scenario YAML.** `controller_free.py`,
+`controller_pick.py` and `controller_push.py` were three copies of the SAME law (measured
+ignoring comments: `make_params`, `dynamics`, `Gains` and the mixer byte-identical;
+`MatlabController` differed only in two features `free` had — `gmo_inhibit` and the
+saturation-consistent coupling — and the copies had silently drifted apart on
+`DLS_LAMBDA`, 0.3 vs `0#.3`). They are now:
+- `utils_controller/controller.py` — THE law, no gain defaults in code.
+- `utils_controller/control_params.py` + `robotic_arm/config/<scenario>.yaml` —
+  every gain and law knob (`free`, `pick`, `push`, `px4_direct`). A missing key is a
+  startup error, so a run's parameters always trace to one file. The free demo passes its
+  TRAJECTORY TYPE as a `variant`, so a mode can carry its own section.
+- the pickplace*/push_home MISSION PLANS moved to `utils_planner` (they are trajectories);
+  `build_traj` gained `land_in_plan` (default False — the demo owns the landing).
+- `controller_track.py` (posture-anchor baseline) and `controller_hover.py` (ROS2 demo)
+  are NOT part of this and stay as they are.
+Both moves were proven behaviour-preserving before deleting anything: old-vs-new law over
+4 operating points x hold on/off x 3 scenarios, and old-vs-new references over the full
+plans at 250 Hz — max difference exactly 0.0 in every case. The px4 rig's `TUNED_GAINS`
+dict became `config/px4_direct.yaml` (renamed `px4_direct_free.yaml` 2026-08-10). NOT yet
+flown in Isaac.
+
+**PX4 DIRECT-ACTUATOR RIG BECAME THE FREE-FLIGHT PARALLEL OF 02 (2026-08-10, user
+request).** `px4_direct_actuator_aerial_manipulator_gmo.py` →
+`application/robotic_arm/03_px4_direct_aerial_manipulator_free.py`; launcher →
+`scripts/start_px4_direct_aerial_manipulator_free.sh` (tmux session `am_free_px4`, optional
+2nd arg = trajectory, forwarded INLINE on the pane command line — an exported var does not
+reliably reach an already-running tmux server); gains →
+`config/px4_direct_free.yaml`. It is no longer a two-phase hover rig: it now runs 02's FULL
+flight machine — setpoint takeoff at the plan's own start point, hover-error-gated handover
+(no clock gating), tracked task, hover-gated setpoint landing, rotor ramp-off, auto-close —
+plus 02's Q_SPAWN arm-spawn + rigid re-seat + ground-seat, two-panel terminal frame (with an
+extra ROTOR cmd/real row), waypoint markers, flight-volume report and npz phase table. Kept
+PX4-specific: PX4-primary spawn, `LaggedQuadraticThrustCurve` (the MOTOR DELAY MODEL,
+lambda = 10.51), omega published to the external bridge, the armed+OFFBOARD engagement hold
+(phase 0), the 3.416 kg body override mirrored into the control model, and the
+`omega_cmd`/`omega_plant`/`omega_real` diagnostics. Dropped to match 02's scope: the
+EE-force disturbance block, the debug-draw arrows, `ARM_ALWAYS_PD_HOLD`.
+- **TUNING RESULT — the failure was the BODY ATTITUDE LOOP, not the arm gains** (20 headless
+  full-stack flights, `utils/px4_gmo_gain_sweep.py`, now `--traj`-aware and scoring per
+  PHASE off the npz phase table). Every crash was the same ~2.7 Hz mode, in all four joints
+  AND the body attitude at once, growing from the moment the law took the arm with a MOVING
+  reference. Cause: with `M_r_d = I0` the attitude loop's `wn = sqrt(k_R/0.065) = 11.1 rad/s`
+  at `k_R = 8` sits ON the rotor-lag pole (10.51), so the moment commanded to cancel the
+  arm's reaction arrives ~90 deg out of phase and pumps the mode. At `k_R = 8` poly_whole
+  crashed at `K_y` = 8, 24, 60, 120, 150 AND 300, and the single `K_y = 200` completion did
+  NOT repeat — that was a marginal system's run-to-run scatter (the stack is wall-clock PX4
+  + DDS, not deterministic), which is why every candidate is now repeat-tested. `k_R` 8→4,
+  `k_w` 2→1.5 (wn 7.85, same zeta) flew at `K_y` 8, 60 AND 200 — a 25x range — and repeats
+  3/3 within 3%. Because this is a PLANT property, k_R/k_w live in `default`, and they
+  **supersede the 2026-07-31 hover tuning's k_R = 8** — that was validated with the arm
+  hanging at q=0 and a climb-ramp takeoff; in this demo's configuration hover_drone at
+  k_R = 8 diverges ~4 s after the handover, while k_R = 4 holds 90 s at 0.5 mm CoM rms /
+  1.0 mm EE. `default` also gets `tau_max` 4.1→3.0 so the law and the demo clamp at the
+  same number. The `poly_whole` section then carries ONE deviation, a tracking choice:
+  K_y 200 (free.yaml's stiffness; 60 → 0.6 mm and 8 → 2.5 mm pinned EE also fly 3/3) with
+  **D_y 24**, which is NOT optional — free.yaml's D_y 6 crashes and 12 crashes, 24 and 48
+  fly. `K_o` stays 0.5 on all ten channels (raising the six BODY channels to 1.0 crashes:
+  the GMO books the rotor lag as a phantom disturbance). Measured on the shipped config,
+  4/4 complete flights: CoM rms 7 mm, EE rms 0.1 mm, pinned-phase EE 0.2 mm, |e_R| max
+  0.009, peak arm torque 1.4 of 3.0 N·m, touchdown at exactly 0.305 m, arm back at home.
+- **Trajectory de-aggression for this plant** via a new planner hook,
+  `utils_planner.traj_config` + `cfg_overrides=` on `build_traj`/`initial_arm_pose` (unknown
+  key = error, except documented-optional `q_hold`): the demo's `TRAJ_CFG_OVERRIDE` holds
+  `pin_mode "combo"→"yaw"`, phases 6→9 s (peak |v| 0.75→0.50 m/s, |a| 0.48→0.21 m/s²) and
+  `beta_home` 86→80 deg. The catalogue is UNTOUCHED, so 02 keeps its validated numbers.
+  beta_home is a JOINT-STOP fix: at 86 the law's ~3.5 deg overshoot folding back to home
+  put q3 at 49.4-49.7 deg against the +50 hard stop on every flight; 80 leaves ~4 deg.
+- **CATALOGUE DEFECT FOUND, NOT FIXED (02 flies it today)**: `TRAJ_CONFIG["poly_whole"]`'s
+  `pin_mode: combo` + `pin_phase_deg: 90` starts the pinned fold at `beta_work + 30` while
+  the fly-in ENDS at `beta_work`, so the plan is DISCONTINUOUS at BOTH pinned joins — a
+  measured 61 mm step in `x_cd` and 16 deg in the recovered arm pose, twice per flight. The
+  EE reference is continuous across it, which is why an EE-error metric never showed it.
+  `pin_mode: yaw` measures 0.0 mm / 0.0 deg. Fixing the catalogue needs its own 02 flight.
+- **A ground-seated vehicle needs a FOLDED arm.** `hover_drone` has no `q_hold`, so the arm
+  hangs at q = 0, which reaches 0.282 m below the base — below the legs at the 0.305 m
+  resting height. Seated, the vehicle rests on its gripper and tips over during the
+  pre-engagement wait (measured: rolled 74 deg, 0.57 m off, before PX4 armed). The old
+  midair-spawn version never met this. Fixed by giving hover_drone the same folded home
+  through `TRAJ_CFG_OVERRIDE`; the demo also WARNS at startup when the spawn fold
+  `beta = q2+q3 < 40 deg`.
+
+**AM-T650: THE AERIAL MANIPULATOR UNDER THE fsc_autopilot_ros2 DIRECT-ACTUATION STACK
+(2026-08-10, user request — the safe-fallback integration step for the whole-body
+controller).** T650 is the airframe the real AM will be built on, so the AM plant now has a
+variant carrying the T650 parameters, flown by the external quadrotor-only DIRECT law while
+the arm is parked. `application/robotic_arm/04_px4_direct_t650_aerial_manipulator_hold.py` spawns
+`AM_realign.usda` PX4-primary (inline spawn, 03's pattern) with `t650_params`' MN4010
+calibration (ω 64.06..730.05, k/c incl. both fit factors, λ = 10.0265 via
+`LaggedQuadraticThrustCurve`) and re-authors `/body` to the T650 2.95 kg + T650 inertia on
+the live stage → **TOTAL 3.746 kg** (AM rotors 4×0.039887 + arm 0.636624 add on top — NOT
+x650_new.usd's lighter rotors). In-process it does exactly one thing: the flight-validated
+02/03 arm hold (PD KP 3.0/KD 0.25 + `dynamics()` gravity comp, clamp 3.0 N·m, slewed ref)
+at the user-specified home `q_home = [0, 40°, 40°, 0]`, hardcoded — no planner dependency —
+running unconditionally (ground/SAFETY/DIRECT). Keeps 02/03's spawn-at-home + rigid re-seat
++ ground-seat, effort-mode arm DOFs, armature, gripper-drive pin, collider/scene fixes; drops
+the whole-body law, mixer, bridge, flight machine, npz. Reads `PEGASUS_PX4_LOCKSTEP`
+(indoor-launcher convention; 03 hardcodes False instead) and does NOT start paused (the
+mocap emulator needs `/uav_0/state/*` flowing). Launcher
+`scripts/indoor_sim/start_t650_aerial_manipulator_direct_actuation_sitl.sh` = the T650 DIRECT wrapper pattern
+(agent pre-check, lockstep export + tmux-server push, offboard param script) but setting the
+`INDOOR_SIM_*` hooks itself (04's script, label AM-T650, own PX4 profile
+`rootfs_fsc_indoor_am_t650`) and exec'ing the x650 base launcher directly. Pairs with
+fsc_autopilot_ros2's `start_direct_actuation_t650_aerial_manipulator_stack.sh` +
+`config/params_single_drone_direct_actuation_t650_aerial_manipulator.yaml` (dev_CCM): a copy of the T650
+tune whose ONLY value changes are the four `vehicle_*` numbers — mass 3.746172,
+thrust_scaling/idle_thrust RE-DERIVED about the heavier hover point (0.036206/0.236457,
+hover ≈ 0.569 vs bare 0.503; the +23% mass is far off the tangent-fit anchor, so copying
+was not an option) — verified: key set identical, exactly 4 value diffs, rounded values
+reproduce hover to −2.3e-06. **The yaml's `vehicle_mass` must equal the TOTAL the spawn
+prints; the printout is the truth.** Known-accepted: alloc px/py stay geometric while the
+folded arm offsets the CoM (standing trim expected — if the rate integrator parks near
+i_max 0.09, seed `ratectl_trim_*` from `rate_control_debug[3..5]`); rate gains are the
+T650/X650 carry-over on a heavier, higher-inertia plant (watch yaw first — the 2.45×
+sim-yaw-gain caveat applies unchanged). Commands: Command.md §7.7.
+**FIRST FLIGHT FLIPPED ON LIFT-OFF (2026-08-10) — ROOT CAUSE: AM_realign's rotor CHANNEL
+INDEXING is mirrored vs x650_new.usd** (ch0 front-LEFT, ch1 rear-RIGHT, ch2 front-RIGHT,
+ch3 rear-LEFT — read off the live stage), which EXACTLY NEGATES THE ROLL ROW of any
+standard Quad-X allocation while leaving pitch/yaw correct — and the flip happened in
+SAFETY mode, where PX4's OWN mixer does the allocation, so no yaml-side fix could reach it
+(observed ω=[427,467,466,427]: the left pair commanded low while PX4 believed it was the
+right pair). This plus the front-on-+y quirk is fixed at the ASSET level, per the user's
+standing plan to re-author the front onto body +x: **`AM_xfwd.usda`**, generated by
+`utils_model/make_x_forward_asset.py` (AM_realign untouched, still serves all whole-body
+demos). The transform exploits the postprocessed layout (every link/joint frame authored at
+identity): rotate every non-body link's pose by Rz(−90) (frame moves WITH content — nothing
+inside needs touching), keep /body's frame while rotating its mesh child + CoM and swapping
+Ixx↔Iyy, and rotate the body-side localPos0/localRot0 of the 5 body-anchored joints
+(joint0..3, manip_joint1). Result: arm on body +x; rotors r0 FR/CCW, r1 RL/CCW, r2 RR/CW,
+r3 FL/CW — x650_new's convention with CHANNELS 2↔3 SWAPPED, so 04 remaps
+ROTOR_PATHS=[rotor0,rotor1,rotor3,rotor2] and the plant presents exact PX4 Quad-X. 04 also
+gained a gravity-comp FRAME ADAPTER (R0_model = R0_actual·Rz(−90) — make_params/dynamics
+still describe the OLD frame; exact for any attitude since only the frame label changed,
+verified identical at level attitude). The whole-body stack (make_params, RotorMixer,
+planner z-x-z, EE_SAG, path_yaw_deg=90) is NOT migrated — it keeps flying AM_realign.
+**SIM-VALIDATED same day (headless full stack, flown end-to-end by Claude):** SAFETY
+takeoff on a streamed z=1.2 reference (SAFETY holds the ground position until a reference
+arrives — stream it at ≥20 Hz, ONE publisher only), hover 4 mm, DIRECT entered in-flight
+and held 50+ s zero-drift with no watchdog trip, SAFETY reversion, 0.2 m/s descent to
+touchdown; hover command 0.5687 vs 0.569 predicted; arm ≤0.6° from home throughout; the
+forward-arm CoM shows as the predicted standing pitch trim (front pair ~+37 rad/s),
+absorbed cleanly. PX4 denies disarm until the land detector sees low thrust — land by
+reference, then disarm. Rendered confirmation run still pending.
+**ARM FEEDFORWARD (2026-08-10, user-reported symptom: X underdamped/slow while Y clean).**
+Cause: the arm folded at home puts the CoM **19.5 mm FORWARD** (model at q_home; independently
+19.3 mm by back-solving the flown hover's rotor commands 59.7/54.1%), a constant **+0.72 N·m**
+nose-down pitch moment. `alloc_rotor*_px/py` are geometric, and per rate_controller.hpp ONLY the
+rate integrator can absorb a torque bias (attitude loop is pure P; the UDE compensates force) —
+so every engagement re-learned it while the vehicle tilted. dy = −0.1 mm is why ROLL/Y was clean:
+the symptom's asymmetry is the arm's asymmetry. Fixed CONFIG-ONLY with the purpose-built
+`ratectl_trim_y: -0.040` in `params_..._t650_aerial_manipulator.yaml` (dev_CCM) — **no control-law change**.
+Value COMPUTED, not tuned: the normalized FLU pitch torque whose allocated commands give zero
+physical moment about the true CoM at hover collective (normalized pitch 1.0 = 11.12 N·m; uses
+44% of i_max), predicting 59.7/54.1/59.7/54.1% against the flown 59.7/54.1/59.6/54.0%.
+**Do NOT instead CoM-reference `alloc_*_px`** (design_decisions.md's action item): the
+effectiveness matrix assumes thrust ∝ command but the real curve has a large affine offset, so
+that OVER-corrects (+0.72 → −0.50 N·m), verified through this repo's own NormalizedMix.
+Matched A/B flown (arm→climb→engage DIRECT, trim 0 vs −0.040): X peak excursion **97.7 → 2.1 cm**,
+settling **23.1 → 4.1 s**, both settling to the same I_y ≈ −0.0394. Two testing traps, both hit:
+(a) there is NO on-set-parameters callback, so `ros2 param set` changes what `param get` reports
+while the controller keeps the YAML value — relaunch with `params_file:=` to A/B; (b) `reset()`
+(which applies the trim) fires on the **ARMING edge**, not the mode switch — SAFETY↔DIRECT uses
+`resetDerivative()` and deliberately PRESERVES the integrator — so land/disarm/re-arm between
+trials. Full write-up: `docs/docs_aerial_manipulator/Feedforward Compensation for Home-Pose Arm.md`.
+Still open: SAFETY mode has the same bias and PX4's own integrator re-learns it (unreachable from
+this config); a true q-dependent feedforward belongs to the whole-body controller, not this rig.
+**BOTH CONTROL PATHS NOW EXIST, AND THE SLOW-STEP DIAGNOSIS (2026-08-11, user request).** The AM
+rig gained a BASELINE (SAFETY-only) counterpart so the arm's compensation exists on both paths:
+new `scripts/indoor_sim/start_t650_aerial_manipulator_baseline_sitl.sh` (the direct launcher minus the lockstep
+disable — baseline WANTS lockstep, and it now asserts `PEGASUS_PX4_LOCKSTEP=1` + clears the tmux
+global so a stale 0 from a DIRECT run cannot leak), pairing with fsc_autopilot_ros2's
+`start_baseline_t650_aerial_manipulator_stack_fused.sh` + `config/params_single_vehicle_baseline_t650_aerial_manipulator.yaml`
+(dev_CCM). Both Isaac launchers share `04_px4_direct_t650_aerial_manipulator_hold.py` (control-agnostic — it only
+spawns the plant and holds the arm) and the PX4 profile `rootfs_fsc_indoor_am_t650`.
+**The arm's FORCE is fed forward on both paths via `vehicle_mass` 3.746170**, read independently by
+robust_controller's gravity term and the UDE; the one-number check is
+`position_controller/ude.disturbance_estimate.z`, measured **+0.05 N** on both (it would be ≈ −8.3 N
+if the bare-T650 yaml's 2.9 kg were loaded — a 29% error). The arm's TORQUE stays DIRECT-only:
+the baseline node builds no rate controller, and **PX4 v1.16 has no multicopter torque trim**
+(`TRIM_PITCH` exists only in fw_rate_control/rc_calibration, zero refs under control_allocator or
+mc_rate_control) — verified, not assumed.
+**SLOW x/y/z STEP CONVERGENCE WAS NOT MISSING FEEDFORWARD.** robust_controller.cpp ALREADY
+implements velocity/acceleration/thrust feedforward and `PositionControllerReference` already
+carries all three fields — but a STEP has zero velocity and zero acceleration, so every FF term is
+zero by construction and no feedforward can speed up a step. The cause is the poles: `nested` form
+is `k_vel*(vel_err + k_pos*pos_err)` in NEWTONS with **no mass normalisation**, so the arm's +23%
+mass alone cost 10% of both wn and zeta. Fixed per path — baseline `k_vel` 3.0→**3.70** (pure
+mass-restore of the hardware-validated T650 response; deliberately NOT higher, because
+docs/sim_to_real_fidelity.md measured sim overstating the settling benefit of raising k_vel by
+**5.8×**, which is how a sim-tuned 8.0 was walked back to 3.0), DIRECT 3.0→**7.0** (the X650 DIRECT
+value, hardware-validated at a near-identical 3.5 kg, where higher k_vel is stabilising against the
+~120 ms attitude lag). Measured DIRECT A/B: x/y rise 2.0-2.5→1.6-1.7 s, overshoot 42-53→25-30%,
+final err ±52-100→±2-14 mm; z overshoot 14-19→0-0.5%, settle 11.0→5.8 s. **The second-order formula
+describes the Z AXIS ONLY** (z drives collective directly; x/y close through the attitude loop) —
+it predicted 4.3 s/5.3% at 7.0, z measured 5.8 s/0% but x/y 15.7-17.8 s/25-30%. That residual x/y
+underdamping is the attitude lag. **x/y RINGING FIXED by LOWERING k_pos 1.0→0.6** (DIRECT only;
+zeta = sqrt(k_vel/(4*k_pos*m)), so lowering k_pos raises damping WITHOUT asking the inner loop for
+bandwidth — the cascade remedy when the inner lag is fixed): x/y overshoot **25-30% → 0.0-0.4%**,
+settling **15.7-18.9 → 9.6-10.1 s**, final err ±2-14 → ±0.1-3.0 mm, at the cost of rise 1.7 → 3.3 s.
+k_pos_z stays 1.0 (z never rang). Safe to adopt from sim because it LOWERS gain — the 5.8x
+sim-overstatement warning applies to raising. **Two hypotheses measured and REJECTED first, do not
+retry**: (a) more torque feedforward — the trim already compensates it AND a pitch-only bias cannot
+ring ROLL, yet y overshot 29.5% vs x 25.5% while dy = -0.1 mm; (b) inertia-scaled rate gains — the
+arm really does raise inertia x1.53 roll/x1.86 pitch/x2.02 yaw (coupled mass matrix at q_home vs
+bare T650), but scaling ratectl_kp/ki/kd by that ratio gave NO improvement (23.5-29.5% vs 25-30%),
+so the rate loop is not the limiter, the 99.7 ms rotor lag is. Full write-up incl. the per-path
+table: `docs/docs_aerial_manipulator/Feedforward Compensation for Home-Pose Arm.md` §6-7.1;
+commands: Command.md §7.8. Baseline path still at k_pos 1.0 with 42-50% x/y overshoot — the same
+fix would likely help but is UNMEASURED there.
+**TRUE ARM TORQUE FEEDFORWARD (2026-08-11, user request — the first fsc_autopilot_ros2
+control-law change).** The trim was the hover-only, arming-edge approximation; the arm is a
+KNOWN wrench, so the DIRECT node now cancels it exactly every tick: new optional
+`system_ff_tau_{x,y}_per_coll/_const` params (default 0.0 = off, other vehicles bit-identical)
+add `per_coll*collective + const` to the commanded torque before allocation. Closed form
+`tau_ff_y(c) = -dx/(√2·L)·(c + b/a) = -0.060c - 0.0058` — evaluated at hover it reproduces the
+flight-calibrated trim (-0.0399 vs -0.040) BEFORE any code was written. AM yaml sets it and
+zeroes `ratectl_trim_y`. Flown: settled I_y **-0.0394 → +0.0005** (integrator fully freed),
+step metrics unchanged-or-better. Exact at every thrust level (climbs/z-steps no longer dump
+0.060·Δc onto the integrator); q-dependent dx(q) is the whole-body controller's opening move.
+Write-up: `Feedforward Compensation for Home-Pose Arm.md` §8.
+**RESTRUCTURED same evening (user request): the feedforward no longer touches the shared
+node.** fsc_autopilot_ros2's `single_drone_direct_actuation_client.{hpp,cpp}` were reverted
+byte-identical to upstream, and the feedforward now lives in a deliberate PARALLEL FORK,
+`fsc_autopilot_ros2_node/single_aerial_manipulator_direct_actuation/`
+(`autopilot_aerial_manipulator_direct_actuation_node`, launched by
+`single_aerial_manipulator_direct_actuation_launch.py`) — same node name/topics/services as
+the parent, so this repo's side cannot tell them apart; bug fixes do NOT auto-propagate
+between the two clients. In the same pass every `am_t650` file was renamed to
+`t650_aerial_manipulator` in both repos (launchers, yamls, the 04 hold script) — EXCEPT the
+PX4 profile directory `rootfs_fsc_indoor_am_t650`, kept on purpose: renaming it would
+re-clone a fresh 39 GB rootfs and orphan the saved AM params.
+
+**ROS2 POSITION-MODE ARM STACK (fsc_open_manipulator) INTEGRATED (2026-08-13, user
+request — first step toward external arm control; torque mode later).** The AM-T650
+DIRECT rig gained a sibling where the arm is commanded OVER ROS2 by the real
+OM-X position-mode stack instead of 04's in-process hold. New, all incremental (04 and
+its launcher untouched): `application/robotic_arm/05_px4_direct_t650_aerial_manipulator_ros2_arm_hold.py`
+(04's plant verbatim; the hold law's REFERENCE now comes from
+`/uav_0/isaacsim_manipulator/position_commands`, joint states/efforts go out on
+`/uav_0/isaacsim_manipulator/joint_states` under controller-side names joint1..4 — the PD+gravity+clamp
+hold is unchanged and acts as the Dynamixel-servo emulation, AK40-10-emulator pattern;
+reference LATCHES if the stack dies, so solo it behaves exactly like 04) +
+`scripts/indoor_sim/start_t650_aerial_manipulator_geometric_direct_actuation_sitl.sh` (the 04 direct
+launcher plus a detached-helper tmux window `arm` with the ros2_control stack — gated on the
+Isaac topic — and the ARM GROUND STATION `joint_plot_inverted`; two ground stations total
+with the drone one; same PX4 profile as 04 on purpose, same plant). The arm side lives in
+`~/ros2_ws/src/fsc_open_manipulator` (workspace repo + Gao907/open_manipulator fork on
+omx-torque-control, cloned 2026-08-13): new package `open_manipulator_x_isaac_bridge`
+(topic-based `hardware_interface::SystemInterface` plugin `IsaacTopicSystem` — read()
+latches JointState by name, write() publishes commands; on_activate BLOCKS for the first
+Isaac state so the controller never snapshots NaN; stub URDF carries only the ros2_control
+block; gripper-less copy of the AERIAL config — inverted-only per the user, home
+[0,40°,40°,0] = the plant's spawn pose so activation homing is a no-op) running the REAL
+`PositionController` plugin. Machine facts (shiqi-desktop): no system ros2_control/pinocchio
+and no sudo → 30 debs extracted root-lessly to `~/ros2_ws/rosdeps/` (its `local_setup.bash`
+documents the future `sudo apt install` replacement; octomap runtime libs symlinked, 2
+non-relocatable cmake paths patched); Qt 6.8.3+Charts via aqtinstall to `~/Qt` (custom_gui's
+expected location); **one fork change**: `open_manipulator_x_custom_controller/CMakeLists.txt`
+additionally links `pinocchio::pinocchio` — ros-humble-pinocchio 4.0's Boost.MPL sizing
+defines and deprecated-header include dir only travel on the modern target, and
+`ament_target_dependencies` drops them (harmless on the bench machine's older pinocchio).
+The workspace builds STANDALONE inside its repo (`colcon build --base-paths src`, a
+gitignored `COLCON_IGNORE` at its root keeps `~/ros2_ws`-level builds out). Config hooks in
+`shiqi_machine.conf`: `FSC_OM_ARM_WS`, `FSC_OM_ARM_ROSDEPS_SETUP`. VALIDATED 2026-08-13
+headless (ground-seated, no PX4 — drone path is 04's, not re-flown): real plant + real stack
+hold home, track a 4-joint target and go_home through the real interfaces, all <0.05° steady
+error, hold torque ≈0.7 N·m; the user then ran the full workflow live. **NAMESPACED under
+/uav_0 same day (user request)**: the launch takes `namespace` (default uav_0, nodes +
+spawners), the yaml nests its node keys under `/uav_0:` (launch namespace and yaml nesting
+must change TOGETHER — a mismatch means params silently don't apply and the controller fails
+on empty `joints`), and the controller's logging topics went namespace-relative — so the
+whole arm interface sits beside the drone's: /uav_0/controller_manager,
+/uav_0/arm_position_controller/…, /uav_0/{joint_states,joint_desired_states,joint_measured_states}.
+This required making custom_gui's ROS names NAMESPACE-RELATIVE (they were absolute
+"/..."; bare launches still resolve to the root, so the bench workflow is unchanged) — the
+sim's station runs with `-r __ns:=/uav_0`. Re-validated loopback (hold/move/go_home PASS)
+and on the wire: the namespaced GUI publishes/subscribes the /uav_0 target topic, follows
+/uav_0/joint_states, and adopts the working range via the namespaced parameter service.
+**SUPERSEDED 2026-08-15 by the OWNER-PREFIX topic scheme** (user request; full convention in
+`docs/docs_aerial_manipulator/Arm Topic Naming.md`): every topic now sits under the namespace
+of the PACKAGE that owns it, mirroring the flight stack's own /uav_0/fsc_autopilot_ros2/… —
+so the real arm stack moved to **/uav_0/fsc_open_manipulator/**{joint_states,
+joint_desired_states,dynamic_joint_states,arm_position_controller/…,controller_manager} and
+the Isaac servo emulation (sim-only, absent on hardware) to
+**/uav_0/isaacsim_manipulator/**{joint_states,position_commands}. The whole first group comes
+from ONE launch argument (`namespace:=uav_0/fsc_open_manipulator`) because the yaml keys were
+flattened to the `/**/<node>:` wildcard the same day — so the "launch namespace and yaml
+nesting must change TOGETHER" trap above is GONE. **The wildcard must be FLAT**: `/**:` with
+the node nested under it parses and matches nothing (verified live at two namespaces). The
+GS `__ns` and the launcher's stack-readiness gate both derive from the launcher's single
+`ARM_NS`, and fsc_autopilot_ros2's `armff_joint_topic` became the relative
+`fsc_open_manipulator/joint_states`. NOT flown yet.
+Commands: Command.md §7.9. **ARM-REPO CONSOLIDATION same day (user request — supersedes
+this entry's workspace paths)**: the two arm repos (workspace repo + ROBOTIS fork) were
+merged into ONE, fork-rooted, histories preserved; on GitHub the fork takes the
+`fsc_open_manipulator` name and the old workspace repo is archived. New layout on this
+machine: `~/colcon_ws/src/fsc_open_manipulator` (packages at repo root — custom_gui,
+open_manipulator_x_isaac_bridge, the controller, the ROBOTIS set) with the three pinned
+Dynamixel deps vcs-imported beside it; `~/ros2_ws/src/fsc_open_manipulator` is GONE
+(deleted after the merge; the rosdeps overlay at `~/ros2_ws/rosdeps` is a separate path
+and STAYS). `FSC_OM_ARM_WS` now points at the workspace `~/colcon_ws` (launcher derives
+`$FSC_OM_ARM_WS/install/setup.bash`); builds are plain `colcon build --packages-select`
+from the workspace root, no `--base-paths`/COLCON_IGNORE machinery. ROBOTIS releases
+merge straight in (`git merge upstream/humble`). Rebuilt + loopback re-validated after
+the move (hold/move/go_home PASS).
+
+**GEOMETRIC + L1-ADAPTIVE STACK (2026-08-20, user request — the controller of Cai et al.,
+"An experiment study for unmanned aerial manipulator systems with L1 adaptive augmentation
+of geometric control", CEP 164 (2025) 106418; PDF in `docs/docs_aerial_manipulator/`).**
+A THIRD external controller for the §7.9 rig, implemented as a parallel fork in
+fsc_autopilot_ros2 (`single_aerial_manipulator_geometric_l1_direct_actuation`, node
+`autopilot_geometric_l1_direct_actuation_node`, params
+`params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml`, stack script
+`start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh`). DIRECT mode runs the
+paper's **constant-position/constant-yaw specialization** at 250 Hz straight from the
+position reference (the message has no jerk/snap/yaw-rate fields, so ω_d = ω̇_d = 0; do not
+claim full time-varying-trajectory equivalence): u_b = geometric SE(3)
+(position+attitude in N/N·m, with the arm's measurable wrench compensated through the LIVE
+r_os from the arm encoders — at home it reproduces the flown −0.0195 N·m/N to the reported
+precision) plus
+u_L1 = L1 augmentation (predictor on [v;ω], piecewise-constant adaptation with Ḡ inverted
+once per distinct feedback capture stamp (4 ms fixed physics step in Isaac, stamp delta on
+hardware), LPF; matched channel only; predictor fed the allocator's
+ACHIEVED wrench as anti-windup; injection clamped ±6 N / ±1.5/0.8 N·m). No attitude
+integral, no UDE in DIRECT — L1 replaces both; SAFETY is the unchanged baseline for
+takeoff/abort. Attitude gains carried from §7.10.4's sim-validated 1.0/0.55 (the paper's
+KR 1.92/Kω 0.3 gives ζ≈0.2 against the MN4010 rotor-lag pole — do not "restore" them on
+this plant); position pair is the paper's mass-scaled and softened (Kp 4/4/8, Kv 6/6/10);
+L1 poles/bandwidth are a conservative first-flight tune below the paper's 65/80/ωc 6, not
+an RTF correction. **FLOWN 2026-08-24 — see the campaign entry below.** Before that it
+was only **static-harness checked 2026-08-20**: synthetic harness
+(§7.10's pre-flight standard) reproduced the hover split 0.597/0.540 exactly, u_L1 ≡ 0 at
+a model-consistent hover, and the adaptation converged to the numerically correct matched
+estimate (γ_f + f_applied = mg ± 0.8 N) against a frozen plant. First campaign = hover
+test. Commands + debug-array layout: Command.md §7.12.
+**DERIVATION + IMPLEMENTATION VERIFIED 2026-08-20 (Command.md §7.12.2).** The paper's
+law re-implemented in its own NED/FRD frame agrees with this ENU/FLU implementation to
+4e-16 N·m over 400 random states with ω up to 1.5 rad/s; the closed loop reproduces the
+paper's eq (27) `I ė_ω = −K_R e_R − K_ω e_ω` exactly (the r_os feedforward cancels d_im1
+and ω×Iω); and the LIVE node matches an independent Python reference to 3e-8 N·m at
+non-trivial states — **including ω = 1.1 rad/s, which the hover bench could never test
+because every centripetal term is identically zero at hover**. Three defects were found
+and fixed in the pass: (a) the UDE was integrating the ROBUST controller's command in
+DIRECT, a command this node never applies, corrupting the SAFETY abort — now fed the
+achieved collective; (b) the L1 predictor used forward EULER, measured to diverge at the
+dt gate's 50 ms ceiling with the paper's own A_s = −65/−80 — now the exact zero-order-hold
+update, the same fix `lagged_thrust_curve.py` records for the rotor lag; (c) **the law and
+the predictor used different gravity constants** (9.80665 vs 9.81), which a 30 s hover soak
+exposed as u_L1 settling at −0.119 N instead of zero — the two form one loop, so a constant
+model disagreement is indistinguishable from a real disturbance and is amplified by
+≈1/(|A_s|·T), 10x here. Every constant shared by the law and the predictor must come from
+one place. NOT a defect but needed to read logs: the PWC estimate under-reads a constant
+disturbance by e^{A_s·T} (10% in sim, ~50% at the paper's hardware poles).
+**POST-REVIEW CORRECTIONS, 2026-08-20:** restored the intended T650 body mass to 2.95 kg
+(the accidental `2.95 - rotor_mass` made the live AM plant 3.662249 kg against the YAML's
+3.746170 kg); the L1 launcher now enforces that total in Isaac; adaptation advances only on
+new feedback samples rather than wall-timer repeats; and arm FK subtracts the bare-airframe
+CoM `[0.00001019,-0.00030900,0.04178889]` m in model axes so r_os has the paper's O→S
+definition. The corrected live-node harness was rerun over hover and three non-trivial
+states, agreeing with the independent reference to 1.34e-6 N, 3.14e-8 N·m, and 1.79e-9 m
+in arm FK; its measured LPF coefficient implies the configured 4.000 ms sample period.
+The earlier claim that the paper printed a negative r_os block in G(R) was a
+typesetting misread: the minus belongs to the exponent in I^-1; paper and code agree after
+the NED/FRD→ENU/FLU thrust-sign conversion.
+
+**AM-T650 GEOMETRIC + L1 FIRST FLIGHTS — +20% kf AND +10 mm CoM AT ONCE (2026-08-24,
+user request).** The §7.12 node flew for the first time, twice, matched, with both
+robustness injections active and **no gain touched**. `armff_mismatch_x` 0.0085 →
+**0.010 m** (the round top of the 8–14 mm band the 0819 hardware flights bracket, not
+its mid-point); `alloc_thrust_coeff` unchanged at 5.6159172e-05 = **+20%** of the plant's
+4.679931202e-05. Mission = §7.13.2's, so the numbers sit beside the bare-T650 campaign's;
+driven by the SAME `l1_payload_campaign_driver.py` with `--hover-z 1.2 --land-z 0.35`
+(no fork needed — it is namespace- and debug-length-agnostic), scored by a NEW
+`docs/sim_to_real_t650/tools/am_l1_robustness_metrics.py` that knows this plant and reads
+the AM-only debug fields. Data: `docs/sim_to_real_t650/am_l1_robustness_20260824/`.
+Runs A/B agree to the third decimal: u_L1 thrust **7.303 N** (predicted 7.350, **73% of
+the 10 N clamp, 0 samples railed**), f_b 36.796 = mg, commanded 44.099 N →
+44.099×(4.679931/5.6159172) = **36.75 N delivered = exactly hover** (so the mismatch is
+demonstrably active and L1 absorbs all of it — the baseline never notices), motors
+0.597/0.540, |e_R| ≤ 0.0073, arm at HOME and **debug [39] = 2 (live encoders) for 100% of
+samples**, touchdown 0.339 m at 0.18°.
+- **THE ACCOUNTING TRAP, and it inverts the verdict.** Scoring the CoM injection as
+  `dx_err*f_b` = 0.368 N·m makes L1's +0.2354 N·m look like a **64%** cancellation, i.e.
+  a failure. It is not: the moment channel carries the **+20% allocation error too**, and
+  there the two injections partly OFFSET. What the plant needs commanded is
+  `-dx_true*T*(kf_c/kf_p)` = −0.8622; the baseline commands −1.0837; so the required u_L1
+  pitch is **+0.2217** and the measured +0.2354 is **106% of it**. **Never score one
+  injection without the other when both are on.** I published the 64% number before
+  catching this — the metrics script now does the full arithmetic.
+- **The residual 0.011 N·m is why position error exists, and it is the paper's STRUCTURE,
+  not a tune.** Attitude loop is pure P → parks at e_R ≈ 0.0039 rad; position loop is pure
+  P/D → parks at `T·e_R/Kp` ≈ 3.5 cm. Measured settled X offset 3.4–4.9 cm (was ~3 cm at
+  the old 8.5 mm injection — it scales). §7.13's finding (b) mechanism, different source.
+- **Do NOT read the X-STEP "final error" as settled.** X has a slow residual mode of tens
+  of seconds (still moving 0.04 m per 6 s at the end of the 15 s window), so the −80/−99 mm
+  on the +0.5 m X step is a WINDOW ARTIFACT. Z does not close through the attitude loop and
+  does settle: −7.1 to −7.6 mm, both runs, both directions.
+- **PX4 never disarms this rig** (`Disarming denied: not landed`, forever, even seated at
+  exactly 0.305 m with the reference pushed below it). Identical to the bare-T650 campaign
+  at `--land-z 0.28`, so it is NOT the AM and NOT the land target — do not "fix" it by
+  lowering the land target (0.12 tipped the whole-body rig). Full step-0 clean and relaunch
+  between missions; the driver already refuses to start against an armed vehicle.
+- Expected, not a fault: the DIRECT→SAFETY abort balloons ~560 mm (§7.13 finding (c) —
+  the SAFETY UDE books the DIRECT-only mismatch as a disturbance). Sim-injection artifact.
+- **Doc drift fixed:** Command.md said `l1_control_debug` is 41 elements; the code has
+  published **44** since 2026-08-20 ([41..43] = the injected mismatch, which is what lets
+  an analysis recover the TRUE r_os as [36..38] − [41..43]).
+- **GROUND-STATION PANE NEVER STARTED ON THIS MACHINE, and it was the INTERPRETER.**
+  `python3` first on PATH is the Isaac env's 3.11, which has neither PyQt5 nor an rclpy
+  built for it, so the `gui` pane of every stack script died at import while every other
+  pane was fine. `start_geometric_l1_direct_actuation_t650_aerial_manipulator_stack.sh` now
+  PROBES for an interpreter that can import both (override `FSC_GS_PYTHON`), non-fatally —
+  it picked `/usr/bin/python3` and the station came up. **The other 12 stack scripts still
+  have the bare `python3`.** Verified live in DIRECT: drone GS shows Controller
+  "Geometric+L1 Direct Actuation", Vehicle "AM-T650-L1", and **N/T pies M1 59.6 / M2 54.0 /
+  M3 59.7 / M4 54.2%** — the ros2_ground_station_gui uncommitted `geometric_l1_direct_actuation`
+  motors_debug entry working (`ros2 topic info` on that topic reads Publisher 1 /
+  Subscription 1); the arm GS shows POSITION mode, the arm at HOME, live joint limits
+  adopted from the controller, and today's new EE Whole-Body tab. Screenshots in the
+  campaign directory. **The monitor is DPMS-off on this machine — screenshots come back
+  all-black until `xset dpms force on`.**
+- Dead code worth knowing before someone trusts it: the GS's `direct_mode_client` is
+  hardcoded to the `direct_actuation` namespace, so it would NOT reach this fork — but
+  nothing calls it. The Controller tab uses the fork-agnostic
+  `fsc_autopilot_ros2/list_controllers` + `activate_controller` pair, which is why the tab
+  works on every fork.
+Full campaign: Command.md §7.12.5.
+
+**BARE-T650 GEOMETRIC + L1 (2026-08-21, user request — the no-arm parallel of the §7.12
+rig).** fsc_autopilot_ros2 (dev_CCM) gained a second L1 fork,
+`single_drone_geometric_l1_direct_actuation` (executable
+`autopilot_drone_geometric_l1_direct_actuation_node` — decorated because the AM fork owns
+the plain name. **The decoration is INFIXED** ("autopilot_" + "drone_" + the rest), so
+neither name is a substring of the other and `pgrep -f` on either matches exactly ONE fork
+— every stale-node guard must therefore list BOTH explicitly, which is a defect found and
+fixed 2026-08-21 after all three L1 scripts had been shipped with the decorated name
+missing, i.e. unable to detect a stale instance of their own controller),
+namespace `nodelib::single_drone_l1`: the AM L1 client minus the whole arm model — r_os ≡ 0
+on a bare airframe (the paper's O→S with O = bare CoM), no `armff_*` keys, no joint-state
+subscription, debug array 37 elements ([0..35] = the AM layout, [36] = L1 active). Same
+frozen mode-service name `fsc_autopilot_ros2/geometric_l1_direct_actuation/set_direct_mode`.
+Yaml `params_single_drone_geometric_l1_direct_actuation_t650.yaml` = bare-T650 plant/SAFETY
+numbers (mass 3.033921, posctl 1.0/3.0, ude_gain 2.0) + the AM campaign's L1 tune (A_s 2/2,
+ωc 6, 10 N thrust bound) + the SAME deliberate +20% `alloc_thrust_coeff` (5.6159172e-05;
+plant truth 4.679931e-05) — the §7.12.4 robustness protocol minus the r_os injection (no
+arm model to corrupt; the thrust mismatch is the whole test). Scripts: Pegasus
+`scripts/indoor_sim/archive/start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh` (plant twin of the
+geometric launcher; gates on the DECORATED node name, which is what lets it refuse the AM
+stack flying this plant), stack
+`scripts/isaacsim/start_geometric_l1_direct_actuation_t650_stack.sh`, hardware
+`scripts/indoor_exp/start_geometric_l1_direct_actuation_stack_t650.sh` (greps the yaml and
+warns loudly while the +20% coefficient ships — restore the bench motor pair before any
+hardware flight). The older geometric stack/exp scripts' stale-controller lists gained the
+missing fork names. Commands + full campaign results: Command.md §7.13. **SIM-SWEPT
+2026-08-21, three findings that will bite again:** (a) the geometric sibling's attitude
+pair kr 2.4/kΩ 0.73 is NOT safe on the L1 node — its rate-loop crossover (9.5–11.4 rad/s)
+sits on the MN4010 lag pole and the L1 torque channel's ωc=6 LPF + one-sample delay eat
+the remaining margin; measured as a ~2.4 Hz mode that decayed in one run and grew +3%/s to
+a flip in the repeat (marginal, scatter-decided — repeat-test everything). Shipped kr
+1.2/kΩ 0.45, 3/3 clean with the step transient decaying within 4 s every run. (b) A
+constant ~4–5 cm −x/−y hover offset is the PLANT: γ̂_um reads a real ~0.20 N lateral force
+(x650_new.usd's built-in ~0.4° thrust-axis/body-frame misalignment), and the paper's
+integrator-less pure-P position loop parks exactly at F_lat/Kp (Kp·e_p = γ̂_um measured to
+a few percent, 3/3). (c) The
+DIRECT→SAFETY abort carries a one-off ~6 N vertical surge (~0.5 m balloon): the SAFETY-path
+UDE books the DIRECT-only mismatch as a disturbance and hands it to a SAFETY loop whose
+thrust model is honest — an artifact of the ASYMMETRIC sim injection that does not transfer
+to hardware (a real kf error lives in both models). Settled hover: u_L1 thrust +5.92 N in
+all three runs (predicted +5.95 — the mismatch closed), motors 0.502 symmetric, u_L1
+torque ≤0.053 N·m.
+
+**BARE-T650 L1 CARRYING A 769 g PAYLOAD (2026-08-24, user request — the loaded
+counterpart of the §7.13 campaign).** Last week's hardware loaded flight saturated the L1
+thrust clamp; the report `docs/docs_aerial_manipulator/L1 Against Battery Fade.pdf`
+(artifact "L1 Against Battery Fade") showed **two thirds of that demand was bookkeeping**
+— `vehicle_mass` left at the bare 3.033921 kg while the vehicle weighed ~3.88 kg cost
+8.28 N of the 12.8–15.3 N asked for; only 4.4–6.8 N was the battery fade being tested.
+Both of the report's recommendations are now applied, **no gain touched**:
+- **Isaac plant carries the payload.** New `PEGASUS_PAYLOAD_MASS` hook (kg, default 0.0 =
+  every existing rig bit-identical) read by `application/px4_base/05_px4_single_drone_t650.py`,
+  plumbed through `start_single_drone_x650.sh`'s Isaac pane command line (baked in, NOT
+  exported — the tmux-server-env trap that already bites `PEGASUS_PX4_LOCKSTEP`), and
+  defaulted to **0.769** by `start_t650_geometric_L1_adaptive_direct_actuation_sitl.sh`.
+  Total **3.802921 kg**. Payload is mass at the body CoM, **inertia UNCHANGED** — so the
+  sim does NOT reproduce the hardware payload's ~4 mm forward CoM shift (0.5→0.8 N·m
+  standing pitch moment) and its u_L1 torque reads far smaller than hardware's.
+- **yaml (`params_single_drone_geometric_l1_direct_actuation_t650.yaml`, dev_CCM):**
+  `vehicle_mass` 3.033921→**3.802921**, `l1adapt_max_thrust_n` 10→**18**, and
+  `vehicle_thrust_scaling`/`vehicle_idle_thrust` 0.040232/0.203169→**0.035935/0.238967**
+  — the SAFETY tangent linearization **re-derived, not copied** (+25.3% mass moves the
+  hover point off the bare anchor, the AM-T650 +23% lesson). Hover command 0.5025→0.5741.
+- **`alloc_thrust_coeff` stays 5.6159172e-05.** The report's finding that the REAL k_f is
+  the MN4010 bench value 4.540431e-05 (i.e. `THRUST_FIT_FACTOR` 1.030724 is a sim-only
+  hover-command match) is a **hardware**-yaml item: it wired nothing into the simulator, so
+  Isaac's plant truth is still `t650_params.ROTOR_CONSTANT` = 4.679931e-05 and +20% of it
+  is unchanged. THE PLANT-TRUTH NUMBER IS WHATEVER ISAAC APPLIES.
+**FLOWN 2026-08-24, 2/2 matched full-mission SITL runs** (§7.13.2's mission), agreeing to
+the third decimal: u_L1 thrust settles **7.416 N** (predicted 7.461) = **0 of 28750 DIRECT
+samples on the rail**, whole-DIRECT range 6.79–8.23 N;
+f_b = 37.35 N = mg exactly while the commanded collective is 44.77 N (**the baseline law
+never notices the kf error — L1 absorbs all of it**, the report's Flight-A signature);
+44.769×(4.679931/5.6159172) = 37.307 N delivered = exactly hover, so the mismatch is
+demonstrably active; motors 0.5741 symmetric; u_L1 torque 0.047 of 1.5 N·m; soak tilt
+0.15° p-p; steps within the bare campaign's numbers; touchdown 0.305 m.
+**Run C — last week's config on the loaded plant CANNOT TAKE OFF**, a stronger result than
+the expected sag: commanded collective **32.1 N against 37.31 N of weight** (bare-mass
+gravity FF 29.76 + ~2.3 position term), and the UDE that would supply the missing 5.2 N is
+gated off by `ude_height_threshold: 0.4` below 0.4 m — which the vehicle cannot reach
+without it. Ground deadlock. With the mass wrong the demand is 15.005 N, so the raised
+bound alone would have been consumed exactly: **both changes were needed, not either one.**
+**Two traps worth more than the numbers:** (a) `PEGASUS_PAYLOAD_MASS` and `vehicle_mass`
+must move together — launcher bare + yaml loaded gives the controller a 769 g phantom;
+(b) **never fly two missions off one launch.** PX4's land detector never sees this rig land
+(`Disarming denied: not landed` forever) so the vehicle stays armed, and the next run finds
+PX4 latched "in flight" AND the SAFETY UDE integrating the ground reaction — the takeoff
+then produces **zero lift with no error message** (measured: 60 s at ref z=1.0, altitude
+constant to 3 decimals). Full step-0 clean between flights; the campaign driver now refuses
+to start against an armed vehicle. Land to z = 0.28 (resting height 0.305 m, not the 0.07 m
+spawn). Tooling + data: `docs/sim_to_real_t650/tools/l1_payload_campaign_{driver,metrics}.py`
+and `docs/sim_to_real_t650/l1_payload_campaign_20260824/`; both need `/usr/bin/python3`
+(the default python3 here is a uv 3.11, rclpy is built for 3.10). NOT covered: battery fade
+(the sim has none — this demand is constant where hardware's grew 4.4→6.8 N over 2.5 min)
+and the payload CoM offset; budget for both on top of the measured 7.5 N.
+Full campaign: Command.md §7.13.3.
+**BOUND 15→18 N and the GS ROTOR DISPLAY, same day (user request).** 15 N covers the
+sim's kf mismatch alone (measured 7.42 N); a real loaded sortie also carries **battery
+fade, 4.4→6.8 N growing over 2.5 min** — worst-case sum **14.2 N**, so 18 N leaves ~21%
+margin, and even railed the commanded collective is 62.8 N against the allocator's 99.8 N
+ceiling. The matched estimate tracks it automatically (`2.0*max_thrust_n`), so there is no
+separate estimate bound. **The 15.3 N hardware peak is NOT the sizing number** — 8.28 N of
+it was the un-updated `vehicle_mass`; with the mass fixed that flight asks ~7.0 N, so
+**u_L1 heading for 15 N with the mass correct means the mass or kf is wrong, not the
+bound.** Re-flown (run D, 90 s soak): 7.415 N, identical to A/B, 41.2% of clamp, no rail.
+**GS N/T rotor pies read 0.0% for this rig — the SAME per-namespace subscription-list
+defect as the whole-body fork's on 2026-08-23**, in
+`ros2_ground_station_gui/src/ROS_Node/ros_single_drone_control.py` (shared repo,
+`dev_robotic_arm`, left UNCOMMITTED). There are exactly **four** direct-actuation
+namespaces across the seven forks and forks SHARE them in pairs (AM + bare-drone):
+`direct_actuation`, `geometric_direct_actuation`, `geometric_l1_direct_actuation`
+(the missing one — both L1 forks), `whole_body_direct_actuation`. All four now listed;
+**add the namespace whenever a fork is added.** Diagnosis is one command:
+`ros2 topic info .../<ns>/motors_debug` read `Publisher 1 / Subscription 0`, and `1 / 1`
+after. The other two gates were already fine (controller-name is a SUBSTRING match on
+"Direct Actuation"; `connected` is PX4 `pre_flight_checks_pass`). **Needs a GS restart.**
+Verified live in DIRECT: M1 57.6 / M2 57.3 / M3 57.4 / M4 57.4% against the 0.5741 hover
+command. SEPARATE, NOT FIXED: on this machine the GS pane of all 13 stack scripts never
+starts — `python3` is the Isaac env's 3.11 and PyQt5 exists only for `/usr/bin/python3`;
+launch it by hand with that interpreter (environment issue, not a script bug).
+
+**HARDWARE/SIM CONFIG SPLIT FOR THE BARE-T650 L1 RIG (2026-08-24, user request).**
+`params_single_drone_geometric_l1_direct_actuation_t650.yaml` (dev_CCM) is now the
+**HARDWARE** config; the simulation one is preserved verbatim as **`..._t650_sim.yaml`**
+(the file 7.13.3's three SITL runs flew) and the isaacsim stack script points there. The
+indoor_exp script keeps the unsuffixed name. **Motivated by the 2026-08-19 AM geometric
+first hardware flight, which took off on the unmodified SIM yaml and diverged in 1.3 s** —
+see [[am-geometric-first-hardware-flight]]; two of its three measured causes were the two
+allocator constants. Exactly **10 keys differ**, all 81 present in both, **every gain
+identical**: `alloc_thrust_coeff` 5.6159172e-05→**4.540431e-05** (bench — the 2026-08-21
+hover balance put the real coefficient on the bench value to −0.08%, so the sim number is
+3.0% optimistic fresh and 10.3% by end of sortie); `alloc_rotor*_km` ±0.052867→**±0.018164**
+(bench, = c/kf; the sim value carries t650_params' ×3.0 stand-in for the unmodelled
+`I_rotor·ω̇` — **2.91×, and NOT inert**: measured yaw response 0.35× commanded on 0819);
+`l1adapt_fixed_sample_time_s` 0.004→**0.0** (measured stamp deltas; 0.0 is what actually
+flew, recovered from the LPF recursion as 3.44/13.05/16.62 ms); `vehicle_mass`
+3.802921→**3.878000**; `vehicle_thrust_scaling`/`idle_thrust`→**0.036128/0.247419**
+(re-derived at bench kf AND that mass); `vehicle_name`.
+**`vehicle_mass` 3.878 is INFERRED from the hover balance, NOT WEIGHED** — 75 g over
+bare+payload, likely mounting hardware. Preferred over the arithmetic 3.802921 because
+75 g = 0.74 N the augmentation must find, the exact error class being removed; but weigh
+it. Alternative pair for 3.802921 is 0.036483/0.244076, written into the yaml.
+**Kept on purpose:** A_s 2/2 + ωc 6 **are the hardware values** (the report read A_s = −2
+out of the 0821 logs; 94–95% delivered, flat 0.09–0.17 N residual, measured under-read
+2.5–3% vs the e^{A_s·T} prediction 1.6%) — the paper's 65/80 chases the last 5% but is its
+own step; `l1adapt_max_thrust_n` 18 (with bench kf the allocator error mostly goes, leaving
+battery fade 4.4→6.8 N — expect u_L1 in a **4–7 N band walking upward**, and 15 N means the
+mass or kf is wrong); `l1geo_kr/kΩ` 1.2/0.45 — **the one block carried over UNTESTED**
+(the geometric sibling says "hardware start 1.2/0.75" since its extra softening was an RTF
+artifact, but this node closes the L1 torque channel through an ωc=6 LPF + one-sample delay
+that the geometric node never pays: at 2.4/0.73 in sim a ~2.4 Hz mode decayed once and grew
++3%/s to a flip on the repeat). **Never raise kΩ against the lag pole.**
+The indoor_exp guard was widened from the one +20% string to all five sim values and now
+PRINTS POSITIVE CONFIRMATION of the three that must be right plus the mass — a silent pass
+used to be indistinguishable from a grep that stopped matching. **Trap: the `0.0` check
+must be anchored to end-of-line, or it matches the sim's `0.004` as a substring and reports
+OK on the wrong file.** Verified by launching the node on the hardware yaml under
+`uav_test` and reading every changed key back. NOT FLOWN in this form; geometric+L1 remains
+unflown on hardware on any airframe. Details: Command.md §7.13.4.
+
+**T650 PLANT THRUST CONSTANT RE-ANCHORED ON MEASURED FLIGHT DATA, AND THE AM-T650
+GEOMETRIC+L1 SIM RETUNE (2026-08-25, user request).** The simulated T650 was
+**15.8% stronger than the real vehicle**, and that surplus was exactly the standing
+thrust compensation the L1/UDE augmentation was always seen carrying in sim.
+`t650_params.THRUST_FIT_FACTOR` **1.030724 -> 0.890066** (`ROTOR_CONSTANT`
+4.679931e-05 -> **4.041283e-05**); previous values, the derived block and the full
+derivation are kept in-file for reversion.
+- **MEASURED, not fitted to a hover command.** `kf_eff = m(g-a_z)/(cos(theta)*sum
+  omega_i^2)` back-solved from the 0820 stepped-payload ulogs, **log_252** (+719 g,
+  the ARM-EQUIVALENT payload: 3.753 kg vs the AM's 3.746, hovering at the same 0.6159
+  collective). All seven flights sit **below** bench (0.883-0.954x) and the spread is
+  NOT payload — logs 249->250 hover at the same collective yet differ **7.8%** because
+  a battery pack was swapped. Regression over all seven: `ln kf = -16.767 +
+  2.149*lnV - 0.264*u`, R^2 = 0.997, i.e. **kf_eff ~ V^2**. The old factor was a
+  hover-match to flight C's fresh pack, so it encoded ~25.3 V as a propeller property.
+- **The correction is folded into kf, NOT the omega-map, on purpose.** The physically
+  faithful fix is a voltage anchor on `ZERO_POSITION_ARMED`/`MAX_ROTOR_VEL`, but the
+  DIRECT allocator carries its own copy of that map (`alloc_omega_idle/max`), so
+  scaling only the plant's would inject a second undeclared mismatch and a robustness
+  campaign needs ONE knob. Cost, stated in-file: sim yaw-torque-to-thrust runs ~12%
+  high. `YAW_TORQUE_FIT_FACTOR` left at 3.0 (its fit was against yaw SHAPE).
+- **`alloc_rotor*_km` MUST MOVE WITH kf** — it is `c_plant/kf_plant`, so the allocator
+  commands `tau_z = km*f` and this ratio is what makes the deliberate
+  `alloc_thrust_coeff` injection scale thrust AND yaw by the same factor. Missing it
+  left yaw delivered at 0.965 of command while thrust was at 0.833. Now **0.0612219**;
+  confirmed by the startup print's yaw scale returning to 3.14041 N.m.
+- **`vehicle_thrust_scaling`/`idle_thrust` are a function of plant kf AND mass** and had
+  to be re-derived (AM: 0.036206/0.236457 -> **0.038962/0.261777**). SAFETY then holds
+  z to -3.5 +- 4.8 mm. **THE OTHER SEVEN T650 SIM YAMLS ARE NOW STALE** on this pair
+  (and on `alloc_thrust_coeff`/`alloc_rotor*_km`); only the AM L1 sim yaml was updated.
+- **HARDWARE IS DELIBERATELY UNCHANGED** at bench `4.540431e-05`. The re-anchor makes
+  the SIMULATED plant match the real vehicle; on hardware the plant IS the real
+  vehicle. 4.041283e-05 is a battery state, not a motor property, and baking one
+  sortie's state in would make the allocator **over-deliver ~7% on a fresh pack** —
+  over-thrust at lift-off, the wrong direction. On a 4.20 V/cell pack bench is only
+  1.8% optimistic (u_L1 ~0.7 N); the 0819 flight's 0.876 loop gain becomes **0.982**,
+  and neither the bench-kf swap (0.903) nor the charge (0.953) gets there alone.
+
+**AM-T650 GEOMETRIC+L1 `_sim.yaml` RETUNED at the new plant** (both injections live),
+5 flights, harness `docs/sim_to_real_t650/tools/am_l1_tune_cycle.sh`, scorer
+`am_l1_transition_metrics.py`, data `am_l1_tuning_20260824/`. Shipped: `l1geo_kr_x/y`
+1.0->**1.5**, `l1geo_komega_x/y` 0.55->**0.70**, `ude_disturbance_lbz/ubz` +-10->**+-2**,
+`l1adapt_omega_c` stays **6**. Abort balloon **560 -> 138 mm**, entry tilt 6.43 ->
+3.81 deg, entry settle 18.7 -> 8.9 s, X-step overshoot 15.6 -> 2.6%.
+- **The entry transient is the ATTITUDE LOOP, not a slow L1** (misdiagnosed first):
+  u_L1 reaches 7.1 of its 7.35 N within **0.73 s**. What tilts the vehicle is the
+  +10 mm r_os over-compensation, ~0.37 N.m of pitch on a `kr = 1.0` loop soft enough
+  to park at 0.37 rad. The 511 mm xy excursion is purely downstream of that tilt.
+- **The abort balloon is a UDE PHANTOM.** In DIRECT the UDE is fed the allocator's
+  BELIEVED achieved collective (44.1 N vs 36.75 delivered), converges to a fictitious
+  -7.35 N and dumps it into SAFETY. On hardware this is CORRECT (a real kf error lives
+  in the SAFETY model too); in sim SAFETY's model is honest, so it is fiction. Capping
+  the z bound caps the balloon: predicted 560*(2/7.35) = 152 mm, measured 136 and 138.
+- **`l1adapt_omega_c` 6 -> 8 DESTABILIZES** (with kr 1.9): a growing **0.62 Hz** mode,
+  steady tilt 0.25 -> 8.81 deg, abort tilt 38.6 deg. The AUGMENTATION drives it —
+  `u_L1 tau_y` rms rose **14x** while attitude error rose 1.75x. Keep omega_c at 6.
+  `kr 1.9` at `omega_c 6` is UNTESTED and its entry numbers looked better.
+- **Steady position hold is ~22-29 mm, structurally**: `T*e_R_y/Kp` against the
+  uncancelled CoM pitch residual. `e_R_y` and `u_L1 tau_y` are identical to 3 decimals
+  across runs; one 10.6 mm run was a lucky outlier. Do not read a single run.
+- **YAW CLAMPS sized against the ALLOCATOR** (`l1geo_max_torque_z` 2.0->**0.40**,
+  `l1adapt_max_torque_z` 0.8->**0.25**, sum 0.65 <= the 0.654 N.m FREE budget). With
+  bench km the yaw ceiling is 0.8724 and the allocator desaturates airmode-style past
+  0.654 — preserving torque but TRADING COLLECTIVE, so a railed yaw channel appears as
+  an **altitude kick** (+8 N at 0.8, +12 N at 1.0). RAISING these is not a safety move:
+  above 0.8724 they deliver nothing. Sim-validated: peak yaw demand 0.0216 N.m = 3% of
+  budget, 0.00% railed. **A CoM offset produces ZERO yaw moment** (`r_os x (0,0,T)` has
+  no z component) — the 8-9 mm dx uncertainty loads `l1adapt_max_torque_xy` (1.5,
+  untouched, ~5x margin).
+- **HARNESS TRAP: never gate arming on `vehicle_status.pre_flight_checks_pass`.** It is
+  **false on this rig while it is armed and flying** (EKF `cs_yaw_align`/`cs_ev_yaw`/
+  `cs_ev_pos` all true, commander "Ready for takeoff!"). Gate on the
+  `estimator_status_flags`. The same false flag is what pinned the ground station's N/T
+  rotor pies at 0.0% for a whole DIRECT flight — fixed in `ros2_ground_station_gui` by
+  gating the display on motors_debug FRESHNESS instead of on `connected`.
+- Score the abort balloon in a window ENDING AT LAND_WAIT; a fixed 25 s window scores
+  the intended descent as balloon (557 mm on a run whose real balloon is 136).
+
+**WHOLE-BODY DIRECT ACTUATION — THE COUPLED LAW IN fsc_autopilot_ros2, ARM IN TORQUE MODE
+(2026-08-22, user request — controller.py ported to C++, both ground stations live).** A fourth
+AM fork, `single_aerial_manipulator_whole_body_direct_actuation` (node
+`autopilot_whole_body_direct_actuation_node`, substring-safe vs all siblings), runs THE law
+(impedance + GMO + DLS + saturation-consistent coupling) at 250 Hz in DIRECT, commanding the
+4 rotors (ActuatorMotors) AND the 4 arm joint torques over ROS2. Everything is NEW FILES
+(user's incrementality rule): `wb_model/wb_controller` (byte-faithful Eigen port, MODEL kept in
+AM_realign's y-forward frame + one `frame_adapter.hpp` boundary), `wb_reference_builder`
+(drone GS position/yaw → x_cd chain via a CoM anchor captured at DIRECT entry; arm GS joint
+target → slewed q_d → FK-implied EE reference on the law's own model), client with the L1
+fork's SAFETY/watchdog/failsafe plumbing, GATED DIRECT entry (pos/vel/arm-err + freshness —
+the sequencing rule made mechanical), and the arm-hold torques streamed in SAFETY too (one
+continuous torque source across the switch). Arm transport: new `ExternalTorqueController`
+(fsc_open_manipulator, derives TorqueControllerBase: pass-through + clamp + position-limit
+pull-back + stale-PD-fallback with re-arm hysteresis + zero-on-deactivate) → new
+`IsaacTopicEffortSystem` (effort-only bridge twin; zero-seed on activate, NaN = don't publish)
+→ `isaacsim_manipulator/effort_commands` (the name Arm Topic Naming.md had reserved) → new
+`06_px4_t650_aerial_manipulator_free_flight.py` (05's plant; fresh efforts applied
+clipped ±3.0, stale → PD+gravity hold at the LATCHED pose — a torque stream must never latch).
+Launchers: Pegasus `scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh`
+(06 + torque arm stack + arm GS `controller:=external_torque_controller simulation:=true`) +
+stack `scripts/isaacsim/start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh`;
+all existing stale-node guards + stop script + the drone GS motors_debug gained the fork.
+**PARITY-LOCKED**: `generate_wb_truth.py` (Pegasus, utils/) builds the T650 model variant with
+the CORRECT model-frame I0 = [0.07475072, 0.08616121, 0.083401015], Ixy −0.0089 (computed, NOT
+05's un-rotated `_body_dI`; base mass 3.1095500) and dumps 220 cases + GMO rollouts; the gtest
+`WbParityTest` (fixture `tests/data/wb_truth_t650.json`) holds the C++ law to ≤1e-8. Model in
+code (`t650Defaults`), gains in yaml — control_params.py's split. **FIRST DIRECT ENGAGEMENT
+GREW A RATE OSCILLATION (2026-08-22): the in-process-validated attitude tune k_R=4/k_w=1.5/
+M_r_d=AM_realign is NOT valid over the external DDS loop** (transport latency 03 never had) —
+tripped the 360 dps watchdog 20 s in, at 14° tilt. Shipped tune: k_R=2.0/k_w=1.1 and M_r_d =
+the ACTUAL T650 M_r diag at home [0.077681, 0.090738, 0.083401] (the old numbers under-stated
+roll/pitch inertia 20–40%, hidden extra gain via M_r·M_r_d⁻¹); wn 6.9→4.9 rad/s vs the
+10.0 rad/s rotor-lag pole. **SIM-VALIDATED same day, 2 flights / 3 engagements after the
+retune, 179 s of DIRECT**: EE rms 2.36 mm, CoM rms 3.2 mm, u1 = mg exactly, peak joint torque
+0.87/3.0, zero saturations, |e_R| ≤ 0.037, no resonant mode; in-flight arm GS step tracked <1°
+in 4 s with the base held to 5 mm; abort bumpless, re-entry gated, touchdown 0.307/0.311 m.
+tau_max = 3.0 appears in THREE places (wb yaml / ExternalTorqueController / 06) — keep one
+number. Commands: Command.md §7.14. Small trap found live: `pgrep -f` stale-node guards also
+match a SHELL whose command line merely contains the node name — don't monitor a launch from a
+same-name-carrying foreground shell.
+
+**WHOLE-BODY +20% KF ROBUSTNESS TEST FAILED (2026-08-22, user-requested injection).** The
+controller allocator used `5.6159172e-05` while 06 kept the calibrated
+plant truth `4.679931e-05` and measured rotor pole `10.0265 1/s`. A guarded constant-hover
+run entered DIRECT with zero anchored CoM error but was aborted after 7.68 s at 30.45 deg
+tilt: altitude 1.148 -> 0.796 -> 1.385 m, CoM error 1.504 m, `d_hat_z` -9.12 N, `u1` peak
+49.06 N, and two arm joints at the 3.0 N.m clamp for 52.9% of DIRECT samples. Rotor
+unallocated thrust remained numerical zero, all arm/DDS streams stayed live, and the plant
+and controller printed their intended distinct coefficients, so this is the present GMO
+tune failing the multiplicative actuator mismatch rather than a transport or injection
+fault. Full protocol and numbers: Command.md §7.14.2.
+
+**WHOLE-BODY +15% KF HOVER PASSED AFTER RETUNE (2026-08-22).** Current yaml belief is
+`5.38192065e-05` against the unchanged `4.679931e-05` plant and `10.0265 1/s` motor pole.
+The hover-only tune uses k_v=12, k_w=1.5, EE Ky/Dy=2/4, GMO Ko=0.5/0.1/0.1, and an optional
+joint-posture PID (Kp/Kd/Ki=2/0.25/0.05, integral torque clamp 0.8 N.m) to select the
+controller-smoothed home branch without the instability of the rejected Kp=8 cases
+(**that PID no longer exists — DELETED 2026-09-05, see the entry below**). Two
+independent clean 90 s runs had zero saturation, <=1.55 deg tilt, 2.0-3.3 mm steady CoM RMS,
+u1=42.262 N and d_hat_z=-5.512 N. Final arm q was within 2.8 deg of [0,40,40,0] and still
+converging. This validates constant hover only, not position or EE steps. Restore
+`4.679931e-05` for matched-model or hardware-oriented use. Details: Command.md §7.14.2.
+
+**ONE ARM REFERENCE, ONE PLANNER PER MODE — THE TORQUE CONTROLLER NOW ONLY
+TRACKS (2026-09-05, user design).** The min-jerk generator lived inside
+`TorqueControllerBase`, so in whole-body DIRECT it ran IN SERIES with the
+whole-body planner's B-spline plan: the whole-body planner poked `target_joint_setpoint` and the
+controller re-profiled it. The 0902/0903 flights measured the arm REPLAYING the
+whole-body planner's move **3-4 s late** with endpoints agreeing exactly. Fixed
+structurally, all new/additive:
+- **NEW node `arm_planner`** (`open_manipulator_x_custom_controller/
+  src/arm_planner_node.cpp`, ~320 lines, C++). Owns the arm reference
+  in **SAFETY only** — including the ground station's
+  `<ctrl>/target_joint_setpoint` + `<ctrl>/go_home` interface at the SAME names,
+  because the controller no longer advertises them — runs the SAME min-jerk
+  profile (moved verbatim, so the tuned motion is preserved), and streams
+  `<ctrl>/reference_joint_trajectory` (`trajectory_msgs/JointTrajectory`) at
+  100 Hz. In DIRECT it goes **SILENT** and REFUSES targets/go_home rather than
+  queueing them; it also tracks the measured joints while silent, so a SAFETY
+  revert resumes from where the arm IS, not a stale goal.
+- **`whole_body_planner`** publishes the same message on the same
+  topic in DIRECT, every stream tick (100 Hz, was a separate 20 Hz
+  `arm_sync_rate` timer — retired), carrying the plan's own `q_d`/`qdot_d`.
+  The `target_joint_setpoint` poke and the one-shot `_publish_arm_sync` sites
+  are gone: ONE publish site.
+- **`TorqueControllerBase`** gained `external_reference_topic` (default `""`)
+  and `external_reference_timeout` (0.2 s). Non-empty = PURE TRACKING: the
+  internal generator is switched off AT THE INTERFACE (`~/target_joint_setpoint`,
+  `~/sine_reference_trajectory`, `~/go_home` are NOT advertised), no activation
+  homing (homing is a plan), and a stale stream **FREEZES** the last reference
+  rather than inventing a fallback trajectory. **The empty default keeps
+  `ComputedTorqueController`, `PositionController` and every bench/hardware
+  workflow byte-identical** — only `torque_controller_isaac_aerial.yaml` opts in.
+- **The reference FANS OUT, it does not loop through the controller.** The WB
+  node subscribes `reference_joint_trajectory` directly (type changed
+  JointState -> JointTrajectory, `wb_arm_reference_topic` repointed, builder
+  setter renamed `setSmoothedReference` -> `setPlannerReference`). It used to
+  read the controller's `smoothed_reference_joint_trajectory` — a CONTROLLER
+  emitting a reference and the flight node consuming a controller's output, the
+  wrong direction, and what hid the second generator. That topic keeps its name
+  and type and is now TELEMETRY ONLY: `effort` = the commanded torque the arm GS
+  plots, position/velocity = an echo. Measured live: reference 2 pub / 2 sub,
+  echo 1 pub / 1 sub (the plot). `comparison_driver.py`'s wb path publishes
+  JointTrajectory now too.
+Loopback-validated (`open_manipulator_x_custom_controller/test/
+test_arm_planner.py`, fake joint states + fake mode, no Isaac):
+9/9 — 100 Hz in SAFETY, seeds/homes on the measured pose, tracks a GS joint
+target (max inter-sample step 3.75 mrad), 0 messages in DIRECT, target and
+go_home both refused there, resumes on the measured pose after revert. The
+whole-body planner's own three tests pass, with `arm syncs 550` against 546 reference
+samples (the full stream rate, was 20 Hz). **NOT yet flown.**
+Topic contract: `docs/docs_aerial_manipulator/Arm Topic Naming.md`.
+
+**THE JOINT-POSTURE PID IS LOAD-BEARING — REMOVED, FLOWN, REVERTED (2026-09-05,
+user request; the term is not in the published law but this rig needs it).**
+`wb_controller.cpp` adds a clamped joint-space PID on `(q_d - q, qdot_d - qdot)`
+to `u3`. It was deleted (term, `WbGains` fields, all five
+`wb_posture_kp/_kd/_ki/_i_max/_ramp_s`, keys in all three whole-body yamls),
+flown, and PUT BACK. **Seven 75-90 s DIRECT soaks on the 7.14.1 sequence, one
+variable at a time:** +15% kf WITH the PID = stable (CoM 2.9 mm, EE 6.5 mm,
+tilt 0.04 deg, |e_R| 0.066, peak tau 0.74, 0% clamp); +15% WITHOUT = DIVERGES,
+abort 32 s, **51% of samples on the 3.0 N.m joint clamp**, tilt 32 deg, CoM
+error 1.49 m; +7.5% WITHOUT diverges (abort 15 s); **MATCHED kf WITHOUT is
+1 PASS IN 3** (75 s, then abort 17 s, then abort 3.7 s — same config all three,
+the 2026-08-10 run-to-run-scatter lesson; a single completed run proves
+nothing, and reading the first one alone briefly shipped an unstable config).
+**MECHANISM** (first 5 s without it): the arm leaves home at once — q2 spans
+-10.8..50.0 deg, q3 -77.6..50.0, hits the +50 stop at t = 0.8 s and crosses
+into NEGATIVE q2/q3, this asset's **elbow-singular branch**; J_3y degrades, the
+DLS solve demands torque the servos cannot give, all four rail, and the
+reaction takes the base. With the PID the same window keeps q2 31-43, q3 39-43.
+**THE EE TASK CANNOT SUBSTITUTE AND STIFFENING IT IS WORSE**: at `K_y` = 2 a
+200 mm task error is 0.4 N of restoring force, and that softening happened in
+the SAME +15% campaign that added the PID — **the two are a compensating pair,
+only ever validated together** (every `controller.py` config that flies with no
+posture anchor uses `K_y` 8-200) — but undoing both, `K_y` 2->20 / `D_y` 4->9,
+was the WORST of the seven runs, abort at 3.8 s / 36 deg tilt. A stiff task on
+this laggy plant is its own instability. **TREE STATE: term restored, +15%
+injection restored, both yamls carry a DO-NOT-DELETE note at `wb_dls_lambda`
+and the sim yaml's `alloc_thrust_coeff` block records that the two must move
+together.** Parity 4/4 and WbReferenceBuilderTest 2/2 both before and after, so
+the C++/Python law agreement is unaffected either way. What removal actually
+needs is a RETUNE with mismatch margin (M_r_d, GMO bandwidths, K_y/D_y, a
+gentler DIRECT entry), not a one-line edit. Declared-deviation note for papers:
+in steady flight the term is 0.004 of 0.77 N.m (0.5%) at the flown 0.11 deg arm
+error, added straight to `u3` with NO null-space projection (there is none —
+the 4-DOF task has isolated but non-unique solutions, `[0,40,40,0]` and
+`[0,128.7,-108.4,0]` deg agreeing on the EE pose to 4.7e-16). Campaign driver +
+per-run metrics: `docs/docs_aerial_manipulator/posture_removal_20260905/`;
+tables: Command.md 7.14.6.
+
+**L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER — IMPLEMENTED, PARITY-LOCKED AND
+SIM-VALIDATED (2026-09-06, user request).** The working note "Decompose the lumped
+disturbances into end-effector and orthogonal components" (2026-08-27, in the manuscript
+repo's `disturbance observer design/`) is implemented as an ALTERNATIVE ESTIMATOR for the
+whole-body law and flown against the GMO on the same plant. Everything is NEW FILES; the
+GMO path is byte-identical and `WbParityTest` passes 4/4 before and after.
+- **What it replaces.** The GMO's `d_hat = K_o (p - p_hat)` closed on its own predictor
+  IS `K_o/(s+K_o)` applied to the true residual, so ONE gain buys both estimate accuracy
+  and loop robustness — which is why this rig's `K_o` is pinned at 0.5/0.1/0.1 (1.0 on the
+  body channels crashed it). The L1 law splits them: a DEADBEAT piecewise-constant
+  inversion whose accuracy is the sample period alone, then an explicit
+  `C(s) = omega_c/(s+omega_c)` that alone decides robustness. It also ATTRIBUTES the task
+  force: a momentum residual measures only `d + d_e`, so the GMO's lumped
+  `(J_y^#)^T d_hat` hands `u3` the internal disturbance as a PHANTOM CONTACT FORCE, and
+  the repair is the four directions no wrench can reach (`N(J_e)`, the arm self-motions,
+  where `Z_0^T J_e^T = 0` exactly — no contact flag anywhere).
+- **Where it lives.** `wb_l1_observer.{hpp,cpp}` in the whole-body fork + the Python
+  reference `extensions/.../utils_controller/l1_observer.py` (run it for its self-test);
+  selected by `wb_l1_observer_type` (default `"gmo"`, so every existing yaml is
+  unaffected); second executable `autopilot_whole_body_l1_direct_actuation_node` over the
+  SAME client — the law is identical, only the update rule changes, so a fork would have
+  been a copy that could drift. **Shared ROS namespace on purpose**: the drone GS, the
+  whole-body planner and the stop scripts need no changes, and the two rigs are mutually
+  exclusive anyway; `vehicle_name` tells them apart. Pegasus launcher
+  `scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_adaptive_6D_direct_actuation_sitl.sh`,
+  stack `scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh`,
+  yaml `..._whole_body_l1_..._t650_sim.yaml` = its GMO twin plus one block (DIFF THEM
+  before every campaign). Every stale-node guard in both repos gained the new name. The
+  comparison harness gained a third case `wb_l1`.
+- **TWO PLACES THE NOTE LEAVES A CHOICE, both measured, both changed the implementation.**
+  (a) **`Phi` is not the deadbeat gain of the predictor that can actually be run.** The
+  `(h+u)` term must be plain Euler (the plant integrates it exactly; any other weight
+  leaves a `(weight-dt)(h+u)` bias, ~0.15 N on z at hover), so the exact gain is
+  `Phi_d = dt(I-e^{A_s Ts})(I-e^{A_s dt})^-1`, which equals the note's `Phi` in the
+  fine-sub-step limit and `dt` at one-tick adaptation. Using `Phi` measures a REAL DC
+  error of `a*Ts`: 0.8% at `A_s=2`, **6.9% at `A_s=20`**; with `Phi_d` it is 2.5e-13.
+  **Corollary: at one-tick adaptation `A_s` drops out of the estimate entirely** — it only
+  weights the average within an interval, so `wb_l1_a_*` and `wb_l1_adapt_period_s` are
+  ONE trade, not two, and `A_s` is inert in noise-free simulation.
+  (b) **The note's minimum-norm `L_c = B_a G^+` makes the phantom force WORSE on this
+  plant.** The collective's coupling into the wrench-free rows is
+  `a_3 = [0, -0.002, -0.103, -0.001]` against the joints' exact `I_4`, so minimum norm
+  compares NEWTONS with NEWTON-METRES and books a 5.5 N thrust deficit as joint torque:
+  measured 0.04 N of 5.5 found and the attributed `|F_hat_y|` **4.5x worse** than not
+  decomposing (0.89 -> 4.00). Generalized to `L_c = B_a W G^T (G W G^T)^-1` with a
+  diagonal prior variance — every property the note's proof uses survives for ANY `W > 0`
+  (`Z_0^T L_c = I_4`, range still in `R(B_a)` so the lateral rows stay frozen, Lyapunov in
+  the `W^-1` metric). `W = 1,1,1` is the note's own choice and the CODE DEFAULT; the yaml
+  ships `(100, 0.25, 0.0025)` and finds 4.90 N of 5.5.
+  (c) **The note's persistency-of-excitation remedy is useless here**, measured: a
+  vigorous 60 s arm sweep gives an averaged projector with eigenvalues down to 4e-4, and
+  **400 s of sweeping moved the collective estimate from -0.04 to -0.30 N** of a true
+  -5.5. The metric in (b) is what actually fixes it; `omega_i` changes only how fast the
+  fixed point is reached, not where (identical from 0.2 to 10 rad/s).
+- **PARITY-LOCKED.** `generate_wb_l1_truth.py` -> `wb_l1_truth_t650.json` (5 gain sets x
+  40 steps, covering N=1 and N=5 adaptation, unequal `A_s`, both `L_c` metrics, decompose
+  on/off, and a set whose bounds clamp); `WbL1ParityTest` holds the C++ to **1e-8**, the
+  same gate as the law's own. Also verified: `J_e Z_0 = 0` to 4e-17, `rank J_e = 6`
+  everywhere, `J_y = S_e Jbar_e` to 3e-16, and `w_hat` IDENTICAL to 2.7e-15 with no
+  contact wrench, a 2.6 N one and a 26 N one — the property that makes the scheme
+  contact-flag-free.
+- **FLOWN, 4 x 110 s DIRECT, none aborted** (`docs/docs_aerial_manipulator/
+  l1_observer_20260906/`, harness `application/robotic_arm/utils/wb_l1_*`). The `_sim`
+  plant carries all three factors the user asked about: **thrust loss** (+15% allocator
+  kf), **model uncertainty** (mass and inertia x1.10, CoM shift 10/10/5 mm) and **motor
+  delay** (rotor lag lambda = 10.0265 1/s) — together 10.8 N the observer must find, and
+  `u1` = 47.559 N / `d_hat_z` = -10.809 N are identical to 3 decimals across runs, which
+  is the check that the plant really was the same in each.
+
+  | omega_c | rise90 | entry sag | recovery | steady CoM | \|e_R\| | tilt pp | **phantom F_y** |
+  |---|---|---|---|---|---|---|---|
+  | GMO K_o .5/.1/.1 | 2.86 s | 463 mm | 49.3 s | 4.59 mm | .0885 | 0.108 | **1.884 N** |
+  | L1, = K_o | 3.28 s | 428 mm | 49.2 s | 3.17 mm | .0934 | 0.337 | **0.065 N** |
+  | **L1, 2/.5/.5** | 1.38 s | 187 mm | 21.0 s | **1.65 mm** | .0059 | 0.564 | **0.055 N** |
+  | L1, 6/2/1 | 0.73 s | 69 mm | never | 52.0 mm | .2615 | 22.24 | 2.045 N |
+
+  **At matched bandwidth the two are indistinguishable and must be** (both reach `f_d`
+  and `u_2` through the same first-order filter) — that is the sanity check. **The
+  phantom force is a separate axis and collapses 29x at zero cost**, and three numbers
+  show it is the mechanism: `w_hat_thrust` = -10.753 of -10.81 (the null channel booked
+  **99.5%** of the residual to the COLLECTIVE), `w_e_hat` = 0.074 N (correct — nothing is
+  touching the arm), and `sigma(d_hat^c)` 0.657 N vs `sigma(d_hat_f)` 0.0021 N (the
+  deadbeat estimate really is a noisy 250 Hz momentum difference and the filter really
+  does remove it). **omega_c = 2/0.5/0.5 is the shipped winner**, 4-5x the GMO's ceiling,
+  better on every metric with zero saturation. **6/2/1 is past the limit** and fails as
+  predicted: best ENTRY of the four, then a 22 deg p-p limit cycle with `d_hat_z` swinging
+  -5..-20 N onto its own bound and 10.4% of samples on the joint clamp — 6 rad/s sits on
+  the 10.03 rad/s rotor-lag pole.
+- **NOT covered, state it rather than imply it:** no contact in any flight (so the TRUE
+  wrench estimate is untested — `w_e_hat` ~ 0 when the answer is 0 is necessary, not
+  sufficient); no arm motion; `sim_arm_backemf_enable` false, so **`lc_var_q = 0.0025` is
+  the one shipped number the campaign did not test** and it must be RAISED once the droop
+  is on; ONE flight per configuration, which near a stability boundary on this rig proves
+  nothing (the 2026-08-10 scatter lesson); and the 6/2/1 run raised all three channel
+  groups together, so which one binds is unresolved. NOT flown on hardware.
+- **THE RIG'S STANDARD TEST ALSO FLIES (2026-09-06, user request): 1 m hover, x/y/yaw
+  steps, compatible trajectory.** Five attempts, four completed; run E flew every leg.
+  Steps x/y ±0.5 m peak 203-268 mm and settle 50-63 mm; yaw ±30 deg peaks 30/9.4 mm and
+  settles 6.7/0.9 mm; **the COMPATIBLE-TRAJECTORY leg (EE −6 cm) is the best-tracked
+  motion in the mission — 9.8 mm peak, 0.74 mm settled, 0.17 deg tilt** while the arm
+  moves and the base counter-moves, which is the expected ordering because it is the only
+  leg whose reference is dynamically consistent by construction. Zero saturation,
+  `u1`/`d_hat_z`/`w_hat_thrust` 47.57/−10.814/−10.738 N across runs C/D/E to 3 decimals.
+  The ~55 mm settled translation residual is the structural `T*e_R/K_p` offset, not a
+  tune. **One attempt in five aborted 8.4 s after DIRECT entry** (growing lateral
+  oscillation, arm on the 3.0 N.m clamp 21.4% of samples) — runs B-E flew the same 1 m,
+  so it is the run-to-run scatter 7.14.6 records, NOT the observer or the altitude.
+- **A STEP IS NOT A REFERENCE PUBLISH in whole-body DIRECT**, and two traps in driving the
+  handshake both produce a plausible log with the steps silently not happening (each cost
+  a flight): (a) the planner's unchanged-target guard is inactive while it is HOLDing, so
+  a full-rate `position_controller/reference` stream drags it back out of HOLD every tick
+  — publish on CHANGE in DIRECT; (b) its status carries suffixes (`PLANNED T=5.2s`,
+  `INFEASIBLE: <reason>`), so a state check must take the FIRST TOKEN, splitting on
+  whitespace AND ':' — stripping only the colon never matches `PLANNED` and times every
+  leg out while the planner reports a good plan. Also require `EXECUTING` before `HOLD`
+  counts as completion, since HOLD is where a leg starts.
+- **THE EE WORKSPACE AT THE FOLDED HOME IS SMALL AND LOPSIDED, and both obvious step
+  directions are outside it** (measured, each refused in ~0.1 s with a readable reason):
+  reaching OUT 0.15 m gives `IK did not converge` — the gripper already sits 0.26 m from
+  the body origin, its own reach (0.16 m wrist at beta = 80 deg + the 0.108 m gripper
+  offset); retracting IN 0.05 m gives `joint limits: q3 = 63.0 vs 50` because retracting
+  FOLDS it further and q3 is already at 40. **DOWN is the direction with room** (it
+  unfolds): 0.06 m down solves to q = [0, 27.1, 38.8, 0] deg and flies. Map it with
+  `transition_planner.ik_position_azimuth` before guessing; the planner publishes the
+  true reachable set on `whole_body_planner/workspace_rz`.
+- Traps found while building the harness: **`vehicle_status` never publishes on this PX4
+  v1.16 / px4_msgs release/1.16 pairing — it is `vehicle_status_v1`**, and subscribing to
+  the un-suffixed name strands a driver in its WAIT phase with no error at all; the
+  system `python3` has numpy 2.2.6 in `~/.local` against an apt matplotlib built for
+  numpy 1.x, so plotting needs `PYTHONNOUSERSITE=1`; and **`pkill -f "[w]b_..."` still
+  kills your own shell if the SAME command line later mentions the target in plain text**
+  — the bracket trick protects the pattern, not the rest of the line.
+  Full write-up: `docs/docs_aerial_manipulator/L1 Augmented Disturbance Observer.md`;
+  commands: Command.md 7.15.
+
+**THE L1 OBSERVER'S FOLLOW-UP CAMPAIGN — LAW AUDIT, POSTURE, BACK-EMF
+(2026-09-06, user request).** Three questions, 12 flights, data
+`docs/docs_aerial_manipulator/l1_final_20260906/`, tables Command.md 7.15.7,
+write-up `L1 Augmented Disturbance Observer.md` 6.
+- **THE LAW CARRIES EXACTLY ONE TERM THE MANUSCRIPT DOES NOT**, audited line by
+  line: the clamped joint-space PID on `u3`. The DLS regularisation and the
+  saturation-consistent rebuild are numerics and actuator bookkeeping, not force
+  terms. The node now PRINTS which way each run is configured (`LAW CHECK` in
+  the controller pane, green when the four `wb_posture_*` are 0) — a silent
+  pass is indistinguishable from a check that stopped matching.
+- **REMOVING IT ON THE L1 PATH FAILS TOO: 2 aborts of 2** (7.7 s / 8.0 s,
+  32-47% of samples on the 3.0 N.m joint clamp), so the L1's attribution does
+  NOT make the posture anchor unnecessary — and WHY is the useful part.
+  **The two observers fail for different reasons and only one is an observer
+  problem.** The GMO's is attribution (lumped residual arrives in `u3` as a
+  phantom contact force, measured 1.35-1.89 N; the task yields). The L1 fixes
+  exactly that — phantom force **0.044-0.132 N, 13-40x smaller** — and still
+  cannot select an IK BRANCH, because nothing in a task-space law can: the
+  4-DOF EE task has isolated but non-unique solutions. Under the entry
+  transient q3 hits its +50 stop at t = 1 s then crosses into NEGATIVE q3, the
+  elbow-singular branch, q1 rails at -35, `J_3y` degrades and the DLS solve
+  demands torque the servos cannot give. **Keep it, declare it** (0.5% of `u3`
+  in steady flight); the real fix is an explicit branch guard, not a gain.
+- **THE ARM'S BACK-EMF DROOP DEFEATS BOTH OBSERVERS, 4 runs of 4.** With
+  `sim_arm_backemf_enable: true` (`b = [0, 0.9337, 1.4934, 0]` N.m per rad/s)
+  the GMO aborts at 9.7/10.8 s and the L1 at 5.8/5.8 s; with it off both fly
+  the full 8-leg mission twice each. Repeats agree to a few percent — not
+  scatter. **Neither should be expected to compensate it**: (a) `-b*qdot` is a
+  GAIN error, a feedback path, and `b/I ~ 75 1/s` against the observers' arm
+  channel at 0.5 (L1) / 0.1 (GMO) rad/s is 150-750x too fast; (b) the damage
+  lands on the BASE, because `tau = T^T u` makes the rotors pre-compensate the
+  arm reaction `N1^T u3` that never arrives; (c) it closes a POSITIVE LOOP
+  around the (normal, large) DIRECT-entry transient — measured droop 0.09 N.m
+  at t = 1 s with tilt already 5.5 deg, then **1.70 N.m** by t = 7 s. The two
+  fail differently, which is diagnostic: the GMO takes 10 s and RAILS the clamp
+  (4.9-9.2%) before drifting 2.1-2.4 m; the L1 takes 5.8 s, reaches a HIGHER
+  tilt (31-32 deg) and never touches the clamp — its faster arm channel
+  responds sooner and drives the base harder. NOT concluded: that the law
+  cannot fly a PWM-mode arm. Untried: a gentler DIRECT entry, an explicit
+  `+b*qdot` arm feedforward (one line, `b` identified to +-5%), and on hardware
+  the real fix, current-control Mode 0, where `b -> 0` and this model should be
+  DELETED not compensated.
+- **COMPARISON, same plant/mission/driver, ideal arm, 16 s hold per leg**
+  (figure `compare_gmo_l1.png`, scorer `utils/wb_compare_metrics.py`, CoM error
+  mm as peak/rms/settled): step x +-0.5 m GMO 296/96/6.8 and 251/80/5.0 vs L1
+  **193/61/2.6** and **209/66/3.0**; step y GMO 267/86/2.5, 268/85/4.9 vs L1
+  238/76/5.1, 222/70/4.9; yaw +-30 deg indistinguishable (<10 mm either way);
+  **compatible trajectory GMO 64/39/14.7 and 57/33/18.9 vs L1 47/18/2.6 and
+  35/13/1.4** — 2.4-2.9x rms and 6-13x settled, the expected ordering because
+  it is the leg where arm and base move together and a LUMPED estimate is most
+  wrong. **The most reproducible difference is the DIRECT-ENTRY transient**
+  (3 runs each): peak 1273/1273/1305 mm recovering to <50 mm in 37.9/38.6/39.3 s
+  vs **796/800/854 mm in 7.1/7.6/7.7 s** — 1.6x peak, **5x recovery**, the
+  `omega_c`-vs-`K_o` bandwidth split doing what it exists for.
+- **A HOLD-LENGTH TRAP THAT INVERTS THE VERDICT, and it cost a pair of runs.**
+  At the driver's default 6 s hold the L1 scored 65-72 mm "settled" against the
+  GMO's 6-21 mm, i.e. WORSE. Artifact: this rig has a slow, lightly damped
+  position mode, so at 6 s neither has settled and the 2 s average lands at an
+  arbitrary phase. At 16 s the ordering inverts. **Never compare settled errors
+  across runs with different `--hold-between`.**
+- **THE COMPATIBLE-TRAJECTORY LEG NOW MOVES ALL FOUR JOINTS** (user request).
+  Down alone was a pure fold — q1 = q4 = 0 throughout, so the arm-yaw and wrist
+  channels were never exercised. Now lateral 0.08 m + down 0.07 m + 60 deg EE
+  heading (`--ee-lat` / `--ee-yaw`), mapped offline with
+  `transition_planner.ik_position_azimuth` BEFORE flying: q = [17.6, 31.0, 29.8,
+  61.9] deg, every joint moving >=9 deg, sigma_nd 0.297 vs the 0.10 keep-out.
+  **THE LATERAL AXIS IS WORLD Y, NOT X** — measured, one refused leg: the frame
+  adapter's `R0_model = R0_actual*Rz(-90)` puts model +y (ALONG the arm,
+  radially OUT) on world +x, so a world-X lateral step is a reach outward and
+  the planner refuses it in 0.13 s with "IK did not converge". Confirmed live by
+  the driver's own mission anchor print (base [0.26, 0.203, 0.982], EE [0.517,
+  0.204, 0.888] — the arm on world +x at yaw 0). The world-Y SIGN does not
+  matter: the workspace is symmetric across the arm (sigma_nd 0.295 vs 0.297)
+  and 60 deg of heading moves q4 a lot either way.
+- **The joint_state_broadcaster's order on this rig is `[q2, q3, q1, q4]`**, not
+  joint1..4 — at the ground pose it reads (40, 40, 0, 0) for the home
+  [0, 40, 40, 0] deg, and in flight column 2 pins at exactly -35 (q1's stop)
+  while column 3 reaches 87 (only q4 has that range). Mislabelling it makes an
+  elbow excursion look like a wrist one.
+
+**WHOLE-BODY L1 TUNING — TWO PARAMETERS, TWO USER-REPORTED SYMPTOMS FIXED
+(2026-09-06).** 16 flights, data `docs/docs_aerial_manipulator/l1_tune_20260906/`,
+tables Command.md 7.15.8. All three disturbance sources stayed ACTIVE (+15% kf,
+mass/inertia x1.10 + 10/10/5 mm CoM, rotor lag); back-EMF off per the request.
+Changed: `ude_height_threshold` 0.4 -> **0.35**, `wb_ky_psi`/`wb_dy_psi` 1.0 ->
+**0.3**. Nothing else.
+- **THE SLOW SAFETY TAKEOFF IS A UDE GATE SITTING ABOVE THE RESTING HEIGHT.**
+  `sim_plant_mass_scale 1.10` makes the plant 4.120787 kg while the controller
+  keeps `vehicle_mass 3.746170` — the gravity feedforward is **3.67 N short**,
+  only the UDE can supply a constant force error, the gate disabled it below
+  0.40 m, and the vehicle **RESTS at 0.305 m**. Measured: creeps at 0.003 m/s
+  for **22 s**, crosses 0.40, then climbs normally. The bare-T650 deadlock
+  (7.13.3 run C) in slow motion; the yaml comment already warned about it, the
+  value had just never been checked against this rig's resting height. Fixed:
+  0.95 m in **9.2/9.6 s vs 28.2 s**. NOT fixed by correcting the mass — that
+  deletes the disturbance under test.
+  **THE OBVIOUS VALUE IS UNSAFE AND ONE RUN WOULD HAVE SHIPPED IT.** 0.32
+  flies, but across **33 recorded runs the seated peak reaches 0.3338 m** (the
+  arming transient), so 0.32 is crossed while still on the ground in **29 of
+  33** and the UDE would integrate the ground reaction. 0.35 clears it by
+  16 mm, 0 of 33. The gate is on MEASURED altitude and dropping below HOLDS the
+  integral rather than resetting it (`ude_base.cpp:47`), so a bounce costs
+  nothing — only the seated case matters.
+- **THE J1/J4 TORQUE RIPPLE IS THE EE HEADING CHANNEL'S LOOP GAIN.** q1 and q4
+  carry ~0 MEAN torque (q2/q3 hold gravity) but ALL the ripple, ~70% of it in a
+  **3.90 Hz** line; the EE heading task row oscillates at exactly that
+  frequency and heading IS the (q1,q4) pair. **On the FULL mission the shipped
+  gains drove q4 across its entire +-3.0 N.m clamp (6.00 N.m p-p)** — invisible
+  in a hover-only test, because only the trajectory leg's 60 deg heading sweep
+  exercises the channel. At 0.3: **0.062 N.m p-p (96x), peak arm torque
+  3.00 -> 0.85, 0.0% clamped**, and heading tracking IMPROVED (e_psi std
+  1.17e-3 -> 5.6e-4 rad) — a self-excited oscillation, not useful stiffness.
+  **THE RIPPLE IS L1-SPECIFIC AND THE GMO YAML DOES NOT CARRY THIS CHANGE** —
+  measured both ways: the GMO's own q4 ripple is 0.0042 N.m std at `ky/dy_psi`
+  1.0 against the L1's 0.4833, and 0.3 moves it to 0.0046, i.e. nothing. What
+  differs is what feeds that task row: the GMO's `F_hat_y` is the smooth lumped
+  `(J_y^#)^T d_hat` off a heavily filtered estimate, the L1's is the attributed
+  `Lam_y S_e Lam_e^-1 w_hat_e` rebuilt every tick from a DEADBEAT one, and the
+  heading row is the least-filtered path it takes. **`ude_height_threshold`
+  0.35 IS mirrored into the GMO yaml** — it helps both (GMO takeoff
+  29.7 -> 15.5 s), since the mass mismatch and resting height are shared.
+  **NOT an anomalous `M_Y_psi`**: reading 0.05 against x/y/z's 1.0 as a 20x
+  amplification is a UNITS ERROR (kg.m^2 vs kg); the real per-row amplification
+  is `Lam_y*M_y^-1 = [0.485, 1.320, 0.778, 0.404]` and the heading row is
+  unremarkable. Four routes all work (`my_psi` 0.3 or 1.0, `dls_lambda` 0.6,
+  `ky/dy_psi` 0.3); the last measured best on the trajectory legs and tilt.
+- **OBSERVER BANDWIDTH IS NOT THE LEVER, AND IT IS THE ROTATIONAL CHANNEL THAT
+  BINDS.** The earlier sweep moved all three `omega_c` groups at once and left
+  "which one binds" open. One group at a time: rotational 0.5 -> 1.5 degrades
+  badly (tail 2.7 -> 279 mm, tilt 34 deg, 4.5% clamped) and 0.5 -> 3.0 **aborts
+  in 12 s**; translational 2 -> 4 and arm 0.5 -> 1.5 change essentially
+  nothing. So 0.5 is already the rotational ceiling, and **the DIRECT-entry
+  transient is not observer-limited** — no `omega_c` will fix it. It is the
+  SAFETY->DIRECT handover (SAFETY's UDE has the ~10.8 N, DIRECT's observer
+  restarts at zero); closing it means SEEDING the L1 from the UDE at the mode
+  switch, which is a code change, not a gain.
+- Tooling: `utils/wb_tune_score.py` (entry transient + dominant-mode amplitude
+  and FREQUENCY — a tune that moves the frequency changed which element
+  dominates, one that moves only the amplitude did not);
+  `wb_l1_set_gains.py` now also takes LAW gains by their full `wb_` name.
+
+**WHOLE-BODY WHOLE-BODY PLANNER — PAPER-FAITHFUL DIRECT COMMANDING (2026-08-23, user
+design).** In whole-body DIRECT the law now always receives the paper's FULL reference set
+(CoM chain through snap, base heading, EE position+heading chains, consistent q_d) instead
+of GS steps, streamed as the NEW `fsc_autopilot_ros2_msgs/WholeBodyReference` (MODEL-frame
+by contract; the msgs CMake GLOBs so the message was a pure file-add). Everything is
+ADDITIVE — no original file's behaviour changed:
+- **Pegasus side (this repo): `utils_planner/transition_planner.py`** — compatible
+  SETPOINT-TO-SETPOINT transitions. Every task channel A→B on ONE shared MIN-SNAP phase
+  (min-snap REQUIRED, not min-jerk: the solved CoM's VELOCITY depends on the prescribed
+  jerk through the thrust-direction map, so nonzero endpoint jerk would step the CoM
+  velocity at the hold↔transition joins), CoM solved by the same Picard fixed point as
+  `compatible_trajectory.py` (imported, untouched), with a time-varying β split and the
+  rest-point identity (α,β,γ) = (φ+q1, q2+q3, q4) making both endpoints ALGEBRAICALLY
+  exact on the holds. Ships `make_params_t650()` (generate_wb_truth's correct model-frame
+  body override), a damped-Newton 4-DOF IK (position + heading azimuth, FD Jacobian on the
+  exact chain, multi-seed) and `rest_ref()` for static holds. Offline-validated (system
+  python3, run the file): defect 4.4e-8 m, hold handover 0.028 mm / ~1e-5 m/s, FD-consistency
+  5e-11, IK round-trip 1e-14 rad, σ_nd ≥ 0.51 on the test transit, wrist-singular and
+  out-of-range goals refused with operator-readable reasons.
+- **2026-09-14: the whole-body planner is now a C++ (rclcpp) node in its OWN
+  ROS 2 package, `fsc_trajectory_planner`** (`~/Workspaces/fsc_autopilot_ws/src/
+  fsc_trajectory_planner`, node `whole_body_trajectory_planner`, namespaced per
+  vehicle by the launch file's `uav_prefix`). It links the flight stack's
+  exported `fsc_autopilot_ros2::wb_law` for the whole-body model and the flat
+  B-spline planner, and carries its own C++ IK and straight-line Picard
+  transition planner — **it does not import this repo's `utils_planner`**,
+  so the `pegasus_root` / `FSC_PEGASUS_ROOT` coupling described in the next
+  bullet is gone from every stack script. Interface unchanged (same
+  `whole_body_planner/*` topics/services, same states), so the arm GS tab, the
+  Isaac `viz_path`/`viz_pose` drawing in 06 and `wb_l1_campaign_driver.py` work
+  as before. Plans in ~3-4 ms (was 45-260 ms). Parity against
+  `transition_planner.py` / `flat_bspline_planner.py` is locked by gtests with
+  fixtures generated from THIS repo's Python (`scripts/dump_python_fixtures.py`
+  there; `dump_flat_reference.py` here), which is now the only remaining
+  relation between the two: a change to `utils_planner`'s maths must be
+  mirrored there or the fixtures diverge. The vehicle model and the trajectory
+  backends sit behind registries (`vehicleFactories()`, `plannerFactories()`)
+  so a second airframe or a figure-8/circle shape is one factory each. Full
+  §7.15.1 sim flight with it: Command.md §7.15.11. The Python
+  `whole_body_planner.py` and its `planner/` directory were DELETED from the
+  autopilot repo the same day (its rig tests moved to the new package). This
+  repo's `utils_planner` stays: the 02/03 demos, comparison/plot tools,
+  `l1_observer.py`'s self-test and the C++ truth generators
+  (`generate_wb_truth.py`, `generate_wb_l1_truth.py`, `dump_flat_reference.py`)
+  import it, and no flight-stack process does. The bullet below describes
+  the Python node as it was.
+- **2026-09-15: END-EFFECTOR TRAJECTORY MODE in fsc_trajectory_planner.** Circle /
+  figure-8 EE trajectories (yaw along the tangent) planned as compatible whole-body
+  runs following `~/Downloads/Task-space Planner`'s `main_redundant_zyxx.m` adapted
+  to the z-x-x-z OM-X (q1 fixed at 0, q2 an assigned sinusoid, drone yaw = the first
+  z angle; the fmincon feasibility residual solved as a relaxed Picard fixed point).
+  Note the MATLAB script's `Ref_TrajGen.m` sweeps ALL THREE EE Euler angles linearly
+  and does not align yaw to the tangent — tangent yaw with zero extra roll/pitch is
+  the user's specification, and a literally level EE is this arm's wrist singularity
+  (refused). Flown from the arm GS's new "EE trajectory" tab (Sine Test and Demos
+  tabs removed). Sim record: Command.md §7.15.12.
+- **fsc_autopilot_ros2 (dev_CCM): the whole-body planner**
+  (`.../single_aerial_manipulator_whole_body_direct_actuation/planner/
+  whole_body_planner.py`, plain rclpy script, no build; own tmux WINDOW
+  `whole-body planner` in the stack launcher — SIX PANES is that row's ceiling, a 7th split fails
+  with `no space for new pane` in the 80-col detached window and `set -e` then kills the
+  launcher before the vrc pane/titles/attach; imports the planner via `pegasus_root` param /
+  `FSC_PEGASUS_ROOT`). State machine: silent in SAFETY (takeoff byte-identical) → on
+  DIRECT (from the node's latched `/mode` topic) captures the rest hold from odom + the
+  smoothed arm reference and streams at 100 Hz → drone-GS reference = PENDING base (never
+  executed; republished latched on `whole_body_planner/pending_base`, auto ride-along
+  plan) → arm-GS EE target (`whole_body_planner/ee_target`, world PoseStamped) = replan
+  (worker thread, `_plan_gen` supersedence; status latched on `whole_body_planner/status`:
+  HOLD/PENDING/CALCULATING/PLANNED/INFEASIBLE:<reason>/EXECUTING) → Trigger
+  `whole_body_planner/send` executes; completion re-holds at the goal and one-shot-seats
+  the arm smoother there. While EXECUTING it also streams q_d to the
+  ExternalTorqueController's target_joint_setpoint (20 Hz) so a SAFETY abort lands on the
+  CURRENT pose. Frame boundary mirrors frame_adapter: φ_model = ψ_actual − π/2,
+  R0_model = R0_actual·Rz(−90). Uses threading.RLock — the plain Lock self-deadlocked when
+  the infeasible branch published status under the lock (found in loopback). Loopback-
+  validated end-to-end (fake mode/odom/arm rig): 100 Hz hold with exact home FK (x_cd
+  shows the known 19.5 mm forward CoM), PENDING→PLANNED (ride-along T=5.4 s),
+  EE replan, Send → 552 samples, max inter-sample EE step 2.46 mm, terminal EE exactly on
+  target, new hold = IK pose, SAFETY revert silences instantly.
+- **WB node hook (C++, the fork):** new optional params `wb_streamed_ref_timeout_s`
+  (0.25 s) / `wb_streamed_ref_topic`; a fresh streamed reference IS the law's reference
+  verbatim (copied, no frame math — the message is model-frame), stale → the internal
+  builder (hover-campaign behaviour preserved; existing yamls run unchanged). Malformed
+  samples (non-finite / degenerate headings) are dropped, edges logged; debug[56] =
+  stream-fresh. Parity suite still 4/4 — the law itself untouched.
+- **Arm GS: NEW second tab "EE Whole-Body"** (`custom_gui/src/ee_wholebody_panel.{hpp,cpp}`,
+  reusing tab 1's WorkspaceView/PlanView untouched + a NEW third HeadingDial for the
+  inertial EE heading with the pending-base heading as a rim tick). Inertial world X/Y/Z +
+  heading boxes; visualization base-relative about the PENDING base; lamp orange
+  Calculating → green Planned / red Infeasible+reason; Assign(plan)/Send(execute)/Clear.
+  Guidance verdict from tab 1's raster only — the whole-body planner is authoritative (the raster is
+  mount-plate-anchored, the whole-body planner body-origin-anchored: cm-level display bias near the
+  boundary, stated in the tooltip). Screenshot-validated on the live pipe (frame math
+  confirmed: base (0.5,0.2,1.4,15°) + pick → world boxes exact). One trap: this Qt style's
+  QPalette::Mid is near-white — the dial uses hard-coded grays.
+  In whole-body DIRECT tab 1's joint/EE commands are superseded (the law ignores the
+  smoothed joint path while the stream is fresh); tab 2 is the EE surface.
+Full operator flow + debug layout: Command.md §7.14.3.
+**FIRST WHOLE-BODY DIRECT FLIGHT, 2026-08-23 — two GROUND-STATION wiring bugs found and
+fixed (neither in the law, the whole-body planner or the planner; both were topic plumbing):**
+(1) **Drone GS N/T rotor pies stuck at 0.0%** through the whole DIRECT flight. Its
+motors_debug subscription list is PER-FORK and held only `direct_actuation` +
+`geometric_direct_actuation`; this fork publishes `whole_body_direct_actuation/motors_debug`.
+Diagnosed in one command — `ros2 topic info` on that topic showed `Publisher count: 1,
+Subscription count: 0`. Fixed by adding the name to that list in
+`ros2_ground_station_gui/src/ROS_Node/ros_single_drone_control.py` (a shared repo on main —
+the change is one line into an existing extension-point list, left UNCOMMITTED). Both of
+the GUI's other gates were already fine: the controller-name test is a SUBSTRING match on
+"Direct Actuation" (so "Whole-Body Direct Actuation" passes), and `connected` was true.
+NOTE the §7.14 text claiming the `connected` gate had been removed was WRONG — it is still
+there (it is really PX4 `pre_flight_checks_pass`); Command.md now says so.
+(2) **Arm GS "EE Whole-Body" tab dead** — lamp stuck on "Not in whole-body DIRECT",
+"waiting for the whole-body planner", buttons greyed, while the whole-body planner was actually at
+`PLANNED T=10.3s`. NAMESPACE MISMATCH: the arm station runs at
+`/uav_0/fsc_open_manipulator` (owner-prefix convention) but the whole-body planner is a FLIGHT-STACK
+node at `/uav_0`, so the panel's plain relative names resolved to
+`/uav_0/fsc_open_manipulator/whole_body_planner/*` and matched nothing (both sets of
+topics existed side by side — the giveaway in `ros2 topic list`). The panel now resolves
+against the vehicle namespace by stripping its own last namespace component (root and
+single-component namespaces handled; `planner_namespace` parameter overrides).
+Verified isolated from the flying vehicle under `/uav_test/fsc_open_manipulator` →
+subscribes `/uav_test/whole_body_planner/*`, and screenshot-confirmed the panel then
+activates (green PLANNED, base target populated, all three buttons enabled).
+BOTH FIXES NEED A GROUND-STATION RESTART to take effect.
+**Arm-GS panel then RESTRUCTURED to the user's spec (same day)**: joint-limit grid
+(Setpoints styling, green/red) fed by a new whole-body planner topic
+`whole_body_planner/target_joints` — published on EVERY plan attempt including
+infeasible ones, since that is exactly when the row earns its place, and defaulting to
+the hold pose · read-only drone-target row (amber while pending) · the three selectors ·
+the EE target as TWO editable rows, relative-to-drone and inertial, each rewriting the
+other through the anchor (heading stored inertially so it does not swing with base yaw) ·
+buttons `Trajectory Planning` / `Send Compatible Trajectory` / `Clear` · whole-body planner status
+strip moved to the BOTTOM. Screenshot-verified against a fake whole-body planner at /uav_test.
+Full layout: Command.md §7.14.3 step 3.
+**EE = THE GRIPPER, and the tab now draws the RIGHT workspace (2026-08-23,
+user's definition + "most setpoints are infeasible" report).** Two findings,
+both measured:
+(a) `make_params()` deliberately ends the chain at the WRIST
+(`ee_pos = joint_pos[3]  # EE = the wrist (manip_joint4)`, l_i[3] = 0). The
+task variable y = [r_e; b_1e] is meant to be the GRIPPER, so the T650
+whole-body variant now extends l_i[3] by the measured pad midpoint
+`GRIPPER_OFF_WRIST = [0, 0, -0.0494]` (= 01_track's `PAD_OFF_EE`, the number
+that demo adds by hand BECAUSE the model's EE is the wrist). Applied ONLY in
+`transition_planner.make_params_t650()` + the C++ `t650Defaults`, never in the
+shared `make_params()` — the legacy demos are flight-validated on the wrist
+convention and would double-count. The offset is ~COAXIAL with joint 4 (the
+asset's gripper CoM is 39.6 mm along that axis, 5.7 mm off it), which is what
+preserves the 4-DOF split: q4 still cannot move r_e (verified identical r_0e at
+q4 = 0/90), so position stays a (q1,q2,q3) problem and q4 buys the heading,
+exactly as the z-x-z recovery assumes. Only l_i[3] moves — com_i[3] is measured
+from O_chain[3] = manip_joint4, so no mass property changes. Fixture
+regenerated, **WbParityTest 4/4**, planner self-test passes (defect 4.8e-8 m,
+sigma_nd 0.404), whole-body planner loopback passes (hold r_ed 0.1465 -> 0.1952).
+`generate_wb_truth.py`'s duplicate `make_params_t650` was DELETED — it now
+imports the extension's, so fixture and whole-body planner cannot describe different
+robots. **K_y/D_y were tuned against the wrist EE and have not been re-flown.**
+(b) The tab was drawing the Setpoints raster, which is wrong here twice over:
+that model has a PITCH wrist with a 126 mm bracket while the asset has the
+coaxial ROLL wrist (~10 cm out), and it ignores the fold guard — of the region
+it drew, only **2.6%** could ever be planned, which is exactly the "most
+setpoints are infeasible" the user hit. The whole-body planner now publishes the true
+usable set (`whole_body_planner/workspace_rz`, filled 192x192 (r,z) occupancy
+grid, latched, one (q2,q3) sweep: r/z are EXACTLY q1-independent because the
+chain is left-multiplied by Rz(q1)) and the panel draws that. Measured
+afterwards: **0/40 points outside it plan** (a correct necessary bound), ~55%
+of points inside plan at a fixed heading — the remainder fail on the WRIST
+ROLL q4 needing 92-99 deg against its ±90 limit, which the joint row shows in
+red. The guidance line says exactly this.
+**RE-PLAN OSCILLATION — THREE COMPOUNDING DEFECTS, all fixed 2026-08-23** (user: "if I
+click trajectory planning then send, the aerial manipulator will oscillate"). The
+reference itself was never at fault — both plans are smooth offline (peak 17 deg/s, no
+overshoot, defect 1e-8). The chain was:
+1. **The whole-body planner's Picard solve holds the GIL for ~0.26 s in ONE block**, against the
+   node's `wb_streamed_ref_timeout_s` of **0.25 s** — so the streamed reference went
+   stale during EVERY solve. Fixed with a `yield_hook`/`yield_every` in
+   `plan_transition`, called every 32 grid samples in BOTH the Picard and diagnostics
+   loops (once per ITERATION is not enough — one iteration alone is ~26 ms of solid
+   GIL). Measured after: the 100 Hz stream survives a re-plan at **101 Hz, worst gap
+   14 ms**.
+2. **On staleness the node fell back to its internal builder**, whose reference tracks
+   `outer_ref_` — the RAW ground-station setpoint, a METRE away once the operator had
+   sent a new drone target. Every stall therefore flicked the law onto a distant
+   reference and back: the lurch. Now a `streamed_ref_seen_` latch makes the builder
+   fallback available ONLY before the whole-body planner's first sample of an engagement (cleared
+   in `switchMode`); after that a stale stream FREEZES the last streamed setpoint with
+   all derivatives zeroed. That is also the *correct* reference during a solve, since
+   the whole-body planner streams a static hold while it plans.
+3. **Every repeated ground-station message restarted the solve** — a second click or a
+   periodic republish flickered CALCULATING <-> PLANNED so a stable PLANNED could not be
+   caught (this is the "Status automatically updates another trajectory" the user saw),
+   and it fired defect 1 over and over. Both target callbacks now IGNORE an unchanged
+   target (1 mm / 2 mrad).
+Also fixed while chasing it: the planning worker caught only `ValueError`/`LinAlgError`,
+so any other error killed the thread silently and left the GUI on an orange
+"Calculating…" for ever — it now catches everything, reports INFEASIBLE with the message
+and logs a traceback. Regression: `planner/test_replan_stream.py` (stream rate
++ worst gap across a re-plan, setpoint immobility while solving, and the repeated-target
+case).
+**FLOWN END-TO-END 2026-08-23 (§7.14.1, three matched runs): the three reference defects
+ARE fixed, and the SWING IS A SEPARATE, PRE-EXISTING CONTROL PROBLEM.** In every run the
+streamed reference was static to **0.0 mm** with `wb_control_debug[56] = 1` throughout and
+ONE plan event (no storm) — yet the vehicle still limit-cycles at **0.88 Hz**, exactly the
+attitude loop's `sqrt(k_R/I) = sqrt(2.0/0.065) = 5.55 rad/s`, with the ARM swinging ±10°
+against a CONSTANT `q_d`. Closed-loop, not commanded. A/B/C/D: gripper EE + the shipped +15%
+kf = bounded ±9° cycle; gripper EE + the CALIBRATED kf = DIVERGED (roll ±176°, watchdog →
+SAFETY in ~30 s); WRIST EE + calibrated kf = worse still (flew 34 m at 18 m/s); and **run D,
+the whole-body planner KILLED so the node runs its own internal builder (`Publisher count: 0` on the
+reference topic), diverges IDENTICALLY** — pitch ±0.9° at t=8-16 s, ±2.1 at 16-20, ±8.6 at
+20-26, flipped by 26: a growing unstable mode with the whole-body planner not in the loop at all.
+That is what rules the reference path out; without run D it could not have been. So the
+`r_e` = gripper change is NOT the trigger, and **the +15% "stress injection" is the only
+reason this configuration flies** — a higher believed kf makes the allocator command ~13%
+LESS motor per unit torque, i.e. a quiet loop-gain reduction. The yaml is LEFT at
+5.38192065e-05 with that recorded in it; §7.14.2's reading of that number as robustness
+margin is misleading.
+**FIXED the same day — it was `M_r_d`, not k_R/k_w.** `wb_mrd_x/y/z` was the T650 **I0**
+diagonal `[0.077681, 0.090738, 0.083401]`, the BODY-ONLY inertia, while the COUPLED
+rotational inertia with the arm is `~[0.132, 0.112, 0.116]` (straight off `dynamics()`'s
+M). `M_r_d` is the inertia the law IMPOSES, so the old value asked the vehicle to rotate as
+if it were half its real weight — a ~2× bandwidth demand the 99.7 ms rotor lag + DDS/HIL
+transport delay cannot honour, and the +15% kf injection was the only thing holding it up.
+**Fix: `M_r_d` → 1.5× I0 = `[0.116522, 0.136107, 0.125102]`, `alloc_thrust_coeff` back to
+the CALIBRATED 4.679931e-05, injection REMOVED.** k_R/k_w/K_y/D_y/GMO/model untouched.
+Screened offline with the NEW `application/robotic_arm/utils/wb_hover_stability.py` (exact
+law + exact model + allocator with the believed-vs-true kf split + rotor lag + a
+transport-delay FIFO, ~5 s/candidate) scored on **DELAY MARGIN**, which is what binds:
+1.0× I0 = 24 ms, 1.25× = 28, **1.5–2.0× = 32**, 2.5× = 28 (turns over). k_R barely moves it
+and raising k_w makes it WORSE; K_y/D_y do not affect it. **That tool is NOT validated in
+absolute terms** — it calls the flown +15% run unstable when the flight held it — so trust
+only the RELATIVE ordering and fly the winner.
+FLOWN (matched kf, whole-body planner streaming): pitch limit cycle **±9.2° → 0.14° p-p**, CoM error
+**18 → 2.6 mm** mean, EE error **53 → 5.1 mm**, arm-vs-reference **±10° → 0.11°**, thrust
+36.74–36.76 N against a 36.75 N hover, no saturation — and at the calibrated kf the OLD
+tune diverged outright. The whole-body planner cycle (drone-GS target → Trajectory Planning → Send)
+then executed for the FIRST time: pitch within ±0.07°, CoM error ≤6 mm, arrived at
+x = 0.480 for a 0.5 m CoM command (the ~20 mm is the forward arm's CoM-vs-base offset) and
+returned to HOLD. ONE flight each — repeat-test before hardware (the 2026-08-10 lesson),
+though a decaying transient vs a divergence is far outside run-to-run scatter.
+**ROBUSTNESS CONFIRMED — the retune carries the +15% kf mismatch with NO further tuning** (user kept the injection on purpose: kf is never exact on hardware and ~15% is near worst case, so a tune that only works at zero mismatch is not a result). Flown, continuous 53 s steady state with the allocator believing the wrong kf: pitch **18.4° → 0.197° p-p** (~93× less attitude motion than the same mismatch before the retune), roll 0.157°, CoM error **18 → 2.85 mm**, EE error **53 → 6.1 mm**, position spread 8×12×0.5 mm, no saturation — within a whisker of the zero-mismatch case (0.14°/2.6 mm). The mismatch is demonstrably ACTIVE: u1 = 42.26 N and 42.26×(4.679931/5.38192) = 36.74 N delivered = exactly hover. Expect a larger ENTRY transient though — CoM error starts ~119 mm and decays 119→26→5 mm over ~40 s as the observer learns the ~13% thrust deficit; that is the estimator working, not a fault. Shipped yaml = retuned M_r_d + 5.38192065e-05. Tables: Command.md §7.14.4 (diagnosis) and §7.14.5 (fix + robustness).
+Operating traps from the campaign: land to **z ≥ 0.35** (commanding 0.12, below the
+0.305 m resting height, pushed the vehicle into the ground and tipped it), and after any
+crash do a FULL step-0 clean — a stale armed PX4 makes the next spawn tip and then refuse
+to arm on "Preflight Fail: Attitude failure (roll)".
+(c) **q4 WIDENED to ±120° (2026-08-23, user)** — the wrist roll WAS the binding
+constraint, so this is the fix for (b)'s residual: in-region feasibility at a
+fixed heading went **60% -> 98%** (measured, same 120 samples; the 2 remaining
+are IK non-convergence right at the envelope edge), and nothing outside the
+region plans either way (0/40, unchanged). The asset authors manip_joint4 at
+**±180**, so ±120 is well inside the physical stop. THREE definitions must stay
+equal — `transition_planner.Q_MIN/Q_MAX`, the C++ `WbReferenceBuilder::kQMin/
+kQMax`, and `torque_controller_isaac_aerial.yaml`'s `min/max_position` (the GS
+adopts that one LIVE, and the whole-body launcher now also passes matching
+`fallback_*_deg` so the joint row is right before the controller answers).
+The hardware/gazebo arm configs kept ±90 until **2026-09-12, when the user made
+the cabling/mechanical call and they were widened to ±120 as well** — see the
+q4-unification entry at the end of this file. There are now SIX definitions, not
+three: add the xacro's `joint4_min/max_deg` (which writes the servo EEPROM) and
+`dxl_servo_ids.py`'s `EXPECTED_LIMITS[14]`. Verified after the change: parity 4/4,
+planner self-test, whole-body planner loopback, and the GS rendering J4 [-120, 120] with
+105° GREEN (it would have been red before). NOT yet flown. The flight itself reached DIRECT
+with the whole-body planner live and planning, so the law/whole-body planner/planner path is sound; a full
+Assign→Send→execute cycle has still NOT been flown.
+
+**THE ARM IS NOT AN IDEAL TORQUE SOURCE, AND NOW THE SIM KNOWS (2026-09-03, user
+request off the 0902/0903 applied-torque analysis).**
+**SUPERSEDED 2026-09-09 — the back-EMF droop is GONE from the simulator, because
+the arm controller's new software CURRENT LOOP removes it on the real arm. The
+entry below is kept for the identification and for the traps it records, but
+`servo_model.py` no longer contains `b`, `PEGASUS_ARM_SERVO_MODEL` no longer
+accepts `pwm`/`pwm_0903`, and the yaml keys are `sim_arm_current_noise_*`. See
+"THE ARM'S CURRENT LOOP" at the end of this file.** The OM-X servos fly in Dynamixel
+**Operating Mode 16 (PWM)**, so what the arm controller writes is a DUTY, i.e. a VOLTAGE.
+The winding sees `V - Ke*qd` across `R`, so the delivered torque falls by a fixed amount per
+unit of joint speed whatever was asked for:
+`tau_app = clip(tau_cmd, ±tau_cap) − b*(qd − s_emf*qd_ref)`, **`b = Kt²/R =
+[1.102, 0.934, 1.493, 1.102] N·m per rad/s`**. Isaac applied the commanded effort exactly,
+which is the mechanical reason it never reproduced the hardware behaviour. New
+`extensions/.../robotic_arm/servo_model.py` (`DynamixelPwmServo`, pure numpy, self-test
+replays both flights) wired into `06_px4_t650_aerial_manipulator_free_flight.py`
+through **`PEGASUS_ARM_SERVO_MODEL`** = `pwm` (DEFAULT — droop on joints 2/3, ceiling 3.0) ·
+`pwm_0903` (adds the 2/3 Sep per-joint ceilings [0.370, 2.160, 1.535, 0.370] N·m, which
+reproduces those bags and DELIBERATELY breaks the one-tau_max rule) · `ideal` (the old
+behaviour, for an A/B). **This changes 06's default behaviour on purpose.**
+**THE SWITCH IS A LAUNCHER KNOB, NOT A CONTROLLER PARAMETER (2026-09-04, user request).**
+`start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh` sets
+`PEGASUS_ARM_SERVO_MODEL` (default `pwm`); the base launcher `start_single_drone_x650.sh`
+VALIDATES it against `pwm|pwm_0903|ideal` and BAKES it into the Isaac pane's command line (the
+tmux-server-env trap, same as `PEGASUS_PX4_LOCKSTEP`/`PEGASUS_PAYLOAD_MASS`), and the launcher
+prints the active mode in colour. It deliberately does NOT go in
+`params_single_aerial_manipulator_whole_body_direct_actuation_t650_sim.yaml`: the droop is a
+PLANT property the controller neither applies nor models — that mismatch IS the effect under
+test — so a parameter there would be a knob wired to nothing. That yaml now carries a header
+block saying exactly this and pointing at the real switch. **Trap fixed while wiring it:** the
+base launcher bakes the variable unconditionally, so an unset knob arrives as the EMPTY STRING;
+06 now reads `(os.environ.get(...) or "pwm")` rather than a `get()` default, which would have
+raised SystemExit on every launcher that does not set it.
+**MOVED INTO THE CONTROLLER YAML, 2026-09-04 (user asked three times — their call).** The
+sim yaml now owns it: `sim_arm_backemf_enable: true` plus `sim_arm_backemf_b_j1..j4`
+(`[0.0, 0.9337, 1.4934, 0.0]` N·m per rad/s) in its `1. REALITY MODEL` section. The
+whole-body NODE never declares those keys — rclcpp ignores them, verified by launching a
+node named `fsc_autopilot_ros2` against the file (101 params delivered, the five `sim_*`
+among them, every gain unaffected) — so the WB **launcher** greps them
+(`$FSC_AUTOPILOT_WS/src/fsc_autopilot_ros2/config/…_t650_sim.yaml`, path from the machine
+conf) and forwards `PEGASUS_ARM_SERVO_MODEL` + the new `PEGASUS_ARM_SERVO_B` to Isaac.
+**Precedence: environment > yaml > built-in.** `sim_` prefix on purpose: nothing in the
+control law reads them. Cost accepted knowingly: a key in a controller config consumed by a
+shell script, and a bare `ros2 launch` ignores it — only the §7.14.1 launcher path applies it.
+Validated: rcl parser accepts the file; the launcher resolves all five cases (yaml true/false,
+env override of mode and of b, key absent → default + NOTE); two headless Isaac runs confirm
+the coefficients arrive.
+- **IDENTIFIED, not assumed.** The command chain `duty = clip_±885[clip_±max_effort(tau·N·rho)
+  + s_emf*(885*Ke/Vs)*qd_ref]`, `rho = 885*R*I_LSB/Vs`, reproduces the logged Goal PWM to
+  **≤0.23 duty counts (1.8 mN·m) over 32 700 samples**, so the commanded side is exact and the
+  whole gap is the motor. At rest j2/j3 deliver 99.4/94.0% (3 Sep) and 100.1/97.6% (2 Sep).
+  In motion the drop is linear and symmetric with slope 0.950 (j2) and 1.409/1.476 (j3)
+  against `Kt²/R` = 0.934/1.493 with NO fitted parameter (`Kt = Ke` in SI for any DC machine).
+  Model error on the recorded flights 0.247 → 0.134 (3 Sep j2) and 0.222 → 0.067 (j3) N·m rms.
+- **THE LOSS IS ABSOLUTE, NOT A PERCENTAGE.** 0.93/1.49 N·m per rad/s whatever the command,
+  so delivery ≥90% needs `|tau_cmd| ≥ 10*b*|qd|` and the torque REVERSES at `|qd| = tau/b`.
+  A 0.5 N·m command on j3 is faithful only to 0.033 rad/s (1.9 °/s). Never score this with a
+  percentage alone — the commanded torque carries a large static gravity-hold component that
+  the motor does deliver, so eta can read 104% in a phase whose mean error is already 0.04 N·m.
+- **Joints 1 and 4 are deliberately left at b = 0.** Their command (0.03–0.04 N·m rms) never
+  left the current sensor's noise floor in either flight and j1's fit (0.457 vs theory 1.102,
+  R² 0.50) disagrees with theory; `backemf_joints=range(4)` enables them if wanted.
+- **No double-count:** `switch_dof_control_mode(mode="effort")` zeroes the drive stiffness AND
+  damping, so the asset's authored `drive:angular:physics:damping` 1.5/0.7 on manip_joint2/3 is
+  NOT active — before this change the simulated joints had no damping at all. The droop is
+  applied EXPLICITLY as a torque; `b*dt/I` = 0.19/0.30 at the 0.0200 kg·m² armature and 250 Hz
+  (stable below 2). If the physics step ever grows, move it into the PhysX drive damping, which
+  is implicit.
+- `joint_states.effort` out of 06 now carries the **APPLIED** torque, matching what the hardware
+  backend reports there (Present Current); before the servo model existed the two were one number.
+- **NOT modelled and it matters:** gearbox friction. `tau_app` is Kt × Present Current, the
+  ELECTROMAGNETIC torque; the 353.5:1 gearbox's losses sit downstream and the flight data cannot
+  separate them (no torque sensor). A breakaway torque needs a bench measurement.
+  **The fix on the real arm is current-control mode (Mode 0)** — the servo then closes its own
+  current loop, R and Ke drop out and b goes to zero; this model should then be DELETED, not
+  retuned. Also: the controller's configured `back_emf_ke[2] = 2.86` contradicts j2's calibrated
+  `Kt = 2.139` by 34% (it did nothing in these flights because qd_ref ≈ 0, but it is wrong —
+  the calibration implies `[2.323, 2.139, 2.534, 2.323]`).
+- **EXPECT THE WHOLE-BODY TUNE TO CHANGE.** The law's `N1^T u3` arm-reaction pre-compensation is
+  exact only if the arm delivers the modelled torque; with the droop in, the sim now carries the
+  same error hardware does, which is the point. Validated offline against both flights and
+  smoke-tested in Isaac (banner, `b*dt/I`, `|tau|max cmd/app` in the status line, clean 4000-step
+  run); **NOT yet flown in a full whole-body SITL flight.** Report:
+  `docs/experimental_data_ros2_bag/0903 - T650-AM whole-body/analysis/` (extraction +
+  `applied_torque_analysis.py` + `wb_divergence_report.html`).
+- **`utils/wb_hover_stability.py` also runs the servo now** (`--servo pwm` default,
+  `ideal` for the A/B) — the offline screener had the same ideal-arm idealisation. It did
+  NOT repair the tool's absolute verdict: it still calls the flown +15 % kf run divergent in
+  every combination tried (servo on/off x old/new M_r_d), so keep trusting the ORDERING only.
+  **Three STALE constants found there while checking, flagged in-file and deliberately NOT
+  changed** (changing them re-bases every sweep recorded against the tool): `KF_TRUE`
+  4.679931e-05 should be `t650_params.ROTOR_CONSTANT` = 4.041283e-05 since the 2026-08-25
+  re-anchor (15.8 % high — the tool flies the pre-re-anchor, too-strong plant); `KF_SHIPPED`
+  5.38192065e-05 should be the sim yaml's `alloc_thrust_coeff` 4.6474755e-05 (the +15 % RATIO
+  is right, the absolute loop gain is not); and `make_gains()`'s `mrd` is the PRE-retune
+  M_r_d against a yaml that has carried (0.116522, 0.136107, 0.125102) since 2026-08-23.
+- **THE TWO ARM REFERENCES ARE NOT SYNCHRONISED — the arm controller REPLAYS the whole-body planner's
+  move 3-4 s LATE (2026-09-03, measured on both 0902 and 0903).** `q_d` (the whole-body planner's
+  `whole_body_direct_actuation/reference`, MODEL convention) and `q_cmd`
+  (`external_torque_controller/smoothed_reference_joint_trajectory`) run the SAME move one after
+  the other: 3 Sep joint 3 whole-body planner 24.81-27.81 s / arm 28.71-33.05 s (**lag +3.90 s**), 2 Sep
+  joint 3 +3.04 s and joint 2 +4.06 s. **Endpoints agree EXACTLY** (8.28/8.28, 40.00/40.00), so it
+  is a TIMING fault, not wiring or convention, and the lag equals the length of the whole-body planner's move
+  — a goal delivered ONCE AT COMPLETION rather than streamed. The measured joint tracks `q_d` and
+  ignores `q_cmd` (correct: the law owns the torque in passthrough), so **every compensation term,
+  the stale-fallback PD hold and the DIRECT-entry gate are all computed against a trajectory
+  nothing is flying.** This is UPSTREAM of the qd_ref-vs-qd_meas choice — feeding the back-EMF term
+  measured velocity fixes what it compensates, not the 3-4 s stale picture.
+  **`external_torque_controller/target_joint_setpoint` recorded ZERO messages in both flights**
+  despite the recorder being subscribed and the whole-body planner spending 3.9 s / 11.4 s in EXECUTING;
+  **CORRECTED 2026-09-04 by a live capture:** `ros2 topic info` on that topic reads **Publisher
+  count: 2** (the whole-body planner's arm-sync AND the arm GS), so the publisher IS in the graph — the
+  earlier inference from rosbag2's `offered_qos_profiles` (one TRANSIENT_LOCAL profile ⇒ the
+  whole-body planner's VOLATILE publisher absent) was WRONG; that field is not a reliable publisher count.
+  What stands is the ZERO MESSAGES: the whole-body planner advertised and did not publish during either
+  flight, so the goal reaches the arm controller by a path the recording does not show.
+  **Check `ros2 topic info -v` + `ros2 topic hz` on that topic during EXECUTING before
+  instrumenting anything else.** Charts, the per-joint lag table and the six-term decomposition are
+  in the report artifact; the analysis is `applied_torque_analysis.py`'s `sync` / `ff` payload.
 
 **Known checklist deviations, not yet fixed** (see "Checklist for adding a new vehicle model"
-below — `x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
+below — `utils_vehicle/x650_vehicle.py`/`x650_multirotor.py` themselves are compliant, only `controller.py`
 deviates):
 - `controller.py:774` — ROS2 node name is hardcoded (`"matlab_aerial_manipulator_controller"`),
   not parameterized by vehicle/uav id. Fine for today's single-vehicle demo; will collide if two
@@ -260,7 +1903,7 @@ then converted into the sim's actual thrust-curve interface:
 - `scripts/outdoor_sim/start_x650_single_drone.sh` (new) — mirrors `start_single_drone_sitl.sh` exactly,
   pointing at the new bare-drone script above; now also calls `apply_x650_px4_gains.sh` (see
   "X650 PX4 gain tuning" above) 8s after launch.
-- `scripts/indoor_sim/start_single_drone_x650.sh` (added 2026-07-25) runs the same calibrated
+- `scripts/indoor_sim/lib/start_single_drone_x650.sh` (added 2026-07-25) runs the same calibrated
   bare-X650 plant and measured `lambda=10.51 1/s` rotor lag with PX4-owned control, but combines
   the validated X650 gains with the indoor external-vision estimator settings before EKF2 starts.
   It keeps those parameters in the independent `rootfs_fsc_indoor_x650/` work directory and
@@ -273,7 +1916,7 @@ then converted into the sim's actual thrust-curve interface:
   `(0.05777498, 0.06408172, 0.065004565) kg*m^2` diagonal inertia. Together with the four authored
   rotor masses, total simulated vehicle mass remains 3.5 kg. Do not copy the new asset's authored
   body mass into controller or calibration constants.
-- Note: `scripts/indoor_sim/start_single_drone_sitl_payload_x650.sh` already existed (pre-dates this
+- Note: `scripts/indoor_sim/archive/start_single_drone_sitl_payload_x650.sh` already existed (pre-dates this
   session's work, launches the payload variant) but lacks the tmux kill-pane cleanup pattern the
   other launch scripts in this repo have — not fixed here since it wasn't asked for. It does now
   also call `apply_x650_px4_gains.sh`, same as the other two X650 launch scripts.
@@ -286,7 +1929,7 @@ prismatic joint + `ROS2CableWinchBackend`), with Iris swapped for the calibrated
 mass (`rod_b_mass+payload_mass=0.565kg`) is unchanged from the Iris version — that constraint
 comes from `cable_torque_ctrl_node`'s deployed mass param (AK40-10 side), not the carrying
 vehicle's lift capacity, so it doesn't change just because X650 has far more thrust margin.
-`scripts/indoor_sim/start_single_drone_sitl_payload_variable_cable_x650.sh` (new) mirrors
+`scripts/indoor_sim/archive/start_single_drone_sitl_payload_variable_cable_x650.sh` (new) mirrors
 `start_single_drone_sitl_payload_variable_cable.sh` exactly, pointing at the new script, and also
 calls `apply_x650_px4_gains.sh`. Neither the Iris variant nor its launch script were touched
 (verified via `git status`).
@@ -401,8 +2044,8 @@ Where things live:
   `T650_USD` constant) and overrides the asset's authored 1.467 kg body mass at spawn.
 - `application/px4_base/05_px4_single_drone_t650.py` — the T650 app. Calls the helper with **no**
   mass/motor arguments, so every T650 number lives in exactly one place.
-- `scripts/indoor_sim/start_single_drone_t650.sh` — thin wrapper over the X650 launcher.
-- `scripts/indoor_sim/start_t650_direct_actuator_sitl.sh` — direct-actuation variant, lockstep
+- `scripts/indoor_sim/archive/start_single_drone_t650.sh` — thin wrapper over the X650 launcher.
+- `scripts/indoor_sim/archive/start_t650_direct_actuator_sitl.sh` — direct-actuation variant, lockstep
   disabled and pushed with `tmux setenv -g` (same fix as the X650 version).
 
 `x650_bare_frame_utils.py`'s `MOTOR_CALIBRATIONS["MN4010"]` entry and the `motor=` argument are
@@ -525,10 +2168,15 @@ initial condition matches the mid-flight bags.
   that rootfs is **39 GB** of accumulated logs. Creating a scratch profile cost 39 GB of disk.
   Exclude `log/` — or create only the `etc`/`test_data` symlinks plus `eeprom/`, which is all PX4
   needs to boot.
-- **`virtual_remote` is service-driven, not interactive.** `/uav_0/rc/{arm,disarm,offboard,rtl}`
-  as `std_srvs/Trigger`; there is no `_wait_for_arm_trigger()` and no "press Enter" gate. The
-  safety comment at `start_baseline_t650_stack_fused.sh:31-34` is **stale and overstates the
-  guarantee** — the pane arms whenever anyone calls the service, script included.
+- **The virtual RC is `ros2 run fsc_autopilot_ros2 virtual_rc` (2026-09-25), service-driven, not
+  interactive.** `/uav_0/rc/{arm,disarm,offboard,rtl}` as `std_srvs/Trigger`; no "press Enter"
+  gate — the pane arms whenever anyone calls the service, script included. It was
+  `px4_offboard_control virtual_remote` on fsc_virtual_remote_controller's `dev_robotic_arm`
+  branch (022d1f6/73cc7d1), which is RETIRED: the node moved into fsc_autopilot_ros2
+  (`scripts/nodes/virtual_rc.py`) so the sim stack depends on that package's MAIN branch only —
+  main's `virtual_remote` is the old interactive one-shot and nothing runs it any more. The pad
+  node the PS4 Remote tab reads (`gamepad_input` + its launch) is on main unchanged.
+  `kill_stale_sim_processes.sh` / `stop_isaacsim_stack.sh` match both names.
 - **PX4 autotune needs `MC_AT_EN=1` set at BOOT** (`rc.mc_apps:23` only starts the module if the
   parameter is already >0), and there is no `MC_AT_AXES` in v1.16 — it sequences roll→pitch→yaw
   and rewrites all three. Use `MC_AT_APPLY=0` to identify without writing. Excitation is injected
@@ -622,7 +2270,7 @@ those two packages work against it **unmodified**.
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/slung_load/variable_length_cable_utils.py` (new) — `create_prismatic_rod_pair`, `setup_variable_length_cable_geometry`
 - `extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/utils/cable_winch_backend_utils.py` (new) — `ROS2CableWinchBackend`: publishes `cable_winch_0/state/cable` (extension, extension velocity) + `state/force`, subscribes `cable_winch_0/command/force`, applies it as a force pair each physics step
 - `application/slungload/02_px4_single_drone_payload_variable_length_cable.py` — populated (was an empty placeholder): drone ↔(spherical)↔ rod_a ↔(prismatic)↔ rod_b ↔(spherical)↔ payload, wired to the new backend
-- `scripts/indoor_sim/start_single_drone_sitl_payload_variable_cable.sh` (new) — launch script for this scenario, same tmux/PX4 pattern as `start_single_drone_sitl_payload.sh`
+- `scripts/indoor_sim/archive/start_single_drone_sitl_payload_variable_cable.sh` (new) — launch script for this scenario, same tmux/PX4 pattern as `start_single_drone_sitl_payload.sh`
 
 **Runtime test log:**
 1. Full stack launches cleanly: PX4 SITL connects over mavlink, Isaac Sim runs with no exceptions/tracebacks, visually the rods/payload behaved correctly (confirmed by user).
@@ -735,3 +2383,1688 @@ hard-coding them, so they cannot go stale when a constant changes.
 - [ ] `ArticulationRootAPI` and `RigidBodyAPI` are applied to the **same** prim — PhysX 5 does not form a valid articulation when they are on separate prims
 - [ ] Override `update_state` to read from `self._stage_prefix` (not `+ "/body"`)
 - [ ] Call `apply_force` / `apply_torque` with `body_part=""`
+
+**THE JOINT-POSTURE TERM: MECHANISM FOUND, TWO PAPER-CONSISTENT FIXES FLOWN 3/3
+WITHOUT IT (2026-09-09, user request — the three questions: which disturbance,
+can gains fix it, what is the minimal provable change).** Full write-up
+`docs/docs_aerial_manipulator/Removing the Joint-Posture Term.md`; data + drivers
+`docs/docs_aerial_manipulator/posture_ablation_20260909/`; offline tool
+`application/robotic_arm/utils/wb_entry_sim.py` (exact law + L1 observer + plant
+injections + joint stops + rotor lag; reproduces every flight to the mm — the +5%
+model flight parked the arm at q = [−35, 11, 24, 30] deg with e_y 214 mm, the sim
+said [−35, 9, 26, 31] and 214 mm; the anchor-only fix flew 102.7 mm, the sim said
+102.7). **Neither failure is a gain problem; both are the manuscript modelling `d_e`
+as the CONTACT wrench only:**
+- **Mechanism 1 — entry transient vs. workspace.** At the SAFETY→DIRECT switch the
+  observer restarts at zero, the unlearned 10.8 N / 0.4 N·m drive a 0.8–1.3 m base
+  excursion, and the WORLD-fixed EE reference is unreachable (arm workspace ~5 cm at
+  the folded home). `e_y` tracks `e_x` 1:1, q3 hits +50 deg at 1 s, then crosses into
+  the elbow-singular branch. With the PID on the same 0.8 m transient happens and the
+  arm simply never moves — the 2 N·m/rad PID overrides the 2 N/m task, which is why
+  `K_y` had to drop to 2 when the PID was added: a compensating pair.
+- **Mechanism 2 — the internal disturbance is a permanent phantom contact force.**
+  `(J_y^#)^T` maps 0.22 N of task force per N of vertical deficit at home; the
+  impedance renders it, so the arm walks off home by F/K_y: 5% model → 0.41 N →
+  214 mm at K_y 2 (measured 214–218), then a stop, then the branch. The L1
+  attribution does NOT remove it (closed loop = F̂_ext + M_y Λ^-1 (F − F̂)).
+- **Ablation flights, PID off, plant-side kf, matched allocator** (hover soak):
+  delay-only 3/3 clean; +5% model 2/2 vehicle ok but ARM parked off-branch (214 mm);
+  +5% kf 1 abort / 1 ok with the arm on the negative branch; +5%+5% ok, elbow branch,
+  clamped. **Plant-side kf ≤0.90 CANNOT TAKE OFF** (SAFETY gravity FF short + UDE
+  height gate = 7.13.3 run C deadlock) — those rows are invalid, so the fix flights
+  used the allocator-side +17.6% (the 09-06 configuration). Yesterday's 17-flight
+  in-law sweep (`l1_inlaw_20260909`) and today's offline sweep of EVERY gain group
+  (k_x/k_v, k_R/k_w, K_y/D_y 0.5–200, M_y, DLS, ω_c, seeds): nothing survives.
+- **The fix, two options, both default-off in the C++ (parity 9/9 unchanged):**
+  `wb_ee_anchor_com` (free-flight EE reference = planned EE-minus-CoM offset held
+  about the ACTUAL CoM: r_ed + e_x, derivatives + e_vx/+e_ax, no differentiation;
+  proof = change of error variable, u3 untouched) and `wb_u3_internal_ff`
+  (coupling feedforward carries u + d̂, i.e. `inner += (J_y^#)^T d̂_e`; proof = one
+  exponentially decaying observer-error input, the same treatment u1/u2 already get).
+  Flown at the full injection, posture 0, K_y 20/D_y 12: **3/3 completed, peak e_y
+  29–31 mm through a 0.85–0.92 m base transient, settled 1.2 mm, arm back at
+  [0,40,41,−1], 0% clamp** (K_y 50/20: 15 mm / 0.5 mm). Anchor alone: flies with a
+  102.7 mm steady offset (= 2.4 N phantom / 20). Feedforward alone at K_y 2: arm at
+  the stops, 68% clamped. **The shipped yaml is UNCHANGED** (posture on, K_y 2, both
+  keys false) — adopting = keys true, K_y 20 / D_y 12, posture 0. Provable joint
+  potential, if a branch selector is still wanted: `K_y e_y + J_3y^{-T} K_q e_q`
+  (a potential in y through the local diffeomorphism), NOT the flown `K_p e_q` on u3.
+- **THE ARM CHANNEL WAS THE ONLY ONE WITHOUT A CANCELLATION, and that is the whole of
+  mechanism 2.** `f_d` carries `−d̂_t` and `u2` carries `−d̂_r`; `u3`'s only estimate is
+  `F̂_y`, which enters through the inertia-shaping `(Λ_y M_y^-1 − I)` and is a READING of
+  the contact force, not a compensation — and `d̂_ρ` is computed and injected NOWHERE.
+  The L1 decomposition fixes the reading (`F̂_y` → 0 correctly, no contact) and changes
+  nothing about the force: `(J_y^#)^T d` still acts on the task, with UNIT gain at
+  natural inertia. Written into the design note 2026-09-09 as the paragraph "The arm
+  channel needs its own cancellation" + eqs. (ee_dyn_int), (u3_int), (ee_closed_int) in
+  `disturbance observer design/disturbance_observer_draft.tex` (PDF rebuilt, 0 errors).
+- **THE TERM HAS THREE BLOCKS AND THE ARM BLOCK IS THE LEAST OF THEM** (asked 2026-09-09,
+  measured): the addition is ONE term `−J̄_3y^-1 (J_y^#)^T d̂`, three only because
+  `(J_y^#)^T = [J̄_1y J̄_2y J̄_3y]`. The two BASE blocks are NOT a second copy of the
+  `−d̂_t`/`−d̂_r` in `f_d`/`u2` — those are in the COMMAND, `d` is in the PLANT, and `u3`
+  pre-compensates their SUM (the arm is bolted to a base a thrust deficit accelerates).
+  Flown-estimate split at home: `J̄_1y d̂_t` 2.380 N, `J̄_2y d̂_r` 0.498, `J̄_3y d̂_ρ` 0.653,
+  total 2.127 (the arm block OPPOSES the base blocks). So carrying `d̂_ρ` ALONE is WORSE
+  THAN NOTHING — offline 102.7 → 148.3 mm; base blocks alone 36.3; all three 1.3.
+- **TWO FEEDFORWARD SOURCES, both flown.** `wb_u3_internal_ff` feeds the filtered LUMPED
+  `d̂_Σ,f`; `wb_u3_internal_ff_use_w_hat` (added 2026-09-09) switches to the note's
+  INTERNAL `T^-T ŵ` (Step 2), the form eq. (u3_int) states. **In free flight the lumped
+  one is BETTER and exact** (`d_e = 0` ⇒ it IS `d`); the internal one is the only one
+  admissible under CONTACT. Flown 2/2: settled EE 3.1/3.4 mm and peak arm torque
+  1.34/1.28 N·m vs the lumped 1.2 mm / 0.8 N·m, arm dipping to q3 19° vs 38° mid-entry.
+  That cost is `ŵ` being PARTIAL — a stationary arm gives α = 0 in the note's PE
+  condition, only 4 of 10 directions identified — and it works here only because `L_c`
+  books **99.3% of the residual to the collective** (measured `ŵ_z` = −10.73 of −10.81 N).
+- **MISMATCH GRID, 9 flights, all completed** (2026-09-09): thrust {10,15}% x model
+  {5,10}%, compensation on, posture off, K_y 20/D_y 12. Settled EE error 0.7/0.9/1.0/1.2 mm
+  against d̂_z −6.12/−8.65/−8.17/−10.81 N — **linear at ~0.11 mm/N**, i.e. residual observer
+  error, not phantom force; 0% clamp everywhere, arm ends at home in all nine, repeats agree
+  to a decimal. Base transient grows 345 → 919 mm (that is the handover, 7.15.8, untouched).
+  Thrust MUST be allocator-side: plant-side above ~5% never takes off (7.13.3 run C deadlock).
+- **`u3_internal_ff` REQUIRES AN ATTRIBUTING OBSERVER, and nothing enforces it** (found
+  2026-09-09 while checking the law against the note): the red d̂ terms are the INTERNAL
+  disturbance and the blue F̂_y is the CONTACT force, two different objects. On the L1 path
+  with decompose=true they are (attributed F̂_y ≈ 0.06 N measured); on the GMO path, or L1
+  with decompose=false, F̂_y IS the same lumped vector as d̂, so it enters twice and the
+  effective coefficient is 2I − Λ_y M_y^-1 ≈ diag(1.52, 0.68, 1.22, 1.60) instead of I.
+  NOT flown that way, but the key is declared in all three whole-body yamls. A startup
+  refusal was offered and NOT added.
+- **FULL 8-LEG MISSION FLOWN TWICE WITH THE PID AT ZERO, AND THE KEYS THEN DELETED**
+  (2026-09-09): 314 s / 276 s of DIRECT, 9/10 and 10/10 legs, **0.00% clamp both**, peak
+  arm torque 0.79 N.m of 3.0, **q3 NEVER negative** (0.00 s on the elbow-singular branch
+  the term existed to prevent); q2 touched its +50 stop 0.31 s during the first step's
+  entry transient only. Run A's missing leg is a DRIVER RACE, not a control failure: the
+  planner went PENDING->CALCULATING->PLANNED inside one 10 ms sample, the driver's `send`
+  then hit CALCULATING again because the second target restarted the solve, and it waited
+  out its 45 s exec timeout while the vehicle held at 1.5 mm EE error / 0% clamp. Fix
+  belongs in wb_l1_campaign_driver.py, NOT the law.
+  **The five `wb_posture_*` keys are now DELETED from the L1 sim yaml** — they are
+  kOptional/default 0.0, so absence makes the term UNREACHABLE from that file, not merely
+  off, and the green LAW CHECK line proves it per launch. The `alloc_thrust_coeff` block's
+  "THIS AND wb_posture_* ARE COUPLED" warning was rewritten: that coupling is gone.
+  **SCOPE: that one file.** The C++ is untouched and the three GMO whole-body yamls still
+  need the term.
+- **POSTURE-TERM WATCH, printed once a second in DIRECT** (2026-09-09, user request):
+  `WbCommand::t_posture` carries the joint PID's ACTUAL applied contribution to u3 (zero
+  while `hold` owns the arm), and the client prints it — GREEN `posture PID: u3_posture =
+  [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0` while it is zero, YELLOW with the
+  four values, max, %-of-|u3| and the gains the moment it is not. Verified in a live flight,
+  not just built. Complements the startup LAW CHECK: the banner says how it is CONFIGURED,
+  this says what is APPLIED. Parity 9/9 after the change.
+- **ENTRY-TRANSIENT TUNE, NO UDE SEED (2026-09-09): `wb_k_x` 16 -> 32, `wb_k_v` 12 -> 20.**
+  Peak base error at the SAFETY->DIRECT switch **919 -> 411 mm**, under 100 mm in
+  **6.4 vs 12.4 s**, peak tilt 10.0 -> 6.3 deg, EE behaviour unchanged (peak 30.4,
+  settled 1.18 mm), 0% clamp, full 8-leg mission 10/10. Mechanism: the peak error is
+  HORIZONTAL -- the vehicle sags ~220 mm, the unlearned CoM moment tilts it, the tilt
+  converts thrust to sideways drift -- so the position loop AND the rotational observer
+  are both levers. wn 2.07 -> 2.92 rad/s, zeta 0.78 -> 0.91, still far under the 10.03
+  rotor pole.
+  **`wb_l1_omega_c_r` 2.0 ABORTS and that result is load-bearing**: best ENTRY of any
+  candidate (303 mm) then a slow rotational oscillation from t = 8 s to a 36 deg abort at
+  15 s (|e_R| 0.04->0.38, d_hat_r swinging +-2 N.m). 7.15.8's ceiling on that gain STANDS;
+  the compensation did not lift it. 1.0 and 1.5 are stable (545 / 388 mm) but 1.5 is only
+  1.33x below a measured instability, so the POSITION-LOOP lever was shipped instead --
+  same peak, better recovery, observer untouched.
+  **`wb_entry_sim.py`'s delay-margin column is NOT a stability certificate for
+  `omega_c_r`** -- it gave the 2.0 case 32 ms against a 16 ms nominal and the rig failed at
+  nominal. Trust it for ORDERING only, as its own header says.
+  Data + drivers: `posture_ablation_20260909/run_entry_tune{,2}.sh`, `entry_score.py`.
+- **Open:** controller.py (the Python source of truth) does not carry the hooks —
+  the parity fixture locks them OFF only; **NO CONTACT has been simulated on any run,
+  which is the entire reason `ŵ` is preferred over the lumped estimate** (06 applies no
+  EE wrench; that block existed in 02 and was dropped from 03 onward, so `w_e ≡ 0`
+  everywhere and the source distinction is derivation, not measurement); steps/trajectory
+  legs not flown with them; interaction phase must keep the WORLD anchor (planner switch
+  not implemented); GMO variant offline only (34 mm settled); the 0.9 m entry transient
+  itself is the handover (7.15.8), untouched.
+
+**THE ARM'S CURRENT LOOP — THE DROOP IS GONE, THE RESIDUAL IS THE MODEL
+(2026-09-09, user request).** `fsc_open_manipulator` now closes a **software
+current loop** around Dynamixel Mode 16 (design + bench validation:
+`fsc_open_manipulator/doc/Current Loop Design.md`, figure
+`doc/current_error_all.png`), calibrated on J2/J3. It is deliberately SLOW —
+`wc` = 1.5 Hz, 6.6x below the stability limit — because rejecting the back-EMF
+disturbance IS deleting the machine's own damping `Kt^2/R`, and that damping is
+the scarce resource on an arm whose velocity signal has 48 ms of group delay.
+The simulator's plant model was rebuilt around its OUTCOME:
+- **REMOVED: the back-EMF droop.** `servo_model.py` no longer contains `b`,
+  `B_BACKEMF`, `backemf_joints`, `back_emf_ff_scale`, `implied_b_true` or
+  `explicit_stability_ratio`; `applied()` lost its `qdot`/`qdot_ref` arguments
+  and takes `dt` instead. `PEGASUS_ARM_SERVO_MODEL` is now **`current|ideal`**;
+  `pwm` and `pwm_0903` are REFUSED WITH A MESSAGE rather than reinterpreted
+  (`pwm_0903` existed to replay the 0902/0903 droop-era bags and cannot without
+  `b`). Yaml keys `sim_arm_backemf_*` -> **`sim_arm_current_noise_{enable,a,
+  bw_hz,seed}`** in BOTH whole-body `_sim` yamls; `PEGASUS_ARM_SERVO_B` ->
+  `PEGASUS_ARM_CURRENT_NOISE_{A,BW_HZ,SEED}`, validated and baked into the Isaac
+  pane by `start_single_drone_x650.sh` (the tmux-server-env trap, unchanged).
+- **ADDED: the residual.** `tau_app = clip(tau_cmd, +-tau_cap) + Kt * i_err`,
+  `i_err` **zero-mean, 7 mA rms, first-order band-limited at 5 Hz**, four
+  independent channels, seeded. 7 mA is **J3** — the worse of the two calibrated
+  joints (bench, loop closed: j2 4.2-4.6, j3 6.7-6.9 mA rms) — and per the
+  user's instruction the same magnitude goes on all four; J1/J4 carry commands
+  near the current sensor's floor and are uncharacterised, so that is a
+  documented assumption. Through each `Kt` it is
+  **[16.3, 15.0, 17.7, 16.3] mN.m rms**, ~2% of the arm's 0.7 N.m hold torque.
+  **The SHAPE is the point, not the size**: loop off, j2/j3 sat on a persistent
+  one-sided ~-20 mA offset and never crossed zero (delivery 93.3/87.5%); loop
+  closed, the error is centred (99.4/91.8%). A bias corrupts a torque-controlled
+  flight, scatter does not — and the 2026-09-03 model was all bias.
+- **Generated as an EXACT-DISCRETIZATION AR(1)**, `a = exp(-2*pi*fc*dt)`,
+  `i <- a*i + sqrt(1-a^2)*sigma*randn(4)`, so the stationary rms is `sigma` at
+  ANY step size. An Euler form's variance scales with `dt` and would silently
+  retune the plant if the physics step ever changed — the same lesson
+  `lagged_thrust_curve.py` records for the rotor lag. Self-test measures the rms
+  dt-invariant to 0.4% at 4 and 16 ms and recovers `fc` = 5.0 Hz from the lag-1
+  autocorrelation.
+- **The software loop is NOT run in simulation, on purpose, and there is a real
+  foot-gun here.** The plant models its outcome; the residual is already
+  post-correction. But `IsaacTopicEffortSystem` DOES export an effort state
+  interface (06 republishes the applied torque), so setting
+  `current_loop_bandwidth_hz > 0` in `torque_controller_isaac_aerial.yaml` would
+  close a SECOND loop around a signal that is already post-loop and cancel the
+  disturbance under test. It defaults to 0.0; that file now carries a comment
+  saying why it must stay there.
+- **The controller cannot see it**, which is what makes the test fair: the
+  whole-body node never subscribes to `joint_states.effort` (grep-verified — it
+  only publishes its own commanded torque there). The residual reaches the law
+  only through the physics.
+- **`wb_l1_lc_var_q` 0.0025 was flagged as "must be RAISED once the droop is
+  on". That instruction is now VOID** — a droop is a systematic joint-torque
+  error the observer should be allowed to find; zero-mean noise is one it
+  should NOT chase, so a low prior is right. Noted in the yaml.
+- **FLOWN, 3 missions, 0 aborts, no gain touched.** Plant = the shipped `_sim`
+  config (+15% allocator kf, mass/inertia x1.10, 10/10/5 mm CoM shift, MN4010
+  rotor lag); law = the 2026-09-09 config (posture term absent,
+  `wb_ee_anchor_com` + `wb_u3_internal_ff`, K_y 20/D_y 12, k_x 32/k_v 20).
+  Run B against the matched ideal-arm baseline `l1_mission_kx32.npz`
+  (same mission, same 16 s holds):
+
+  | | noise ON | ideal arm |
+  |---|---|---|
+  | legs completed / aborted | 10/10, no | 10/10, no |
+  | DIRECT | 276.2 s | 276.9 s |
+  | CoM err mean / late | 21.0 / 9.6 mm | 18.8 / 5.0 mm |
+  | EE err mean / max | 3.5 / 33.4 mm | 2.9 / 30.4 mm |
+  | tilt p-p, \|e_R\| max | 3.08 deg, 0.181 | 2.78 deg, 0.170 |
+  | peak arm torque | 0.798 of 3.0 N.m | 0.751 |
+  | joint clamp / rotor sat | **0.00% / 0.00%** | 0.00% / 0.00% |
+  | q2/q3 abs err | 0.81 / 1.21 deg | 0.58 / 0.97 deg |
+  | phantom \|F_hat_y\| | 0.123 N | 0.077 N |
+
+  Run C repeats B to within a few percent on every row (CoM mean 16.9 mm, EE
+  3.2, tilt 2.95 deg, tau 0.785, 0.00% clamp), so this is not one lucky run.
+  Per-leg: every leg completed, peaks within 8% of the baseline, settled errors
+  1.5-6x larger in a range that is 3-8 mm.
+  **THE MECHANISM IS IN THE ARM CHANNELS OF THE OBSERVER, and it reproduces
+  3/3** — std over the quiet soak hold, N.m:
+
+  | | d_hat^c UNFILTERED (deadbeat) q1/q2/q3/q4 | d_hat FILTERED (what the law sees) |
+  |---|---|---|
+  | noise, 3 runs | .0247-.0254 / .0389-.0496 / .0229-.0266 / .0199-.0206 | .0029 / .0031-.0050 / .0039-.0042 / .0038-.0040 |
+  | ideal arm | .0138 / .0330 / .0143 / .0108 | .0003 / .0047 / .0025 / .0006 |
+
+  The unfiltered deadbeat estimate picks the injection up almost exactly — the
+  quadrature excess over the ideal run is **16.7 mN.m on q4 and 17.9 on q3
+  against the 16.3 / 17.7 injected** (q1/q2 read ~21 because the law's own
+  reaction adds there) — and the L1's explicit `C(s) = omega_c/(s+omega_c)`
+  then cuts it ~5x, to 3-5 mN.m against the arm's 700 mN.m hold torque. That
+  bandwidth/accuracy split is exactly what the observer exists for, and it is
+  why 7 mA costs single-digit millimetres.
+  **DO NOT read this off the COLLECTIVE channel.** `dc_z_std` is 0.73 / 0.23 /
+  0.29 N on noise-B / noise-C / the IDEAL run — the arm's joint-space noise is
+  not what dominates it, and its run-to-run spread swamps the effect. Scoring
+  it that way once made the noise look 2.5x worse than ideal on one run and
+  identical on the next.
+- **Measured end-to-end from flight telemetry, not just from the model**: over a
+  33 s quiet hold, `applied - commanded` has mean **0.1-0.8 mN.m** (the bias is
+  really gone) at 21-24 mN.m rms against the 15-18 injected — the excess is the
+  law REACTING, its own commanded torque carrying 13-19 mN.m of ripple at 250 Hz
+  in the same window, plus the asynchronous 50 Hz log sampling of two streams.
+  **The applied-torque log columns are in MODEL order** (verified by
+  cross-correlation), NOT the broadcaster order `LOG_Q_OF_JOINT` applies to the
+  POSITION columns — mixing them up scores joint 2 against joint 1.
+- Tooling: `wb_hover_stability.py`'s `--servo` is now `current|ideal`, seeded;
+  read its delay-margin ORDERING with `ideal`, since the noise is scatter.
+  Campaign: `docs/docs_aerial_manipulator/arm_current_noise_20260909/`
+  (`run_noise.sh`, README). NOT flown on the GMO rig, though the plant change
+  reaches it (its yaml has the same new keys); NOT flown on hardware.
+
+**WHOLE-BODY SAFETY GUARD — every DIRECT exit hovers in place and folds the arm
+home (2026-09-11, user request).** Three small changes across three repos, and
+nothing in any control law:
+- **L1 sim yaml:** `system_wd_max_tilt_deg` 40 → **20**. The watchdog's tilt is
+  `acos(R22)` ≥ max(|roll|, |pitch|), so it trips on either. The GMO twin still
+  has 40.
+- **fsc_open_manipulator `arm_planner`:** new `home_on_safety_revert` (node
+  default false; the Isaac aerial yaml sets it true) plus
+  `home_on_revert_delay_s` 1.0. On the DIRECT → SAFETY edge of the mode topic it
+  holds the measured pose for 1 s, then folds home on its min-jerk profile. Any
+  arm command during the delay cancels the fold.
+  One edge covers all four exits: the watchdog, the feedback-loss failsafe, the
+  drone GS "Return to baseline" (`activate_controller`) and `set_direct_mode
+  false`.
+- **WB client:** `switchMode` publishes `/mode` immediately rather than on the
+  500 ms info tick.
+
+Hover-in-place needed no change — `switchMode(kSafety)` already re-seeds
+`outer_ref_` to the current pose, and the drone GS publishes a setpoint only when
+the operator presses send, never as a stream.
+
+Flown 3× in Isaac with NO reference published after the revert (Command.md
+§7.15.1):
+- Arm home in 2.40 / 2.44 s, final error ≈ 0.4°.
+- Settled within 28–30 mm of the revert point.
+- Nominal DIRECT peaked at 6.9–7.3° of tilt.
+
+**Two excursions, measured apart with a no-fold control flight:**
+- The ~0.45 m VERTICAL climb after the revert is the pre-existing handover
+  surge. It is identical without the fold. In DIRECT the UDE is fed the
+  allocator's believed collective, and this yaml's allocator believes a kf
+  17.6% too high. It is sim-only.
+- The ~0.4 m SIDEWAYS walk IS the fold: 72 → 394 mm, starting on a +6° roll
+  spike. Un-yawing the arm moves the CoM, and PX4's integrator re-learns the
+  trim.
+- Knobs, neither flown: the fold delay and the planner's `max_velocity`.
+
+Loopback test (`test_arm_planner.py`, 12 checks) also covers the fold. Its
+teardown no longer aborts with rc 134. **Trap:** that test drives the REAL
+`/uav_0/.../mode` topic, so a live stack still republishing `SAFETY` makes the
+four DIRECT checks fail — tear the sim down first. NOT flown on the GMO rig or
+on hardware.
+
+**SIDEWAYS-DRIFT TRIP + THE L1 HARDWARE PAIR (2026-09-11, same request).**
+- **New `system_wd_max_drift_m`** (node default 0.0 = off, so the GMO and
+  hardware GMO yamls are untouched), **0.75 m in the L1 sim yaml**. It measures
+  `|x_c − x_cd|_xy`, the law's own HORIZONTAL CoM tracking error against **the
+  reference the law is flying** — not a fixed point, not the raw GS setpoint —
+  which is the only version that survives planned motion: the planner moves the
+  base 0.5 m on a step leg and none of it counts. `driftTripped()` runs in the
+  DIRECT tick after reference selection, shares the tilt/rate watchdog's latch,
+  and is evaluated BEFORE the law step so a tripped tick commands nothing.
+  Measured peaks: 410 mm at the DIRECT entry, 349 mm on the legs, so 0.75 is
+  ~1.8x the worst nominal. Flown: the full 10-leg mission with **no false trip**
+  (170 s DIRECT, 0 saturations), and a forced trip at a temporary 0.15 m limit
+  that fired 1.44 s into DIRECT **at 7.0° tilt** (so tilt cannot explain it),
+  hovered to 21 mm and folded the arm home in 2.40 s.
+- **Arm fold for a stack with NO `arm_planner`** (i.e. hardware): new
+  `system_arm_go_home_service` + `system_arm_go_home_delay_s` (1.0 s) call the
+  arm controller's own `go_home` after the revert; re-entering DIRECT cancels a
+  pending fold. EMPTY in the sim yaml on purpose — `arm_planner` owns that edge
+  there, and two mechanisms would command the arm twice.
+- **NEW L1 HARDWARE PAIR, never flown:**
+  `config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650.yaml`
+  + `scripts/indoor_exp/start_whole_body_l1_direct_actuation_stack_t650_aerial_manipulator.sh`.
+  PLANT/ALLOCATOR/SAFETY map from the GMO **hardware** file; LAW/OBSERVER from
+  the L1 **sim** file; every `sim_plant_*`/`sim_arm_*` key and the kf injection
+  dropped; guard at 20° / 0.75 m. **Trap I hit: the copied launcher must KEEP
+  the shared `fsc_indoor_autopilot_stack` session name** — renaming it per fork
+  would stop it killing the GMO stack, and both publish the same PX4 setpoints.
+  Validated by loading the yaml on the node at `/uav_test` (guard params,
+  identity, L1 banner, green posture-OFF check, mass cross-check).
+- **PRE-EXISTING HARDWARE BLOCKER found while doing this, NOT fixed:** the
+  hardware `wb_arm_reference_topic` is `reference_joint_trajectory`, which only
+  `arm_planner` publishes, and the hardware arm launch
+  (`external_torque_hardware.launch.py`) does not start it — the controller
+  keeps its own generator and publishes `~/smoothed_reference_joint_trajectory`.
+  The DIRECT-entry gate checks that topic, so hardware DIRECT entry should be
+  REFUSED today, on the GMO hardware stack too. Left for a decision: run
+  `arm_planner` alongside the hardware arm stack (set
+  `external_reference_topic`, the sim topology, which also supplies the fold) or
+  repoint the key. Recorded in both new headers.
+
+**ARM CALIBRATION + PER-JOINT CURRENT LOOP ALIGNED INTO THE SIM AND BOTH WB-L1
+LAUNCHERS — AND THIS MACHINE CANNOT VALIDATE THEM (2026-09-11, user request).**
+Pulled `fsc_open_manipulator` (6 commits, `bf80b51..06e598c`: the Mode-16 current
+loop, the motor-constant campaign, the j1/j4 unit swap) and aligned the plant and
+the two whole-body L1 launchers to it. Full write-up + all eight flights:
+`docs/docs_aerial_manipulator/arm_calib_20260911/`.
+- **THE CALIBRATION** (`servo_model.py`): `NM_TO_COUNTS`
+  `[160.0, 173.8, 146.7, 160.0] -> [162.4, 154.0, 150.5, 153.4]` counts/N.m,
+  `RESISTANCE_OHM` `[4.90, 4.90, 4.30, 4.90] -> [5.26, 4.90, 4.53, 4.88]`. The
+  j1/j4 UNITS were calibrated by swapping them into the j2/j3 brackets, where
+  gravity gives them a lever. **Two checks now ASSERT in the self-test and they
+  are what makes the set trustworthy**: the derived `NM_TO_DUTY` comes out
+  `[169.47, 149.70, 135.25, 148.51]`, exactly what the arm controller LOGGED on
+  hardware, and `eta = Kt/Ke` against the measured Ke is `[0.943, 0.943, 0.942,
+  0.943]` — four motors agreeing to 0.1% on a sensible gearbox loss, where the
+  superseded set implied the impossible `eta > 1` on j2. Believed to **+-2%**:
+  the campaign found kappa conditioning-limited, not measurement-limited.
+- **THE RESIDUAL IS PER JOINT, AND THE UNTRIMMED JOINTS ARE THE NOISY ONES.**
+  `current_loop_bandwidth_hz_joints` ships `[0.0, 1.5, 1.5, 0.0]` — the trim
+  helps the loaded joints and HURTS j1/j4, whose commanded current is mostly
+  noise. So `CURRENT_NOISE_A` `0.007` uniform -> `[0.0156, 0.0062, 0.0096,
+  0.0156]` A, i.e. torque noise `[16.3, 15.0, 17.7, 16.3] -> [35.7, 15.0, 23.7,
+  37.8]` mN.m. The 2026-09-09 note that j1/j4 were "uncharacterised, a
+  documented assumption" is superseded.
+- **TWO JUDGEMENTS THE MEASUREMENT DOES NOT SETTLE, both flagged in-file rather
+  than quietly decided.** (a) THE SIGMA CONVENTION: the bench scores the 5 Hz
+  CONTENT, an IN-BAND rms, while the model wants a TOTAL. `total = sqrt(2) x
+  in-band` is right only if the real spectrum keeps falling like the model's
+  above 5 Hz, which `servo_model.py` says is "not characterised" — a 41%
+  inflation either way. The superseded model used `sigma = in-band` directly.
+  Both were flown; neither caused the failures. (b) **IS j1/j4's RESIDUAL EVEN
+  TORQUE?** At the steady hold the COMMANDED current is **0.2 / 108 / 36 / 0.0
+  LSB** (2.69 mA quantum) while the measured residual is 4.1 / 1.6 / 2.5 / 4.1.
+  On j2 it is unambiguously a real torque error; on j1/j4 the command is ZERO
+  and the "error" is ~4 sensor quanta, which is why the arm repo says the trim
+  there chases noise. Real ripple (torque the law must reject) and current-sense
+  noise (no torque at all) are indistinguishable in that data and have OPPOSITE
+  plant consequences. **A bench run at a NON-ZERO j1/j4 load separates them** —
+  a real error scales with command, sensor noise does not.
+- **PLUMBING**: the sim yaml still carried `sim_arm_backemf_*`, deleted from the
+  plant on 2026-09-09, so the launcher fell back to built-ins and printed a NOTE
+  every launch. Now per-joint `sim_arm_current_noise_a_j1..j4`; `06` and
+  `start_single_drone_x650.sh` accept `"a1,a2,a3,a4"`. `wb_arm_torque_plot.py`'s
+  hard-coded `NM_TO_DUTY` now IMPORTS from `servo_model.py` so a re-calibration
+  cannot leave it scoring the previous arm.
+- **HARDWARE LAUNCHER**: `max_effort` is unchanged in COUNTS but its N.m value
+  moved with the calibration, `[0.38, 2.19, 1.36, 0.38] -> [0.34, 2.44, 1.42,
+  0.39]` — j2 gained 13%, j1/j4 lost ~9%, and these STILL BIND below the law's
+  `wb_tau_max` 3.0. New non-fatal ARM-SIDE CONFIG CHECK verifies kappa, the
+  per-joint bandwidth, Ke and R against the arm repo at startup
+  (`FSC_OM_ARM_REPO` to point it). **Two hardware items re-checked, not
+  assumed**: `external_reference_topic` is STILL unset and the bring-up still
+  starts no `arm_planner`, so the DIRECT-entry blocker stands; and
+  `back_emf_velocity_source: observer` means the flight law must supply ALL arm
+  damping — never flown, ramp `back_emf_ff_scale` 0 -> 1.
+**THE VALIDATION DID NOT PASS, AND IT DOES NOT PASS WITH AN IDEAL ARM EITHER.**
+Eight flights, seven aborts. **`ideal` — an exact torque source, the plant
+bit-identical to the 09-09 baseline that flew clean — aborted 2/2**, and the
+ordering is not even monotonic in noise (`ideal` aborted EARLIEST). Same
+signature everywhere: step peaks 290-325 mm (shiqi baseline 182-226), tilt p-p
+18.7-20.1 deg, a growing ~0.6 Hz mode in q2/q3.
+- **CAUSE, MEASURED: this box runs the sim at RTF 0.336 and the feedback is a
+  STAIRCASE.** The plant makes a new state at 85 Hz wall (250 Hz sim x 0.34)
+  while the estimator->controller chain runs on the WALL CLOCK at 235-250 Hz:
+  **65.2% of consecutive odometry samples are byte-identical, each pose
+  republished ~2.87 times = 1/RTF**, so two of every three control ticks act on
+  stale data while the law's observers assume a 4 ms step. **NOTE THE
+  DIRECTION** — the obvious guess is backwards: a slow sim makes transport
+  delays SMALLER in simulated time; the damage is OVERSAMPLING a slow plant.
+- **Headless does NOT fix it** (RTF 0.336 -> 0.351): Isaac is CPU-bound in
+  PHYSICS at ~400%, GPU at 40%. `PEGASUS_HEADLESS` is now baked into the Isaac
+  pane by `start_single_drone_x650.sh` (it never reached it before — the
+  tmux-server-env trap), which is worth having but is not the remedy.
+- Ruled out by measurement, each cheaper than the flight that would have found
+  it: loop stalls (clean 250 Hz, p99 4.9 ms); the `bspline` planner backend (it
+  came in with the L1 observer commit, so the 09-09 baseline had it too); arm
+  pass-through fidelity (applied - commanded mean 0.0-2.0 mN.m); rendering.
+- **The 09-09 baseline ran on `shiqi_machine`; every run here was on
+  `fsc_lab_machine`. CROSS-MACHINE ABSOLUTE NUMBERS ARE NOT COMPARABLE** on this
+  rig and must not be quoted as a baseline — `wb_l1_metrics` output carries no
+  machine field, so record it beside the run. **CHECK RTF FIRST** on any new box
+  before reading a whole-body result: the rig's attitude tune was retuned once
+  already for transport latency (2026-08-22) and `M_r_d` was picked on a ~32 ms
+  delay margin; a 2.87x feedback staircase is far outside all of it.
+- **Re-run this validation on a box holding RTF near 1.** Nothing in the flight
+  set implicates the alignment, and nothing in it validates the alignment either.
+
+**J4 FOLLOW-UP: THE SIM WAS MODELLING j1/j4's CURRENT SENSOR, NOT THEIR MOTORS
+(2026-09-11 evening, user request).** Pulled `fsc_open_manipulator` `612775a`
+"joint4: friction_ff belongs to the unit, and its peaks are the sensor floor".
+- **NEITHER CHANGED PARAMETER REACHES THE WHOLE-BODY FLIGHT PATH**, verified in
+  code, not assumed: `friction_ff[3]` 21.2203 -> 7.7776 sits behind
+  `auxiliary_terms_enabled() {return !passthrough_;}`, so it is identically zero
+  while the law streams and acts only in the local PD+ hold; and
+  `current_loop_bandwidth_hz_joints` is UNCHANGED at `[0.0, 1.5, 1.5, 0.0]` (the
+  commit only records the measurement behind it: j4 trim ON halves the bias,
+  mean 8.1 -> 3.4 mA, but more than doubles the variance, sd 7.8 -> 16.9, total
+  rms 17.2 vs 11.2 OFF). The sim models no gearbox friction and its arm config
+  carries no motor model, so nothing in the sim consumes either.
+- **BUT THE FINDING THAT CAME WITH THEM INVALIDATED A NUMBER I HAD SHIPPED.**
+  j1/j4's 11 mA is NOT a torque: at stalled samples, where `I = V/R` must hold
+  exactly, **j4's measured current correlates 0.58 with its applied duty against
+  0.97 on j2** (7.6 counts of residual against a signal of similar size; j4 runs
+  at a few current counts, j2 at 100+). The arm repo's own verdict is "stop
+  quoting a metric below its own noise floor" — and it explains three failed
+  fixes there: the trim made j4 WORSE, the dither did nothing, and only ~20% of
+  the "reversal excess" was ever friction. **This is exactly the ambiguity the
+  morning's entry flagged as needing "a bench run at a NON-ZERO j1/j4 load", and
+  it is now settled in the direction that says do not model it as torque.**
+  `CURRENT_NOISE_A` `[0.0156, 0.0062, 0.0096, 0.0156] -> [0.0096, 0.0062,
+  0.0096, 0.0096]` A: j1/j4 take j3's figure, the worse of the two joints whose
+  residual IS real — restoring, for a better reason, what this model did before
+  that morning. Conservative on purpose: a duty/R error scales with duty and
+  j1/j4 command ~500x less of it. Torque noise is now `[22.0, 15.0, 23.7, 23.3]`
+  mN.m, verified in the live Isaac banner.
+- **KNOWN AND DELIBERATELY NOT MODELLED**: j4's remaining error is a
+  VELOCITY-DEPENDENT BIAS (-2.6 mA at rest, +6..+11 moving, ~8 mA mean) that the
+  arm repo attributes to a `back_emf_ke` ~20% high — slot 4's Ke was never
+  measured in that slot, it is the j3 unit's value from another slot and day.
+  That IS a real torque error on the flight path (the pass-through compensates
+  back-EMF with it) and it is structurally a DROOP, not noise, so it would not
+  be captured by raising any sigma. Left out because the 20% is an inference
+  from an unmeasured constant; fixing it needs J4STEEP + the 80 mm bracket.
+- **None of this changes the 8-flight campaign's conclusion**, which was never
+  sensitive to the arm residual: `ideal`, zero noise on all four joints, aborted
+  2/2. Re-measured this evening on an otherwise idle box: **RTF 0.347, odom
+  stale-repeat 65.2%, each pose republished 2.88x** — identical to the morning,
+  so the machine limit is reproducible and `fsc_lab_machine` still cannot
+  validate this rig.
+- Two traps hit again while doing it, both already in this file and both worth
+  the reminder: `scripts/kill_stale_sim_processes.sh -y` KILLS ITS OWN INVOKING
+  SHELL (exit 144), so anything launched in the same Bash call never starts —
+  run it in a call of its own; and `pgrep -f "<node name>"` matched MY OWN SHELL
+  and reported a controller that was not running.
+
+**q4 UNIFIED AT ±120° ACROSS SIM AND HARDWARE (2026-09-12, user's call).** The
+2026-08-23 widening stopped at the sim: planner / C++ / Isaac ran ±120 while every
+HARDWARE arm config stayed ±90, and the shared planner is expected to use 90-120°
+(that range is why q4 was widened — in-region feasibility 60% -> 98%). So a target
+the planner accepted would drive q4 past the hardware controller's guard, where
+`external_torque_controller` REPLACES the whole-body law's streamed torque with its
+kp/kd pull-back — on the joint carrying EE heading — and the law is never told. The
+C++ header's own comment already required these to be equal.
+- **SIX definitions now, and they must stay equal** (was three): the three sim ones
+  (`transition_planner.Q_MIN/Q_MAX`, `WbReferenceBuilder::kQMin/kQMax`,
+  `torque_controller_isaac_aerial.yaml`) plus the xacro's `joint4_min/max_deg`
+  (writes servo EEPROM) and `dxl_servo_ids.py`'s `EXPECTED_LIMITS[14]`. The sim
+  three were ALREADY ±120 and were not touched; only the hardware side moved.
+- **Changed**: 9 aerial arm configs (the flight one is
+  `external_torque_controller_hardware_aerial_pwm.yaml`) ±1.570796 -> ±2.0943951
+  rad; xacro `joint4_min/max_deg` -90/90 -> -120/120; `EXPECTED_LIMITS[14]`
+  `(1024, 3072, -90, 90)` -> **`(683, 3413, -120, 120)`**. The counts follow the
+  xacro's own ceil/floor conversion, and a regenerated URDF writes exactly
+  683/3413 with joints 1-3 unchanged — that round-trip is the check.
+- **NOT changed, on purpose**: the four NON-aerial configs (`position_controller_
+  hardware.yaml`, `position_controller_gazebo.yaml`, `computed_torque_controller_
+  gazebo.yaml`, `computed_torque_controller_hardware.yaml`). Those are the UPRIGHT
+  ground rig, whose cabling is a different question; their software guard still
+  clamps ±90 even though the EEPROM is now ±120, which is the safe direction.
+- **THE EEPROM IS STALE UNTIL A POSITION-MODE BRING-UP RUNS.** The limits live in
+  the servo, not the config, so joint4 still holds 1024/3072 until one bring-up
+  writes them. `doc/Joint Limits.md`'s table is a record of a past hardware read
+  and was deliberately left alone; `check_servo_limits.py` will read 683/3413 only
+  after the rewrite. In torque mode this changes nothing (Mode 16 ignores EEPROM
+  limits — the yaml's `min/max_position` is the only guard and it moved), but a
+  position-mode session would still stop at 90°.
+- Verified: all 10 aerial yamls parse and read ±120.0°; the URDF round-trip above;
+  `dxl_servo_ids.py` parses and agrees with the xacro; the planner self-test passes
+  (IK round-trip 3.2e-13 rad, defect 5.5e-08 m). The C++ `kQMin/kQMax` were
+  untouched, so the parity fixtures cannot be affected. NOT flown.
+
+**HARDWARE ADOPTS THE SIM ARM TOPOLOGY — WHOLE-BODY DIRECT ENTRY UNBLOCKED
+(2026-09-12, user's call).** The DIRECT-entry gate requires `wb_arm_reference_topic`
+fresh, and **it is evaluated while still in SAFETY, where `whole_body_planner` is
+silent by design** (`_stream_tick` returns unless `_mode_direct`; its only arm-reference
+publish is reached from inside that tick). So the SAFETY owner, `arm_planner`, must be
+running for the gate to open — and the hardware bring-up never launched it. The builder
+is explicit that nothing else counts: `seed()` "deliberately does NOT count as an
+external reference". **In DIRECT the arm does track the whole-body planner's compatible
+trajectory only** — that half was always right; the gap was purely the SAFETY-side
+bootstrap.
+- `external_torque_hardware.launch.py` now starts `arm_planner`, mirroring
+  `torque_control_isaac.launch.py`; `external_torque_controller_hardware_aerial_pwm.yaml`
+  gains `external_reference_topic`/`_timeout` and a `/**/arm_planner:` section.
+  **THE PAIR IS THE TOPOLOGY — never set the key without launching the node**: the key
+  is what puts the controller into pure tracking and un-advertises
+  `~/target_joint_setpoint`, `~/sine_reference_trajectory`, `~/go_home`; `arm_planner`
+  re-advertises all three AT THE SAME NAMES, so the GS and the flight node's
+  `system_arm_go_home_service` are unaffected. Alone, the key leaves the arm with no
+  reference at all (a stale stream FREEZES, it does not fall back).
+- **The move profile is HARDWARE'S OWN, not the sim's**: 10 deg/s (`0.17453`, the
+  2026-09-08 operational bound) against Isaac's 0.2 rad/s — the controller's former
+  values verbatim, so the tuned motion is preserved.
+- **`home_on_safety_revert: false` on hardware, and that is not a gap.** The flight yaml
+  already points `system_arm_go_home_service` at this node's `go_home`, so the flight
+  node commands the fold 1.0 s after a revert. Sim does the opposite (key true, service
+  empty). **EXACTLY ONE of the two may be active** — both would command the arm twice on
+  every revert.
+- **`mode_topic` is ABSOLUTE and hard-codes `uav_0`** (the flight node is a flight-stack
+  node at the vehicle namespace, this one lives under the arm package's). That matches
+  both defaults. FLYING UNDER A DIFFERENT PREFIX MEANS EDITING THAT LINE — otherwise the
+  node never sees DIRECT, keeps streaming its SAFETY reference, and fights the
+  whole-body planner for the arm.
+- **Stale refusal text fixed**: the gate said "controller smoothed arm reference never
+  received", naming the pre-2026-09-05 topic. It now names the actual
+  `wb_arm_reference_topic` and asks "is arm_planner running?" — the old wording sent an
+  operator to `~/smoothed_reference_joint_trajectory`, which is telemetry and publishes
+  happily either way.
+- **Validated** (`test_arm_planner.py`, 12 checks, no Isaac/PX4): SIM config **12/12 ALL
+  PASS**; the NEW HARDWARE config **11/12**, the single failure being exactly
+  `folds HOME after a SAFETY revert` — the key deliberately false there. Same node, same
+  binary, difference is only the configured fold owner. Also: launch file evaluates
+  (`--show-args` rc=0), `arm_planner_node` is an installed executable, both yamls parse,
+  `fsc_autopilot_ros2` rebuilds. **q4 re-verified ±120° across all six definitions after
+  these edits.** NOT flown on hardware.
+- Trap worth keeping: `kill` on the `ros2 run` WRAPPER leaves the node child alive. Two
+  planners then publish the same topic and the loopback test fails on "reference is
+  smooth" for reasons that have nothing to do with the config under test.
+
+**NEVER ENTER WHOLE-BODY DIRECT ON A GROUNDED VEHICLE WITH PROPS ON.** Seated,
+the law cannot tell the floor from flight (the momentum observer sees
+`dp/dt = 0` and finds no residual), so from the instant DIRECT is entered it
+commands ~57% on all four motors — live thrust the moment props are fitted.
+A props-off bench run is evidence about the ARM only. (Found by the 2026-09-12
+inert-prop ground-test sim rig, since deleted; history in commit `a885877`.)
+
+**THE PD+ CALIBRATION CORRECTIONS NOW ACT ON THE STREAMED u3 — ARM SIDE,
+LAW AND OBSERVER UNTOUCHED (2026-09-14, user request).** The whole-body L1
+rig (§7.15) streams `u3` in N·m to `fsc_open_manipulator`'s
+`ExternalTorqueController`, whose shared base already ran the PD+ campaign's
+command-level pipeline (report §2.2: mapping → friction → dither → clamp →
+back-EMF + current trim) but gated the friction/dither/integral OFF on the
+pass-through. The pass-through now treats the streamed torque as a second
+NOMINAL law and applies the same bottom-level correction: three LIVE keys in
+`external_torque_controller_hardware_aerial_pwm.yaml`, all default false so
+every existing config is byte-identical — `passthrough_auxiliary_terms: true`
+(friction + dither, reference-driven, exactly zero at a hold),
+`passthrough_gravity_correction: true` (`(S−1)·g(q)`, VALID because
+`wb_arm_model_check` puts the whole-body model's `g(q)` within 0.0016 N·m of
+the URDF's, so the law's `g` IS `g_urdf`; −0.072 N·m on j2 = the handover step
+the observer used to absorb), `passthrough_integral: false` (DELIBERATE: the
+L1 arm channel + `wb_u3_internal_ff` already integrate the joint residual; a
+second integrator would corrupt `ŵ`). The friction load term is the corrected
+streamed torque (eq. 5's `µ|τ_load|`). Nothing in fsc_autopilot_ros2's law,
+observer or node changed; the Isaac yaml leaves the keys unset on purpose
+(the sim plant has no gearbox friction). `law_debug` 18 → 28 append-only
+(`[18..21]` aux added, `[22..25]` gravity correction, `[26]/[27]` flags); the
+"`[3]` = complement of `[0]`" invariant now holds only with the aux key false.
+**Validated on mock hardware, 24/24** (`test/run_passthrough_corrections_test.sh`:
+real controller on `fake_components/GenericSystem`, real yaml, every stage
+scored against the yaml's own constants — κτ to 0.01 counts, friction to
+0.02, dither rms = A/√2 exact, exactly 0 at rest). Found and fixed on the way:
+`current_loop_bandwidth_hz_joints` was live in PD+ but not in the pass-through's
+copy of the callback. Trap: mock hardware mirrors the written duty into Present
+Current, so the trim must be OFF (scalar and list) in any loopback. The
+hardware stack script's arm-side check prints the two keys either way and
+reds out a true integral. Commands + watch list: Command.md §7.15.13.
+**NOT flown.**
+
+**GEARBOX FRICTION + A 5 % ARM GRAVITY MISMATCH IN THE PLANT, AND THE
+COMPENSATION IN SIM — 3 FLIGHTS, STABLE (2026-09-14, user request off the
+calibration report).** `servo_model.py` gained the report's eq. (5) gearbox
+friction `[fc + µ|τ|]·tanh(q̇/w)` (fc [17.1, 31.4, 57.5, 52.4] mN·m = the
+yaml's duty counts / κ_pwm, µ [0, .246, .161, 0], w 0.015), applied on the
+MEASURED velocity downstream of the electromagnetic torque and
+**momentum-clamped** to `I_min·|q̇|/dt` (armature 0.02) so an explicit Coulomb
+term at 250 Hz can never reverse a joint (self-test: spin-down at the 3 N·m
+clamp never reverses). `06` gained `PEGASUS_ARM_FRICTION_SCALE` (0 = off, the
+old plant; 1.05 = 5 % more than compensated), `_FRICTION_WIDTH`, and
+`PEGASUS_ARM_MASS_SCALE` (arm links AND inertias ×, every model nominal —
+distinct from `sim_plant_mass_scale`, which moves the BODY only and leaves the
+arm exact); both WB launchers forward `sim_arm_friction_scale/_width` and
+`sim_arm_mass_scale` from the `_sim` yamls (both twins now ship 1.05/0.015/1.05)
+and pass `passthrough_corrections:=true|false` to `torque_control_isaac.launch.py`
+so the arm-side friction feed-forward (now in `torque_controller_isaac_aerial.yaml`,
+same fc/µ in N·m, `passthrough_auxiliary_terms: true`, dither 0) is on iff the
+plant has friction (`PEGASUS_ARM_FRICTION_COMP=0` = the uncompensated A/B). No
+back-EMF, on purpose — the current loop owns it. **Flown 3× (A mismatch,
+B matched, C uncompensated) vs the ideal-arm 16 s-hold baseline: all complete,
+0 % clamp, 0 % saturation, peak τ ≤ 1.06 of 3 N·m, tilt ≤ 3.6° p-p — it
+stabilizes.** The 5 % itself is cheap (A vs B: j3 err 0.6→2.6°, CoM wander
+16→25 mm std; `d̂_z` finds the 0.31 N of extra arm weight, `τ_q2` the +5 %).
+**`late_com` is a WANDER not an offset** (per-axis means 1–7 mm; the std of
+`e_com,y` is 16–25 mm at ~0.1 Hz; EE error 1–2 mm std). **Compensation buys
+the standing accuracy (C: joints park short 1.5/3.0°, phantom bias −0.28 N,
+`late_com` 36 mm) and costs a metastable 0.88 Hz j2-torque cycle at 0.105 N·m
+rms** = the attitude loop's `√(k_R/I)` mode (2026-08-23): the friction
+feed-forward is exactly zero at a hold (streamed `q_d` bit-constant — checked),
+so it cannot drive it there; it RE-EXCITES it at each leg end (FF off on `q̇_d`,
+plant friction off on the lagging `q̇`); in C the same mode is kicked by the
+EE leg and DECAYS (97→53→13→6 %); in A/B it locks in. Damping is
+model-dependent (the clamp is an effective stick below ~0.04 rad/s); the mode is
+the airframe's. Per-hold scorer: `arm_mismatch_20260914/hold_chatter.py`
+(`wb_l1_metrics`' `late_com` cannot tell offset from wander). Not implicated:
+`wb_l1_lc_var_q`. Not tried: repeat C, damp the 0.88 Hz mode (k_w/M_r_d), a
+rate-limited FF switch-off. Tables: Command.md §7.15.14. Three traps hit
+again and worth the reminder: `pkill -f` kills the invoking shell when the
+SAME command line mentions the pattern in plain text — even inside a heredoc;
+`tmux capture-pane` wraps at the pane width, so multi-word greps need `-J`; a
+metric that averages |e| reads an oscillation as a standing error.
+
+**CONFIG A MADE THE STANDING §7.15 SIM PLANT (2026-09-14, user request — "use A
+for the current simulation ... to simulate this minor mismatching case for
+robustness validation before the flight test").** No code change was needed:
+both `_sim` twins already shipped `sim_arm_friction_scale: 1.05` /
+`_width: 0.015` / `sim_arm_mass_scale: 1.05`, the launcher derives
+`passthrough_corrections:=true` from friction > 0, and `wb_l1_set_gains.py`
+preserves the new keys (it re.subs only the observer keys it knows) — all three
+VERIFIED, not assumed. What was missing was DISCOVERABILITY, now fixed in the
+three places that describe the plant: both yamls' section-1 FACTOR table gained
+the two rows and now say SIX factors, not four; the L1 isaacsim stack script's
+header listed a plant that was stale twice over (it still promised the
+2026-09-09-deleted back-EMF droop and knew nothing of the friction); and
+Command.md §7.15 now opens with the change, with a "CONFIRM THE PLANT TOO"
+banner check beside the observer one in §7.15.1. **The consequence to carry:
+every flight number in §7.15.4–§7.15.12 (incl. the C++-planner and EE-trajectory
+flights, 2026-09-14/15) was flown on a FRICTIONLESS arm and is NOT
+comparable with a run from here on** — the frictionless baseline is
+`posture_ablation_20260909/l1_mission_kx32.npz`, and
+`PEGASUS_ARM_FRICTION_SCALE=0 PEGASUS_ARM_MASS_SCALE=1.0` reproduces that plant
+for an A/B. The GMO twin (§7.14) carries the same values on purpose: the repo's
+own rule is that the two sim yamls must not describe different plants.
+
+**THE FOUR-DIMENSIONAL ATTRIBUTION — THE NOTE'S SEPTEMBER REVISION, IMPLEMENTED,
+PARITY-LOCKED AND FLOWN AGAINST THE 6-D DESIGN ON THE SAME PLANT (2026-09-16/17,
+user request).** `disturbance_observer_draft.tex` ("the four-dimensional interaction
+wrench"; the 6-D design is archived in `_backup.tex`) replaces the metric +
+projector + identifier of the 2026-09-06 observer with an ALGEBRAIC attribution on
+the JOINT ROWS: `w_e = S_e^T F + k` with `k` joint-invisible, `[w_Σ]_q = w_q +
+J_yq^T F` (a platform wrench has `[w]_q = 0` EXACTLY), `F̂ = J_yq^-T([ŵ_Σ]_q − ŵ_q)`,
+`ŵ_q` a slow trim (`ω_q`) in free flight and frozen in contact, `F̂_y = (1−χ) C_x F̂`
+(ZERO in free flight by construction), `u3`'s feedforward `d_int^f = C_x T^-T ŵ_int`.
+Layer 1 untouched. Everything additive: the `four_d` branch of `wb_l1_observer.cpp`
++ `l1_observer.py` (self-test section 6: exact attribution in contact to 2e-15 where
+the 6-D identifier had 0.59 N of error), keys `wb_l1_four_d / omega_q / contact /
+collision_threshold_n / omega_x_{t,r,q}`, debug [97..100] raw F̂ / [101..104] ŵ_q /
+[105] χ, a 4D banner + per-second watch line, `WbL1ParityTest` 9 rollouts, **same
+executable** — the yaml `..._whole_body_l1_4d_..._sim.yaml` is the switch; new
+stack script `start_whole_body_l1_4d_..._stack.sh` and Pegasus launcher
+`start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_sitl.sh`,
+which READS `wb_l1_four_d` OFF THE RUNNING NODE (`ros2 param get`) and refuses the
+6-D stack, since a process-name gate cannot tell them apart. Tooling:
+`wb_l1_tune_cycle.sh l1_4d`, `wb_l1_set_gains.py --four-d`, `phantom_Fraw_*` in
+`wb_l1_metrics.py`, `|Fraw|` in `wb_compare_metrics.py`; campaign
+`docs/docs_aerial_manipulator/l1_4d_20260916/` (`run_4d.sh`, `summarize_4d.py`,
+`ripple_4d.py`, `plot_4d.py`). Commands + every table: Command.md §7.17.
+- **THE ONE TUNING KNOB IS `ω_x`, AND THE ANSWER IS 0.25 rad/s — the note's own scalar
+  form, shipped.** In free flight the 4-D law differs from the flown 6-D one in exactly
+  two places: `F̂_y ≡ 0`, and `u3`'s feedforward is `C_x` of the WHOLE residual at ONE
+  bandwidth where the 6-D fed the per-group `d_f` (2/0.5/0.5). The 6-D yaml's `ω_x = 20`
+  (a wrench-reading smoother there) is NOT a starting point. Sweep, 10 flights, none
+  aborted, 0 % clamp/saturation: 6 → 339 mN·m of j2 ripple at the airframe's 0.94 Hz
+  attitude mode (§7.15.14's metastable cycle) and 14° tilt p-p; 2 → 259; 0.5 → 196;
+  **0.25 → 5.0 mN·m, tilt ripple 0.075°, below BOTH 6-D baselines (7.8 / 70), repeated
+  3/3.** NOT a bandwidth mismatch: per-block `Ω_x` at the 6-D's own 2/0.5/0.5 still
+  rippled 167, 2/0.25/0.25 rippled 182 — the TRANSLATIONAL block of the feedforward at
+  2 rad/s excites the mode and the boundary is between 0.25 and 0.5. What the 6-D had
+  and the 4-D removes on purpose is the rendered `−(Λ_y M_y⁻¹ − I) F̂_y`, a ~0.3–0.4 N
+  force off a 20 rad/s filter acting as fast momentum feedback into `u3`, i.e. damping
+  that mode by accident.
+- **WHAT THE ATTRIBUTION BUYS ON THE CONFIG-A PLANT, SCORED PER STATE** (friction
+  ×1.05 + arm mass ×1.05 are JOINT-ROW disturbances, the class a 6-D metric can never
+  keep off the task). **EVERY LEG IS A COMPATIBLE TRAJECTORY**, steps included, so
+  every state has a reference; `traj_errors.py` scores each channel in its own unit,
+  peak/rms/settled-rms per leg (`traj_errors.txt`/`.csv`). Pooled over the mission,
+  6-D → 4-D settled: CoM position 30 → 13 mm (2.3×), CoM velocity 22 → 17 mm/s,
+  attitude 1.29 → 0.50° (2.6×), EE POSITION 5.5 → 3.0 mm (1.8×), **EE HEADING
+  9.57 → 1.33° (7.2×)**, **joints 9.68 → 1.88° (5.1×)**. **THE PEAKS ARE IDENTICAL ON
+  EVERY CHANNEL** (247 vs 241 mm, 9.4 vs 9.3°, 32 vs 35 mm, 26.3 vs 26.9°) — peak is
+  the planner's transition, which both designs fly the same way; the attribution
+  changes only what is left after arrival, and it changes ORIENTATION far more than
+  translation. A translation-only metric calls these two designs nearly equivalent.
+  **THE 6-D HEADING ERROR IS A SLOW OSCILLATION, NOT AN OFFSET**: 0 → 13° p-p at
+  **0.06–0.11 Hz**, continuous through hover and the settled window of every leg
+  (4-D: 0.8° p-p); the joint column mirrors it because the EE heading is carried by
+  the `(q1,q4)` pair. The 4-D's one HIGHER peak, 17–25° on the three trajectory legs,
+  is tracking lag on a commanded 60° heading sweep that decays to 0.9–2.4° inside the
+  hold, where the 6-D's comparable peak never decays; both lag it because
+  `K_y,ψ = 0.3` is deliberately soft. Entry transient and `d̂_z` (−11.18 N) identical
+  (same Layer 1). Raw F̂ (collision reading, gated) 0.15–0.24 N late with `ŵ_q` at
+  0.05–0.13 N·m still converging at `ω_q = 0.2`; instantaneously it is a 250 Hz
+  momentum difference through `J_yq⁻ᵀ` and noisy (~1 N std) — a collision threshold
+  sits on the filtered value.
+- **A UNIT DEFECT IN THE PER-LEG TOOL, FOUND 2026-09-17 AND FIXED.**
+  `wb_compare_metrics.py` reported an "EE error" that was `norm(e_y)` over ALL FOUR
+  components — three in METRES plus `sin(heading error)`, DIMENSIONLESS. An 8.7°
+  heading error contributes 0.151 to that norm and was printed as **"151 mm" of EE
+  position error**; the first published version of the §7.17.4 table and the artifact
+  carried 110–233 mm "EE" figures that were mostly heading. **EE position was never
+  more than ~7 mm settled on either design.** The tool now reports `peakEE`/`settEE`
+  (mm) and `pkHead`/`setHead` (deg) separately, and the campaign's numbers are
+  recomputed per channel by `traj_errors.py` and cross-checked against it. **Never
+  norm a task vector whose components carry different units**; and note `‖e_R‖` and
+  `e_y[3]` are SINES, inverted through `asin`, not radians. Every analysis window
+  must also be masked to DIRECT: the last leg runs past the abort into the SAFETY
+  descent, where the node publishes the shorter debug prefix and the recorder
+  zero-pads it — which reads as a 0 mm CoM "error" and a 65° joint "error".
+- **Traps hit:** `wb_l1_set_gains.py` wrote `omega_x_t=0` as an INTEGER and rclcpp
+  refused the double at startup — the node died before its first log line and the
+  cycle reported "never came up" (the setter now writes a float when the file holds
+  one); a running `run_4d.sh` must NOT be edited (bash reads scripts by byte offset —
+  revert to the original bytes if you did); the campaign's EXIT trap restores the
+  yaml from a backup taken at START, so a mid-campaign yaml edit needs the backup
+  refreshed or is lost; `setsid nohup … &`'s "Done" is the shell reaping the wrapper,
+  not the campaign; `pgrep -f run_4d.sh` matches the checking shell itself; the
+  session's scratchpad does not survive a restart — keep drafts in the repo.
+- **NOT covered:** contact (the `χ = 0` branch is parity-locked and self-tested, never
+  flown — no contact exists in Isaac); `ω_q` as a flight knob; hardware. `wb_l1_omega_x`
+  on the 6-D yaml is unchanged at 20 (there it filters only the wrench reading).
+
+**THE 4-D RIG ON THE C++ TRAJECTORY PLANNER, THE THREE-REPO SYNC, AND A HARDWARE
+PAIR (2026-09-17, user request).** Local work in all three repos was committed and
+the remotes merged in (nothing pushed): Pegasus `dev_robotic_arm`,
+fsc_autopilot_ros2 `dev_CCM` (the Python planner deleted, `ee_traj_*` keys), and
+`fsc_trajectory_planner` cloned at **`~/ros2_ws/src/fsc_trajectory_planner`** on
+this desktop. The incoming notes say `~/Workspaces/fsc_autopilot_ws`; that is the
+other machine. Full record: Command.md §7.17.5.
+- **The arm GS's circle / figure-8 "EE trajectory" tab was ALREADY in the local
+  arm repo** (`omx-torque-control`, Longhao's 5d22f50/537a5c0/2abcd3d, and in the
+  Sep-14 GS build). There is **no `dev_robotic_arm` branch** on either arm remote
+  (`origin` = Gao907/fsc_open_manipulator; a separate FSC-Lab/fsc_open_manipulator
+  exists and its `omx-torque-control` is BEHIND the local checkout).
+- **Command.md renumbering:** the incoming §7.15.11 (C++ planner flight) and
+  §7.15.12 (EE circle) kept their numbers; the local PD+ section is now
+  **§7.15.13** and the friction-mismatch flights **§7.15.14**.
+- **4-D sim pair re-derived, not hand-edited:** merged 6-D twin + the saved
+  6-D->4-D patch, so the 4-D yaml carries `/**/whole_body_trajectory_planner`
+  (bspline, `ee_traj_*`) and the 4-D stack launches the C++ node. The planner
+  LINKS `wb_law`, which compiles `wb_l1_observer.cpp`: rebuild it after any
+  law/observer change (`colcon build --packages-select fsc_autopilot_ros2
+  fsc_trajectory_planner`). Verified: WbParityTest 4/4, WbReferenceBuilderTest
+  2/2, WbL1ParityTest 4/4, flat-planner parity, planner gtests 14/14, and both of
+  the planner's rig loopbacks (transition; EE circle, 8890 samples within 3 mm of
+  the radius) with `params_file:=` the 4-D sim yaml.
+- **`wb_l1_tune_cycle.sh` gained `WB_L1_MISSION=ee_circle|ee_figure8`** (default
+  `standard`, unchanged). It runs the planner package's installed
+  `ee_trajectory_sim_driver.py` on any of gmo/l1/l1_4d; that package's own
+  `ee_trajectory_sim_cycle.sh` hard-codes the 6-D stack and the other machine's
+  paths. The EE driver's npz has no `wb_control_debug`; score it with
+  `docs/docs_aerial_manipulator/l1_4d_planner_20260917/ee_run_score.py` (the
+  §7.15.12 metrics).
+- **FLOWN in Isaac on this desktop, both EE shapes on the 4-D rig** (config-A
+  plant), each end to end with no abort, refusal or INFEASIBLE:
+  - circle (s 0.905/1.131): raw EE error 124/178 mm, lag 1.05 s, residual
+    55 mm, radius 0.450 of 0.500 m.
+  - figure-8 (s 0.286/0.358): 50/106 mm, lag 1.37 s, residual 27 mm, extent
+    0.970 × 0.464 of 1.0 × 0.5 m. **The first recorded figure-8 flight on any
+    rig.**
+
+  The 4-D watch line showed `chi=free` and the J2 trim `w_hat_q` at about
+  −0.1 N·m. **NOT comparable with §7.15.12's 6-D circle**: that flight ran on
+  another machine at RTF 0.34, on a frictionless arm. The matched 6-D run is
+  `WB_L1_MISSION=ee_circle ... wb_l1_tune_cycle.sh l1 <tag>`. Data:
+  `docs/docs_aerial_manipulator/l1_4d_planner_20260917/`.
+- **EE-run arm split retuned 2026-09-17 (user): q2 30 +- 10 deg at a 60 deg
+  fold, 48 s period**, both 4-D yamls (the 6-D twins keep 80 / 40 +- 8). **The
+  fold and the centre are one choice** — at rest `q3 = fold - q2`, so 30 +- 10
+  at the old 80 deg fold is REFUSED (q3 -> 60 vs the +50 stop; the planner names
+  the only admissible centre, 40). At fold 60 both joints sit in [20, 40], 10 deg
+  of margin. The period must DIVIDE `laps * lap_time` or the run does not end on
+  its start pose. Peak joint rate is `amp * 2pi * s / period` and the SLIDER sets
+  the worst case: 1.79 deg/s at the circle's s_max, 0.62 at the figure-8's.
+  Costs: EE 0.135 m below the base (was 0.061), sigma_nd 0.306 -> 0.258, peak
+  joint torque 0.82 of 3.0 N.m; s_max unchanged (it is the yaw rate). Check any
+  `ee_traj_*` edit with `l1_4d_planner_20260917/ee_plan_probe.py` before flying.
+  NOT re-flown at this split.
+- **SIM AND EXPERIMENT PLAN IDENTICALLY (2026-09-17, user request).** The
+  `planner` backend was the ONLY difference between each whole-body yaml and its
+  `_sim` twin (all three pairs, 33 keys, one diff); all three hardware files now
+  select **`bspline`**, so the planner sections are byte-identical. Precondition
+  met: bspline flew the 2026-09-14 §7.15.1 sim mission 10/10 and planned every
+  Go-to-start of the 09-17 EE flights, and it enforces rotor force + joint torque
+  which straight_line does NOT (its refusals are a superset). Verified on the 4-D
+  hardware yaml through the planner's rig loopback. **`straight_line` WAS THEN REMOVED**
+  (same day, user request): with every config on bspline it was a name nothing
+  selected, and its refusals were a SUBSET (rotor force + joint torque are
+  checked only in the flat path). Gone: the C++ backend, its registry entry,
+  the straight_line-only `PlanOptions` knobs, 4 gtests + a 156 kB fixture, and
+  this repo's `transition_planner.plan_transition` (221 lines, no callers —
+  `flat_bspline_planner.plan_transition` is the drop-in). **That module keeps
+  the model, FK, IK and rest algebra**, which eleven tools import. Parity
+  suites still pass against the COMMITTED fixtures. **Fixture trap:**
+  regenerating them drifts in the last bits (max |Δ| 8.6e-13 vs a 1e-8
+  tolerance, 13894 of 34950 numbers) from BLAS/threading in the iterative IK —
+  do not commit regenerated fixtures without a reason.
+- **4-D HARDWARE PAIR, never flown:**
+  `params_..._whole_body_l1_4d_direct_actuation_t650.yaml` (the 6-D hardware yaml
+  + the identical parameter delta, identity `AM-T650-WB-L1-4D-HW`) and
+  `fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh`,
+  with a FATAL design gate (`wb_l1_four_d: true`, not overridable). **It carries
+  the 6-D hardware file's 2026-09-12 experiment kf 4.260431e-05 on purpose**;
+  restore the bench value in both files together. Both L1 hardware launchers
+  now expect `current_loop_bandwidth_hz_joints [0.0, 1.5, 1.5, 0.2]` (the arm's
+  TEMPORARY j4 trim); before, they printed a red MISMATCH on every start.
+
+**FIRST HARDWARE FLIGHT OF THE 4-D RIG — STABLE; ARM FRICTION + A MOCAP DROPOUT ARE THE
+STORY (2026-09-18, user request: analyse + report).** Bag `docs/experimental_data_ros2_bag/
+0918 - T650-AM whole-body-L1-4D-.../flight_wb_l1_4d_20260918_144828` (the `_152112` twin has
+metadata only, NO `.db3`). Report, tools and numbers in
+`docs/docs_aerial_manipulator/wb_l1_4d_flight_20260918/` (report.html; `tools/extract_bag.py`
+is a GENERIC rosbag2→npz flattener, `prepare.py` aligns clocks/orderings/conventions into a
+numeric npz for numpy-1.x matplotlib); Command.md §7.17.6. 83 s of DIRECT, five planner legs
+(two EE excursions, two go-homes, a 0.61 m base step), all completed, operator-commanded
+SAFETY revert — no watchdog, 0 saturation, 0 bound hits, 0 clamp except 19 ticks. Verdicts:
+STABLE (|e_R| rms 0.03–0.09, tilt ≤ 5.3°, transients decay to the same ±15–35 mm 0.1 Hz
+wander §7.18.1 already knows); tracking CoM 24 mm rms hover / 30–78 mm holds, EE 4 → 8–16 mm,
+heading 0.7 → 2.3° standing; ARM TORQUE precise in holds (j2 applied − written 0.00 mean /
+0.05 rms of 0.75 N·m) but not during moves (0.9 N·m spikes on j3); OBSERVER compensates
+(u1 + d̂z = 36.79 vs mg 36.74 N, d̂z walks −0.1 → −1.0 N with the pack 24.06 → 23.64 V,
+finds a −0.10 N·m standing yaw and 0.5 N lateral bias); PHANTOM FORCE consumed = 0.000 on
+every tick, χ free 100 %, raw reading LP-0.25 ≤ 0.49 N (0912's 6-D: +0.51 N standing, 3.6 N
+peaks). Two defects, neither in the law: (a) **mocap NO DATA 44.65–46.87 s** — the estimator
+republished the frozen pose (134/210 odom samples identical, so `system_fb_timeout_s` never
+fired) then jumped 151 mm / 2.6 m/s at re-acquisition → 2 ticks of u1 = 9 N, |e_R| 1.0, j1
+clamped 76 ms, ~10 s to re-converge; (b) **the arm moves now (0912: 0.35° of 3.8°) but parks
+where friction catches it** — j2 40 → 35.2 → 35.2° against 40 → 33 → 40, j3 overshoots 2.5–4°
+and holds, j4 3° short: the pass-through friction FF is zero at a hold and K_y 20 × 9 mm ≪
+breakaway. Also: the hardware DEADBEAT estimate is 25× noisier than Isaac's (std 24/29/15 N);
+define any collision latch on a filtered reading. Traps: vehicle topics 0.348 s AHEAD of the
+recorder clock; `/rosout` 3 s late early in the bag; the written duty legitimately exceeds
+`max_effort` (back-EMF FF is added after the clamp). Hardware yamls UNCHANGED by this entry.
+
+**EE MARKER CUBE — THE MEASURED END-EFFECTOR, AN UNMODELLED EE PAYLOAD, AND
+WHAT IT REVEALED (2026-09-18, user request).** The arm GS's EE Trajectory tab
+now draws TWO end-effector triads: **EE (FK)** = the planner's `current_ee`
+(forward kinematics of the MEASURED base pose and joints on its own model —
+it now carries orientation, `eeFrameQuat(R0_actual·r_model, Re)`, same
+convention as `reference_pose`) and **EE (Meas)** = `/obj_0/mocap`, with a
+SOLID BLACK line between them and its length in the overlay. The commanded-EE
+triad and the Pause button are GONE (pause/resume services and the `PAUSED`
+suffix deleted from the planner; test renamed `test_ee_trajectory_origin.py`).
+- **THE MARKER.** `PEGASUS_EE_MARKER_CUBE=1` (yaml `sim_ee_marker_cube`, mass
+  `sim_ee_marker_cube_mass_kg`, env > yaml, forwarded by all three WB launchers,
+  baked by the base launcher; `false` = the plant exactly as before) makes 06
+  weld a cube into the gripper AFTER the re-seat + ground seat (a weld authored
+  before the articulation teleport is torn open): a shapeless rigid body (no
+  collider — it would fight the weld) with mass/inertia, `UsdPhysics.FixedJoint`
+  at `/World/ee_marker_cube_weld` (OUTSIDE the vehicle prim so PhysX never reads
+  it as an articulation joint), body0 = `/manip_base` — the WRIST-ROLL link
+  (manip_joint4's child; the name lies), placed laterally at the two pads' CoM
+  midpoint and 0.108 m out along the wrist −z = the model's own grasp point
+  (`transition_planner.GRIPPER_OFF_WRIST`), 3 cm. Published as `obj_0` by a
+  `ROS2RigidBodyBackend` (handle-guarded: the actor exists only after PhysX
+  sees the prim); the stack scripts pass `bodies:="uav_0 obj_0"` and the
+  **emulator now skips a body until its first pose arrives** — before, a
+  listed-but-absent body was emulated as a phantom at the origin.
+  **The pad MESH bounds are unusable for placement**: `ComputeLocalBound` on the
+  flattened prototypes returns ~30 cm boxes not in the pad frame (measured —
+  the cube landed 42 cm away); the `physics:centerOfMass` attrs ARE in the pad
+  frame. The USD link xforms are also NOT synced after the dc teleport — take
+  poses from `dc`, never from `XformCache`, at spawn time.
+- **FK ↔ MARKER AGREE TO 0.7 mm AT HOME but 8.6–10.5 mm at the circle's
+  start rest** (hover, then go-to-start): the whole-body model's grasp frame
+  and the USD gripper differ by a pose-dependent ~1 cm — the black line is
+  exactly the instrument for that, and it is NOT a tracking error (FK uses
+  the measured joints).
+- **200 g CANNOT TAKE OFF: nose-over on the ground at spin-up.** Roll stays
+  0.0° while pitch runs monotonically nose-down 2.6° → 59° in 2 s from z 0.31,
+  vehicle thrown 7–10 m, PX4 "Attitude failure (pitch)" failsafe. The
+  weld held (cube–body 0.287–0.292 m throughout). Control run without the
+  cube: clean takeoff, hover 1.198 m within 1.4 cm — but even that peaks at
+  16.9° pitch and 1.56 m of excursion: PX4's softened attitude loop has thin
+  margin against the arm's standing moment, and the cube's +0.57 N·m plus the
+  10° arm sag it causes on the SAFETY hold (q2/q3 30/33 vs 40/40) tips it.
+  100 g takes off (peak pitch 22.9°, 2.25 m excursion, hover 1.198 ± 0.0002 m).
+- **THE BINDING LIMIT IS THE DIRECT-ENTRY ARM GATE, NOT FLIGHT.** The SAFETY
+  hold (PD + nominal gravity comp, no integral) sags under the unmodelled
+  mass, and `wb_gate_arm_rad` 0.05 refuses: 100 g → 5.53°, 50 g → 3.16°
+  (slope ~4.7°/100 g + ~0.8° baseline from config A's own friction/gravity
+  mismatch) → the gate admits ≤ ~44 g. `ros2 param set` does NOT change the
+  live gate (params read at startup — the documented trap). **30 g flew the
+  whole thing**: DIRECT entered (12 cm entry transient, settled < 1 cm), circle
+  READY s=1.00, go-to-start 8.1 s, run 2 laps (cube swept 715°, z 1.126 ±
+  3.8 mm, tilt ≤ 3.5°), back to HOLD, no abort. Widening the gate or an
+  integral/feed-forward in the SAFETY arm hold is what a real 200 g test needs;
+  both are the user's call. Data + traces + `takeoff_trace.py` (a 50 Hz
+  body/cube/joints recorder — its `actuator_motors` field never filled, QoS):
+  `docs/docs_aerial_manipulator/ee_marker_cube_20260918/`.
+  **Launch recipe (added 2026-09-20): Command.md §7.17.1 step 3'** —
+  `PEGASUS_EE_MARKER_CUBE=1 PEGASUS_EE_MARKER_CUBE_MASS=0.03` in front of the
+  4-D Pegasus launcher; nothing changes in step 2. The yaml keeps
+  `sim_ee_marker_cube: false` / `_mass_kg: 0.2`, and that default mass is
+  exactly the one that cannot take off, so never enable the cube from the
+  yaml without also lowering the mass.
+  **CUBE AXES = THE EE CONVENTION (2026-09-20, user report: EE (Meas) triad
+  did not line up with EE (FK)).** 06 spawned the cube on the bare WRIST-link
+  frame (`R_w`, identity weld rotations), while the planner's `current_ee` is
+  `Re·M`, `M = [-e3, -e1, e2]` (x = claw = wrist -z, z = gripper up = wrist +y):
+  a constant 120 deg. The cube is now oriented `R_w·M` and the weld's
+  `localRot0 = M` (`EE_MARKER_R_WRIST_EE`), i.e. the mocap rigid body defined
+  on the gripper's axes — a HARDWARE rigid body must be defined the same way
+  or its triad will be off by whatever its axes are. Verified in Isaac,
+  seated, 5 poses via arm_planner (q1 +-20, q4 +-60/90, q2/q3 30/45): 0.08-0.29
+  deg, 0.3-1.0 mm. The arm GS overlay now prints the angle too (`… mm, …°`).
+- **THE "TWO DRONE CIRCLES" ARE REAL GEOMETRY**: `ee_traj_q2_period_s` 48 s =
+  the whole 2-lap phase, so the arm folds once per RUN and the base rides a
+  different loop on each lap (13 mm radial / 24 mm vertical apart at equal
+  bearing, measured; the EE loops coincide to 0.0 mm). Separately, inferno and
+  viridis converge to the same yellow at the top of the range (33/255 apart) —
+  the drone map now ends at a saturated orange.
+  **2026-09-20 (user request): the tab now draws ONE airframe loop, and the
+  Drone triad is MEASURED.** The planner reports where the first lap ends
+  (`/ee_trajectory/info` [15], bisected on its own time profile) and the tab
+  cuts `drone_path` there; the topic still carries the whole run. Lap 2 vs
+  lap 1 at MID-lap (q2 40 vs 20 deg), interpolated: **45 mm** on the 4-D sim
+  yaml, 0.0 mm on the node defaults (q2 period = one lap); lap 1 closes on
+  itself to 0.4 mm. So during lap 2 the Drone triad rides up to ~4.5 cm off
+  the drawn ring by design; `q2_period_s = lap_time` would make the flight
+  itself one loop (a design change, not made). The Drone triad now reads the
+  planner's new `whole_body_planner/current_base` (odometry position + PX4
+  attitude, x = nose — the pair `current_ee` is computed from, same 15 Hz tick
+  and 0.5 s gate), so before Go To Start it moves with EE (FK); it used to
+  read the COMMANDED `ee_trajectory/drone_reference_pose`, a static hold.
+  `drone_reference_pose` is still published (the origin test reads it).
+  Verified: `test_ee_trajectory_origin.py` PASS on defaults AND with
+  `EE_ORIGIN_PARAMS_FILE=<4-D sim yaml>` (new: current_base == fed odom/att,
+  info[15] == Tr/2 + T_lap), and an offscreen grab of the REAL panel linked
+  from `libjoint_plot_core.a` against a moving loopback base.
+- **Two traps hit AGAIN, four times between them**: `pkill -f`/`pgrep -f` with a
+  bracketed pattern still matches your own shell when the SAME command line
+  later spells the target out in plain text (a `ros2 topic pub ...` launch line
+  did it); and a `2>&1 | cut` behind `run_in_background` lost a script's entire
+  output. NOT flown on hardware; nothing committed.
+
+**0921 HARDWARE CIRCLE ATTEMPT — TRANSITION TRACKED, MOCAP FLIPS, 120 Hz FEED (2026-09-21,
+user request: analyse).** Flight 3 (`flight_wb_l1_4d_circle_20260921_123637`) only flew the
+planner's go-to-start (a 148° heading spin with the EE pinned, T = 14.85 s, w_max-limited)
+and tracked it (CoM 13/9/4 mm, EE 3.5/4.5/7 mm, e_R,z ±0.008) until two **mocap rigid-body
+FLIPS** (one-sample 0.18 m + ~110° jumps, `mocap_status` normal, all 18 flips of the bag at
+headings ≤ −70°) hit the law, which reads odometry VERBATIM with no innovation gate: u1
+−60/+152 N for a tick, motors railed 0.1 s, j2 2.5 N·m; PX4's EKF gated the same samples
+(≤ 3 mm) but no loop reads it: position + velocity for BOTH DIRECT and SAFETY (and the
+planner) are the RAW mocap message via `indoor_mocap_feedback_launch.py` (odom bit-identical
+to mocap in all four hardware bags); attitude is EKF2 `vehicle_attitude`, rate the
+`sensor_combined` gyro. SAFETY's tilt setpoint also spiked 23–35° at each flip; PX4's soft
+attitude loop kept the vehicle within 2°. The revert was the OPERATOR, not the watchdog. The 120 Hz mocap made the law's
+velocity feedback (a short finite difference of mocap position) 2.7x noisier (odom v std
+10.8 vs 4.0 cm/s; deadbeat d̂ 91 vs 24 N; |e_R| 0.074 vs 0.033 at 19–21 Hz) — actuator
+chatter, not instability, and flight 2 at 60 Hz was as noisy, so the rate is not the whole
+story. 200 Hz sensor_combined/vehicle_attitude: no adverse sign. Report + tools:
+`docs/docs_aerial_manipulator/wb_l1_4d_flight_20260921/`; Command.md §7.17.7. Traps: the
+extractor's cursor must not be reused inside its own iteration (only /parameter_events
+prints); `mocap_status` never flags a flip.
+
+**THE 4-D HARDWARE STACK FLIES ON EKF2-FUSED FEEDBACK FROM 2026-09-23 — CHECKED, NOT
+NEWLY BUILT (2026-09-23, user request).** The user's runbook now starts
+`start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator_fused.sh` (created
+2026-09-21, fsc_autopilot_ros2 `df91e52`; sim twin + 2 fused Isaac missions in
+`wb_l1_4d_fused_sim_20260921/`). Verified against the X650 reference
+`start_autopilot_stack_x650_fused.sh` and the client code: the ONLY difference from the raw
+script is the estimator pane (`indoor_estimator_launch.py` -> `indoor_state_estimator_node`,
+whose `Px4FusedOdomBridge` republishes EKF2 `fmu/out/vehicle_odometry` as
+`state_estimator/local_position/odom`), so the law's POSITION + VELOCITY are EKF2's; ATTITUDE
+(`vehicle_attitude`) and RATES (`sensor_combined`) were EKF2/gyro in BOTH variants already.
+The planner reads the same odom topic. The bridge's world-frame velocity takes the client's
+existing inertial-velocity branch (empty `child_frame_id`). The stale-estimator backstop
+lists both estimator executables. **The mocap feed is 120 Hz today**: in the fused path that
+rate only sets EKF2's EV input; the law's velocity is no longer a finite difference and the
+fused topic runs at PX4's ~100 Hz. What the 120 Hz noise still does inside EKF2 is governed
+by Pixhawk `EKF2_EV_NOISE_MD`/`EKF2_EVV_NOISE`/`EKF2_EVP_NOISE` and the EV gates — NOT set by
+this repo, read them before the flight. Two things the sim never exercised: the
+`timesync_status` stamp path (the SITL ran `UXRCE_DDS_SYNCT=0`) and mocap faults (the
+emulated mocap is perfect). NOT yet flown on hardware under the whole-body node; hover in
+SAFETY and diff odom vs `/mocap` first. Runbook + pre-flight commands: Command.md §7.17.8.
+
+**0924 CIRCLE FLIGHTS ON THE FUSED STACK — THE DRIFT WAS A FROZEN MOCAP POSE FUSED AS VALID, THE ARM
+DID NOT TRACK ITS SINUSOID, AND THE CONFIG CHANGES WERE MEASURED (2026-09-24, user request: analyse).**
+Bags `0924 - T650-AM whole-body-L1-4D Circle-.../flight_wb_l1_4d_circle_20260924_{120228,120546}`;
+report + tools + raw outputs `docs/docs_aerial_manipulator/wb_l1_4d_flight_20260924/`; Command.md §7.17.9.
+Flight 2 completed a full compatible circle (28 s) and returned to HOLD; flight 1 flew 1.57 of 2 laps.
+Both: 0 saturation, 0 clamp, tilt ≤ 2.1°, EE relative 3–7 mm rms, absolute EE 53–58 mm mean (radius
+0.48–0.49 of 0.50 m), base CoM 42 mm rms / 100 mm peak LAP-PERIODIC and tied to |e_R| (the structural
+pure-P residual — the translational observer tracks the body-fixed 0.4/−0.5 N lateral bias to 0.1 N).
+- **THE DRIFT: mocap lost the rigid body for 2.84 s at yaw 135° and the broadcaster REPUBLISHED THE LAST
+  POSE WITH FRESH STAMPS** (169 identical `/mocap` poses at 60 Hz, twist 0); `indoor_state_estimator.cpp`
+  forwards every `/mocap` message to EKF2 unconditionally (fixed 1e-4 variances), so EKF2 fused a frozen
+  position as valid (`cs_ev_pos` 1, no reset, no dead-reckoning). The estimate moved 62 mm while the
+  reference moved 365 mm; the law pushed the REAL vehicle ~2 m/s² along the tangent; re-acquisition found
+  it 1.35 m away at ~1 m/s; EKF2 then REJECTED the true pose 1.2 s and reset at the instant the pilot took
+  STAB; touchdown 3.7 m away, 58° tilt. The 0.75 m drift guard measures against the frozen estimate and
+  cannot fire. Two 108 ms pauses (yaw −172°/139°) were absorbed (≤ 25 mm) — short pauses are fine,
+  frozen republishing is not. Pauses live in ONE heading sector, 135°–188°, both flights. Fix at the
+  broadcaster (stop publishing on NO DATA) or estimator (drop bit-identical/stale EV samples) so EKF2
+  dead-reckons and `feedbackLost()` hands over on a MOVING estimate; add a frozen-feed guard in the DIRECT
+  client; find why Motive stalls at that viewpoint. The processor runs on the GROUND-STATION computer (source FSC-Lab/fsc_optitrack_processor_ros2), not the Orin — see the source bullet below.
+- **THE FREEZE'S SOURCE (same day, report section 4.1, fig. 7): Motive's output stream paused — not the estimator, not the
+  WiFi, not a lost rigid body.** Bag clock stamps put the processor, both ground stations and the RECORDER on
+  the ground-station computer (drone nodes arrive at a constant −3.6 ms offset). Drone WiFi carried traffic
+  both ways, at unchanged latency, through every pause (the operator's Safety command landed mid-pause). The
+  first frame back matched the drone's IMU-dead-reckoned pose 2.72 s EARLIER (at 75.64 s, ~1 mm) — Motive was
+  still tracking when delivery stopped. The 108 ms pauses resume with ~100 ms-late frames at the normal 8 ms
+  cadence, then a 13 mm skip to live (pipeline falling behind, not a network burst); no orientation snaps. All
+  3 in-flight pauses at headings 135–188° (7 % of DIRECT time, p ≈ 4e-4). Best-supported: Motive's processing
+  stalls at that viewpoint. Confirm with `/vrpn_mocap/*/pose` recorded as-is plus a second recording-only VRPN client with `use_vrpn_timestamps: true` (not on the processor's client), all
+  rigid bodies streamed, and Motive's latency/drop indicators while hovering at that heading.
+- **THE ARM REALISED 43 % (q2) / 15 % (q3) OF ITS 30 ± 10° SINUSOID**, errors 7.4°/13.9°, q2 lagging 2.5 s and q3 barely following, with
+  torques at 42 %/34 % of the servo caps and a 0.07°/0.04° static hold. In DIRECT the joints are held only
+  by the task impedance (`wb_ky` 20 N/m ≈ 0.006 N·m per degree of joint error) — below j3's ~60 mN·m
+  breakaway — and the arm-side friction FF (ON, `law_debug[26]` = 1) is reference-velocity driven with a
+  0.86°/s tanh width against a 1.3°/s-peak reference. **Faster IS feasible** (planner probe, all READY,
+  τ_j ≤ 0.87 N·m, base motion unchanged): recommend `ee_traj_q2_period_s` 12 / `ee_traj_q2_amp_deg` 15
+  (7.9°/s at s = 1, 8.9 at s_max, 5° from the stops); 8 s and 6 s periods exceed the arm's 10°/s bound.
+  Speed does not fix the amplitude loss — that needs stiffness (`wb_ky/dy` 50/20, sim-only), a friction
+  FF retune for slow references, or a provable joint-space term.
+- **EE error by channel (report fig. 2):** absolute EE error = law task error `wb_control_debug[24..26]` +
+  base CoM error, exact to < 1 mm. Circle run rms: absolute ~40/40/7 mm x/y/z, task 3–7 mm, yaw 0.75–1.1°
+  (peak 2.2°, +0.5..+1.2° standing offset). x/y absolute error IS the base error (CoM anchor by design);
+  the task error is q − q_d through FK (corr 0.96–0.98), ~2 mm per degree of q2/q3 split.
+- **CONFIG CHANGES (hold windows, 0918 → 0921 → 0924):** law velocity std 2.6 → 10.8 → 1.4 cm/s;
+  deadbeat d̂_x 13.7 → 91 → 9.8 N; u1 rms > 5 Hz 0.42 → 1.09 → 0.06 N; |e_R| 0.033 → 0.074 → 0.021; mocap
+  steps consumed 1 → 8 → 0; timesync RTT 3.7 → 0.45 ms (offset drift 39 ms → 0.25 ms); law tick max 16.9 →
+  12.2 ms. EKF fusion = the big win (costs 20 ms lag, 4–9 mm rms vs mocap, and the stale-EV mode);
+  Ethernet works; CPU isolation modest. **400 Hz `sensor_combined` is the UNFILTERED integrated gyro**: its
+  power > 15 Hz went 32–76 % → 86–89 % (rotor lines 136–158 Hz), motor-cmd HF rms +40 %, τ_body,y std
+  +35 %, arm τ tick noise +40 % — no ringing, attitude unchanged, an actuator-wear cost. Feed the rate loop
+  from filtered `vehicle_angular_velocity`, low-pass ω (~40 Hz) in the client, or go back to 200 Hz for
+  `sensor_combined` only.
+- Traps: the fused `local_position/odom` header is on PX4's clock (hdr − recv ≈ −2.5e9 s) — window on
+  receive time; `mocap_status` says `mocap_normal` through a 2.84 s loss; `joint_states.effort` is in
+  Dynamixel current counts. Nothing committed; no yaml changed.
+
+**q2 = 25° ± 15° AT A 12 s PERIOD, CHECKED IN SIM (2026-09-24, user request).** Campaign
+`docs/docs_aerial_manipulator/q2_sine_sim_20260924/`, Command.md §7.17.10, 0924 report section 3.1 (its figure was dropped from the report 2026-09-26; the campaign directory keeps it).
+The requested design is REFUSED at the flown 60° fold (q3 = fold − q2 hits exactly +50°); **fold 55°**
+keeps q2 10–40° and q3 15–45°. Flown on the l1_4d_fused rig (config A) at the planned pace: both laps,
+0 saturation/clamp/abort, arm 103/109 % of span, joint error ~2x the old design (lag 0.44–0.50 s),
+**base/EE/yaw errors identical to the old design**, torques unchanged, **q3 peak 47.0° = 3° inside the
++50° guard**. Two traps: (a) **the sim runs at RTF 0.49 while the law and planner run on the wall
+clock, so a requested time scale s reaches the plant as s / RTF — request s = RTF to test the planned
+pace** (a first run at s = 1 was effectively 2x and still held); (b) **the sim is optimistic about the
+arm** — the old design realised 107–112 % of its span in sim vs 15–44 % on hardware (config A's
+friction model does not reproduce hardware stiction). Also corrected: the hardware joint lag is 2.5 s
+(q2), not "~1.6 s". Hardware yaml NOT changed.
+
+**FLIGHTS 3 AND 4 (2026-09-24 afternoon): FASTER ARM DESIGNS FLOWN, TORQUE FAITHFUL, STICK–SLIP, VRPN
+CLEAN (user request: analyse + add to the report).** Bags `..._165654` (fold 55°, q2 25 ± 15°, 12 s) and
+`..._172101` (same, 6 s). Command.md §7.17.11, report sections 2 and 3.1 (fig. 3 there = q2/q3 tracking + law/intended/applied joint torques, all four flights, followed since 2026-09-26 by one
+statistics table and the causes/fixes ranked by priority with the data behind each; restructured 2026-09-25: 2 = all four flights' tracking statistics, 3 = OPEN questions — the arm tracking, 4 = ARCHIVED questions — the drift and the configuration changes). Both completed one lap, 0 sat/clamp/abort;
+CoM 44 / 49 mm rms (better than the morning's 56–60), EE absolute 51 / 52 mm, EE yaw 1.0°. **Applied arm
+torque = INTENDED torque (law cmd + (S−1)g + friction FF) to 0.01–0.04 N·m rms, corr 0.93–0.997** —
+score against the intended sum, NOT the raw duty (back-EMF duty makes no torque and reads as 0.2–0.5 N·m).
+**Joint rmse unchanged at 5–8° but the mode flipped from lag/park to STICK–SLIP**: stuck 20–57 % of the
+moving-reference time, bursts 40–68°/s (5–7× the reference), overshoot 7–12°, j3 on its +50° stop 5 % of
+F4. Friction identified from flight (`friction_id.py`, applied − S·g(q,R0) − I·q̈): kinetic j2 0.14–0.19 vs
+FF 0.19–0.20, j3 0.06–0.09 vs 0.11 — the FF is delivered and 10–40 % high. Mechanism: the pass-through has
+no joint loop (impedance 1.3 N·m/rad j2 / 0.67 j3, no integral, no stiction term) and the friction FF is
+a relay in the REFERENCE velocity; PD+ on the ground has the integral + stiction FF. Proposed (not
+applied): FF ×0.85 (j2) / ×0.65 (j3), drive it from the observer velocity with a 0.05 rad/s width, add
+joint damping, keep 12 s. **Raw VRPN recorded and clean in both flights** (120 Hz, max 19 ms, 0 stalls);
+the 12:03 stall stays unexplained. F4's 2.75 s `wb_control_debug` gap = pilot took STAB during a planner
+descent leg (WB node stops ticking when PX4 leaves OFFBOARD), on the ground.
+
+**THE DECOUPLED STACK FLIES THE ARM GS's EE TRAJECTORY TAB ON HARDWARE — SAME PLAN,
+SAME MOTION, TWO REFERENCE SETS (2026-09-26, user request; Command.md §7.20).** For the
+comparison study (whole-body 4-D L1 vs geometric+L1 with a POSITION-mode arm, one controller
+per session, same 0.5 m / 24 s / 1-lap horizontal EE circle) the hardware decoupled stack
+gained what the sim decoupled rig (§7.18.2) already had, plus a fused twin:
+- `start_geometric_l1_direct_actuation_stack_t650_aerial_manipulator{,_fused}.sh` (fused =
+  the 4-D fused recipe: `indoor_estimator_launch.py`, EKF2-fused position/velocity; the L1
+  sample clock then runs on EKF2's ~10 ms stamps instead of the mocap's 8.3 ms) now open a
+  `planner` tmux window: `fsc_trajectory_planner` via ITS LAUNCH FILE with the hardware
+  `base_com [0,-0.017854,0]` / `arm_joint_sign [-1,1,1,-1]` and the WHOLE-BODY 4-D hardware
+  yaml's planner section (ONE planner config for both rigs; the geometric+L1 yaml has none on
+  purpose), re-pointed by two NEW launch args `mode_topic:=` / `arm_reference_topic:=`; beside
+  it `decoupled_reference_bridge.py` with the NEW `--base-com`. The node's reference input is
+  remapped to `position_controller/reference_direct` ONLY when the planner window runs
+  (otherwise the stack degrades to the plain input, never to a node with no reference).
+  Startup refuses on a `base_com` ≠ the whole-body yaml's `wb_base_com_*`, warns on a
+  missing Pegasus checkout (the bridge imports `utils_planner`, pure numpy — clone it on the
+  Orin), and checks the arm yaml. Pane titles: `planner[decoupled wiring]` / `reference bridge`.
+- **THE BRIDGE PROVES THE EQUIVALENCE EVERY TICK**: `|r_ed − (x_b + R0 r_0e(q_d))|`
+  (`base_reference_vector[23]`, 10 s report line, WARN > 2 mm). `r_0e` is `base_com`-free
+  while `r_0c` carries `m_0·base_com`, so a wrong `--base-com` shows up here as a constant
+  residual instead of a silent few-mm base offset — which is exactly what the pre-existing
+  bridge would have done on hardware (its model defaulted to zero base_com; in Isaac both
+  are zero, so §7.18's sim comparison was unaffected). Loopback 0.0002 mm; 252 mm with a
+  deliberately inconsistent fake reference.
+- **Hardware arm, position mode, now the pure-tracking topology**:
+  `position_controller_hardware_aerial.yaml` sets `external_reference_topic` + an
+  `/**/arm_planner` section (mode_topic = the geometric+L1 fork's, ABSOLUTE with `uav_0`;
+  `home_on_safety_revert: true` because the geometric+L1 node has NO
+  `system_arm_go_home_service`, so `arm_planner` is the fold's only owner), and
+  `position_control_hardware.launch.py` starts `arm_planner` after `spawn_arm` (new arg
+  `arm_planner`, default = aerial only; the ground yaml is untouched). Validated 12/12 with
+  `test_arm_planner.py` (run against a planner started on that yaml with the test's
+  controller name swapped to `position_controller`).
+- The hardware 4-D yaml's `ee_traj_laps` 2 → 1 (the flown circle). With the 48 s q2 period a
+  24 s lap ends at the sinusoid's zero crossing, so the arm returns to its start pose.
+- Traps hit: `pkill -f "[w]hole…"` still kills the invoking shell when the SAME command line
+  spells the target out in plain text (a `ros2 launch …_launch.py` line did it, twice); the
+  bridge's vector index is [23] not [24] (count the fields); `test_arm_planner.py` hard-codes
+  `external_torque_controller` and the whole-body mode topic — override both to test another
+  section, and START A FRESH PLANNER per run.
+- **SIM-VALIDATED 2026-09-26 (this desktop, config-A plant, `am_compare_cycle.sh decoupled`,
+  `docs/docs_aerial_manipulator/decoupled_circle_20260926/`)**: the decoupled rig flew the
+  0.5 m / 24 s / 1-lap circle end to end from DIRECT with no abort at s = 0.5 (= RTF): EE
+  82.8 mm mean / 113.7 max, lag 1.28 s, heading error = yaw error 10.2° (the constant-yaw law,
+  7.18.4), joints rms ≤ 1.5°. The recorded PLAN stream: EE reference z span 0.035 mm
+  (horizontal plane), radius 0.5000 m exact, same-motion residual 0.0003 mm over 5200
+  samples, q2/q3 back at 30/30°; `same_motion_check.py` in the campaign dir reads any driver
+  npz (both rigs) and, given two, compares their plan streams sample by sample.
+- **Matched whole-body twin flown the same day, same cycle and arguments, no abort**: EE
+  77.5 vs 82.8 mm mean, heading 4.7 vs 10.2°, base z 0.6 vs 11.3 mm low (whole-body vs
+  decoupled; the 7.18.4 ordering). **The two plan streams are the same motion**: joint
+  references agree to 0.001° sample for sample; EE/base references differ 16.8 mm raw, all
+  of it the START POSE (circle anchored at the EE's height + bearing at selection; the
+  vehicles hovered 5.8 mm / 1.6° apart), and 1.8 / 2.0 mm after removing that rigid offset
+  (the 100 Hz alignment floor). On hardware, park both sessions on the SAME drone-GS hover
+  target before selecting. `am_compare_cycle.sh` now restarts the ros2 daemon after its
+  clean slate (it wedged 2 of 2 cycles); editing it mid-run tore the running copy and cost
+  one flight — the known byte-offset trap. Scores + plots in the campaign dir, Command.md §7.20.2.
+
+**SIM-TO-REAL MIRROR OF THE 4-D WHOLE-BODY RIG — THE SIM YAML SPLIT, THE PLANT
+IDENTIFIED FROM 0918/0921/0924, AND THE REPLAYS (2026-09-26, user request).** Full
+record Command.md §7.17.12; campaign dir `docs/docs_aerial_manipulator/
+sim2real_tuning_20260926/` (README, fit_plant.py, replay.sh, compare.py,
+build_report.py, artifact "Sim-to-Real Flight Performance Tuning").
+- **TWO 4-D SIM YAMLS.** `..._whole_body_l1_4d_direct_actuation_t650_sim.yaml` is now
+  the EXPERIMENT MIRROR: section 2 = the hardware yaml VERBATIM (gains, observer,
+  flown allocator kf 4.260431e-05 / bench km, bench thrust map, guards; the diff
+  is exactly vehicle_name, `wb_arm_hold_stream` true, empty go-home service, the
+  arm sign map omitted, planner `base_com` = wb_base_com); section 1 = the plant
+  identified from the flights, with per-flight provenance; section 3 lists the
+  topology keys. The former stress plant is BYTE-IDENTICAL at
+  `..._sim_robustness.yaml`. `WB_SIM_PROFILE=mirror|robustness` (default mirror)
+  on BOTH the stack script and the Pegasus launcher; `WB_SIM_YAML` overrides.
+  Every campaign before 2026-09-26 flew the robustness plant; their scripts were
+  repointed. `am_plant_from_yaml.sh` is now what the 4-D Pegasus launcher sources
+  (inline copy removed); the base launcher validates + bakes the new knobs.
+- **NEW PLANT KNOBS, all default off:** `sim_plant_km_scale` (yaw c alone),
+  `sim_plant_rotor_lambda`, `sim_plant_kf_sag_per_min` (kf falls from lift-off),
+  `sim_plant_force_bias_*` / `sim_plant_torque_bias_*` (body-fixed FLU wrench each
+  physics step), `sim_arm_vel_lag_s` + `sim_arm_vel_quant_rad_s` (the REPORTED
+  joint velocity only — Present Velocity emulation), per-joint
+  `sim_arm_friction_scale_j1..j4` (servo_model friction_scale is a 4-vector,
+  `has_friction`), and `sim_feedback_mocap_rate_hz / pos_noise_m / vel_noise_mps /
+  noise_seed` read by the STACK scripts and passed to the emulator launch (which
+  gained `frequency / position_noise_std / velocity_noise_std / noise_seed`).
+  **`sim_plant_com_shift_*` IS THE ACTUAL x-forward body frame** (USD body prim),
+  not the model frame the old comment claimed: model base_com_y −0.017854 →
+  `sim_plant_com_shift_x: -0.017854`.
+- **WHAT THE FLIGHTS SAY (fit_plant.py):** kf_eff 4.03–4.31e-05 tracking pack
+  voltage (mean 4.19e-05 = ×1.037 of the 0825 plant), sag −2.6…−4.5 %/min;
+  roll/pitch authority = the plant's (gain 1.11/1.03 on 0921 #3, corr 0.7–0.8; the
+  circles do not excite it above the vibration floor); **yaw 0.43–0.78 of the
+  BENCH c — the sim's ×3 c delivered 4–7× the real yaw response in DIRECT**, mirror
+  uses 0.70× bench; a body-fixed force (+0.55, −0.50) N and yaw torque −0.1 N·m on
+  every flight (d̂_t is WORLD-frame, no model relabel; d̂_r body/model); arm
+  friction j2 0.95 / j3 0.75 / j4 1.5 of the report model; joint_states.velocity
+  lags the encoder 44–56 ms at a 0.024 rad/s quantum; mocap velocity noise 2.2–2.6
+  cm/s at 60 Hz raw (10 cm/s at 120 Hz), 1.2–1.5 fused.
+- **THE RTF TRAP COST A FLIGHT.** At RTF 0.48 the wall-clock law sees every plant
+  lag ÷RTF; at hardware gains and ×1.0 inertia the mirror diverged in a slow
+  (0.26 Hz plant) growing ROLL oscillation 16 s into DIRECT (f18_r1), after 16 s
+  in which d̂_t read exactly the hardware's (+0.5, −0.42) N. `replay.sh` expresses
+  λ, the arm-velocity lag and the noise corner in WALL time and scales the
+  planner bounds / EE time scale by RTF; the yaml keeps physical values. The
+  stress plant only ever flew at RTF 0.5 because +17.6 % kf belief × 1.10 inertia
+  cut the attitude loop gain ~25 %. Observer filters remain ~2× fast in plant
+  time — document, never tune against it.
+- **0924 F2 CIRCLE REPLAYED on the fused stack (a2_r6, s = 0.48 = RTF, no abort):**
+  motors and yaw torque match the flight within 1–2 %; the sim tracks WORSE during
+  the run (CoM rms 94 vs 56 mm, |e_R| 0.10 vs 0.04, heading 3.8 vs 1.1°) while the
+  slow-pace attempts (s 0.09–0.11) sat BELOW the flight (25–34 mm, 0.026) — the
+  excess is pace-dependent (EKF2 non-lockstep at RTF 0.48 + 2× observer bandwidth),
+  not the plant numbers. **Three replay traps, each cost a run:** the EE trajectory's
+  `s_max` IS the CoM/EE-speed bound, so never scale the planner bounds for a circle
+  replay (set the pace with s alone); the SAFETY takeoff DEADLOCKS at that day's
+  DIRECT-hold kf (bench map 4.1 N short below the 0.4 m UDE gate) — use the
+  LIFT-OFF kf the SAFETY UDE implies (−3.0 N → 4.17e-05); and a `kill_stale…-y`
+  that kills its invoking shell leaves the replay's driver alive, so a relaunch runs
+  TWO drivers on one vehicle and the zombie's abort reverts the live run to SAFETY —
+  launch replays with `setsid nohup`, `pgrep -f ee_trajectory_sim_driver` first. A
+  safe copy of the mirror yaml taken while a replay had its temporary RTF scaling
+  applied propagated double-scaled planner bounds for three runs: copy the yaml only
+  when no replay is running.
+- **0918 REPLAYED WITH THE MOCAP FEED EMULATED (f18_r4, final):** hover |e_R| 0.021 vs
+  0.028 flown (0.002 without the noise) — the attitude ripple IS feedback noise; the
+  hover CoM wander stays 4 vs 27 mm (the flight's 0.1 Hz position mode is not
+  noise-driven); d̂_t (+0.57, −0.43) N to the second decimal; a sim-only 3.5–3.9°
+  heading offset after the base step. Earlier, without noise:
+- **0918 REPLAYED, all five legs, no abort (f18_r3):** u1, the four motor means,
+  d̂_t, d̂_r,z and the sag drift all within a few % of the flight; the sim is
+  QUIETER (hover CoM 2 vs 27 mm rms, |e_R| 0.002 vs 0.028, tilt 1.2 vs 3.8°) —
+  the mocap noise/wander the feedback keys were then added for. Base-step
+  overshoot larger in sim (153 vs 81 mm). The driver gained `--mission
+  "ee:...;home;base:...;..."` (home = the planner's own go_home service — an EE
+  target back to the entry pose is INFEASIBLE after the base moves).
+
+**ARM-CHANNEL AUDIT + CIRCLE GAIN STUDY: THE BASE ERROR IS A BODY-FIXED FORCE ON A YAWING
+TRAJECTORY (2026-09-26, user request; Command.md §7.17.14, artifact sections 5–7, campaign
+`sim2real_tuning_20260926/`).** Hardware whole-body yaml NOT changed.
+- **Arm friction FF corrected, UNFLOWN:** the flights' kinetic friction is 30–35 % below the
+  feed-forward on j2/j3 and the relay fired on the REFERENCE velocity (full push through a stick,
+  zero at a hold). Hardware + Isaac arm yamls: j2 ×0.70, j3 ×0.65 (f_c and µ), and a NEW
+  `TorqueControllerBase` option `friction_velocity_source: measured` (+ `friction_measured_width`
+  0.03; default "reference" = every other config byte-identical). Passthrough loopback 24/24
+  (the test now expects zero relay on "measured"). Mirror plant `sim_arm_friction_scale_j2/j3`
+  0.70/0.65. The servo applies what the chain intends (κ, S consistent) — no correction there.
+- **Mechanism (offline `tools/circle_sweep.py`, exact law on the recorded 0924 F2 reference, RTF
+  1):** removing the identified BODY-FIXED lateral force (+0.55, −0.50) N takes the circle EE
+  absolute error 23.5 → 1.9 mm; world-fixed it costs 3.9 mm; the yaw bias, km mismatch and arm
+  friction change nothing. The observer tracks the force to 0.07 N; the law's `f_d_dot` treats
+  `d̂_t` as constant while it rotates in world at the heading rate, so `ω_0c` carries a spurious
+  roll/pitch rate and the attitude parks at `e_R ≈ (k_w/k_R)·e_ω`, which the pure-P position loop
+  turns into `T·e_R/k_x`. The real F2 obeys the same identity (|e_R| 0.042 → 48 mm vs 56 mm CoM);
+  the offline model carries ~40 % of the flight's attitude error (no noise/vibration/wander) —
+  RANK with it, do not quote its absolute numbers as a flight prediction.
+- **FINAL RECOMMENDATION: `wb_k_w` 1.5 → 0.9 ALONE** (ζ 1.47 → 0.88), hardware yaml NOT
+  changed. Offline circle 23.5 → 17.5 mm and MORE delay margin (1.5 aborts at 24 ms). Isaac, 8
+  flights on the 0924 F2 circle, all completed / 0 sat / 0 clamp: mirror 83.3 → 63.5 mm (−24 %),
+  robustness 86.5 → 68.0 mm (−21 %), |e_R| 0.10 → 0.06; cost = larger robustness DIRECT-entry
+  handover (360 → 427 mm, inside the 0.75 m guard). **K4 (+ `wb_l1_omega_c_t` 2 → 6) is best
+  OFFLINE (10.5 mm, gust recovery 4.3 → 2.8 s) but RANG on the Isaac robustness circle** (104
+  vs 86 mm, peak 185, 0.38 Hz) — doubling every observer bandwidth offline does NOT reproduce
+  that, so its source is another part of the RTF 0.49 wall-clock coupling. Hold ω_c_t at 2 until
+  it can be tested on sim time or as a separate hardware step. k_x ≥ 64, k_R ≥ 3, ω_c_r 1 cost
+  margin; K_y, K_ψ, ω_x do not move the base error. Structural fix (a law change): the
+  disturbance-estimate rate is missing from `f_d_dot`.
+- **Tooling:** `replay.sh` gained `WB_REPLAY_PROFILE=robustness` (robustness yaml + the hardware
+  law overlaid) and `WB_REPLAY_GAINS="key=val,..."`; `run_gain_isaac.sh` flies the 4-flight
+  confirmation; `score_run.py` scores EE ABSOLUTE = |(x_c − x_cd) + e_y[0:3]| (sim or `--real`);
+  `wb_entry_sim.Law` returns `R0c/omega_0c/f_d` and has a default-off `dhat_rate_ff` what-if.
+  Trap: `pkill -f` from a command line that names the target killed the shell again (exit 144).
+
+**THE ARM ARMATURE: THE VALUE IS ROUGHLY RIGHT, THE STRUCTURE IS NOT, AND IT IS WHAT CAPS THE
+JOINT STIFFNESS (2026-09-26, user request; full write-up + tables
+`docs/docs_aerial_manipulator/arm_armature_20260926/README.md`).** `J_arm = 353.5² × 1.6e-7 = 0.020`
+(a guessed rotor inertia inherited from the MATLAB model) is added as `J_arm·h hᵀ` to each CHILD
+LINK's body inertia (`controller.make_params`, `wb_model.cpp:135`); physically it is JOINT-DIAGONAL
+(the rotor turns at N·q̇ relative to its housing), which is also what 06 authors in PhysX — so every
+sim flight has flown that mismatch. It is ~75 % of the j2/j3 block of M̃_ρ, so it sets the law's joint
+stiffness `K_q = ω²·M̃_ρ` and its 6.7:1 soft direction; it also sets N1 (the arm reaction the rotors
+pre-compensate: base-x row on j2 1.14 → 0.45 diagonal) and moves M_r by ≤ 14 %.
+- **Flights:** only flight 4 excites it (`tools/armature_id.py`): diagonal J ≈ 0.017 (0.009–0.022 by
+  filter band); flights 1–3 bury it in friction scatter. Structure not resolvable from flight data.
+- **Hook:** `controller.dynamics()` takes an optional `params["armature_diag"]` (absent = bit-identical,
+  verified; transformed dynamics consistent to 1e-11 with it). C++/parity NOT changed.
+- **Offline sim** (`arm_stiffness_sim.py`: exact law, 4-D hardware config, stick-slip friction at the
+  flight-identified ratios, flown friction FF, Present Velocity 48 ms / 0.024 rad/s) reproduces flight 3
+  (5.7/9.3° vs 5.0/8.3°). Diagonal model alone → 2.5/3.9°; + K_y 50/20 → 1.1/1.6° (robust to J_true
+  0.012–0.030, ≈ a 2 N·m/rad joint PD). **The gain ceiling is the law's q̇ = Present Velocity, not the
+  vehicle**: K_y 200 limit-cycles on it, but on the arm's 12 ms position observer K_y 200/40 tracks
+  0.3/0.4° with holds ≤ 0.4°. Raising K_y on the FLOWN model limit-cycles already at 50. **Isaac cannot
+  test this until 06 emulates Present Velocity lag + stiction** — K_y 50/20 flew there on 09-09 only
+  because PhysX hands the law exact joint velocity. Nothing adopted; the user decides the next step.
+
+**THE ARM'S ARMATURE CALIBRATED FROM THE GROUND BENCH; THE LAW'S ARMATURE MOVED TO THE
+JOINT DIAGONAL; THE LAW'S q̇ = THE ARM'S VELOCITY OBSERVER; K_y/D_y 80/24 (2026-09-26,
+user request + user's fix order).** Campaign `docs/docs_aerial_manipulator/
+arm_armature_20260926/bench/` (README, `tune/README.md`), Command.md §7.17.13. From the
+2026-09-09/11 PD+ bench bags ONLY (motor IDs: 09-09 slots 11/12/13/14, 09-11 = FLIGHT
+12/11/14/13): in the law's `J_arm h hᵀ` structure **J_arm = 0.0097 kg·m² (0.0077–0.0120
+over 72 method variants), HALF the 0.020 guess**; per motor inside the bands → one
+scalar. Friction is 10× the inertial torque on that bench: only matched-amplitude
+kinetic plateaus at two frequencies and fast min-jerk moves (onset cut by DISTANCE, the
+report's µ|Sg+Mq̈| gear law removed) carry J; lever sweeps and 10 °/s moves are useless;
+09-11 slot j1 (loose screws) excluded. **The overestimate made the arm STIFFER
+(Kq = ω²M̃_ρ), not softer — it does not explain the flown stiffness deficit, correcting
+the value alone WORSENS tracking (offline 5.6/8.9 → 9.0/14.8°), and tuning J_arm up ≡
+scaling K_y AND D_y together with the 6.6:1 anisotropy fixed: 0.020 is already the
+stability edge (rejected).** Adopted, in the user's order: (1) **joint-diagonal
+armature** [0.010, 0.0194, 0.0097, 0.0097] — `WholeBodyParams::useJointDiagonalArmature`
++ `armature_diag` terms in `computeDynamics` (port of `controller.dynamics`' hook),
+`make_params_t650(armature_diag=)`, `fsc_trajectory_planner` `VehicleOptions.armature*`;
+keys `wb_armature_joint_diag/_j1..j4`, planner `armature_joint_diag/armature`, 06
+`PEGASUS_ARM_ARMATURE` ← `sim_arm_armature_j1..j4`; Kq j2/j3 6.6:1 → 2.5:1; **new fixture
+`wb_truth_t650_jointdiag.json` (`generate_wb_truth.py --armature-diag`) +
+`WbParityJointDiagTest` 4/4 at 1e-8** (test file refactored into shared checks; original
+suite untouched, 14/14); M_r_d rescaled ×1.122/0.999/1.073 → 0.130710/0.135962/0.134261
+so the attitude loop is the flown one. (2) **`wb_arm_velocity_topic` =
+`…/external_torque_controller/velocity_observer`** (12 ms vs Present Velocity's 52 ms,
+both measured on the bench bags; model of that observer validated to 0.02 rad/s on the
+published one), `wb_arm_velocity_timeout_s` 0.05 (observer publishes at
+`state_publish_rate` 250 on hardware AND Isaac); stale → per-tick fallback (WARN,
+`wb_control_debug[106]` flag, [107..110] q̇ used, [111..114] Present Velocity) and DIRECT
+refused; the Isaac arm yaml now publishes the observer. (3) **K_y/D_y 80/24** — offline
+(stick-slip, bench arm, the real observer on quantised encoder positions) 0.8/1.9° vs
+5.4/8.9 flown, stable to ±30 % armature and +40 ms arm transport on a COUPLED arm (120
+fails there; every K_y ≥ 80 limit-cycles on Present Velocity). **Isaac A/B, same mirror
+plant, F3 circle (`replay.sh a3`, `bench/tools/law_ab_yaml.py old|new`): q2/q3
+2.29/4.85 → 1.07/1.39°, EE 20.8 → 10.3 mm, base CoM/|e_R| unchanged (97→94 mm, 0.106→
+0.104), 0 sat/clamp, observer on 100 % of 24 630 ticks.** Sim arm optimistic vs hardware
+(old law 2.3/4.9 vs 5.0/8.3 flown) — expect less on hardware. Traps: `replay.sh` wrote an
+INTEGER `ee_traj_fold_deg: 55` and the C++ planner exited on the double parameter (now
+always floats); at RTF < 1 the observer's q̇ is in WALL time = RTF × the plant rate
+(measured 2.0× on all joints) so a replay under-damps the observer config — absent on
+hardware. The 6-D L1, GMO and `_sim_robustness` yamls keep the old law on purpose. NOT
+flown on hardware; nothing committed.
+
+**THE PLAIN §7.17.1 LAUNCH DIVERGED ON THE MIRROR PLANT — WALL-CLOCK COMPENSATION
+(2026-09-27, user report; Command.md §7.17.15, data `sim2real_tuning_20260926/wallclock_20260927/`).**
+Both 4-D launchers default to the MIRROR yaml since 2026-09-26, and its plant lags are in
+PLANT seconds (`sim_plant_rotor_lambda` 10.0265, `sim_arm_vel_lag_s` 0.048) while the law,
+observers and planner run on the WALL clock at RTF ~0.48 — the law saw a ~200 ms rotor pole
+and DIRECT diverged (0.90 Hz attitude mode, watchdog at 14–15 s). Only `replay.sh` had been
+converting those lags, so every mirror flight before this was a replay. Fixed in the
+LAUNCHER, no controller parameter touched: `am_plant_from_yaml.sh` rescales λ/RTF, arm-vel
+lag×RTF, noise corner/RTF when the yaml sets `sim_wall_clock_compensation: true` (mirror
+only; the robustness yaml is unchanged); RTF = `PEGASUS_SIM_RTF` > machine-conf `SIM_RTF`
+(shiqi 0.48, fsc_lab 0.34) > 1.0; env-set values are never rescaled (replay.sh unaffected).
+Same automated path both ways: without = DIRECT 15.5 s, aborted, |e_R| 0.043→0.185; with =
+160.9 s, all 10 legs, tilt ≤ 3.4°, |e_R| 0.041→0.023, 0 saturation/watchdog. **Before arming,
+look for the magenta `WALL-CLOCK COMPENSATION ON (RTF 0.48)` line in the Pegasus pane.** The
+circle gain study's `wb_k_w` 0.9 recommendation (§7.17.14) is still NOT applied to any yaml.
+
+**CIRCLE TUNING ROUND 2: ALL GAIN GROUPS JOINTLY + THE TRAJECTORY AS A HYPERPARAMETER, APPLIED
+AS H1b (2026-09-27, user request; Command.md §7.17.16, report section 8, campaign
+`docs/docs_aerial_manipulator/circle_tune_20260927/`).** Applied to the HARDWARE 4-D yaml and its
+`_sim` twin (the robustness yaml untouched); NOT flown on hardware; supersedes the same day's
+`wb_k_w` 0.9. H1b: `k_x/k_v` 50.03/12.58, `k_r/k_w` 2.134/1.567, `M_r_d` ×1.071, `K_y/D_y`
+211.9/26.82, `K_ψ/D_ψ` 0.2484/0.2903, `ω_c` 2.927/0.7428/0.8479, `ω_x` 0.2072. Bench (exact law,
+planner-generated streams, calibrated hardware-like feedback): −20…−32 % EE absolute error on all
+48 circles, shipped-level delay margin, better gust and robustness plant; Isaac: completes the
+robustness gate 141 → 107 mm, flight-matched circles clean. Recommended showcase: r 0.75 m, 24 s
+lap, CLOCKWISE (14–21 % better, intrinsic to the airframe), arm ±15° once per lap.
+**Isaac verdicts on stronger tunes are biased by a wall-clock L1 artefact**: at RTF 0.48 the node's
+observer gives `d̂ = d − (1−RTF)·ṗ` (positive acceleration feedback); `circle_bench.simulate(rtf=0.48)`
+models it and reproduces Isaac to a few %. And a stiff arm task (K_y 270, ω_c_q 1.1) oscillates on
+Isaac's flight-matched plant by a mechanism the bench does not reproduce — hence H1b's arm side is
+F3's, which Isaac flew clean. The `_sim` planner section now carries the joint-diagonal armature;
+the `_sim` plant still lacks `sim_arm_armature_j1..j4` (06 uses 0.020).
+
+**PS4 REAL-TIME TELEOPERATION — THE PAD DRIVES ALL EIGHT FLAT OUTPUTS (2026-09-27, user
+design; replaces §7.19's aim → confirm → move).** Pad velocities → integrated setpoints →
+one full compatible `WholeBodyReference` per planner tick; no plan, no Send. D-pad = drone
+(system CoM) fwd/back/left/right in the HEADING frame, △/✕ up/down, □/○ yaw L/R; left stick =
+grasp point fwd/back/left/right RELATIVE TO THE AIRFRAME (body frame), right stick up/down =
+grasp point up/down, right stick left/right = wrist roll q4; PS = arm home (joint space, drone
+held); L1/R1 gripper (station). Compatible by construction: the flat outputs are `[x_c; ψ; q]`,
+the sticks set `s = r_0e(q)` through a 3-DOF position IK (q4 is coaxial with the grasp point)
+plus q4 directly, and `flatState()` (wb_law) builds the reference. Where:
+`fsc_trajectory_planner` `teleop_reference.{hpp,cpp}` (exact-ZOH chain smoothers — convex
+combinations of past raw targets, so no overshoot past a wall or out of the joint box; walls
+on the RAW targets: geofence, altitude, EE floor, joint box, q3 ≥ 0, σ_nd, IK, 0.5 m leash
+that only SCALES input) + the node's `TELEOP`/`TELEOP_STOP` state, `whole_body_planner/teleop/
+{engage,arm_home,state,note}`, `current_skeleton`; the planner reads `rc/input` ITSELF (the
+station only engages and displays). Arm station `ps4_panel.*` rewritten (labelled pad, black
+quadrotor + brown arm + dashed target airframe in `Traj3DView`). Config: `..._t650_sim_ps4test.yaml`
+= the tuned mirror sim yaml (H1b) verbatim + `vehicle_name` + `teleop_*` (`teleop_time_scale`
+= SIM_RTF 0.48). Bring-up: `application/robotic_arm/utils/ps4_teleop_bringup.py up|land`.
+Commands: Command.md §7.21. Three traps found building it: (a) a SILENT pad read as "centred"
+and armed the inputs — arming now needs a fresh all-centred sample and a stale feed disarms;
+(b) a 4-stage CoM smoother steps the snap by ω⁴·v·dt EVERY tick (the n-th derivative uses the
+held raw target) — 5 stages; (c) the SAFETY reference stream overlapping the DIRECT switch is
+captured by the planner as a PENDING drone target (→ PLANNED, never executed) — the bring-up
+clears it. Validated: gtest 7/7 (every sample FK-compatible to 1e-9), planner loopback 15/15,
+station loopback 7/7 against the real planner, existing planner tests unchanged; Isaac
+hands-off engage on the mirror plant (pad fresh, 1–2 cm hover spread, release → HOLD).
+Operator flight pending (user testing); NOT on hardware; nothing committed (3 repos).
+**Polish same day (user review):** signed-axis pad labels; editable rate boxes that write the
+planner's `teleop_*` parameters live (homing rate fixed, not a box); ONE 3-D view switched
+between two fixed scales, GRASPING (1.0 m cube) / FLYING (2.5 m cube) — not a split view; a 20 %
+joint reserve (`teleop_joint_range_frac` 0.8 → q1 ±28, q2 −67..37, q3 −31..41, q4 ±96 deg; a
+target outside may only move back in). **The stowed home [0, 40, 40, 0] is OUTSIDE that box
+(q2 40 > 37): from it the pad can only move the grasp point down**, so PS folds to the pad's
+home `teleop_home_pose_deg` [0, 30, 30, 0] (reach ~9 cm L/R/down, 4 up, 1.5 fwd/back). The
+tab fits 2560×1440 maximised. Launching on the default `_sim.yaml` gives the planner's
+DEFAULT teleop settings (time scale 1.0) — use `WB_SIM_YAML=..._sim_ps4test.yaml`.
+
+**THE TUNE IS ON GITHUB FOR THE DRONE, AND THE HARDWARE STACK VERIFIES IT (2026-09-28, user
+request; Command.md §7.17.17).** Committed + pushed (user's go-ahead): fsc_autopilot_ros2
+`dev_CCM` `272c0f0` (merge of origin's 20 Orin commits — RT CPU layout, Ethernet XRCE, the
+2026-09-25 EE trajectory — onto 4 local commits: law armature/observer q̇, hardware yaml = H1b +
+arm channel + sim mirror/robustness split, scripts, decoupled stack), fsc_trajectory_planner
+`main` `32e05c8` (armature), fsc_open_manipulator `omx-torque-control` `b3cc576` (friction
+×0.70/×0.65 + measured relay) and `f5dee7d` (position-mode arm_planner). The interaction-campaign
+`_sim_interaction_*.yaml` stay untracked. **On the Orin: pull the 3 repos and rebuild
+fsc_autopilot_ros2, fsc_trajectory_planner, open_manipulator_x_custom_controller** — all three:
+rclcpp/ros2_control silently ignore undeclared yaml keys, so a stale node would fly K_y 212 on the
+old armature with Present Velocity as q̇ (the limit-cycle combination). Both 4-D hardware stack
+scripts (fused + raw) now: fix the expected-value check (it expected `wb_l1_omega_x 0.25` and
+rejected trailing comments — the tuned file read as MISSING); print all 28 tuned values OK/DIFFERS;
+REFUSE to start if the installed node/planner binary lacks `wb_armature_joint_diag` /
+`wb_arm_velocity_topic` / `armature_joint_diag` (string probe of the resolved binary; yellow if
+sources are newer than it); and check the arm yaml's friction/observer keys plus the arm plugin
+build. Negative-tested (stale binary exit 1, edited gain DIFFERS, old arm yaml MISMATCH). The
+merged node started on the hardware yaml at `/uav_test` and printed the armature, observer q̇,
+H1b gains and 4-D L1; Wb* tests 14/14, planner 23/23, arm pass-through ALL PASS. **The drone's
+EE trajectory is the Orin's (fold 55°, q2 25 ± 15° at a 6 s period), outside the tune's 12–48 s
+sweeps, so it was bench-checked: EE 20.0 → 13.8 mm mirror / 20.8 → 14.9 robustness, 0 % clamp,
+peak τ 1.28 N·m, margin to 28 ms** (`circle_tune_20260927/tools/arm_sweep_check.py`). Trap:
+`gen_circle_stream.py --set ee_traj_laps=1` writes 1.0000, the planner's INTEGER key rejects it
+and the generator reports only `timeout: planner up`. NOT flown in this form.
+
+**0928 HARDWARE: WHOLE-BODY vs DECOUPLED ON THE CIRCLE, AND THE TUNE FLOWN (2026-09-28, user request:
+analyse + report).** Bags `0928 - T650-AM whole-body vs decoupled Circle-*/` (WB `_171154`/`_172242`, DEC
+`_182835`/`_183608`); report + tools `docs/docs_aerial_manipulator/wb_vs_decoupled_flight_20260928/` (artifact
+"0928 Circle Comparison"); Command.md §7.20.3. Same plan all four (r 0.5 m CCW, 24.17 s lap, q2 25 ± 15° / 6 s),
+all completed, 0 saturation. Scored with ONE definition for both rigs (odometry + encoders through the planner FK vs
+the plan stream; cross-checked against the WB law's debug to 0.05°/0.6 mm/0.3 mm and the bridge to 0.4 mm).
+- **EE 24–26 mm (WB) vs 192–218 mm (DEC), heading 0.44–0.48° vs 10.3°.** DEC's error is two structural parts of the
+  paper law, both measured: (a) the body-fixed lateral force ((+0.46…+0.63, −0.42…−0.52) N, read by BOTH observers)
+  is unmatched for the geometric+L1 law, so K_p 4 N/m parks the airframe 0.14–0.17 m off (K_p e_p + K_v e_v = γ̂_um
+  to 0.05 N), turning with the heading → EE flies r 0.68–0.70 m; (b) ω_d = 0 → e_ψ = (0.35/0.49)·14.6°/s = 10.4°
+  (11.1° measured), carried to the gripper by the position-mode arm (which itself tracks best: 0.8–1.1°). The 09-26
+  Isaac comparison flew the robustness plant (no body-fixed force), so it could not show (a).
+- **H1b + arm compensation WORK on hardware (vs 0924 F4, same sweep): EE 52 → 24–26 mm, CoM 49 → 24–25 mm, q2/q3
+  5.1/7.7 → 1.7–2.0/1.4°, span 155/171 % → 103–105 %, no stop contact.** Verified live in the data: observer q̇ 100 %
+  of ticks, FF ×0.64/×0.63, FF sign follows MEASURED velocity 98–100 % (0 % on F4), FF while stuck 0.19 → ≤0.017 N·m.
+  Remaining: q3 stuck 23–26 %, ±2° antisymmetric q2/q3 hold offset (3–5 mm EE), airframe error with 50–80 % of its
+  along-track variance at the 6 s arm-sweep frequency (both rigs swing there). Offline arm model predicted 0.3/0.4° at
+  K_y 200; flight is 4–5× — still optimistic. Two flights each; gains and arm terms changed together.
+- Traps: the recorder's QoS missed DEC-1's position-mode arm reference (use WholeBodyReference q_d); a reference-speed
+  MAX over receive stamps is one spike (percentile); npz object arrays from the numpy-2 extractor need `np1_compat.py`
+  before the numpy-1.21 plotting python can read them.
+
+**MODULAR ADAPTIVE (Yadav et al., TMECH 2025) — A THIRD DIRECT LAW, SIMULATION-ONLY COMPARISON RIG
+(2026-09-30/10-01, user request).** The paper (`docs/comparison references/`) implemented the way the
+Cai et al. L1 paper was: Python reference `extensions/.../utils_controller/modular_adaptive.py` (self-test)
+→ C++ fork `fsc_autopilot_ros2_node/single_aerial_manipulator_modular_adaptive_direct_actuation/`
+(executable `autopilot_modular_adaptive_direct_actuation_node`; client = parallel fork of the whole-body
+client, compiles the whole-body `wrench_allocator.cpp`; answers under the **whole_body_direct_actuation
+namespace on purpose**, debug `modular_control_debug`), parity gtest `ModularParityTest` (270 steps,
+`generate_modular_truth.py`), launchers `scripts/indoor_sim/start_t650_aerial_manipulator_modular_adaptive_direct_actuation_sitl.sh`
++ fsc_autopilot_ros2 `scripts/isaacsim/start_modular_adaptive_direct_actuation_t650_aerial_manipulator_stack.sh`,
+yaml `params_single_aerial_manipulator_modular_adaptive_direct_actuation_t650_sim{,_robustness}.yaml`
+**GENERATED** from the 4-D whole-body yaml by `docs/docs_aerial_manipulator/modular_adaptive_20260930/tools/make_modular_yaml.py`
+(plant + planner sections checked identical — regenerate, never hand-edit). Commands/results: Command.md §7.22;
+report artifact "Modular Adaptive vs Whole-Body L1". Not committed.
+- **Table II is not flyable here** (abort 1.7 s); one structural addition (`τ_p += m g e3`), arm gets no
+  gravity model; CMA-ES over all 29 constants + an arm re-tune with a 32 ms arm-delay run (the stage-2 tune
+  oscillated j2/j3 into a tilt trip 3.4 s into DIRECT in Isaac — its arm-delay margin was 16–24 ms).
+  At the final tune the adaptive term is idle (0.002–0.007 N of the position command) — a high-gain PD.
+- **Results:** Isaac (2 flights each) EE mean WB 62.1/62.2 vs MOD 54.8/55.0 mm, but RTF-1 bench WB 16.5 vs
+  MOD 65.9 mm and robustness plant 15.1 vs 296 mm. **Isaac's RTF 0.48 reverses the order**: the WB circle
+  comes out 40 mm small / 53 mm late (reference feed-forward scaled by RTF, centripetal by RTF²), the
+  modular law sits 40 mm off at hover and 50 mm LOW on the circle (no integral, no model). The bench under
+  the Isaac clock reproduces Isaac's WB to 1 mm — trust the RTF-1 bench for the hardware question.
+- **Two harness traps fixed/found:** `am_ee_compare_driver.py` had been broken since the bridge dropped
+  `_load_model()` on 2026-09-28 (now builds the model from `utils_planner`, `--base-com` explicit); its
+  stability gate `--gate-speed 0.03` is BELOW the mirror plant's mocap velocity noise — use 0.10.
+
+**0929 HARDWARE: FIRST PS4 TELEOPERATION FLIGHT — STABLE, PARTLY EXERCISED, AND A REVERT DIP ON EVERY
+FLIGHT (2026-10-01, user request: analyse, "can we rely on this mode for pick-and-place").** Bag
+`0929 - T650-AM whole-body-L1-4D Gamepad-*/…/flight_wb_l1_4d_ps4_20260929_160027`; analysis + figures +
+tools `docs/docs_aerial_manipulator/wb_l1_4d_ps4_flight_20260929/` (README); Command.md §7.21.2. The
+hardware yaml carries no `teleop_*` keys, so the planner's defaults flew (0.20 m/s xy, 4 cm/s EE, scale 1.0).
+- **Stable**: 108 s DIRECT / 98 s TELEOP, 0 saturation, 0 torque clamp (max 1.04 of 3.0 N·m), tilt ≤ 2.4°,
+  `|e_R|` ≤ 0.075. Pad 25 Hz, max gap 45 ms, never stale. Reference stream fresh 99.996 %. Mocap clean.
+  Released to HOLD, then an operator revert.
+- **Tracking**: CoM 18.3 rms / 49 max mm, EE task 2.7 mm, EE absolute 18.8 / 51 mm. The error is the known
+  ~0.125 Hz airframe wander, largest with a STATIC reference; 0928's static windows read 22 / 53 mm. Pad →
+  reference lag 0.6 s (the 5-stage smoother); the vehicle adds 0.00 s. A 0.15 s tap at 0.20 m/s = 30 mm.
+- **Coverage**: only x/y taps, EE down/forward, PS and the gripper were used (7.5 s of input in 98 s, all
+  taps ≤ 0.5 s). Altitude, yaw, EE sideways/up, roll and sustained presses are UNFLOWN on hardware.
+- **The operator flew the arm from the stowed home before pressing PS**: EE-forward hit the q2 ≤ 37° pad
+  bound 8 times (14 mm from 6 pushes), exactly as §7.21 predicts. From the pad home the fore/aft reach is
+  ±1.5 cm (sideways ±9, down 10, up 5 cm).
+- **EVERY airborne DIRECT → SAFETY revert on the 4-D rig dips 186–225 mm (6/6, 0918–0929)**, with or without
+  an arm fold, so neither the fold nor teleop causes it. Cause: the hardware yaml's two thrust models are 6.2 %
+  apart — the SAFETY `vehicle_thrust_scaling/idle` is derived at bench kf 4.540431e-05, the allocator flies the
+  deliberate 4.260431e-05. SAFETY's first collective is 0.015–0.023 below DIRECT's motor mean, and the SAFETY
+  UDE re-learns −1.6…−2.5 N over 6 s (predicted −2.3…−2.5). NOT fixed — the experiment kf is the user's.
+- Raw `F̂` low-passed at 2 rad/s reaches p99 2.4 N in this free flight (0928: 1.6), so a 2 N contact
+  threshold would false-trigger during teleop.
+- Extractor trap: `for f in $(find …)` splits these bag paths on their spaces — use `while IFS= read -r`.
+
+**ISAAC RUNS AT REAL TIME ON shiqi-desktop (2026-10-01, user request: "can RTF be 1 so the sim matches the
+flight's ~25 mm").** Campaign `docs/docs_aerial_manipulator/rtf_profile_20261001/` (README), Command.md §7.23,
+comparison report artifact "Modular Adaptive vs Whole-Body L1" republished v2.
+- **Why it was 0.48 (profiled):** 8.26 ms wall per 4 ms physics step; 06's callback 3.98 ms, of which ~3 ms
+  was `controller.dynamics()` evaluated EVERY step for an arm gravity vector only the SAFETY PD hold uses —
+  now lazy (`g_arm_now()`, values identical where used). Plus the i9-14900KF's E-cores (CPUs 16–31): the
+  scheduler parked Isaac's main thread there part of the time (measured RTF 0.76 on CPU 19).
+- **Fixes:** lazy gravity; `ISAAC_CPUS`/`PEGASUS_ISAAC_CPUS` → `taskset -c` on the Isaac pane; a real-time
+  pacer in 06 (`PEGASUS_REALTIME`/`SIM_REALTIME`, prints `RTF x.xxx over the last 10.0 s` every 10 s);
+  windowed runs step physics singly and redraw every `PEGASUS_RENDER_EVERY` (8) steps. `shiqi_machine.conf`:
+  `SIM_RTF=1.0`, `SIM_REALTIME=1`, `ISAAC_CPUS=0-15` — **these go together** (1.0 without the pacer is
+  wrong: headless runs ~1.2× real time). `fsc_lab_machine.conf`'s 0.34 is flagged STALE, not re-measured.
+  Opt-in profiler: `PEGASUS_PROFILE_START/STEPS/OUT`.
+- **Measured:** headless 1.000 in every 10 s window of every flight (~19 % idle); windowed 0.95–1.00.
+- **The circle at RTF 1: WB 15.6 / 14.9 mm rms (was 64.5 at 0.48)** = the RTF-1 bench, below the 0928
+  hardware's 24–26 mm. Exact 0928 split: attitude 5.3 / joints 5.4 match the flights (5.7–6.7 / 6.6–8.2); the
+  gap is the airframe swing at the 6 s arm sweep, ~3× smaller in sim (24 vs 77 mm p-p). The user's view:
+  sim better than flight and the same order is the goal, not an exact match.
+- **Modular comparison at RTF 1: 77 mm, whole-body 5× better — §7.22's Isaac ranking (MOD ahead) was the
+  clock.** The §7.22 modular tune completed 1 of 3: the DIRECT-entry transient fed its adaptive switching
+  gain (ρ 0.07 → 6–7) to a tilt trip. Bench delay margin is identical for both laws (28 ms ok, 40 ms abort),
+  so that is not the mechanism; softer modular attitude aborts even at 16 ms. Leakage on K̂₁₋₃ ×10 flew 3/3
+  at identical tracking → shipped (`modular_adaptive_20260930/analysis/modular_final_gains_rt1.json`, yamls
+  regenerated).
+- **A lightly damped 1.55 Hz roll mode (~9.7 rad/s, on the 10 rad/s rotor-lag pole) shows in EVERY RTF-1 WB
+  run at ~2° p-p** (RTF 0.48's compensation made the rotor 2× faster in plant time and hid it). The one
+  windowed flight on the old 4-steps-per-frame stepping let it grow 2 → 35° and crashed; the single-step
+  windowed re-flight completed. Cause NOT isolated (n=1 each). **Fly comparisons headless.**
+- Every Isaac whole-body number before 2026-10-01 on this desktop was flown at RTF 0.48 (bias:
+  feed-forward ×RTF, centripetal ×RTF², L1 `−(1−RTF)ṗ`, all lags 2× faster in plant time) — do not mix
+  them with RTF-1 numbers.
+
+**THE COMPARISON IS THREE CONTROLLERS, ALL AT RTF 1 UNDER ONE CONDITION (2026-10-01, user request).**
+Report artifact v7 (https://claude.ai/artifact/Wc4gqiUpWU8YGXsRrufTRT, user-titled "Simulation: Free-flight
+Comparison"): whole-body L1 15.0 mm / 0.50° EE, geometric L1 (Cai et al.) 206 mm / 9.6°, modular adaptive
+77 mm / 3.5° (3 flights each, headless, pinned from launch, mirror plant). Command.md §7.23.5,
+`docs/docs_aerial_manipulator/rtf_profile_20261001/` (README).
+- **Geometric rig on the mirror plant** = `variants/geometric_l1_mirror_sim.yaml` from
+  `tools/make_geometric_mirror_yaml.py` (geometric HARDWARE controller values + the WB mirror's guards and
+  37 `sim_*` keys, checked). Its committed `_sim.yaml` is the OLD stress plant — do not compare it with
+  mirror-plant flights. fsc_autopilot_ros2's isaacsim geometric stack gained (additive) a `WB_SIM_YAML`
+  override, the yaml's mocap noise, and the bridge `--base-com` (was 0,0,0 against the planner's −17.854 mm).
+- **06 `_arm_gravity()`**: exact `dynamics()["g"][6:]` (3e-16 N·m), ~6.5x cheaper; the position-mode arm
+  servo needs it every step and the full `dynamics()` held that rig at RTF 0.72. Self-checked on each run.
+- Geometric results reproduce its 09-28 hardware flights (structural: F/K_p offset against the body-fixed
+  force; ω_d = 0 heading lag). It needs `START_POS_TOL=0.25` (settles 0.18 m off the start point);
+  `start_error` yaw/joint fields are DEGREES.
+
+**THE GEOMETRIC L1 LAW TUNED FOR THE COMPARISON (2026-10-01, user request; Command.md §7.23.6,
+`docs/docs_aerial_manipulator/geometric_l1_tune_20261001/`, report v8).** It had flown its 09-28 hardware
+gains (206 mm) against two tuned laws. Python port of the node + bridge + 06's position-mode servo on the
+unchanged `circle_bench.py` (`tools/geo_bench.py`, r_os matches the node's startup print exactly), CMA-ES
+over all 11 gains with the modular tune's runs/cost. **Stage 1 at the shared 28 ms delay bar (bench 43 mm)
+DIVERGED in Isaac** — a 1.53 Hz attitude mode from DIRECT entry, the bench reproduces it at 30 ms; the
+whole-body tune itself only survives 28 ms on that bench, so a 28 ms bench margin does NOT certify this
+law in Isaac. **Stage 2 at 44 ms: ω_c 6 → 1 rad/s** (keeps the L1 torque out of the rotor-lag band),
+K_p 20.1 / K_R 3.34 / K_R,z 1.74; Isaac 3/3 at RTF 1 **EE 48.9 mm / 2.97°** with the standard 0.10 m Start
+gate (WB 15.0, MOD 77.0). Residual = unmatched lateral force F/K_p ≈ 37 mm + ω_d = 0 lag ≈ 3.5°.
+Tuned yaml `variants/geometric_l1_mirror_sim_tuned.yaml` (generated, gains only); hardware and committed
+`_sim` yamls untouched; never flown on hardware. Trap: `kill_stale_sim_processes.sh` (every cycle's clean
+slate) kills the whole tmux server, so a tmux-hosted CMA job dies with it.
+
+**PS4 TELEOPERATION ON THE DECOUPLED (geometric+L1) RIG (2026-10-01, user request; Command.md §7.24,
+campaign `docs/docs_aerial_manipulator/ps4_decoupled_20261001/`).** No law, planner or bridge code
+changed: the decoupled stack already runs the same `fsc_trajectory_planner`, whose TELEOP state reads
+`/uav_0/rc/input`; `decoupled_reference_bridge.py` converts the pad's WholeBodyReference samples like any
+plan and the joint half drives the position-mode arm. Added: the `joy` window in
+`start_t650_aerial_manipulator_geometric_L1_adaptive_direct_actuation_sitl.sh` (the 4-D launcher's
+block); `ps4_teleop_bringup.py --da auto` (picks whichever of whole_body / geometric_l1 publishes a
+mode) and an `up` that waits out the DIRECT-entry transient; fsc_autopilot_ros2 isaacsim decoupled stack
+`TELEOP_TIME_SCALE` (passed as a double) + notes; a `PS4 teleop` block in both HARDWARE decoupled stacks'
+planner check (effective `teleop_*`, red if a non-1.0 time scale leaked in, the ground-station pad
+command); the arm GS PS4 tab's "Not in whole-body DIRECT" → "Not in DIRECT (planner idle)". **The
+whole-body `_sim_ps4test.yaml` `teleop_time_scale` 0.48 → 1.0** — stale since §7.23 (RTF 1), it halved
+every pad rate. Validated in Isaac with a synthetic pad (`run_check.sh`, engages through the arm
+station's own service): decoupled 17/17 twice, controller never left DIRECT, bridge same-motion
+residual ≤ 0.002 mm, **yaw lags ≤ 15.4° while □/○ is held** (ω_d = 0); the real DualShock then went
+live through the launcher's joy window. **Whole-body rig 16/17: its wrist roll is STICK-SLIP** (+30° →
++21°, return left q4 parked ~20°) — soft EE-heading task (K_ψ ≈ 0.25) vs config-A j4 friction with a
+measured-velocity friction relay; pre-existing, first exposed by this check, not tuned. Trap hit again:
+a launch call whose command line contains a node name as plain text trips the stack's `pgrep -f`
+stale-node guard on your own shell. NOT flown on hardware.
+
+**ISAAC APPS RENAMED/ARCHIVED, AND THE PICK-AND-PLACE SCENE (2026-10-01, user request;
+Command.md §7.25).** `06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py` →
+**`06_px4_t650_aerial_manipulator_free_flight.py`** (every launcher, 07's import, the docs and the arm
+repo's comments updated; only the raw `rtf_profile_20261001/prof_*.txt` dumps keep the old name).
+The user moved 01–05 to `application/robotic_arm/archive/`; the launchers that start them
+(direct_actuation/baseline → 04, geometric_direct_actuation + the comparison launcher's `l1` → 05,
+`scripts/start_aerial_manipulator_*.sh` → 01/02, `start_px4_direct_aerial_manipulator_free.sh` and
+`utils/px4_gmo_gain_sweep.py` → 03) still point at the old paths. NEW
+**`07_px4_t650_aerial_manipulator_pick_and_place.py`** (06 loaded as a module, the interaction app's
+pattern): field 4.5 m (x, FORWARD) × 4.2 m (y), not drawn (user's call), vehicle FACING +x (yaw 0 --
+the first version faced +y, which the user corrected), spawned a little OFF the origin at (0.10, -0.07) m
+like a real start mark (`PEGASUS_PNP_SPAWN_XY`/`_SPAWN_YAW_DEG`), so Adjust has a real offset to measure, two 1 m Ø0.10 m static pillars on the 1 m grid — PICK
+(1.0, 1.0) front-left, PLACE (−1.0, −1.0) back-right — and a 200 g payload on the PICK pillar: 110×110×65 mm box
++ a 30×60×200 mm handle plate (thin axis 135°, the jaws' closing axis on the approach from (0, 0); 30 mm because
+the jaws cannot close below ~23.8 mm -- measured, 43.3 mm open), friction 1.2/1.0 combine max, gripper drive
+capped 0.3 N·m in this scene. Waypoint view = the six leg goals as labelled markers (Command.md §7.25.2). Mocap: `obj_0` = the PICK pillar top and
+`drop_0` = the PLACE pillar top, both fixed and published from the arm bridge node (user's call: on
+hardware, markers on the pillars; claw offsets pick [0, 0, 0.211] / place [0, 0, 0.216] from the tops);
+the payload body is `payload_0`, ground truth only (an UNSCALED rigid-body Xform with the scaled
+box/handle as collider children, because `ROS2RigidBodyBackend` reads orientation with `ExtractRotation`,
+exact only on an unscaled matrix; one backend only -- every instance takes the fixed node name
+`simulator_payload`). 06's EE marker cube is forced off (it is also `obj_0`). Launch: the 4-D
+launcher's script/label became overridable (`AM_ISAAC_SCENE_SCRIPT`/`_LABEL`, unset = 06), wrapper
+`scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh` (fused by
+default, `PNP_FEEDBACK=raw`); both fsc_autopilot_ros2 4-D isaacsim stacks now list
+`obj_0 drop_0` for the emulator (it skips bodies until their first pose). Brought up once: mocap,
+yaw 90.02°, fused odom and the resting payload all as designed. No grasp yet; the planner's
+`pick_place_*` poses are still placeholders.
+
+**PICK-AND-PLACE TUNED AND FLOWN END TO END IN ISAAC (2026-10-02, user request; Command.md
+§7.25.3, campaign `docs/docs_aerial_manipulator/pick_place_tune_20261001/README.md`).** 15 headless
+RTF-1 missions with the gripper really grasping; the final configuration flew **2 of 2 complete
+missions** (payload untouched before the clamp, carried, set upright on the place pillar 18/30 mm off
+axis, 0 saturation, 0 joint clamp). Config = the GENERATED yaml
+`..._l1_4d_direct_actuation_t650_sim_pick_place.yaml` (`tools/make_pick_place_yaml.py`, mirror + keys;
+never hand-edit), selected by **`WB_SIM_PROFILE=pick_place`** on the stack (the scene wrapper sets it and
+warns if the running planner lacks the block). Pick = place = carry pose **[0, −30, 30, 0]°**; pick
+offset **0.250**, place **0.260** (release 10 mm up); **approach from 0.10 m above** (new planner option
+`pick_place_approach_dz`/`_hold_s`, default 0 = off); **world-held claw for the pick descent only**
+(new: planner `pick_place_world_anchor_pick`/`_place` + whole-body node service
+`whole_body_direct_actuation/set_ee_anchor_com`, blended `wb_ee_anchor_blend_s`, law
+`ee_anchor_weight` 1.0 = bit-identical, parity 17/17); place sweep q2/q3 mirrored, no q1;
+**`wb_k_r`/`wb_k_w` 1.6/1.2** in that yaml only (H1b's 1.5 Hz pitch mode grew to 8–12° in 2 of 8
+hovers). 07: **handle 20 mm** (was 30), new JAW GAP / HANDLE CEILING / gear probes, `claw_0` truth.
+Traps worth more than the numbers:
+- **The fingertips are narrower than the pads**: open gap 37–38 mm at the fingertips (7.25.2's 43.3 mm
+  was the pad midpoint), and the handle pinches ~20 mm in. 30 mm handle = 3.5–4 mm a side vs a claw
+  lateral error of 3–6 mm world-held / 6–20 mm CoM-held on the way down: 4/4 failed. The physical
+  handle thickness is the user's decision.
+- **World anchor only while nothing is touched.** World-held in contact (clamped payload still on its
+  pillar, a box set down) or in flight → q1 to its ±35° stop, q4 spins, q3 crosses 0 → crash.
+- **Any closed chain with the table drifts within ~1–3 s under either anchor**: lift the moment the
+  jaws stall, release without setting down (operator rule, scripted in `pnp_mission_driver.py`).
+- A direct claw leg swings in sideways (angles converge as (T−t)^3, the CoM as ^5): approach vertically.
+- Launch traps hit again: a launch shell whose command line contains a node name trips the stack's
+  `pgrep -f` guard (start it from a script file); the wrapper's `ros2 param get` under `set -euo
+  pipefail` killed the launcher silently until made non-fatal.
+Not covered: hardware (no hardware pick-and-place yaml); the contact phases are survived by brevity,
+not controlled. Nothing committed.
+
+## T650: injected aerodynamic drag, run-time mass report, and a principal-axes finding (2026-09-30)
+- **Drag env vars (single-drone T650, `05_px4_single_drone_t650.py` via `start_single_drone_x650.sh`;
+  expanded into the Isaac command, so the tmux-server-env trap does not apply):**
+  - `PEGASUS_LINEAR_DRAG=dx,dy,dz` sets `config.drag = LinearDrag(...)` [N/(m/s), body FLU, applied at
+    the /body origin]. Unset keeps the Pegasus default (0.5, 0.3, 0).
+  - `PEGASUS_ANGULAR_DRAG=cx,cy,cz` makes `T650Multirotor` apply `tau = -diag(c) w_body` on /body each
+    step [N m/(rad/s)].
+  - Startup line: `[T650] DRAG: linear [...] angular [...]`.
+- **`PEGASUS_REPORT_MASS_PROPS=1` [`PEGASUS_MASS_REPORT_FILE=<json>`]:**
+  `rotorcraft/t650_mass_report.py` reads what PhysX actually simulates (omni.physics.tensors: masses,
+  CoM poses incl. the principal-axes quaternion, inertias in the link prim frame) at step 10. It prints
+  `[T650 MASS]` lines: per link, the composite about the composite CoM in the /body frame, and the ratio
+  to the CCM design inertia.
+- **FINDING: `principalAxes` on the `/body/body` MESH prim is ignored by PhysX.**
+  - `author_inertia_tensor` writes eigen-sorted moments + `principalAxes`, so the T650 body is simulated
+    as diag(0.0595, 0.0650, 0.0815) in the body frame (composite with rotors
+    diag(0.0655, 0.0718, 0.0906)), not T650 INERTIA_TENSOR (Ixx 0.077, Iyy 0.0641, Izz 0.0650,
+    Ixy 0.0089).
+  - That is roll -15%, pitch +12%, yaw +39%, Ixy lost.
+  - Even a diagonal tensor is permuted (the eigen-sort reorders the axes).
+  - A zero-g torque probe (Isaac 5.1) confirmed it. The same attributes on the `/body` rigid-body prim
+    ARE applied (composite = design + rotors, +8/+11/+14%).
+  - Not fixed: fixing it changes every T650 plant (single drone and aerial manipulator scripts that use
+    the helper). Re-baseline anything tuned against the current plant if it is fixed.
+
+## T650 single drone at RTF 1 on fsc_lab_machine (2026-10-02)
+- **The pacer is now in `05_px4_single_drone_t650.py`.** `_RealTimePacer`, `_RtfProfiler` and single-step
+  rendering are ported from `06_..._free_flight`, with the same `PEGASUS_REALTIME` /
+  `PEGASUS_RENDER_EVERY` / `PEGASUS_PROFILE_*` knobs. Prints `[T650] REAL-TIME PACER on (...)` and
+  `[T650] RTF x.xxx over the last 10.0 s`.
+- **Measured on fsc_lab_machine** (i5-10600K, 6 cores / 12 threads, NOT hybrid, so no `ISAAC_CPUS`;
+  headless):
+  - **Start:** 0.955 on the ground, 0.94-0.95 in a CCM flight; 4.18 ms per 4 ms step.
+  - **Profile (cProfile):** PhysX fetch ~1.2 ms; Pegasus Python callbacks most of the rest.
+- **Three fixes:**
+  1. **`pegasus.simulator/.../vehicles/vehicle.py` `update_state`:** `np.array(carb.Float3)` walks the
+     sequence protocol, ~0.06 ms per call and 5 calls per step. It now builds the arrays from
+     `.x/.y/.z`; same float64 values, every app benefits. Ground RTF 0.955 -> 1.000, but only ~2% spare
+     and still 0.95 in flight.
+  2. **`t650_bare_frame_utils.py`:** the ground-truth `ROS2Backend` is a `_ThrottledROS2Backend` that
+     spins its executor every 25 steps (10 Hz) instead of every step. It has no subscriptions;
+     publishing happens in the state callbacks, still 250 Hz.
+  3. **Same file:** Magnetometer 50 Hz and GPS 10 Hz instead of 250 Hz. Every indoor T650 profile sets
+     `SYS_HAS_MAG 0` / `EKF2_MAG_TYPE 5` / `EKF2_GPS_CTRL 0`. IMU and baro stay at 250 Hz.
+     Affects 05, `06_px4_single_drone_t650_gate_splat.py` and the archived 04.
+- **Result:** RTF 1.000 in every 10 s window during CCM flights (torque and rotor, circle / figure-8 /
+  tangent circle), pacer sleeping ~11%, worst lag <= 17 ms.
+- **`fsc_lab_machine.conf`** now sets `SIM_REALTIME=1`, `SIM_RTF=1.0`.
+- **Traps:**
+  - Margin matters, not just the average. The one flight at ~2% spare (50 ms catch-ups) grew a 1.83 Hz
+    roll mode and aborted.
+  - `06_px4_direct_t650_aerial_manipulator_ros2_arm_torque.py` (and other apps without the pacer) still
+    run unpaced, so `SIM_RTF=1.0` is only right for paced apps.
+  - The T650 launcher moved to `scripts/indoor_sim/archive/start_t650_direct_actuator_sitl.sh`.
+

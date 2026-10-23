@@ -1,0 +1,3 @@
+# Generated plots — keep the folder in git, ignore its contents.
+*
+!.gitignore

@@ -17,7 +17,7 @@ TAG="$3"
 
 PEGASUS_ROOT="/home/fsc-jupiter/Source/fsc_PegasusSimulator"
 AUTOPILOT_WS="/home/fsc-jupiter/Workspaces/fsc_autopilot_ws"
-SIM_LAUNCHER="$PEGASUS_ROOT/scripts/indoor_sim/start_single_drone_t650.sh"
+SIM_LAUNCHER="$PEGASUS_ROOT/scripts/indoor_sim/archive/start_single_drone_t650.sh"
 STACK_LAUNCHER="$AUTOPILOT_WS/src/fsc_autopilot_ros2/scripts/isaacsim/start_baseline_t650_stack_fused.sh"
 CFG="fsc_lab_machine"
 ROS2_SETUP="/opt/ros/humble/setup.bash"

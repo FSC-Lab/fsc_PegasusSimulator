@@ -1,0 +1,2 @@
+noise_B servo=current 7mA@5Hz driver='--hold-between 16'
+noise_C servo=current 7mA@5Hz driver='--hold-between 16'

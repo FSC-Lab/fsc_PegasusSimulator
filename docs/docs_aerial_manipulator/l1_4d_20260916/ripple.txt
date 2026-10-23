@@ -1,0 +1,11 @@
+run                     tau_j1  tau_j2  tau_j3  tau_j4    tilt  |e_psi|   |Fy| |Fraw|   (band-passed 0.5-3 Hz std, mN.m / deg; EE heading mean deg; phantom N; all DIRECT t>40 s)
+l1_6d_A                   11.0    70.0    50.0    10.1   0.256     8.70  0.361  0.000   CoM  32.3 mm  EE  7.2 mm
+l1_6d_B                   10.4     7.8     5.7     9.3   0.104     8.79  0.273  0.000   CoM  30.0 mm  EE  6.2 mm
+l1_4d_4d_wx6              41.4   339.3   363.2    37.9   2.111     1.29  0.000  3.784   CoM  56.7 mm  EE 13.6 mm
+l1_4d_4d_wx2              10.7   259.0   133.0     9.4   1.181     2.00  0.000  1.508   CoM  44.5 mm  EE  8.8 mm
+l1_4d_4d_wx0p5            19.0   195.7    90.5    39.1   0.881     2.42  0.000  1.126   CoM  30.8 mm  EE  7.8 mm
+l1_4d_4d_blk               7.6   167.1    86.0     5.6   0.741     2.88  0.000  0.927   CoM  31.5 mm  EE  7.1 mm
+l1_4d_4d_blk_slow         30.9   181.5    93.2    46.6   1.039     2.85  0.000  1.041   CoM  30.8 mm  EE  8.0 mm
+l1_4d_4d_wx0p25            6.2     5.0     2.5     2.3   0.075     3.89  0.000  0.209   CoM  27.1 mm  EE  5.4 mm
+l1_4d_4d_best_A            6.3     6.3     3.6     2.2   0.075     3.01  0.000  0.203   CoM  22.5 mm  EE  4.8 mm
+l1_4d_4d_best_B            6.3     5.1     3.0     2.7   0.083     2.87  0.000  0.196   CoM  21.6 mm  EE  4.5 mm

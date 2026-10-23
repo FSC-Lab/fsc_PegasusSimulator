@@ -1,0 +1,39 @@
+
+############ full_A  full mission, posture OFF, compensation ON ############
+=== [l1/mission_full_A] 0. clean slate ===
+=== [l1/mission_full_A] 1. controller stack ===
+=== [l1/mission_full_A] 2. Pegasus / PX4 / arm ===
+=== [l1/mission_full_A] 3. waiting for odometry ===
+=== [l1/mission_full_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/mission_full_A] 3c. waiting for the arm ===
+=== [l1/mission_full_A] 4. flying ===
+=== [l1/mission_full_A] done (driver rc=0) ===
+[ 340.53s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 340.84s] mode -> SAFETY
+[ 340.84s] planner -> IDLE
+[ 352.53s] PHASE LAND  ref=[0.004, 0.015, 0.985] mode='SAFETY'
+[ 372.55s] service rc/disarm requested
+[ 372.55s] PHASE DONE  ref=[0.004, 0.015, 0.35] mode='SAFETY'
+[ 372.57s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ full_A rc=0 ############
+
+############ full_B  full mission, posture OFF, compensation ON ############
+=== [l1/mission_full_B] 0. clean slate ===
+=== [l1/mission_full_B] 1. controller stack ===
+=== [l1/mission_full_B] 2. Pegasus / PX4 / arm ===
+=== [l1/mission_full_B] 3. waiting for odometry ===
+=== [l1/mission_full_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/mission_full_B] 3c. waiting for the arm ===
+=== [l1/mission_full_B] 4. flying ===
+=== [l1/mission_full_B] done (driver rc=0) ===
+[ 298.75s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 299.11s] mode -> SAFETY
+[ 299.11s] planner -> IDLE
+[ 310.75s] PHASE LAND  ref=[0.049, 0.05, 0.991] mode='SAFETY'
+[ 330.75s] service rc/disarm requested
+[ 330.75s] PHASE DONE  ref=[0.049, 0.05, 0.35] mode='SAFETY'
+[ 330.77s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ full_B rc=0 ############
+FULL MISSION DONE

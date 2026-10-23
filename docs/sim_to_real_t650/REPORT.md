@@ -18,7 +18,7 @@ recorded indoor T650 flights and IsaacSim replays of the same reference sequence
 
 - **Real:** `docs/experimental_data_ros2_bag/debug_recording_20260806_134620` (flight A,
   117 s) and `.../debug_recording_20260806_140303` (flight B, 169 s).
-- **Sim:** `scripts/indoor_sim/start_single_drone_t650.sh` (PX4 SITL + Pegasus/IsaacSim
+- **Sim:** `scripts/indoor_sim/archive/start_single_drone_t650.sh` (PX4 SITL + Pegasus/IsaacSim
   T650 plant, MN4010 + 15x5", 2.95 kg, lockstep on) driven by the real ROS 2 stack,
   `fsc_autopilot_ros2/scripts/isaacsim/start_baseline_t650_stack_fused.sh` — same
   controller build, same EKF2-fused estimator, same `params_single_vehicle_baseline_t650.yaml`.

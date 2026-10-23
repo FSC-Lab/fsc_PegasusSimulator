@@ -17,7 +17,7 @@ did is directly reproducible here, and the numbers below are directly comparable
 
 - **Real:** `docs/experimental_data_ros2_bag/debug_recording_20260806_164742` — 211 s,
   21 078 odometry samples at a clean 100 Hz, 18 reference waypoints → **18 steps**.
-- **Sim:** `scripts/indoor_sim/start_single_drone_t650.sh` (PX4 SITL + Pegasus/IsaacSim
+- **Sim:** `scripts/indoor_sim/archive/start_single_drone_t650.sh` (PX4 SITL + Pegasus/IsaacSim
   T650 plant, MN4010 + 15x5", 2.95 kg, lockstep on) plus
   `fsc_autopilot_ros2/scripts/isaacsim/start_baseline_t650_stack_fused.sh` — same controller
   build, same EKF2-fused estimator, same `params_single_vehicle_baseline_t650.yaml`.

@@ -1,0 +1,58 @@
+
+############ mismatch_A  friction x1.05  arm mass x1.05  compensation 1 ############
+=== [l1/mismatch_A] 0. clean slate ===
+=== [l1/mismatch_A] 1. controller stack ===
+=== [l1/mismatch_A] 2. Pegasus / PX4 / arm ===
+=== [l1/mismatch_A] 3. waiting for odometry ===
+=== [l1/mismatch_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/mismatch_A] 3c. waiting for the arm ===
+=== [l1/mismatch_A] 4. flying ===
+=== [l1/mismatch_A] done (driver rc=0) ===
+[ 304.91s] mode -> SAFETY
+[ 304.91s] planner -> IDLE
+[ 304.93s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 316.93s] PHASE LAND  ref=[0.024, 0.038, 0.998] mode='SAFETY'
+[ 336.95s] service rc/disarm requested
+[ 336.95s] PHASE DONE  ref=[0.024, 0.038, 0.35] mode='SAFETY'
+[ 336.97s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ mismatch_A rc=0 ############
+
+############ matched_B  friction x1.00  arm mass x1.00  compensation 1 ############
+=== [l1/matched_B] 0. clean slate ===
+=== [l1/matched_B] 1. controller stack ===
+=== [l1/matched_B] 2. Pegasus / PX4 / arm ===
+=== [l1/matched_B] 3. waiting for odometry ===
+=== [l1/matched_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/matched_B] 3c. waiting for the arm ===
+=== [l1/matched_B] 4. flying ===
+=== [l1/matched_B] done (driver rc=0) ===
+[ 334.51s] mode -> SAFETY
+[ 334.51s] planner -> IDLE
+[ 334.53s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 346.53s] PHASE LAND  ref=[0.037, 0.025, 0.995] mode='SAFETY'
+[ 366.55s] service rc/disarm requested
+[ 366.55s] PHASE DONE  ref=[0.037, 0.025, 0.35] mode='SAFETY'
+[ 366.57s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ matched_B rc=0 ############
+
+############ uncomp_C  friction x1.05  arm mass x1.05  compensation 0 ############
+=== [l1/uncomp_C] 0. clean slate ===
+=== [l1/uncomp_C] 1. controller stack ===
+=== [l1/uncomp_C] 2. Pegasus / PX4 / arm ===
+=== [l1/uncomp_C] 3. waiting for odometry ===
+=== [l1/uncomp_C] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/uncomp_C] 3c. waiting for the arm ===
+=== [l1/uncomp_C] 4. flying ===
+=== [l1/uncomp_C] done (driver rc=0) ===
+[ 301.37s] mode -> SAFETY
+[ 301.37s] planner -> IDLE
+[ 301.39s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 313.39s] PHASE LAND  ref=[0.018, 0.014, 0.997] mode='SAFETY'
+[ 333.39s] service rc/disarm requested
+[ 333.39s] PHASE DONE  ref=[0.018, 0.014, 0.35] mode='SAFETY'
+[ 333.41s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ uncomp_C rc=0 ############
+CAMPAIGN_DONE

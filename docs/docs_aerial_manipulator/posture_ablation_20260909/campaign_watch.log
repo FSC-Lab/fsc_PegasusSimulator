@@ -1,0 +1,16 @@
+=== [l1/posture_watch] 0. clean slate ===
+=== [l1/posture_watch] 1. controller stack ===
+=== [l1/posture_watch] 2. Pegasus / PX4 / arm ===
+=== [l1/posture_watch] 3. waiting for odometry ===
+=== [l1/posture_watch] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/posture_watch] 3c. waiting for the arm ===
+=== [l1/posture_watch] 4. flying ===
+=== [l1/posture_watch] done (driver rc=0) ===
+[  65.65s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[  66.10s] mode -> SAFETY
+[  66.10s] planner -> IDLE
+[  77.65s] PHASE LAND  ref=[-0.0, -0.0, 1.0] mode='SAFETY'
+[  97.65s] service rc/disarm requested
+[  97.65s] PHASE DONE  ref=[-0.0, -0.0, 0.35] mode='SAFETY'
+[  97.67s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed

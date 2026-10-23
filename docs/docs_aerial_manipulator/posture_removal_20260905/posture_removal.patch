@@ -1,0 +1,173 @@
+diff --git a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/single_aerial_manipulator_whole_body_direct_actuation_client.hpp b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/single_aerial_manipulator_whole_body_direct_actuation_client.hpp
+index afb1cc3..5801079 100644
+--- a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/single_aerial_manipulator_whole_body_direct_actuation_client.hpp
++++ b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/single_aerial_manipulator_whole_body_direct_actuation_client.hpp
+@@ -153,8 +153,7 @@ struct WholeBodyLawConfig : fsc::ParameterSchema<WholeBodyLawConfig> {
+     return std::tie(k_x, k_v, k_r, k_w, mrd_x, mrd_y, mrd_z, ky_x, ky_y, ky_z,
+                     ky_psi, dy_x, dy_y, dy_z, dy_psi, my_x, my_y, my_z, my_psi,
+                     use_gmo, ko_t, ko_r, ko_q, impedance_shaped, dls_lambda,
+-                    posture_kp, posture_kd, posture_ki, posture_i_max,
+-                    posture_ramp_s, tau_max, omega_e_ff, gmo_use_achieved,
++                    tau_max, omega_e_ff, gmo_use_achieved,
+                     arm_state_timeout_s, arm_reference_timeout_s, arm_hold_kp,
+                     arm_hold_kd, arm_hold_stream, gate_pos_m, gate_vel_mps,
+                     gate_arm_rad,
+@@ -167,8 +166,7 @@ struct WholeBodyLawConfig : fsc::ParameterSchema<WholeBodyLawConfig> {
+     return std::tie(k_x, k_v, k_r, k_w, mrd_x, mrd_y, mrd_z, ky_x, ky_y, ky_z,
+                     ky_psi, dy_x, dy_y, dy_z, dy_psi, my_x, my_y, my_z, my_psi,
+                     use_gmo, ko_t, ko_r, ko_q, impedance_shaped, dls_lambda,
+-                    posture_kp, posture_kd, posture_ki, posture_i_max,
+-                    posture_ramp_s, tau_max, omega_e_ff, gmo_use_achieved,
++                    tau_max, omega_e_ff, gmo_use_achieved,
+                     arm_state_timeout_s, arm_reference_timeout_s, arm_hold_kp,
+                     arm_hold_kd, arm_hold_stream, gate_pos_m, gate_vel_mps,
+                     gate_arm_rad,
+@@ -231,23 +229,6 @@ struct WholeBodyLawConfig : fsc::ParameterSchema<WholeBodyLawConfig> {
+            fsc::ParamImportance::kRequired, {}, true);
+   WB_PARAM(double, dls_lambda, "Damped-least-squares reg. of the J_3y solve",
+            fsc::ParamImportance::kRequired, {fsc::NonNegative{}}, 0.0);
+-  WB_PARAM(double, posture_kp,
+-           "DIRECT joint-posture stiffness [N.m/rad]; selects the smoothed "
+-           "reference's IK branch. 0 disables.",
+-           fsc::ParamImportance::kOptional, {fsc::NonNegative{}}, 0.0);
+-  WB_PARAM(double, posture_kd,
+-           "DIRECT joint-posture damping [N.m.s/rad]. 0 disables.",
+-           fsc::ParamImportance::kOptional, {fsc::NonNegative{}}, 0.0);
+-  WB_PARAM(double, posture_ki,
+-           "DIRECT joint-posture integral gain [N.m/(rad.s)]. 0 disables.",
+-           fsc::ParamImportance::kOptional, {fsc::NonNegative{}}, 0.0);
+-  WB_PARAM(double, posture_i_max,
+-           "Per-joint clamp for the DIRECT posture integral torque [N.m].",
+-           fsc::ParamImportance::kOptional, {fsc::NonNegative{}}, 0.0);
+-  WB_PARAM(double, posture_ramp_s,
+-           "DIRECT-entry ramp time for the joint-posture objective [s]. "
+-           "0 applies full gain immediately.",
+-           fsc::ParamImportance::kOptional, {fsc::NonNegative{}}, 0.0);
+   WB_PARAM(double, tau_max,
+            "Joint-torque clamp [N.m]; the law rebuilds the base moment from "
+            "the realized u3. One number across law/controller/plant.",
+diff --git a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/wb_controller.hpp b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/wb_controller.hpp
+index 63aa7d8..8bd1d88 100644
+--- a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/wb_controller.hpp
++++ b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/include/single_aerial_manipulator_whole_body_direct_actuation/wb_controller.hpp
+@@ -62,17 +62,6 @@ struct WbGains {
+   bool shaped{false};      // impedance_mode: true = "shaped", false = "natural"
+   Vec4 M_Y{Vec4::Ones()};  // diagonal task inertia (shaped mode only)
+   double dls_lambda{0.0};
+-  // Optional joint-space secondary objective. It disambiguates IK branches
+-  // while using the same smoothed q/qdot trajectory as the EE task. Zero
+-  // preserves the parity-locked original law.
+-  double posture_kp{0.0};
+-  double posture_kd{0.0};
+-  double posture_ki{0.0};
+-  double posture_i_max{0.0};
+-  // DIRECT-entry ramp for the posture objective. This avoids fighting a
+-  // temporarily incompatible world-fixed EE task while the base observer
+-  // acquires a large thrust mismatch. <= 0 applies full gain immediately.
+-  double posture_ramp_s{0.0};
+   // tau_max <= 0 means NO clamp inside the law (Python's tau_max: null).
+   double tau_max{0.0};
+   bool omega_e_ff{false};
+@@ -99,8 +88,6 @@ class WholeBodyController {
+     p_hat_.reset();
+     qdot_prev_.reset();
+     omega0_prev_.reset();
+-    active_time_s_ = 0.0;
+-    posture_i_torque_.setZero();
+   }
+ 
+   bool hold{false};
+@@ -112,11 +99,11 @@ class WholeBodyController {
+ 
+   const WholeBodyParams& params() const { return p_; }
+   const WbGains& gains() const { return g_; }
+-  // Replace the gains in place, keeping the observer momentum, the posture
+-  // integral and the DIRECT timer -- a live gain step on a running law (the
+-  // bench arm test tunes wb_* through `ros2 param set`; a torque controller
+-  // cannot be reconfigured without dropping the arm). The law reads g_ on
+-  // every step(), so the new set applies from the next call.
++  // Replace the gains in place, keeping the observer momentum -- a live gain
++  // step on a running law (the bench arm test tunes wb_* through
++  // `ros2 param set`; a torque controller cannot be reconfigured without
++  // dropping the arm). The law reads g_ on every step(), so the new set
++  // applies from the next call.
+   void setGains(const WbGains& gains) { g_ = gains; }
+ 
+  private:
+@@ -125,8 +112,6 @@ class WholeBodyController {
+   std::optional<Vec10> p_hat_;
+   std::optional<VecN> qdot_prev_;
+   std::optional<Vec3> omega0_prev_;
+-  double active_time_s_{0.0};
+-  VecN posture_i_torque_{VecN::Zero()};
+ };
+ 
+ }  // namespace nodelib::wb
+diff --git a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/single_aerial_manipulator_whole_body_direct_actuation_client.cpp b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/single_aerial_manipulator_whole_body_direct_actuation_client.cpp
+index dc932a3..4b0724f 100644
+--- a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/single_aerial_manipulator_whole_body_direct_actuation_client.cpp
++++ b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/single_aerial_manipulator_whole_body_direct_actuation_client.cpp
+@@ -239,11 +239,6 @@ void WholeBodyDirectActuationClient::initialize() {
+       wb::Vec3::Constant(wb_cfg_.ko_r), wb::VecN::Constant(wb_cfg_.ko_q);
+   gains.shaped = wb_cfg_.impedance_shaped;
+   gains.dls_lambda = wb_cfg_.dls_lambda;
+-  gains.posture_kp = wb_cfg_.posture_kp;
+-  gains.posture_kd = wb_cfg_.posture_kd;
+-  gains.posture_ki = wb_cfg_.posture_ki;
+-  gains.posture_i_max = wb_cfg_.posture_i_max;
+-  gains.posture_ramp_s = wb_cfg_.posture_ramp_s;
+   gains.tau_max = wb_cfg_.tau_max;
+   gains.omega_e_ff = wb_cfg_.omega_e_ff;
+ 
+@@ -276,16 +271,13 @@ void WholeBodyDirectActuationClient::initialize() {
+       "Whole-body law up: model total %.6f kg (hover %.2f N), k_x=%.1f "
+       "k_v=%.1f k_R=%.1f k_w=%.2f K_y=[%.0f %.0f %.0f %.0f] D_y=[%.0f %.0f "
+       "%.0f %.0f] GMO=%s(K_o %.2f/%.2f/%.2f) impedance=%s dls=%.2f "
+-      "posture=%.2f/%.2f/%.3f i_max=%.2f ramp=%.1fs tau_max=%.1f "
+-      "gmo_achieved=%s",
++      "tau_max=%.1f gmo_achieved=%s",
+       model_total, model_total * wb_params_.g, gains.k_x, gains.k_v, gains.k_R,
+       gains.k_w, gains.K_y[0], gains.K_y[1], gains.K_y[2], gains.K_y[3],
+       gains.D_y[0], gains.D_y[1], gains.D_y[2], gains.D_y[3],
+       gains.use_gmo ? "on" : "OFF", wb_cfg_.ko_t.value, wb_cfg_.ko_r.value,
+       wb_cfg_.ko_q.value, gains.shaped ? "shaped" : "natural", gains.dls_lambda,
+-      gains.posture_kp, gains.posture_kd, gains.posture_ki, gains.posture_i_max,
+-      gains.posture_ramp_s, gains.tau_max,
+-      wb_cfg_.gmo_use_achieved.value ? "true" : "false");
++      gains.tau_max, wb_cfg_.gmo_use_achieved.value ? "true" : "false");
+ 
+   if (wb_params_.base_com.squaredNorm() > 0.0) {
+     // r_0c_0 at the folded home pose, for a one-glance sanity check that the
+diff --git a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/wb_controller.cpp b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/wb_controller.cpp
+index 6e431f7..a1af7d3 100644
+--- a/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/wb_controller.cpp
++++ b/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/client_lib/src/wb_controller.cpp
+@@ -249,28 +249,6 @@ WbCommand WholeBodyController::step(const WbState& x,
+   };
+   VecN u3 = -dls_solve(inner) - C_rp.transpose() * omega_0 + C_p * rho;
+ 
+-  // The 4-D EE task is not globally one-to-one in q. During a large base
+-  // disturbance it can therefore converge to a different IK branch even
+-  // though the requested joint trajectory remains at the home posture. Add a
+-  // deliberately configurable joint-space PD objective to select the branch.
+-  // It is applied in u3 so T^T also gives the base the matching arm-reaction
+-  // compensation; the saturation-consistent rebuild below remains valid.
+-  if (!hold && dt > 0.0) active_time_s_ += dt;
+-  const double posture_scale =
+-      g_.posture_ramp_s > 0.0
+-          ? std::clamp(active_time_s_ / g_.posture_ramp_s, 0.0, 1.0)
+-          : 1.0;
+-  if (!hold && dt > 0.0 && g_.posture_ki > 0.0 && g_.posture_i_max > 0.0) {
+-    posture_i_torque_ += g_.posture_ki * (ref.q_d - x.q) * dt;
+-    posture_i_torque_ = posture_i_torque_.cwiseMax(-g_.posture_i_max)
+-                            .cwiseMin(g_.posture_i_max);
+-  }
+-  const VecN u3_posture =
+-      posture_scale * (g_.posture_kp * (ref.q_d - x.q) +
+-                       g_.posture_kd * (ref.qdot_d - x.qdot)) +
+-      posture_i_torque_;
+-  u3 += u3_posture;
+-
+   // HOLD: the caller drives the arm itself; zero u3 BEFORE forming tau so the
+   // body torque does not inherit the coupling N1^T u3 of an arm torque that
+   // isn't there (that phantom reaction was a roll-runaway path).

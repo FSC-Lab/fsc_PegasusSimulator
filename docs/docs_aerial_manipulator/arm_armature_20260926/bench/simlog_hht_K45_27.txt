@@ -1,0 +1,1 @@
+law K45_27 | plant hht                       | j2 rms 35.0 max 91.6 span  295% stuck   3% v99 511.7 over +62.4 | j3 rms 21.6 max 51.3 span  224% stuck  21% v99 149.5 over +31.7 | tilt 20.1 CoM   586 mm EE 146.5 mm | tau j2/j3 2.44/1.42 cap 89.1%

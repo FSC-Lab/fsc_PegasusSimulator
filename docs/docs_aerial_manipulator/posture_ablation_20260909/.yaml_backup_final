@@ -1,0 +1,808 @@
+# ============================================================================
+# !! SIMULATION CONFIG -- IsaacSim/Pegasus AM-T650. NOT A HARDWARE FILE.     !!
+# ============================================================================
+# AM-T650 WHOLE-BODY + L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER
+#   node: autopilot_whole_body_l1_direct_actuation_node
+#
+# DERIVED FROM params_single_aerial_manipulator_whole_body_direct_actuation_t650_sim.yaml.
+# It is that file, verbatim, plus section 3.6 and two changed values
+# (vehicle_name, and wb_l1_observer_type: l1). Keep it that way: the whole
+# point of the rig is that the LAW, the plant, the injections and every gain
+# are identical to the GMO baseline, so a difference between the two flights
+# is the ESTIMATOR and nothing else. Diff them before every campaign:
+#   diff params_single_aerial_manipulator_whole_body{,_l1}_direct_actuation_t650_sim.yaml
+#
+# Launched only by
+#   scripts/isaacsim/start_whole_body_l1_direct_actuation_t650_aerial_manipulator_stack.sh
+# Never fly it on hardware: it carries the deliberate +15% controller-side kf
+# injection and the simulator's own kf/km, and the hardware launcher greps for
+# exactly those values and refuses to start. The hardware twin is
+# params_single_aerial_manipulator_whole_body_direct_actuation_t650.yaml (split
+# 2026-08-26; same split, same reasons, as the AM geometric+L1 pair of
+# 2026-08-24).
+#
+# ┌──────────────────────────────────────────────────────────────────────────┐
+# │ SECTION INDEX                                                            │
+# │   0  NODE, RATES AND INTERFACES   what runs, how fast, wired to what     │
+# │   1  REALITY MODEL                every deliberate deviation from a      │
+# │                                   perfect plant: thrust mismatch, model  │
+# │                                   uncertainty, motor delay, arm back-EMF │
+# │   2  SAFETY                       bounds, timeouts, gates, mode logic    │
+# │   3  CONTROL GAINS                3.1 SAFETY position loop               │
+# │                                   3.2 DIRECT translation (system CoM)    │
+# │                                   3.3 DIRECT platform attitude           │
+# │                                   3.4 DIRECT arm (EE impedance/posture)  │
+# │                                   3.5 disturbance observers (GMO, UDE)   │
+# │   4  ACTUATION                    4.1 SAFETY normalized thrust map       │
+# │                                   4.2 DIRECT wrench allocation           │
+# │   5  WHOLE-BODY PLANNER           which planner builds a transition      │
+# └──────────────────────────────────────────────────────────────────────────┘
+#
+# WHAT THE NODE IS
+# The coupled airframe+arm law of fsc_PegasusSimulator's
+# utils_controller/controller.py (EE impedance + shaped task inertia +
+# generalized-momentum disturbance observer + DLS arm inverse +
+# saturation-consistent coupling), ported to C++ (wb_model/wb_controller,
+# parity-locked to <=1e-8 against the Python reference by the wb_parity gtest)
+# and run at 250 Hz in DIRECT mode. The node owns position, attitude, rate,
+# MIXING and the FOUR ARM JOINT TORQUES; PX4 runs no control (direct_actuator).
+# SAFETY is the unchanged robust_controller+UDE baseline — while it flies, this
+# node still streams the flight-validated PD+gravity ARM HOLD torques, so the
+# arm torque source is continuous across the mode switch.
+#
+# MODE TABLE
+#   SAFETY  PX4 attitude+rate+mixer; arm = PD+gravity hold on the torque
+#           controller's smoothed reference (kp 3.0 / kd 0.25 /
+#           clamp 3.0 N·m — 04's numbers)
+#   DIRECT  whole-body law -> ActuatorMotors + joint_torque_command
+#   Enter DIRECT: ros2 service call
+#     /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode \
+#     std_srvs/srv/SetBool "{data: true}"
+#   — REFUSED unless the hover/arm settle gates pass (§2; the refusal message
+#   names every red gate). Abort with data: false. NEVER step a reference at
+#   the instant of a mode switch (the sequencing rule: a stepped reference
+#   while the law owns the arm once demanded 90 N·m, 22x the clamp).
+#
+# WHAT IS DELIBERATELY NOT IN THIS FILE
+#   The whole-body MODEL (masses, inertias, link geometry). It is the plant,
+#   not a tune: it lives in code (WholeBodyParams::t650Defaults — the
+#   AM_realign extraction + the T650 body override applied CORRECTLY in the
+#   model frame, NOT 05's un-rotated delta) and is locked by the parity test.
+#   Exactly the make_params-in-code / gains-in-yaml split the Python has.
+#   The node cross-checks the model total (3.746174 kg) against vehicle_mass
+#   at startup and refuses to run past 0.5%.
+#
+# STATUS: built 2026-08-22, parity-verified against the Python law (220
+# cases + GMO rollouts, <=1e-8). First SITL DIRECT engagement 2026-08-22:
+# SAFETY takeoff + 20 s DIRECT before a growing rate mode tripped the
+# watchdog at the Python tune -> attitude pair retuned (§3.3). The retuned
+# MATCHED-MODEL hover campaign is in Command.md §7.14.
+# ============================================================================
+
+/**/fsc_autopilot_ros2:
+  ros__parameters:
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 0. NODE, RATES AND INTERFACES
+    # ══════════════════════════════════════════════════════════════════════
+    vehicle_name: "AM-T650-WB-L1"
+    vehicle_num_rotors: 4
+    system_posctl_type: robust_controller
+    system_posctl_rate: 100.0
+    # Inner loop: whole-body law + allocation in DIRECT, arm hold in SAFETY.
+    system_attctl_rate: 250.0
+    system_ude_type: velocity_based
+
+    # ARM INTERFACE. Subscribes the ros2_control broadcaster's joint_states
+    # (BY NAME — its ordering is [joint2, joint3, joint1, joint4]) and the
+    # ExternalTorqueController's smoothed reference; publishes torques back to
+    # that controller. NEVER point anything at /uav_0/isaacsim_manipulator/*
+    # (sim-only servo wire — Arm Topic Naming.md).
+    wb_arm_joint_topic: "fsc_open_manipulator/joint_states"
+    # ExternalTorqueController owns the min-jerk reference. The WBC consumes
+    # its named position+velocity stream, so activation homing, Go Home and EE
+    # targets all drive one trajectory instead of a second independent slew.
+    wb_arm_reference_topic: "fsc_open_manipulator/external_torque_controller/reference_joint_trajectory"
+    wb_arm_torque_topic: "fsc_open_manipulator/external_torque_controller/joint_torque_command"
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 1. REALITY MODEL — every deliberate deviation from a perfect plant
+    # ══════════════════════════════════════════════════════════════════════
+    # PLANT RE-ANCHORED 2026-08-25 (fsc_PegasusSimulator 6623131): kf
+    # 4.679931e-05 -> 4.041283e-05 (THRUST_FIT_FACTOR 1.030724 -> 0.890066,
+    # back-solved from the 0820 +719 g hovers), so the real vehicle makes 13.6%
+    # LESS thrust per rotor than before. Every plant-dependent number in this
+    # file moved with it on 2026-08-26; the AM-L1 sim config got the same
+    # treatment a day earlier.
+    #
+    # Four realistic factors act on this rig. Two are knobs in this file, two
+    # live in the plant (Isaac) because this node neither applies nor models
+    # them — that mismatch IS the effect under test.
+    #
+    #   FACTOR              VALUE                        SET WHERE
+    #   ------------------  ---------------------------  --------------------
+    #   thrust mismatch     allocator believes kf =      alloc_thrust_coeff
+    #                       4.6474755e-05, plant truth   (below; the rest of
+    #                       4.041283e-05  => +15%        the allocator is §4.2)
+    #   model uncertainty   bare-airframe CoM offset     wb_base_com_* (below)
+    #                       0.0 here / -0.017854 in y
+    #                       on hardware
+    #   model uncertainty   total mass the stack flies   vehicle_mass (below)
+    #   rotor motor delay   first-order lag,             Isaac plant:
+    #                       lambda = 10.0265 1/s         LaggedQuadraticThrust-
+    #                       (tau 99.7 ms, MN4010)        Curve, t650_params.py
+    #   arm motor back-EMF  tau_app = clip(tau_cmd)      sim_arm_backemf_*
+    #                       - b*qd, b = Kt^2/R           (below; applied by the
+    #                       [0, 0.9337, 1.4934, 0]       Isaac plant, not by
+    #                       N.m per rad/s as shipped     this node)
+    #
+    # ── ARM MOTOR BACK-EMF: the switch and the coefficients ───────────────
+    # READ BY THE PEGASUS LAUNCHER, NOT BY THIS NODE. The whole-body node
+    # never declares these keys, so rclcpp ignores them; step 3 of the run
+    # sequence (Command.md §7.14.1) greps them out of this file and hands them
+    # to the Isaac plant on the app's command line. That is why the prefix is
+    # sim_ and not wb_ — nothing in the control law reads them.
+    #
+    #   sim_arm_backemf_enable   true  = the real PWM-mode servo (droop ON)
+    #                            false = an ideal torque source (droop OFF),
+    #                                    i.e. the pre-2026-09-03 plant
+    #   sim_arm_backemf_b_j*     the droop coefficients, N.m per rad/s, in the
+    #                            arm's own joint order [j1 j2 j3 j4]
+    #
+    # b = Kt^2/R, from the arm repo's calibrated counts-per-N.m and the
+    # configured winding resistance: [1.1017, 0.9337, 1.4934, 1.1017]. Only
+    # joints 2 and 3 are identified from flight (fitted 0.950 and 1.409/1.476
+    # against those two, R^2 0.77/0.94/0.96); joints 1 and 4 carry commands
+    # below the current-sensor floor, so they ship at 0.0 rather than at a
+    # theoretical value nothing measured. Set them to 1.1017 to model the same
+    # machine everywhere, but know that is an assumption, not a measurement.
+    #
+    # An explicit PEGASUS_ARM_SERVO_MODEL / PEGASUS_ARM_SERVO_B in the
+    # environment still wins over this file — env > yaml > built-in default.
+    # The Isaac pane prints what it ended up with:
+    #   [AM-T650-WB] arm servo model '<mode>': back-EMF droop [...] N·m/(rad/s)
+    #
+    # EXPECT TO RETUNE WITH IT ON. The law's N1^T*u3 arm-reaction
+    # pre-compensation is exact only for an ideal arm; with the droop in, the
+    # sim carries the same error hardware does. Identification, the six-term
+    # feedforward decomposition and the model:
+    #   fsc_PegasusSimulator/extensions/fsc_aerial_manipulation/
+    #     fsc_aerial_manipulation/robotic_arm/servo_model.py
+    #   "docs/experimental_data_ros2_bag/0903 - T650-AM whole-body/analysis/"
+    # ── ROBUSTNESS INJECTION: PLANT-SIDE MODEL UNCERTAINTY ──────────────
+    # The PLANT is perturbed while the controller keeps believing the shipped
+    # model — that is what "model uncertainty" means, and it keeps the control
+    # config honest. Read by the launcher, forwarded to Isaac (06). 1.0 / 0.0
+    # is nominal, so every other rig is unaffected.
+    #
+    #   sim_plant_mass_scale     multiplies the VEHICLE TOTAL mass. The arm and
+    #                            rotors keep their authored masses, so the body
+    #                            carries the whole delta.
+    #                            The controller's vehicle_mass and whole-body
+    #                            model do NOT follow, so this IS the error.
+    #   sim_plant_inertia_scale  same, on the body inertia tensor.
+    #   sim_plant_com_shift_*    metres, MODEL frame, added to the body's
+    #                            centre of mass. Not a percentage: what matters
+    #                            is the moment it makes, T*dx — 0.010 m at
+    #                            hover is 0.37 N.m, the same order as the arm's
+    #                            own 0.72 N.m and twice the measured hardware
+    #                            base-CoM offset of -0.0179 m.
+    sim_plant_mass_scale: 1.10
+    sim_plant_inertia_scale: 1.10
+    sim_plant_com_shift_x: 0.010
+    sim_plant_com_shift_y: 0.010
+    sim_plant_com_shift_z: 0.005
+    # THRUST LOSS, PLANT SIDE (2026-09-09). The rotors really deliver 85% of
+    # the calibrated k_f, so BOTH SAFETY and DIRECT fly the reduced plant.
+    # Previously this was injected as alloc_thrust_coeff = k_f/0.85, which
+    # only DIRECT goes through -- SAFETY commands a normalised setpoint via
+    # vehicle_thrust_scaling/idle_thrust and never sees it. That made the two
+    # modes fly different plants (3.67 N of mismatch vs 10.81 N) and left the
+    # handover with nothing to inherit. Read by the launcher, not the node.
+    sim_plant_kf_scale: 1.0
+
+    sim_arm_backemf_enable: false
+    sim_arm_backemf_b_j1: 0.0
+    sim_arm_backemf_b_j2: 0.9337
+    sim_arm_backemf_b_j3: 1.4934
+    sim_arm_backemf_b_j4: 0.0
+
+    # ── THRUST MISMATCH: +15%, KEPT DELIBERATELY (user, 2026-08-23) ────────
+    # The plant's true value is 4.041283e-05 (= t650_params' ROTOR_CONSTANT);
+    # this is 1.15x it. kf is never known exactly on hardware and ~15% is close
+    # to worst case, so the rig is REQUIRED to fly with the allocator believing
+    # the wrong number — a controller that only works at zero mismatch is not a
+    # result. Restore 4.041283e-05 for a matched baseline or before hardware.
+    #
+    # History worth keeping straight: before the M_r_d retune (§3.3) this
+    # injection was NOT a test, it was a CRUTCH. Believing a high kf makes the
+    # allocator command ~13% less motor per unit torque, and that gain cut was
+    # the only thing masking an M_r_d that asked the vehicle to rotate as if it
+    # were half its true coupled inertia — removing the injection made the hold
+    # DIVERGE. With M_r_d fixed the rig flies on the TRUE model (2.6 mm CoM
+    # error, 0.14 deg pitch p-p over 78 s), so the injection is once again
+    # measuring robustness rather than providing it.
+    #
+    # = 4.041283e-05 (plant) x 1.15. PREVIOUS 5.38192065e-05 was the OLD plant
+    # x 1.15; against the re-anchored plant it had become x 1.3317 (+33.2%),
+    # far past the +20% that FAILED after 7.7 s. The INJECTION RATIO is what
+    # the campaign validated, so it is the ratio that is preserved here.
+    #
+    # km TRACKS THE PLANT, THE INJECTION DOES NOT — see §4.2.
+    #
+    # ROBUSTNESS CAMPAIGN (2026-08-22, simulation only): +20% FAILED after
+    # 7.7 s (cross-axis GMO growth, arm tau_max, 1.5 m CoM error, 30 deg
+    # guard). The retuned +15% case passed two clean 90 s guarded hovers with
+    # zero saturation, 2.0-3.3 mm steady CoM RMS and <=1.55 deg tilt.
+    #
+    # ROBUSTNESS INJECTION: 15% THRUST LOSS.
+    # The allocator believes kf = plant_kf / 0.85, so every rotor delivers 85%
+    # of the force the law asked for. Plant truth is t650_params.ROTOR_CONSTANT
+    # = 4.041283e-05 (the 2026-08-25 flight re-anchor); 4.7544506e-05 is that
+    # divided by 0.85. Set it back to 4.041283e-05 for a matched plant.
+    #
+    # SUPERSEDED NOTE (kept because it explains the history): this used to be
+    # coupled to wb_posture_*, because deleting the posture term made the +15%
+    # case diverge in 32 s with 51% of samples on the joint clamp, and even a
+    # matched kf survived only 1 soak in 3 (Command.md 7.14.6 / 7.15.7). That
+    # coupling is GONE as of 2026-09-09: with wb_ee_anchor_com and
+    # wb_u3_internal_ff the posture term is not needed at any point of the
+    # thrust {10,15}% x model {5,10}% grid, 9 flights of 9 completed, nor on
+    # the full 8-leg mission, 2 of 2 with 0.00% clamp. This coefficient is now
+    # a free knob again. See Command.md 7.15.9.
+    alloc_thrust_coeff: 4.7544506e-05
+
+    # ── MODEL UNCERTAINTY: bare-airframe CoM, MODEL frame [m] ─────────────
+    # 0.0 IS CORRECT HERE and must stay: in Isaac the plant IS this model
+    # (the asset's own base offset is 0.3 mm horizontally). The hardware file
+    # carries -0.017854 in y, measured on the 2026-08-25 flight. Listed
+    # rather than omitted so the difference between the two files is visible
+    # at a glance -- the 0819 lesson. If it is ever set here, the whole-body planner's
+    # base_com parameter must move with it.
+    wb_base_com_x: 0.0
+    wb_base_com_y: 0.0
+    wb_base_com_z: 0.0
+
+    # ── THE ONE MASS THE STACK FLIES ──────────────────────────────────────
+    # MUST equal the TOTAL the Pegasus spawn prints (the 06 launcher enforces
+    # 3.746170 via PEGASUS_EXPECTED_TOTAL_MASS); the whole-body model total
+    # (3.746174, make_params' rotor rounding) is cross-checked against it at
+    # startup and the node refuses to run past 0.5%. The SAFETY thrust map in
+    # §4.1 was re-derived at this mass AND the re-anchored plant kf.
+    vehicle_mass: 3.746170
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 2. SAFETY — bounds, timeouts, gates and mode logic
+    # ══════════════════════════════════════════════════════════════════════
+    # Actuator saturation limits are not here: they belong to the allocator
+    # output map (alloc_omega_*/alloc_motor_*, §4.2).
+
+    # ── DIRECT-mode fallback watchdog ──────────────────────────────────────
+    # Automatically reverts to SAFETY (PX4 regains attitude+rate+mixing) when
+    # the vehicle exceeds either limit. The rate limit is what caught the
+    # first DIRECT engagement's growing rate mode at only 14 deg of tilt.
+    system_wd_max_tilt_deg: 40.0
+    system_wd_max_rate_dps: 360.0
+
+    # ── Position-feedback loss failsafe ───────────────────────────────────
+    # Identical mechanism to the sibling nodes. Set fb_timeout_s: 0.0 to
+    # disable.
+    system_fb_timeout_s: 1.0
+    system_fb_land_speed: 0.2
+
+    # ── DIRECT-entry gates ────────────────────────────────────────────────
+    # set_direct_mode is REFUSED unless the vehicle is settled inside all
+    # three. This is the sequencing rule made mechanical.
+    wb_gate_pos_m: 0.15
+    wb_gate_vel_mps: 0.20
+    wb_gate_arm_rad: 0.05
+
+    # ── Arm stream freshness ──────────────────────────────────────────────
+    # Stale arm state or reference drops the law out of its arm path rather
+    # than latching a torque under a flying vehicle.
+    wb_arm_state_timeout_s: 0.5
+    wb_arm_reference_timeout_s: 0.2
+
+    # ── Arm torque clamp ──────────────────────────────────────────────────
+    # ONE clamp number across the whole chain: this == the
+    # ExternalTorqueController's max_effort == the Isaac plant's TAU_MAX.
+    wb_tau_max: 3.0
+
+    # ── SAFETY disturbance-estimate limits (the UDE gain is in §3.5) ──────
+    # The height threshold gates the estimator off below it — note the
+    # bare-T650 L1 lesson: a vehicle that cannot lift without the UDE cannot
+    # reach the threshold that enables it. The lb/ub pair bounds what the
+    # observer may inject, and on the L1 rig capping the z pair is what capped
+    # the DIRECT->SAFETY abort balloon.
+    # 0.35, NOT 0.40 (2026-09-06). At 0.40 the SAFETY takeoff to 1 m took
+    # 28 s: sim_plant_mass_scale 1.10 leaves the gravity feedforward 3.67 N
+    # short, only the UDE can supply a constant force error, and the vehicle
+    # RESTS at 0.305 m -- so it crept at 0.003 m/s for 22 s until it happened
+    # to reach the gate that enables the thing it needed to climb. Exactly the
+    # deadlock the paragraph above warns about, in a slow-motion form.
+    # Measured after: 0.95 m in 9.2 / 9.6 s, two runs, smooth and monotonic.
+    # THE VALUE IS BOUNDED BELOW BY THE SEATED ALTITUDE, and 0.32 is NOT safe
+    # even though it flies: across 33 recorded runs the seated peak reaches
+    # 0.3338 m (the arming transient), so 0.32 is crossed while still on the
+    # ground in 29 of them and the UDE would integrate the ground reaction.
+    # 0.35 clears that peak by 16 mm and was crossed while seated in 0 of 33.
+    ude_height_threshold: 0.35
+    ude_disturbance_lbx: -10.0
+    ude_disturbance_lby: -10.0
+    ude_disturbance_lbz: -10.0
+    ude_disturbance_ubx: 10.0
+    ude_disturbance_uby: 10.0
+    ude_disturbance_ubz: 10.0
+
+    # ── Collective thrust setpoint bounds [N] ─────────────────────────────
+    safety_min_thrust_setpoint: 0.0
+    safety_max_thrust_setpoint: 150.0
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 3. CONTROL GAINS
+    # ══════════════════════════════════════════════════════════════════════
+    # PROVENANCE: the wb_* block started as px4_direct_free.yaml's
+    # flight-validated PX4-direct tune; the ATTITUDE PAIR + M_r_d were retuned
+    # after the first DIRECT engagement (§3.3) — the external DDS loop carries
+    # transport latency the in-process 03 rig never had. K_o = 0.5 stays ~20x
+    # below the rotor-lag pole (raising the body channels crashed poly_whole).
+    # Schema and names follow fsc_PegasusSimulator's control_params.py:
+    #   k_x/k_v (CoM) · k_R/k_w (attitude) · M_r_d (desired rotational inertia
+    #   diagonal) · K_y/D_y (EE impedance, [x y z heading]) · M_Y (shaped task
+    #   inertia) · K_o (GMO bandwidth).
+
+    # ────────────────────────────────────────────────────────────────────
+    # 3.1  SAFETY position loop (robust_controller) — the AM-T650 tune
+    # ────────────────────────────────────────────────────────────────────
+    posctl_pid_form: "nested"
+    posctl_apply_pos_err_saturation: true
+    posctl_apply_vel_err_saturation: true
+    posctl_k_pos_x: 0.45
+    posctl_k_pos_y: 0.45
+    posctl_k_pos_z: 1.0
+    posctl_k_vel_x: 7.0
+    posctl_k_vel_y: 7.0
+    posctl_k_vel_z: 7.0
+
+    # ────────────────────────────────────────────────────────────────────
+    # 3.2  DIRECT — SYSTEM TRANSLATION (whole-body CoM)
+    # ────────────────────────────────────────────────────────────────────
+    # k_x is the CoM position stiffness; with m = 3.75 kg it sets the loop's
+    # natural frequency at sqrt(k_x/m) = 2.07 rad/s = 0.33 Hz.
+    wb_k_x: 16.0
+    # Raise translational damping for the slow GMO/mismatch handover mode;
+    # k_x is unchanged, so this does not raise its natural frequency.
+    wb_k_v: 12.0
+
+    # ────────────────────────────────────────────────────────────────────
+    # 3.3  DIRECT — PLATFORM ATTITUDE
+    # ────────────────────────────────────────────────────────────────────
+    # ATTITUDE PAIR RETUNED AFTER THE FIRST DIRECT ENGAGEMENT (2026-08-22):
+    # the Python-validated 4.0/1.5 rode wn = 6.9 rad/s against the 10.0 rad/s
+    # rotor-lag pole and the DDS transport latency the in-process 03 rig never
+    # had — 20 s after entry a growing rate oscillation tripped the 360 dps
+    # watchdog (tilt only 14 deg: a rate mode, 03's crash signature). 2.0/1.1
+    # halves the bandwidth (wn 4.9, zeta 1.34) toward the flown C++ forks'
+    # 3-4.5 rad/s attitude loops.
+    # wb_k_r: 2.0
+    wb_k_r: 2.0
+    # +15% hover: add damping without raising the attitude stiffness/natural
+    # frequency against the 10.03 1/s rotor pole.
+    wb_k_w: 1.5
+    # M_r_d — the DESIRED rotational inertia the law imposes. Retuned
+    # 2026-08-23 from the T650 I0 diagonal [0.077681, 0.090738, 0.083401] to
+    # 1.5x it. I0 is the BODY-ONLY inertia, but the coupled rotational inertia
+    # with the arm is ~[0.132, 0.112, 0.116], so the old setting asked the
+    # vehicle to rotate as if it were roughly half its real weight — that is
+    # what ate the phase margin against the 99.7 ms rotor lag plus the DDS/HIL
+    # transport delay, and it was only flyable because a +15% allocator-kf
+    # injection was quietly cutting loop gain. Screened offline for DELAY
+    # MARGIN (application/robotic_arm/utils/wb_hover_stability.py: 24 ms at
+    # the old value, 32 ms across a 1.5x-2.0x plateau, worse again past 2.5x)
+    # and then flown. Raising k_R or k_w does NOT help — k_w makes it worse.
+    wb_mrd_x: 0.116522
+    wb_mrd_y: 0.136107
+    wb_mrd_z: 0.125102
+
+    # ────────────────────────────────────────────────────────────────────
+    # 3.4  DIRECT — ARM (EE impedance, task inertia, posture, SAFETY hold)
+    # ────────────────────────────────────────────────────────────────────
+    # K_y/D_y are the world-locked end-effector impedance, ordered
+    # [x y z heading]; M_Y is the shaped task inertia.
+    # +15% hover: soften the EE task so the unavoidable initial base sag does
+    # not rail the arm and feed its reaction back into attitude.
+    wb_ky_x: 20.0
+    wb_ky_y: 20.0
+    wb_ky_z: 20.0
+    # HEADING ROW 1.0 -> 0.3 (2026-09-06), the fix for a 3.90 Hz limit cycle
+    # in the arm's q1/q4 torques (user-reported). Those two joints carry ~0
+    # mean torque -- q2/q3 hold gravity -- but ALL the ripple, because the EE
+    # heading task is exactly the (q1,q4) pair. On the full mission the
+    # shipped 1.0 drove q4 across its ENTIRE +-3.0 N.m clamp (6.00 N.m p-p);
+    # at 0.3 it is 0.062 N.m p-p, a 96x reduction, and peak arm torque drops
+    # 3.00 -> 0.85 N.m with 0.0% of samples clamped. Heading tracking got
+    # BETTER, not worse (e_psi std 1.17e-3 -> 5.6e-4 rad), so this was a
+    # self-excited oscillation, not useful stiffness.
+    # NOT a correction of an anomalous M_Y_psi: the amplification each task
+    # row actually gets is Lam_y*M_y^-1 = [0.485, 1.320, 0.778, 0.404], so the
+    # heading row was unremarkable -- comparing M_Y_psi 0.05 (kg.m^2) against
+    # the 1.0 of x/y/z (kg) is a units error. What was too high is that
+    # channel's LOOP GAIN against the arm dynamics plus the external 250 Hz
+    # DDS loop. Three other routes reach the same place (my_psi 0.3 or 1.0,
+    # dls_lambda 0.6); this one measured best on the trajectory legs and tilt.
+    # THE RIPPLE IS L1-SPECIFIC -- measured, and it is why this value is NOT
+    # mirrored into the GMO yaml. At ky/dy_psi 1.0 the GMO's own q4 ripple is
+    # 0.0042 N.m std against the L1's 0.4833, and dropping it to 0.3 moves the
+    # GMO to 0.0046, i.e. nothing. What differs is what feeds that task row:
+    # the GMO's F_hat_y is the smooth lumped (J_y^#)^T d_hat off a heavily
+    # filtered estimate, the L1's is the ATTRIBUTED Lam_y S_e Lam_e^-1 w_hat_e
+    # rebuilt every tick from a DEADBEAT one, and the heading row is the
+    # least-filtered path it takes.
+    wb_ky_psi: 0.3
+    wb_dy_x: 12.0
+    wb_dy_y: 12.0
+    wb_dy_z: 12.0
+    wb_dy_psi: 0.3
+    wb_my_x: 1.0
+    wb_my_y: 1.0
+    wb_my_z: 1.0
+    wb_my_psi: 0.05
+    wb_impedance_shaped: true
+    wb_dls_lambda: 0.3
+
+    # ── JOINT-POSTURE PID: A DECLARED DEVIATION FROM THE PUBLISHED LAW ───
+    # THE JOINT-POSTURE PID IS DELIBERATELY ABSENT FROM THIS FILE (2026-09-09).
+    #
+    # The manuscript's law has no joint-space term on u3, and this rig no
+    # longer needs one. The five wb_posture_* keys are NOT listed on purpose:
+    # they are declared kOptional with default 0.0, so leaving them out makes
+    # the term unreachable from this configuration rather than merely switched
+    # off, and the node prints a green "LAW CHECK: joint-posture PID is OFF"
+    # line at startup to prove it. DO NOT re-add them here -- if a run needs
+    # the term, that is evidence something else regressed.
+    #
+    # WHAT REPLACED IT, and why the term was ever needed. It was standing in
+    # for two distinct gaps, both consequences of the manuscript modelling
+    # d_e as the CONTACT wrench only:
+    #   (1) the internal disturbance reached the EE as a phantom task force,
+    #       (J_y^#)^T d, with unit gain at natural inertia -- u3 was the one
+    #       channel with no -d_hat cancellation, while f_d has -d_hat_t and
+    #       u2 has -d_hat_r. Fixed by wb_u3_internal_ff.
+    #   (2) the world-fixed EE reference left the arm's ~5 cm workspace during
+    #       the 0.8-1.3 m DIRECT-entry transient, so the impedance drove the
+    #       arm into its stops and across the elbow-singular branch. Fixed by
+    #       wb_ee_anchor_com.
+    # Both are ON below, with K_y 20 / D_y 12 (the old K_y 2 was the other
+    # half of the compensating pair: at 2 N/m the PID out-pulled the task by
+    # an order of magnitude and the arm was pinned, not tracking).
+    #
+    # EVIDENCE (all posture gains 0, both options on, L1 with attribution):
+    #   mismatch grid, thrust {10,15}% x model {5,10}%, 9 flights, 9 completed,
+    #     settled EE 0.7-1.2 mm, 0% clamp, arm home in every one;
+    #   full 8-leg mission x2, 314 s and 276 s of DIRECT, 0.00% clamp, peak
+    #     arm torque 0.79 N.m of 3.0, q3 NEVER negative (0.00 s on the
+    #     singular branch that the term existed to prevent).
+    # Full write-up: fsc_PegasusSimulator docs/docs_aerial_manipulator/
+    # "Removing the Joint-Posture Term.md"; Command.md 7.15.9.
+    #
+    # SCOPE: this file only. The GMO whole-body yamls still carry
+    # wb_posture_kp 2.0 with K_y 2 and have never flown with the compensation
+    # -- and the GMO path cannot simply adopt it, because there F_hat_y is the
+    # same lumped vector as d_hat and the feedforward would double-count.
+    # SAFETY-mode arm hold (PD + gravity comp on the smoothed reference) —
+    # 04's flight-validated numbers, streamed so the arm torque source is
+    # continuous across the mode switch.
+    wb_arm_hold_kp: 3.0
+    wb_arm_hold_kd: 0.25
+
+    # ────────────────────────────────────────────────────────────────────
+    # 3.5  DISTURBANCE OBSERVERS
+    # ────────────────────────────────────────────────────────────────────
+    # DIRECT: the generalized-momentum observer (GMO). K_o is its bandwidth,
+    # kept ~20x below the rotor-lag pole — raising the body channels to 1.0
+    # crashed poly_whole.
+    wb_use_gmo: true
+    wb_ko_t: 0.5
+    # +15% hover tune: keep the translational observer fast enough to learn
+    # the -5.51 N vertical deficit, but slow the rotational/arm channels that
+    # grew during the 0.5/0.5/0.5 trial and drove tilt + joint saturation.
+    wb_ko_r: 0.1
+    wb_ko_q: 0.1
+    # false = GMO integrates the commanded wrench (the Python-validated
+    # behaviour, what the parity fixtures encode). true = the allocator's
+    # achieved wrench (anti-windup A/B — L1-fork precedent).
+    wb_gmo_use_achieved: false
+    # Start DIRECT's observer from what SAFETY already knows instead of from
+    # zero. Not a control term: the law is untouched, only the estimator's
+    # initial condition. Only the TRANSLATIONAL block is seedable (the UDE is
+    # a 3-DOF force estimate), so the rotational and arm channels still start
+    # at zero.
+    wb_seed_disturbance_from_ude: false
+    wb_omega_e_ff: false
+    # EE REFERENCE ANCHOR (2026-09-09). false = the manuscript's world-fixed
+    # r_ed as streamed. true = the planned EE offset FROM THE CoM is held
+    # (r_ed + e_x, derivative chain + e_vx / + e_ax), so the impedance closes
+    # on the RELATIVE error e_y - [e_x; 0]. Motivation, measured: every
+    # posture-PID-off abort on this rig starts with a 0.8-1.3 m DIRECT-entry
+    # base transient against a ~5 cm arm workspace -- the world-anchored EE
+    # reference is unreachable, the arm is driven into its stops and across
+    # the elbow-singular branch. The CoM anchor makes the task feasible
+    # throughout, which is what the posture PID was standing in for.
+    wb_ee_anchor_com: true
+    # INTERNAL-DISTURBANCE FEEDFORWARD IN u3 (2026-09-09). The manuscript's
+    # d_e is the contact wrench only, so u3 pre-compensates the base wrench u
+    # alone. With an internal disturbance (thrust deficit, CoM moment) the net
+    # base wrench is u + d_int, and leaving d_int out renders the phantom
+    # (J_y^#)^T d_int on the EE impedance: measured offline as a steady
+    # ~2 N / K_y arm deflection (103 mm at K_y = 20). true adds the observer's
+    # filtered estimate to the coupling feedforward.
+    wb_u3_internal_ff: true
+    # Source of that feedforward: false = the filtered lumped estimate (exact
+    # in free flight, also cancels a contact wrench); true = the L1 note's
+    # Step-2 INTERNAL estimate T^-T w_hat (eq. u3_int in the note), which
+    # leaves the contact wrench to the impedance. Ignored on the GMO path.
+    wb_u3_internal_ff_use_w_hat: false
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 3.6 L1 ADAPTIVE AUGMENTED DISTURBANCE OBSERVER
+    # ══════════════════════════════════════════════════════════════════════
+    # THE ONE THING THIS FILE CHANGES. Everything above is the GMO config,
+    # unchanged, so that a difference between the two rigs is the estimator.
+    #
+    # WHAT IT REPLACES. The GMO's update law is d_hat = K_o (p - p_hat) on the
+    # predictor p_hat_dot = h + u + d_hat, which makes d_hat a first-order
+    # low-pass of the true residual at bandwidth K_o [rad/s]. One gain buys
+    # BOTH accuracy and robustness, which is why §3.5's K_o is pinned at 0.5
+    # and 0.1: raising the six body channels to 1.0 crashed the rig (the
+    # observer books the 99.7 ms rotor lag as a phantom disturbance).
+    #
+    # The L1 law splits those two jobs:
+    #   Layer 1  a DEADBEAT piecewise-constant inversion of the predictor
+    #            error. Its accuracy is set by the sample period alone
+    #            (2*L_Sigma*T_s, uniform in t) and is NOT filtered.
+    #   Layer 2  an explicit low-pass C(s) = omega_c/(s + omega_c) on the way
+    #            into the control loops, which is the ONLY thing that decides
+    #            robustness.
+    # So omega_c below is the direct analogue of K_o -- SAME transfer function
+    # into f_d and u_2 -- and the interesting question this rig exists to
+    # answer is how much higher than K_o it can be pushed. Start matched.
+    #
+    # WHAT IT ADDS. The GMO can only offer u3 the LUMPED task force
+    # (J_y^#)^T (d_hat + d_hat_e), because a momentum residual measures only
+    # the sum: the internal disturbance arrives at the impedance law as a
+    # PHANTOM CONTACT FORCE and the controller renders compliance against a
+    # force the environment never applied. The L1 path attributes it, using
+    # the four directions of the residual no wrench can reach (N(J_e), the
+    # arm self-motions). wb_l1_decompose is that switch.
+    #
+    # Derivation: "Decompose the lumped disturbances into end-effector and
+    # orthogonal components" (working note, 2026-08-27). Implementation +
+    # every measured number quoted here: wb_l1_observer.hpp and its Python
+    # reference fsc_PegasusSimulator .../utils_controller/l1_observer.py.
+    # Parity-locked to 1e-8 by WbL1ParityTest.
+    #
+    # ── which estimator runs ──────────────────────────────────────────────
+    # "gmo" here would make this file behave EXACTLY like its parent, which
+    # is the intended way to run the A/B control case on this same node.
+    wb_l1_observer_type: "l1"
+
+    # ── Layer 1: the deadbeat inversion ───────────────────────────────────
+    # A_s = -diag(a) is the predictor pole. With wb_l1_adapt_period_s = 0 the
+    # adaptation fires every 4 ms tick, the deadbeat cancellation is exact and
+    # A_s DROPS OUT of the estimate entirely -- it only weights the average
+    # within one interval, which is the note's own Remark. It becomes a live
+    # knob only when the estimate is HELD longer than a tick, which is also
+    # the only way to buy down the 1/T_s noise gain of the momentum
+    # difference. Treat wb_l1_a_* and wb_l1_adapt_period_s as ONE trade.
+    #
+    # In simulation the state is noise-free, so N = 1 is right and a_* is
+    # inert. On hardware, expect to hold (e.g. 0.020 s, N = 5) and then a_*
+    # matters.
+    wb_l1_a_t: 2.0
+    wb_l1_a_r: 2.0
+    wb_l1_a_q: 2.0
+    wb_l1_adapt_period_s: 0.0
+
+    # ── Layer 2: the filter that sets robustness ──────────────────────────
+    # THE TUNING KNOB, and these values are the SWEPT WINNER, not a guess.
+    # Four 110 s DIRECT flights on this exact plant, 2026-09-06
+    # (docs/docs_aerial_manipulator/l1_observer_20260906/, scored by
+    # wb_l1_metrics.py; full tables in "L1 Augmented Disturbance Observer.md"):
+    #
+    #   omega_c        rise90  entry sag  recovery  steady CoM  |e_R|   tilt pp
+    #   GMO K_o .5/.1/.1  2.86s    463 mm    49.3 s     4.59 mm  .0885   0.108
+    #   = K_o             3.28s    428 mm    49.2 s     3.17 mm  .0934   0.337
+    #   2 / 0.5 / 0.5     1.38s    187 mm    21.0 s     1.65 mm  .0059   0.564
+    #   6 / 2   / 1       0.73s     69 mm     never    52.01 mm  .2615  22.242
+    #
+    # At omega_c = K_o the two estimators are indistinguishable, as they must
+    # be: both reach f_d and u_2 through the same first-order omega/(s+omega).
+    # 2 / 0.5 / 0.5 is 4-5x the GMO's ceiling and improves every metric at
+    # once, with zero saturation.
+    #
+    # 6 / 2 / 1 IS PAST THE LIMIT and fails the way the theory says: the best
+    # ENTRY of the four (0.73 s rise, 69 mm sag) followed by a 22 deg
+    # peak-to-peak limit cycle, d_hat_z swinging -5..-20 N against its own
+    # bound, and 10.4% of samples on the joint clamp. 6 rad/s sits on the
+    # 10.03 rad/s MN4010 rotor-lag pole with DDS transport on top -- the same
+    # mechanism that capped the GMO at K_o = 1.0.
+    #
+    # NOT RESOLVED: that run raised all three channel groups together, so
+    # which one binds is unknown. The limit is between (2, .5, .5) and
+    # (6, 2, 1); sweeping the three groups separately is the next experiment,
+    # and the translational channel -- the one carrying the 10.8 N -- may well
+    # tolerate more than the rotational one.
+    #
+    # ONE FLIGHT PER POINT. Near a stability boundary on this rig that proves
+    # nothing (the 2026-08-10 run-to-run-scatter lesson); repeat the 2 / .5 /
+    # .5 point before trusting it on hardware.
+    wb_l1_omega_c_t: 2.0
+    wb_l1_omega_c_r: 0.5
+    wb_l1_omega_c_q: 0.5
+
+    # ── the attribution chain ─────────────────────────────────────────────
+    # omega_i is the null-channel observer's bandwidth: it sets how fast the
+    # internal estimate converges, NOT where to (measured: the fixed point is
+    # identical from 0.2 to 10 rad/s). omega_x filters the wrench estimate and
+    # must sit well above it.
+    wb_l1_omega_i: 2.0
+    wb_l1_omega_x: 20.0
+
+    # THE PRIOR-VARIANCE METRIC, AND WHY IT IS NOT 1/1/1.
+    # The innovation is 4 numbers against 8 unknown actuator errors, so where
+    # the correction is booked is a choice. The note's L_c = B_a G^+ makes it
+    # by MINIMUM NORM, which on this plant compares newtons of collective
+    # against newton-metres of joint torque: the collective's coupling into
+    # the wrench-free rows is a_3 ~ 0.1 (metres of EE lift per joint radian)
+    # against the joints' exact 1.0, so a 5.5 N thrust deficit and a ~10x
+    # smaller joint torque explain the SAME innovation and minimum-norm picks
+    # the joint torque. Measured on this model: 0.04 N of a true 5.5 N found,
+    # and the attributed EE force came out 4.5x WORSE than not decomposing.
+    #
+    # These three are the diagonal of W in L_c = B_a W G^T (G W G^T)^-1. Every
+    # property the note's proof uses survives for any W > 0. Read them as "a
+    # thrust error of 10 N is as plausible as a 0.5 N.m body moment or a
+    # 0.05 N.m joint torque". Measured with these: 4.90 N of the true 5.5 N
+    # found on a STATIC arm, phantom EE force halved, and a real contact
+    # wrench recovered to ~0.6 N.
+    #
+    # Do NOT expect arm motion to substitute for this. The note's persistency
+    # -of-excitation remedy is real but useless here: a vigorous 60 s sweep
+    # gives an averaged projector with eigenvalues down to 4e-4, so the weak
+    # directions converge 2500x slower than omega_i, and 400 s of sweeping
+    # moved the collective estimate from -0.04 to -0.30 N.
+    #
+    # THE ONE SHIPPED NUMBER THE 2026-09-06 CAMPAIGN DID NOT TEST is lc_var_q.
+    # Every flight ran with sim_arm_backemf_enable false, so there was no
+    # joint-space disturbance at all; 0.0025 tells the observer a joint-torque
+    # error is implausible, which is exactly wrong once the back-EMF droop is
+    # switched on. RAISE IT with the droop.
+    wb_l1_lc_var_f: 100.0
+    wb_l1_lc_var_m: 0.25
+    wb_l1_lc_var_q: 0.0025
+
+    # true  = u3 gets the ATTRIBUTED task force (the note's whole point)
+    # false = u3 gets the GMO's own lumped (J_y^#)^T d_hat, on the L1 estimate
+    # The A/B that separates the note's two ideas. Run both.
+    wb_l1_decompose: true
+
+    # ── bounds ────────────────────────────────────────────────────────────
+    # Not tuning knobs -- a bound the estimate must never need. Sized against
+    # what this rig's injections actually ask for: the +15% kf and the x1.10
+    # mass together ask for 10.8 N of collective (measured), the 10 mm CoM
+    # shift ~0.37 N.m of pitch. If the estimate rails, the plant is not what
+    # the config says it is -- OR the filter is too fast: at omega_c = 6 the
+    # estimate limit-cycled onto the 20 N bound for 4.6% of samples, and the
+    # bound is what kept that run from diverging. debug [88] counts channels
+    # on a bound; on a healthy configuration it reads 0 (measured 0 at
+    # omega_c = K_o and at 2 / 0.5 / 0.5).
+    wb_l1_max_force_n: 20.0
+    wb_l1_max_torque_nm: 2.0
+    wb_l1_max_joint_nm: 1.5
+    wb_l1_max_wrench_force_n: 15.0
+    wb_l1_max_wrench_torque_nm: 3.0
+    # SAFETY: the velocity-based UDE (type in §0, bounds and height gate in §2).
+    ude_gain: 0.45
+
+    # ══════════════════════════════════════════════════════════════════════
+    # 4. ACTUATION
+    # ══════════════════════════════════════════════════════════════════════
+
+    # ────────────────────────────────────────────────────────────────────
+    # 4.1  SAFETY normalized thrust map (the PX4 path)
+    # ────────────────────────────────────────────────────────────────────
+    # RE-DERIVED 2026-08-26 at the re-anchored plant kf 4.041283e-05 and the
+    # mass in §1: T_hover/rotor 9.1875 N -> omega 476.80 rad/s -> u_hover
+    # 0.6197 (was 0.5691 on the old kf). Identical to the AM-L1 sim file's
+    # pair, same plant and same mass. Both numbers are a function of plant kf
+    # AND mass — if either moves, re-derive, do not copy.
+    vehicle_thrust_scaling: 0.038962
+    vehicle_idle_thrust: 0.261777
+
+    # ────────────────────────────────────────────────────────────────────
+    # 4.2  DIRECT wrench allocation — AM_xfwd geometry, MN4010 motors
+    # ────────────────────────────────────────────────────────────────────
+    # The believed thrust coefficient is NOT here: it is the deliberate +15%
+    # mismatch and lives in §1 with the other realistic factors.
+    #
+    # km TRACKS THE PLANT, THE INJECTION DOES NOT. alloc_rotor*_km is the true
+    # c_plant/kf_plant = 2.474152e-06/4.041283e-05 = 0.0612219, so the single
+    # alloc_thrust_coeff injection scales thrust AND yaw by the same factor.
+    # Leaving km on the old 0.052867 would have delivered yaw at 0.965 of
+    # command while thrust sat at 0.833 — a silent cross-axis asymmetry.
+    alloc_rotor0_px: 0.22990663
+    alloc_rotor0_py: 0.22990663
+    alloc_rotor0_km: 0.0612219
+    alloc_rotor1_px: -0.22990663
+    alloc_rotor1_py: -0.22990663
+    alloc_rotor1_km: 0.0612219
+    alloc_rotor2_px: 0.22990663
+    alloc_rotor2_py: -0.22990663
+    alloc_rotor2_km: -0.0612219
+    alloc_rotor3_px: -0.22990663
+    alloc_rotor3_py: 0.22990663
+    alloc_rotor3_km: -0.0612219
+    # Output map: rotor speed limits and the normalized motor command range.
+    alloc_omega_idle: 64.0603
+    alloc_omega_max: 730.0507
+    alloc_motor_idle: 0.0
+    alloc_motor_max: 1.0
+
+# ============================================================================
+# 5  WHOLE-BODY PLANNER — which planner builds a setpoint-to-setpoint transition
+# ============================================================================
+# Read by whole_body_planner.py (the stack's `whole-body planner` tmux window),
+# NOT by the C++ node. The two backends share the IK, the rest algebra and the
+# model, take the same options and return the same diag; they differ only in how
+# the transition between two rest setpoints is constructed.
+#
+#   straight_line   utils_planner/transition_planner.py. Prescribes a STRAIGHT
+#                   LINE end-effector path and SOLVES the compatible CoM by a
+#                   Picard fixed point. Flight-validated (2026-08-23) and the
+#                   whole-body planner's built-in default — which is why the hardware
+#                   yaml, saying nothing here, keeps it.
+#   bspline         utils_planner/flat_bspline_planner.py. Parameterizes the
+#                   FLAT OUTPUTS (system CoM, platform heading, joints) as
+#                   clamped B-splines and optimizes the control points.
+#
+# Why bspline is selected for simulation: compatibility stops being a fixed
+# point and becomes an identity (defect 2e-16 against 3e-7 m; endpoints exact
+# against 4e-5 m), qdot_d stops being a 1 ms finite difference, and the bounds
+# below are ENFORCED rather than verified-then-refused. It also plans in ~45 ms
+# against ~300 ms, which matters when the operator is clicking setpoints in
+# flight. NOT YET FLOWN: set straight_line to fall back, no other change.
+#
+# THE EE PATH IS NOT THE SAME. Only straight_line holds the end-effector to a
+# straight line; on a typical transition the two paths differ by ~2 cm. If a
+# transit ever has to clear something, that is the reason to switch back.
+/**/whole_body_planner:
+  ros__parameters:
+    planner: "bspline"          # "bspline" | "straight_line"
+
+    # --- kinematic bounds, honoured by BOTH backends ---------------------
+    # straight_line sizes T from min-snap peak FACTORS (an estimate of a shape
+    # it then fits); bspline sizes it in closed form from the shape's own peaks,
+    # so it hits these exactly. Same numbers either way.
+    v_max: 0.30                 # peak CoM speed              [m/s]
+    a_max: 0.15                 # peak CoM acceleration       [m/s^2]
+    w_max: 0.30                 # peak rate, any angle channel [rad/s]
+    t_min: 3.0                  # never faster than this      [s]
+
+    # --- bspline only ----------------------------------------------------
+    dw_max: 0.60                # peak angular acceleration   [rad/s^2]
+    t_max: 40.0                 # refuse rather than crawl    [s]
+    # Joint-torque bound. MUST equal wb_tau_max above (and the arm
+    # controller's clamp, and 06's): the planner refusing at one number while
+    # the law saturates at another is the failure this shares a value to avoid.
+    # <= 0 disables the check.
+    tau_joint_max: 3.0
+    # Rotor speed bounds via inverse dynamics on the reference. This is the
+    # ONLY expensive constraint (one dynamics() call per sample, ~35 of the
+    # 45 ms); false drops the plan to ~11 ms. Measured on this plant the input
+    # peaks are 99.9% GRAVITY, so slowing down barely moves them — the check
+    # earns its cost by catching a POSE that cannot be held, not a speed.
+    rotor_bounds: true
+    # Diagnostic grid: sigma_nd (an SVD per sample), joint extrema, tilt. The
+    # whole-body planner logs min_sigma_nd from it, so do not set 0 without also
+    # accepting a blind singularity margin.
+    n_check: 101

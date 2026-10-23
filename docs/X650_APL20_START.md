@@ -23,7 +23,7 @@ The main implementation files, relative to that workspace, are:
   positions, motor spin signs, moment ratio, and motor limits.
 
 This repository owns the launcher and simulated plant. In particular,
-`scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh` starts
+`scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh` starts
 `apl20_ros/autopilot_node`, while `application/px4_base/03_px4_single_drone_x650.py` and the FSC
 X650 rotorcraft modules implement the Isaac/Pegasus side.
 
@@ -91,7 +91,7 @@ FSC_AUTOPILOT_WS="$HOME/Workspaces/fsc_autopilot_ws" \
 X650_HOVER_X=1 \
 X650_HOVER_Y=-1 \
 X650_HOVER_ALT=1.5 \
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
 ```
 
 For a vertical hover at the origin, omit the target overrides:
@@ -100,7 +100,7 @@ For a vertical hover at the origin, omit the target overrides:
 cd "$HOME/Source/fsc_PegasusSimulator"
 
 FSC_AUTOPILOT_WS="$HOME/Workspaces/fsc_autopilot_ws" \
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
 ```
 
 ## Start Headless
@@ -114,7 +114,7 @@ FSC_AUTOPILOT_WS="$HOME/Workspaces/fsc_autopilot_ws" \
 X650_HOVER_X=1 \
 X650_HOVER_Y=-1 \
 X650_HOVER_ALT=1.5 \
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh fsc_lab_machine headless
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh fsc_lab_machine headless
 ```
 
 The target coordinates use ENU: positive x is east, positive y is north, and positive z is up.

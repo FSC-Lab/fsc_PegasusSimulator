@@ -1,0 +1,1816 @@
+#!/usr/bin/env python
+"""
+06_px4_t650_aerial_manipulator_free_flight.py
+
+Author: Shiqi Gao (shiqi.gao907@gmail.com)
+
+AM-T650 WHOLE-BODY direct-actuation plant: 05's rig with the arm in TORQUE
+mode. The drone side is byte-for-byte 05's (AM_xfwd.usda, T650 motor model,
+PX4-primary, /uav_0/state/* to the external stack). What changed is ONLY who
+computes the arm torque:
+
+    fsc_autopilot_ros2 whole-body direct-actuation node   (the coupled
+        (autopilot_whole_body_direct_actuation_node,       airframe+arm law,
+         impedance + GMO, 250 Hz)                          C++ port of
+        |  joint torques [N*m]                             controller.py)
+        v
+    open_manipulator_x_custom_controller/ExternalTorqueController
+        (clamp, position-limit pull-back, stale fallback, zero-on-deactivate)
+        | effort command interfaces
+        v
+    open_manipulator_x_isaac_bridge/IsaacTopicEffortSystem
+        -> /uav_0/isaacsim_manipulator/effort_commands  (sensor_msgs/JointState)
+        <- /uav_0/isaacsim_manipulator/joint_states
+    THIS process (physics callback, 250 Hz):
+        FRESH stream  -> apply the commanded efforts (clipped +-TAU_MAX)
+        STALE/absent  -> 05's PD + gravity-comp hold at the pose latched when
+                         the stream died (spawn HOME until it ever starts) —
+                         a torque stream must never latch (a stale torque on
+                         an arm under a flying vehicle is not a hold, it is
+                         an open-loop push), so staleness reverts to the
+                         flight-validated servo-emulation law instead.
+
+The stale fallback is the third and deepest safety layer (whole-body law's
+own hold -> ExternalTorqueController's PD fallback -> this); it is what holds
+the arm before the stacks come up and after they die.
+
+Run with:
+  scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_GMO_6D_direct_actuation_sitl.sh <config>
+(starts this plant, the arm ros2_control TORQUE stack and the arm ground
+station; pairs with fsc_autopilot_ros2's
+start_whole_body_direct_actuation_t650_aerial_manipulator_stack.sh, started
+FIRST — it owns MicroXRCEAgent).
+"""
+
+import os
+import math
+import time
+
+import carb
+from isaacsim import SimulationApp
+
+# Indoor-launcher env conventions (same as 03/04):
+#   PEGASUS_HEADLESS=1       run without a window
+#   PEGASUS_STEPS=N          stop after N physics steps (smoke tests)
+#   PEGASUS_PX4_LOCKSTEP=0   disable lockstep — REQUIRED for the DIRECT
+#                            wall-clock DDS path; the SITL launcher pushes it
+#                            onto the tmux server (an export alone is discarded
+#                            when a tmux server already exists).
+#   PEGASUS_ARM_FRICTION_SCALE   gearbox friction on the plant, x the report's
+#                            identified level (0 = off; 1.05 = 5 % more than
+#                            the arm controller compensates), 2026-09-14
+#   PEGASUS_ARM_FRICTION_WIDTH   its tanh half-width, rad/s (default 0.015)
+#   PEGASUS_ARM_MASS_SCALE       arm link masses x this, every model nominal
+#   PEGASUS_EE_MARKER_CUBE=1     weld a 200 g mocap-marker cube into the gripper
+#                                (obj_0 -> /obj_0/mocap = the MEASURED EE pose)
+#   PEGASUS_EE_MARKER_CUBE_MASS  its mass, kg (default 0.2)
+#   PEGASUS_PROFILE_START=S      (2026-10-01) S wall seconds after play, measure
+#                                the real-time factor over PEGASUS_PROFILE_STEPS
+#                                world.step() calls (default 1500), then repeat
+#                                the window under cProfile; writes
+#                                PEGASUS_PROFILE_OUT(.prof/.txt). 0/unset = off.
+#   PEGASUS_REALTIME=1           (2026-10-01) pace the loop so simulated time never
+#                                runs AHEAD of the wall clock (RTF capped at 1),
+#                                and print the achieved RTF every 10 s. For the
+#                                wall-clock controllers, a sim that can keep up
+#                                (headless runs at ~1.01 on shiqi-desktop since the
+#                                lazy g_arm below) is then exactly real time.
+HEADLESS = os.environ.get("PEGASUS_HEADLESS", "0") == "1"
+REALTIME = os.environ.get("PEGASUS_REALTIME", "0") == "1"
+#   PEGASUS_RENDER_EVERY=N       (2026-10-01, windowed runs only) step physics ONE 4 ms
+#                                step at a time and draw a frame every N steps, instead of
+#                                world.step(render=True), which advances 4 physics steps per
+#                                frame in one burst (16 ms of plant time per call, so the
+#                                pacer can only hold the wall clock at that granularity). The
+#                                one windowed RTF-1 flight on the burst step crashed (a 1.55 Hz
+#                                roll mode grew in hover); the single-step re-flight completed --
+#                                n=1 each, the cause is NOT isolated (Command.md 7.23). Default 8
+#                                (30 Hz drawing) when PEGASUS_REALTIME=1, else 0 (the burst step).
+RENDER_EVERY = int(os.environ.get("PEGASUS_RENDER_EVERY", "") or (8 if REALTIME else 0))
+PROFILE_START = float(os.environ.get("PEGASUS_PROFILE_START", "0") or 0.0)
+PROFILE_STEPS = int(os.environ.get("PEGASUS_PROFILE_STEPS", "1500") or 1500)
+PROFILE_OUT = (os.environ.get("PEGASUS_PROFILE_OUT", "") or
+               os.path.expanduser("~/.cache/pegasus_profile/06_profile"))
+STEP_LIMIT = int(os.environ.get("PEGASUS_STEPS", "0"))
+PX4_LOCKSTEP = os.environ.get("PEGASUS_PX4_LOCKSTEP", "1") == "1"
+EXPECTED_TOTAL_MASS = os.environ.get("PEGASUS_EXPECTED_TOTAL_MASS", "").strip()
+# ARM SERVO MODEL (2026-09-09, superseding the 2026-09-03 back-EMF droop). The
+# arm controller now closes a 1.5 Hz software CURRENT LOOP around Dynamixel
+# Mode 16, which removes the droop bias — j2's torque delivery 93.3 -> 99.4 %,
+# j3's 87.5 -> 91.8 % — and leaves a zero-mean residual current error. That
+# residual is the whole of the model now, and it is PER JOINT: the loop ships
+# on j2/j3 only (it chases noise on j1/j4), so the two UNTRIMMED joints are the
+# NOISY ones — in-band 11 / 4.4 / 6.8 / 11 mA rms.
+#   current   the arm as it is today: residual current noise, no droop
+#   ideal     an exact torque source, for the A/B
+# `or "current"`, not a get() default: the launcher bakes the variable into the
+# Isaac pane unconditionally, so an unset knob arrives as the EMPTY STRING.
+ARM_SERVO_MODEL = (os.environ.get("PEGASUS_ARM_SERVO_MODEL", "") or "current").strip().lower()
+# Residual current error left by the closed loop, normally forwarded by the
+# launcher out of the paired controller yaml's sim_arm_current_noise_* keys.
+#   _A       rms of I_measured - I_commanded, AMPS -- one number, or four as
+#            "a1,a2,a3,a4". PER JOINT since 2026-09-11: the current loop runs
+#            on j2/j3 only, so j1/j4 keep the untrimmed residual and are the
+#            NOISIER pair (in-band bench rms 11 / 4.4 / 6.8 / 11 mA)
+#   _BW_HZ   first-order corner of that noise, Hz (the bench figure's own band)
+#   _SEED    integer seed — a run is reproducible; "none" draws from the OS
+# Empty = servo_model.py's built-in defaults.
+ARM_CURRENT_NOISE_A = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_A", "") or "").strip()
+ARM_CURRENT_NOISE_BW = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_BW_HZ", "") or "").strip()
+ARM_CURRENT_NOISE_SEED = (os.environ.get("PEGASUS_ARM_CURRENT_NOISE_SEED", "") or "").strip()
+# COUNT <-> TORQUE TRANSFORMATION (2026-09-08). The real command is an int16
+# Goal PWM register, not a torque: the chain converts N.m to counts with the
+# calibration it BELIEVES and the winding makes torque per count according to
+# the calibration that is TRUE. "1" routes the command through that register
+# (truncation toward zero + the +-885 rail); the two count lists, "c1,c2,c3,c4"
+# in counts per N.m, are the same quantity the arm repo calls
+# nm_to_effort_joints. Normally forwarded by the launcher out of the paired
+# controller yaml's sim_arm_counts_* keys. Empty = servo_model.py's calibrated
+# NM_TO_COUNTS on both sides, i.e. a perfectly calibrated arm.
+ARM_COUNTS_ENABLE = (os.environ.get("PEGASUS_ARM_COUNTS_ENABLE", "") or "0").strip() == "1"
+ARM_COUNTS_NOMINAL = (os.environ.get("PEGASUS_ARM_COUNTS_NOMINAL", "") or "").strip()
+ARM_COUNTS_TRUE = (os.environ.get("PEGASUS_ARM_COUNTS_TRUE", "") or "").strip()
+# GEARBOX FRICTION and ARM GRAVITY MISMATCH (2026-09-14). The calibration
+# report's friction (eq. 5) on the plant, scaled: 0 = frictionless (every
+# earlier rig), 1.0 = exactly what the arm controller's feed-forward pays,
+# 1.05 = 5 % more than compensated. The arm link masses (and inertias) scaled
+# by PEGASUS_ARM_MASS_SCALE while every model -- the flight law's, the arm
+# controller's and this file's own hold -- keeps the nominal arm, so 1.05 is a
+# 5 % gravity-compensation error. Forwarded by the launcher from the paired
+# yaml's sim_arm_friction_* / sim_arm_mass_scale keys.
+ARM_FRICTION_SCALE = (os.environ.get("PEGASUS_ARM_FRICTION_SCALE", "") or "").strip()
+ARM_FRICTION_WIDTH = (os.environ.get("PEGASUS_ARM_FRICTION_WIDTH", "") or "").strip()
+ARM_MASS_SCALE = (os.environ.get("PEGASUS_ARM_MASS_SCALE", "") or "").strip()
+simulation_app = SimulationApp({"headless": HEADLESS})
+
+# ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
+import numpy as np
+import omni.usd
+import omni.timeline
+from omni.isaac.core.world import World
+from omni.isaac.dynamic_control import _dynamic_control
+from pxr import Usd, UsdPhysics, PhysxSchema, Gf
+
+from scipy.spatial.transform import Rotation
+
+from pegasus.simulator.params import SIMULATION_ENVIRONMENTS
+from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
+from pegasus.simulator.logic.backends.px4_mavlink_backend import (
+    PX4MavlinkBackend, PX4MavlinkBackendConfig)
+from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
+
+from fsc_aerial_manipulation.utils import (add_dome_lighting, author_inertia_tensor,
+                                           read_inertia_tensor)
+from fsc_aerial_manipulation.rotorcraft.x650_rotorcraft_utils import (
+    print_mass_inertia_properties,
+    print_rotor_positions,
+)
+from fsc_aerial_manipulation.rotorcraft import t650_params
+from fsc_aerial_manipulation.rotorcraft.lagged_thrust_curve import LaggedQuadraticThrustCurve
+from fsc_aerial_manipulation.robotic_arm.utils_vehicle.x650_multirotor import (
+    MultirotorMod, MultirotorConfig)
+from fsc_aerial_manipulation.robotic_arm.utils_controller import controller as C
+from fsc_aerial_manipulation.robotic_arm.servo_model import (
+    DynamixelPwmServo, CURRENT_NOISE_A, CURRENT_NOISE_BW_HZ)
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  CONFIG (identical to 04 unless marked ARM-ROS2)                         ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+import fsc_aerial_manipulation.rotorcraft as _fsc_rotorcraft
+ASSETS_DIR = os.path.join(os.path.dirname(_fsc_rotorcraft.__file__), "assets")
+USD_FILE   = os.path.join(ASSETS_DIR, "AM_xfwd.usda")
+USD_PRIM_PATH     = "/gripper_bat"
+BODY_PATH         = "/body"
+# CHANNEL REMAP, load-bearing — see 04's header comment.
+ROTOR_PATHS       = ["/rotor0", "/rotor1", "/rotor3", "/rotor2"]
+ROTOR_JOINT_NAMES = ["joint0", "joint1", "joint3", "joint2"]
+ARM_JOINT_NAMES   = ["manip_joint1", "manip_joint2", "manip_joint3", "manip_joint4"]
+GRIPPER_JOINT     = "gripper_joint"
+GRIPPER_REST_DEG  = 0.0
+
+SPAWN_POS   = (0.0, 0.0, 0.5)
+SPAWN_EULER = (0.0, 0.0, 0.0)
+VEHICLE_ID  = 0
+GROUND_BODY_Z = 0.305
+
+# Spawn pose = the aerial home every fsc_open_manipulator aerial config uses
+# ([0, 40, 40, 0] deg). The PositionController's activation homing is then a
+# no-op, and until ROS 2 commands flow this process holds exactly like 04.
+Q_HOME = np.radians([0.0, 40.0, 40.0, 0.0])
+
+# ── ARM-ROS2: the SIMULATED SERVO BUS (must match the IsaacTopicSystem params
+# in open_manipulator_x_isaac_bridge/urdf/open_manipulator_x_isaac_aerial.urdf).
+# These two topics stand in for the Dynamixel/U2D2 serial link and exist ONLY
+# in simulation — hence the `isaacsim_manipulator` prefix, which marks
+# everything the SIMULATOR owns. On real hardware the bus is the wire and
+# nothing under it is published. Everything the REAL ARM STACK owns lives under
+# `/uav_0/fsc_open_manipulator/...` (joint_states from joint_state_broadcaster,
+# the controller's own topics) and is identical in sim and on hardware; that is
+# the whole point of the split, so do NOT let an application subscribe here.
+# States/commands are matched BY NAME using the controller-side joint names,
+# so neither side depends on the other's ordering.
+# NOTE: `effort` below is the applied joint torque in N*m. The hardware
+# backend reports raw Dynamixel counts on the same field — see
+# docs/docs_aerial_manipulator/Arm Topic Naming.md.
+ARM_ROS_JOINT_NAMES = ["joint1", "joint2", "joint3", "joint4"]
+ARM_STATE_TOPIC     = "/uav_0/isaacsim_manipulator/joint_states"
+# The name Arm Topic Naming.md reserved for torque mode — written ONLY by
+# IsaacTopicEffortSystem, read ONLY by this plant.
+ARM_EFFORT_TOPIC    = "/uav_0/isaacsim_manipulator/effort_commands"
+# --- ARM COMMAND MODE (2026-09-18) ------------------------------------------
+# PEGASUS_ARM_COMMAND_MODE = effort (default, every existing rig bit-identical)
+#                          | position
+# `position` makes THIS plant the DECOUPLED rig's too: the arm is commanded by
+# the position-mode ros2_control stack (IsaacTopicSystem, 05's bus) and the
+# PD + gravity-comp servo emulation tracks the streamed
+# isaacsim_manipulator/position_commands -- 05's emulation, but through the
+# SAME servo model (current-loop residual, gearbox friction, arm-mass and
+# body injections) as the torque-mode arm, so the whole-body and decoupled
+# controllers meet an identical plant. The emulation additionally carries an
+# INTEGRAL term (a Dynamixel position servo has one; it is what absorbs the
+# gearbox friction that the torque-mode stack feeds forward instead).
+ARM_COMMAND_MODE    = (os.environ.get("PEGASUS_ARM_COMMAND_MODE", "") or "effort").strip().lower()
+if ARM_COMMAND_MODE not in ("effort", "position"):
+    raise SystemExit(f"PEGASUS_ARM_COMMAND_MODE must be effort or position (got '{ARM_COMMAND_MODE}')")
+ARM_POSITION_TOPIC  = "/uav_0/isaacsim_manipulator/position_commands"
+ARM_POS_KI          = 2.0    # [N·m/(rad·s)] servo-integrator emulation, position mode only
+ARM_POS_I_MAX       = 0.35   # [N·m] anti-windup clamp (below the friction+gravity residual it absorbs)
+
+# --- GRIPPER BUS (2026-09-25) ------------------------------------------------
+# The gripper's simulated servo bus, beside the arm's. The Isaac arm stack runs
+# no ros2_control gripper interface; open_manipulator_x_isaac_bridge's
+# isaac_gripper_action_server serves gripper_controller/gripper_cmd (the action
+# the ground station's OPEN/CLOSE and the PS4 pad's L1/R1 call) and writes the
+# hub-angle target here. This plant slews the gripper_joint drive toward it --
+# 01_aerial_manipulator_track's proven pattern on this same joint (OPEN = the
+# authored rest 0 deg, CLOSED = -50 deg, 0.5 rad/s) -- and publishes the joint
+# back. Before this, the drive was pinned at 0 deg and nothing could move it.
+GRIPPER_CMD_TOPIC   = "/uav_0/isaacsim_manipulator/gripper_command"   # std_msgs/Float64 [rad]
+GRIPPER_STATE_TOPIC = "/uav_0/isaacsim_manipulator/gripper_state"     # sensor_msgs/JointState
+GRIPPER_LIMIT_RAD   = math.radians(50.0)   # the joint's authored limits
+GRIPPER_RATE        = 0.5                  # [rad/s] slew, = 01's open/close ramp
+GRIPPER_STATE_DIV   = 5                    # publish every 5th physics step (50 Hz at 250 Hz)
+
+# --- PLANNED-TRAJECTORY VISUALISATION (2026-09-04, user request) -----------
+# BLUE  = the drone reference path (the system CoM the law tracks) + an arrow
+#         along the vehicle's NOSE.
+# RED   = the end-effector reference path + an arrow along the GRIPPER AXIS,
+#         where the claw actually aims (tilts ~10 deg down at the home pose).
+# Both arrows come from the whole-body planner already converted. It does NOT send the
+# law's own b1_d/b1_de: those are MODEL-frame x-axes and the model frame is the
+# actual one yawed by -90, so drawing them raw put the drone's heading arrow
+# 90 deg off its nose (2026-09-04). The conversion belongs on the whole-body planner's
+# side, where the frame boundary already lives.
+# The data is the whole-body planner's own reference, already in the WORLD frame and
+# already sampled, arriving as a plain Float64MultiArray (12 doubles per
+# sample: x_cd, nose, r_ed, claw). Deliberately not WholeBodyReference: this
+# process has core message packages only, and re-deriving the model<->actual
+# frame conversion here would put a second copy of the whole-body planner's frame
+# boundary somewhere with no business owning one.
+TRAJ_VIZ            = os.environ.get("PEGASUS_TRAJ_VIZ", "1") == "1"
+VIZ_PATH_TOPIC      = "/uav_0/whole_body_planner/viz_path"
+VIZ_POSE_TOPIC      = "/uav_0/whole_body_planner/viz_pose"
+VIZ_BLUE            = (0.20, 0.55, 1.00, 1.0)
+VIZ_RED             = (1.00, 0.25, 0.25, 1.0)
+VIZ_CURVE_WIDTH     = 3.0
+VIZ_ARROW_WIDTH     = 6.0
+VIZ_ARROW_DRONE     = 0.45      # m, heading arrow length on the vehicle
+VIZ_ARROW_EE        = 0.22      # m, shorter so it reads as the smaller body
+VIZ_REDRAW_STEPS    = 8         # debug_draw is cleared and rebuilt each time
+# External-torque freshness: stale after this sim-time age (matches the
+# ExternalTorqueController's command_timeout_s), re-engage only after this
+# many consecutive fresh commands (hysteresis — no chattering at the
+# boundary between the torque stream and the PD hold).
+CMD_FRESH_S   = 0.3
+REARM_FRESH_N = 3
+
+# ── ROBUSTNESS INJECTION: PLANT-SIDE MODEL UNCERTAINTY (2026-09-05) ──────────
+# The controller's model is the shipped one; the PLANT is perturbed, which is
+# what "model uncertainty" means physically and keeps the controller config
+# honest. Set from section 1 of the whole-body sim yaml and forwarded by the
+# launcher. 1.0 / 0.0 = nominal, i.e. every existing rig is bit-identical.
+def _envf(name, default):
+    v = (os.environ.get(name) or "").strip()
+    if not v:
+        return default
+    try:
+        return float(v)
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] {name} must be a number, got '{v}'")
+
+
+# ── EE MARKER CUBE (2026-09-18, user request) ────────────────────────────────
+# PEGASUS_EE_MARKER_CUBE=1 welds a small cube into the gripper at spawn and
+# publishes its rigid-body state as `obj_0` (state/pose, state/twist,
+# state/twist_inertial), which the OptiTrack emulator turns into /obj_0/mocap:
+# the END-EFFECTOR'S MEASURED POSE, ground truth for the arm ground station's
+# "EE (Meas)" triad. It is at the same time an UNMODELLED EE PAYLOAD -- no
+# controller, planner or hold in this process knows about it, which is the
+# test. Default 0 = every existing rig bit-identical.
+EE_MARKER_CUBE      = (os.environ.get("PEGASUS_EE_MARKER_CUBE", "") or "0").strip() == "1"
+EE_MARKER_CUBE_MASS = _envf("PEGASUS_EE_MARKER_CUBE_MASS", 0.2)      # [kg]
+EE_MARKER_CUBE_SIDE = 0.03                                            # [m]
+EE_MARKER_GRASP_DEPTH = 0.108     # [m] wrist -> grasp point, = transition_planner.GRIPPER_OFF_WRIST
+EE_MARKER_BODY      = "obj_0"            # the mocap rigid-body name the stack expects
+EE_MARKER_PRIM      = "/World/ee_marker_cube"
+EE_MARKER_JOINT     = "/World/ee_marker_cube_weld"
+# The gripper hangs off the wrist-roll link, which the asset names
+# `manip_base` (manip_joint4's child; the fingers ride on `hub` below it).
+EE_MARKER_WRIST_LINK = "/manip_base"
+EE_MARKER_PAD_LINKS  = ("/left_grip", "/right_grip")
+# The cube's BODY FRAME is the end-effector frame the trajectory planner
+# publishes as current_ee ("EE (FK)", its eeFrameQuat): x = the claw axis (the
+# wrist's -z), y = the wrist's -x, z = the gripper's up (the wrist's +y). This
+# is the wrist -> EE rotation, columns in wrist coordinates. Welding the bare
+# wrist frame instead drew "EE (Meas)" 120 deg off "EE (FK)" (2026-09-20) -- the
+# sim equivalent of defining the mocap rigid body on the gripper's axes, which
+# is what a hardware rigid body needs too for the two triads to coincide.
+EE_MARKER_R_WRIST_EE = np.array([[0.0, -1.0, 0.0],
+                                 [0.0,  0.0, 1.0],
+                                 [-1.0, 0.0, 0.0]])
+
+PLANT_MASS_SCALE    = _envf("PEGASUS_PLANT_MASS_SCALE", 1.0)
+PLANT_INERTIA_SCALE = _envf("PEGASUS_PLANT_INERTIA_SCALE", 1.0)
+PLANT_COM_SHIFT = np.array([_envf("PEGASUS_PLANT_COM_SHIFT_X", 0.0),
+                            _envf("PEGASUS_PLANT_COM_SHIFT_Y", 0.0),
+                            _envf("PEGASUS_PLANT_COM_SHIFT_Z", 0.0)], float)
+
+# PLANT-SIDE THRUST-CONSTANT ERROR. 1.0 = the calibrated MN4010 constant.
+#
+# WHY THIS EXISTS RATHER THAN JUST DETUNING alloc_thrust_coeff. Injecting the
+# k_f error on the CONTROLLER's allocator makes it DIRECT-only, because SAFETY
+# does not go through that allocator -- it commands a normalised setpoint
+# through vehicle_thrust_scaling/idle_thrust. The two modes then fly different
+# plants: measured on this rig, SAFETY sees 3.67 N of mismatch and DIRECT sees
+# 10.81 N. That asymmetry is not physical (a real k_f error lives in both
+# models) and it is what makes the SAFETY->DIRECT handover so violent, since
+# nothing SAFETY learned can be handed over. Scaling the PLANT instead makes
+# the error symmetric and representative of hardware.
+PLANT_KF_SCALE = _envf("PEGASUS_PLANT_KF_SCALE", 1.0)
+
+# ── SIM-TO-REAL MIRROR KNOBS (2026-09-26, sim2real_tuning_20260926) ─────────
+# Every one of these defaults to "off" = the plant exactly as before. They
+# exist so the mirror config (..._l1_4d_..._sim.yaml) can carry what the
+# 0918/0921/0924 flights identified and the older knobs could not express.
+#   PEGASUS_PLANT_KM_SCALE        x on the rotors' yaw (rolling-moment)
+#                                 coefficient ALONE. kf and c are one number
+#                                 each in t650_params, and the flown yaw
+#                                 authority is a different fraction of its
+#                                 calibration than the thrust is.
+#   PEGASUS_PLANT_ROTOR_LAMBDA    rotor spin-up bandwidth [1/s], replaces the
+#                                 MN4010 bench value (an effective lag that
+#                                 also stands in for unmodelled dead time).
+#   PEGASUS_PLANT_KF_SAG_PER_MIN  battery sag: fractional kf loss per MINUTE
+#                                 airborne, kf(t) = kf0 (1 - r t/60); the
+#                                 flights measured -2.6..-4.5 %/min at ~20 A.
+#   PEGASUS_PLANT_FORCE_BIAS      "fx,fy,fz"  body-fixed FLU force  [N]   and
+#   PEGASUS_PLANT_TORQUE_BIAS     "tx,ty,tz"  body-fixed FLU torque [N.m]
+#                                 applied to the body every physics step: the
+#                                 standing wrench the real airframe carries
+#                                 (thrust-axis tilt, prop/motor asymmetry)
+#                                 that a symmetric rotor model cannot make.
+#   PEGASUS_ARM_VEL_LAG_S         first-order lag on the joint velocity 06
+#                                 REPORTS (not on the physics): the Dynamixel
+#                                 Present Velocity the flight law consumes is
+#                                 ~48 ms behind the encoder.
+#   PEGASUS_ARM_VEL_QUANT         its quantum [rad/s] (0.024 = 0.229 rpm).
+#   PEGASUS_ARM_ARMATURE          the servos' reflected rotor inertia, PhysX joint
+#                                 armature [kg m^2], one number or "j1,j2,j3,j4".
+#                                 Unset = 0.020 on every joint (the MATLAB guess
+#                                 every run before 2026-09-26 flew); the mirror
+#                                 yaml carries the ground-bench calibration
+#                                 0.010,0.0194,0.0097,0.0097 (sim_arm_armature_j*).
+PLANT_KM_SCALE = _envf("PEGASUS_PLANT_KM_SCALE", 1.0)
+PLANT_ROTOR_LAMBDA = _envf("PEGASUS_PLANT_ROTOR_LAMBDA", float(t650_params.ROTOR_LAMBDA))
+PLANT_KF_SAG_PER_MIN = _envf("PEGASUS_PLANT_KF_SAG_PER_MIN", 0.0)
+
+
+def _env3(name):
+    v = (os.environ.get(name) or "").strip()
+    if not v:
+        return np.zeros(3)
+    parts = [x.strip() for x in v.split(",")]
+    if len(parts) != 3:
+        raise SystemExit(f"[AM-T650-WB] {name} must be three numbers 'x,y,z' (got {v!r})")
+    try:
+        return np.array([float(x) for x in parts], float)
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] {name} must be three numbers 'x,y,z' (got {v!r})")
+
+
+PLANT_FORCE_BIAS = _env3("PEGASUS_PLANT_FORCE_BIAS")
+PLANT_TORQUE_BIAS = _env3("PEGASUS_PLANT_TORQUE_BIAS")
+ARM_VEL_LAG_S = _envf("PEGASUS_ARM_VEL_LAG_S", 0.0)
+ARM_VEL_QUANT = _envf("PEGASUS_ARM_VEL_QUANT", 0.0)
+for _nm, _v in (("PEGASUS_PLANT_KM_SCALE", PLANT_KM_SCALE), ("PEGASUS_PLANT_ROTOR_LAMBDA", PLANT_ROTOR_LAMBDA)):
+    if _v <= 0.0:
+        raise SystemExit(f"[AM-T650-WB] {_nm} must be > 0")
+if PLANT_KF_SAG_PER_MIN < 0.0 or ARM_VEL_LAG_S < 0.0 or ARM_VEL_QUANT < 0.0:
+    raise SystemExit("[AM-T650-WB] PEGASUS_PLANT_KF_SAG_PER_MIN, PEGASUS_ARM_VEL_LAG_S and "
+                     "PEGASUS_ARM_VEL_QUANT must be >= 0")
+
+T650_BODY_MASS    = float(t650_params.BODY_MASS)
+# Full 3x3 tensor, not the diagonal: it may carry products of inertia, which USD can only
+# store as diagonalInertia + principalAxes (see utils.author_inertia_tensor).
+T650_BODY_INERTIA = np.asarray(t650_params.INERTIA_TENSOR, float)
+
+# ── STALE-FALLBACK law: 04's flight-validated hold (PD + gravity comp) ──────
+ARM_HOLD_KP   = 3.0    # [N·m/rad]
+ARM_HOLD_KD   = 0.25   # [N·m·s/rad]
+ARM_HOLD_RATE = 0.5    # [rad/s] reference slew — transparent to the position
+                       # controller's <= 0.2 rad/s min-jerk moves; caps the step
+                       # if something publishes a raw far-away target directly
+TAU_MAX       = 3.0    # [N·m] — one number with the wb yaml, the
+                       # ExternalTorqueController and servo_model.py's
+                       # TAU_CAP_CURRENT; keep the four together
+ARM_ARMATURE_DEFAULT = 353.5 ** 2 * 1.6e-7
+_arm_armature_raw = (os.environ.get("PEGASUS_ARM_ARMATURE") or "").strip()
+if _arm_armature_raw:
+    try:
+        _aa = [float(x) for x in _arm_armature_raw.split(",")]
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_ARMATURE must be one number or four "
+                         f"'j1,j2,j3,j4' (got {_arm_armature_raw!r})")
+    if len(_aa) == 1:
+        _aa = _aa * 4
+    if len(_aa) != 4 or min(_aa) <= 0.0:
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_ARMATURE needs 1 or 4 values > 0 "
+                         f"(got {_arm_armature_raw!r})")
+    ARM_ARMATURE_J = np.array(_aa, float)
+else:
+    ARM_ARMATURE_J = np.full(4, ARM_ARMATURE_DEFAULT)
+# the smallest a joint can present (the friction model's momentum clamp)
+ARM_ARMATURE = float(ARM_ARMATURE_J.min())
+
+# ── ARM SERVO: the plant between the commanded torque and the applied one ───
+# Isaac applies a commanded effort exactly; the real XM430s do not, even with
+# the current loop closed. See servo_model.py for the bench measurement.
+# `ideal` keeps the exact torque source for an A/B.
+def _float_env(raw, name, lo=0.0):
+    """One number, or four as "v1,v2,v3,v4" -- per joint. None when unset.
+
+    The four-value form exists because the arm's current loop is per joint
+    (``current_loop_bandwidth_hz_joints`` [0, 1.5, 1.5, 0]), so the residual it
+    leaves behind is per joint too.
+    """
+    if not raw:
+        return None
+    parts = [x.strip() for x in raw.split(",")]
+    if len(parts) not in (1, 4):
+        raise SystemExit(f"[AM-T650-WB] {name} must be one number or four as "
+                         f"'v1,v2,v3,v4' (got {raw!r})")
+    try:
+        v = np.array([float(x) for x in parts], float)
+    except ValueError:
+        v = np.array([float("nan")])
+    if not np.all(np.isfinite(v)) or np.any(v < lo):
+        raise SystemExit(f"[AM-T650-WB] {name} must be finite and "
+                         f">= {lo:g} (got {raw!r})")
+    return float(v[0]) if v.size == 1 else v
+
+
+_NOISE_A = _float_env(ARM_CURRENT_NOISE_A, "PEGASUS_ARM_CURRENT_NOISE_A")
+_NOISE_BW = _float_env(ARM_CURRENT_NOISE_BW, "PEGASUS_ARM_CURRENT_NOISE_BW_HZ")
+if ARM_CURRENT_NOISE_SEED.lower() in ("", "none"):
+    _NOISE_SEED = None if ARM_CURRENT_NOISE_SEED.lower() == "none" else 0
+else:
+    try:
+        _NOISE_SEED = int(ARM_CURRENT_NOISE_SEED)
+    except ValueError:
+        raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_CURRENT_NOISE_SEED must be "
+                         f"an integer or 'none' (got {ARM_CURRENT_NOISE_SEED!r})")
+
+
+def _counts_env(raw, name):
+    """Parse "c1,c2,c3,c4" counts per N.m, or None when unset."""
+    if not raw:
+        return None
+    try:
+        v = np.array([float(x) for x in raw.split(",")], float)
+    except ValueError:
+        v = np.empty(0)
+    if v.shape != (4,) or not np.all(np.isfinite(v)) or np.any(v <= 0.0):
+        raise SystemExit(f"[AM-T650-WB] {name} must be four finite positive "
+                         f"numbers 'c1,c2,c3,c4' in counts per N·m (got {raw!r})")
+    return v
+
+
+_COUNTS_NOMINAL = _counts_env(ARM_COUNTS_NOMINAL, "PEGASUS_ARM_COUNTS_NOMINAL")
+_COUNTS_TRUE = _counts_env(ARM_COUNTS_TRUE, "PEGASUS_ARM_COUNTS_TRUE")
+def _scalar_env(raw, name, default):
+    v = _float_env(raw, name)
+    if v is None:
+        return default
+    if not np.isscalar(v):
+        raise SystemExit(f"[AM-T650-WB] {name} must be ONE number (got {raw!r})")
+    return float(v)
+
+
+# One scale or four ("j1,j2,j3,j4"): the 0924 flights identified j2 and j3 at
+# different fractions of the report's model (sim2real_tuning_20260926).
+_FRICTION_SCALE = _float_env(ARM_FRICTION_SCALE, "PEGASUS_ARM_FRICTION_SCALE")
+_FRICTION_SCALE = 0.0 if _FRICTION_SCALE is None else _FRICTION_SCALE
+if np.any(np.asarray(_FRICTION_SCALE) < 0.0):
+    raise SystemExit("[AM-T650-WB] PEGASUS_ARM_FRICTION_SCALE must be >= 0")
+_FRICTION_WIDTH = _float_env(ARM_FRICTION_WIDTH, "PEGASUS_ARM_FRICTION_WIDTH")
+if _FRICTION_WIDTH is not None and (not np.isscalar(_FRICTION_WIDTH) or _FRICTION_WIDTH <= 0.0):
+    raise SystemExit("[AM-T650-WB] PEGASUS_ARM_FRICTION_WIDTH must be ONE number > 0")
+ARM_MASS_SCALE_F = _scalar_env(ARM_MASS_SCALE, "PEGASUS_ARM_MASS_SCALE", 1.0)
+if ARM_MASS_SCALE_F <= 0.0:
+    raise SystemExit("[AM-T650-WB] PEGASUS_ARM_MASS_SCALE must be > 0")
+# The digital path engages if the register is modelled OR the two calibrations
+# disagree; either alone is a real effect, and both default to off/matched.
+_DIGITAL = dict(quantize=ARM_COUNTS_ENABLE,
+                nm_to_counts_nominal=_COUNTS_NOMINAL,
+                nm_to_counts_true=_COUNTS_TRUE)
+# The gearbox is downstream of the winding, so its friction applies in BOTH
+# servo modes: `ideal` means an exact ELECTROMAGNETIC torque source, and a
+# frictionless plant is friction_scale 0, not `ideal`. The momentum clamp uses
+# the armature this file authors (ARM_ARMATURE), the smallest inertia a joint
+# can present.
+_FRICTION = dict(friction_scale=_FRICTION_SCALE,
+                 inertia_min=ARM_ARMATURE,
+                 **({"friction_width": _FRICTION_WIDTH} if _FRICTION_WIDTH is not None else {}))
+
+if ARM_SERVO_MODEL == "ideal":
+    # `ideal` switches off the CURRENT NOISE, nothing else. The count↔torque
+    # register is an independent effect with its own switch, so it still
+    # applies here — the two must stay orthogonal or one knob silently
+    # disables the other (measured 2026-09-08: with the yaml's servo switch
+    # off, a +10% calibration injection reached the launcher, was reported
+    # ACTIVE, and then did nothing at all).
+    ARM_SERVO = DynamixelPwmServo(tau_cap=np.full(4, TAU_MAX),
+                                  current_noise_a=0.0, **_DIGITAL, **_FRICTION)
+elif ARM_SERVO_MODEL == "current":
+    ARM_SERVO = DynamixelPwmServo(
+        tau_cap=np.full(4, TAU_MAX),
+        current_noise_a=CURRENT_NOISE_A if _NOISE_A is None else _NOISE_A,
+        current_noise_bw_hz=(CURRENT_NOISE_BW_HZ if _NOISE_BW is None
+                             else _NOISE_BW),
+        seed=_NOISE_SEED, **_DIGITAL, **_FRICTION)
+elif ARM_SERVO_MODEL in ("pwm", "pwm_0903"):
+    raise SystemExit(
+        f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL={ARM_SERVO_MODEL!r} is GONE "
+        f"(2026-09-09). Those modelled the back-EMF droop, which the arm "
+        f"controller's 1.5 Hz current loop removes; the plant now models the "
+        f"loop's residual current error instead. Use 'current' (or 'ideal').")
+else:
+    raise SystemExit(f"[AM-T650-WB] PEGASUS_ARM_SERVO_MODEL must be one of "
+                     f"'current', 'ideal' (got {ARM_SERVO_MODEL!r})")
+
+R_MODEL = np.array([[0.0, 1.0, 0.0],
+                    [-1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0]])   # frame adapter, see 04
+
+STATUS_PERIOD_S = 5.0
+
+
+def _rot_to_quat_wxyz(R):
+    """Rotation matrix → quaternion (w, x, y, z). Shepperd's method (03's)."""
+    tr = np.trace(R)
+    if tr > 0.0:
+        s = 2.0 * np.sqrt(tr + 1.0)
+        q = [0.25 * s, (R[2, 1] - R[1, 2]) / s,
+             (R[0, 2] - R[2, 0]) / s, (R[1, 0] - R[0, 1]) / s]
+    elif R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2])
+        q = [(R[2, 1] - R[1, 2]) / s, 0.25 * s,
+             (R[0, 1] + R[1, 0]) / s, (R[0, 2] + R[2, 0]) / s]
+    elif R[1, 1] > R[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2])
+        q = [(R[0, 2] - R[2, 0]) / s, (R[0, 1] + R[1, 0]) / s,
+             0.25 * s, (R[1, 2] + R[2, 1]) / s]
+    else:
+        s = 2.0 * np.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1])
+        q = [(R[1, 0] - R[0, 1]) / s, (R[0, 2] + R[2, 0]) / s,
+             (R[1, 2] + R[2, 1]) / s, 0.25 * s]
+    q = np.asarray(q, float)
+    return q / np.linalg.norm(q)
+
+
+class AmT650WholeBodyArmSim:
+    """05's plant with the arm TORQUE owned by the external whole-body stack."""
+
+    def __init__(self):
+        self.timeline = omni.timeline.get_timeline_interface()
+
+        # --- Pegasus world + environment ------------------------------------
+        self.pg        = PegasusInterface()
+        self.pg._world = World(**self.pg._world_settings)
+        self.world     = self.pg.world
+        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
+        self._raise_physx_gpu_capacity()
+
+        stage = omni.usd.get_context().get_stage()
+        add_dome_lighting(stage=stage, dome_path="/World/DomeLight",
+                          intensity=2500.0, exposure=0.0, color=(1.0, 1.0, 1.0))
+
+        # --- Spawn (PX4-PRIMARY) --------------------------------------------
+        self.drone_path = self._spawn_am_px4_primary()
+
+        self._wait_for_prim(self.drone_path, max_frames=300)
+        self._dedupe_physics_scenes()
+        self._disable_self_collisions()
+        self._disable_rotor_colliders()
+        self._apply_t650_body_override()
+        self._apply_arm_mass_injection()
+        self._setup_gripper_drive()
+        self.world.reset()
+        self.stage = omni.usd.get_context().get_stage()
+
+        print_mass_inertia_properties(self.stage, self.drone_path)
+        print_rotor_positions(self.stage, self.drone_path, ROTOR_PATHS)
+
+        # --- DC (body pose/twist) + core Articulation API (arm) -------------
+        self._dc   = _dynamic_control.acquire_dynamic_control_interface()
+        self._body = self._dc.get_rigid_body(self.drone_path + BODY_PATH)
+        from omni.isaac.core.articulations import Articulation
+        self._art = Articulation(prim_path=self.drone_path)
+        self._art.initialize()
+        names = list(self._art.dof_names)
+        self._arm_idx  = [names.index(nm) for nm in ARM_JOINT_NAMES]
+        self._grip_idx = names.index(GRIPPER_JOINT) if GRIPPER_JOINT in names else None
+        print(f"[AM-T650-WB] core Articulation API active; arm dof indices "
+              f"{self._arm_idx}, gripper dof {self._grip_idx}", flush=True)
+
+        # --- Control model (gravity comp only) ------------------------------
+        self.params = C.make_params()
+        if getattr(self, "_body_dm", 0.0):
+            self.params["m_i"][0] += self._body_dm
+            if self._body_dI is not None:
+                # _body_dI is already a 3x3 tensor delta — do NOT np.diag() it (on a 2-D
+                # input that EXTRACTS the diagonal instead of building a matrix).
+                self.params["I_i_i"][0] = self.params["I_i_i"][0] + self._body_dI
+            print(f"[AM-T650-WB] control model mirrored: m0="
+                  f"{self.params['m_i'][0]:.6f} kg, m_total="
+                  f"{sum(self.params['m_i']):.6f} kg (hover thrust "
+                  f"{sum(self.params['m_i']) * self.params['g']:.2f} N)", flush=True)
+
+        # --- Arm spawn at HOME + rigid re-seat + ground seat (04's sequence) -
+        beta_spawn = float(Q_HOME[1] + Q_HOME[2])
+        if beta_spawn < math.radians(40.0):
+            print(f"[AM-T650-WB] WARNING: spawn fold beta = "
+                  f"{math.degrees(beta_spawn):.1f} deg is SHALLOW — a "
+                  f"ground-seated vehicle with an unfolded arm rests on its "
+                  f"gripper and tips over.", flush=True)
+        pose_a = self._dc.get_rigid_body_pose(self._body)
+        self._art.set_joint_positions(Q_HOME, joint_indices=self._arm_idx)
+        self._art.set_joint_velocities(np.zeros(len(self._arm_idx)),
+                                       joint_indices=self._arm_idx)
+        pose_b = self._dc.get_rigid_body_pose(self._body)
+        Ra = C.quat_to_rot(pose_a.r.w, pose_a.r.x, pose_a.r.y, pose_a.r.z)
+        Rb = C.quat_to_rot(pose_b.r.w, pose_b.r.x, pose_b.r.y, pose_b.r.z)
+        pa = np.array([pose_a.p.x, pose_a.p.y, pose_a.p.z])
+        pb = np.array([pose_b.p.x, pose_b.p.y, pose_b.p.z])
+        R_corr = Ra @ Rb.T
+        p_corr = pa - R_corr @ pb
+        pr, qr = self._art.get_world_pose()
+        self._art.set_world_pose(
+            position=R_corr @ np.asarray(pr, float) + p_corr,
+            orientation=_rot_to_quat_wxyz(R_corr @ C.quat_to_rot(*np.asarray(qr, float))))
+        print(f"[AM-T650-WB] arm spawned at HOME q = "
+              f"{np.degrees(Q_HOME).round(1)} deg (body re-seated: teleport "
+              f"moved it {np.linalg.norm(pb - pa):.3f} m)", flush=True)
+
+        pose_g = self._dc.get_rigid_body_pose(self._body)
+        dz = GROUND_BODY_Z - float(pose_g.p.z)
+        pr, qr = self._art.get_world_pose()
+        self._art.set_world_pose(
+            position=np.asarray(pr, float) + np.array([0.0, 0.0, dz]))
+        print(f"[AM-T650-WB] ground-seated: body z {pose_g.p.z:.3f} -> "
+              f"{GROUND_BODY_Z:.3f} m (dz={dz:+.3f})", flush=True)
+
+        # AFTER the re-seat and the ground seat: the cube is placed where the
+        # gripper actually ended up, and a weld authored before a teleport of
+        # the articulation would be torn open by it.
+        if EE_MARKER_CUBE:
+            self._spawn_ee_marker_cube()
+
+        # --- Arm actuation: TRUE effort control from the start ---------------
+        self._set_arm_armature()
+        actrl = self._art.get_articulation_controller()
+        for i in self._arm_idx:
+            actrl.switch_dof_control_mode(dof_index=i, mode="effort")
+        _from_yaml = (ARM_CURRENT_NOISE_A or ARM_CURRENT_NOISE_BW)
+        print(f"[AM-T650-WB] arm servo model '{ARM_SERVO_MODEL}'"
+              f"{' (noise from the controller yaml)' if _from_yaml else ''}: "
+              f"current-loop residual "
+              f"{np.round(ARM_SERVO.current_noise_a * 1e3, 2).tolist()} mA rms @ "
+              f"{np.round(ARM_SERVO.current_noise_bw_hz, 2).tolist()} Hz = "
+              f"{np.round(ARM_SERVO.torque_noise_nm() * 1e3, 1).tolist()} mN·m rms, "
+              f"seed {ARM_SERVO.seed}, "
+              f"ceiling {np.round(ARM_SERVO.tau_cap, 3).tolist()} N·m",
+              flush=True)
+        if ARM_SERVO_MODEL == "ideal":
+            print("\033[1;33m[AM-T650-WB] arm is an EXACT torque source — the "
+                  "current-loop residual is OFF. A/B baseline, not the arm.\033[0m",
+                  flush=True)
+        # COUNT <-> TORQUE. Always print the verdict: a silent pass and a knob
+        # that never reached the plant look identical otherwise (the 0824
+        # lesson from the hardware-yaml guard).
+        if ARM_SERVO.digital:
+            g = ARM_SERVO.gain_error
+            print(f"[AM-T650-WB] COUNT↔TORQUE PATH ACTIVE: register "
+                  f"{'quantized (trunc toward zero) + ±%g rail' % ARM_SERVO.pwm_full_scale if ARM_SERVO.quantize else 'continuous'}"
+                  f", 1 count = "
+                  f"{np.round(ARM_SERVO.quantum_nm() * 1e3, 2).tolist()} mN·m",
+                  flush=True)
+            print(f"[AM-T650-WB]   counts/N·m nominal "
+                  f"{ARM_SERVO.nm_to_counts_nominal.tolist()} vs true "
+                  f"{ARM_SERVO.nm_to_counts_true.tolist()}", flush=True)
+            if not np.allclose(g, 1.0):
+                print(f"\033[1;31m[AM-T650-WB]   ARM CALIBRATION MISMATCH: the "
+                      f"joints deliver {np.round(g * 100.0, 1).tolist()} % of "
+                      f"every commanded N·m. The controller is NOT told; this "
+                      f"IS the effect under test.\033[0m", flush=True)
+                # The current error becomes torque through the TRUE Kt, so the
+                # noise moves with this too — report it rather than leaving the
+                # banner's figure (computed on the same true constant) unexplained.
+                print(f"[AM-T650-WB]   NOTE the current-loop residual is worth "
+                      f"{np.round(ARM_SERVO.torque_noise_nm() * 1e3, 2).tolist()} "
+                      f"mN·m at the TRUE calibration", flush=True)
+        else:
+            print("[AM-T650-WB] count↔torque path OFF: the arm command stays a "
+                  "continuous torque (perfect calibration, no register)",
+                  flush=True)
+        # GEARBOX FRICTION. Print the verdict either way, like the count path.
+        if ARM_SERVO.has_friction:
+            lvl_home = ARM_SERVO.friction_coulomb_nm(np.array([0.0, 0.70, 0.24, 0.0]))
+            fs_txt = (f"{ARM_SERVO.friction_scale[0]:g}" if np.ptp(ARM_SERVO.friction_scale) == 0.0
+                      else f"{np.round(ARM_SERVO.friction_scale, 3).tolist()} per joint")
+            print(f"\033[1;31m[AM-T650-WB] GEARBOX FRICTION ACTIVE x{fs_txt}: "
+                  f"[fc + mu|tau|] tanh(qd/{ARM_SERVO.friction_width:g}) with fc "
+                  f"{np.round(ARM_SERVO.friction_fc * 1e3, 1).tolist()} mN·m, mu "
+                  f"{ARM_SERVO.friction_mu.tolist()} -- at the home hold load that is "
+                  f"{np.round(lvl_home * 1e3, 1).tolist()} mN·m per joint, of which the "
+                  f"arm controller's feed-forward pays 1.00x the report's model. "
+                  f"Momentum-clamped at I_min {ARM_SERVO.inertia_min:.4f} kg·m².\033[0m",
+                  flush=True)
+        else:
+            print("[AM-T650-WB] gearbox friction OFF (friction_scale 0): the plant "
+                  "loses nothing in the gearbox. If the arm controller's friction "
+                  "feed-forward is on, it is a pure disturbance here.", flush=True)
+        print("[AM-T650-WB] arm dofs in effort mode; EXTERNAL TORQUE "
+              f"(clip ±{TAU_MAX} N·m, fresh < {CMD_FRESH_S}s) with PD+gravity "
+              f"fallback KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} on a stale stream",
+              flush=True)
+
+        # --- ARM-ROS2: bridge node (position commands in, joint states out) --
+        self._setup_arm_ros2_bridge()
+
+        self._hold_ref = None            # slewed fallback reference
+        self._q_hold_target = Q_HOME.copy()  # fallback pose (latched at stale edge)
+        self._tau_cmd = np.zeros(len(self._arm_idx))  # latest external torque
+        self._cmd_stamp_t = None         # sim time the last torque arrived
+        self._n_cmds = 0
+        self._ext_active = False         # torque stream has authority
+        self._fresh_count = 0            # consecutive fresh commands (re-arm)
+        self._tau_applied = np.zeros(len(self._arm_idx))
+        self._tau_cmd_applied = np.zeros(len(self._arm_idx))
+        self._qd_rep = np.zeros(len(self._arm_idx))   # reported-velocity lag state
+        self._t = 0.0
+        self._status_t = -1e9
+        self.stop_sim = False
+        carb.log_info("[AM-T650-WB] ready")
+
+    # ── ARM-ROS2 bridge ─────────────────────────────────────────────────────
+
+    def _setup_arm_ros2_bridge(self):
+        """rclpy pub/sub for the arm — the Isaac side of IsaacTopicSystem.
+
+        The Pegasus ROS2Backend already initialised rclpy (its own node
+        publishes /uav_0/state/*); this node is separate and uniquely named,
+        per the one-node-per-instance rule.
+        """
+        import rclpy
+        from rclpy.node import Node as RclpyNode
+        from sensor_msgs.msg import JointState
+
+        try:
+            rclpy.init()
+        except Exception:
+            pass  # already initialised is not an error
+
+        self._JointState = JointState
+        self._rclpy = rclpy
+        self._arm_node = RclpyNode(f"isaac_arm_torque_plant_{VEHICLE_ID}")
+        self._arm_state_pub = self._arm_node.create_publisher(
+            JointState, ARM_STATE_TOPIC, 10)
+
+        # --- gripper bus ------------------------------------------------------
+        self._grip_cmd = math.radians(GRIPPER_REST_DEG)     # latest command [rad]
+        self._grip_tgt = self._grip_cmd                     # slewed drive target
+        self._grip_tgt_sent = None
+        self._grip_n = 0
+        if self._grip_idx is not None:
+            from std_msgs.msg import Float64
+            self._grip_sub = self._arm_node.create_subscription(
+                Float64, GRIPPER_CMD_TOPIC, self._on_gripper_command, 10)
+            self._grip_state_pub = self._arm_node.create_publisher(
+                JointState, GRIPPER_STATE_TOPIC, 10)
+            print(f"[AM-T650-WB] GRIPPER bus: {GRIPPER_CMD_TOPIC} -> gripper_joint drive "
+                  f"(slew {GRIPPER_RATE} rad/s, +-{math.degrees(GRIPPER_LIMIT_RAD):.0f} deg), "
+                  f"state on {GRIPPER_STATE_TOPIC}", flush=True)
+        if ARM_COMMAND_MODE == "position":
+            self._q_cmd = Q_HOME.copy()          # latest position command (latched)
+            self._i_pos = np.zeros(4)
+            self._arm_pos_sub = self._arm_node.create_subscription(
+                JointState, ARM_POSITION_TOPIC, self._on_arm_position, 10)
+            print(f"[AM-T650-WB] ARM COMMAND MODE = POSITION: servo emulation tracking "
+                  f"{ARM_POSITION_TOPIC} (KP={ARM_HOLD_KP} KD={ARM_HOLD_KD} KI={ARM_POS_KI} "
+                  f"clamp {TAU_MAX} N·m) through the servo model; the effort bus is NOT subscribed",
+                  flush=True)
+        else:
+            self._arm_eff_sub = self._arm_node.create_subscription(
+                JointState, ARM_EFFORT_TOPIC, self._on_arm_effort, 10)
+            # Once, at bring-up. (2026-09-06 to 2026-09-25 this print sat at the
+            # end of _draw_trajectory, i.e. it fired on EVERY viz callback --
+            # ~8-20 lines/s that scrolled the status line out of the pane's
+            # 2000-line history within a minute and hid the pre-flip record
+            # of the 2026-09-25 flip.)
+            print(f"[AM-T650-WB] arm ROS2 bridge up: states -> {ARM_STATE_TOPIC}, "
+                  f"efforts <- {ARM_EFFORT_TOPIC} (names {ARM_ROS_JOINT_NAMES})",
+                  flush=True)
+
+        # --- planned-trajectory visualisation -------------------------------
+        self._viz_path = None       # (N, 12) world-frame samples of the plan
+        self._viz_pose = None       # (12,)  the current reference sample
+        self._draw = None
+        self._draw_ok = False
+        if TRAJ_VIZ and not HEADLESS:
+            from std_msgs.msg import Float64MultiArray
+            from rclpy.qos import (DurabilityPolicy, QoSProfile,
+                                   ReliabilityPolicy)
+            # The path is LATCHED on the whole-body planner's side, so match it or a
+            # plan made before Isaac subscribed never arrives.
+            latched = QoSProfile(depth=1,
+                                 reliability=ReliabilityPolicy.RELIABLE,
+                                 durability=DurabilityPolicy.TRANSIENT_LOCAL)
+            self._viz_path_sub = self._arm_node.create_subscription(
+                Float64MultiArray, VIZ_PATH_TOPIC, self._on_viz_path, latched)
+            self._viz_pose_sub = self._arm_node.create_subscription(
+                Float64MultiArray, VIZ_POSE_TOPIC, self._on_viz_pose, 10)
+            self._acquire_debug_draw()
+
+    def _acquire_debug_draw(self):
+        """debug_draw moved namespaces across Isaac versions; try both and
+        enable the extension first in case it is present but not loaded.
+        Degrades to no drawing rather than taking the sim down with it."""
+        import importlib
+        try:
+            from omni.isaac.core.utils.extensions import enable_extension
+        except Exception:
+            enable_extension = None
+        last = None
+        for ext in ("omni.isaac.debug_draw", "isaacsim.util.debug_draw"):
+            try:
+                if enable_extension is not None:
+                    try:
+                        enable_extension(ext)
+                    except Exception:
+                        pass
+                self._draw = importlib.import_module(
+                    ext + "._debug_draw").acquire_debug_draw_interface()
+                print(f"[AM-T650-WB] trajectory viz: {ext} acquired "
+                      f"(BLUE = drone, RED = end-effector)", flush=True)
+                return
+            except Exception as exc:
+                last = exc
+        print(f"[AM-T650-WB] trajectory viz: no debug_draw module — "
+              f"curves off ({last})", flush=True)
+
+    def _on_viz_path(self, msg):
+        d = np.asarray(msg.data, float)
+        self._viz_path = (d.reshape(-1, 12)
+                          if d.size >= 12 and d.size % 12 == 0 else None)
+
+    def _on_viz_pose(self, msg):
+        d = np.asarray(msg.data, float)
+        self._viz_pose = d if d.size == 12 else None
+
+    @staticmethod
+    def _arrow_lines(p, direction, length, starts, ends):
+        """Shaft + two head strokes for one arrow."""
+        d = np.asarray(direction, float)
+        n = float(np.linalg.norm(d))
+        if not np.isfinite(n) or n < 1e-9:
+            return
+        u = d / n
+        p = np.asarray(p, float)
+        tip = p + length * u
+        # any axis not parallel to u, so the head has a plane to open in
+        ref = np.array([0.0, 0.0, 1.0]) if abs(u[2]) < 0.9 else \
+            np.array([1.0, 0.0, 0.0])
+        perp = np.cross(u, ref)
+        perp /= (np.linalg.norm(perp) + 1e-12)
+        back = tip - 0.30 * length * u
+        starts.append(tuple(p))
+        ends.append(tuple(tip))
+        for side in (+1.0, -1.0):
+            starts.append(tuple(tip))
+            ends.append(tuple(back + side * 0.15 * length * perp))
+
+    def _draw_trajectory(self):
+        """Redraw both curves and both heading arrows. debug_draw is cleared
+        and rebuilt wholesale, so everything on screen is drawn here."""
+        if self._draw is None:
+            return
+        starts, ends, colors, widths = [], [], [], []
+        path = self._viz_path
+        if path is not None and len(path) > 1:
+            for col, o in ((VIZ_BLUE, 0), (VIZ_RED, 6)):
+                pts = path[:, o:o + 3]
+                starts.extend(tuple(v) for v in pts[:-1])
+                ends.extend(tuple(v) for v in pts[1:])
+                colors.extend([col] * (len(pts) - 1))
+                widths.extend([VIZ_CURVE_WIDTH] * (len(pts) - 1))
+        pose = self._viz_pose
+        if pose is not None:
+            for col, o, ln in ((VIZ_BLUE, 0, VIZ_ARROW_DRONE),
+                               (VIZ_RED, 6, VIZ_ARROW_EE)):
+                n0 = len(starts)
+                self._arrow_lines(pose[o:o + 3], pose[o + 3:o + 6], ln,
+                                  starts, ends)
+                added = len(starts) - n0
+                colors.extend([col] * added)
+                widths.extend([VIZ_ARROW_WIDTH] * added)
+        try:
+            self._draw.clear_lines()
+            if starts:
+                self._draw.draw_lines(starts, ends, colors, widths)
+                if not self._draw_ok:
+                    self._draw_ok = True
+                    print(f"[AM-T650-WB] trajectory viz: first draw "
+                          f"({len(starts)} segments)", flush=True)
+        except Exception as exc:
+            print(f"[AM-T650-WB] trajectory viz disabled: {exc}", flush=True)
+            self._draw = None
+
+    def _on_arm_position(self, msg):
+        # 05's semantics: match by name, latch what arrives, keep the rest.
+        q = self._q_cmd.copy()
+        matched = 0
+        names = list(msg.name)
+        for j, nm in enumerate(ARM_ROS_JOINT_NAMES):
+            try:
+                k = names.index(nm)
+            except ValueError:
+                continue
+            if k < len(msg.position) and math.isfinite(msg.position[k]):
+                q[j] = float(msg.position[k])
+                matched += 1
+        if matched:
+            self._q_cmd = q
+            self._cmd_stamp_t = self._t
+            self._n_cmds += 1
+
+    def _on_arm_effort(self, msg):
+        # Match BY NAME; reject the WHOLE message if any joint is missing or
+        # non-finite (same rule as ExternalTorqueController's own subscriber:
+        # a half-valid torque vector must never reach the arm, and rejecting
+        # keeps the staleness clock honest).
+        tau = np.zeros(len(ARM_ROS_JOINT_NAMES))
+        names = list(msg.name)
+        for j, nm in enumerate(ARM_ROS_JOINT_NAMES):
+            try:
+                k = names.index(nm)
+            except ValueError:
+                return
+            if k >= len(msg.effort) or not math.isfinite(msg.effort[k]):
+                return
+            tau[j] = float(msg.effort[k])
+        self._tau_cmd = tau
+        self._cmd_stamp_t = self._t
+        self._n_cmds += 1
+
+    def _on_gripper_command(self, msg):
+        v = float(msg.data)
+        if math.isfinite(v):
+            self._grip_cmd = max(-GRIPPER_LIMIT_RAD, min(GRIPPER_LIMIT_RAD, v))
+
+    def _step_gripper(self, dt, q_all, qd_all):
+        """Slew the gripper drive toward the command; publish its state."""
+        if self._grip_idx is None:
+            return
+        step = GRIPPER_RATE * dt
+        self._grip_tgt += max(-step, min(step, self._grip_cmd - self._grip_tgt))
+        if self._grip_tgt_sent is None or abs(self._grip_tgt - self._grip_tgt_sent) > 1e-6:
+            from omni.isaac.core.utils.types import ArticulationAction
+            self._art.get_articulation_controller().apply_action(ArticulationAction(
+                joint_positions=np.array([self._grip_tgt]),
+                joint_indices=np.array([self._grip_idx])))
+            self._grip_tgt_sent = self._grip_tgt
+        self._grip_n += 1
+        if self._grip_n % GRIPPER_STATE_DIV == 0:
+            msg = self._JointState()
+            msg.header.stamp = self._arm_node.get_clock().now().to_msg()
+            msg.name = [GRIPPER_JOINT]
+            msg.position = [float(q_all[self._grip_idx])]
+            msg.velocity = [float(qd_all[self._grip_idx])]
+            msg.effort = [0.0]
+            self._grip_state_pub.publish(msg)
+
+    def _publish_arm_state(self, q, qdot, tau):
+        msg = self._JointState()
+        msg.header.stamp = self._arm_node.get_clock().now().to_msg()
+        msg.name = list(ARM_ROS_JOINT_NAMES)
+        msg.position = [float(v) for v in q]
+        msg.velocity = [float(v) for v in qdot]
+        msg.effort = [float(v) for v in tau]
+        self._arm_state_pub.publish(msg)
+
+    # ── spawn (04's, unchanged) ─────────────────────────────────────────────
+
+    def _spawn_am_px4_primary(self):
+        """Spawn AM_xfwd with PX4 primary and the T650 motor calibration."""
+        quat_xyzw = Rotation.from_euler("XYZ", SPAWN_EULER, degrees=True).as_quat()
+
+        input_scaling = float(t650_params.MAX_ROTOR_VEL - t650_params.ZERO_POSITION_ARMED)
+        mavlink_config = PX4MavlinkBackendConfig({
+            "vehicle_id": VEHICLE_ID,
+            "connection_type": "tcpin",
+            "connection_ip": "127.0.0.1",
+            "connection_baseport": 4560,
+            "enable_lockstep": PX4_LOCKSTEP,
+            "px4_autolaunch": False,
+            "px4_dir": self.pg.px4_path,
+            "px4_vehicle_model": self.pg.px4_default_airframe,
+            "input_offset": [0.0] * 4,
+            "input_scaling": [input_scaling] * 4,
+            "zero_position_armed": [float(t650_params.ZERO_POSITION_ARMED)] * 4,
+        })
+
+        ros2_backend = ROS2Backend(
+            vehicle_id=VEHICLE_ID,
+            config={
+                "namespace": "uav_",
+                "pub_sensors": False,
+                "pub_graphical_sensors": False,
+                "pub_state": True,
+                "pub_twist": True,
+                "pub_accel": True,
+                "pub_twist_inertial": True,
+                "pub_tf": True,
+                "sub_control": False,
+            },
+        )
+
+        config = MultirotorConfig()
+        config.backends = [PX4MavlinkBackend(mavlink_config), ros2_backend]
+        self._px4_backend = config.backends[0]
+        plant_kf = float(t650_params.ROTOR_CONSTANT) * PLANT_KF_SCALE
+        plant_km = float(t650_params.ROLLING_MOMENT_COEFFICIENT) * PLANT_KM_SCALE
+        config.thrust_curve = LaggedQuadraticThrustCurve(config={
+            "rotor_constant": [plant_kf] * 4,
+            "rolling_moment_coefficient": [plant_km] * 4,
+            "min_rotor_velocity": [float(t650_params.MIN_ROTOR_VEL)] * 4,
+            "max_rotor_velocity": [float(t650_params.MAX_ROTOR_VEL)] * 4,
+            "rot_dir": [int(d) for d in t650_params.ROT_DIR],
+            "rotor_lambda": [float(PLANT_ROTOR_LAMBDA)] * 4,
+        })
+        self._thrust_curve = config.thrust_curve
+        self._plant_kf0 = plant_kf          # battery-sag reference (kf at lift-off)
+        self._t_airborne0 = None            # set when the rotors first spin up
+
+        drone_prim_path = f"/World/quadrotor_{VEHICLE_ID}"
+        MultirotorMod(
+            stage_prefix=drone_prim_path,
+            usd_file=USD_FILE,
+            vehicle_id=VEHICLE_ID,
+            init_pos=SPAWN_POS,
+            init_orientation=quat_xyzw,
+            body_path=BODY_PATH,
+            rotor_paths=ROTOR_PATHS,
+            rotor_joint_names=ROTOR_JOINT_NAMES,
+            config=config,
+            usd_prim_path=USD_PRIM_PATH,
+        )
+        print(f"[AM-T650-WB] spawned PX4-PRIMARY AM at {drone_prim_path}: MN4010 "
+              f"k_f={plant_kf:.4e}"
+              + (f" (x{PLANT_KF_SCALE:.4f} PLANT-SIDE)" if PLANT_KF_SCALE != 1.0 else "")
+              + f" "
+              f"k_m={plant_km:.4e}"
+              + (f" (x{PLANT_KM_SCALE:.4f} PLANT-SIDE)" if PLANT_KM_SCALE != 1.0 else "")
+              + f" lambda={PLANT_ROTOR_LAMBDA:g}"
+              + (f" (bench {t650_params.ROTOR_LAMBDA})" if PLANT_ROTOR_LAMBDA != float(t650_params.ROTOR_LAMBDA) else "")
+              + " "
+              f"omega=[{t650_params.MIN_ROTOR_VEL}, {t650_params.MAX_ROTOR_VEL}] "
+              f"map u->omega: x{input_scaling:.4f} "
+              f"+{t650_params.ZERO_POSITION_ARMED} | lockstep="
+              f"{'ON' if PX4_LOCKSTEP else 'OFF'}", flush=True)
+        if PLANT_KF_SAG_PER_MIN > 0.0:
+            print(f"\033[1;35m[AM-T650-WB] BATTERY SAG: k_f falls {PLANT_KF_SAG_PER_MIN*100:.2f} %/min "
+                  f"from lift-off (the 0918/0924 packs measured -2.6..-4.5 %/min).\033[0m", flush=True)
+        if np.any(PLANT_FORCE_BIAS) or np.any(PLANT_TORQUE_BIAS):
+            print(f"\033[1;35m[AM-T650-WB] STANDING WRENCH BIAS on the body (FLU): force "
+                  f"{PLANT_FORCE_BIAS.round(3).tolist()} N, torque {PLANT_TORQUE_BIAS.round(3).tolist()} N.m "
+                  f"-- the airframe asymmetry the flights' observer found.\033[0m", flush=True)
+        if ARM_VEL_LAG_S > 0.0 or ARM_VEL_QUANT > 0.0:
+            print(f"\033[1;35m[AM-T650-WB] ARM VELOCITY FEEDBACK emulates Present Velocity: "
+                  f"lag {ARM_VEL_LAG_S*1000:.0f} ms, quantum {ARM_VEL_QUANT:g} rad/s "
+                  f"(reported only; the physics and the friction model use the true rate).\033[0m", flush=True)
+        return drone_prim_path
+
+    # ── physics/model fixes (04's, unchanged) ───────────────────────────────
+
+    def _raise_physx_gpu_capacity(self):
+        stage = omni.usd.get_context().get_stage()
+        scene = next((p for p in stage.Traverse() if p.IsA(UsdPhysics.Scene)), None)
+        if scene is None:
+            return
+        api = PhysxSchema.PhysxSceneAPI.Apply(scene)
+        api.CreateGpuFoundLostAggregatePairsCapacityAttr().Set(256 * 1024)
+        api.CreateGpuTotalAggregatePairsCapacityAttr().Set(256 * 1024)
+        api.CreateGpuFoundLostPairsCapacityAttr().Set(1024 * 1024)
+        api.CreateGpuMaxRigidContactCountAttr().Set(2 * 1024 * 1024)
+        api.CreateGpuMaxRigidPatchCountAttr().Set(256 * 1024)
+
+    def _wait_for_prim(self, prim_path, max_frames=300):
+        stage = omni.usd.get_context().get_stage()
+        for _ in range(max_frames):
+            p = stage.GetPrimAtPath(prim_path)
+            if p and p.IsValid():
+                return p
+            self.world.step(render=False)
+        carb.log_error(f"[AM-T650-WB] prim never appeared: {prim_path}")
+        return None
+
+    def _dedupe_physics_scenes(self):
+        stage = omni.usd.get_context().get_stage()
+        scenes = [p for p in stage.Traverse() if p.IsA(UsdPhysics.Scene)]
+        if len(scenes) <= 1:
+            return
+        keep = next((p for p in scenes
+                     if not p.GetPath().pathString.startswith(self.drone_path)), scenes[0])
+        for p in scenes:
+            if p.GetPath() == keep.GetPath():
+                continue
+            path = p.GetPath()
+            stage.RemovePrim(path)
+            still = stage.GetPrimAtPath(path)
+            if still and still.IsValid():
+                still.SetActive(False)
+        print(f"[AM-T650-WB] kept one PhysicsScene: {keep.GetPath()}", flush=True)
+
+    def _disable_self_collisions(self):
+        stage = omni.usd.get_context().get_stage()
+        root = stage.GetPrimAtPath(self.drone_path)
+        target = next((pr for pr in Usd.PrimRange(root)
+                       if pr.HasAPI(UsdPhysics.ArticulationRootAPI)), root)
+        PhysxSchema.PhysxArticulationAPI.Apply(target).CreateEnabledSelfCollisionsAttr().Set(False)
+        print(f"[AM-T650-WB] self-collision disabled on {target.GetPath()}", flush=True)
+
+    def _disable_rotor_colliders(self):
+        stage = omni.usd.get_context().get_stage()
+        n = 0
+        for rp in ROTOR_PATHS:
+            root = stage.GetPrimAtPath(self.drone_path + rp)
+            if not root or not root.IsValid():
+                continue
+            for prim in Usd.PrimRange(root):
+                if prim.HasAPI(UsdPhysics.CollisionAPI):
+                    UsdPhysics.CollisionAPI(prim).CreateCollisionEnabledAttr().Set(False)
+                    n += 1
+        print(f"[AM-T650-WB] disabled {n} rotor collider(s).", flush=True)
+
+    def _apply_t650_body_override(self):
+        """T650 mass + inertia onto /body, live stage — see 04's docstring."""
+        self._body_dm = 0.0
+        self._body_dI = None
+
+        stage = omni.usd.get_context().get_stage()
+        body_path = self.drone_path + BODY_PATH
+        prim = stage.GetPrimAtPath(body_path)
+        if not prim or not prim.IsValid():
+            print(f"[AM-T650-WB] WARNING: body prim {body_path} not found — "
+                  f"T650 override SKIPPED", flush=True)
+            return
+
+        m_rest = 0.0
+        for p in Usd.PrimRange(stage.GetPrimAtPath(self.drone_path)):
+            if p.GetPath() == prim.GetPath() or not p.HasAPI(UsdPhysics.RigidBodyAPI):
+                continue
+            a = UsdPhysics.MassAPI(p).GetMassAttr()
+            if a and a.HasValue():
+                m_rest += float(a.Get())
+
+        mass_api = UsdPhysics.MassAPI.Apply(prim)
+        m_old = float(mass_api.GetMassAttr().Get())
+        I_attr = mass_api.GetDiagonalInertiaAttr()
+        I_old = (np.array(I_attr.Get(), float)
+                 if I_attr and I_attr.HasValue() else None)
+
+        # ROBUSTNESS INJECTION. The PLANT is perturbed; the controller's model is
+        # not. self._body_dm / _body_dI are deliberately computed from the
+        # NOMINAL values, so 06's own in-process model (the arm-hold gravity
+        # comp) keeps believing the nominal plant — the mismatch is the point.
+        # PLANT_MASS_SCALE scales the VEHICLE TOTAL, not the body: the arm and
+        # rotor links keep their authored masses, so the body carries the whole
+        # delta. Scaling the body directly would have meant only +7.9% total at
+        # a nominal +10%, and the report would have said 10% while the plant
+        # flew 7.9.
+        total_nominal = T650_BODY_MASS + m_rest
+        mass_plant = total_nominal * PLANT_MASS_SCALE - m_rest
+        inertia_plant = T650_BODY_INERTIA * PLANT_INERTIA_SCALE
+
+        mass_api.CreateMassAttr().Set(mass_plant)
+        self._body_dm = T650_BODY_MASS - m_old
+        # Authors diagonalInertia + principalAxes, the only representation USD/PhysX has —
+        # a straight diagonalInertia write would silently drop the Ixy product.
+        moments, quat = author_inertia_tensor(mass_api, inertia_plant)
+        if np.any(PLANT_COM_SHIFT):
+            com_attr = mass_api.CreateCenterOfMassAttr()
+            com_old = np.array(com_attr.Get(), float) if com_attr.HasValue() \
+                else np.zeros(3)
+            com_new = com_old + PLANT_COM_SHIFT
+            com_attr.Set(Gf.Vec3f(*com_new.astype(float)))
+            print(f"[AM-T650-WB] INJECTION body CoM {com_old.round(5)} -> "
+                  f"{com_new.round(5)} m (shift {PLANT_COM_SHIFT.round(5)})",
+                  flush=True)
+        if PLANT_MASS_SCALE != 1.0 or PLANT_INERTIA_SCALE != 1.0:
+            print(f"[AM-T650-WB] INJECTION vehicle TOTAL mass x{PLANT_MASS_SCALE:.4f} "
+                  f"({total_nominal:.6f} -> {total_nominal * PLANT_MASS_SCALE:.6f} kg; "
+                  f"body {T650_BODY_MASS:.6f} -> {mass_plant:.6f}), body inertia "
+                  f"x{PLANT_INERTIA_SCALE:.4f}. The controller still believes "
+                  f"the nominal model.", flush=True)
+        if I_old is not None:
+            self._body_dI = T650_BODY_INERTIA - np.diag(I_old)
+            print(f"[AM-T650-WB] body inertia diag {I_old.round(6)} -> "
+                  f"{np.diag(T650_BODY_INERTIA).round(6)} kg·m² (T650), "
+                  f"Ixy {T650_BODY_INERTIA[0, 1]:+.6f}; authored as principal moments "
+                  f"{moments.round(6)} + principalAxes (w,x,y,z) {quat.round(4)}",
+                  flush=True)
+        # Read the tensor back off the stage and confirm it round-trips.
+        I_stage = read_inertia_tensor(prim)
+        err = (np.abs(I_stage - T650_BODY_INERTIA).max()
+               if I_stage is not None else float("nan"))
+        print(f"[AM-T650-WB] inertia round-trip off the stage: max err {err:.2e} kg·m²",
+              flush=True)
+
+        # The consistency gate compares the NOMINAL total against what the
+        # controller believes. A deliberate mass injection must not trip it —
+        # that mismatch is the experiment, not a stale config.
+        total_mass = T650_BODY_MASS + m_rest
+        total_mass_plant = mass_plant + m_rest
+        if EXPECTED_TOTAL_MASS:
+            expected_total_mass = float(EXPECTED_TOTAL_MASS)
+            if not math.isclose(total_mass, expected_total_mass, rel_tol=0.0,
+                                abs_tol=5e-4):
+                raise RuntimeError(
+                    "AM-T650 plant/controller mass mismatch: Isaac authored "
+                    f"{total_mass:.6f} kg, but the launcher expects "
+                    f"{expected_total_mass:.6f} kg. Fix t650_params.py and the "
+                    "paired controller YAML before flight."
+                )
+
+        print(f"[AM-T650-WB] T650 MASS OVERRIDE: {body_path} {m_old:.6f} -> "
+              f"{T650_BODY_MASS:.6f} kg (delta {self._body_dm:+.6f}); "
+              f"other bodies {m_rest:.6f} kg; "
+              f"TOTAL {m_old + m_rest:.6f} -> {total_mass:.6f} kg "
+              f"(weight {total_mass * 9.81:.2f} N)"
+              + (f"; PLANT FLIES {total_mass_plant:.6f} kg "
+                 f"(weight {total_mass_plant * 9.81:.2f} N) under the "
+                 f"x{PLANT_MASS_SCALE:.4f} injection" if PLANT_MASS_SCALE != 1.0 else "")
+              + ". "
+              f"vehicle_mass in params_..._t650_aerial_manipulator.yaml MUST equal this total. "
+              f"The .usda is untouched.", flush=True)
+
+    def _apply_arm_mass_injection(self):
+        """Scale the ARM links' mass (and authored inertia) by ARM_MASS_SCALE.
+
+        A GRAVITY-COMPENSATION MISMATCH (2026-09-14). The flight law, the arm
+        controller's gravity correction and this file's own hold all keep the
+        nominal arm; the plant's arm is heavier (or lighter), so every gravity
+        feed-forward is wrong by exactly the scale. Distinct from
+        PLANT_MASS_SCALE, which moves the BODY so the vehicle total hits its
+        target and leaves the arm untouched. Applied after the body override,
+        so the nominal-total consistency gate there is unaffected -- the plant
+        total printed here is what actually flies. The links are every rigid
+        body under the vehicle that is not /body and not a rotor: the four
+        arm links and the gripper fingers.
+        """
+        self._arm_dm = 0.0
+        if ARM_MASS_SCALE_F == 1.0:
+            return
+        stage = omni.usd.get_context().get_stage()
+        body_path = self.drone_path + BODY_PATH
+        rotor_paths = {self.drone_path + r for r in ROTOR_PATHS}
+        scaled = []
+        for p in Usd.PrimRange(stage.GetPrimAtPath(self.drone_path)):
+            path = str(p.GetPath())
+            if path == body_path or path in rotor_paths or not p.HasAPI(UsdPhysics.RigidBodyAPI):
+                continue
+            mass_api = UsdPhysics.MassAPI(p)
+            m_attr = mass_api.GetMassAttr()
+            if not (m_attr and m_attr.HasValue()):
+                continue
+            m_old = float(m_attr.Get())
+            m_new = m_old * ARM_MASS_SCALE_F
+            m_attr.Set(m_new)
+            I_attr = mass_api.GetDiagonalInertiaAttr()
+            if I_attr and I_attr.HasValue():
+                I_attr.Set(Gf.Vec3f(*(np.array(I_attr.Get(), float) * ARM_MASS_SCALE_F)))
+            self._arm_dm += m_new - m_old
+            scaled.append((p.GetName(), m_old, m_new))
+        if not scaled:
+            print("[AM-T650-WB] WARNING: ARM_MASS_SCALE set but no arm link carries an "
+                  "authored mass -- nothing scaled.", flush=True)
+            return
+        m_arm_old = sum(m for _, m, _ in scaled)
+        print(f"\033[1;31m[AM-T650-WB] INJECTION arm links mass x{ARM_MASS_SCALE_F:.4f} "
+              f"({m_arm_old:.6f} -> {m_arm_old * ARM_MASS_SCALE_F:.6f} kg, "
+              f"+{self._arm_dm:.6f} kg; inertias scaled alike): "
+              + ", ".join(f"{n} {a:.4f}->{b:.4f}" for n, a, b in scaled)
+              + f". Every model keeps the nominal arm -- a {100 * (ARM_MASS_SCALE_F - 1):+.1f} % "
+              f"gravity-compensation error on every joint.\033[0m", flush=True)
+        print(f"[AM-T650-WB] PLANT TOTAL carries an extra {self._arm_dm:+.6f} kg in the arm "
+              f"on top of the body injection (the nominal-total gate above is unaffected).",
+              flush=True)
+
+    # ── EE MARKER CUBE (2026-09-18) ──────────────────────────────────────────
+    def _spawn_ee_marker_cube(self):
+        """Weld a cube into the gripper and publish it as the mocap body obj_0.
+
+        Placed at the midpoint of the two finger-pad centres of mass, in the
+        WRIST link's frame, with its body axes on the EE convention
+        (EE_MARKER_R_WRIST_EE), and held by a FIXED joint whose frames are
+        taken from the live poses -- so it is exactly satisfied at creation and
+        the marker-to-wrist pose is a constant the ground station can draw. No
+        collider on purpose: the weld carries it, and a collider inside the
+        fingers would only fight the joint.
+        """
+        from pxr import UsdGeom
+        from fsc_aerial_manipulation.utils import ROS2RigidBodyBackend
+
+        wrist_path = self.drone_path + EE_MARKER_WRIST_LINK
+        wrist = self._dc.get_rigid_body(wrist_path)
+        pads = [self._dc.get_rigid_body(self.drone_path + p) for p in EE_MARKER_PAD_LINKS]
+        if not wrist or not all(pads):
+            raise RuntimeError(
+                f"[AM-T650-WB] EE marker cube: gripper bodies not found under "
+                f"{self.drone_path} ({EE_MARKER_WRIST_LINK}, {EE_MARKER_PAD_LINKS})")
+
+        def pose(h):
+            P = self._dc.get_rigid_body_pose(h)
+            return (np.array([P.p.x, P.p.y, P.p.z]),
+                    C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z))
+
+        p_w, R_w = pose(wrist)
+        # Laterally centred between the pads (their CoM midpoint, x and y in
+        # the wrist frame), and pushed out along the gripper axis -- the
+        # wrist's -z -- to the GRASP POINT the whole-body model uses
+        # (transition_planner.GRIPPER_OFF_WRIST, 0.108 m from the wrist), so
+        # "EE (FK)" and "EE (Meas)" coincide by construction and the marker
+        # sits at the fingertips, not inside the pad plates. The pad meshes'
+        # own bounds are NOT usable for this: the flattened prototypes are
+        # not authored in the pad frame (measured 30 cm boxes, 2026-09-18).
+        pad_com = []
+        for path, h in zip(EE_MARKER_PAD_LINKS, pads):
+            p, R = pose(h)
+            com = UsdPhysics.MassAPI(self.stage.GetPrimAtPath(self.drone_path + path)) \
+                .GetCenterOfMassAttr().Get()
+            pad_com.append(R_w.T @ ((p + R @ np.array([com[0], com[1], com[2]], float)) - p_w))
+        mid = 0.5 * (pad_com[0] + pad_com[1])
+        side = float(EE_MARKER_CUBE_SIDE)
+        off_wrist = np.array([mid[0], mid[1], -EE_MARKER_GRASP_DEPTH])
+        p_c = p_w + R_w @ off_wrist
+
+        # the cube: a rigid body with mass and inertia, no collider
+        cube = UsdGeom.Cube.Define(self.stage, EE_MARKER_PRIM)
+        cube.CreateSizeAttr(side)
+        cube.CreateDisplayColorAttr([Gf.Vec3f(0.95, 0.15, 0.85)])
+        qw, qx, qy, qz = _rot_to_quat_wxyz(R_w @ EE_MARKER_R_WRIST_EE)
+        xf = UsdGeom.Xformable(cube)
+        xf.AddTranslateOp().Set(Gf.Vec3d(*map(float, p_c)))
+        xf.AddOrientOp().Set(Gf.Quatf(float(qw), Gf.Vec3f(float(qx), float(qy), float(qz))))
+        prim = cube.GetPrim()
+        UsdPhysics.RigidBodyAPI.Apply(prim)
+        mass = UsdPhysics.MassAPI.Apply(prim)
+        mass.CreateMassAttr(float(EE_MARKER_CUBE_MASS))
+        i_side = EE_MARKER_CUBE_MASS * side ** 2 / 6.0
+        mass.CreateDiagonalInertiaAttr(Gf.Vec3f(i_side, i_side, i_side))
+        mass.CreateCenterOfMassAttr(Gf.Vec3f(0.0, 0.0, 0.0))
+
+        # the weld, outside the vehicle prim so PhysX never reads it as an
+        # articulation joint
+        joint = UsdPhysics.FixedJoint.Define(self.stage, EE_MARKER_JOINT)
+        joint.CreateBody0Rel().SetTargets([wrist_path])
+        joint.CreateBody1Rel().SetTargets([EE_MARKER_PRIM])
+        joint.CreateLocalPos0Attr(Gf.Vec3f(*map(float, off_wrist)))
+        # the joint frame on the wrist side IS the cube's frame (identity on
+        # the cube side), so the weld holds cube = wrist * (off_wrist, R_wrist_ee)
+        jw, jx, jy, jz = _rot_to_quat_wxyz(EE_MARKER_R_WRIST_EE)
+        joint.CreateLocalRot0Attr(Gf.Quatf(float(jw), Gf.Vec3f(float(jx), float(jy), float(jz))))
+        joint.CreateLocalPos1Attr(Gf.Vec3f(0.0, 0.0, 0.0))
+        joint.CreateLocalRot1Attr(Gf.Quatf(1.0, Gf.Vec3f(0.0, 0.0, 0.0)))
+
+        # its state on the wire, as the payload scripts do it. The handle
+        # only exists after PhysX has seen the new prim, hence the guard.
+        class _MarkerBackend(ROS2RigidBodyBackend):
+            def update_sim_state(this, dt):
+                if not this.get_dc_interface().get_rigid_body(this.payload_path):
+                    return
+                super().update_sim_state(dt)
+
+        self._marker_backend = _MarkerBackend(
+            world=self.world, payload_path=EE_MARKER_PRIM,
+            config={"topic_prefix": EE_MARKER_BODY, "pub_state": True})
+        print(f"\033[1;35m[AM-T650-WB] EE MARKER CUBE: {EE_MARKER_CUBE_MASS*1e3:.0f} g, "
+              f"{side*1e2:.1f} cm, welded to {EE_MARKER_WRIST_LINK} at "
+              f"{np.round(off_wrist, 4).tolist()} m in the wrist frame; world "
+              f"{np.round(p_c, 3).tolist()} m -> published as {EE_MARKER_BODY}/state/* "
+              f"(mocap /{EE_MARKER_BODY}/mocap). UNMODELLED by every controller: "
+              f"the plant now weighs +{EE_MARKER_CUBE_MASS:.3f} kg at the end-effector.\033[0m",
+              flush=True)
+
+    def _setup_gripper_drive(self):
+        stage = omni.usd.get_context().get_stage()
+        root = stage.GetPrimAtPath(self.drone_path)
+        prim = next((p for p in Usd.PrimRange(root)
+                     if p.GetName() == GRIPPER_JOINT and p.IsA(UsdPhysics.RevoluteJoint)), None)
+        if prim is None:
+            print(f"[AM-T650-WB] WARNING: gripper joint '{GRIPPER_JOINT}' not found",
+                  flush=True)
+            return
+        drive = UsdPhysics.DriveAPI.Apply(prim, "angular")
+        drive.GetStiffnessAttr().Set(1e6)
+        drive.GetDampingAttr().Set(1e4)
+        drive.GetMaxForceAttr().Set(1000.0)
+        drive.GetTargetPositionAttr().Set(GRIPPER_REST_DEG)
+        print(f"[AM-T650-WB] gripper drive stiffened on {prim.GetPath()}", flush=True)
+
+    def _arm_prims(self):
+        root = self.stage.GetPrimAtPath(self.drone_path)
+        prims = {p.GetName(): p for p in Usd.PrimRange(root)
+                 if p.IsA(UsdPhysics.RevoluteJoint)}
+        return [(n, prims[n]) for n in ARM_JOINT_NAMES if n in prims]
+
+    def _set_arm_armature(self):
+        for name, prim in self._arm_prims():
+            j = ARM_JOINT_NAMES.index(name)
+            PhysxSchema.PhysxJointAPI(prim).CreateArmatureAttr().Set(float(ARM_ARMATURE_J[j]))
+        src = "PEGASUS_ARM_ARMATURE" if _arm_armature_raw else "default"
+        print(f"[AM-T650-WB] arm armature (joint-diagonal, {src}) = "
+              f"[{', '.join(f'{v:.4f}' for v in ARM_ARMATURE_J)}] kg·m²", flush=True)
+
+    # ── control step: servo emulation tracking the ROS 2 reference ──────────
+
+    def _control_step(self, step_size):
+        t0 = time.perf_counter() if PROFILE_START > 0 else 0.0
+        try:
+            self._control_step_inner(step_size)
+        except Exception as exc:
+            carb.log_error(f"[AM-T650-WB] control step: {exc}")
+        if PROFILE_START > 0:
+            self._prof_cb_s += time.perf_counter() - t0
+            self._prof_cb_n += 1
+
+    def _control_step_inner(self, dt):
+        self._t += dt
+
+        # Pump the arm bridge callbacks (non-blocking).
+        self._rclpy.spin_once(self._arm_node, timeout_sec=0.0)
+
+        pose = self._dc.get_rigid_body_pose(self._body)
+        p0 = np.array([pose.p.x, pose.p.y, pose.p.z])
+        R0 = C.quat_to_rot(pose.r.w, pose.r.x, pose.r.y, pose.r.z)
+        lin = self._dc.get_rigid_body_linear_velocity(self._body)
+        ang = self._dc.get_rigid_body_angular_velocity(self._body)
+        v0     = R0.T @ np.array([lin.x, lin.y, lin.z])
+        omega0 = R0.T @ np.array([ang.x, ang.y, ang.z])
+        q_all  = np.asarray(self._art.get_joint_positions(), float)
+        qd_all = np.asarray(self._art.get_joint_velocities(), float)
+        q    = q_all[self._arm_idx]
+        qdot = qd_all[self._arm_idx]
+        self._step_gripper(dt, q_all, qd_all)
+
+        # ── sim-to-real mirror terms (all default off) ────────────────────
+        if PLANT_KF_SAG_PER_MIN > 0.0:
+            # lift-off = the rotors first clearly above the armed idle
+            if self._t_airborne0 is None:
+                try:
+                    if np.mean(self._thrust_curve.velocity) > t650_params.ZERO_POSITION_ARMED + 50.0:
+                        self._t_airborne0 = self._t
+                except Exception:
+                    pass
+            if self._t_airborne0 is not None:
+                kf_now = self._plant_kf0 * max(0.5, 1.0 - PLANT_KF_SAG_PER_MIN
+                                                * (self._t - self._t_airborne0) / 60.0)
+                self._thrust_curve._rotor_constant = [kf_now] * 4
+        if np.any(PLANT_FORCE_BIAS):
+            self._dc.apply_body_force(self._body, carb._carb.Float3(*PLANT_FORCE_BIAS.tolist()),
+                                      carb._carb.Float3(0.0, 0.0, 0.0), False)
+        if np.any(PLANT_TORQUE_BIAS):
+            self._dc.apply_body_torque(self._body, carb._carb.Float3(*PLANT_TORQUE_BIAS.tolist()), False)
+        # the joint velocity the ARM STACK sees (Present Velocity emulation)
+        qdot_rep = qdot
+        if ARM_VEL_LAG_S > 0.0:
+            a = math.exp(-dt / ARM_VEL_LAG_S)
+            self._qd_rep = a * self._qd_rep + (1.0 - a) * qdot
+            qdot_rep = self._qd_rep
+        if ARM_VEL_QUANT > 0.0:
+            qdot_rep = np.round(qdot_rep / ARM_VEL_QUANT) * ARM_VEL_QUANT
+
+        # gravity comp at the CURRENT attitude (the servo integrator's role
+        # in the emulation) — model in AM_realign's old frame, adapt.
+        # LAZY (2026-10-01, the RTF profile): only the PD-hold branch below
+        # uses it, and the full Python dynamics() was ~3 ms of the 8.3 ms a
+        # 4 ms physics step cost -- computed and discarded every step while the
+        # external torque stream is live (the torque rigs stream in SAFETY too).
+        # Same expression, evaluated only when needed, so the values are
+        # unchanged wherever they are used.
+        # 2026-10-01: in POSITION mode the servo emulation needs this EVERY step,
+        # and the full dynamics() call alone held the decoupled rig at RTF ~0.72.
+        # _arm_gravity() is exactly dynamics(X)["g"][6:] (same sum, nothing else),
+        # checked against it on the first call.
+        def g_arm_now():
+            R0_m = R0 @ R_MODEL
+            g_fast = _arm_gravity(q, R0_m, self.params)
+            if not getattr(self, "_g_checked", False):
+                v0_m = R_MODEL.T @ v0
+                om_m = R_MODEL.T @ omega0
+                X = np.concatenate([p0, R0_m.flatten(order="F"), q, v0_m, om_m, qdot])
+                err = float(np.abs(C.dynamics(X, self.params)["g"][6:] - g_fast).max())
+                if err > 1e-9:
+                    raise SystemExit(f"_arm_gravity disagrees with controller.dynamics by {err:.3e} N.m")
+                print(f"[AM-T650-WB] arm gravity: fast path == dynamics() to {err:.1e} N.m", flush=True)
+                self._g_checked = True
+            return g_fast
+
+        # ── Torque source arbitration (hysteresis, mirrors the controller) ─
+        fresh = (self._cmd_stamp_t is not None
+                 and (self._t - self._cmd_stamp_t) < CMD_FRESH_S)
+        if ARM_COMMAND_MODE == "position":
+            # POSITION mode: the PD hold IS the servo; its target is the
+            # latched ROS 2 position command, slewed below exactly as 05 does.
+            self._q_hold_target = np.asarray(self._q_cmd, float)
+            self._ext_active = False
+            fresh = False
+        if not fresh:
+            self._fresh_count = 0
+            if self._ext_active:
+                # Stale edge: torque authority is DROPPED, never latched. Fall
+                # back to the PD+gravity hold AT THE CURRENT POSE.
+                self._ext_active = False
+                self._q_hold_target = np.asarray(q, float).copy()
+                self._hold_ref = np.asarray(q, float).copy()
+                print(f"[AM-T650-WB] external torque stream STALE at "
+                      f"t={self._t:.1f}s — PD+gravity hold at "
+                      f"q={np.degrees(q).round(1)} deg", flush=True)
+        elif not self._ext_active:
+            if self._n_cmds != getattr(self, "_seen_cmds", -1):
+                self._seen_cmds = self._n_cmds
+                self._fresh_count += 1
+            if self._fresh_count >= REARM_FRESH_N:
+                self._ext_active = True
+                print(f"[AM-T650-WB] external torque stream LIVE at "
+                      f"t={self._t:.1f}s — applying commanded efforts",
+                      flush=True)
+
+        if self._ext_active:
+            tau_cmd = np.asarray(self._tau_cmd, float)
+        else:
+            # 05's flight-validated servo-emulation hold, slewed, clamped.
+            if self._hold_ref is None:
+                self._hold_ref = np.asarray(q, float).copy()
+            d_ref = np.clip(self._q_hold_target - self._hold_ref,
+                            -ARM_HOLD_RATE * dt, ARM_HOLD_RATE * dt)
+            self._hold_ref = self._hold_ref + d_ref
+            tau_cmd = -ARM_HOLD_KP * (q - self._hold_ref) - ARM_HOLD_KD * qdot + g_arm_now()
+            if ARM_COMMAND_MODE == "position":
+                # the servo's integrator (position mode only)
+                self._i_pos = np.clip(self._i_pos - ARM_POS_KI * (q - self._hold_ref) * dt,
+                                      -ARM_POS_I_MAX, ARM_POS_I_MAX)
+                tau_cmd = tau_cmd + self._i_pos
+
+        # THE SERVO. Both branches go through it: the residual current error is
+        # a property of the motor and its current loop, not of whoever computed
+        # the command, and on hardware the controller's own PD fallback pays it
+        # too. Called exactly once per physics step — it advances the noise.
+        # `qdot` feeds the gearbox friction model (a loss on the joint's actual
+        # motion); the noise and clamp do not use it.
+        tau = ARM_SERVO.applied(tau_cmd, dt, qdot=qdot)
+        self._art.set_joint_efforts(np.asarray(tau, float),
+                                    joint_indices=self._arm_idx)
+        self._tau_cmd_applied = np.clip(tau_cmd, -ARM_SERVO.tau_cap, ARM_SERVO.tau_cap)
+        self._tau_applied = tau
+
+        # Joint states out — this is what IsaacTopicSystem.read() latches and
+        # what /joint_states (broadcaster) and the arm ground station show.
+        # `effort` carries the APPLIED torque, which is what the hardware
+        # backend reports there (the servo's Present Current); before the servo
+        # model existed the two were the same number.
+        self._publish_arm_state(q, qdot_rep, tau)
+
+        if self._t - self._status_t >= STATUS_PERIOD_S:
+            self._status_t = self._t
+            try:
+                omega_real = np.asarray(self._thrust_curve.velocity, float)
+                omega_txt = np.array2string(omega_real.round(0), separator=",")
+            except Exception:
+                omega_txt = "n/a"
+            if self._cmd_stamp_t is None:
+                cmd_txt = "none yet (PD hold at spawn pose)"
+            else:
+                cmd_txt = (f"n={self._n_cmds}, age "
+                           f"{self._t - self._cmd_stamp_t:4.1f}s")
+            mode_txt = ("POS-SERVO" if ARM_COMMAND_MODE == "position"
+                        else ("EXT-TORQUE" if self._ext_active else "PD-HOLD"))
+            print(f"[AM-T650-WB] t={self._t:7.1f}s  z={p0[2]:6.3f} m  "
+                  f"|v|={np.linalg.norm(v0):5.2f} m/s  arm={mode_txt}  "
+                  f"q={np.degrees(q).round(1)} deg  "
+                  f"|tau|max cmd/app="
+                  f"{np.abs(self._tau_cmd_applied).max():4.2f}/"
+                  f"{np.abs(tau).max():4.2f} N·m  "
+                  f"cmds: {cmd_txt}  omega={omega_txt} rad/s", flush=True)
+
+    # ── main loop ───────────────────────────────────────────────────────────
+
+    def run(self):
+        self.world.add_physics_callback("am_wb_arm_torque", self._control_step)
+        # No START_PAUSED (04's rationale): /uav_0/state/* must flow for the
+        # mocap emulator, and /uav_0/isaacsim_manipulator/joint_states must flow for
+        # the arm stack's hardware activation.
+        self.timeline.play()
+        steps = 0
+        prof = _RtfProfiler(self) if PROFILE_START > 0 else None
+        pacer = _RealTimePacer(self) if REALTIME else None
+        while (simulation_app.is_running()
+               and not self.stop_sim
+               and (not STEP_LIMIT or steps < STEP_LIMIT)):
+            if prof is not None:
+                prof.before_step()
+            if HEADLESS or RENDER_EVERY > 0:
+                # one physics step; with a window, draw every RENDER_EVERY steps
+                # (render() redraws without advancing physics)
+                self.world.step(render=False)
+                if not HEADLESS and steps % RENDER_EVERY == 0:
+                    self.world.render()
+            else:
+                self.world.step(render=True)
+            steps += 1
+            if prof is not None:
+                prof.after_step()
+            if pacer is not None:
+                pacer.after_step()
+            # Drawn from the RENDER loop, not the physics callback: the lines
+            # only need to keep up with the eye, and clear+rebuild at 250 Hz
+            # would be pure waste.
+            if self._draw is not None and steps % (VIZ_REDRAW_STEPS * max(1, RENDER_EVERY)) == 0:
+                self._draw_trajectory()
+        carb.log_warn("[AM-T650-WB] Simulation App is closing.")
+        try:
+            self._arm_node.destroy_node()
+        except Exception:
+            pass
+        self.timeline.stop()
+        simulation_app.close()
+
+
+def _arm_gravity(q, R0_m, p):
+    """controller.dynamics(X, p)["g"][6:] -- the arm joints' gravity torques -- without
+    the rest of dynamics() (mass matrix, Coriolis, task Jacobian): the same sum
+    g_q = sum_i A_i^T R0^T (m_i g e3), A_i[:, k] = h_k x (r_0i - O_{k-1}). Depends
+    only on q and the MODEL-frame base attitude. 3e-16 N.m from dynamics() over 500
+    random states (2026-10-01); the base link (i = 0) and any armature do not enter."""
+    n, mi, l_i, h_im1, g = p["n"], p["m_i"], p["l_i"], p["h_i_im1"], p["g"]
+    com_i = p.get("com_i") or [l_i[k] / 2.0 for k in range(n)]
+    R = [np.eye(3)]
+    for i in range(n):
+        R.append(R[i] @ C.joint_rotation(h_im1[i], q[i]))
+    O = [np.zeros(3)]
+    for i in range(1, n + 1):
+        O.append(O[i - 1] + R[i] @ l_i[i - 1])
+    f = R0_m.T @ (g * C.E3)
+    out = np.zeros(n)
+    for i in range(1, n + 1):
+        ri = O[i - 1] + R[i] @ com_i[i - 1]
+        for k in range(1, i + 1):
+            out[k - 1] += mi[i] * (np.cross(R[k - 1] @ h_im1[k - 1], ri - O[k - 1]) @ f)
+    return out
+
+
+class _RealTimePacer:
+    """PEGASUS_REALTIME (2026-10-01): keep simulated time from running ahead of
+    the wall clock, so the wall-clock control stack sees a real-time plant.
+    Anchored on absolute time (sim - sim0 <= wall - wall0); when the sim falls
+    more than MAX_LAG_S BEHIND (a stall it cannot catch up from at RTF ~1.01),
+    the anchor is moved rather than letting it sprint, and the event counted.
+    Every REPORT_S of wall time it prints the achieved RTF and the worst lag."""
+
+    MAX_LAG_S = 0.05
+    REPORT_S = 10.0
+
+    def __init__(self, sim):
+        self.sim = sim
+        self.w0 = time.perf_counter()
+        self.s0 = float(sim.world.current_time)
+        self.rep_w = self.w0
+        self.rep_s = self.s0
+        self.worst_lag = 0.0
+        self.reanchors = 0
+        self.slept = 0.0
+        mode = "headless" if HEADLESS else (f"window, 4 ms physics steps, a frame every {RENDER_EVERY}"
+                                             if RENDER_EVERY > 0 else "window, 4 physics steps per frame")
+        print(f"[AM-T650-WB] REAL-TIME PACER on ({mode}): "
+              f"simulated time is held to the wall clock (RTF <= 1).", flush=True)
+
+    def after_step(self):
+        now = time.perf_counter()
+        st = float(self.sim.world.current_time)
+        ahead = (st - self.s0) - (now - self.w0)
+        if ahead > 0.0:
+            time.sleep(ahead)
+            self.slept += ahead
+            now = time.perf_counter()
+        elif -ahead > self.MAX_LAG_S:
+            self.worst_lag = max(self.worst_lag, -ahead)
+            self.reanchors += 1
+            self.w0, self.s0 = now, st
+        else:
+            self.worst_lag = max(self.worst_lag, -ahead)
+        if now - self.rep_w >= self.REPORT_S:
+            rtf = (st - self.rep_s) / (now - self.rep_w)
+            print(f"[AM-T650-WB] RTF {rtf:.3f} over the last {now - self.rep_w:.1f} s "
+                  f"(worst lag {1e3 * self.worst_lag:.1f} ms, {self.reanchors} re-anchor(s), "
+                  f"slept {self.slept:.2f} s)", flush=True)
+            self.rep_w, self.rep_s = now, st
+            self.worst_lag = 0.0
+            self.reanchors = 0
+            self.slept = 0.0
+
+
+class _RtfProfiler:
+    """PEGASUS_PROFILE_START (2026-10-01): where the wall time of a physics step
+    goes. Window A (plain): real-time factor = simulated / wall seconds over
+    PROFILE_STEPS world.step() calls, and the share spent in THIS app's own
+    physics callback. Window B (cProfile, same length): the Python call tree of
+    everything else on the main thread -- Pegasus sensors, MAVLink, the ROS 2
+    backends, PhysX (as the time inside the step call itself). cProfile slows
+    Python-heavy code, so read B as a breakdown, A as the speed."""
+
+    def __init__(self, sim):
+        import cProfile
+        self.sim = sim
+        self.cprofile = cProfile.Profile()
+        self.t_play = time.perf_counter()
+        self.phase = "wait"
+        self.n = 0
+        sim._prof_cb_s = 0.0
+        sim._prof_cb_n = 0
+        os.makedirs(os.path.dirname(PROFILE_OUT) or ".", exist_ok=True)
+
+    def _sim_t(self):
+        return float(self.sim.world.current_time)
+
+    def before_step(self):
+        now = time.perf_counter()
+        if self.phase == "wait" and now - self.t_play >= PROFILE_START:
+            self.phase, self.n = "A", 0
+            self.a0 = (now, self._sim_t())
+            self.sim._prof_cb_s, self.sim._prof_cb_n = 0.0, 0
+        elif self.phase == "A" and self.n >= PROFILE_STEPS:
+            self.a1 = (now, self._sim_t())
+            self.cb = (self.sim._prof_cb_s, self.sim._prof_cb_n)
+            self.phase, self.n = "B", 0
+            self.b0 = (now, self._sim_t())
+            self.cprofile.enable()
+        elif self.phase == "B" and self.n >= PROFILE_STEPS:
+            self.cprofile.disable()
+            self.b1 = (now, self._sim_t())
+            self.phase = "done"
+            self._report()
+
+    def after_step(self):
+        if self.phase in ("A", "B"):
+            self.n += 1
+
+    def _report(self):
+        import io
+        import pstats
+        wa = self.a1[0] - self.a0[0]; sa = self.a1[1] - self.a0[1]
+        wb = self.b1[0] - self.b0[0]; sb = self.b1[1] - self.b0[1]
+        lines = [f"[AM-T650-WB] PROFILE ({'headless' if HEADLESS else 'rendering'}, "
+                 f"{PROFILE_STEPS} world.step() calls per window)",
+                 f"  window A (plain):    wall {wa:.2f} s, sim {sa:.2f} s -> RTF {sa / wa:.3f}; "
+                 f"{self.cb[1]} physics steps ({self.cb[1] / max(sa, 1e-9):.1f} Hz sim), "
+                 f"{1e3 * wa / max(self.cb[1], 1):.2f} ms wall per physics step, of which this app's "
+                 f"callback {1e3 * self.cb[0] / max(self.cb[1], 1):.2f} ms",
+                 f"  window B (cProfile): wall {wb:.2f} s, sim {sb:.2f} s -> RTF {sb / wb:.3f}"]
+        buf = io.StringIO()
+        st = pstats.Stats(self.cprofile, stream=buf)
+        st.sort_stats("cumulative").print_stats(45)
+        st.sort_stats("tottime").print_stats(35)
+        self.cprofile.dump_stats(PROFILE_OUT + ".prof")
+        with open(PROFILE_OUT + ".txt", "w") as f:
+            f.write("\n".join(lines) + "\n\n" + buf.getvalue())
+        print("\n".join(lines) + f"\n  -> {PROFILE_OUT}.txt / .prof", flush=True)
+
+
+def main():
+    AmT650WholeBodyArmSim().run()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,10 @@
+home [0,40,40,0]: joint stiffness from K_y=20 N/m, diag(J^T K J) = [1.279 1.268 0.669 0.   ] N.m/rad = [0.022 0.022 0.012 0.   ] N.m/deg ; damping from D_y=12: [0.768 0.761 0.401 0.   ] N.m.s/rad
+F3/F4 centre [0,25,30,0]: joint stiffness from K_y=20 N/m, diag(J^T K J) = [1.333 1.423 0.669 0.   ] N.m/rad = [0.023 0.025 0.012 0.   ] N.m/deg ; damping from D_y=12: [0.8   0.854 0.401 0.   ] N.m.s/rad
+F1 j2: ref peak |qdot| 27.3 deg/s, measured p99 |qdot| 4.7 deg/s (0.2x); stuck (|qdot|<1 while ref moves >2 deg/s) 72% of moving-reference time; q range 27.3..36.0 (limit -80..50); at upper stop 0.0% of run
+F1 j3: ref peak |qdot| 27.2 deg/s, measured p99 |qdot| 4.2 deg/s (0.2x); stuck (|qdot|<1 while ref moves >2 deg/s) 70% of moving-reference time; q range 25.0..28.1 (limit -40..50); at upper stop 0.0% of run
+F2 j2: ref peak |qdot| 21.2 deg/s, measured p99 |qdot| 5.1 deg/s (0.2x); stuck (|qdot|<1 while ref moves >2 deg/s) 48% of moving-reference time; q range 29.0..36.2 (limit -80..50); at upper stop 0.0% of run
+F2 j3: ref peak |qdot| 21.2 deg/s, measured p99 |qdot| 4.6 deg/s (0.2x); stuck (|qdot|<1 while ref moves >2 deg/s) 59% of moving-reference time; q range 24.3..27.1 (limit -40..50); at upper stop 0.0% of run
+F3 j2: ref peak |qdot| 264.0 deg/s, measured p99 |qdot| 40.4 deg/s (0.2x); stuck (|qdot|<1 while ref moves >2 deg/s) 33% of moving-reference time; q range 11.1..42.5 (limit -80..50); at upper stop 0.0% of run
+F3 j3: ref peak |qdot| 262.9 deg/s, measured p99 |qdot| 54.6 deg/s (0.2x); stuck (|qdot|<1 while ref moves >2 deg/s) 57% of moving-reference time; q range 7.3..43.0 (limit -40..50); at upper stop 0.0% of run
+F4 j2: ref peak |qdot| 466.4 deg/s, measured p99 |qdot| 58.8 deg/s (0.1x); stuck (|qdot|<1 while ref moves >2 deg/s) 20% of moving-reference time; q range 2.7..49.2 (limit -80..50); at upper stop 0.0% of run
+F4 j3: ref peak |qdot| 461.5 deg/s, measured p99 |qdot| 67.7 deg/s (0.1x); stuck (|qdot|<1 while ref moves >2 deg/s) 38% of moving-reference time; q range -0.5..50.1 (limit -40..50); at upper stop 5.2% of run

@@ -1,0 +1,82 @@
+wb array length by mode: {0: [np.int64(57)], 1: [np.int64(106)]}
+DIRECT 9.66 .. 92.65 s  (83.0 s, 20748 ticks, median dt 4.00 ms, p99 5.3 ms, max 16.9)
+flags over DIRECT: hold[1] mean 0.000  gmo[2] 1.000  armref_fresh[3] 1.0000  armstate_fresh[4] 1.0000  stream_fresh[56] 0.9999  l1_active[57] 1.0000  bound[88] max 0 mean 0.0000  chi[105] min 1 mean 1.0000  n_sat[51] max 0  unalloc_thrust[55] max 0.000  unalloc_tau max 0.0000
+F_hat_y consumed [58..61] max abs: [0. 0. 0. 0.]
+legs: [(np.float64(27.97), np.float64(30.98)), (np.float64(39.7), np.float64(42.71)), (np.float64(52.52), np.float64(58.16)), (np.float64(71.9), np.float64(74.91)), (np.float64(85.99), np.float64(89.0))]
+x_c[48..50] - odom position (mean, DIRECT): [ 0.0053  0.     -0.0161]  std: [0.0015 0.0012 0.0014]
+
+=== per-window tracking (model-frame CoM error; EE task error; heading; attitude) ===
+DIRECT all                       CoMxy pk  231.5 rms   59.3 | z pk  55.1 | EEpos pk   29.0 rms  10.4 mm | head pk  3.45 rms  1.84 deg | |eR| pk 0.9995 rms 0.0644 | tilt pk  5.32 pp  3.97 | q err pk [ 3.9551  4.8438 12.0698  3.1641] rms [0.7043 3.0621 2.9922 2.1239]
+entry 0-5 s                      CoMxy pk   45.0 rms   26.5 | z pk  19.9 | EEpos pk    8.8 rms   5.4 mm | head pk  1.20 rms  0.71 deg | |eR| pk 0.1006 rms 0.0480 | tilt pk  3.60 pp  1.29 | q err pk [3.9551 0.0879 0.0879 0.0879] rms [1.9311 0.0661 0.0664 0.0798]
+entry 5-15 s                     CoMxy pk   41.4 rms   28.0 | z pk   7.9 | EEpos pk    5.8 rms   4.0 mm | head pk  1.30 rms  0.75 deg | |eR| pk 0.0855 rms 0.0331 | tilt pk  3.76 pp  1.46 | q err pk [0.791  0.0879 0.0879 0.0879] rms [0.3163 0.0657 0.061  0.0796]
+hover 20-27.9 s                  CoMxy pk   39.7 rms   23.7 | z pk   7.9 | EEpos pk    5.8 rms   3.7 mm | head pk  1.30 rms  0.78 deg | |eR| pk 0.0891 rms 0.0291 | tilt pk  3.76 pp  1.40 | q err pk [0.791  0.0879 0.1758 0.0879] rms [0.2847 0.07   0.0682 0.0788]
+LEG arm out (EE +0.02 x, -0.07 z) move CoMxy pk   94.5 rms   72.3 | z pk   4.8 | EEpos pk   29.0 rms  15.1 mm | head pk  1.85 rms  0.86 deg | |eR| pk 0.1807 rms 0.0853 | tilt pk  4.63 pp  2.71 | q err pk [ 0.6826  2.379  12.0698  1.651 ] rms [0.3573 1.5493 6.0944 0.664 ]
+    hold +0..5                   CoMxy pk   74.5 rms   54.2 | z pk   7.3 | EEpos pk   12.1 rms   9.3 mm | head pk  2.18 rms  1.15 deg | |eR| pk 0.1784 rms 0.0626 | tilt pk  5.32 pp  3.55 | q err pk [1.8269 2.165  1.8634 0.456 ] rms [0.69   2.0772 1.8604 0.3697]
+    hold +5..10                  CoMxy pk   53.1 rms   29.3 | z pk   7.2 | EEpos pk   13.2 rms   8.5 mm | head pk  2.03 rms  1.11 deg | |eR| pk 0.1569 rms 0.0529 | tilt pk  4.48 pp  2.73 | q err pk [1.2492 2.0771 2.7499 1.1635] rms [0.4996 1.9516 1.9365 0.402 ]
+    settled (2 s before next @39.7) CoMxy pk   53.1 rms   35.6 | z pk   5.8 | EEpos pk   10.9 rms   8.2 mm | head pk  2.03 rms  1.33 deg | |eR| pk 0.1177 rms 0.0518 | tilt pk  4.34 pp  2.58 | q err pk [0.4582 2.0771 1.8634 0.456 ] rms [0.2339 2.0752 1.8591 0.3705]
+LEG arm home move                CoMxy pk   60.3 rms   32.3 | z pk   9.0 | EEpos pk    9.0 rms   6.3 mm | head pk  3.24 rms  1.52 deg | |eR| pk 0.1415 rms 0.0590 | tilt pk  4.48 pp  2.31 | q err pk [0.8713 4.7559 2.9036 3.1641] rms [0.4796 2.872  2.1426 1.9599]
+    hold +0..5                   CoMxy pk  231.5 rms   88.2 | z pk  55.1 | EEpos pk   16.7 rms   9.2 mm | head pk  3.45 rms  2.56 deg | |eR| pk 0.9995 rms 0.1228 | tilt pk  4.67 pp  2.45 | q err pk [2.8125 4.8438 2.8027 3.1641] rms [1.0083 4.7387 2.7227 3.1237]
+    hold +5..10                  CoMxy pk  228.5 rms  110.5 | z pk   7.5 | EEpos pk   15.8 rms   9.1 mm | head pk  3.17 rms  2.48 deg | |eR| pk 0.2372 rms 0.0887 | tilt pk  4.76 pp  3.27 | q err pk [2.8125 4.8438 2.8027 3.1641] rms [0.7688 4.7652 2.7758 3.1264]
+    settled (2 s before next @52.5) CoMxy pk   93.8 rms   78.0 | z pk   7.5 | EEpos pk   12.8 rms   9.2 mm | head pk  2.96 rms  2.30 deg | |eR| pk 0.1896 rms 0.0887 | tilt pk  4.55 pp  3.06 | q err pk [1.2305 4.8438 2.8027 3.1641] rms [0.6058 4.7619 2.7768 3.1246]
+LEG base step +0.61 m x move     CoMxy pk   80.6 rms   60.0 | z pk  13.4 | EEpos pk   13.3 rms   9.2 mm | head pk  3.17 rms  2.39 deg | |eR| pk 0.2192 rms 0.0706 | tilt pk  4.92 pp  3.57 | q err pk [1.0547 4.8438 2.8027 3.1641] rms [0.5896 4.759  2.7789 3.121 ]
+    hold +0..5                   CoMxy pk   61.6 rms   43.0 | z pk   5.5 | EEpos pk   11.2 rms   8.8 mm | head pk  3.24 rms  2.30 deg | |eR| pk 0.1401 rms 0.0553 | tilt pk  3.85 pp  2.12 | q err pk [0.791  4.8438 2.8027 3.1641] rms [0.3118 4.7567 2.7922 3.1168]
+    hold +5..10                  CoMxy pk   67.8 rms   47.1 | z pk   4.5 | EEpos pk   11.1 rms   8.8 mm | head pk  2.98 rms  2.27 deg | |eR| pk 0.1103 rms 0.0484 | tilt pk  3.50 pp  1.73 | q err pk [0.5273 4.8438 2.8906 3.1641] rms [0.2402 4.752  2.7985 3.1133]
+    settled (2 s before next @71.9) CoMxy pk   35.0 rms   30.2 | z pk   7.6 | EEpos pk   10.6 rms   8.8 mm | head pk  2.95 rms  2.44 deg | |eR| pk 0.0805 rms 0.0307 | tilt pk  3.82 pp  1.47 | q err pk [1.0547 4.7559 2.8027 3.1641] rms [0.6904 4.642  2.7998 3.1081]
+LEG arm out #2 move              CoMxy pk   91.1 rms   59.1 | z pk   4.6 | EEpos pk   18.0 rms   9.6 mm | head pk  2.50 rms  1.68 deg | |eR| pk 0.1225 rms 0.0684 | tilt pk  3.52 pp  1.64 | q err pk [0.9668 4.6678 5.9193 3.1641] rms [0.5393 2.9712 3.5698 1.9171]
+    hold +0..5                   CoMxy pk  126.4 rms   98.1 | z pk   5.6 | EEpos pk   18.7 rms  16.3 mm | head pk  2.71 rms  1.94 deg | |eR| pk 0.1574 rms 0.0837 | tilt pk  3.64 pp  1.72 | q err pk [1.206  0.5296 4.7041 1.5455] rms [0.664  0.4416 4.6163 1.4833]
+    hold +5..10                  CoMxy pk   79.0 rms   47.3 | z pk   6.1 | EEpos pk   18.1 rms  15.9 mm | head pk  2.61 rms  2.09 deg | |eR| pk 0.1807 rms 0.0504 | tilt pk  3.45 pp  1.42 | q err pk [0.6787 0.4417 4.6162 1.5455] rms [0.2263 0.4416 4.6159 1.4868]
+    settled (2 s before next @86.0) CoMxy pk   85.7 rms   74.5 | z pk   6.4 | EEpos pk   18.1 rms  16.3 mm | head pk  2.16 rms  1.83 deg | |eR| pk 0.1807 rms 0.0755 | tilt pk  3.42 pp  1.07 | q err pk [0.5908 0.4417 4.6162 1.5455] rms [0.2587 0.4417 4.5727 1.487 ]
+LEG arm home #2 move             CoMxy pk   88.1 rms   65.2 | z pk   5.1 | EEpos pk   20.5 rms  14.2 mm | head pk  2.55 rms  1.78 deg | |eR| pk 0.1895 rms 0.0569 | tilt pk  4.43 pp  2.17 | q err pk [1.0558 2.2196 5.4723 2.9004] rms [0.665  1.5807 3.458  1.8333]
+    hold +0..5                   CoMxy pk   60.8 rms   39.4 | z pk   6.6 | EEpos pk   17.3 rms  15.9 mm | head pk  2.58 rms  2.26 deg | |eR| pk 0.1310 rms 0.0439 | tilt pk  4.71 pp  2.55 | q err pk [0.6152 2.1192 3.7891 2.9883] rms [0.3409 2.0687 3.7891 2.8985]
+    hold +5..10                  (window outside DIRECT)
+    settled (2 s before next @92.6) CoMxy pk   60.8 rms   37.4 | z pk   6.6 | EEpos pk   17.0 rms  15.7 mm | head pk  2.57 rms  2.25 deg | |eR| pk 0.1310 rms 0.0485 | tilt pk  3.48 pp  1.32 | q err pk [0.6152 2.1192 3.7891 2.9883] rms [0.3539 2.0675 3.7891 2.8994]
+
+=== hold mean CoM error (x,y,z mm) per hold window (settled 2 s) ===
+  after arm out (EE +0.02 x, -0.07 z): [-19.7597 -24.7845  -0.6158]  EEpos mean [ 4.0993 -0.6089  6.7831]  head mean 1.29 deg  q err mean [ 0.1624  2.0752 -1.859   0.3703]
+  after arm home                    : [-64.2257 -38.0765   0.9116]  EEpos mean [-2.2832  0.1012 -8.6178]  head mean -2.28 deg  q err mean [ 0.3974 -4.7619  2.7765 -3.1243]
+  after base step +0.61 m x         : [-20.7686  20.8796  -0.0329]  EEpos mean [-2.3703 -0.3149 -8.2438]  head mean -2.43 deg  q err mean [-0.3359 -4.6418  2.7997 -3.1078]
+  after arm out #2                  : [64.338  36.0701  1.7854]  EEpos mean [-1.8201 -3.1376 15.8898]  head mean 1.82 deg  q err mean [-0.2257 -0.4417  4.5724  1.4865]
+  after arm home #2                 : [-35.1366  -4.0874  -0.3918]  EEpos mean [  7.2607   1.3073 -13.8146]  head mean -2.25 deg  q err mean [ 0.323  -2.0671 -3.7891 -2.8993]
+  pre-leg hover 20-27.9      : [-2.333 -7.421 -2.032]  EEpos mean [ 0.7189 -0.1359  3.2859]  head mean 0.72 deg  q err mean [ 0.0256 -0.0558 -0.033   0.0707]
+
+=== inputs ===  mg model 36.74 N
+  DIRECT all     u1 mean  37.20 std  1.01 min   8.99 max  41.16 | tau_body rms [0.1529 0.2081 0.1127] max [0.8567 0.9259 0.3089] | motors mean [0.5538 0.5461 0.6588 0.6521] min 0.032 max 0.772
+  hover 20-27.9  u1 mean  36.91 std  0.50 min  35.01 max  38.06 | tau_body rms [0.1314 0.1684 0.0969] max [0.4525 0.5333 0.2635] | motors mean [0.5628 0.5506 0.6451 0.6442] min 0.435 max 0.737
+  hold 60-69     u1 mean  37.78 std  0.50 min  36.14 max  39.43 | tau_body rms [0.1705 0.1646 0.1217] max [0.5867 0.5432 0.2633] | motors mean [0.5528 0.5463 0.6591 0.6734] min 0.433 max 0.743
+  hold 76-84     u1 mean  37.71 std  0.52 min  35.77 max  39.51 | tau_body rms [0.0968 0.2403 0.0913] max [0.4655 0.6181 0.236 ] | motors mean [0.5755 0.5584 0.6578 0.6423] min 0.466 max 0.732
+
+=== L1 observer (filtered d_hat [31..40]) ===
+  entry 0-2      d_t mean [ 0.3837 -0.2838  0.7587] std [0.2677 0.1481 0.3211] | d_r mean [ 0.0411 -0.0216 -0.0411] std [0.0212 0.0092 0.0234] | d_q mean [ 0.0033 -0.0103  0.0031  0.001 ] std [0.0023 0.0067 0.0024 0.0006]
+  entry 2-5      d_t mean [ 0.5748 -0.4051  0.8692] std [0.1449 0.0742 0.1996] | d_r mean [ 0.0974 -0.0328 -0.0968] std [0.0068 0.0104 0.0097] | d_q mean [ 0.0039 -0.0349  0.0096  0.0018] std [0.0014 0.0047 0.002  0.0006]
+  hover 20-27.9  d_t mean [ 0.5515 -0.3962 -0.0928] std [0.1602 0.1011 0.2931] | d_r mean [ 0.0199  0.0682 -0.0897] std [0.0159 0.0138 0.0019] | d_q mean [0.004  0.0505 0.0363 0.0047] std [0.0009 0.0209 0.0084 0.0009]
+  hold 33-39     d_t mean [ 0.5931 -0.4886 -0.1226] std [0.2999 0.3001 0.2234] | d_r mean [-0.0476 -0.0416 -0.1074] std [0.0147 0.0195 0.0045] | d_q mean [0.0029 0.1609 0.0349 0.0092] std [0.0014 0.02   0.0042 0.0011]
+  hold 60-69     d_t mean [ 0.5602 -0.5095 -0.9929] std [0.2091 0.1317 0.1724] | d_r mean [ 0.3167  0.0868 -0.1253] std [0.0477 0.0364 0.0101] | d_q mean [ 0.0041 -0.1002 -0.0015 -0.0175] std [0.0013 0.027  0.0013 0.002 ]
+  hold 76-84     d_t mean [ 0.6056 -0.4401 -0.9808] std [0.1846 0.144  0.1663] | d_r mean [ 0.0835  0.0099 -0.0872] std [0.0566 0.0233 0.0033] | d_q mean [ 0.005  -0.0023  0.064  -0.0097] std [0.0008 0.0406 0.0205 0.0029]
+  hold 89-92.6   d_t mean [ 0.6148 -0.3457 -1.085 ] std [0.1723 0.0953 0.173 ] | d_r mean [-0.0339 -0.1344 -0.0871] std [0.0279 0.0032 0.0013] | d_q mean [ 0.0043  0.0086  0.0317 -0.0105] std [0.0007 0.0162 0.0121 0.0011]
+  DIRECT all     d_t mean [ 0.5697 -0.4306 -0.4346] std [0.286  0.3847 0.6108] | d_r mean [ 0.089  -0.0015 -0.103 ] std [0.1485 0.0669 0.0194] | d_q mean [ 0.0038  0.018   0.0257 -0.0044] std [0.0017 0.0951 0.0277 0.0097]
+  deadbeat d^c std (DIRECT 20s+): [23.9634 28.9838 14.6785  1.8183  1.5517  0.8575  0.3551  1.3169  0.5656  0.3498]
+  filtered d_hat std          : [0.2958 0.4083 0.4687 0.158  0.0703 0.0172 0.0018 0.1007 0.0291 0.01  ]
+  w_hat internal [78..87] mean (hold 60-69): [ 0.5268  0.5591 -1.0283  0.2192  0.1132 -0.1134 -0.0047 -0.1385 -0.0147 -0.0173]
+  w_hat_e [72..77] mean/std (hold 60-69): [ 0.011  -0.3019  0.2545  0.      0.     -0.0041] [0.0035 0.0122 0.0118 0.     0.     0.0004]
+  u1 + d_hat_z (hold 60-69): 36.788 N  vs mg 36.737
+  d_hat_z: at entry 0.00 -> hover -0.09 N, 90% rise nan s
+  |d_hat| max: t 16.38 N (bound 20)  r 0.441 Nm (bound 2)  q 0.201 Nm (bound 1.5)
+
+=== 4-D attribution ===
+  chi [105]: fraction free = 1.0
+  F_hat_y consumed [58..61]: max |.| = 0.0
+  hover 20-27.9  raw F mean [0.0673 0.0007 0.126 ] std [3.0213 1.6541 5.8751] |F| mean 5.41 p95 13.81 max 23.47 | raw Mz mean +0.002 std 0.439 | LP0.25 |F| mean 0.109 max 0.175 | LP1Hz |F| mean 0.21 max 0.87 | w_q mean [-0.0038  0.0348  0.0247  0.004 ]
+  hold 33-39     raw F mean [0.3946 0.0087 0.1468] std [5.4901 2.6196 4.6777] |F| mean 6.21 p95 15.26 max 27.17 | raw Mz mean +0.002 std 0.311 | LP0.25 |F| mean 0.390 max 0.446 | LP1Hz |F| mean 0.49 max 1.06 | w_q mean [-0.0067  0.1275  0.0267  0.0082]
+  hold 60-69     raw F mean [-0.3105 -0.0091 -0.2435] std [3.4193 1.7351 5.4888] |F| mean 5.41 p95 13.19 max 21.78 | raw Mz mean -0.003 std 0.372 | LP0.25 |F| mean 0.387 max 0.435 | LP1Hz |F| mean 0.40 max 0.97 | w_q mean [-0.0056 -0.0821 -0.0091 -0.0148]
+  hold 76-84     raw F mean [0.1848 0.0005 0.2948] std [4.0663 1.7168 4.2288] |F| mean 4.97 p95 11.89 max 22.76 | raw Mz mean +0.006 std 0.267 | LP0.25 |F| mean 0.236 max 0.325 | LP1Hz |F| mean 0.38 max 0.79 | w_q mean [-0.0044 -0.0666  0.0286 -0.0125]
+  legs moving    raw F mean [ 0.0164 -0.0047 -0.0998] std [4.7175 2.455  5.3101] |F| mean 6.02 p95 14.66 max 28.91 | raw Mz mean -0.002 std 0.354 | LP0.25 |F| mean 0.314 max 0.492 | LP1Hz |F| mean 0.42 max 1.26 | w_q mean [-0.0054  0.0215  0.018  -0.0043]
+  DIRECT all     raw F mean [ 0.0027 -0.0024 -0.0268] std [4.1064 2.5835 5.1673] |F| mean 5.52 p95 13.64 max 179.50 | raw Mz mean -0.000 std 0.352 | LP0.25 |F| mean 0.252 max 0.492 | LP1Hz |F| mean 0.36 max 4.21 | w_q mean [-0.0048  0.0107  0.0159 -0.0039]
+  w_hat_q [101..104] at end of DIRECT: [-0.0036 -0.016   0.0224 -0.01  ]  max |.| over DIRECT: [0.0345 0.1766 0.0801 0.0211]
+
+=== arm ===
+  js names: ['joint2' 'joint3' 'joint1' 'joint4' 'gripper_left_joint' 'gripper_right_joint']  tcmd names: ['joint1' 'joint2' 'joint3' 'joint4']  armref: ['joint1' 'joint2' 'joint3' 'joint4']
+  js effort range per column: [-134. -151.  -42.  -25.   -5.    0.] [271. 203.  44.  25.   5.   0.]
+  tcmd effort range: [-0.1343  0.3117  0.1154 -0.039 ] [0.4736 1.1014 0.5346 0.0461]
+  law [9..12] tau_ext range: [-0.1343  0.      0.     -0.039 ] [0.4736 1.1014 0.5346 0.0461]  [13..16] cmd counts range: [ -57.2321 -248.8998 -203.8851  -45.771 ] [ 95.0186 272.9074 194.5042  51.4796]
+  law [0] passthrough frac in DIRECT window: 0.999855435620663  [26] grav corr 1.0  [27] integral 0.0  [3] aux 1.0
+  dxl comm_state unique: [0.]  hw_state max: 0.0

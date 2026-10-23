@@ -1,0 +1,36 @@
+
+#### a3: /vrpn_mocap/uav_0/pose n=8360 over 69.7 s -> 120.0 Hz; hdr-recv median 0.16 ms
+   stamp dt (ms) p1/10/50/90/99/max: [ 6.98  7.97  8.02  9.02 11.02] 13.0 | dt<=1ms pairs 0 | identical consecutive poses 0.0
+   gaps >20 ms: 0  (in DIRECT: 0)
+   orientation steps >3 deg: 0 (DIRECT 0); pos steps >5 cm: 0
+   DIRECT per-heading: sector | n | dt>12ms | dt>20ms
+      [-180,-135)   358    0   0
+      [-135, -90)   360    0   0
+      [ -90, -45)  1839   14   0
+      [ -45,   0)  1545   12   0
+      [   0,  45)   360    3   0
+      [  45,  90)   360    4   0
+      [  90, 135)   359    5   0
+      [ 135, 180)   362    4   0
+   /uav_0/mocap frozen runs >=2: []
+   /uav_0/mocap rate 119.98704439787501 ; NO DATA lines: 0 ; mocap_status uniq ['mocap_normal']
+   vrpn n 8360 vs mocap n 8359; vrpn pos vs mocap(interp) rms [0.018 0.017 0.035] mm
+
+#### a4: /vrpn_mocap/uav_0/pose n=9548 over 79.6 s -> 120.0 Hz; hdr-recv median 0.19 ms
+   stamp dt (ms) p1/10/50/90/99/max: [ 6.01  7.97  8.01  9.01 12.  ] 19.0 | dt<=1ms pairs 3 | identical consecutive poses 0.0
+   gaps >20 ms: 0  (in DIRECT: 0)
+   orientation steps >3 deg: 0 (DIRECT 0); pos steps >5 cm: 0
+   DIRECT per-heading: sector | n | dt>12ms | dt>20ms
+      [-180,-135)   362    8   0
+      [-135, -90)   360    2   0
+      [ -90, -45)  4726   32   0
+      [ -45,   0)  1623   16   0
+      [   0,  45)   360    1   0
+      [  45,  90)   361    3   0
+      [  90, 135)   360    9   0
+      [ 135, 180)   357    2   0
+   /uav_0/mocap frozen runs >=2: []
+   /uav_0/mocap rate 119.97991386929552 ; NO DATA lines: 0 ; mocap_status uniq ['mocap_normal']
+   vrpn n 9548 vs mocap n 9290; vrpn pos vs mocap(interp) rms [ 3.538  1.241 11.28 ] mm
+   a4 law tick max gap 2751 ms at 73.87 s; tcmd gaps>50ms: []
+   mode edges: [(70.07, 'DIRECT'), (70.57, 'DIRECT'), (71.07, 'DIRECT'), (71.57, 'DIRECT'), (72.07, 'DIRECT'), (72.57, 'DIRECT'), (73.07, 'DIRECT'), (73.57, 'DIRECT'), (74.07, 'DIRECT'), (74.57, 'DIRECT')]

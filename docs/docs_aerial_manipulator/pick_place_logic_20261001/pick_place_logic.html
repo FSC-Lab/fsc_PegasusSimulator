@@ -1,0 +1,463 @@
+<title>Pick-and-Place Mission Logic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one full-width reading column on black (the user's report convention), tables in scroll wrappers,
+   status colours taken from the arm ground station's own lamps, brightened for a black ground. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #131312;
+  --panel-2: #1b1b19;
+  --line: #2e2d29;
+  --fg: #ebe8e0;
+  --muted: #a6a39a;
+  --accent: #d9b26f;
+  --ok: #72c476;
+  --move: #6fb2ec;
+  --warn: #f2a640;
+  --bad: #ef6b5f;
+  --idle: #9e9e9e;
+  --font-body: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-head: "IBM Plex Sans Condensed", "Arial Narrow", "IBM Plex Sans", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15.5px; line-height: 1.6; }
+main { max-width: 1180px; margin: 0 auto; padding-inline: 24px; padding-block: 36px 72px; }
+@media (max-width: 600px) { main { padding-inline: 16px; } body { font-size: 15px; } }
+
+h1, h2, h3 { font-family: var(--font-head); text-wrap: balance; line-height: 1.2; }
+h1 { font-size: 2.3rem; font-weight: 600; margin: 0.2rem 0 0.6rem; letter-spacing: 0.005em; }
+h2 { font-size: 1.55rem; font-weight: 600; margin: 3.2rem 0 0.9rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+h2 .n { color: var(--accent); font-family: var(--font-mono); font-weight: 500; font-size: 1.15rem; margin-right: 0.55rem; }
+h3 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; color: var(--fg); }
+h3 .n { color: var(--accent); font-family: var(--font-mono); font-weight: 500; font-size: 0.95rem; margin-right: 0.45rem; }
+p { margin: 0.55rem 0; }
+ul, ol { margin: 0.5rem 0; padding-left: 1.4rem; }
+li { margin: 0.25rem 0; }
+li::marker { color: var(--muted); }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; overflow-wrap: anywhere; }
+code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0.05em 0.35em; }
+strong { font-weight: 600; }
+.muted { color: var(--muted); }
+
+.eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.meta { color: var(--muted); font-size: 0.92rem; }
+.meta code { font-size: 0.85em; }
+
+.contents { margin: 1.6rem 0 0; padding: 0.9rem 1.1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.contents .label { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.contents ol { columns: 2 260px; column-gap: 2.2rem; margin: 0.4rem 0 0; padding-left: 1.4rem; }
+.contents li { break-inside: avoid; margin: 0.15rem 0; }
+.contents a { color: var(--fg); text-decoration: none; }
+.contents a:hover { color: var(--accent); text-decoration: underline; }
+
+.lede { font-size: 1.06rem; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.5rem 1.6rem; margin: 1.1rem 0 0; padding: 0; list-style: none; }
+.facts li { margin: 0; padding: 0.45rem 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 0.1rem; }
+.facts .k { color: var(--muted); font-size: 0.85rem; }
+.facts .v { font-family: var(--font-mono); font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+
+/* operator sequence */
+.flow { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0; }
+.flow > li { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0 0.9rem; margin: 0; position: relative; padding-bottom: 1.1rem; }
+.flow > li::before { content: ""; position: absolute; left: 1.3rem; top: 2.3rem; bottom: 0; width: 1px; background: var(--line); }
+.flow > li:last-child::before { display: none; }
+.flow .tag { width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); display: grid; place-items: center; font-family: var(--font-mono); font-weight: 500; background: var(--bg); position: relative; }
+.flow .tag.leg { border-color: var(--move); color: var(--move); }
+.flow .body { min-width: 0; padding-top: 0.25rem; }
+.flow .title { font-weight: 600; font-size: 1.04rem; }
+.flow .who { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; margin-left: 0.5rem; vertical-align: 2px; }
+.chip { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.03em; padding: 0.08rem 0.45rem; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); background: var(--panel); white-space: nowrap; }
+.flow p { margin: 0.25rem 0; }
+
+/* status words, coloured like the ground station's lamp */
+.st { font-family: var(--font-mono); font-size: 0.82rem; padding: 0.05rem 0.4rem; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.st.ok { color: var(--ok); } .st.move { color: var(--move); } .st.warn { color: var(--warn); } .st.bad { color: var(--bad); } .st.idle { color: var(--idle); }
+
+/* tables */
+.tscroll { overflow-x: auto; margin: 0.8rem 0 1rem; border: 1px solid var(--line); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); }
+th { font-family: var(--font-head); font-weight: 600; font-size: 0.9rem; color: var(--muted); background: var(--panel); letter-spacing: 0.02em; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { white-space: nowrap; font-variant-numeric: tabular-nums; }
+td .legno { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px solid var(--move); color: var(--move); font-family: var(--font-mono); font-size: 0.85rem; }
+td.y { color: var(--ok); } td.x { color: var(--bad); } td.k { color: var(--muted); }
+
+.note { margin: 1rem 0; padding: 0.75rem 1rem; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 0 6px 6px 0; }
+.note .h { font-weight: 600; color: var(--warn); }
+.formula { font-family: var(--font-mono); font-size: 0.9rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 0.7rem 1rem; margin: 0.7rem 0; overflow-x: auto; white-space: pre; line-height: 1.55; }
+
+.points { counter-reset: pt; list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.7rem; }
+.points > li { counter-increment: pt; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 0.8rem; margin: 0; padding: 0.75rem 1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.points > li::before { content: "P" counter(pt); font-family: var(--font-mono); font-weight: 500; color: var(--accent); }
+.points .t { font-weight: 600; }
+.points p { margin: 0.25rem 0 0; }
+
+footer { margin-top: 3.5rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">T650 aerial manipulator · whole-body 4-D L1 stack</div>
+  <h1>Pick-and-Place Mission Logic</h1>
+  <p class="meta">What the code does today, read from the source rather than the docs.
+  Planner: <code>fsc_trajectory_planner</code> <code>main</code> @ <code>c04c1d6</code> (the feature branch with <code>main</code> merged in).
+  Arm ground station: <code>fsc_open_manipulator</code> <code>omx-torque-control</code> @ <code>aae909b</code>.
+  Both local on shiqi-desktop, not pushed. Written 1 Oct 2026.</p>
+</header>
+
+<nav class="contents" aria-label="Contents">
+  <div class="label">Contents</div>
+  <ol>
+    <li><a href="#overview">The mission in one paragraph</a></li>
+    <li><a href="#sequence">What the operator does, step by step</a></li>
+    <li><a href="#parts">Who does what</a></li>
+    <li><a href="#inputs">Inputs: poses, Adjust and captures</a></li>
+    <li><a href="#plan">The Plan button</a></li>
+    <li><a href="#legs">The six legs</a></li>
+    <li><a href="#fine">Arrival gate and the PS4 fine correction</a></li>
+    <li><a href="#status">Status words, buttons and interlocks</a></li>
+    <li><a href="#scope">What the mode leaves to the operator</a></li>
+    <li><a href="#record">Test and flight record</a></li>
+    <li><a href="#points">Points to decide on</a></li>
+  </ol>
+</nav>
+
+<section id="overview">
+  <h2><span class="n">1</span>The mission in one paragraph</h2>
+  <p class="lede">The mission is six rest-to-rest whole-body moves, each started by its own button in the arm ground station's <strong>Pick &amp; Place</strong> tab. When the operator presses <strong>Plan</strong>, the planner computes all six goal poses once. They come from nominal base poses in its parameters (shifted by an <strong>Adjust</strong> offset) and two points captured from motion capture: the object <code>obj_0</code> and the drop point <code>drop_0</code>. After that, every leg button re-plans that one leg from wherever the vehicle is holding and flies it straight away, with no separate Send. After the two claw legs, the separate <strong>Pick &amp; Place PS4</strong> tab lets the operator nudge the claw with the sticks (the arm moves, the drone holds) and work the gripper with R1 / L1. The planner never touches the gripper, PX4 modes, arming or the touchdown.</p>
+  <ul class="facts">
+    <li><span class="k">Legs</span><span class="v">6, flown in order</span></li>
+    <li><span class="k">Arrival gate</span><span class="v">claw within 50 mm</span></li>
+    <li><span class="k">Capture</span><span class="v">0.5 s mean, ≤ 20 mm spread</span></li>
+    <li><span class="k">Claw-down grasp point</span><span class="v">0.155 m ahead, 0.340 m below</span></li>
+    <li><span class="k">Place-leg arm sweep</span><span class="v">19.2 s on the test scene</span></li>
+    <li><span class="k">Final hover</span><span class="v">0.8 m over the land spot</span></li>
+  </ul>
+</section>
+
+<section id="sequence">
+  <h2><span class="n">2</span>What the operator does, step by step</h2>
+  <p>Letters are setup steps; numbers are the six leg buttons. The chips name which station or node each step goes through.</p>
+  <ol class="flow">
+    <li><span class="tag">A</span><div class="body">
+      <span class="title">Take off in SAFETY</span><span class="who"><span class="chip">drone GS</span></span>
+      <p>The usual baseline takeoff. Nothing in pick-and-place runs yet; the tab shows <span class="st idle">NOT IN DIRECT</span>.</p></div></li>
+    <li><span class="tag">B</span><div class="body">
+      <span class="title">Adjust, with the vehicle on the physical start mark</span><span class="who"><span class="chip">Pick &amp; Place tab</span><span class="chip">planner</span></span>
+      <p>Offset = measured position − nominal start (x and y only, unless <code>pick_place_adjust_z</code> / <code>_yaw</code> are set). Every nominal base pose is shifted by it, so the day's mocap centring does not matter. Works on the ground or in a hover, in SAFETY or DIRECT.</p></div></li>
+    <li><span class="tag">C</span><div class="body">
+      <span class="title">Get obj_0 and Get drop_0</span><span class="who"><span class="chip">Pick &amp; Place tab</span><span class="chip">planner</span></span>
+      <p>Each averages its mocap body over the last 0.5 s and is refused if the samples scatter more than 20 mm. Also works in SAFETY. The four "Get (opt.)" base-point buttons are refused today because no mocap topic is set for them.</p></div></li>
+    <li><span class="tag">D</span><div class="body">
+      <span class="title">Enter whole-body DIRECT</span><span class="who"><span class="chip">drone GS</span><span class="chip">planner</span></span>
+      <p>The planner captures its HOLD from odometry and the arm encoders and starts streaming. The tab shows <span class="st warn">NOT PLANNED: press Plan</span>, or names the missing capture.</p></div></li>
+    <li><span class="tag">E</span><div class="body">
+      <span class="title">Plan</span><span class="who"><span class="chip">Pick &amp; Place tab</span><span class="chip">planner</span></span>
+      <p>The six goals are fixed and the whole mission is dry-run from the current hold. Shows <span class="st move">PLANNING</span>, then <span class="st ok">READY next=go_to_start</span>. The tab draws the planned claw and airframe paths in its 3-D view and lists each leg's duration on its button.</p></div></li>
+    <li><span class="tag leg">1–6</span><div class="body">
+      <span class="title">Press the legs in order</span><span class="who"><span class="chip">Pick &amp; Place tab</span><span class="chip">planner</span><span class="chip">flight node</span></span>
+      <p>The next leg's button is outlined green. Each press re-plans that leg from where the vehicle holds now, flies it (<span class="st move">FLYING go_to_start T=7.4s</span>), and ends in a HOLD at the leg's goal (<span class="st ok">DONE go_to_start next=execute_pick</span>). A finished leg may be flown again; a leg cannot be skipped.</p></div></li>
+    <li><span class="tag">F</span><div class="body">
+      <span class="title">After leg 2 and leg 4: optional fine correction and the gripper</span><span class="who"><span class="chip">Pick &amp; Place PS4 tab</span><span class="chip">planner</span><span class="chip">gripper action</span></span>
+      <p>When the status ends in "claw within tolerance: fine correction OK", the operator may engage the PS4 tab. The sticks nudge the claw (the arm moves, the drone holds); R1 closes and L1 opens the gripper. Pressing the next leg disengages the tab automatically.</p></div></li>
+    <li><span class="tag">G</span><div class="body">
+      <span class="title">After leg 6: land by hand</span><span class="who"><span class="chip">operator</span><span class="chip">drone GS</span></span>
+      <p>The status reads <span class="st ok">COMPLETE -- touch down with SAFETY -&gt; land</span>. The vehicle is hovering 0.8 m over the landing spot; the operator reverts to SAFETY and lands.</p></div></li>
+  </ol>
+</section>
+
+<section id="parts">
+  <h2><span class="n">3</span>Who does what</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>Part</th><th>Where it lives</th><th>Its job in this mission</th></tr></thead>
+    <tbody>
+      <tr><td>Planner, pick-and-place mode</td><td><code>fsc_trajectory_planner</code>, node <code>whole_body_trajectory_planner</code>; services under <code>whole_body_planner/pick_place/*</code></td><td>Keeps the Adjust offset and the captures, computes the six goals at Plan, plans and streams each leg as a <code>WholeBodyReference</code> at 100 Hz, and reports status, info and the claw error.</td></tr>
+      <tr><td><strong>Pick &amp; Place</strong> tab</td><td>arm GS, <code>pick_place_panel.cpp</code></td><td>Adjust, six Get buttons, Plan, Reset and the six leg buttons. Shows the offset, the captures, each leg's goal and duration, the status lamp, the claw or body error, and a 3-D view of the planned claw and airframe paths with the measured claw.</td></tr>
+      <tr><td><strong>Pick &amp; Place PS4</strong> tab</td><td>arm GS, <code>pick_place_fine_panel.cpp</code></td><td>Gamepad fine correction at the pick and the place, and the gripper on R1 / L1. Sends ordinary EE targets to the planner.</td></tr>
+      <tr><td>Mocap bodies</td><td><code>/obj_0/mocap</code>, <code>/drop_0/mocap</code> (<code>fsc_autopilot_ros2_msgs/Mocap</code>, absolute topics)</td><td>The pick point and the place point.</td></tr>
+      <tr><td>Whole-body flight node</td><td><code>fsc_autopilot_ros2</code>, 4-D L1 in DIRECT</td><td>Tracks whatever reference the planner streams. It knows nothing about pick-and-place.</td></tr>
+      <tr><td>Gripper</td><td>the arm GS's GripperCommand action</td><td>Moved only by the operator: the GS OPEN / CLOSE buttons, or R1 / L1 in the PS4 tab.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="inputs">
+  <h2><span class="n">4</span>Inputs: poses, Adjust and captures</h2>
+  <h3><span class="n">4.1</span>Parameters and their defaults</h3>
+  <p>Base poses are <code>[x, y, z, yaw°]</code> in the world frame with the actual yaw (the drone GS's convention). Arm poses are joint angles in degrees.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Parameter</th><th class="n">Default</th><th>Used by</th></tr></thead>
+    <tbody>
+      <tr><td><code>pick_place_start</code></td><td class="n mono">[0, 0, 1.0, 0]</td><td>Leg 1 goal (body)</td></tr>
+      <tr><td><code>pick_place_place_start</code></td><td class="n mono">[0, −1.0, 1.0, 0]</td><td>Leg 3 goal (body)</td></tr>
+      <tr><td><code>pick_place_land_start</code></td><td class="n mono">[−1.0, 0, 1.0, 0]</td><td>Leg 5 goal (body)</td></tr>
+      <tr><td><code>pick_place_land</code></td><td class="n mono">[−1.0, 0, 0.8, 0]</td><td>Leg 6 goal: the hover over the landing spot. Raised from 0.4 m after a crash in Isaac.</td></tr>
+      <tr><td>home pose (planner <code>home_pose</code>)</td><td class="n mono">[0, 40, 40, 0]</td><td>Arm at legs 1, 5, 6</td></tr>
+      <tr><td><code>pick_place_pick_pose_deg</code></td><td class="n mono">[0, 0, 0, 0]</td><td>Arm at leg 2: claw straight down</td></tr>
+      <tr><td><code>pick_place_carry_pose_deg</code></td><td class="n mono">[0, 40, 40, 0]</td><td>Arm at leg 3</td></tr>
+      <tr><td><code>pick_place_place_pose_deg</code></td><td class="n mono">[0, 0, 0, 0]</td><td>Arm at the end of leg 4</td></tr>
+      <tr><td><code>pick_place_pick_ee_offset</code>, <code>_place_ee_offset</code></td><td class="n mono">[0, 0, 0] m</td><td>Claw target = captured point + this, world frame</td></tr>
+      <tr><td><code>pick_place_face_target</code></td><td class="n mono">true</td><td>Legs 2 and 4 turn the nose to the target</td></tr>
+      <tr><td><code>pick_place_retreat_dz</code>, <code>_retreat_back</code></td><td class="n mono">0.15, 0.20 m</td><td>The climb and back-off before legs 3 and 5</td></tr>
+      <tr><td><code>pick_place_sweep_*</code></td><td class="n mono">q1 ±25°, q2 10–45°</td><td>Leg 4's arm sweep (see 6.4)</td></tr>
+      <tr><td><code>pick_place_arrival_tol</code></td><td class="n mono">0.05 m</td><td>The fine-correction gate</td></tr>
+      <tr><td><code>pick_place_capture_window</code>, <code>_capture_max_spread</code></td><td class="n mono">0.5 s, 0.02 m</td><td>Get buttons</td></tr>
+      <tr><td><code>pick_place_pick_topic</code>, <code>_place_topic</code></td><td class="n mono">/obj_0/mocap, /drop_0/mocap</td><td>The two required captures</td></tr>
+      <tr><td><code>pick_place_{start,place_start,land_start,land}_topic</code></td><td class="n mono">"" (none)</td><td>Optional base-point captures; all empty</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="h">The flight configs do not set any of these.</span> No <code>fsc_autopilot_ros2</code> whole-body yaml (hardware, mirror sim, robustness sim, PS4 test) carries a <code>pick_place_*</code> key, and the stacks start the planner with those yamls. A real or simulated run therefore uses the code defaults above, and the three base poses are placeholders for the room.</div>
+
+  <h3><span class="n">4.2</span>Adjust</h3>
+  <ul>
+    <li>Needs fresh odometry. Is refused while a leg is in flight.</li>
+    <li>Offset = measured body position − nominal start. z is shifted only if <code>pick_place_adjust_z</code> is true; yaw only if <code>pick_place_adjust_yaw</code> is true (measured from PX4 attitude).</li>
+    <li>The offset is added to all four nominal base poses. It is not added to the two captured claw points, which are measured in the world already.</li>
+    <li>Pressing Adjust throws away any existing plan.</li>
+  </ul>
+
+  <h3><span class="n">4.3</span>Captures (the Get buttons)</h3>
+  <ul>
+    <li>The planner keeps the last 2 s of each mocap body. A capture averages the samples from the last 0.5 s.</li>
+    <li>Refused if there are no samples in the window, if they spread more than 20 mm from their mean, or while a leg is in flight. The spread check exists because Isaac's emulator once published a second, phantom <code>obj_0</code> at the origin and the average of the two was flown.</li>
+    <li>Pick and place are required before Plan. They are used as measured, with no Adjust offset.</li>
+    <li>A base point can be captured only if its <code>_topic</code> parameter is set (none is). If it were, its x and y would replace the nominal pose plus offset; z and yaw would stay nominal.</li>
+    <li>Every capture throws away any existing plan.</li>
+    <li>Mocap and odometry must share one world frame. On the EKF2-fused stack, EKF2's local origin must sit on the mocap origin.</li>
+  </ul>
+</section>
+
+<section id="plan">
+  <h2><span class="n">5</span>The Plan button</h2>
+  <p>Plan is refused unless all of these hold: whole-body DIRECT with a hold; no leg in flight and the planner not executing; PS4 teleoperation not engaged; both claw points captured.</p>
+  <ol>
+    <li><strong>The six goal poses are fixed.</strong> Each arm pose is checked against the joint box and against the singularity margin (σ<sub>nd</sub> ≥ 0.10); a failure names the leg. Claw goals are worked out as in <a href="#claw">6.1</a>.</li>
+    <li><strong>The whole mission is dry-run</strong> on a worker thread: leg 1 from the current hold, each later leg from the goal of the leg before. The first infeasible leg stops it with <span class="st bad">INFEASIBLE: &lt;leg&gt;: &lt;reason&gt;</span>.</li>
+    <li><strong>The result is published</strong>: the status becomes <span class="st ok">READY next=go_to_start</span>, the info topic carries the goals and the six durations, and the path topics carry 600 samples each of the claw and the airframe.</li>
+  </ol>
+  <p>The dry-run trajectories are only a preview. Flying a leg never reuses them: each leg is planned again from the current hold to the goal fixed here. What Plan really commits to is the set of six goals.</p>
+</section>
+
+<section id="legs">
+  <h2><span class="n">6</span>The six legs</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>#</th><th>Button / service</th><th>Goal</th><th>Arm at the goal</th><th>Heading</th><th>How it moves</th></tr></thead>
+    <tbody>
+      <tr><td><span class="legno">1</span></td><td>Go To Start<br><code>go_to_start</code></td><td>Body at <code>pick_place_start</code> + offset</td><td>home [0, 40, 40, 0]</td><td>the pose's yaw</td><td>One flat B-spline transition</td></tr>
+      <tr><td><span class="legno">2</span></td><td>Execute To Pick<br><code>execute_pick</code></td><td>Claw on the captured <code>obj_0</code> + pick offset</td><td>pick [0, 0, 0, 0], claw down</td><td>turns to face the object</td><td>One transition</td></tr>
+      <tr><td><span class="legno">3</span></td><td>Go To Place Start<br><code>go_to_place_start</code></td><td>Body at <code>pick_place_place_start</code> + offset</td><td>carry [0, 40, 40, 0]</td><td>the pose's yaw</td><td>Retreat (climb 0.15 m, back off 0.20 m), then a transition</td></tr>
+      <tr><td><span class="legno">4</span></td><td>Execute To Place<br><code>execute_place</code></td><td>Claw on the captured <code>drop_0</code> + place offset</td><td>place [0, 0, 0, 0], claw down</td><td>turns to face the drop point</td><td>Arm-sweep leg: q1 and q2 swing while the vehicle travels</td></tr>
+      <tr><td><span class="legno">5</span></td><td>Go To Land Start<br><code>go_to_land_start</code></td><td>Body at <code>pick_place_land_start</code> + offset</td><td>home</td><td>the pose's yaw</td><td>Retreat, then a transition</td></tr>
+      <tr><td><span class="legno">6</span></td><td>Execute To Land<br><code>execute_land</code></td><td>Body hovering at <code>pick_place_land</code> + offset (0.8 m)</td><td>home</td><td>the pose's yaw</td><td>One transition. No touchdown.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="claw"><span class="n">6.1</span>Where a claw leg puts the vehicle</h3>
+  <p>For legs 2 and 4 the planner chooses the body pose that puts the claw (the model's grasp point) exactly on the target, with the arm in its fixed pose:</p>
+  <div class="formula">target  = captured point + offset                     (world)
+r0e(q)  = grasp point in the body frame for the arm pose q
+bearing = direction from the previous leg's GOAL body position to the target
+alpha   = azimuth of r0e(q) in the body frame   (nose, if the arm has no horizontal reach)
+heading = bearing − alpha                         so the arm's reach points at the target
+body    = target − Rz(heading) · r0e(q)</div>
+  <p>The vehicle therefore turns to face the object over the whole leg; the flat planner keeps the yaw smooth and within its rate bound <code>w_max</code>. The bearing is taken from the previous leg's planned goal, not from where the vehicle actually is, and the goal is fixed at Plan.</p>
+
+  <h3><span class="n">6.2</span>The claw-down pose [0, 0, 0, 0]</h3>
+  <p>Upper arm hanging straight down, forearm out along the nose, claw pointing straight down. The grasp point is 0.155 m ahead of and 0.340 m below the body origin, with σ<sub>nd</sub> = 0.169, above the 0.10 margin. This is the bottom of the arm's reach: from it, the arm alone can raise the claw, pull it in or swing it sideways, but cannot lower it or push it further out. Lowering the claw onto an object is the body's job, and the leg's plan does it.</p>
+
+  <h3><span class="n">6.3</span>The retreat before legs 3 and 5</h3>
+  <p>The leg first flies a separate rest-to-rest move: from the current hold, climb 0.15 m and back off 0.20 m along the reverse of the nose, with the arm unchanged. Then a second transition goes to the leg's goal. The two are streamed back to back as one leg. Setting both distances to zero removes the retreat.</p>
+
+  <h3><span class="n">6.4</span>The arm sweep in leg 4</h3>
+  <p>Leg 4 is not a normal transition. Every channel is written down in closed form and turned into a compatible reference directly, with no fixed-point solve:</p>
+  <ul>
+    <li>The system centre of mass goes in a straight line from start to goal on a 9th-order (nonic) phase, at rest through snap at both ends, so the body-torque reference has no step at the joins.</li>
+    <li>The heading turns on the same phase.</li>
+    <li>q3 and q4 go straight from the carry pose to the place pose.</li>
+    <li>q1 and q2 follow that straight line blended with a sinusoid inside a plateau window: q1 between −25° and +25°, q2 between 10° and 45°, a quarter cycle apart, 2 full cycles. The window ramps in and out over 20 % of the duration each.</li>
+    <li>The duration is the shortest one (8 to 120 s, bisected to 2 %) that passes every check on a 401-point grid: joint box, σ<sub>nd</sub>, CoM speed and acceleration, yaw rate, joint rate ≤ 0.5 rad/s, joint torque and rotor force. On the test scene it is 19.2 s, limited by the joint rate, and takes 48 ms to plan.</li>
+  </ul>
+  <p>The point of the leg is to show the whole-body law carrying a payload that moves in 3-D while the vehicle travels: the airframe moves to absorb the arm's centre-of-mass excursion.</p>
+
+  <h3><span class="n">6.5</span>What one leg button does</h3>
+  <ol>
+    <li><strong>Checks</strong>, in this order: DIRECT with a hold; the mission not still planning; a plan exists; PS4 teleoperation not engaged; the planner not CALCULATING or EXECUTING; leg ≤ last completed + 1 (else "out of order -- the next leg is …").</li>
+    <li><strong>Plans the leg</strong> from the current hold to the goal fixed at Plan. The planner state becomes CALCULATING and the status <span class="st move">FLYING &lt;leg&gt;</span>.</li>
+    <li><strong>Executes at once</strong>, with no Send step. The planner state becomes EXECUTING and the status gains the duration.</li>
+    <li><strong>Holds at the goal</strong> when the trajectory ends. The leg counts as completed; the status becomes <span class="st ok">DONE &lt;leg&gt; next=&lt;leg&gt;</span>.</li>
+    <li><strong>If the leg is infeasible</strong>, the status becomes <span class="st bad">INFEASIBLE: &lt;leg&gt;: &lt;reason&gt;</span>, progress is unchanged and the vehicle keeps holding. The button can be pressed again.</li>
+  </ol>
+</section>
+
+<section id="fine">
+  <h2><span class="n">7</span>Arrival gate and the PS4 fine correction</h2>
+  <h3><span class="n">7.1</span>The arrival gate</h3>
+  <p>At 10 Hz the planner publishes <code>pick_place/arrival_error</code> for the leg in flight, or else the last leg completed:</p>
+  <ul>
+    <li><strong>Claw legs (2, 4)</strong>: the measured claw, from forward kinematics on the measured joints at the measured body pose (odometry + PX4 attitude), against the goal claw point.</li>
+    <li><strong>Other legs</strong>: the measured body origin against the goal body position.</li>
+    <li><strong>Within</strong> = error ≤ 50 mm. <strong>Settled</strong> = within, no leg in flight, and the planner in HOLD.</li>
+  </ul>
+  <p>After a claw leg the status appends "claw within tolerance: fine correction OK" when settled, otherwise "claw outside tolerance". The Pick &amp; Place tab shows "Claw error N mm (tolerance 50 mm) after Execute To Pick", in green when within.</p>
+
+  <h3><span class="n">7.2</span>When the PS4 tab will engage</h3>
+  <p>Engage is refused, with the reason shown, unless every check passes, in this order:</p>
+  <ol>
+    <li>The planner is in whole-body DIRECT.</li>
+    <li>The planner is not moving (not CALCULATING, PLANNED or EXECUTING).</li>
+    <li>An arrival message arrived in the last 0.6 s.</li>
+    <li>The last leg was Execute To Pick or Execute To Place.</li>
+    <li>The gate is settled: claw within 50 mm and the planner holding.</li>
+    <li>The measured claw (<code>current_ee</code>) and its heading (<code>current_ee_heading</code>) are fresh (≤ 0.5 s).</li>
+    <li>The workspace grid and the base anchor have arrived from the planner.</li>
+  </ol>
+  <p>Engaging seeds the target on the measured claw position and the measured claw heading, so engaging moves nothing and a position nudge never swings the wrist.</p>
+
+  <h3><span class="n">7.3</span>The sticks and buttons</h3>
+  <div class="tscroll"><table>
+    <thead><tr><th>Input</th><th>Effect</th><th class="n">Rate at full stick</th></tr></thead>
+    <tbody>
+      <tr><td>Left stick up / down</td><td>Claw target +X / −X, world axes</td><td class="n">0.02 m/s (0.005–0.05)</td></tr>
+      <tr><td>Left stick left / right</td><td>Claw target along world Y (the sign is in <a href="#points">P5</a>)</td><td class="n">0.02 m/s</td></tr>
+      <tr><td>Right stick up / down</td><td>Claw target +Z / −Z</td><td class="n">0.02 m/s</td></tr>
+      <tr><td>Right stick left / right</td><td>Claw heading + / −</td><td class="n">5°/s (1–15)</td></tr>
+      <tr><td>R1 / L1</td><td>Gripper CLOSE / OPEN (rising edge)</td><td class="n">—</td></tr>
+    </tbody>
+  </table></div>
+  <p>Stick deadzone is 0.08. Each axis of the target is limited on its own, so a blocked axis does not stop the others. A step is kept only if it stays within ±0.10 m (adjustable 0.02–0.20) of the engage point on that axis, and inside <code>pick_place/workspace_rz</code>. That grid is the reachable (r, z) region about the planner's base anchor, with its floor lowered to −0.345 m so the claw-down pose is inside it.</p>
+
+  <h3><span class="n">7.4</span>One stick push is one short arm move</h3>
+  <ol>
+    <li>The tab integrates the sticks into a target. When it has moved 5 mm or 2° from the last target the planner accepted, the tab publishes it as an EE target.</li>
+    <li>The planner solves it with the body held where it is (an arm-only change) and reports PLANNED.</li>
+    <li>The tab calls Send itself; the planner executes and returns to HOLD. The sticks are frozen while the planner is busy.</li>
+    <li>If the planner refuses the target, the tab snaps back to the last accepted one and shows the reason. If PLANNED does not come within 5 s, it gives up and asks for another push.</li>
+  </ol>
+
+  <h3><span class="n">7.5</span>When the tab lets go</h3>
+  <ul>
+    <li>The vehicle leaves whole-body DIRECT.</li>
+    <li>A pick-and-place leg starts (the status turns to FLYING).</li>
+    <li>The planner starts any move the tab did not send.</li>
+    <li>The operator engages the PS4 Remote tab. One pad drives one tab: engaging either one drops the other (but see <a href="#points">P6</a>).</li>
+  </ul>
+</section>
+
+<section id="status">
+  <h2><span class="n">8</span>Status words, buttons and interlocks</h2>
+  <h3><span class="n">8.1</span><code>pick_place/status</code> and the tab's lamp</h3>
+  <div class="tscroll"><table>
+    <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><span class="st idle">NOT IN DIRECT</span></td><td>SAFETY. The plan, if any, has been dropped.</td></tr>
+      <tr><td><span class="st warn">NOT PLANNED: capture pick (/obj_0/mocap) first</span></td><td>DIRECT, no plan. Names what is missing, or says "press Plan".</td></tr>
+      <tr><td><span class="st move">PLANNING</span></td><td>The dry run is running.</td></tr>
+      <tr><td><span class="st ok">READY next=go_to_start</span></td><td>Planned, no leg flown yet.</td></tr>
+      <tr><td><span class="st move">FLYING execute_pick T=7.1s</span></td><td>A leg is being planned (no T yet) or executed.</td></tr>
+      <tr><td><span class="st ok">DONE execute_pick next=go_to_place_start -- claw within tolerance: fine correction OK</span></td><td>A leg finished. The gate text appears only after claw legs.</td></tr>
+      <tr><td><span class="st bad">INFEASIBLE: execute_place: &lt;reason&gt;</span></td><td>The last Plan or leg was refused.</td></tr>
+      <tr><td><span class="st ok">COMPLETE -- touch down with SAFETY -&gt; land</span></td><td>Leg 6 finished.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3><span class="n">8.2</span>When the Pick &amp; Place tab's buttons are enabled</h3>
+  <ul>
+    <li><strong>Adjust, Get, Reset</strong>: whenever no leg is in flight and the mission is not planning.</li>
+    <li><strong>Plan</strong>: as above, and the planner idle (HOLD, PLANNED, PENDING or INFEASIBLE).</li>
+    <li><strong>Leg k</strong>: planned, planner idle, nothing in flight, and k ≤ last completed + 1. The next leg is outlined green, the leg in flight blue, finished legs carry a ✓.</li>
+  </ul>
+
+  <h3><span class="n">8.3</span>What each event keeps and clears</h3>
+  <div class="tscroll"><table>
+    <thead><tr><th>Event</th><th>Offset</th><th>Captures</th><th>Plan (goals)</th><th>Progress</th><th>Leg in flight</th></tr></thead>
+    <tbody>
+      <tr><td>Adjust</td><td>new</td><td class="k">kept</td><td class="x">cleared</td><td class="k">kept</td><td class="k">refused while flying</td></tr>
+      <tr><td>Get (capture)</td><td class="k">kept</td><td>new</td><td class="x">cleared</td><td class="k">kept</td><td class="k">refused while flying</td></tr>
+      <tr><td>Plan</td><td class="k">kept</td><td class="k">kept</td><td>new</td><td class="k">kept</td><td class="k">refused while flying</td></tr>
+      <tr><td>Reset</td><td class="k">kept</td><td class="k">kept</td><td class="x">cleared</td><td class="x">cleared</td><td class="k">refused while flying</td></tr>
+      <tr><td>Revert to SAFETY</td><td class="k">kept</td><td class="k">kept</td><td class="x">cleared</td><td class="k">kept</td><td class="x">dropped</td></tr>
+      <tr><td>Leg infeasible</td><td class="k">kept</td><td class="k">kept</td><td class="k">kept</td><td class="k">kept</td><td>none</td></tr>
+    </tbody>
+  </table></div>
+  <p>Because progress survives a SAFETY revert, re-entering DIRECT and pressing Plan again resumes the mission at the next leg. Re-planning starts the dry run from the new hold.</p>
+
+  <h3><span class="n">8.4</span>The planner's other modes</h3>
+  <ul>
+    <li>A drone-GS target, an EE target or Go Home sent while a leg is still being planned cancels that leg. While a leg executes, they are ignored.</li>
+    <li>PS4 teleoperation (the PS4 Remote tab): Plan and the legs are refused while it is engaged, and engaging it is refused while a leg is planning or executing. These two refusals were added in the merge of <code>main</code>; the feature branch had no teleop.</li>
+  </ul>
+</section>
+
+<section id="scope">
+  <h2><span class="n">9</span>What the mode leaves to the operator</h2>
+  <ul>
+    <li><strong>The gripper.</strong> No leg opens or closes it.</li>
+    <li><strong>Takeoff, landing, arming and PX4 modes.</strong> The mission starts from a DIRECT hover and ends in a 0.8 m hover.</li>
+    <li><strong>Stopping mid-leg.</strong> There is no pause or abort button in the mode; the only way out is a revert to SAFETY. Reset is refused while a leg flies.</li>
+    <li><strong>Contact.</strong> Nothing in the mode knows whether the claw touched or holds the object; the flight node runs its free-flight observer settings throughout.</li>
+    <li><strong>Obstacles.</strong> The plan checks the vehicle's own limits (joints, singularity, speeds, torques, rotor forces), not the room. The retreat is the only table-clearing logic.</li>
+  </ul>
+</section>
+
+<section id="record">
+  <h2><span class="n">10</span>Test and flight record</h2>
+  <div class="tscroll"><table>
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Planner gtests (<code>test_pick_place</code>, 9 tests)</td><td>Pass on the merged planner.</td></tr>
+      <tr><td>Planner loopback (<code>test_pick_place_loopback.py</code>: Adjust, captures incl. the two-publisher refusal, Plan, out-of-order refusal, six legs, gate both ways, retreat 0.150 m, sweep q1 ±25° / q2 45°, COMPLETE, reset, SAFETY silence)</td><td>Pass on the merged planner.</td></tr>
+      <tr><td>Teleop vs pick-and-place interlock (scratch check, 1 Oct)</td><td>Pass: Plan and go_to_start refused under teleop, accepted after disengage.</td></tr>
+      <tr><td>GS integration (<code>test_pick_place_fine_integration.py</code>, 14 checks, offscreen GS + real planner)</td><td>Written against the feature-branch planner, which had no teleop. On the merged planner it fails at check 4: see <a href="#points">P6</a>.</td></tr>
+      <tr><td>Isaac, stressed plant (pp1, pp2)</td><td>Two full missions, all six legs including the 19.2 s sweep, no refusal or abort. The DIRECT hold oscillated vertically by 115–226 mm at 0.32–0.49 Hz, so the 50 mm gate flickered and no fine correction was possible.</td></tr>
+      <tr><td>Isaac, matched plant (pp3)</td><td>The hold oscillation went away (161 → 6 mm). Fine correction flown: gate held at 3.7 mm (pick) and 30.8 mm (place); one push each, +9.5 / +8.7 mm. Then the tilt watchdog tripped in the retreat after the place (20.4° against 20°), with the force estimate growing from 1.5 to 66.9 N while holding claw-down.</td></tr>
+      <tr><td>Isaac, stressed plant (pp4)</td><td>The same watchdog trip, 8 s into the sweep.</td></tr>
+      <tr><td>Isaac, 0.4 m land hover</td><td>Brushed the floor and tumbled. Default raised to 0.8 m, not flown since.</td></tr>
+      <tr><td>Hardware</td><td>Not flown.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="points">
+  <h2><span class="n">11</span>Points to decide on</h2>
+  <p>These are what I noticed while reading the code against how it would be flown. They are observations for your review, not changes I have made.</p>
+  <ol class="points">
+    <li><div><span class="t">The base poses are placeholders, and no flight config sets them.</span>
+      <p>Start (0, 0, 1.0), place start (0, −1.0, 1.0), land start (−1.0, 0, 1.0) and land (−1.0, 0, 0.8) come from the code defaults on every stack.</p></div></li>
+    <li><div><span class="t">The gripper is not part of the sequence.</span>
+      <p>Closing at the pick and opening at the place depend on the operator remembering R1 / L1 or the GS buttons. Nothing blocks leg 3 with the gripper open.</p></div></li>
+    <li><div><span class="t">The claw goes exactly to the marker point.</span>
+      <p>With both offsets at zero, the grasp point lands on the mocap body's origin. Where that marker sits relative to the part to be grasped decides the grasp.</p></div></li>
+    <li><div><span class="t">The pick pose is the bottom of the arm's reach.</span>
+      <p>With the claw down at [0, 0, 0, 0], the fine correction can raise the claw, pull it in or move it sideways, but cannot lower it or push it further out. A grasp that needs the claw a few millimetres lower needs the body to move.</p></div></li>
+    <li><div><span class="t">The fine-correction sticks are in world axes, and the left/right sign disagrees with the comment.</span>
+      <p>The PS4 Remote teleop moves the claw relative to the airframe; this tab moves it along world X / Y. Pushing the left stick left reads +1 and the code applies −Y, while the tab's own comment says left is +Y. No test pushes the left stick.</p></div></li>
+    <li><div><span class="t">The handover from PS4 Remote back to the fine tab is broken on the merged planner.</span>
+      <p>Engaging PS4 Remote now really puts the planner into teleop. The fine tab can only engage while the planner holds, so it refuses, its "engaging drops the other" never fires, and it shows the misleading "claw 0 mm from the target … wait for it to settle". The operator must release PS4 Remote and wait for HOLD first.</p></div></li>
+    <li><div><span class="t">The gate needs a still hold.</span>
+      <p>On the stressed sim plant the DIRECT hold oscillated by 115–226 mm and the gate flickered, so the fine correction could not engage at all.</p></div></li>
+    <li><div><span class="t">Claw-down holds and the sweep excite an instability seen in Isaac.</span>
+      <p>The watchdog tripped on both plants with the arm extended. It is a flight-law question; on the planning side only a slower or narrower sweep, or a better-conditioned pick pose, would excite it less.</p></div></li>
+    <li><div><span class="t">There is no pause or abort inside the mode.</span>
+      <p>A leg in flight can only be stopped by reverting to SAFETY.</p></div></li>
+    <li><div><span class="t">The landing is manual and the 0.8 m final hover is unflown.</span>
+      <p>After COMPLETE the operator lands from SAFETY.</p></div></li>
+    <li><div><span class="t">Base-point captures are wired but inactive.</span>
+      <p>The four "Get (opt.)" buttons always refuse because no topic is configured for them.</p></div></li>
+    <li><div><span class="t">Claw-leg headings are fixed at Plan.</span>
+      <p>The bearing for legs 2 and 4 is taken from the previous leg's planned goal. If a later leg starts somewhere else (after a fine correction or a re-flown leg), the vehicle still ends on the heading chosen at Plan.</p></div></li>
+  </ol>
+</section>
+
+<footer>
+  Sources: <code>pick_place.{hpp,cpp}</code>, <code>arm_sweep_planner.hpp</code>, the pick-and-place part of <code>whole_body_trajectory_planner_node.cpp</code> and the package yaml in <code>fsc_trajectory_planner</code>; <code>pick_place_panel.cpp</code>, <code>pick_place_fine_panel.{hpp,cpp}</code> and <code>control_panel.cpp</code> in the arm ground station; the Isaac record in the planner's CLAUDE.md. Numbers quoted from tests and sim runs are the ones those files record.
+</footer>
+</main>

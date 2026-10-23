@@ -1,0 +1,136 @@
+  wb_posture_kp : 2.0 -> 0.0
+  wb_posture_kd : 0.25 -> 0.0
+  wb_posture_ki : 0.05 -> 0.0
+  wb_posture_i_max : 0.8 -> 0.0
+  wb_ee_anchor_com : false -> true
+  wb_u3_internal_ff : false -> true
+  wb_u3_internal_ff_use_w_hat : false -> false
+  wb_ky_x : 2.0 -> 20.0
+  wb_ky_y : 2.0 -> 20.0
+  wb_ky_z : 2.0 -> 20.0
+  wb_dy_x : 4.0 -> 12.0
+  wb_dy_y : 4.0 -> 12.0
+  wb_dy_z : 4.0 -> 12.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ grid_t10m5_A  alloc=4.4903144e-05  model x1.05  CoM (0.005,0.005,0.0025) ############
+    alloc_thrust_coeff: 4.4903144e-05
+=== [l1/grid_t10m5_A] 0. clean slate ===
+=== [l1/grid_t10m5_A] 1. controller stack ===
+=== [l1/grid_t10m5_A] 2. Pegasus / PX4 / arm ===
+=== [l1/grid_t10m5_A] 3. waiting for odometry ===
+=== [l1/grid_t10m5_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/grid_t10m5_A] 3c. waiting for the arm ===
+=== [l1/grid_t10m5_A] 4. flying ===
+=== [l1/grid_t10m5_A] done (driver rc=0) ===
+[ 103.55s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 103.98s] mode -> SAFETY
+[ 103.98s] planner -> IDLE
+[ 115.55s] PHASE LAND  ref=[-0.0, -0.0, 1.0] mode='SAFETY'
+[ 135.55s] service rc/disarm requested
+[ 135.55s] PHASE DONE  ref=[-0.0, -0.0, 0.35] mode='SAFETY'
+[ 135.57s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ grid_t10m5_A rc=0 ############
+
+############ grid_t10m5_B  alloc=4.4903144e-05  model x1.05  CoM (0.005,0.005,0.0025) ############
+    alloc_thrust_coeff: 4.4903144e-05
+=== [l1/grid_t10m5_B] 0. clean slate ===
+=== [l1/grid_t10m5_B] 1. controller stack ===
+=== [l1/grid_t10m5_B] 2. Pegasus / PX4 / arm ===
+=== [l1/grid_t10m5_B] 3. waiting for odometry ===
+=== [l1/grid_t10m5_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/grid_t10m5_B] 3c. waiting for the arm ===
+=== [l1/grid_t10m5_B] 4. flying ===
+=== [l1/grid_t10m5_B] done (driver rc=0) ===
+[ 101.55s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 102.00s] mode -> SAFETY
+[ 102.00s] planner -> IDLE
+[ 113.55s] PHASE LAND  ref=[0.0, 0.0, 1.0] mode='SAFETY'
+[ 133.55s] service rc/disarm requested
+[ 133.55s] PHASE DONE  ref=[0.0, 0.0, 0.35] mode='SAFETY'
+[ 133.57s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ grid_t10m5_B rc=0 ############
+
+############ grid_t15m5_A  alloc=4.7544506e-05  model x1.05  CoM (0.005,0.005,0.0025) ############
+    alloc_thrust_coeff: 4.7544506e-05
+=== [l1/grid_t15m5_A] 0. clean slate ===
+=== [l1/grid_t15m5_A] 1. controller stack ===
+=== [l1/grid_t15m5_A] 2. Pegasus / PX4 / arm ===
+=== [l1/grid_t15m5_A] 3. waiting for odometry ===
+=== [l1/grid_t15m5_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/grid_t15m5_A] 3c. waiting for the arm ===
+=== [l1/grid_t15m5_A] 4. flying ===
+=== [l1/grid_t15m5_A] done (driver rc=0) ===
+[ 101.83s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 102.29s] mode -> SAFETY
+[ 102.29s] planner -> IDLE
+[ 113.83s] PHASE LAND  ref=[0.001, -0.0, 1.0] mode='SAFETY'
+[ 133.83s] service rc/disarm requested
+[ 133.83s] PHASE DONE  ref=[0.001, -0.0, 0.35] mode='SAFETY'
+[ 133.85s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ grid_t15m5_A rc=0 ############
+
+############ grid_t15m5_B  alloc=4.7544506e-05  model x1.05  CoM (0.005,0.005,0.0025) ############
+    alloc_thrust_coeff: 4.7544506e-05
+=== [l1/grid_t15m5_B] 0. clean slate ===
+=== [l1/grid_t15m5_B] 1. controller stack ===
+=== [l1/grid_t15m5_B] 2. Pegasus / PX4 / arm ===
+=== [l1/grid_t15m5_B] 3. waiting for odometry ===
+=== [l1/grid_t15m5_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/grid_t15m5_B] 3c. waiting for the arm ===
+=== [l1/grid_t15m5_B] 4. flying ===
+=== [l1/grid_t15m5_B] done (driver rc=0) ===
+[ 101.67s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 102.10s] mode -> SAFETY
+[ 102.10s] planner -> IDLE
+[ 113.67s] PHASE LAND  ref=[0.001, 0.0, 1.0] mode='SAFETY'
+[ 133.67s] service rc/disarm requested
+[ 133.67s] PHASE DONE  ref=[0.001, 0.0, 0.35] mode='SAFETY'
+[ 133.69s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ grid_t15m5_B rc=0 ############
+
+############ grid_t10m10_A  alloc=4.4903144e-05  model x1.10  CoM (0.010,0.010,0.005) ############
+    alloc_thrust_coeff: 4.4903144e-05
+=== [l1/grid_t10m10_A] 0. clean slate ===
+=== [l1/grid_t10m10_A] 1. controller stack ===
+=== [l1/grid_t10m10_A] 2. Pegasus / PX4 / arm ===
+=== [l1/grid_t10m10_A] 3. waiting for odometry ===
+=== [l1/grid_t10m10_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/grid_t10m10_A] 3c. waiting for the arm ===
+=== [l1/grid_t10m10_A] 4. flying ===
+=== [l1/grid_t10m10_A] done (driver rc=0) ===
+[ 104.79s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 105.23s] mode -> SAFETY
+[ 105.23s] planner -> IDLE
+[ 116.79s] PHASE LAND  ref=[0.001, -0.0, 1.0] mode='SAFETY'
+[ 136.81s] service rc/disarm requested
+[ 136.81s] PHASE DONE  ref=[0.001, -0.0, 0.35] mode='SAFETY'
+[ 136.83s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ grid_t10m10_A rc=0 ############
+
+############ grid_t10m10_B  alloc=4.4903144e-05  model x1.10  CoM (0.010,0.010,0.005) ############
+    alloc_thrust_coeff: 4.4903144e-05
+=== [l1/grid_t10m10_B] 0. clean slate ===
+=== [l1/grid_t10m10_B] 1. controller stack ===
+=== [l1/grid_t10m10_B] 2. Pegasus / PX4 / arm ===
+=== [l1/grid_t10m10_B] 3. waiting for odometry ===
+=== [l1/grid_t10m10_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/grid_t10m10_B] 3c. waiting for the arm ===
+=== [l1/grid_t10m10_B] 4. flying ===
+=== [l1/grid_t10m10_B] done (driver rc=0) ===
+[ 104.07s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 104.50s] mode -> SAFETY
+[ 104.50s] planner -> IDLE
+[ 116.07s] PHASE LAND  ref=[0.0, -0.0, 1.0] mode='SAFETY'
+[ 136.09s] service rc/disarm requested
+[ 136.09s] PHASE DONE  ref=[0.0, -0.0, 0.35] mode='SAFETY'
+[ 136.11s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ grid_t10m10_B rc=0 ############
+GRID DONE
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml

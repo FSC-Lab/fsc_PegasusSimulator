@@ -1,0 +1,94 @@
+  wb_k_x : 16.0 -> 16.0
+  wb_k_v : 12.0 -> 12.0
+  wb_l1_omega_c_r : 0.5 -> 1.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ entry_wr10_A  k_x=16.0 k_v=12.0 omega_c_r=1.0 ############
+=== [l1/entry_wr10_A] 0. clean slate ===
+=== [l1/entry_wr10_A] 1. controller stack ===
+=== [l1/entry_wr10_A] 2. Pegasus / PX4 / arm ===
+=== [l1/entry_wr10_A] 3. waiting for odometry ===
+=== [l1/entry_wr10_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/entry_wr10_A] 3c. waiting for the arm ===
+=== [l1/entry_wr10_A] 4. flying ===
+=== [l1/entry_wr10_A] done (driver rc=0) ===
+[ 103.61s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 104.05s] mode -> SAFETY
+[ 104.05s] planner -> IDLE
+[ 115.61s] PHASE LAND  ref=[0.0, -0.0, 1.0] mode='SAFETY'
+[ 135.61s] service rc/disarm requested
+[ 135.61s] PHASE DONE  ref=[0.0, -0.0, 0.35] mode='SAFETY'
+[ 135.63s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ entry_wr10_A rc=0 ############
+  wb_k_x : 16.0 -> 16.0
+  wb_k_v : 12.0 -> 12.0
+  wb_l1_omega_c_r : 1.0 -> 1.5
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ entry_wr15_A  k_x=16.0 k_v=12.0 omega_c_r=1.5 ############
+=== [l1/entry_wr15_A] 0. clean slate ===
+=== [l1/entry_wr15_A] 1. controller stack ===
+=== [l1/entry_wr15_A] 2. Pegasus / PX4 / arm ===
+=== [l1/entry_wr15_A] 3. waiting for odometry ===
+=== [l1/entry_wr15_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/entry_wr15_A] 3c. waiting for the arm ===
+=== [l1/entry_wr15_A] 4. flying ===
+=== [l1/entry_wr15_A] done (driver rc=0) ===
+[ 105.55s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 105.97s] mode -> SAFETY
+[ 105.97s] planner -> IDLE
+[ 117.55s] PHASE LAND  ref=[0.0, -0.0, 1.0] mode='SAFETY'
+[ 137.55s] service rc/disarm requested
+[ 137.55s] PHASE DONE  ref=[0.0, -0.0, 0.35] mode='SAFETY'
+[ 137.57s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ entry_wr15_A rc=0 ############
+  wb_k_x : 16.0 -> 32.0
+  wb_k_v : 12.0 -> 20.0
+  wb_l1_omega_c_r : 1.5 -> 0.5
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ entry_C_A  k_x=32.0 k_v=20.0 omega_c_r=0.5 ############
+=== [l1/entry_C_A] 0. clean slate ===
+=== [l1/entry_C_A] 1. controller stack ===
+=== [l1/entry_C_A] 2. Pegasus / PX4 / arm ===
+=== [l1/entry_C_A] 3. waiting for odometry ===
+=== [l1/entry_C_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/entry_C_A] 3c. waiting for the arm ===
+=== [l1/entry_C_A] 4. flying ===
+=== [l1/entry_C_A] done (driver rc=0) ===
+[ 103.05s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 103.47s] mode -> SAFETY
+[ 103.47s] planner -> IDLE
+[ 115.05s] PHASE LAND  ref=[0.0, 0.0, 1.0] mode='SAFETY'
+[ 135.05s] service rc/disarm requested
+[ 135.05s] PHASE DONE  ref=[0.0, 0.0, 0.35] mode='SAFETY'
+[ 135.07s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ entry_C_A rc=0 ############
+  wb_k_x : 32.0 -> 32.0
+  wb_k_v : 20.0 -> 20.0
+  wb_l1_omega_c_r : 0.5 -> 0.5
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ entry_C_B  k_x=32.0 k_v=20.0 omega_c_r=0.5 ############
+=== [l1/entry_C_B] 0. clean slate ===
+=== [l1/entry_C_B] 1. controller stack ===
+=== [l1/entry_C_B] 2. Pegasus / PX4 / arm ===
+=== [l1/entry_C_B] 3. waiting for odometry ===
+=== [l1/entry_C_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/entry_C_B] 3c. waiting for the arm ===
+=== [l1/entry_C_B] 4. flying ===
+=== [l1/entry_C_B] done (driver rc=0) ===
+[ 104.01s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 104.45s] mode -> SAFETY
+[ 104.45s] planner -> IDLE
+[ 116.01s] PHASE LAND  ref=[-0.0, -0.0, 1.0] mode='SAFETY'
+[ 136.03s] service rc/disarm requested
+[ 136.03s] PHASE DONE  ref=[-0.0, -0.0, 0.35] mode='SAFETY'
+[ 136.05s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ entry_C_B rc=0 ############
+ENTRY TUNE 2 DONE
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml

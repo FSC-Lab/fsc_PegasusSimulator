@@ -1,0 +1,66 @@
+# ===========================================================================
+# free — FREE-FLIGHT TRAJECTORY TRACKING (02_aerial_manipulator_free.py)
+#
+# The in-process rig with IDEAL instantaneous rotors and no autopilot in the
+# loop. No contact, no payload: what the observer sees here is model error, not
+# the environment.
+#
+# `default` is the baseline every trajectory starts from; a section named after
+# a trajectory type (hover_drone, circle_drone, figure8_whole, poly_whole, ...)
+# overrides it for that mode only. Add a section when a mode genuinely needs
+# different numbers — an empty one is worse than none, since it reads as
+# "someone tuned this".
+# ===========================================================================
+
+default:
+  # --- geometric outer loop ------------------------------------------------
+  # k_x/k_v from the 2026-07-07 gain sweep (validated on reach + circle +
+  # pickplace): 16/8 halved the CoM error vs the MATLAB's 10/5 at no cost in
+  # attitude, EE error or torque. k_R/k_w are the MATLAB values.
+  # The vertical channel is critically damped at these numbers
+  # (zeta = k_v / (2*sqrt(k_x)) = 1), which is what lets takeoff and landing be
+  # plain position SETPOINTS with no profile.
+  k_x: 16.0
+  k_v: 8.0
+  k_R: 8.0
+  k_w: 2.0
+  # M_r_d — desired rotational inertia. The paper/MATLAB use eye(3), which on
+  # this vehicle gives the attitude loop only ~0.09 N.m of authority and tips
+  # over even at 250 Hz zero latency (measured 2026-07-03). The body's own I0.
+  M_r_d: [0.065194, 0.064352, 0.100439]
+
+  # --- end-effector task impedance ----------------------------------------
+  # [x, y, z, EE heading]. The 4th channel stays DETUNED: J_3y^-1's heading
+  # column drives the near-massless q1/q4 wrist pair, where mrad-level error
+  # noise produced N.m-level torque and clamp chatter (2026-07-02 log).
+  # K_y does NOT remove steady gravity droop — the GMO does.
+  K_y: [200.0, 200.0, 200.0, 40.0]
+  D_y: [6.0, 6.0, 6.0, 1.0]
+
+  # --- generalized-momentum disturbance observer ---------------------------
+  # The estimate is a first-order low-pass of the true disturbance,
+  # d_e_hat_dot = K_o (d_e - d_e_hat), so K_o IS the per-channel estimation
+  # bandwidth [rad/s]: 6 body channels then n=4 arm channels. 20 rad/s
+  # (main_sim.m Section 1c) is forward-Euler stable at the physics rate
+  # (K_o*dt = 0.08 << 2). On a rig with ACTUATOR LAG this must sit far below
+  # the actuator bandwidth — see px4_direct_free.yaml, which runs 0.5.
+  use_gmo: true
+  K_o: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
+
+  # --- arm task inertia ----------------------------------------------------
+  # shaped: impose a design task inertia M_Y != Lambda_y. Realizing a different
+  # apparent inertia REQUIRES the estimated task force, so shaped is meaningful
+  # only with use_gmo true (the loader enforces this). natural -> M_Y: null.
+  impedance_mode: shaped
+  M_Y: [1.0, 1.0, 1.0, 0.05]        # [kg, kg, kg, kg.m^2] (main_sim m_y_t/m_y_r)
+
+  # --- solver / actuator ---------------------------------------------------
+  # dls_lambda regularizes the J_3y solve; 0 recovers the MATLAB's plain
+  # inverse (J_3y is square). > 0 caps the torque gain of near-singular task
+  # directions — kept non-zero here because removing the posture anchor took
+  # away the term that used to pin the q1/q4 pair.
+  dls_lambda: 0.3
+  # tau_max: XM430-W350 stall torque. With a value the law clamps AND rebuilds
+  # the base moment from the REALIZED u3; null disables the in-law clamp only.
+  tau_max: 4.1
+  omega_e_ff: false

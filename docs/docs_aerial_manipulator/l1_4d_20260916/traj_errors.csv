@@ -1,0 +1,331 @@
+run,leg,channel,unit,peak,rms,settled_rms
+l1_6d_A,step_x+,CoM pos,mm,219.5780,74.2220,11.3142
+l1_6d_A,step_x+,CoM vel,mm/s,314.2381,102.6984,20.1120
+l1_6d_A,step_x+,attitude,deg,5.6819,2.3207,0.5049
+l1_6d_A,step_x+,EE pos,mm,14.1767,6.6837,4.7504
+l1_6d_A,step_x+,EE head,deg,13.7634,9.4840,10.4399
+l1_6d_A,step_x+,joints,deg,13.7361,9.5381,10.2804
+l1_6d_A,step_x-,CoM pos,mm,231.8691,76.0663,45.0137
+l1_6d_A,step_x-,CoM vel,mm/s,297.6446,95.3842,26.1370
+l1_6d_A,step_x-,attitude,deg,6.3309,2.3994,1.8079
+l1_6d_A,step_x-,EE pos,mm,11.6721,6.1859,4.7751
+l1_6d_A,step_x-,EE head,deg,12.4802,9.6011,5.0325
+l1_6d_A,step_x-,joints,deg,12.4308,9.7411,5.2182
+l1_6d_A,step_y+,CoM pos,mm,215.5921,65.9152,38.5747
+l1_6d_A,step_y+,CoM vel,mm/s,309.7813,90.6246,19.1247
+l1_6d_A,step_y+,attitude,deg,5.5666,1.8245,1.8635
+l1_6d_A,step_y+,EE pos,mm,8.7995,5.4846,5.3820
+l1_6d_A,step_y+,EE head,deg,16.1641,10.7947,10.6628
+l1_6d_A,step_y+,joints,deg,13.9560,10.8255,10.5450
+l1_6d_A,step_y-,CoM pos,mm,200.6846,66.1420,20.2266
+l1_6d_A,step_y-,CoM vel,mm/s,292.0295,88.7839,24.1973
+l1_6d_A,step_y-,attitude,deg,5.2530,2.1591,1.2365
+l1_6d_A,step_y-,EE pos,mm,9.7028,5.9434,7.1094
+l1_6d_A,step_y-,EE head,deg,16.2241,10.0565,11.2851
+l1_6d_A,step_y-,joints,deg,15.9247,10.2239,11.2983
+l1_6d_A,step_yaw+,CoM pos,mm,47.5382,23.9188,8.2969
+l1_6d_A,step_yaw+,CoM vel,mm/s,49.6240,24.2538,13.1929
+l1_6d_A,step_yaw+,attitude,deg,8.9346,2.9550,0.8297
+l1_6d_A,step_yaw+,EE pos,mm,30.1145,10.2602,6.4439
+l1_6d_A,step_yaw+,EE head,deg,11.2251,8.3020,9.8933
+l1_6d_A,step_yaw+,joints,deg,11.4162,8.3554,9.9930
+l1_6d_A,step_yaw-,CoM pos,mm,37.9855,18.0644,30.4889
+l1_6d_A,step_yaw-,CoM vel,mm/s,36.9365,17.8402,26.6817
+l1_6d_A,step_yaw-,attitude,deg,9.0618,3.0519,1.6966
+l1_6d_A,step_yaw-,EE pos,mm,29.7539,10.3900,5.9644
+l1_6d_A,step_yaw-,EE head,deg,16.0110,11.9069,13.6074
+l1_6d_A,step_yaw-,joints,deg,15.8571,11.7717,13.5296
+l1_6d_A,traj_ee,CoM pos,mm,72.9358,37.0401,43.3912
+l1_6d_A,traj_ee,CoM vel,mm/s,86.4019,41.9469,26.0136
+l1_6d_A,traj_ee,attitude,deg,3.8530,1.6518,1.4173
+l1_6d_A,traj_ee,EE pos,mm,20.5174,10.7048,6.4733
+l1_6d_A,traj_ee,EE head,deg,12.2418,8.2189,12.0765
+l1_6d_A,traj_ee,joints,deg,12.4480,8.5321,12.4010
+l1_6d_A,traj_ee_back,CoM pos,mm,44.6936,28.7302,41.9929
+l1_6d_A,traj_ee_back,CoM vel,mm/s,45.4914,25.3817,20.2532
+l1_6d_A,traj_ee_back,attitude,deg,2.1082,1.3021,1.8159
+l1_6d_A,traj_ee_back,EE pos,mm,14.0343,7.7491,4.1970
+l1_6d_A,traj_ee_back,EE head,deg,14.5157,9.8006,8.6529
+l1_6d_A,traj_ee_back,joints,deg,14.5870,9.7624,8.6698
+l1_6d_A,traj_both,CoM pos,mm,181.9681,63.9985,41.6278
+l1_6d_A,traj_both,CoM vel,mm/s,208.6744,71.3802,22.3206
+l1_6d_A,traj_both,attitude,deg,6.4173,2.3404,1.2477
+l1_6d_A,traj_both,EE pos,mm,19.7226,10.9159,6.7442
+l1_6d_A,traj_both,EE head,deg,13.6291,8.1609,3.3835
+l1_6d_A,traj_both,joints,deg,13.7944,8.8307,4.5464
+l1_6d_A,traj_both_back,CoM pos,mm,42.4500,21.5300,31.3557
+l1_6d_A,traj_both_back,CoM vel,mm/s,35.7913,17.2469,23.3441
+l1_6d_A,traj_both_back,attitude,deg,2.0045,0.9924,1.7526
+l1_6d_A,traj_both_back,EE pos,mm,10.9232,7.0737,5.6016
+l1_6d_A,traj_both_back,EE head,deg,13.8488,10.0027,10.8525
+l1_6d_A,traj_both_back,joints,deg,14.1163,10.3938,11.1372
+l1_6d_A,post_hold,CoM pos,mm,42.2545,24.1441,28.1561
+l1_6d_A,post_hold,CoM vel,mm/s,36.6127,21.5225,26.2643
+l1_6d_A,post_hold,attitude,deg,2.2601,1.1701,1.0218
+l1_6d_A,post_hold,EE pos,mm,10.8006,6.5959,8.1468
+l1_6d_A,post_hold,EE head,deg,11.5151,8.1032,4.9463
+l1_6d_A,post_hold,joints,deg,11.4845,8.2915,5.5569
+l1_6d_B,step_x+,CoM pos,mm,247.2152,81.2477,19.5245
+l1_6d_B,step_x+,CoM vel,mm/s,342.2850,112.6348,36.8934
+l1_6d_B,step_x+,attitude,deg,6.2698,2.5863,0.5085
+l1_6d_B,step_x+,EE pos,mm,14.6719,6.8669,4.7976
+l1_6d_B,step_x+,EE head,deg,14.7528,10.3817,6.7021
+l1_6d_B,step_x+,joints,deg,14.8168,10.4927,6.7567
+l1_6d_B,step_x-,CoM pos,mm,231.7502,76.8085,24.5766
+l1_6d_B,step_x-,CoM vel,mm/s,304.1899,101.3221,27.7382
+l1_6d_B,step_x-,attitude,deg,5.9873,2.4138,1.3556
+l1_6d_B,step_x-,EE pos,mm,10.5257,6.2782,4.6373
+l1_6d_B,step_x-,EE head,deg,12.2001,9.9232,11.8756
+l1_6d_B,step_x-,joints,deg,12.2369,10.0143,11.9528
+l1_6d_B,step_y+,CoM pos,mm,235.2344,76.7409,8.9565
+l1_6d_B,step_y+,CoM vel,mm/s,335.1372,102.0317,17.1602
+l1_6d_B,step_y+,attitude,deg,6.2115,2.2318,0.4668
+l1_6d_B,step_y+,EE pos,mm,8.1642,5.2374,5.4108
+l1_6d_B,step_y+,EE head,deg,13.0344,8.9791,10.1378
+l1_6d_B,step_y+,joints,deg,12.3704,8.9223,10.0017
+l1_6d_B,step_y-,CoM pos,mm,211.7101,66.0418,38.0554
+l1_6d_B,step_y-,CoM vel,mm/s,335.6974,102.6438,14.1208
+l1_6d_B,step_y-,attitude,deg,4.9141,1.9632,1.3334
+l1_6d_B,step_y-,EE pos,mm,8.7820,5.5777,4.4371
+l1_6d_B,step_y-,EE head,deg,14.1922,10.4862,4.5019
+l1_6d_B,step_y-,joints,deg,13.8886,10.6599,4.4746
+l1_6d_B,step_yaw+,CoM pos,mm,39.8427,18.2209,5.5887
+l1_6d_B,step_yaw+,CoM vel,mm/s,39.2853,16.7981,3.8604
+l1_6d_B,step_yaw+,attitude,deg,8.3311,2.6880,0.3058
+l1_6d_B,step_yaw+,EE pos,mm,26.7313,9.7408,4.8839
+l1_6d_B,step_yaw+,EE head,deg,13.4686,8.5534,12.4838
+l1_6d_B,step_yaw+,joints,deg,13.6518,8.7703,12.6047
+l1_6d_B,step_yaw-,CoM pos,mm,48.3074,26.1772,38.3551
+l1_6d_B,step_yaw-,CoM vel,mm/s,42.3984,21.4539,22.3236
+l1_6d_B,step_yaw-,attitude,deg,9.3911,3.0461,1.1537
+l1_6d_B,step_yaw-,EE pos,mm,32.3282,11.0174,4.4486
+l1_6d_B,step_yaw-,EE head,deg,13.9405,9.8550,3.4490
+l1_6d_B,step_yaw-,joints,deg,14.3305,10.1913,3.7412
+l1_6d_B,traj_ee,CoM pos,mm,62.0813,31.1497,43.0921
+l1_6d_B,traj_ee,CoM vel,mm/s,60.4093,31.5448,14.1639
+l1_6d_B,traj_ee,attitude,deg,2.6252,1.3359,1.4085
+l1_6d_B,traj_ee,EE pos,mm,16.4513,8.9631,5.7317
+l1_6d_B,traj_ee,EE head,deg,26.2802,12.0144,3.1926
+l1_6d_B,traj_ee,joints,deg,25.3800,11.9678,4.2354
+l1_6d_B,traj_ee_back,CoM pos,mm,42.1618,22.4111,35.1794
+l1_6d_B,traj_ee_back,CoM vel,mm/s,45.3927,22.5737,19.1820
+l1_6d_B,traj_ee_back,attitude,deg,1.8661,0.9870,1.6574
+l1_6d_B,traj_ee_back,EE pos,mm,15.7906,8.6911,4.0689
+l1_6d_B,traj_ee_back,EE head,deg,13.5326,8.7574,11.2505
+l1_6d_B,traj_ee_back,joints,deg,13.5841,8.8648,11.2212
+l1_6d_B,traj_both,CoM pos,mm,44.3887,22.5313,28.0952
+l1_6d_B,traj_both,CoM vel,mm/s,40.2599,17.5419,22.6755
+l1_6d_B,traj_both,attitude,deg,1.9814,0.9333,1.5741
+l1_6d_B,traj_both,EE pos,mm,7.5007,5.0040,5.2004
+l1_6d_B,traj_both,EE head,deg,14.9203,9.4894,8.3277
+l1_6d_B,traj_both,joints,deg,14.9259,9.5745,8.4636
+l1_6d_B,traj_both_back,CoM pos,mm,45.3091,21.0323,9.2394
+l1_6d_B,traj_both_back,CoM vel,mm/s,40.1992,19.7107,21.4211
+l1_6d_B,traj_both_back,attitude,deg,2.0461,0.8161,0.5717
+l1_6d_B,traj_both_back,EE pos,mm,5.7368,4.6184,5.5209
+l1_6d_B,traj_both_back,EE head,deg,13.0400,9.4834,11.8896
+l1_6d_B,traj_both_back,joints,deg,13.0278,9.5730,12.0301
+l1_6d_B,post_hold,CoM pos,mm,42.6543,19.9638,12.0396
+l1_6d_B,post_hold,CoM vel,mm/s,35.6398,17.3052,11.7745
+l1_6d_B,post_hold,attitude,deg,1.9444,0.8431,0.7325
+l1_6d_B,post_hold,EE pos,mm,5.5391,4.6418,5.1641
+l1_6d_B,post_hold,EE head,deg,12.6876,10.2468,12.4949
+l1_6d_B,post_hold,joints,deg,12.7053,10.3410,12.6210
+l1_4d_4d_wx0p25,step_x+,CoM pos,mm,187.2206,60.6911,18.3109
+l1_4d_4d_wx0p25,step_x+,CoM vel,mm/s,283.0748,94.1424,30.5345
+l1_4d_4d_wx0p25,step_x+,attitude,deg,4.7398,1.9461,0.5383
+l1_4d_4d_wx0p25,step_x+,EE pos,mm,11.3433,5.9999,2.8929
+l1_4d_4d_wx0p25,step_x+,EE head,deg,0.9849,0.6369,0.6592
+l1_4d_4d_wx0p25,step_x+,joints,deg,4.3502,3.5020,1.7961
+l1_4d_4d_wx0p25,step_x-,CoM pos,mm,238.4645,78.7756,32.7470
+l1_4d_4d_wx0p25,step_x-,CoM vel,mm/s,330.2437,116.3049,34.2508
+l1_4d_4d_wx0p25,step_x-,attitude,deg,6.8373,2.7124,0.8701
+l1_4d_4d_wx0p25,step_x-,EE pos,mm,10.9250,5.1417,4.1759
+l1_4d_4d_wx0p25,step_x-,EE head,deg,0.7288,0.3859,0.0521
+l1_4d_4d_wx0p25,step_x-,joints,deg,2.3488,1.3638,2.2734
+l1_4d_4d_wx0p25,step_y+,CoM pos,mm,227.0126,68.6431,2.9984
+l1_4d_4d_wx0p25,step_y+,CoM vel,mm/s,309.5369,91.8051,6.5690
+l1_4d_4d_wx0p25,step_y+,attitude,deg,5.5978,1.8999,0.1802
+l1_4d_4d_wx0p25,step_y+,EE pos,mm,6.4034,3.6277,1.7847
+l1_4d_4d_wx0p25,step_y+,EE head,deg,2.7349,0.9833,0.1056
+l1_4d_4d_wx0p25,step_y+,joints,deg,2.5119,2.0429,1.0772
+l1_4d_4d_wx0p25,step_y-,CoM pos,mm,190.0845,57.5885,4.2383
+l1_4d_4d_wx0p25,step_y-,CoM vel,mm/s,267.5050,77.1323,6.7838
+l1_4d_4d_wx0p25,step_y-,attitude,deg,4.7301,1.5109,0.2884
+l1_4d_4d_wx0p25,step_y-,EE pos,mm,7.5392,2.7879,2.5249
+l1_4d_4d_wx0p25,step_y-,EE head,deg,2.3791,0.8273,0.3349
+l1_4d_4d_wx0p25,step_y-,joints,deg,1.4597,0.8710,1.0150
+l1_4d_4d_wx0p25,step_yaw+,CoM pos,mm,14.5562,6.4712,2.6865
+l1_4d_4d_wx0p25,step_yaw+,CoM vel,mm/s,16.2773,6.7540,1.9135
+l1_4d_4d_wx0p25,step_yaw+,attitude,deg,9.2551,2.8460,0.1397
+l1_4d_4d_wx0p25,step_yaw+,EE pos,mm,32.3870,9.7299,1.4867
+l1_4d_4d_wx0p25,step_yaw+,EE head,deg,1.2669,0.4213,0.3801
+l1_4d_4d_wx0p25,step_yaw+,joints,deg,1.3983,0.7113,0.4359
+l1_4d_4d_wx0p25,step_yaw-,CoM pos,mm,6.2489,3.5493,2.3547
+l1_4d_4d_wx0p25,step_yaw-,CoM vel,mm/s,8.8447,4.8636,2.7120
+l1_4d_4d_wx0p25,step_yaw-,attitude,deg,8.7004,2.6746,0.1375
+l1_4d_4d_wx0p25,step_yaw-,EE pos,mm,32.1587,9.4896,1.3732
+l1_4d_4d_wx0p25,step_yaw-,EE head,deg,1.3864,0.4213,0.1205
+l1_4d_4d_wx0p25,step_yaw-,joints,deg,1.3360,0.7175,0.6778
+l1_4d_4d_wx0p25,traj_ee,CoM pos,mm,26.4411,12.5057,3.5755
+l1_4d_4d_wx0p25,traj_ee,CoM vel,mm/s,35.9096,16.1287,7.9029
+l1_4d_4d_wx0p25,traj_ee,attitude,deg,1.1870,0.5762,0.1435
+l1_4d_4d_wx0p25,traj_ee,EE pos,mm,11.9714,6.2627,2.9374
+l1_4d_4d_wx0p25,traj_ee,EE head,deg,16.9451,7.1997,2.4526
+l1_4d_4d_wx0p25,traj_ee,joints,deg,15.7656,6.8525,2.5386
+l1_4d_4d_wx0p25,traj_ee_back,CoM pos,mm,43.0544,19.7284,14.3792
+l1_4d_4d_wx0p25,traj_ee_back,CoM vel,mm/s,34.0604,15.7567,3.3251
+l1_4d_4d_wx0p25,traj_ee_back,attitude,deg,1.8765,0.8305,0.5626
+l1_4d_4d_wx0p25,traj_ee_back,EE pos,mm,20.3224,8.8252,4.2588
+l1_4d_4d_wx0p25,traj_ee_back,EE head,deg,22.4802,10.0371,2.2361
+l1_4d_4d_wx0p25,traj_ee_back,joints,deg,21.3287,9.8491,2.3258
+l1_4d_4d_wx0p25,traj_both,CoM pos,mm,154.3417,53.0843,11.7368
+l1_4d_4d_wx0p25,traj_both,CoM vel,mm/s,174.1684,60.7859,25.7602
+l1_4d_4d_wx0p25,traj_both,attitude,deg,5.1949,1.9893,0.7200
+l1_4d_4d_wx0p25,traj_both,EE pos,mm,11.6108,7.6573,3.4694
+l1_4d_4d_wx0p25,traj_both,EE head,deg,26.5898,13.1593,0.4127
+l1_4d_4d_wx0p25,traj_both,joints,deg,25.6043,13.1385,2.3069
+l1_4d_4d_wx0p25,traj_both_back,CoM pos,mm,146.5894,52.0254,20.4121
+l1_4d_4d_wx0p25,traj_both_back,CoM vel,mm/s,232.4867,80.6696,19.3025
+l1_4d_4d_wx0p25,traj_both_back,attitude,deg,4.1913,2.1234,1.0910
+l1_4d_4d_wx0p25,traj_both_back,EE pos,mm,21.2394,10.2811,5.8094
+l1_4d_4d_wx0p25,traj_both_back,EE head,deg,26.8677,12.5756,2.7820
+l1_4d_4d_wx0p25,traj_both_back,joints,deg,26.4142,12.4366,2.9435
+l1_4d_4d_wx0p25,post_hold,CoM pos,mm,26.7515,11.1176,6.4140
+l1_4d_4d_wx0p25,post_hold,CoM vel,mm/s,19.9002,8.6840,5.3522
+l1_4d_4d_wx0p25,post_hold,attitude,deg,0.9860,0.3695,0.3257
+l1_4d_4d_wx0p25,post_hold,EE pos,mm,5.9640,3.0529,1.2218
+l1_4d_4d_wx0p25,post_hold,EE head,deg,3.4229,2.2040,3.3105
+l1_4d_4d_wx0p25,post_hold,joints,deg,3.3492,2.4624,3.2941
+l1_4d_4d_best_A,step_x+,CoM pos,mm,198.4192,69.7390,26.1185
+l1_4d_4d_best_A,step_x+,CoM vel,mm/s,308.1353,111.9422,35.9529
+l1_4d_4d_best_A,step_x+,attitude,deg,5.1210,2.4202,0.7114
+l1_4d_4d_best_A,step_x+,EE pos,mm,13.2952,6.9312,3.1502
+l1_4d_4d_best_A,step_x+,EE head,deg,0.9782,0.6459,0.6755
+l1_4d_4d_best_A,step_x+,joints,deg,4.7982,3.8423,1.7260
+l1_4d_4d_best_A,step_x-,CoM pos,mm,241.0002,79.8125,28.5171
+l1_4d_4d_best_A,step_x-,CoM vel,mm/s,325.9538,114.7464,27.3997
+l1_4d_4d_best_A,step_x-,attitude,deg,6.4321,2.5853,0.8620
+l1_4d_4d_best_A,step_x-,EE pos,mm,10.7359,5.2053,4.5475
+l1_4d_4d_best_A,step_x-,EE head,deg,0.6833,0.2893,0.1752
+l1_4d_4d_best_A,step_x-,joints,deg,2.8028,1.6551,2.6882
+l1_4d_4d_best_A,step_y+,CoM pos,mm,216.9959,67.8708,4.4927
+l1_4d_4d_best_A,step_y+,CoM vel,mm/s,298.0901,91.2880,11.6010
+l1_4d_4d_best_A,step_y+,attitude,deg,5.1729,1.8509,0.2795
+l1_4d_4d_best_A,step_y+,EE pos,mm,7.9906,4.2849,1.9741
+l1_4d_4d_best_A,step_y+,EE head,deg,2.4242,0.9515,0.0924
+l1_4d_4d_best_A,step_y+,joints,deg,2.8351,2.1847,0.9267
+l1_4d_4d_best_A,step_y-,CoM pos,mm,215.4941,65.4187,6.7219
+l1_4d_4d_best_A,step_y-,CoM vel,mm/s,297.0766,89.8101,12.5203
+l1_4d_4d_best_A,step_y-,attitude,deg,5.2404,1.8287,0.4593
+l1_4d_4d_best_A,step_y-,EE pos,mm,7.9207,3.4532,2.8031
+l1_4d_4d_best_A,step_y-,EE head,deg,2.4773,0.9759,0.2243
+l1_4d_4d_best_A,step_y-,joints,deg,1.8324,1.0873,1.2762
+l1_4d_4d_best_A,step_yaw+,CoM pos,mm,14.4082,7.0577,1.9130
+l1_4d_4d_best_A,step_yaw+,CoM vel,mm/s,17.5062,8.5858,3.7085
+l1_4d_4d_best_A,step_yaw+,attitude,deg,8.7312,2.7077,0.1403
+l1_4d_4d_best_A,step_yaw+,EE pos,mm,30.5975,9.0620,1.4911
+l1_4d_4d_best_A,step_yaw+,EE head,deg,1.3602,0.4559,0.3090
+l1_4d_4d_best_A,step_yaw+,joints,deg,1.3985,0.8387,0.4281
+l1_4d_4d_best_A,step_yaw-,CoM pos,mm,9.1304,4.2830,0.8840
+l1_4d_4d_best_A,step_yaw-,CoM vel,mm/s,14.9076,6.4669,2.8787
+l1_4d_4d_best_A,step_yaw-,attitude,deg,9.2285,2.9120,0.1195
+l1_4d_4d_best_A,step_yaw-,EE pos,mm,34.5021,10.3464,1.4903
+l1_4d_4d_best_A,step_yaw-,EE head,deg,1.4648,0.4568,0.0866
+l1_4d_4d_best_A,step_yaw-,joints,deg,1.2644,0.7747,0.9207
+l1_4d_4d_best_A,traj_ee,CoM pos,mm,27.6835,13.8361,3.0879
+l1_4d_4d_best_A,traj_ee,CoM vel,mm/s,38.8244,17.8032,9.1517
+l1_4d_4d_best_A,traj_ee,attitude,deg,1.2779,0.6316,0.1518
+l1_4d_4d_best_A,traj_ee,EE pos,mm,14.8001,7.0308,2.8097
+l1_4d_4d_best_A,traj_ee,EE head,deg,17.6075,7.9657,2.5583
+l1_4d_4d_best_A,traj_ee,joints,deg,16.2934,7.6372,2.7668
+l1_4d_4d_best_A,traj_ee_back,CoM pos,mm,37.5148,21.5887,16.5666
+l1_4d_4d_best_A,traj_ee_back,CoM vel,mm/s,37.1445,17.8920,5.3166
+l1_4d_4d_best_A,traj_ee_back,attitude,deg,1.7118,0.9149,0.6006
+l1_4d_4d_best_A,traj_ee_back,EE pos,mm,23.9393,10.3694,5.2122
+l1_4d_4d_best_A,traj_ee_back,EE head,deg,25.0762,12.0881,1.5693
+l1_4d_4d_best_A,traj_ee_back,joints,deg,23.5929,11.8339,2.1877
+l1_4d_4d_best_A,traj_both,CoM pos,mm,156.5232,53.9901,9.1252
+l1_4d_4d_best_A,traj_both,CoM vel,mm/s,169.0396,58.9500,23.2243
+l1_4d_4d_best_A,traj_both,attitude,deg,5.1293,2.0150,0.6937
+l1_4d_4d_best_A,traj_both,EE pos,mm,12.2475,8.3413,3.3921
+l1_4d_4d_best_A,traj_both,EE head,deg,23.8278,12.2117,1.8223
+l1_4d_4d_best_A,traj_both,joints,deg,22.8352,12.1182,2.4601
+l1_4d_4d_best_A,traj_both_back,CoM pos,mm,16.0862,5.8848,2.7814
+l1_4d_4d_best_A,traj_both_back,CoM vel,mm/s,21.9151,7.4098,4.9931
+l1_4d_4d_best_A,traj_both_back,attitude,deg,0.5453,0.2585,0.1969
+l1_4d_4d_best_A,traj_both_back,EE pos,mm,4.5796,2.4847,1.7967
+l1_4d_4d_best_A,traj_both_back,EE head,deg,4.1817,2.4421,1.1554
+l1_4d_4d_best_A,traj_both_back,joints,deg,4.1306,2.5936,1.1658
+l1_4d_4d_best_A,post_hold,CoM pos,mm,7.4706,4.4205,2.9920
+l1_4d_4d_best_A,post_hold,CoM vel,mm/s,6.9301,3.5438,2.8230
+l1_4d_4d_best_A,post_hold,attitude,deg,0.3709,0.1978,0.1848
+l1_4d_4d_best_A,post_hold,EE pos,mm,3.3214,2.5313,2.3169
+l1_4d_4d_best_A,post_hold,EE head,deg,1.3502,1.0338,0.3854
+l1_4d_4d_best_A,post_hold,joints,deg,1.8676,1.6478,1.4958
+l1_4d_4d_best_B,step_x+,CoM pos,mm,171.2455,57.5967,14.4773
+l1_4d_4d_best_B,step_x+,CoM vel,mm/s,272.0419,90.3165,34.7470
+l1_4d_4d_best_B,step_x+,attitude,deg,4.1244,1.8882,0.6102
+l1_4d_4d_best_B,step_x+,EE pos,mm,11.2829,5.9719,2.7090
+l1_4d_4d_best_B,step_x+,EE head,deg,1.3307,0.7132,0.7519
+l1_4d_4d_best_B,step_x+,joints,deg,4.3333,3.4415,1.6358
+l1_4d_4d_best_B,step_x-,CoM pos,mm,241.2721,79.5530,27.4062
+l1_4d_4d_best_B,step_x-,CoM vel,mm/s,337.6500,116.1158,36.4657
+l1_4d_4d_best_B,step_x-,attitude,deg,6.5475,2.6198,0.7378
+l1_4d_4d_best_B,step_x-,EE pos,mm,10.5381,5.0489,4.1284
+l1_4d_4d_best_B,step_x-,EE head,deg,0.9335,0.3966,0.1720
+l1_4d_4d_best_B,step_x-,joints,deg,2.4750,1.4474,2.4104
+l1_4d_4d_best_B,step_y+,CoM pos,mm,223.2641,71.3327,5.5566
+l1_4d_4d_best_B,step_y+,CoM vel,mm/s,319.7608,98.5000,18.6153
+l1_4d_4d_best_B,step_y+,attitude,deg,5.6432,2.0477,0.3895
+l1_4d_4d_best_B,step_y+,EE pos,mm,6.4885,3.7374,1.8002
+l1_4d_4d_best_B,step_y+,EE head,deg,3.0535,1.1157,0.1966
+l1_4d_4d_best_B,step_y+,joints,deg,2.5620,2.0151,0.8697
+l1_4d_4d_best_B,step_y-,CoM pos,mm,217.8250,66.3037,5.0487
+l1_4d_4d_best_B,step_y-,CoM vel,mm/s,307.3893,92.7087,8.3425
+l1_4d_4d_best_B,step_y-,attitude,deg,5.4717,1.8766,0.3106
+l1_4d_4d_best_B,step_y-,EE pos,mm,7.1445,2.9275,2.5145
+l1_4d_4d_best_B,step_y-,EE head,deg,2.8575,1.0181,0.2151
+l1_4d_4d_best_B,step_y-,joints,deg,1.6493,0.9440,1.1828
+l1_4d_4d_best_B,step_yaw+,CoM pos,mm,13.7422,5.8116,1.3037
+l1_4d_4d_best_B,step_yaw+,CoM vel,mm/s,13.7132,6.5194,0.9970
+l1_4d_4d_best_B,step_yaw+,attitude,deg,9.2007,2.7306,0.1277
+l1_4d_4d_best_B,step_yaw+,EE pos,mm,32.5455,9.1414,1.1782
+l1_4d_4d_best_B,step_yaw+,EE head,deg,1.1700,0.3757,0.3541
+l1_4d_4d_best_B,step_yaw+,joints,deg,1.3265,0.7410,0.3919
+l1_4d_4d_best_B,step_yaw-,CoM pos,mm,6.3910,3.3668,2.7234
+l1_4d_4d_best_B,step_yaw-,CoM vel,mm/s,9.1000,4.9416,2.7305
+l1_4d_4d_best_B,step_yaw-,attitude,deg,8.6946,2.7165,0.1712
+l1_4d_4d_best_B,step_yaw-,EE pos,mm,31.5146,9.5317,1.4109
+l1_4d_4d_best_B,step_yaw-,EE head,deg,1.3210,0.4032,0.0391
+l1_4d_4d_best_B,step_yaw-,joints,deg,1.3120,0.7815,0.8534
+l1_4d_4d_best_B,traj_ee,CoM pos,mm,25.6658,12.1998,3.5974
+l1_4d_4d_best_B,traj_ee,CoM vel,mm/s,32.3889,13.6703,5.7316
+l1_4d_4d_best_B,traj_ee,attitude,deg,1.1895,0.5467,0.1386
+l1_4d_4d_best_B,traj_ee,EE pos,mm,12.8170,6.2381,2.3589
+l1_4d_4d_best_B,traj_ee,EE head,deg,15.4021,6.7177,2.0611
+l1_4d_4d_best_B,traj_ee,joints,deg,14.1406,6.3828,2.1914
+l1_4d_4d_best_B,traj_ee_back,CoM pos,mm,38.5875,19.0912,15.0998
+l1_4d_4d_best_B,traj_ee_back,CoM vel,mm/s,29.9400,15.2239,3.3762
+l1_4d_4d_best_B,traj_ee_back,attitude,deg,1.7082,0.8095,0.6349
+l1_4d_4d_best_B,traj_ee_back,EE pos,mm,20.6426,9.5389,4.8535
+l1_4d_4d_best_B,traj_ee_back,EE head,deg,22.1434,10.3139,2.4691
+l1_4d_4d_best_B,traj_ee_back,joints,deg,21.1469,10.0926,2.5044
+l1_4d_4d_best_B,traj_both,CoM pos,mm,158.9638,56.1216,11.0394
+l1_4d_4d_best_B,traj_both,CoM vel,mm/s,176.2283,61.2476,22.7770
+l1_4d_4d_best_B,traj_both,attitude,deg,5.3109,2.0820,0.7680
+l1_4d_4d_best_B,traj_both,EE pos,mm,12.7925,8.4268,3.6536
+l1_4d_4d_best_B,traj_both,EE head,deg,25.5335,12.9262,0.5129
+l1_4d_4d_best_B,traj_both,joints,deg,24.6899,12.9323,2.5407
+l1_4d_4d_best_B,traj_both_back,CoM pos,mm,18.6937,5.8556,3.0357
+l1_4d_4d_best_B,traj_both_back,CoM vel,mm/s,21.9825,6.7509,3.6891
+l1_4d_4d_best_B,traj_both_back,attitude,deg,0.5973,0.2495,0.2046
+l1_4d_4d_best_B,traj_both_back,EE pos,mm,4.4108,2.6240,1.7493
+l1_4d_4d_best_B,traj_both_back,EE head,deg,4.4503,2.5223,1.2059
+l1_4d_4d_best_B,traj_both_back,joints,deg,4.2084,2.6764,1.1840
+l1_4d_4d_best_B,post_hold,CoM pos,mm,5.9597,4.0007,2.6766
+l1_4d_4d_best_B,post_hold,CoM vel,mm/s,7.7365,3.8159,3.7111
+l1_4d_4d_best_B,post_hold,attitude,deg,0.3120,0.1857,0.1954
+l1_4d_4d_best_B,post_hold,EE pos,mm,3.3597,2.6192,2.5265
+l1_4d_4d_best_B,post_hold,EE head,deg,1.4092,1.0307,0.3782
+l1_4d_4d_best_B,post_hold,joints,deg,1.9873,1.7808,1.7124

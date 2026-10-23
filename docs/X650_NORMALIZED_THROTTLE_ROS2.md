@@ -11,7 +11,7 @@ X650 plant:
 
 ```bash
 cd "$HOME/Source/fsc_PegasusSimulator"
-./scripts/indoor_sim/start_x650_direct_actuator_sitl.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_x650_direct_actuator_sitl.sh fsc_lab_machine
 ```
 
 This launcher automatically disables Pegasus lockstep and applies the PX4
@@ -30,7 +30,7 @@ FSC_AUTOPILOT_WS="$HOME/Workspaces/fsc_autopilot_ws" \
 X650_HOVER_X=1 \
 X650_HOVER_Y=-1 \
 X650_HOVER_ALT=1.5 \
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh fsc_lab_machine
 ```
 
 Do not run a second normalized-throttle publisher alongside `apl20_ros/autopilot_node`. Only one

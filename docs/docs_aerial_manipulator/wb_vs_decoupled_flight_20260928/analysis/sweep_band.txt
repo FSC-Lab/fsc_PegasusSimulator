@@ -1,0 +1,6 @@
+0924 F3 16:56  sweep band 0.06-0.11 Hz: along-track 44 % of variance (116 mm p-p, mean +4) | radial 2 % (107 mm p-p, mean -15)
+0924 F4 17:21  sweep band 0.13-0.21 Hz: along-track 49 % of variance (140 mm p-p, mean +7) | radial 68 % (120 mm p-p, mean -26)
+WB-1 17:11     sweep band 0.13-0.21 Hz: along-track 80 % of variance (77 mm p-p, mean +1) | radial 9 % (58 mm p-p, mean -6)
+WB-2 17:22     sweep band 0.13-0.21 Hz: along-track 50 % of variance (71 mm p-p, mean +3) | radial 16 % (79 mm p-p, mean -9)
+DEC-1 18:28    sweep band 0.13-0.21 Hz: along-track 64 % of variance (111 mm p-p, mean +103) | radial 66 % (166 mm p-p, mean +91)
+DEC-2 18:36    sweep band 0.13-0.21 Hz: along-track 32 % of variance (135 mm p-p, mean +124) | radial 39 % (167 mm p-p, mean +110)

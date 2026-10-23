@@ -1,0 +1,1 @@
+law D80_30     | plant diag    | qdot present  | dly 8+8   | j2 rms 17.4 max 71.2 span  301% stuck   3% v99 418.1 over +48.6 | j3 rms 29.1 max 73.6 span  300% stuck   3% v99 466.9 over +55.5 | tilt 13.0 CoM   103 mm EE 109.7 mm | tau j2/j3 2.44/1.42 cap 92.1%

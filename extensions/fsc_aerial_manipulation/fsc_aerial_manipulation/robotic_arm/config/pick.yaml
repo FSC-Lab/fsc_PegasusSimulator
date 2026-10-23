@@ -1,0 +1,56 @@
+# ===========================================================================
+# pick — GRASP / CARRY / PLACE (02_aerial_manipulator_pick.py)
+#
+# Physical interaction: the jaws close on a real 0.2 kg block that the model
+# does not know about, so unlike the free-flight rig the observer here is
+# estimating a GENUINE external wrench, not just model error.
+#
+# These are the numbers the scenario flew with before the controllers were
+# merged — reproduced key for key so the merge itself changed nothing. Two of
+# them are worth a second look now that they are visible (see dls_lambda and
+# tau_max below); both are one-line experiments from here.
+# ===========================================================================
+
+default:
+  # --- geometric outer loop (identical to free — never separately tuned) ---
+  k_x: 16.0
+  k_v: 8.0
+  k_R: 8.0
+  k_w: 2.0
+  M_r_d: [0.065194, 0.064352, 0.100439]
+
+  # --- end-effector task impedance ----------------------------------------
+  # The stiff position channels matter more here than in free flight: the EE
+  # has to hold its grasp pose against the contact transient when the jaws
+  # close, and against the payload once it is carried.
+  K_y: [200.0, 200.0, 200.0, 40.0]
+  D_y: [6.0, 6.0, 6.0, 1.0]
+
+  # --- generalized-momentum disturbance observer ---------------------------
+  # This is the channel that does the real work in this scenario: the 0.2 kg
+  # block is deliberately absent from the model, so d_t_hat should converge to
+  # its weight once it is lifted.
+  use_gmo: true
+  K_o: [20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0]
+
+  impedance_mode: shaped
+  M_Y: [1.0, 1.0, 1.0, 0.05]
+
+  # --- solver / actuator ---------------------------------------------------
+  # dls_lambda 0 = the MATLAB's plain J_3y inverse. NOTE this is a DIVERGENCE
+  # from free.yaml (0.3), inherited from the pre-merge controller_pick.py where
+  # it was written `DLS_LAMBDA = 0#.3` — a commented-out digit, not a decision.
+  # It is kept at 0 here only so the merge was behaviour-preserving. Raising it
+  # to 0.3 (free's value) is the first thing to try if the arm ever fights
+  # itself near the q1/q4 heading singularity during the reach.
+  dls_lambda: 0.0
+  # tau_max null = NO clamp inside the law, which is what this scenario used to
+  # do (the demo clamps the applied torque at its own TAU_MAX = 1.5 N.m).
+  # The consequence, now that it is stated: on saturation the base moment still
+  # pre-compensates the DEMANDED arm reaction rather than the delivered one.
+  # Setting this to the demo's 1.5 turns on the saturation-consistent coupling
+  # (clamp, back out the realized u3, rebuild tau_body) — worth testing on this
+  # rig, where contact makes saturation a live possibility rather than a
+  # pathological one.
+  tau_max: null
+  omega_e_ff: false

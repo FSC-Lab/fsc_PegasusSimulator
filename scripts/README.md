@@ -19,10 +19,10 @@ the Isaac Sim GUI, and ROS 2 ground-truth checks:
 
 ```bash
 # Iris with indoor OptiTrack estimator settings
-./scripts/indoor_sim/start_single_drone_iris.sh fsc_lab_machine
+./scripts/indoor_sim/archive/start_single_drone_iris.sh fsc_lab_machine
 
 # Bare X650 with OptiTrack settings, X650 gains, and measured motor lag
-./scripts/indoor_sim/start_single_drone_x650.sh fsc_lab_machine
+./scripts/indoor_sim/lib/start_single_drone_x650.sh fsc_lab_machine
 ```
 
 The X650 plant uses the measured first-order rotor response
@@ -107,8 +107,8 @@ plant, the external `apl20_ros` PX4-style cascade, and a persistent 1.5 m ENU
 setpoint:
 
 ```bash
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh longhao_machine
-./scripts/indoor_sim/start_x650_ros_offboard_hover_test.sh longhao_machine headless
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh longhao_machine
+./scripts/indoor_sim/archive/start_x650_ros_offboard_hover_test.sh longhao_machine headless
 ```
 
 Override the ENU target with `X650_HOVER_X`, `X650_HOVER_Y`, and

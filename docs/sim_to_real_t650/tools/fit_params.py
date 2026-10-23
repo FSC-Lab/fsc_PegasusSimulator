@@ -109,8 +109,11 @@ def main():
                       P.INERTIA_DIAG[2] * f_izz],
     )
     print(f"\nthrust reference flight: {fresh} (lowest early mean command)")
+    # Last column: k and c against their BENCH values; the inertia rows against the shipped
+    # diagonal (t650_params no longer carries a separate CAD constant — its INERTIA_TENSOR
+    # is itself flight-identified, so "fitted vs shipped" is the meaningful comparison).
     print(f"\n{'parameter':30} {'current':>14} {'factor':>9} {'fitted':>14} "
-          f"{'vs bench/CAD':>13}")
+          f"{'vs bench/shipped':>17}")
     print(f"{'ROTOR_CONSTANT':30} {P.ROTOR_CONSTANT:14.6e} {f_k:9.4f} "
           f"{new['ROTOR_CONSTANT']:14.6e} "
           f"{new['ROTOR_CONSTANT']/P.BENCH_ROTOR_CONSTANT:12.3f}x")
@@ -120,7 +123,7 @@ def main():
     for i, (nm, f) in enumerate((("INERTIA Ixx", f_ixx), ("INERTIA Iyy", f_iyy),
                                  ("INERTIA Izz", f_izz))):
         print(f"{nm:30} {P.INERTIA_DIAG[i]:14.6e} {f:9.4f} {new['INERTIA_DIAG'][i]:14.6e} "
-              f"{new['INERTIA_DIAG'][i]/P.CAD_INERTIA_DIAG[i]:12.3f}x")
+              f"{new['INERTIA_DIAG'][i]/P.INERTIA_DIAG[i]:16.3f}x")
 
     g_ = 9.81
     T = P.MASS * g_ / 4

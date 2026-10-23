@@ -1,0 +1,145 @@
+=== laps=2 period=48.0 s amp=10.0 deg
+[circle] READY s=1.00 max=1.13 T=52.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          52.0000
+    T_lap            24.0000
+    laps             2.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1475
+    peak_a           0.0774
+    peak_qdot        0.0276
+    peak_tau_j       0.8220
+    min_sigma_nd     0.2584
+    -- at s_max = 1.1312: peak |q_dot| 1.79 deg/s, |v| 0.167 m/s, |a| 0.088 m/s^2, tau_j 0.822 N.m, sigma_nd 0.259, T 46.4 s
+terminate called without an active exception
+timeout: the monitored command dumped core
+=== laps=1 period=24.0 s amp=10.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1489
+    peak_a           0.0766
+    peak_qdot        0.0475
+    peak_tau_j       0.8218
+    min_sigma_nd     0.2585
+    -- at s_max = 1.1312: peak |q_dot| 3.05 deg/s, |v| 0.168 m/s, |a| 0.087 m/s^2, tau_j 0.822 N.m, sigma_nd 0.259, T 25.2 s
+terminate called without an active exception
+timeout: the monitored command dumped core
+=== laps=1 period=24.0 s amp=15.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1507
+    peak_a           0.0759
+    peak_qdot        0.0685
+    peak_tau_j       0.8556
+    min_sigma_nd     0.2372
+    -- at s_max = 1.1312: peak |q_dot| 4.44 deg/s, |v| 0.170 m/s, |a| 0.086 m/s^2, tau_j 0.856 N.m, sigma_nd 0.237, T 25.2 s
+=== laps=1 period=12.0 s amp=15.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1561
+    peak_a           0.0744
+    peak_qdot        0.1371
+    peak_tau_j       0.8544
+    min_sigma_nd     0.2373
+    -- at s_max = 1.1312: peak |q_dot| 8.88 deg/s, |v| 0.177 m/s, |a| 0.085 m/s^2, tau_j 0.854 N.m, sigma_nd 0.237, T 25.2 s
+terminate called without an active exception
+timeout: the monitored command dumped core
+=== laps=1 period=12.0 s amp=10.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1524
+    peak_a           0.0754
+    peak_qdot        0.0914
+    peak_tau_j       0.8209
+    min_sigma_nd     0.2585
+    -- at s_max = 1.1312: peak |q_dot| 5.92 deg/s, |v| 0.172 m/s, |a| 0.086 m/s^2, tau_j 0.821 N.m, sigma_nd 0.259, T 25.2 s
+=== laps=1 period=8.0 s amp=15.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1617
+    peak_a           0.0738
+    peak_qdot        0.2056
+    peak_tau_j       0.8524
+    min_sigma_nd     0.2374
+    -- at s_max = 1.1312: peak |q_dot| 13.33 deg/s, |v| 0.183 m/s, |a| 0.084 m/s^2, tau_j 0.851 N.m, sigma_nd 0.238, T 25.2 s
+=== laps=1 period=6.0 s amp=15.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1674
+    peak_a           0.0746
+    peak_qdot        0.2742
+    peak_tau_j       0.8496
+    min_sigma_nd     0.2376
+    -- at s_max = 1.1312: peak |q_dot| 17.77 deg/s, |v| 0.189 m/s, |a| 0.086 m/s^2, tau_j 0.848 N.m, sigma_nd 0.238, T 25.2 s
+=== laps=1 period=12.0 s amp=18.0 deg
+[circle] READY s=1.00 max=1.13 T=28.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          28.0000
+    T_lap            24.0000
+    laps             1.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1583
+    peak_a           0.0738
+    peak_qdot        0.1645
+    peak_tau_j       0.8727
+    min_sigma_nd     0.2241
+    -- at s_max = 1.1312: peak |q_dot| 10.66 deg/s, |v| 0.179 m/s, |a| 0.084 m/s^2, tau_j 0.872 N.m, sigma_nd 0.224, T 25.2 s
+terminate called without an active exception
+timeout: the monitored command dumped core
+PROBEDONE

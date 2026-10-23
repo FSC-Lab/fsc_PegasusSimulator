@@ -1,0 +1,36 @@
+
+#### a1 circle 35.9-75.5: law[0] passthrough 1.00, [1] fresh 1.00, [26] aux 1, [27] grav-corr flag 0
+  joint | cmd(node) mean/rms N.m | accepted-cmd rms | duty(after corr) mean | aux(fric+dither) mean/rms | gravcorr mean | applied mean | applied-cmd mean/rms | applied-duty mean/rms | corr(app,duty) | duty clamp %
+  j1   | +0.003/0.021 | 0.0247 | +0.003 | +0.000/0.000 | +0.000 | +0.001 | -0.002/0.030 | -0.002/0.062 | -0.032 | 0.0
+  j2   | +0.761/0.765 | 0.0672 | +0.614 | -0.039/0.230 | -0.079 | +0.643 | -0.118/0.198 | +0.029/0.242 | 0.398 | 0.0
+  j3   | +0.288/0.295 | 0.0366 | +0.289 | +0.018/0.110 | -0.011 | +0.296 | +0.008/0.082 | +0.007/0.122 | 0.380 | 0.0
+  j4   | +0.012/0.014 | 0.0079 | +0.013 | +0.000/0.009 | +0.000 | +0.011 | -0.001/0.032 | -0.001/0.065 | 0.020 | 0.0
+  j2: |qd_ref| mean 0.77 deg/s, |q_dot meas| mean 1.36; ref and actual velocity OPPOSITE sign 27% of moving time; friction FF (aux, dither averaged) rms 0.140 N.m, |max| 0.269; FF against actual motion (sign(auxf)!=sign(v)) 23% of moving time
+  j3: |qd_ref| mean 0.78 deg/s, |q_dot meas| mean 0.87; ref and actual velocity OPPOSITE sign 49% of moving time; friction FF (aux, dither averaged) rms 0.070 N.m, |max| 0.130; FF against actual motion (sign(auxf)!=sign(v)) 21% of moving time
+
+#### a2 circle 22.9-50.9: law[0] passthrough 1.00, [1] fresh 1.00, [26] aux 1, [27] grav-corr flag 0
+  joint | cmd(node) mean/rms N.m | accepted-cmd rms | duty(after corr) mean | aux(fric+dither) mean/rms | gravcorr mean | applied mean | applied-cmd mean/rms | applied-duty mean/rms | corr(app,duty) | duty clamp %
+  j1   | +0.004/0.020 | 0.0267 | +0.004 | +0.000/0.000 | +0.000 | +0.001 | -0.003/0.030 | -0.003/0.063 | -0.054 | 0.0
+  j2   | +0.792/0.794 | 0.0752 | +0.697 | -0.001/0.226 | -0.080 | +0.711 | -0.081/0.181 | +0.013/0.239 | 0.377 | 0.0
+  j3   | +0.269/0.279 | 0.0411 | +0.248 | -0.004/0.109 | -0.011 | +0.255 | -0.014/0.082 | +0.007/0.120 | 0.121 | 0.0
+  j4   | +0.015/0.016 | 0.0092 | +0.015 | -0.000/0.012 | +0.000 | +0.004 | -0.011/0.031 | -0.011/0.052 | 0.139 | 0.0
+  j2: |qd_ref| mean 0.72 deg/s, |q_dot meas| mean 1.18; ref and actual velocity OPPOSITE sign 27% of moving time; friction FF (aux, dither averaged) rms 0.139 N.m, |max| 0.263; FF against actual motion (sign(auxf)!=sign(v)) 22% of moving time
+  j3: |qd_ref| mean 0.73 deg/s, |q_dot meas| mean 0.64; ref and actual velocity OPPOSITE sign 51% of moving time; friction FF (aux, dither averaged) rms 0.068 N.m, |max| 0.144; FF against actual motion (sign(auxf)!=sign(v)) 15% of moving time
+
+#### a3 circle 20.6-48.6: law[0] passthrough 1.00, [1] fresh 1.00, [26] aux 1, [27] grav-corr flag 0
+  joint | cmd(node) mean/rms N.m | accepted-cmd rms | duty(after corr) mean | aux(fric+dither) mean/rms | gravcorr mean | applied mean | applied-cmd mean/rms | applied-duty mean/rms | corr(app,duty) | duty clamp %
+  j1   | +0.003/0.020 | 0.0238 | +0.002 | +0.000/0.000 | +0.000 | +0.001 | -0.003/0.030 | -0.002/0.063 | 0.017 | 0.0
+  j2   | +0.702/0.710 | 0.0624 | +0.629 | +0.019/0.242 | -0.076 | +0.646 | -0.055/0.196 | +0.017/0.292 | 0.638 | 0.0
+  j3   | +0.359/0.365 | 0.0338 | +0.327 | -0.009/0.133 | -0.011 | +0.338 | -0.021/0.116 | +0.012/0.287 | 0.457 | 1.0
+  j4   | +0.013/0.014 | 0.0077 | +0.013 | -0.000/0.012 | +0.000 | +0.004 | -0.008/0.031 | -0.008/0.056 | 0.103 | 0.0
+  j2: |qd_ref| mean 4.33 deg/s, |q_dot meas| mean 4.05; ref and actual velocity OPPOSITE sign 19% of moving time; friction FF (aux, dither averaged) rms 0.172 N.m, |max| 0.312; FF against actual motion (sign(auxf)!=sign(v)) 16% of moving time
+  j3: |qd_ref| mean 4.32 deg/s, |q_dot meas| mean 4.01; ref and actual velocity OPPOSITE sign 22% of moving time; friction FF (aux, dither averaged) rms 0.104 N.m, |max| 0.158; FF against actual motion (sign(auxf)!=sign(v)) 14% of moving time
+
+#### a4 circle 20.1-48.1: law[0] passthrough 1.00, [1] fresh 1.00, [26] aux 1, [27] grav-corr flag 0
+  joint | cmd(node) mean/rms N.m | accepted-cmd rms | duty(after corr) mean | aux(fric+dither) mean/rms | gravcorr mean | applied mean | applied-cmd mean/rms | applied-duty mean/rms | corr(app,duty) | duty clamp %
+  j1   | +0.004/0.023 | 0.0266 | +0.002 | +0.000/0.000 | +0.000 | +0.000 | -0.003/0.031 | -0.002/0.067 | -0.040 | 0.0
+  j2   | +0.726/0.736 | 0.0662 | +0.659 | +0.018/0.231 | -0.075 | +0.670 | -0.056/0.209 | +0.011/0.424 | 0.671 | 0.0
+  j3   | +0.369/0.375 | 0.0367 | +0.344 | -0.010/0.130 | -0.012 | +0.344 | -0.025/0.125 | +0.000/0.526 | 0.547 | 6.1
+  j4   | +0.013/0.014 | 0.0087 | +0.013 | -0.000/0.014 | +0.000 | -0.001 | -0.013/0.024 | -0.014/0.045 | 0.085 | 0.0
+  j2: |qd_ref| mean 9.22 deg/s, |q_dot meas| mean 10.38; ref and actual velocity OPPOSITE sign 12% of moving time; friction FF (aux, dither averaged) rms 0.185 N.m, |max| 0.308; FF against actual motion (sign(auxf)!=sign(v)) 11% of moving time
+  j3: |qd_ref| mean 9.12 deg/s, |q_dot meas| mean 11.29; ref and actual velocity OPPOSITE sign 15% of moving time; friction FF (aux, dither averaged) rms 0.109 N.m, |max| 0.161; FF against actual motion (sign(auxf)!=sign(v)) 10% of moving time

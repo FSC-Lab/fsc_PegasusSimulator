@@ -1,0 +1,8 @@
+F1 j2: slip onsets 6; torque beyond gravity just before slipping (along the slip): median +0.129, p25/p75 +0.101/+0.165 N.m | kinetic (|v|>5 deg/s) median +0.171 N.m (n=22)
+F1 j3: slip onsets 12; torque beyond gravity just before slipping (along the slip): median -0.028, p25/p75 -0.052/+0.039 N.m | kinetic (|v|>5 deg/s) median -0.030 N.m (n=26)
+F2 j2: slip onsets 3; torque beyond gravity just before slipping (along the slip): median +0.242, p25/p75 +0.152/+0.248 N.m | kinetic (|v|>5 deg/s) median +0.128 N.m (n=28)
+F2 j3: slip onsets 9; torque beyond gravity just before slipping (along the slip): median +0.041, p25/p75 -0.076/+0.091 N.m | kinetic (|v|>5 deg/s) median +0.071 N.m (n=17)
+F3 j2: slip onsets 2; torque beyond gravity just before slipping (along the slip): median +0.009, p25/p75 -0.005/+0.023 N.m | kinetic (|v|>5 deg/s) median +0.212 N.m (n=242)
+F3 j3: slip onsets 3; torque beyond gravity just before slipping (along the slip): median +0.058, p25/p75 +0.025/+0.086 N.m | kinetic (|v|>5 deg/s) median +0.089 N.m (n=176)
+F4 j2: slip onsets 0; torque beyond gravity just before slipping (along the slip): median +nan, p25/p75 +nan/+nan N.m | kinetic (|v|>5 deg/s) median +0.201 N.m (n=579)
+F4 j3: slip onsets 3; torque beyond gravity just before slipping (along the slip): median +0.094, p25/p75 +0.087/+0.118 N.m | kinetic (|v|>5 deg/s) median +0.097 N.m (n=465)

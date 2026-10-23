@@ -1,0 +1,1 @@
+law D80_24     | plant hht     | qdot observer | dly 20+20 | j2 rms  1.2 max  2.3 span  103% stuck  52% v99 22.9 over  +0.9 | j3 rms  2.2 max  3.6 span  104% stuck  59% v99 25.3 over  +1.0 | tilt  0.4 CoM    22 mm EE  2.7 mm | tau j2/j3 1.12/0.50 cap 0.0%

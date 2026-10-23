@@ -1,0 +1,37 @@
+=================== wb_tracking_20260902_124652 ===================
+DIRECT windows: [(np.float64(6.4), np.float64(103.9))]
+HOLD windows:   [(np.float64(6.4), np.float64(21.9)), (np.float64(33.0), np.float64(46.2)), (np.float64(59.4), np.float64(74.9)), (np.float64(86.1), np.float64(103.9))]
+EXEC windows:   [(np.float64(30.0), np.float64(33.0)), (np.float64(56.4), np.float64(59.4)), (np.float64(80.7), np.float64(86.1))]
+
+ARM TORQUE EXECUTION (model convention, N.m):
+joint |  corr(recv,flight) slope |  corr(deliv,flight) slope  mean(fl) mean(del)
+  j1 |  +0.959 +0.969        |  +0.146 +0.052 (off -0.001)   -0.001  -0.001
+  j2 |  +0.994 +0.994        |  +0.985 +0.925 (off +0.043)   +0.577  +0.576
+  j3 |  +0.996 +0.998        |  +0.779 +0.555 (off +0.112)   +0.249  +0.251
+  j4 |  +0.551 +0.596        |  +0.223 +0.063 (off +0.000)   +0.005  +0.000
+
+REFERENCE CHECKS:
+  x_cd FD vs x_cd_dot: rms diff = 0.0014 m/s (stream), max |v| = 0.230 m/s, max |a| = 0.146 m/s2
+  max inter-sample step x_cd = 2.9 mm; r_ed = 2.9 mm; q_d = 0.25 deg
+  max |qdot_d| = 18.9 deg/s
+
+STEADY-STATE (mean over last 60% of each HOLD window):
+ window        | CoM err mm (x,y,z) | EE e_y mm (x,y,z) | e_y_hd | headerr deg | q-q_d deg | d_t N (x,y,z) | d_r N.m | u1 N
+    6.4-  21.9 |  -173.9   -88.0   +14.4 |  +169.0   +80.6   -31.2 | -0.003 |   -0.84 |  -0.8  -0.0  +0.4  -0.2 | -2.66 -0.16 +0.43 | -0.160 -0.066 -0.069 |  36.46
+   33.0-  46.2 |   -63.6   +71.7    +2.0 |   +50.5   -69.7   -19.7 | +0.019 |   -0.01 |  +0.8  -2.0  +4.4  +0.3 | -2.75 -0.26 -0.19 | -0.226 -0.028 -0.091 |  37.06
+   59.4-  74.9 |   +19.4   -17.7    +3.2 |   -24.1   +15.5   -17.9 | -0.002 |   -0.48 |  +0.2  +0.6  +0.3  -0.2 | -2.81 -0.14 -0.87 | -0.227 +0.039 -0.119 |  37.78
+   86.1- 103.9 |   -99.6   +20.5   +12.7 |   +95.1   -18.8   -27.2 | +0.003 |   +0.62 |  -0.1  +0.6  +0.3  -0.2 | -2.80 -0.19 -1.36 | -0.239 -0.001 -0.122 |  37.38
+
+HOLD CONVERGENCE (|CoM err| horizontal, mean per third of window, mm) + e_R norm:
+    6.4-  21.9: |e_com|   125.6 ->   289.6 ->   120.5 mm   |e_R| 0.107 -> 0.130 -> 0.043
+   33.0-  46.2: |e_com|   344.1 ->   193.3 ->   160.9 mm   |e_R| 0.142 -> 0.111 -> 0.078
+   59.4-  74.9: |e_com|   165.6 ->    81.3 ->    40.9 mm   |e_R| 0.077 -> 0.033 -> 0.019
+   86.1- 103.9: |e_com|    66.7 ->    62.6 ->   142.6 mm   |e_R| 0.030 -> 0.029 -> 0.065
+
+BASE-CoM RESIDUAL from steady d_r (model x = pitch-ish axis, forward = +y):
+    6.4-  21.9  q=(-1,40,40,-0)deg  d_r=(-0.160,-0.066) N.m  => CoM residual model (dx,dy)=(+1.8,-4.4) mm
+   33.0-  46.2  q=(1,41,19,-0)deg  d_r=(-0.226,-0.028) N.m  => CoM residual model (dx,dy)=(+0.8,-6.1) mm
+   59.4-  74.9  q=(0,41,40,-0)deg  d_r=(-0.227,+0.039) N.m  => CoM residual model (dx,dy)=(-1.0,-6.0) mm
+   86.1- 103.9  q=(-0,41,40,-0)deg  d_r=(-0.239,-0.001) N.m  => CoM residual model (dx,dy)=(+0.0,-6.4) mm
+
+ANTI-DAMPING CHECK: tau_model_x vs v_fwd slope = -0.328 N.m/(m/s), r = -0.39 (0901 was -0.36; positive/small = healthy)

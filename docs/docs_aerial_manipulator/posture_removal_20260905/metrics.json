@@ -1,0 +1,558 @@
+{
+  "A_kf15_noPID": {
+    "aborted": true,
+    "reason": "tilt=2.2deg poserr=1.51m z=1.15",
+    "direct_s": 32.28,
+    "com_err_last20_mm": 530.42,
+    "com_err_max_mm": 1494.7,
+    "ee_err_last20_mm": 708.41,
+    "eR_max": 0.9599,
+    "tilt_last20_deg": 12.843,
+    "tilt_max_deg": 32.12,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 51.08,
+    "u1_last20_N": 52.901,
+    "q_final_deg": [
+      -6.37,
+      -18.0,
+      -6.16,
+      26.65
+    ],
+    "q23_span_first5s_deg": [
+      -10.8,
+      50.0,
+      -77.6,
+      50.0
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.0, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        25.54,
+        "hover settled: err=23 mm tilt=0.00deg"
+      ],
+      [
+        25.54,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        26.02,
+        "-> DIRECT"
+      ],
+      [
+        58.32,
+        "!! ABORT: tilt=2.2deg poserr=1.51m z=1.15"
+      ],
+      [
+        58.32,
+        "-> LAND"
+      ],
+      [
+        67.34,
+        "-> DONE"
+      ]
+    ]
+  },
+  "B_kf15_PID": {
+    "aborted": false,
+    "reason": "",
+    "direct_s": 75.0,
+    "com_err_last20_mm": 2.88,
+    "com_err_max_mm": 197.8,
+    "ee_err_last20_mm": 6.48,
+    "eR_max": 0.0664,
+    "tilt_last20_deg": 0.04,
+    "tilt_max_deg": 2.37,
+    "tau_max_Nm": 0.743,
+    "clamp_pct": 0.0,
+    "u1_last20_N": 42.263,
+    "q_final_deg": [
+      0.02,
+      38.78,
+      39.7,
+      0.01
+    ],
+    "q23_span_first5s_deg": [
+      31.0,
+      42.7,
+      38.8,
+      43.2
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        26.18,
+        "hover settled: err=23 mm tilt=0.03deg"
+      ],
+      [
+        26.18,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        26.2,
+        "-> DIRECT"
+      ],
+      [
+        101.22,
+        "soak complete (75.0 s)"
+      ],
+      [
+        101.22,
+        "-> REVERT"
+      ],
+      [
+        107.24,
+        "-> LAND"
+      ],
+      [
+        116.26,
+        "-> DONE"
+      ]
+    ]
+  },
+  "C_matched_noPID_run1": {
+    "aborted": false,
+    "reason": "",
+    "direct_s": 75.0,
+    "com_err_last20_mm": 2.94,
+    "com_err_max_mm": 39.4,
+    "ee_err_last20_mm": 3.7,
+    "eR_max": 0.0334,
+    "tilt_last20_deg": 0.037,
+    "tilt_max_deg": 1.12,
+    "tau_max_Nm": 0.88,
+    "clamp_pct": 0.0,
+    "u1_last20_N": 36.75,
+    "q_final_deg": [
+      0.42,
+      40.71,
+      39.09,
+      -0.06
+    ],
+    "q23_span_first5s_deg": [
+      40.0,
+      50.0,
+      15.6,
+      40.0
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.0, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        24.62,
+        "hover settled: err=22 mm tilt=0.01deg"
+      ],
+      [
+        24.62,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        24.76,
+        "-> DIRECT"
+      ],
+      [
+        99.78,
+        "soak complete (75.0 s)"
+      ],
+      [
+        99.78,
+        "-> REVERT"
+      ],
+      [
+        105.8,
+        "-> LAND"
+      ],
+      [
+        114.82,
+        "-> DONE"
+      ]
+    ]
+  },
+  "D_kf7.5_noPID": {
+    "aborted": true,
+    "reason": "tilt=20.7deg poserr=1.53m z=0.77",
+    "direct_s": 14.92,
+    "com_err_last20_mm": 511.87,
+    "com_err_max_mm": 1481.0,
+    "ee_err_last20_mm": 586.96,
+    "eR_max": 0.9049,
+    "tilt_last20_deg": 15.889,
+    "tilt_max_deg": 30.07,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 20.48,
+    "u1_last20_N": 40.925,
+    "q_final_deg": [
+      2.29,
+      -22.66,
+      -22.58,
+      -43.63
+    ],
+    "q23_span_first5s_deg": [
+      4.3,
+      50.0,
+      31.5,
+      50.0
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, -0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        24.82,
+        "hover settled: err=22 mm tilt=0.02deg"
+      ],
+      [
+        24.82,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        24.92,
+        "-> DIRECT"
+      ],
+      [
+        39.86,
+        "!! ABORT: tilt=20.7deg poserr=1.53m z=0.77"
+      ],
+      [
+        39.86,
+        "-> LAND"
+      ],
+      [
+        48.88,
+        "-> DONE"
+      ]
+    ]
+  },
+  "E_kf15_noPID_stiffKy": {
+    "aborted": true,
+    "reason": "tilt=36.3deg poserr=1.07m z=0.64",
+    "direct_s": 3.8,
+    "com_err_last20_mm": 905.46,
+    "com_err_max_mm": 1076.9,
+    "ee_err_last20_mm": 945.43,
+    "eR_max": 0.8982,
+    "tilt_last20_deg": 16.814,
+    "tilt_max_deg": 36.26,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 49.74,
+    "u1_last20_N": 55.74,
+    "q_final_deg": [
+      -0.82,
+      48.05,
+      -1.78,
+      9.96
+    ],
+    "q23_span_first5s_deg": [
+      21.6,
+      50.0,
+      -90.0,
+      49.9
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.0, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        25.0,
+        "hover settled: err=26 mm tilt=0.06deg"
+      ],
+      [
+        25.0,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        25.36,
+        "-> DIRECT"
+      ],
+      [
+        29.18,
+        "!! ABORT: tilt=36.3deg poserr=1.07m z=0.64"
+      ],
+      [
+        29.18,
+        "-> LAND"
+      ],
+      [
+        38.2,
+        "-> DONE"
+      ]
+    ]
+  },
+  "F_matched_noPID_run2": {
+    "aborted": true,
+    "reason": "tilt=11.1deg poserr=1.50m z=0.92",
+    "direct_s": 16.96,
+    "com_err_last20_mm": 920.26,
+    "com_err_max_mm": 1523.2,
+    "ee_err_last20_mm": 1180.33,
+    "eR_max": 0.9313,
+    "tilt_last20_deg": 11.641,
+    "tilt_max_deg": 27.62,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 40.16,
+    "u1_last20_N": 51.832,
+    "q_final_deg": [
+      -25.68,
+      -45.37,
+      -15.4,
+      -15.5
+    ],
+    "q23_span_first5s_deg": [
+      -35.0,
+      50.0,
+      -63.5,
+      50.0
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.5,
+        "-> ARM"
+      ],
+      [
+        7.52,
+        "-> TAKEOFF"
+      ],
+      [
+        25.22,
+        "hover settled: err=19 mm tilt=0.04deg"
+      ],
+      [
+        25.22,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        25.34,
+        "-> DIRECT"
+      ],
+      [
+        42.32,
+        "!! ABORT: tilt=11.1deg poserr=1.50m z=0.92"
+      ],
+      [
+        42.32,
+        "-> LAND"
+      ],
+      [
+        51.34,
+        "-> DONE"
+      ]
+    ]
+  },
+  "G_matched_noPID_run3": {
+    "aborted": true,
+    "reason": "tilt=35.6deg poserr=0.29m z=1.07",
+    "direct_s": 3.7,
+    "com_err_last20_mm": 235.64,
+    "com_err_max_mm": 345.5,
+    "ee_err_last20_mm": 572.81,
+    "eR_max": 0.463,
+    "tilt_last20_deg": 15.73,
+    "tilt_max_deg": 35.64,
+    "tau_max_Nm": 3.0,
+    "clamp_pct": 27.42,
+    "u1_last20_N": 41.756,
+    "q_final_deg": [
+      3.5,
+      -40.8,
+      19.29,
+      -7.98
+    ],
+    "q23_span_first5s_deg": [
+      -60.6,
+      50.0,
+      -58.1,
+      50.0
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [0.001, 0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        24.64,
+        "hover settled: err=22 mm tilt=0.05deg"
+      ],
+      [
+        24.64,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        24.94,
+        "-> DIRECT"
+      ],
+      [
+        28.66,
+        "!! ABORT: tilt=35.6deg poserr=0.29m z=1.07"
+      ],
+      [
+        28.66,
+        "-> LAND"
+      ],
+      [
+        37.68,
+        "-> DONE"
+      ]
+    ]
+  },
+  "H_kf15_PID_restored_tree": {
+    "aborted": false,
+    "reason": "",
+    "direct_s": 90.0,
+    "com_err_last20_mm": 2.98,
+    "com_err_max_mm": 197.6,
+    "ee_err_last20_mm": 5.57,
+    "eR_max": 0.0682,
+    "tilt_last20_deg": 0.042,
+    "tilt_max_deg": 2.48,
+    "tau_max_Nm": 0.745,
+    "clamp_pct": 0.0,
+    "u1_last20_N": 42.263,
+    "q_final_deg": [
+      -0.02,
+      39.35,
+      39.7,
+      0.01
+    ],
+    "q23_span_first5s_deg": [
+      31.3,
+      43.0,
+      38.8,
+      43.1
+    ],
+    "events": [
+      [
+        2.0,
+        "home = [-0.0, -0.0, 0.305]"
+      ],
+      [
+        2.0,
+        "-> OFFBOARD"
+      ],
+      [
+        4.52,
+        "-> ARM"
+      ],
+      [
+        7.54,
+        "-> TAKEOFF"
+      ],
+      [
+        25.28,
+        "hover settled: err=26 mm tilt=0.01deg"
+      ],
+      [
+        25.28,
+        "-> DIRECT_WAIT"
+      ],
+      [
+        25.72,
+        "-> DIRECT"
+      ],
+      [
+        115.74,
+        "soak complete (90.0 s)"
+      ],
+      [
+        115.74,
+        "-> REVERT"
+      ],
+      [
+        121.76,
+        "-> LAND"
+      ],
+      [
+        130.78,
+        "-> DONE"
+      ]
+    ]
+  }
+}

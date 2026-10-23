@@ -1,0 +1,1 @@
+law dcal   | plant hht                       | j2 rms  2.9 max  4.9 span  108% stuck  30% v99 19.9 over  +1.6 | j3 rms  5.5 max  9.7 span  125% stuck  48% v99 29.4 over  +4.4 | tilt  0.2 CoM    16 mm EE  7.7 mm | tau j2/j3 1.09/0.51 cap 0.0%

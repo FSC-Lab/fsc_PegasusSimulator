@@ -1,0 +1,1 @@
+law K57_34 | plant diag                      | j2 rms 28.6 max 57.1 span  191% stuck   4% v99 229.3 over +39.9 | j3 rms 21.8 max 49.8 span  196% stuck   4% v99 248.3 over +23.0 | tilt  5.7 CoM   317 mm EE 135.1 mm | tau j2/j3 2.44/1.42 cap 87.7%

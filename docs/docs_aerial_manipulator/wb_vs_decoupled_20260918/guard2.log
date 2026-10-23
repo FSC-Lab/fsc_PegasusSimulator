@@ -1,0 +1,21 @@
+  wb_k_r : 2.0 -> 3.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+  wb_k_w : 1.5 -> 1.8
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+############ wb/c48_diverge  wb_k_r=3.0 wb_k_w=1.8 ############
+=== [wb/c48_diverge] 0. clean slate ===
+=== [wb/c48_diverge] 1. controller stack ===
+=== [wb/c48_diverge] 2. Pegasus / PX4 / arm ===
+=== [wb/c48_diverge] 3. waiting for odometry ===
+=== [wb/c48_diverge] 3b. waiting for EKF yaw/EV alignment ===
+=== [wb/c48_diverge] 3c. waiting for the arm stack + planner ===
+=== [wb/c48_diverge] 4. flying (--shape circle --radius 0.75 --lap-time 48 --laps 2 --time-scale 1.0 --hover-z 1.2 --guard-watch 25) ===
+=== [wb/c48_diverge] done (driver rc=0) ===
+[ 117.70s] !! NODE REVERTED TO SAFETY DURING DIRECT_SETTLE -- guard trip; freezing the reference at [0.184, 0.036, 1.1] and recording for 25.0 s
+[ 117.70s] PHASE GUARD_WATCH  mode=DIRECT plan=HOLD ee=NONE
+[ 142.71s] PHASE LAND  mode=SAFETY plan=IDLE ee=NONE
+[ 162.73s] PHASE DONE  mode=SAFETY plan=IDLE ee=NONE
+[ 162.73s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_vs_decoupled_20260918/wb_c48_diverge.npz aborted=False 
+./run_gain_check.sh: line 31: RIG: unbound variable
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml

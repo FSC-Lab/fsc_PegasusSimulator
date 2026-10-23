@@ -1,0 +1,100 @@
+metric                        l1_ctrl_armoff.npz           l1_gain10.npz          l1_gain10b.npz
+------------------------------------------------------------------------------------------------
+observer                                      L1                      L1                      L1
+aborted                                    False                   False                   False
+direct_s [s]                               165.4                   164.6                   164.0
+soak_s [s]                                 145.4                   144.6                   144.0
+dhat_rise90_s [s]                           1.58                    1.53                    1.72
+entry_sag_mm [mm]                            158                     163                     148
+entry_xy_max_mm [mm]                         736                     750                     676
+entry_peak_com_mm [mm]                     738.7                   754.4                   679.8
+entry_settle_s [s]                           inf                     inf                     inf
+com_err_mean_mm [mm]                       78.17                   76.57                   81.26
+com_err_rms_mm [mm]                       112.89                  110.65                  114.55
+com_err_max_mm [mm]                       360.12                  356.26                  359.78
+ee_err_mean_mm [mm]                        83.93                   82.20                   87.10
+ee_err_max_mm [mm]                        363.19                  358.09                  365.77
+late_com_mm [mm]                          104.40                   97.78                  100.14
+late_com_max_mm [mm]                      318.11                  301.24                  310.39
+tilt_pp_deg [deg]                          3.562                   3.359                   3.527
+tilt_mean_deg [deg]                        1.239                   1.221                   1.320
+eR_max                                    0.2239                  0.2288                  0.2252
+u1_mean_N [N]                             47.577                  47.574                  47.573
+tau_max_Nm [N.m]                           0.832                   0.817                   0.953
+n_sat_frac                                 0.000                   0.000                   0.000
+stream_fresh_frac                          1.000                   1.000                   1.000
+dhat_z_N [N]                             -10.807                 -10.807                 -10.805
+dhat_xy_N [N]                              0.711                   0.694                   0.748
+dhat_rot_Nm [N.m]                         0.6361                  0.6358                  0.5748
+dhat_q1_Nm [N.m]                          0.0000                 -0.0000                 -0.0001
+dhat_q2_Nm [N.m]                          0.2123                  0.2117                  0.1384
+dhat_q3_Nm [N.m]                          0.0842                  0.0843                  0.0549
+dhat_q4_Nm [N.m]                         -0.0006                 -0.0006                  0.0015
+tau_q1_Nm [N.m]                           0.0000                  0.0001                  0.0002
+tau_q2_Nm [N.m]                           0.7198                  0.7183                  0.8021
+tau_q3_Nm [N.m]                           0.2853                  0.2858                  0.3364
+tau_q4_Nm [N.m]                          -0.0020                 -0.0020                 -0.0044
+tau_arm_absmean_Nm [N.m]                  0.2537                  0.2533                  0.2886
+q1_err_deg [deg]                          -0.036                  -0.045                  -0.062
+q2_err_deg [deg]                          -1.868                  -1.870                  -2.025
+q3_err_deg [deg]                          -1.058                  -1.074                  -1.228
+q4_err_deg [deg]                           0.030                   0.022                   0.026
+q2_abserr_deg [deg]                        3.054                   3.024                   3.442
+q3_abserr_deg [deg]                        1.387                   1.362                   1.541
+phantom_Fy_force_N [N]                    0.1870                  0.1742                  0.4101
+phantom_Fy_late_N [N]                     0.3253                  0.3067                  0.4889
+phantom_Fy_max_N [N]                      0.8417                  0.7627                  0.9278
+phantom_Fy_psi_Nm [N.m]                   0.0075                  0.0071                  0.0095
+we_force_N [N]                            0.6279                  0.6133                  0.8567
+we_moment_Nm [N.m]                        0.1218                  0.1196                  0.1409
+what_thrust_N [N]                        -10.797                 -10.757                 -10.315
+n_clamped_frac                             0.000                   0.000                   0.000
+dc_z_std_N [N]                             1.238                   1.186                   1.501
+dhat_z_std_N [N]                          0.3224                  0.2151                  0.2354
+
+per-leg (x/y/yaw steps and the compatible-trajectory leg)
+------------------------------------------------------------------------------------------------
+step_x+.peak_mm                           281.77                  272.64                  277.75
+step_x+.settle_mm                          32.80                   34.57                   41.16
+step_x+.tilt_max                            2.48                    2.47                    2.49
+step_x+.s                                  11.50                   11.42                   11.46
+step_x-.peak_mm                           342.23                  342.02                  352.04
+step_x-.settle_mm                          32.92                   36.54                   42.71
+step_x-.tilt_max                            2.91                    3.03                    3.28
+step_x-.s                                  11.82                   11.82                   11.90
+step_y+.peak_mm                           349.89                  350.99                  359.65
+step_y+.settle_mm                          57.92                   59.36                   62.99
+step_y+.tilt_max                            3.24                    3.19                    3.28
+step_y+.s                                  12.00                   11.84                   11.84
+step_y-.peak_mm                           360.12                  356.26                  359.78
+step_y-.settle_mm                          44.11                   40.15                   44.93
+step_y-.tilt_max                            3.39                    3.30                    3.30
+step_y-.s                                  11.90                   11.90                   11.88
+step_yaw+.peak_mm                         118.45                  122.40                  124.95
+step_yaw+.settle_mm                        47.69                   47.18                   50.83
+step_yaw+.tilt_max                          1.92                    2.00                    2.07
+step_yaw+.s                                 9.76                    9.82                    9.70
+step_yaw-.peak_mm                          60.56                   68.01                   64.50
+step_yaw-.settle_mm                        23.40                   24.24                   24.83
+step_yaw-.tilt_max                          1.36                    1.49                    1.45
+step_yaw-.s                                 9.80                    9.72                    9.82
+traj_ee.peak_mm                            28.89                   34.07                   33.36
+traj_ee.settle_mm                           8.48                    8.97                   16.93
+traj_ee.tilt_max                            0.62                    0.73                    0.69
+traj_ee.s                                  12.78                   12.70                   12.36
+traj_ee_back.peak_mm                       45.63                   37.06                   41.65
+traj_ee_back.settle_mm                     22.10                   11.29                   25.88
+traj_ee_back.tilt_max                       0.79                    0.63                    0.98
+traj_ee_back.s                             13.04                   13.02                   12.88
+traj_both.peak_mm                         283.70                  271.53                  269.02
+traj_both.settle_mm                        46.04                   51.57                   53.87
+traj_both.tilt_max                          2.97                    2.75                    2.84
+traj_both.s                                13.38                   13.20                   13.14
+traj_both_back.peak_mm                    318.11                  301.24                  310.39
+traj_both_back.settle_mm                   49.74                   51.79                   50.97
+traj_both_back.tilt_max                     3.57                    3.36                    3.55
+traj_both_back.s                           13.08                   12.82                   12.72
+post_hold.peak_mm                         112.08                  107.69                  109.51
+post_hold.settle_mm                        30.90                   39.15                   36.63
+post_hold.tilt_max                          1.83                    1.80                    1.90
+post_hold.s                                 6.00                    6.02                    6.02

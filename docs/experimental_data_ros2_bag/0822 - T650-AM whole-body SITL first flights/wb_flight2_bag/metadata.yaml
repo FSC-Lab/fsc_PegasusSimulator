@@ -1,0 +1,38 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: sqlite3
+  duration:
+    nanoseconds: 468608300477
+  starting_time:
+    nanoseconds_since_epoch: 1787413370539639275
+  message_count: 330896
+  topics_with_message_count:
+    - topic_metadata:
+        name: /uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/wb_control_debug
+        type: std_msgs/msg/Float32MultiArray
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 97270
+    - topic_metadata:
+        name: /uav_0/fsc_open_manipulator/joint_states
+        type: sensor_msgs/msg/JointState
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 116580
+    - topic_metadata:
+        name: /uav_0/state_estimator/local_position/odom
+        type: nav_msgs/msg/Odometry
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 117046
+  compression_format: ""
+  compression_mode: ""
+  relative_file_paths:
+    - wb_flight2_bag_0.db3
+  files:
+    - path: wb_flight2_bag_0.db3
+      starting_time:
+        nanoseconds_since_epoch: 1787413370539639275
+      duration:
+        nanoseconds: 468608300477
+      message_count: 330896

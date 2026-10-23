@@ -1,0 +1,175 @@
+  wb_posture_kp : 2.0 -> 0.0
+  wb_posture_kd : 0.25 -> 0.0
+  wb_posture_ki : 0.05 -> 0.0
+  wb_posture_i_max : 0.8 -> 0.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+
+############ fix_ab_A anchor_com=true int_ff=true K_y=20.0 D_y=12.0 ############
+  wb_ee_anchor_com : false -> true
+  wb_u3_internal_ff : false -> true
+  wb_ky_x : 2.0 -> 20.0
+  wb_ky_y : 2.0 -> 20.0
+  wb_ky_z : 2.0 -> 20.0
+  wb_dy_x : 4.0 -> 12.0
+  wb_dy_y : 4.0 -> 12.0
+  wb_dy_z : 4.0 -> 12.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/fix_ab_A] 0. clean slate ===
+=== [l1/fix_ab_A] 1. controller stack ===
+=== [l1/fix_ab_A] 2. Pegasus / PX4 / arm ===
+=== [l1/fix_ab_A] 3. waiting for odometry ===
+=== [l1/fix_ab_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/fix_ab_A] 3c. waiting for the arm ===
+=== [l1/fix_ab_A] 4. flying ===
+=== [l1/fix_ab_A] done (driver rc=0) ===
+[ 102.99s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 103.45s] mode -> SAFETY
+[ 103.45s] planner -> IDLE
+[ 114.99s] PHASE LAND  ref=[0.0, -0.0, 1.0] mode='SAFETY'
+[ 134.99s] service rc/disarm requested
+[ 134.99s] PHASE DONE  ref=[0.0, -0.0, 0.35] mode='SAFETY'
+[ 135.01s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ fix_ab_A rc=0 ############
+
+############ fix_ab_B anchor_com=true int_ff=true K_y=20.0 D_y=12.0 ############
+  wb_ee_anchor_com : true -> true
+  wb_u3_internal_ff : true -> true
+  wb_ky_x : 20.0 -> 20.0
+  wb_ky_y : 20.0 -> 20.0
+  wb_ky_z : 20.0 -> 20.0
+  wb_dy_x : 12.0 -> 12.0
+  wb_dy_y : 12.0 -> 12.0
+  wb_dy_z : 12.0 -> 12.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/fix_ab_B] 0. clean slate ===
+=== [l1/fix_ab_B] 1. controller stack ===
+=== [l1/fix_ab_B] 2. Pegasus / PX4 / arm ===
+=== [l1/fix_ab_B] 3. waiting for odometry ===
+=== [l1/fix_ab_B] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/fix_ab_B] 3c. waiting for the arm ===
+=== [l1/fix_ab_B] 4. flying ===
+=== [l1/fix_ab_B] done (driver rc=0) ===
+[ 103.07s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 103.53s] mode -> SAFETY
+[ 103.53s] planner -> IDLE
+[ 115.07s] PHASE LAND  ref=[0.0, 0.0, 1.0] mode='SAFETY'
+[ 135.07s] service rc/disarm requested
+[ 135.07s] PHASE DONE  ref=[0.0, 0.0, 0.35] mode='SAFETY'
+[ 135.09s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ fix_ab_B rc=0 ############
+
+############ fix_ab_C anchor_com=true int_ff=true K_y=20.0 D_y=12.0 ############
+  wb_ee_anchor_com : true -> true
+  wb_u3_internal_ff : true -> true
+  wb_ky_x : 20.0 -> 20.0
+  wb_ky_y : 20.0 -> 20.0
+  wb_ky_z : 20.0 -> 20.0
+  wb_dy_x : 12.0 -> 12.0
+  wb_dy_y : 12.0 -> 12.0
+  wb_dy_z : 12.0 -> 12.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/fix_ab_C] 0. clean slate ===
+=== [l1/fix_ab_C] 1. controller stack ===
+=== [l1/fix_ab_C] 2. Pegasus / PX4 / arm ===
+=== [l1/fix_ab_C] 3. waiting for odometry ===
+=== [l1/fix_ab_C] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/fix_ab_C] 3c. waiting for the arm ===
+=== [l1/fix_ab_C] 4. flying ===
+=== [l1/fix_ab_C] done (driver rc=0) ===
+[ 102.61s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 103.04s] mode -> SAFETY
+[ 103.04s] planner -> IDLE
+[ 114.61s] PHASE LAND  ref=[0.001, 0.0, 1.0] mode='SAFETY'
+[ 134.63s] service rc/disarm requested
+[ 134.63s] PHASE DONE  ref=[0.001, 0.0, 0.35] mode='SAFETY'
+[ 134.65s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ fix_ab_C rc=0 ############
+
+############ fix_a_A anchor_com=true int_ff=false K_y=20.0 D_y=12.0 ############
+  wb_ee_anchor_com : true -> true
+  wb_u3_internal_ff : true -> false
+  wb_ky_x : 20.0 -> 20.0
+  wb_ky_y : 20.0 -> 20.0
+  wb_ky_z : 20.0 -> 20.0
+  wb_dy_x : 12.0 -> 12.0
+  wb_dy_y : 12.0 -> 12.0
+  wb_dy_z : 12.0 -> 12.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/fix_a_A] 0. clean slate ===
+=== [l1/fix_a_A] 1. controller stack ===
+=== [l1/fix_a_A] 2. Pegasus / PX4 / arm ===
+=== [l1/fix_a_A] 3. waiting for odometry ===
+=== [l1/fix_a_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/fix_a_A] 3c. waiting for the arm ===
+=== [l1/fix_a_A] 4. flying ===
+=== [l1/fix_a_A] done (driver rc=0) ===
+[ 105.25s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 105.70s] mode -> SAFETY
+[ 105.70s] planner -> IDLE
+[ 117.25s] PHASE LAND  ref=[0.0, -0.0, 1.0] mode='SAFETY'
+[ 137.25s] service rc/disarm requested
+[ 137.25s] PHASE DONE  ref=[0.0, -0.0, 0.35] mode='SAFETY'
+[ 137.27s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ fix_a_A rc=0 ############
+
+############ fix_b_A anchor_com=false int_ff=true K_y=2.0 D_y=4.0 ############
+  wb_ee_anchor_com : true -> false
+  wb_u3_internal_ff : false -> true
+  wb_ky_x : 20.0 -> 2.0
+  wb_ky_y : 20.0 -> 2.0
+  wb_ky_z : 20.0 -> 2.0
+  wb_dy_x : 12.0 -> 4.0
+  wb_dy_y : 12.0 -> 4.0
+  wb_dy_z : 12.0 -> 4.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/fix_b_A] 0. clean slate ===
+=== [l1/fix_b_A] 1. controller stack ===
+=== [l1/fix_b_A] 2. Pegasus / PX4 / arm ===
+=== [l1/fix_b_A] 3. waiting for odometry ===
+=== [l1/fix_b_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/fix_b_A] 3c. waiting for the arm ===
+=== [l1/fix_b_A] 4. flying ===
+=== [l1/fix_b_A] done (driver rc=0) ===
+[ 104.93s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 105.38s] mode -> SAFETY
+[ 105.39s] planner -> IDLE
+[ 116.93s] PHASE LAND  ref=[0.0, 0.0, 1.0] mode='SAFETY'
+[ 136.95s] service rc/disarm requested
+[ 136.95s] PHASE DONE  ref=[0.0, 0.0, 0.35] mode='SAFETY'
+[ 136.97s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ fix_b_A rc=0 ############
+
+############ fix_ab50_A anchor_com=true int_ff=true K_y=50.0 D_y=20.0 ############
+  wb_ee_anchor_com : false -> true
+  wb_u3_internal_ff : true -> true
+  wb_ky_x : 2.0 -> 50.0
+  wb_ky_y : 2.0 -> 50.0
+  wb_ky_z : 2.0 -> 50.0
+  wb_dy_x : 4.0 -> 20.0
+  wb_dy_y : 4.0 -> 20.0
+  wb_dy_z : 4.0 -> 20.0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml
+=== [l1/fix_ab50_A] 0. clean slate ===
+=== [l1/fix_ab50_A] 1. controller stack ===
+=== [l1/fix_ab50_A] 2. Pegasus / PX4 / arm ===
+=== [l1/fix_ab50_A] 3. waiting for odometry ===
+=== [l1/fix_ab50_A] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1/fix_ab50_A] 3c. waiting for the arm ===
+=== [l1/fix_ab50_A] 4. flying ===
+=== [l1/fix_ab50_A] done (driver rc=0) ===
+[ 105.81s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 106.23s] mode -> SAFETY
+[ 106.23s] planner -> IDLE
+[ 117.81s] PHASE LAND  ref=[0.0, 0.0, 1.0] mode='SAFETY'
+[ 137.83s] service rc/disarm requested
+[ 137.83s] PHASE DONE  ref=[0.0, 0.0, 0.35] mode='SAFETY'
+[ 137.85s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ fix_ab50_A rc=0 ############
+FIX DONE
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_direct_actuation_t650_sim.yaml

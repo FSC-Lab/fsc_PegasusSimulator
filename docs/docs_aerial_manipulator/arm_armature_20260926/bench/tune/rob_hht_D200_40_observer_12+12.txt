@@ -1,0 +1,1 @@
+law D200_40    | plant hht     | qdot observer | dly 12+12 | j2 rms 30.6 max 92.9 span  418% stuck   5% v99 814.3 over +91.9 | j3 rms 16.2 max 64.8 span  249% stuck   5% v99 872.9 over +36.6 | tilt 17.8 CoM   236 mm EE 124.9 mm | tau j2/j3 2.44/1.42 cap 98.8%

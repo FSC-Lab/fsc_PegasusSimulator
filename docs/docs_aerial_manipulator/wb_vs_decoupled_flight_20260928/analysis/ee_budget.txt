@@ -1,0 +1,8 @@
+WB-1 17:11     EE   26.2 mm rms = airframe   25.3 + attitude   6.7 + joints   8.2   (closure 6.63e-04 mm)
+WB-2 17:22     EE   24.4 mm rms = airframe   23.4 + attitude   5.7 + joints   6.6   (closure 7.06e-04 mm)
+DEC-1 18:28    EE  192.0 mm rms = airframe  151.3 + attitude  49.1 + joints   3.4   (closure 1.23e-03 mm)
+DEC-2 18:36    EE  218.4 mm rms = airframe  176.8 + attitude  49.7 + joints   3.4   (closure 6.82e-04 mm)
+0924 F1 12:02  EE   62.9 mm rms = airframe   59.7 + attitude   4.3 + joints  11.6   (closure 1.07e-03 mm)
+0924 F2 12:05  EE   55.9 mm rms = airframe   56.1 + attitude   5.1 + joints   8.0   (closure 1.05e-03 mm)
+0924 F3 16:56  EE   50.7 mm rms = airframe   43.0 + attitude   5.8 + joints  14.0   (closure 6.20e-04 mm)
+0924 F4 17:21  EE   52.2 mm rms = airframe   48.3 + attitude   7.3 + joints  13.5   (closure 1.31e-03 mm)

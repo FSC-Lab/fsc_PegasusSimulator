@@ -1,0 +1,88 @@
+<figure class="wide">
+<div class="ee3d" id="ee3d">
+  <div class="ee3d-bar">
+    <div class="seg tog" role="group" aria-label="Lines shown">
+      <button type="button" data-cat="ee_ref" aria-pressed="true"><span class="sw dash" style="--c:var(--ink2)"></span>EE planned (r = 0.50 m)</button>
+      <button type="button" data-cat="com_ref" aria-pressed="true"><span class="sw dot" style="--c:var(--ink2)"></span>CoM planned</button>
+      <button type="button" data-cat="com" aria-pressed="true"><span class="sw" style="--c:var(--aqua)"></span>CoM measured</button>
+      <button type="button" data-cat="arm" aria-pressed="true"><span class="sw thin" style="--c:var(--ink2)"></span>Arm, base to EE every 2 s</button>
+      <button type="button" data-cat="ee" aria-pressed="true"><span class="sw" style="--c:var(--blue)"></span>EE measured</button>
+    </div>
+    <div class="seg" role="group" aria-label="Vertical scale">
+      <button type="button" data-z="1" aria-pressed="true">True vertical scale</button>
+      <button type="button" data-z="5" aria-pressed="false">Vertical ×5</button>
+    </div>
+    <button type="button" id="ee3d-reset" class="plain">Reset all views</button>
+  </div>
+  <div class="ee3d-grid">
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="f1"></div><div class="ee3d-plot" data-flight="f1" aria-label="Rotatable 3D plot, flight 1"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="f2"></div><div class="ee3d-plot" data-flight="f2" aria-label="Rotatable 3D plot, flight 2"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="f3"></div><div class="ee3d-plot" data-flight="f3" aria-label="Rotatable 3D plot, flight 3"></div></div>
+    <div class="ee3d-cell"><div class="ee3d-title" data-title="f4"></div><div class="ee3d-plot" data-flight="f4" aria-label="Rotatable 3D plot, flight 4"></div></div>
+  </div>
+  <img id="ee3d-fallback" src="figures/f_circle_3d.png" alt="3D circle trajectories of all four flights" hidden>
+</div>
+<script type="application/json" id="ee3d-data">__DATA__</script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-gl3d-dist-min@2.35.2/plotly-gl3d.min.js"></script>
+<script>
+(function(){
+  var root=document.getElementById('ee3d'), D=JSON.parse(document.getElementById('ee3d-data').textContent);
+  var KEYS=['f1','f2','f3','f4'];
+  KEYS.forEach(function(k){root.querySelector('[data-title="'+k+'"]').textContent=D[k].label;});
+  if(typeof window.Plotly==='undefined'){
+    root.querySelector('.ee3d-grid').hidden=true; root.querySelector('.ee3d-bar').hidden=true;
+    document.getElementById('ee3d-fallback').hidden=false; return;
+  }
+  var show={ee_ref:true,com_ref:true,com:true,arm:true,ee:true}, zs=1;
+  var cam0={eye:{x:1.02,y:-1.28,z:0.66},up:{x:0,y:0,z:1},center:{x:0,y:0,z:-0.05}};
+  function clone(o){return JSON.parse(JSON.stringify(o));}
+  var cams={}; KEYS.forEach(function(k){cams[k]=clone(cam0);});
+  function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+  function col(A,k){return A.map(function(p){return p[k];});}
+  function el(k){return root.querySelector('.ee3d-plot[data-flight="'+k+'"]');}
+  function traces(f){
+    var c={ink:tok('--ink'),ink2:tok('--ink2'),blue:tok('--blue'),orange:tok('--orange'),aqua:tok('--aqua')};
+    var n=f.ee.length, lap2=f.lap.reduce(function(s,v){return s+v;},0)>=20, i2=lap2?f.lap.indexOf(1):n;
+    function seg(a,b){return {x:col(f.ee.slice(a,b),0),y:col(f.ee.slice(a,b),1),z:col(f.ee.slice(a,b),2),
+      customdata:f.t.slice(a,b).map(function(t,i){return [t,f.err[a+i]];})};}
+    var wx=[],wy=[],wz=[];
+    for(var j=0;j<n;j+=50){wx.push(f.base[j][0],f.ee[j][0],null);wy.push(f.base[j][1],f.ee[j][1],null);wz.push(f.base[j][2],f.ee[j][2],null);}
+    var hov='t = %{customdata[0]:.1f} s into the run<br>EE error %{customdata[1]:.0f} mm<extra>%{fullData.name}</extra>';
+    var T=[
+      {meta:'ee_ref',type:'scatter3d',mode:'lines',name:'EE planned',x:col(f.ee_ref,0),y:col(f.ee_ref,1),z:col(f.ee_ref,2),line:{color:c.ink2,width:3,dash:'dash'},hoverinfo:'skip'},
+      {meta:'com_ref',type:'scatter3d',mode:'lines',name:'CoM planned',x:col(f.com_ref,0),y:col(f.com_ref,1),z:col(f.com_ref,2),line:{color:c.ink2,width:2,dash:'dot'},hoverinfo:'skip'},
+      {meta:'com',type:'scatter3d',mode:'lines',name:'CoM measured',x:col(f.com,0),y:col(f.com,1),z:col(f.com,2),line:{color:c.aqua,width:4},hoverinfo:'skip'},
+      {meta:'arm',type:'scatter3d',mode:'lines',name:'Arm',x:wx,y:wy,z:wz,line:{color:c.ink2,width:2},opacity:0.45,hoverinfo:'skip'}];
+    var s1=seg(0,lap2?i2+1:n);
+    T.push({meta:'ee',type:'scatter3d',mode:'lines',name:lap2?'EE measured, lap 1':'EE measured',x:s1.x,y:s1.y,z:s1.z,customdata:s1.customdata,line:{color:c.blue,width:6},hovertemplate:hov});
+    if(lap2){var s2=seg(i2,n);T.push({meta:'ee',type:'scatter3d',mode:'lines',name:'EE measured, lap 2',x:s2.x,y:s2.y,z:s2.z,customdata:s2.customdata,line:{color:c.orange,width:6},hovertemplate:hov});}
+    T.push({meta:'ee',type:'scatter3d',mode:'markers+text',name:'start',x:[f.ee[0][0]],y:[f.ee[0][1]],z:[f.ee[0][2]],text:['start'],textposition:'top center',textfont:{color:c.ink,size:11},marker:{size:4,color:c.ink},hoverinfo:'skip'});
+    T.forEach(function(t){t.visible=show[t.meta];t.showlegend=false;});
+    return T;
+  }
+  function layout(f,k){
+    var ink=tok('--ink'),ink2=tok('--ink2'),line=tok('--line');
+    var all=f.ee.concat(f.ee_ref,f.com,f.com_ref,f.base), lo=[1e9,1e9,1e9], hi=[-1e9,-1e9,-1e9];
+    all.forEach(function(p){for(var q=0;q<3;q++){if(p[q]<lo[q])lo[q]=p[q];if(p[q]>hi[q])hi[q]=p[q];}});
+    var span=[0,1,2].map(function(q){return hi[q]-lo[q];}), m=Math.max(span[0],span[1]), pad=0.04;
+    function ax(title,q){return {title:{text:title,font:{color:ink2,size:11}},range:[lo[q]-pad,hi[q]+pad],color:ink2,gridcolor:line,zerolinecolor:line,showbackground:false,tickfont:{color:ink2,size:9}};}
+    return {margin:{l:0,r:0,t:0,b:0},paper_bgcolor:'rgba(0,0,0,0)',font:{family:"'IBM Plex Sans',system-ui,sans-serif",color:ink},showlegend:false,
+      scene:{xaxis:ax('x [m]',0),yaxis:ax('y [m]',1),zaxis:ax('z [m]',2),aspectmode:'manual',
+        aspectratio:{x:(span[0]+2*pad)/m,y:(span[1]+2*pad)/m,z:Math.min(1.2,(span[2]+2*pad)/m*zs)},camera:cams[k]},
+      hoverlabel:{bgcolor:tok('--panel'),bordercolor:line,font:{color:ink}}};
+  }
+  function keepCam(k){try{var c=el(k)._fullLayout.scene._scene.getCamera();if(c)cams[k]=c;}catch(e){}}
+  function draw(k){Plotly.react(el(k),traces(D[k]),layout(D[k],k),{displaylogo:false,responsive:true,displayModeBar:false});}
+  KEYS.forEach(function(k){draw(k);el(k).on('plotly_relayout',function(ev){if(ev&&ev['scene.camera'])cams[k]=ev['scene.camera'];});});
+  function press(attr,val){root.querySelectorAll('button['+attr+']').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute(attr)===val));});}
+  root.querySelectorAll('button[data-cat]').forEach(function(b){b.addEventListener('click',function(){
+    var cat=b.dataset.cat; show[cat]=!show[cat]; b.setAttribute('aria-pressed',String(show[cat]));
+    KEYS.forEach(function(k){var e=el(k),idx=[];e.data.forEach(function(t,i){if(t.meta===cat)idx.push(i);});Plotly.restyle(e,{visible:show[cat]},idx);});
+  });});
+  root.querySelectorAll('button[data-z]').forEach(function(b){b.addEventListener('click',function(){
+    zs=+b.dataset.z; press('data-z',b.dataset.z); KEYS.forEach(function(k){keepCam(k);draw(k);});
+  });});
+  document.getElementById('ee3d-reset').addEventListener('click',function(){KEYS.forEach(function(k){cams[k]=clone(cam0);draw(k);});});
+})();
+</script>
+<figcaption>Fig. 1 — The circle run of each flight in 3D, world frame, from the start rest to the end of the run (flight 1 stops at the mocap freeze; its second lap is drawn in orange). Each view rotates on its own: drag to rotate, scroll or pinch to zoom, and hover the EE path for time and error. The buttons above switch a line on or off in all four views. The EE rides 0.10–0.11 m below the CoM, and the grey whiskers show the arm reaching 0.27 m ahead along the direction of travel. At true vertical scale the paths are nearly flat; use ×5 to see the height variation.</figcaption></figure>

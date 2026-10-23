@@ -1,0 +1,8 @@
+/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/wb_vs_decoupled_flight_20260928/tools/ff_check.py:23: RuntimeWarning: Mean of empty slice.
+  r[f"j{j+1}"] = dict(ff_p99=float(np.percentile(np.abs(f), 99)), follows_measured_pct=float(100 * (np.sign(f) == np.sign(v[:, j]))[dis].mean()),
+/usr/lib/python3/dist-packages/numpy/core/_methods.py:189: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+0924 F3 16:56 {'j2': {'ff_p99': 0.24816926979110815, 'follows_measured_pct': nan, 'n_disagree': 0, 'ff_when_stuck': 0.16995420418192167, 'n_stuck': 277}, 'j3': {'ff_p99': 0.13940206302776798, 'follows_measured_pct': nan, 'n_disagree': 0, 'ff_when_stuck': 0.11040126395715974, 'n_stuck': 1389}, 'observer_pct': None}
+0924 F4 17:21 {'j2': {'ff_p99': 0.26131810024314994, 'follows_measured_pct': 0.0, 'n_disagree': 20, 'ff_when_stuck': 0.19176641698516836, 'n_stuck': 153}, 'j3': {'ff_p99': 0.141494303829172, 'follows_measured_pct': 0.0, 'n_disagree': 18, 'ff_when_stuck': 0.113711885942717, 'n_stuck': 991}, 'observer_pct': None}
+WB-1 17:11 {'j2': {'ff_p99': 0.16931896736180696, 'follows_measured_pct': 100.0, 'n_disagree': 13, 'ff_when_stuck': 0.014121660192645036, 'n_stuck': 223}, 'j3': {'ff_p99': 0.08880167999549628, 'follows_measured_pct': 100.0, 'n_disagree': 88, 'ff_when_stuck': 0.006159134816382085, 'n_stuck': 672}, 'observer_pct': 100.0}
+WB-2 17:22 {'j2': {'ff_p99': 0.16524128865845295, 'follows_measured_pct': 100.0, 'n_disagree': 12, 'ff_when_stuck': 0.016826821293380242, 'n_stuck': 127}, 'j3': {'ff_p99': 0.08915419242703758, 'follows_measured_pct': 98.0392156862745, 'n_disagree': 51, 'ff_when_stuck': 0.00392190736914581, 'n_stuck': 598}, 'observer_pct': 100.0}

@@ -1,0 +1,39 @@
+=== laps=2 fold=60.0 q2 = 25.0 +- 15.0 deg, period 12.0 s
+[circle] INFEASIBLE: joint q3 leaves its range: [20.000, 50.000] deg vs [-40.000, 50.000]
+=== laps=1 fold=60.0 q2 = 25.0 +- 15.0 deg, period 12.0 s
+[circle] INFEASIBLE: joint q3 leaves its range: [20.000, 50.000] deg vs [-40.000, 50.000]
+=== laps=2 fold=55.0 q2 = 25.0 +- 15.0 deg, period 12.0 s
+[circle] READY s=1.00 max=1.13 T=52.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          52.0000
+    T_lap            24.0000
+    laps             2.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1563
+    peak_a           0.0735
+    peak_qdot        0.1371
+    peak_tau_j       0.8440
+    min_sigma_nd     0.2373
+    -- at s_max = 1.1312: peak |q_dot| 8.88 deg/s, |v| 0.177 m/s, |a| 0.084 m/s^2, tau_j 0.844 N.m, sigma_nd 0.237, T 46.4 s
+=== laps=2 fold=60.0 q2 = 30.0 +- 15.0 deg, period 12.0 s
+[circle] READY s=1.00 max=1.13 T=52.00s EE err 0.1mm/0.0deg
+    s                1.0000
+    s_max            1.1312
+    T_total          52.0000
+    T_lap            24.0000
+    laps             2.0000
+    ramp             4.0000
+    type_id          1.0000
+    ee_pos_err_m     0.0001
+    ee_rot_err_deg   0.0004
+    peak_v           0.1561
+    peak_a           0.0744
+    peak_qdot        0.1371
+    peak_tau_j       0.8544
+    min_sigma_nd     0.2373
+    -- at s_max = 1.1312: peak |q_dot| 8.88 deg/s, |v| 0.177 m/s, |a| 0.085 m/s^2, tau_j 0.854 N.m, sigma_nd 0.237, T 46.4 s
+PROBEDONE

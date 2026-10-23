@@ -1,0 +1,44 @@
+  wb_l1_omega_x : 2.0 -> 2.0
+  wb_l1_omega_x_t : 0.0 -> 2.0
+  wb_l1_omega_x_r : 0.0 -> 0.5
+  wb_l1_omega_x_q : 0.0 -> 0.5
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+
+############ l1_4d/4d_blk  omega_x=2.0 omega_x_t=2.0 omega_x_r=0.5 omega_x_q=0.5 ############
+=== [l1_4d/4d_blk] 0. clean slate ===
+=== [l1_4d/4d_blk] 1. controller stack ===
+=== [l1_4d/4d_blk] 2. Pegasus / PX4 / arm ===
+=== [l1_4d/4d_blk] 3. waiting for odometry ===
+=== [l1_4d/4d_blk] 3b. waiting for EKF yaw/EV alignment ===
+=== [l1_4d/4d_blk] 3c. waiting for the arm ===
+=== [l1_4d/4d_blk] 4. flying ===
+=== [l1_4d/4d_blk] done (driver rc=0) ===
+[ 298.99s] mode -> SAFETY
+[ 298.99s] planner -> IDLE
+[ 299.01s] service set_direct_mode(false) -> std_srvs.srv.SetBool_Response(success=True, message='Switched to SAFETY mode')
+[ 311.01s] PHASE LAND  ref=[0.031, 0.031, 0.989] mode='SAFETY'
+[ 331.03s] service rc/disarm requested
+[ 331.03s] PHASE DONE  ref=[0.031, 0.031, 0.35] mode='SAFETY'
+[ 331.05s] service rc/disarm -> std_srvs.srv.Trigger_Response(success=True, message='Disarm command sent')
+completed
+############ 4d_blk rc=0 ############
+  wb_l1_omega_x : 2.0 -> 0.25
+  wb_l1_omega_x_t : 2.0 -> 0
+  wb_l1_omega_x_r : 0.5 -> 0
+  wb_l1_omega_x_q : 0.5 -> 0
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
+
+############ l1_4d/4d_wx0p25  omega_x=0.25 omega_x_t=0 omega_x_r=0 omega_x_q=0 ############
+=== [l1_4d/4d_wx0p25] 0. clean slate ===
+=== [l1_4d/4d_wx0p25] 1. controller stack ===
+FAILED: autopilot_whole_body_l1_direct_actuation_node never came up
+[Config] Using: /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/scripts/config/shiqi_machine.conf
+[1;35mDISTURBANCE OBSERVER: L1 ADAPTIVE, FOUR-DIMENSIONAL ATTRIBUTION (joint rows). Same law, same gains, same plant, same executable as the 6-D rig.[0m
+[1;31mWARNING: simulation-only +15% allocator-kf stress injection is active.[0m
+[1;33mThe GMO baseline is validated for hover only (2 x 90 s); +20% fails it. That is the bar.[0m
+Ground-station interpreter: python3 (Python 3.10.12)
+Reference-whole-body planner interpreter: python3 (Python 3.10.12)
+Reference whole-body planner: transition planner = bspline
+open terminal failed: not a terminal
+############ 4d_wx0p25 rc=1 ############
+restored /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml

@@ -1,0 +1,1 @@
+law cal    | plant diag                      | j2 rms  9.0 max 14.6 span  137% stuck   5% v99 35.1 over  +7.7 | j3 rms 14.8 max 23.8 span  166% stuck  21% v99 48.6 over +14.9 | tilt  1.0 CoM    60 mm EE 18.0 mm | tau j2/j3 1.13/0.54 cap 0.0%
