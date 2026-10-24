@@ -6576,7 +6576,8 @@ Exit (0.24 s later) released mid-swing. **Proposed, NOT applied:** settle gate b
 of the stuck-arm push, unfold the arm before Go To Start's final straight. Do not loosen the q3 guard.
 
 **THE HAND-OVER SETTLE + THE CALM EXIT, APPLIED THE SAME EVENING (2026-10-24, user: "go ahead 1-3";
-same README section 8; uncommitted, NOT flown).** fsc_trajectory_planner node (default off; on in the
+same README section 8; PUSHED 2026-10-24: fsc_trajectory_planner ceaab3b, fsc_autopilot_ros2 fe5bc49,
+fsc_open_manipulator a0cb8b8, Pegasus 8dd9e2f; NOT flown on hardware).** fsc_trajectory_planner node (default off; on in the
 three box yamls via `make_push_pull_yaml.py`):
 - `push_pull_handle_settle_tol` 0.025 / `_axis_tol` 0.015 (0.008 until the Isaac check below) / `_max_speed` 0.030 / `_dwell_s` 0.3. After
   Ready the claw stays on the CoM anchor until it is near the grasp point and still, then the room hold.
