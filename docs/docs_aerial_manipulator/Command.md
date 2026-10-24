@@ -1392,11 +1392,11 @@ box-pushing yamls; 0 = the rule above; no credit more than 1 deg past the wall).
 q3 fold with q2 on the wall still does. Not flown. Rebuild `fsc_trajectory_planner` (Orin); both whole-body hardware
 stacks refuse an older planner.
 
-**2026-10-24 -- the q3 limit 10 -> 5 deg** (same record, section 10). `push_pull_guard_q3_min_deg` (both q3 guards) is
+**2026-10-24 -- the q3 limit 10 -> 5 deg, then back to 10** (same record, section 10). `push_pull_guard_q3_min_deg` (both q3 guards) is
 5 in the box-pushing yamls. q3 is singular at -34 deg; 5 deg keeps twice the planner's margin. At 10 a level stretch
 onto the q2 wall (q3 7.6 deg there) tripped. Yaml only, not flown; both whole-body hardware stacks expect 5.0.
 Isaac (2026-10-24, `archive/box_pushing_guard_gate_20261024`) found the cost: a slow fold on the q2 wall escapes 5 deg
-and the abort that followed crashed; going back to 10 is recommended, not yet done.
+and the abort that followed crashed; put back to 10 the same day.
 
 **2026-10-24 -- the arm GS's close gate** (Box Pushing tab; same record). The gripper closes within 25 mm of the grasp
 point, within 8 mm across the fin (3 mm in Isaac) and with the claw slower than 30 mm/s; not met within 2.5 s, the

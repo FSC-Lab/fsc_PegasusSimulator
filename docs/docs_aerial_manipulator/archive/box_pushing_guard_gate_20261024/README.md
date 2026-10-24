@@ -68,7 +68,12 @@ the same way: the claw arrives far from the fin, or the open jaws shove the box 
   - The 69-run replay behind the 10 → 5 change contained fast buckles and false trips but no slow
     fold on the wall, so it missed this.
 
-## Recommendation (NOT applied)
+## Recommendation
+
+**Item 1 APPLIED 2026-10-24 (user):** `push_pull_guard_q3_min_deg` back to 10 in the three box-pushing
+yamls (generator), the hardware stacks expect 10.0 again, loopback ALL PASS on the sim and hardware
+yamls. Pushed with everything else: fsc_trajectory_planner `90f138b`, fsc_autopilot_ros2 `596f722`,
+fsc_open_manipulator `e646d34`, Pegasus `260ed1f`. Item 2 is open.
 
 1. **For the hardware flight: put `push_pull_guard_q3_min_deg` back to 10** (yaml only). Keep the
    q2-aware rule (it alone clears the 10-23 trip) and the new GS gate.

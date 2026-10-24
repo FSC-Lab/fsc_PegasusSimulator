@@ -6507,7 +6507,7 @@ an arm resting on its wall tripped. Replay on 69 runs: false trips 6 -> 2, buckl
 (move it for +7–10 mm out room); q3 ≤ 50 = a working-range number (stock linkage +80°; 65° would
 add ~29 mm IN room after a bench check; Isaac's asset stop is also +50). Hardware stacks expect
 5.0; loopback [9h]/[9k] made threshold-relative. **ISAAC SAYS REVERT THE 5° (2026-10-24,
-`archive/box_pushing_guard_gate_20261024`, NOT reverted yet — user's call):** a SLOW fold with q2
+`archive/box_pushing_guard_gate_20261024`; REVERTED to 10 the same day and PUSHED, user's call):** a SLOW fold with q2
 pinned on its wall (q3 16 → 5.5° at ~10°/s, wrist to −75°) escapes a 5° rate threshold; the abort that
 followed crashed (seed 2). At 10° the rate rule fires 0.7 s earlier at q3 11.4°. Recommended: back to 10
 (or split: static 5 / rate 10). **Also APPLIED 2026-10-24: the arm GS's Box Pushing close gate**
@@ -6518,7 +6518,11 @@ new box-only keys `push_pull_box_grip_*`. Harness 69/69. Isaac, 8 paired seeds v
 at 10–27 mm/s, and seed 8 (baseline: closed at 43 mm/s on nothing) completed. Every failure in BOTH sets
 starts with the claw arriving 50–90 mm off or the open jaws shoving the box before the grasp. Next:
 an arrival check (abort / retry at DONE ready when the claw is > ~40 mm off), and a box-moved check
-before the close. Laptop: rebuild utils_custom_ground_station. **Cause:** the free-axis anchor removed 10-21's along-arm
+before the close. **PUSHED 2026-10-24 (user chose "everything": today's box pushing + the mail-delivery
+10-23 + valve-safety 10-22 uncommitted work):** fsc_trajectory_planner `90f138b`, fsc_autopilot_ros2
+`596f722`, fsc_open_manipulator `e646d34`, Pegasus `260ed1f` (no bags / .mat / .zip / video).
+Orin: pull + rebuild fsc_trajectory_planner, pull fsc_autopilot_ros2; laptop: pull + rebuild
+utils_custom_ground_station. **Cause:** the free-axis anchor removed 10-21's along-arm
 swing (q2/q3 still in the open-jaw hold), but the lateral CoM error tripled under the world hold
 (34 vs 12–15 mm rms); the claw arrived 21 mm off across, q1 stuck at −8.5° (stiction) 5–6 mm short
 of the 3 mm gate, so the grasp waited 2.8 s and closed into a ~0.2 Hz sideways swing that dragged

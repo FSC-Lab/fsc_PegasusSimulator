@@ -366,7 +366,8 @@ The floor is one key for both guards. Replayed on the same 69 runs as section 3 
 > Seed 2: a SLOW fold with q2 pinned on its wall (q3 16 -> 5.5° at ~10°/s, the wrist rolling to
 > −75°) is not caught at a 5° rate threshold; the vehicle crashed in the abort that followed.
 > At 10° the rate rule fires 0.7 s earlier, at q3 11.4°. Recommended: back to 10 (or split the
-> key: static 5, rate 10). NOT reverted yet: the user's call.
+> key: static 5, rate 10). **REVERTED to 10 the same day (user)**, pushed with the gate and the
+> q2-aware rule (fsc_autopilot_ros2 `596f722`).
 
 - Set in the generator `push_pull_20261003/tools/make_push_pull_yaml.py`. Regenerated: the sim
   and hardware whole-body box yamls and the coordinated-admittance box yaml. The diff is the value
