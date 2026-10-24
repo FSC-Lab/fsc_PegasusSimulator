@@ -6407,3 +6407,158 @@ fsc_open_manipulator (GS) and Pegasus; NOT flown in Isaac or on hardware.
   / 22 s (0.50 m). gtests 27/27 (new `GoToLandStartGoesRoundTheTableToo`); loopback [8]/[8b] ALL PASS
   on the sim and hardware yamls (turn -90 clockwise only; below the exit height >= 0.68 m from the
   table). Rebuild on the Orin: fsc_trajectory_planner; laptop: utils_custom_ground_station.
+
+**VALVE TURNING: THE BOX PUSH'S SAFETY FEATURES CARRIED OVER, VALIDATED IN ISAAC (2026-10-22, user
+request; record `docs/docs_aerial_manipulator/archive/valve_turning_safety_20261022/README.md`, Command.md
+§18).** 46 headless flights at 120 Hz mocap (the hardware rate -- **every valve flight before 2026-10-21 flew
+250 Hz**, the emulator ignored `frequency:=`), measured-bearing scene defaults, the arm GS flying the steps.
+- **Carried over** (valve yaml generator + hardware twin + both 4-D stacks): the raw-mocap guard (estimator
+  `mocap_guard:=true`, planner + node topics), the rotor sample gate (20 mm / 10 deg), rotor tilt (2 deg) and
+  stale-feed (0.5 s) guards, the q3 static guard at **3 deg** (completed valve turns dip q3 to ~10 deg, so the
+  box's 10 would false-trip 20 of 57; three completions today still dipped to 3.9-4.1 deg -- thin margin),
+  the arm GS's automatic Ready / Turn / Exit + mocap lamp on the Valve Turning tab (its own world-held exit
+  kept), and **the free-axis anchor 0.75 + on_world -- now ON** (`wb_ee_anchor_free_axis_weight`, was 0).
+  Under the box push's hardware-like drift model (`PEGASUS_PLANT_FORCE_NOISE=0.32,0.12,k`) the previous valve
+  config failed 3 of 3 (every one left DIRECT, two after grasping the fin's corner); the final config
+  completed 3 of 3, nominal 3 of 3. NOT carried: the q3 rate guard and a turn-lag guard (no threshold
+  separates failures from completions, replay over 118 runs), and the abort UNBUCKLE (measured hold +
+  unbuckle CRASHED the injected mid-turn abort, arm on both stops; the valve keeps its planned hold).
+- **fsc_trajectory_planner (uncommitted):** (a) a mocap-guard abort is never room-held -- the room is then
+  EKF2 dead-reckoning, the arm absorbed the phantom drift and the vehicle flipped; a fault during a room-held
+  release ends it (loopback [9j]); (b) `push_pull_abort_mocap_release_wait_s` (default -1 = unchanged, valve
+  0.7): the 2 s release at fin height let the drifting vehicle sweep the open claw into the fin; (c) a turn's
+  Ready error (the GS's close gate) is measured against the LIVE handle -- under drift the open jaws turn the
+  free rotor 5-20 deg before the grasp (seen holding a close 1.5 s at 22-32 mm in s22_final_hw_2), with a
+  throttled operator warning. The hardware raw stack refuses a planner without them on the valve profile.
+- **NOT solved:** a drone-mocap freeze while clamped is 1 clean / 1 safe (watchdog after the mocap returned,
+  SAFETY hovering) / 1 crash (late in the turn the open claw caught the fin's top edge, wrist rolled 46 deg)
+  -- in this sim EKF2 dead-reckoning in contact drifts 20-300 mm/s; and a heavy valve (damping 2.0) buckles
+  the arm 4 of 4 whatever the abort or the governor. Hardware precondition: a hover yaw sweep at the valve
+  with raw VRPN recorded (every turn crosses the 0924 Motive stall headings 135-188 deg).
+- Traps: editing `try_valve.sh` IN PLACE while a flight used it made bash re-fly that flight under the same
+  tag (replace harness scripts atomically); a generator that reads the on-disk sim yaml (the CA one) picks up
+  `try_valve.sh`'s in-place per-run overrides while a flight runs -- regenerate derived yamls only with
+  nothing flying. Nothing committed; NOT flown on hardware.
+
+**THE MAIL DELIVERY -- THE FINAL PICK-AND-PLACE EXPERIMENT (2026-10-23, user design; record
+`docs/docs_aerial_manipulator/archive/mail_delivery_20261023/README.md`, Command.md section 19).** A red
+envelope lying flat on the pick hat ((1, 1), 0.77 m pillar) is picked with the wrist rolled 90 deg (the jaws
+close vertically) and slid through the front mouth of the RED mailbox (235 W x 125 D x 272.5 H mm) on the
+console table; the BLUE mailbox is scenery. Uncommitted in all four repos; NOT flown on hardware.
+- **The box's 125 mm depth binds, not J4.** Jaws outside the wall + the far end short of the back wall + the
+  centre of mass past the mouth's lip cannot all hold for a UNIFORM envelope with +-20-30 mm of hover error
+  (`tools/mail_geometry.py`). Design: **150 x 90 x 4 mm, 60 g, far end WEIGHTED** (CoM 40 mm from it, ~35 g
+  steel strip in a 2 mm PLA core), near edge 70 mm past the hat's rim, grasp 15 mm inside it (EE Offset
+  [-0.06, 0, 0]). At q4 = 90 gravity loads J4 only by m g x the lateral grip offset (~24 mN.m at 40 mm).
+- Pose **[0, 36, 44, 90] deg** for pick = carry = place (claw 10 deg below level; q2 9 / q3 6 deg from the real
+  stops; sigma_nd 0.347). **q4 = 90 is not singular for the law**: its heading row is the rotation about the
+  claw axis and the planner streams the full FK frame (`b1_de = (R0 Re) e1`).
+- **Mouth 190 x 90 mm**, centred, top edge 25 mm under the box top, sized from the measured hold error
+  (`hover_error/`, 13 hardware flights: lateral p99 41-43, vertical p99 8 mm; 10 mm median at the GS's gripper
+  command). It sits that high because the FRONT PROPS reach 0.423 m ahead of the body and pass 125 mm over the
+  box top at the release (77 mm above it). The envelope rides 7-18 deg nose-down in the sim jaws (its weight
+  moment in the pinch), so the claw sits 21.5 mm above the mouth's centre; all margins positive at the
+  budget (5-15 mm).
+- **Code:** planner `pick_place_place_insert` + `pick_place_place_approach_back` (Ready To Place holds
+  behind the target at its height, Place slides in; gtest; pick-place suite 31/31). Arm GS
+  `PickPlacePanel::Mode {kSetDown, kDrop, kMail}`, new last tab **Mail Envelope** (index 8): Insert Margin
+  box, vertical grip gate `pick_place_grip_vertical_tol` 8 mm, Exit To Insert on the OPEN report
+  (`pick_place_auto_exit_mail`); every tab's Plan sets both `place_drop` and `place_insert`. Scene
+  `07_px4_t650_aerial_manipulator_mail_delivery.py` (subclasses the PnP 07; T650 gear, q2 stops [-20, 45],
+  `PEGASUS_MAIL_*`). Profile **mail_delivery**: `WB_SIM_PROFILE` (both generators' sim yaml, both 4-D sim
+  stacks, `am_plant_from_yaml.sh`, the pick-and-place wrapper -> the mail scene + GS tab 8) and
+  `AM_HW_PROFILE` (both whole-body hardware stacks; they refuse the sim yaml and a planner without the insert).
+- **Verified:** the tab against the real planner without Isaac (`tools/mail_gs_check.sh`, ALL PASS); the Pick &
+  Drop tab's own harness still completes (no regression); Isaac headless whole-body flights: 3 of 3 on the final
+  design delivered to the red mailbox's floor (2 raw, 1 EKF2-fused), every margin >= 17 mm, peak tilt <= 4.2 deg.
+- **Traps:** the sim's 20 mm invisible grip pad HOOKED the mouth's lower lip and the envelope hung vertical
+  from it (a 4 mm envelope slides through) -- the scene now switches the pad's collider off when the jaws open
+  at the mailbox; a readiness poll whose COMMAND LINE names the planner node tripped the FUSED stack's
+  startup guard (it reaches it after 20 s) -- poll the `pick_place/status` topic and require a `data:` line
+  (`ros2 topic echo` prints its "not published yet" warning on stdout); a chain script calling the clean slate
+  died at that step -- one clean-slate call per flight.
+
+**1023 HARDWARE BOX PUSH: THE q3 RATE GUARD ABORTED THE GRASP — A REACH MOTION INTO q2's LIMIT,
+NOT A BUCKLE (2026-10-23, user request: is the guard too conservative?; record
+`docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261023/README.md`).** One recorded
+flight (`_172853`; the day's second trip and 10-22's were not recorded). The push never started:
+0.5 s after the jaws clamped the fin, the rate guard fired at q3 18.0° / −67°/s → predicted 4.6°
+(replayed exactly offline). q2 rose 31 → 45.4° while q3 fell 29 → 14.1° at a constant fold
+q2+q3 ≈ 60°, and **q3 stopped dead the instant q2 reached its +45° limit**: the static guard would
+never have fired. At the trip instant, though, the signature (q3 17–19°, tens of °/s, q2 at/near 45)
+matches the onset of all three 10-21/22 Isaac buckles, which happened in the same phase (GS closing
+the gripper) — they differ only AFTER q2 pins (Isaac: q3 kept falling to −400°/s and left DIRECT).
+Replay over both hardware pushes + 67 Isaac runs: **static-only catches 0/3 buckles** (do not remove
+the rate guard); a **q2-limit-aware prediction** `q3 + 0.2 q̇3 + max(0, q2 + 0.2 q̇2 − 45)` clears
+today's trip and catches all 3 buckles at the same lead (0.25–0.31 s, q3 14–16°), insensitive to
+the assumed limit 44–47°. Predicting q3 < 0 or a 0.1 s look-ahead also clear today but catch the
+buckles later/lower. **APPLIED 2026-10-24 (README §9, uncommitted, not flown):** planner key
+`push_pull_guard_q2_max_deg` (0 = the 10-22 rule; no credit more than 1° past it; gate-only),
+45 in the sim + hardware whole-body box yamls and the CA box yaml (generator); the valve yamls
+do not set it. Both whole-body hardware stacks expect 45.0 and refuse a planner without it; the
+Isaac scene check compares it. Loopback [9k] on sim + hardware yamls: the 10-23 stretch no longer
+trips, key 0 trips at q3 18–19° (the flown 18.0°), q2 pinned + q3 folding still trips; gtests push
+27/27, pick-place 31/31. Orin: rebuild fsc_trajectory_planner. **Also APPLIED 2026-10-24
+(README §10): `push_pull_guard_q3_min_deg` 10 -> 5** in the same three box yamls (both q3 guards
+share it; valve keeps 3). Why: only the q3 FLOOR relates to singularity (singular q3 −34°, keep-out
+−14°; 5° = σ_nd 0.192); a level stretch onto q2's mechanical 45° wall parks q3 at 7.6°, so at 10°
+an arm resting on its wall tripped. Replay on 69 runs: false trips 6 -> 2, buckles still caught
+0.19–0.25 s ahead at q3 11–12°. The other limits are not singularity: q2 ≤ 45 = the U2D2 board
+(move it for +7–10 mm out room); q3 ≤ 50 = a working-range number (stock linkage +80°; 65° would
+add ~29 mm IN room after a bench check; Isaac's asset stop is also +50). Hardware stacks expect
+5.0; loopback [9h]/[9k] made threshold-relative. **ISAAC SAYS REVERT THE 5° (2026-10-24,
+`archive/box_pushing_guard_gate_20261024`, NOT reverted yet — user's call):** a SLOW fold with q2
+pinned on its wall (q3 16 → 5.5° at ~10°/s, wrist to −75°) escapes a 5° rate threshold; the abort that
+followed crashed (seed 2). At 10° the rate rule fires 0.7 s earlier at q3 11.4°. Recommended: back to 10
+(or split: static 5 / rate 10). **Also APPLIED 2026-10-24: the arm GS's Box Pushing close gate**
+(`push_pull_panel.cpp`; Valve Turning unchanged): 25 mm, 8 mm across on hardware / 3 mm in Isaac, claw
+slower than 30 mm/s over 0.3 s (25 mm/s was too strict on the 10-21 hold), ABORT if not met in 2.5 s;
+new box-only keys `push_pull_box_grip_*`. Harness 69/69. Isaac, 8 paired seeds vs the 10-22 baseline:
+5/8 complete (baseline 6/8), one crash (seed 2, the 5° issue). Every close came 0.1–1.55 s after Ready,
+at 10–27 mm/s, and seed 8 (baseline: closed at 43 mm/s on nothing) completed. Every failure in BOTH sets
+starts with the claw arriving 50–90 mm off or the open jaws shoving the box before the grasp. Next:
+an arrival check (abort / retry at DONE ready when the claw is > ~40 mm off), and a box-moved check
+before the close. Laptop: rebuild utils_custom_ground_station. **Cause:** the free-axis anchor removed 10-21's along-arm
+swing (q2/q3 still in the open-jaw hold), but the lateral CoM error tripled under the world hold
+(34 vs 12–15 mm rms); the claw arrived 21 mm off across, q1 stuck at −8.5° (stiction) 5–6 mm short
+of the 3 mm gate, so the grasp waited 2.8 s and closed into a ~0.2 Hz sideways swing that dragged
+the box 26 mm / 5.5° and extended the arm. Isaac's 3.0 s open-jaw waits fail the same way. Abort
+was calm (tilt ≤ 4°, box back to 9 mm). Mocap vs PX4 attitude differ 2.8° pitch today (3.1° roll on
+10-21): the rigid-body frame, not the cause.
+
+**VALVE BEARING FROM A FREE-SPIN BENCH TEST: ~9 mN·m RUNNING, NOT ~38 (2026-10-23, user request:
+"is our bearing-friction estimate accurate?"; record
+`docs/docs_aerial_manipulator/archive/valve_bearing_spin_20261023/README.md`).** The bag
+`mocap_valve_spin_20261023_174910` holds 133 s of raw VRPN of the clamped valve, flicked or pulled by
+string. Its 13 spin-downs that end at rest give a Coulomb-equivalent deceleration of **3.48 rad/s²
+[3.19, 3.81]**; at the turn's ≤ 24 deg/s it is 2.65 [1.95, 3.29] with a small viscous part
+c ≈ 0.3 /s. That holds on two independent angle measures (yaw and the marker centroid's circle
+angle) and for either fit start. ω²/2 against the remaining travel is a straight line: the friction
+is Coulomb, which matches the scene's model. **Torque = I × that, and I is the one unknown**: at the
+CAD 204 g, 8.9 mN·m (0.056 N at the fin); at 243 g solid PLA, 10.6. Even all 243 g at the 0.2 m
+tip caps it at 37. So the free spin AGREES with the 10-17 fin-pull bound (≤ 32) and is **4x below
+the 10-22 hub-rope gauge test's ~38**. That test put 1.2-2.6 N sideways on the hub, so side load or
+rubbing may explain the gap (untested). If friction rises with side load, the drone's few-newton
+radial claw loads matter too. Sim default 0.048 is NOT changed (user's measured value): it is 5x
+conservative for the claw's force demand, but friction also DAMPS the contact phase, and the 10-22
+final valve config has never been flown below 0.048. Suggested, not done: weigh the rotor; a
+hanging thread at the fin (5.7 g ↔ 9 mN·m, 24 g ↔ 38) with two weights to get I and friction;
+a few labelled `PEGASUS_VALVE_FRICTION=0.009` missions. Analysis traps: the mocap angle has a ±3°
+orientation-dependent error, so per-spin parametric fits are unstable; use the energy regression
+(`tools/decel_fit.py`). The bag path contains `[ ]`, so Python's glob finds nothing.
+**THE FINAL VALVE CONFIG FLOWN ON THAT BEARING (same day, user: "you can try"; record
+`archive/valve_bench_friction_20261023/README.md`).** This is a stress case; the scene default
+stays 0.048. The fitted law is `PEGASUS_VALVE_FRICTION 0.0065` + `_DAMPING 0.00077`, low end 0.004.
+There were 8 headless flights, paired with the 10-22 FINAL runs on the same seeds:
+- **Nominal: 4/4 complete**, as good as 0.048 (q3 ≥ 7°, no stop contact).
+- **Hardware-like drift: 1 of 4 vs 3 of 3** (p ≈ 0.14), every failure clean (DIRECT kept, tilt ≤ 7.7°).
+
+Two mechanisms are visible:
+- **The open jaws push the light rotor 4.6–18° during the Ready descent** (0.4–6.9° at 0.048,
+  since it coasts ~7x farther). The live-handle gate then refuses (a 20 s timeout) or closes 15–20
+  mm along the 20 mm half-fin. The claw target does not follow the moved fin.
+- **The q1/q4 ~1 Hz antiphase mode grows undamped** (tilt guard 4.3 s into the turn). One run
+  buckled to q3 −14.5° before the q3 guard.
+
+So 0.048 was conservative for force but NOT for stability. The options are the user's call: add
+shaft friction on the real valve, re-aim the claw at the live handle, or damp the q1/q4 mode.

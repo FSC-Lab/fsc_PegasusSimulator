@@ -208,6 +208,55 @@ PLANNER_BLOCK = f"""
     push_pull_abort_back: 0.0
     push_pull_abort_release_wait_s: 2.0
     push_pull_abort_release_world_held: true
+    # ... except on a MOCAP-GUARD abort (2026-10-22, archive/valve_turning_safety_20261022): the
+    # world is then EKF2 dead-reckoning -- the planner hands the claw to the CoM at once, and the
+    # wait at fin height is cut to 0.7 s (the jaws clear the 5 mm fin; hardware opens in
+    # 0.65-0.70 s) so the drifting vehicle does not sweep the open claw into the fin
+    push_pull_abort_mocap_release_wait_s: 0.7
+    # push_pull_abort_unbuckle (the box push's 2026-10-21 fix) acts only on an abort held on the
+    # MEASURED arm, and stays OFF with the planned hold: flown 2026-10-22 as measured hold +
+    # unbuckle, it CRASHED the injected mid-turn abort (arm on both stops: unbuckling during the
+    # climb dragged the open claw through the fin, rotor +98 deg, inverted), was clean at 33 s,
+    # recovered one slowly buckled arm (q3 -16 deg) and lost the heavy valve 2 of 2 -- as the
+    # planned hold did. Nothing recovers an arm buckling at ~25 deg/s on a heavy valve.
+    push_pull_abort_unbuckle: false
+    #
+    # THE BOX PUSH'S GUARDS, CARRIED OVER (2026-10-22, archive/valve_turning_safety_20261022;
+    # thresholds re-chosen on the 118 recorded valve runs, tools/valve_guard_replay.py):
+    #   box_tilt_deg: the ROTOR tilted > 2 deg from its pose when the claw first sat on the
+    #     fin, for box_persist_s -- the rig lifting off the table or its clamp giving, not a
+    #     turn (a turn is a yaw). Isaac's rotor is on a revolute joint (0 deg); the hardware
+    #     box read <= 0.7 deg clamped (2026-10-21).
+    #   box_stale_s: no rotor sample for 0.5 s, or the same pose repeated (the processor
+    #     republishing a body it lost) -- the guard above is blind. Armed by the tilt guard.
+    #   q3_min_deg 3.0, NOT the box's 10: completed valve turns dip q3 to 9.8-10.7 deg on this
+    #     config (the results campaign) and a 10 deg guard would have tripped 20 of 57 completed
+    #     runs; < 3 deg for 0.2 s trips none of the current config's completed turns (two old-
+    #     config stress runs only) and 17 of 50 failures, 0.4-17 s before the tilt guard. It
+    #     also aborts when the arm's joint states go silent for box_stale_s (the guard is blind).
+    #   q3_lookahead_s 0 (the box's RATE guard OFF): the valve's arm folds and unfolds fast in a
+    #     NOMINAL turn -- at the box's 10 deg / 0.2 s it false-trips 41 of 57 completed runs, and
+    #     no lower limit separates the failures from those.
+    #   NO turn-lag guard (the box-lag analog): the rotor's lag behind the plan stays <= 10 deg
+    #     in completed turns, but the heavy-valve failure (damping 2.0, base_visc) buckled the
+    #     arm with only 11 deg of lag -- no threshold separates them; the q3 guard caught it 3.8 s
+    #     before the tilt guard.
+    push_pull_guard_box_tilt_deg: 2.0
+    push_pull_guard_box_persist_s: 0.20
+    push_pull_guard_box_stale_s: 0.50
+    push_pull_guard_q3_min_deg: 3.0
+    push_pull_guard_q3_lookahead_s: 0.0
+    # THE ROTOR SAMPLE GATE (the box push's, 2026-10-21): an obj_0 sample farther than 20 mm /
+    # 10 deg from the last good one (the allowance growing with the gap) is dropped before Get
+    # and the guards read it; Get refuses a window with any dropped sample. The turn's own yaw
+    # rate (25 deg/s peak, 0.2 deg per 120 Hz sample) is far inside it.
+    push_pull_box_gate_jump_m: 0.020
+    push_pull_box_gate_jump_deg: 10.0
+    # THE RAW-MOCAP GUARD (the box push's, 2026-10-21, archive/mocap_safety_guard_20261021):
+    # the estimator's guard health. A confirmed DRONE mocap fault with the claw on the fin (a
+    # LOST one in any step) aborts -- this file's free-handle abort -- and every step and Plan
+    # wait for the mocap. The valve-turning stacks launch the estimator with mocap_guard:=true.
+    push_pull_mocap_guard_topic: "state_estimator/mocap_guard"
 """
 
 HEADER = """# =============================================================================
@@ -230,6 +279,12 @@ HEADER = """# ==================================================================
 #   * the push-and-pull planner block in its TURN form (end of the planner
 #     section): the valve's axis as the captured body, push_pull_turn_deg 360,
 #     push_pull_obstacle = the beam's swept circle
+#   * 2026-10-22: the box push's guards carried over (archive/
+#     valve_turning_safety_20261022): the rotor tilt / stale-feed guards, the
+#     q3 guard at the VALVE's 3 deg, the rotor sample gate and the raw-mocap
+#     guard (planner + node, system_mocap_guard_topic); the free-axis anchor
+#     0.75 latched from the room hold (the box push's); a mocap-guard abort
+#     releases in 0.7 s CoM-anchored (push_pull_abort_mocap_release_wait_s)
 # wb_l1_contact stays false at startup: the PLANNER switches it to CONTACT from
 # the jaws' grip (the Push press) to the end of the turn (set_contact).
 # =============================================================================
@@ -281,17 +336,24 @@ ADDITIONS = {
     # it and every flight blended over the 1.0 s default -- i_old_b3 and i_old_b1 (8.9) were the
     # SAME configuration, and the 3 of 3 open-then-exit result is a 1.0 s result. Set to what flew.
     "wb_ee_anchor_blend_s": ("wb_ee_anchor_com", "1.0"),
-    # THE FREE-AXIS ANCHOR (2026-10-18, README 15.6/15.8/15.9) -- OFF. While in CONTACT the
-    # claw's reference would also ride the CoM error along the nose (the fin's tangent, the
-    # valve's free direction). At 1.0 (omega_c_t 2.0, the LATCHED node build): 11 of 11 turns
-    # incl. 3 frictionless, the arm off its stops -- but it removes the claw's tether on the
-    # base: the base swings 55-96 mm along the nose (43-54 without), and once 87/96 mm with q1
-    # on its -35 deg stop and q3 at -16 deg. The configuration WITHOUT it has the flight history
-    # and completes from 0.005 N.m of bearing friction up. Never with omega_c_t 2.927 (0 of 2).
-    "wb_ee_anchor_free_axis_weight": ("wb_ee_anchor_blend_s", "0.0"),
+    # THE FREE-AXIS ANCHOR -- ON since 2026-10-22, the box push's setting (0.75, latched from the
+    # room hold on the handle). While the claw is held in the room its reference also rides
+    # 0.75 x the CoM error along the nose -- the fin's tangent, the valve's FREE direction -- so
+    # the base's wander turns the valve a little instead of folding the arm onto its stops.
+    # 10-18 (README 15.6/15.9): at 1.0 11 of 11 turns but the base wandered 55-96 mm; not shipped.
+    # 10-22 (archive/valve_turning_safety_20261022): under the box push's hardware-like drift
+    # model (0.32 N @ 0.12 Hz, the real AM's attitude-estimate wander) the config WITHOUT it went
+    # 0 of 3, every one leaving DIRECT (q3 guard 8 s in; twice the fin's corner then a flip);
+    # WITH it 3 of 3 (s22_final_hw_2/3/4, arm never on a stop) + 2 of 2 nominal. Never with
+    # omega_c_t 2.927 (0 of 2, 10-18).
+    "wb_ee_anchor_free_axis_weight": ("wb_ee_anchor_blend_s", "0.75"),
+    "wb_ee_anchor_free_axis_on_world": ("wb_ee_anchor_free_axis_weight", "true"),
     "wb_l1_contact_hold_translation": ("wb_l1_collision_threshold_n", "false"),
     "wb_attitude_from_odometry": ("wb_dls_lambda", "false"),
     "wb_attitude_odometry_correction_rad_s": ("wb_attitude_from_odometry", "0.0"),
+    # THE RAW-MOCAP GUARD (2026-10-22, carried over from the box push): the node's side --
+    # DIRECT entry needs the guard fresh and MOCAP, and its EKF2 bridging is not a feedback loss
+    "system_mocap_guard_topic": ("system_fb_land_speed", '"state_estimator/mocap_guard"'),
 }
 MARK = "VALVE-TURNING"
 

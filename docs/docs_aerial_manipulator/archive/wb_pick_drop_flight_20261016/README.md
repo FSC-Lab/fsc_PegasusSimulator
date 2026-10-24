@@ -25,3 +25,13 @@ Findings:
   -0.54 -> -1.50, current 190 -> 340 counts; breakaway +12.7 deg, pitch kick 4.7 deg. Worst 10 s mean 321 counts
   (08-26 overload ~250). No servo error.
 - Empty wrist still wanders (E-1 -25..+18 deg after 69.9 s, D-1 -45 deg after release), as the 10-16 j4 model predicted.
+
+**2026-10-19 question, Drop Margin 0.20 -> 0.15?** `tools/drop_margin_check.py` (output
+`analysis/drop_margin_check.txt`): the basket's lowest point (mocap pose on the CAD's low points) over the plane it stood
+on at the cover Get, along Ready To Drop. The leg CLIMBS (Drop Start body 1.0 m -> drop hold 1.39 m), so the tightest
+point is the near rim crossing, not the release: at 0.20 the lowest point cleared the cover plane by 107-119 mm (D-1,
+wrong grip, basket tilted 19 deg) / 135-145 mm (D-2) with the basket centre 150-250 mm from the drop point; shifted to
+0.15 (rest 0.05 lower, Drop Start unchanged, a straight leg lowered by 0.05 * s): 64-75 / 92-101 mm; at the hold 104 /
+132 mm. Released 182 / 193 mm above its cover height (hangs lower than the EE-offset model). Pitch over the tray at
+the hold (body 1.39 m, rim ~0.89) 0.20-0.36 deg rms 0.3-2 Hz = the carry's: no 10-14-bin effect at 0.49 m; 0.44 m at
+0.15 not flown. Assumes the rim ~ the cover plane and the box's near wall within ~0.2 m of the Get point.

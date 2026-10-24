@@ -1,0 +1,10 @@
+hover above the handle   base speed median  18.5 / p90  23.3 mm/s, claw median  18.9 / p90  24.9 mm/s
+Ready descent            base speed median  48.1 / p90  73.5 mm/s, claw median  46.8 / p90  74.9 mm/s
+open-jaw room hold       base speed median  27.2 / p90  78.2 mm/s, claw median  14.8 / p90  44.5 mm/s
+
+open-jaw hold, 76 samples at 20 Hz:
+  position gate (|across| <= 3, |along| <= 20 mm) met 11.8 % (first at 47.75 s)
+  + claw < 10 mm/s and base < 15 mm/s: met  0.0 %
+  + claw < 10 mm/s and base < 25 mm/s: met  0.0 %
+  + claw < 20 mm/s and base < 30 mm/s: met  0.0 %
+  at the close command 47.79 s: across -0.5 mm, along +8.7 mm, claw 38 mm/s, base 49 mm/s

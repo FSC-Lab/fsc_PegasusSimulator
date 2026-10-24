@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Generate the PICK-AND-PLACE and PICK-AND-DROP sim configs from the 4-D mirror sim config.
 
-    /usr/bin/python3 make_pick_place_yaml.py [--profile pick_and_place|pick_and_drop] [--check]
+    /usr/bin/python3 make_pick_place_yaml.py [--profile pick_and_place|pick_and_drop|mail_delivery] [--check]
 
   in : fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml
   out: fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_place.yaml
        fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_pick_and_drop.yaml
-  (no --profile = both)
+       fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_mail_delivery.yaml
+  (no --profile = all three)
 
 TWO SIMULATION DEMONSTRATIONS (2026-10-14, user: "one is the original
 pick-and-place, which is for the simulation comparison in the paper. The other
@@ -17,6 +18,10 @@ its scene, 07's PEGASUS_PNP_TASK):
                   pillar (place point z 1.02, as flown 2026-10-08/09), no drop
   pick_and_drop   today's: the payload DROPPED into the bin on the place hat of
                   a 0.77 m pillar (the mirror's = the hardware file's task block)
+  mail_delivery   (2026-10-23, user design) the final experiment: a red envelope
+                  picked flat off the pick hat (wrist rolled 90 deg) and INSERTED
+                  through the front mouth of a mailbox on the console table
+                  (07 mail-delivery scene; planner pick_place_place_insert)
 
 The output is the mirror file BYTE FOR BYTE, plus
   * a header saying what differs (written above the mirror's own header),
@@ -142,6 +147,42 @@ PROFILES = {
         "gains": {},    # 2026-10-16: the mirror's H1b attitude pair (see GAIN_OVERRIDES_PICK_PLACE)
         "planner": {
             "pick_place_ee_offset": ("[-0.04, 0.0, 0.16]", [-0.04, 0.0, 0.16]),
+        },
+    },
+    # THE MAIL DELIVERY (2026-10-23, user design; archive/mail_delivery_20261023,
+    # every number from its tools/mail_geometry.py against the 07 mail-delivery
+    # scene's defaults): the drone yaw 0 throughout; ONE arm pose for the pick,
+    # the carry and the place, [0, 36, 44, 90] deg -- the wrist rolled 90 deg so
+    # the jaws close VERTICALLY on the flat envelope, the claw 10 deg below level
+    # (q2 + q3 = 80, the folded home's fold: q2 9 deg from the real arm's +45
+    # stop, q3 6 from +50, sigma_nd 0.347). EE offset [-0.06, 0, 0]: the grasp
+    # point 15 mm inside the envelope's near edge (obj_0 = its centre, x toward the
+    # far end). The place point = the envelope's centre at the release, 9 mm past
+    # the red mailbox's front face (x 1.70), z so the claw sits 21.5 mm above the
+    # mouth's centre: the envelope rides 0..20 deg nose-down in the jaws (14 in the
+    # sim's first flight), its band then centred in the mouth. Mailbox Start 0.40 m in
+    # front of the release body, Land at the start mark. The controller is the
+    # pick-and-drop's (the mirror's): the envelope is model uncertainty.
+    "mail_delivery": {
+        "vehicle": "AM-T650-WB-L1-4D-MAIL",
+        "gains": {},
+        "planner": {
+            "pick_place_place_start": ("[1.0, 0.25, 1.1, 0.0]", [1.0, 0.25, 1.1, 0.0]),
+            "pick_place_land_start": ("[0.0, 0.0, 1.0, 0.0]", [0.0, 0.0, 1.0, 0.0]),
+            "pick_place_land": ("[0.0, 0.0, 0.35, 0.0]", [0.0, 0.0, 0.35, 0.0]),
+            "pick_place_pick_pose_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
+            "pick_place_place_pose_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
+            "pick_place_carry_pose_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
+            "pick_place_sweep_lo_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
+            "pick_place_sweep_hi_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
+            "pick_place_ee_offset": ("[-0.06, 0.0, 0.0]", [-0.06, 0.0, 0.0]),
+            "pick_place_place_point": ("[1.709, 0.25, 1.024, 0.0]", [1.709, 0.25, 1.024, 0.0]),
+            "pick_place_place_drop": ("false", False),
+        },
+        # keys the mirror does not carry, appended to the sim-only block
+        "added": {
+            "pick_place_place_insert": ("true", True),
+            "pick_place_place_approach_back": ("0.15", 0.15),
         },
     },
 }
@@ -381,8 +422,17 @@ def build(profile):
     if not tail.startswith("    "):
         sys.exit("the mirror no longer ends inside the planner section")
     out = out.rstrip("\n") + "\n" + PICK_PLACE_BLOCK
+    added = PROFILES[profile].get("added", {})
+    if added:
+        for key in added:
+            if re.search(rf"^    {re.escape(key)}:", src, flags=re.M):
+                sys.exit(f"added key {key} is already in the mirror")
+        out += ("    # THE INSERT PLACE (the mail delivery, 2026-10-23): Ready To Place holds the claw\n"
+                "    # pick_place_place_approach_back in front of the mouth, level; Place slides it in.\n")
+        out += "".join(f"    {k}: {v}\n" for k, (v, _) in added.items())
     ov = ", ".join(f"{k} {v}" for k, v in GAIN_OVERRIDES.items()) or "none (the hardware gains verbatim)"
     pov = ", ".join(f"{k} {v[0]}" for k, v in PLANNER_OVERRIDES.items()) or "none"
+    pov += "".join(f", + {k} {v[0]}" for k, v in PROFILES[profile].get("added", {}).items())
     return HEADER.format(vehicle=VEHICLE_NAME, overrides=ov, poverrides=pov, profile=profile) + out
 
 
@@ -405,6 +455,8 @@ def check(text, profile):
     assert all(pa[k] == pb[k] for k in pa if k not in PLANNER_OVERRIDES), "planner section changed outside the declared overrides"
     for k, (_, v) in PLANNER_OVERRIDES.items():
         assert pb[k] == v, (k, pb[k], v)
+    for k, (_, v) in PROFILES[profile].get("added", {}).items():
+        assert k in extra and pb[k] == v, (k, pb.get(k), v)
     for k in set(a) - {"/**/fsc_autopilot_ros2", "/**/whole_body_trajectory_planner"}:
         assert a[k] == b[k], k
     print(f"OK [{profile}]: node differs only in {diff}; planner overrides {sorted(PLANNER_OVERRIDES)}, adds {len(extra)} pick_place_ keys; "
@@ -413,7 +465,7 @@ def check(text, profile):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--profile", choices=sorted(PROFILES), help="one demonstration (default: both)")
+    ap.add_argument("--profile", choices=sorted(PROFILES), help="one demonstration (default: all)")
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
     rc = 0

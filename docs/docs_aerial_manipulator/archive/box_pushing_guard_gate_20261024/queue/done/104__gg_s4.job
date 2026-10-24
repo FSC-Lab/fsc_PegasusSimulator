@@ -1,0 +1,2 @@
+ENV="MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto"
+ARGS="push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4"

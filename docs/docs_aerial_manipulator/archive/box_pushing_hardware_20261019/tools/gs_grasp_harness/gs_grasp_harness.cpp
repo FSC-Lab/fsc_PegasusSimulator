@@ -20,6 +20,8 @@
 //      push -> DONE push edge -- release, open, exit on the OPEN report; never on a
 //      latched DONE push without the edge, never after ABORTING / NOT IN DIRECT /
 //      a manual Exit inside the delay, never with the delay 0
+//   C  (2026-10-24) the close gate: 8 mm across on hardware / 3 mm in Isaac, 25 mm, no close
+//      while the claw sweeps (> 30 mm/s), a close once it stops, ABORT after 2.5 s
 //   G  (2026-10-21) the AUTOMATIC Ready To Push + Push: Ready push_pull_auto_ready_delay_s
 //      after the FLYING go_to_start -> DONE go_to_start edge (a settle refusal retried),
 //      Push on the FLYING ready -> DONE ready edge (the close at the gate, the push on the
@@ -74,6 +76,11 @@ struct Rig
   double close_pos{-0.0092};
   bool push_ok{true};
   int ready_refusals{0};   // the next N ready calls are refused "wait for it to settle" (A2)
+  // (2026-10-24) the claw's error the fake planner reports in the hold: across the fin
+  // (world x, [3] and [9]), along it ([4]); sweep_mm_s > 0 sweeps it across between
+  // +-sweep_amp at that speed (a triangle), until sweep_stop_s after the case starts
+  double across{0.001}, along{0.0049}, sweep_mm_s{0.0}, sweep_amp{0.006}, sweep_stop_s{1e9};
+  Clock::time_point t0{Clock::now()};
   State state{State::kOnHandle};
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pl_status, status;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr info, arrival;
@@ -136,13 +143,22 @@ struct Rig
         if (state != State::kOnHandle) {return;}
         std_msgs::msg::Float64MultiArray a;   // the claw on the grasp point, centred
         a.data.assign(21, 0.0);
+        double x = across;
+        const double ts = std::chrono::duration<double>(Clock::now() - t0).count();
+        if (sweep_mm_s > 0.0 && ts < sweep_stop_s) {   // a triangle between +-sweep_amp
+          const double period = 4.0 * sweep_amp / (1e-3 * sweep_mm_s);
+          const double ph = std::fmod(ts, period) / period;
+          x = sweep_amp * (ph < 0.5 ? -1.0 + 4.0 * ph : 3.0 - 4.0 * ph);
+        }
         a.data[0] = 1.0;       // step: ready
         a.data[1] = 1.0;       // a claw target
-        a.data[2] = 0.005;     // 5 mm from the grasp point
+        a.data[2] = std::hypot(x, along);   // default: 5 mm from the grasp point
+        a.data[3] = x;         // the error, world (x across the fin, y along)
+        a.data[4] = along;
         a.data[6] = 0.05;
         a.data[7] = 1.0;
         a.data[8] = 1.0;       // holding
-        a.data[9] = 0.001;     // 1 mm across the fin
+        a.data[9] = x;         // across the fin (default 1 mm)
         arrival->publish(a);
       });
     panel = new PushPullPanel(node);
@@ -473,6 +489,48 @@ int main(int argc, char * argv[])
           check(r.count("ready") == 0, "G5_no_ready_after_ABORT");
         });
     }, go_done, 1.0, 1900});
+
+  // ---- 2026-10-24: the Box Pushing close gate (the 10-23 hardware grasp) -----------------
+  // hardware: 25 mm / 8 mm across / slower than 30 mm/s, else ABORT after 2.5 s; Isaac: 3 mm
+  cases.push_back({"C1_hardware_closes_7mm_across", false, State::kOnHandle,
+    [&](Rig & r) {r.across = 0.007; r.along = 0.020;}, "3  ", 1500,
+    [&](Rig & r) {check(r.count("close") == 1 && r.count("push") == 1, "C1_closed_at_7mm_across_21mm_off");}});
+  cases.push_back({"C2_isaac_keeps_3mm", true, State::kOnHandle,
+    [&](Rig & r) {r.across = 0.007; hw(r, ControlPanel::kCloseStalled, 0.0040);}, "3  ", 1500,
+    [&](Rig & r) {check(r.count("close") == 0, "C2_isaac_no_close_at_7mm");},
+    nullptr, 1.0, 1800});   // its 2.5 s wait limit fires in the tail; nothing checks it here
+  cases.push_back({"C3_no_close_while_sweeping", false, State::kOnHandle,
+    // turning outside the gate (+-20 mm): every 0.3 s window ending inside it is mid-ramp
+    [&](Rig & r) {r.sweep_mm_s = 40.0; r.sweep_amp = 0.020;}, "3  ", 1800,
+    [&](Rig & r) {
+      check(r.count("close") == 0, "C3_no_close_in_a_40mm_s_sweep_inside_the_gate");
+      check(r.lamp().find("mm/s") != std::string::npos, "C3_lamp_shows_the_speed");
+      if (const char * dir = std::getenv("GS_GRASP_SHOT")) {
+        r.panel->grab().save(QString::fromLocal8Bit(dir) + "/gs_close_gate_sweep.png");
+      }
+    }, nullptr, 1.0, 1500});
+  cases.push_back({"C4_closes_once_it_stops", false, State::kOnHandle,
+    [&](Rig & r) {r.sweep_mm_s = 40.0; r.sweep_amp = 0.020; r.sweep_stop_s = 3.3;}, "3  ", 2200,
+    [&](Rig & r) {
+      check(r.count("close") == 1 && r.count("push") == 1 && r.count("abort") == 0,
+        "C4_closed_after_the_sweep_stopped");
+    }});
+  cases.push_back({"C5_wait_limit_aborts", false, State::kOnHandle,
+    [&](Rig & r) {r.across = 0.015;}, "3  ", 2000,
+    [&](Rig & r) {
+      check(r.count("abort") == 0 && r.count("close") == 0, "C5_nothing_before_2p5_s");
+      QTimer::singleShot(900, r.panel, [&]() {
+          check(r.count("abort") == 1 && r.count("close") == 0, "C5_abort_at_2p5_s_no_close");
+          check(r.lamp().find("close gate") != std::string::npos, "C5_lamp_says_why");
+        });
+    }, nullptr, 1.0, 1300});
+  cases.push_back({"C6_auto_push_waits_for_a_sweep_too", false, State::kOnHandle,
+    [&](Rig & r) {r.sweep_mm_s = 40.0; r.sweep_amp = 0.020; r.sweep_stop_s = 3.6; r.publishState("FLYING ready T=3.2s");},
+    "", 2400,
+    [&](Rig & r) {
+      check(r.count("close") == 1 && r.count("push") == 1 && r.count("abort") == 0,
+        "C6_auto_close_after_the_sweep_stopped");
+    }, [](Rig & r) {r.publishState();}, 1.0, 600});
 
   size_t next = 0;
   std::function<void()> run_next;

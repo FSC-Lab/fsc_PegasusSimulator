@@ -1,0 +1,5 @@
+172853  40.14- 41.81: mocap roll/pitch mean +0.59/+3.96  tilt 4.02 | PX4 (FRD) roll/pitch mean +0.61/-1.14 std 0.19/0.31
+172853  60.40- 71.20: mocap roll/pitch mean +0.41/+3.86  tilt 3.89 | PX4 (FRD) roll/pitch mean +0.50/-1.24 std 0.19/0.18
+172853  45.00- 47.80: mocap roll/pitch mean +1.02/+4.37  tilt 4.54 | PX4 (FRD) roll/pitch mean +1.01/-1.61 std 0.68/0.23
+170123  31.32- 33.31: mocap roll/pitch mean +0.75/-0.37  tilt 1.06 | PX4 (FRD) roll/pitch mean -2.39/-0.84 std 0.52/0.51
+170123  36.50- 39.55: mocap roll/pitch mean +0.60/-0.24  tilt 1.26 | PX4 (FRD) roll/pitch mean -2.51/-1.04 std 0.72/0.75

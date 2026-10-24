@@ -44,7 +44,9 @@ for i in $(seq 60); do
 done
 [[ -n "$off" ]] || { echo "the planner has no push_pull_turn_deg -- old binary? rebuild fsc_trajectory_planner"; exit 1; }
 echo "[$(date +%T)] planner up, turn $off deg"
-(setsid nohup env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=valve_turning \
+# (2026-10-22) the arm GS's Valve Turning tab now runs Ready / Turn / Exit by itself: off here,
+# pl_mission.py flies the steps
+(setsid nohup env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=valve_turning ARM_GS_AUTO_EXIT_DELAY=0.0 ARM_GS_AUTO_STEPS=false \
    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_coordinated_admittance_valve_turning_sitl.sh" --in-terminal shiqi_machine \
    > "$RUNS/$TAG.scene.log" 2>&1 &)
 echo "[$(date +%T)] waiting for the valve (Isaac)"

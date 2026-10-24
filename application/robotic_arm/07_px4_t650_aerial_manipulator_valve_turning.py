@@ -110,6 +110,21 @@ Knobs (environment):
                                  checked -- the margin covers up to half a division). A sealed
                                  608 at this load is likely a few mN.m: fly the frictionless end
                                  too (PEGASUS_VALVE_FRICTION=0).
+  PEGASUS_VALVE_LOAD_TORQUE      a HANGING-WEIGHT load on the shaft [N.m] = m g r_drum, default 0 =
+                                 off (2026-10-21, the user's drum/pulley idea). The string is
+                                 just taut at the start (payload on the floor): winding in the
+                                 turn's direction lifts it (full torque after
+                                 PEGASUS_VALVE_LOAD_TAKEUP_DEG, default 3), unwinding lowers it
+                                 and past the start the string is slack (no torque). It is a
+                                 CONSTANT torque, not friction: it back-drives the valve the
+                                 moment nothing holds it. The payload's own inertia (m r^2,
+                                 ~15 % of the rotor's at 0.2 N.m on a 20 mm drum) is neglected,
+                                 so a back-drive is slightly faster than real.
+  PEGASUS_VALVE_LOAD_DIR         the turn direction the load resists, default +1 (the planned
+                                 +360 deg turn winds the string)
+  PEGASUS_VALVE_RATCHET=1        a one-way pawl: rotation against LOAD_DIR is stopped and the
+                                 pawl carries the weight (it fades in below 0.02 rad/s of forward
+                                 rate), default 0
   PEGASUS_VALVE_FIN_GRIP_MM      the fin's clamped width in the sim [mm], default 20; 0 = bare
   PEGASUS_VALVE_USD              the asset, default assets/Valve_Assembly.usda
   PEGASUS_VALVE_GRIP_TORQUE      gripper drive torque cap [N.m], default 0.3
@@ -185,6 +200,11 @@ ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.204)     # [kg] the printe
 BEARING_DAMPING = am06._envf("PEGASUS_VALVE_DAMPING", 0.0)     # [N.m.s/rad]
 BEARING_FRICTION = am06._envf("PEGASUS_VALVE_FRICTION", 0.048) # [N.m] 1.5x the measured 0.2 N x 0.160 m bound
 BEARING_FRICTION_W = 0.05               # [rad/s] the tanh width of the friction torque
+LOAD_TORQUE = am06._envf("PEGASUS_VALVE_LOAD_TORQUE", 0.0)      # [N.m] hanging weight m g r_drum, 0 = off
+LOAD_DIR = 1.0 if am06._envf("PEGASUS_VALVE_LOAD_DIR", 1.0) >= 0.0 else -1.0
+LOAD_TAKEUP_DEG = max(0.1, am06._envf("PEGASUS_VALVE_LOAD_TAKEUP_DEG", 3.0))
+RATCHET = am06._envf("PEGASUS_VALVE_RATCHET", 0.0) > 0.5
+RATCHET_W = 0.02                        # [rad/s] forward rate below which the pawl takes the weight
 FIN_GRIP_MM = am06._envf("PEGASUS_VALVE_FIN_GRIP_MM", 20.0)
 GRASP_BELOW_TOP = 0.025                 # [m] the claw point under the fin top (the box push's rule)
 if not os.path.isfile(VALVE_USD):
@@ -476,6 +496,12 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
               f"{EE_OFFSET[2]:.4f}] m; obstacle (push_pull_obstacle) [{ax - reach:.3f}, {ax + reach:.3f}, "
               f"{ay - reach:.3f}, {ay + reach:.3f}, {VALVE_BASE_Z + VALVE['beam_top_z_m']:.4f}]. "
               f"Unmodelled by every controller.\033[0m", flush=True)
+        if LOAD_TORQUE > 0.0:
+            print(f"\033[1;35m[AM-T650-VALVE] HANGING-WEIGHT LOAD {LOAD_TORQUE:.3f} N.m resisting "
+                  f"{'+' if LOAD_DIR > 0 else '-'} rotation ({LOAD_TORQUE / VALVE['fin_radius_m']:.2f} N at the fin; "
+                  f"= {LOAD_TORQUE / (9.81 * 0.02):.2f} kg on a 20 mm drum), take-up {LOAD_TAKEUP_DEG:.1f} deg, "
+                  f"{'RATCHET (one-way pawl)' if RATCHET else 'NO ratchet: it back-drives when released'}\033[0m",
+                  flush=True)
 
     def _setup_arm_ros2_bridge(self):
         super()._setup_arm_ros2_bridge()
@@ -626,6 +652,46 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
             self._dc.apply_body_torque(self._rotor_h, [0.0, 0.0, tau], True)
         return tau
 
+    def _valve_load(self, P, dt):
+        """The hanging-weight load (PEGASUS_VALVE_LOAD_TORQUE): -dir * tau_L while
+        the string is wound in the turn's direction, faded in over the take-up
+        angle (0 on the floor / slack). With PEGASUS_VALVE_RATCHET a pawl stops
+        any backward rotation and carries the weight. Logs each state change."""
+        if LOAD_TORQUE <= 0.0 or not self._rotor_h:
+            return 0.0
+        R = am06.C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z)
+        yaw = math.atan2(R[1, 0], R[0, 0])
+        if getattr(self, "_ld_prev", None) is None:
+            self._ld_prev, self._ld_th, self._ld_state, self._ld_peak_back = yaw, 0.0, "on the floor", 0.0
+        else:
+            self._ld_th += math.atan2(math.sin(yaw - self._ld_prev), math.cos(yaw - self._ld_prev))
+            self._ld_prev = yaw
+        wz = float(self._dc.get_rigid_body_angular_velocity(self._rotor_h).z)
+        wound = LOAD_DIR * self._ld_th                                   # [rad] string wound on the drum
+        k = min(1.0, max(0.0, wound / math.radians(LOAD_TAKEUP_DEG)))
+        tau = -LOAD_DIR * LOAD_TORQUE * k
+        fwd = LOAD_DIR * wz
+        state = "lifted" if k >= 1.0 else ("taking up" if k > 0.0 else "on the floor")
+        if RATCHET:
+            if fwd < 0.0:                                                # the pawl: stop it, carry the weight
+                I = VALVE["rotor_inertia_axis_kgm2"] * self._rotor_mass / VALVE["rotor_mass_kg"]
+                tau = -I * wz / max(dt, 1e-6)
+                state = "pawl holding" if k > 0.0 else state
+            else:
+                tau *= min(1.0, fwd / RATCHET_W)
+        elif fwd < 0.0 and k > 0.0:
+            state = "BACK-DRIVING"
+            self._ld_peak_back = max(self._ld_peak_back, -fwd)
+        if state != self._ld_state:
+            print(f"[AM-T650-VALVE] t={self._t:7.2f}s LOAD {self._ld_state} -> {state} (wound "
+                  f"{math.degrees(wound):+.1f} deg, rate {math.degrees(wz):+.1f} deg/s, torque {tau:+.3f} N.m"
+                  + (f", peak back-drive so far {math.degrees(self._ld_peak_back):.0f} deg/s" if self._ld_peak_back else "")
+                  + ")", flush=True)
+            self._ld_state = state
+        if tau != 0.0:
+            self._dc.apply_body_torque(self._rotor_h, [0.0, 0.0, tau], True)
+        return tau
+
     def _control_step_inner(self, dt):
         super()._control_step_inner(dt)
         self._ct_time += dt
@@ -633,6 +699,7 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         P = self._rotor_pose()
         if P is not None:
             self._bearing_friction(dt)
+            self._valve_load(P, dt)
         if self._fixed_step % FIXED_PUB_DIV == 0:
             stamp = self._arm_node.get_clock().now().to_msg()
             if P is not None:

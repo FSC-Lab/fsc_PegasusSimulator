@@ -20,6 +20,10 @@
 #                             one-piece basket, 1.0 m pillars, set down on the hat
 #   pick_and_drop             the PICK-AND-DROP: the real payload (Box_Assembly),
 #                             0.77 m pillars, dropped into the bin on the place hat
+#   mail_delivery             (2026-10-23) THE MAIL DELIVERY: its own scene,
+#                             07_px4_t650_aerial_manipulator_mail_delivery.py -- a red
+#                             envelope on the pick hat, inserted through the front mouth
+#                             of the red mailbox on the console table (PEGASUS_MAIL_* knobs)
 #
 # Usage: start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh [--in-terminal] <config>
 set -euo pipefail
@@ -30,7 +34,6 @@ FOUR_D_LAUNCHER="$SCRIPT_DIR/start_t650_aerial_manipulator_whole_body_L1_adaptiv
 FUSED_LAUNCHER="$SCRIPT_DIR/start_t650_aerial_manipulator_whole_body_L1_adaptive_4D_direct_actuation_fused_sitl.sh"
 
 export AM_ISAAC_SCENE_SCRIPT="$REPO_ROOT/application/robotic_arm/07_px4_t650_aerial_manipulator_pick_and_place.py"
-export AM_ISAAC_SCENE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-WB-L1-4D-PNP}"
 # The payload is obj_0 in this scene; the EE marker cube would publish it too.
 export PEGASUS_EE_MARKER_CUBE=0
 # The paired config: the mirror plant + controller with the tuned pick-and-place
@@ -40,11 +43,20 @@ export WB_SIM_PROFILE="${WB_SIM_PROFILE:-pick_and_place}"
 case "$WB_SIM_PROFILE" in
   pick_and_place|pick_place) _PNP_TASK=place; _PNP_YAML_SUFFIX=_sim_pick_and_place.yaml; _PNP_TAB=4 ;;
   pick_and_drop)             _PNP_TASK=drop;  _PNP_YAML_SUFFIX=_sim_pick_and_drop.yaml;  _PNP_TAB=5 ;;
-  *) echo "ERROR: WB_SIM_PROFILE must be pick_and_place or pick_and_drop for this scene (got '$WB_SIM_PROFILE')" >&2; exit 1 ;;
+  mail_delivery)             _PNP_TASK=mail;  _PNP_YAML_SUFFIX=_sim_mail_delivery.yaml;  _PNP_TAB=8 ;;
+  *) echo "ERROR: WB_SIM_PROFILE must be pick_and_place, pick_and_drop or mail_delivery for this scene (got '$WB_SIM_PROFILE')" >&2; exit 1 ;;
 esac
+if [[ "$_PNP_TASK" == mail ]]; then
+  # the mail delivery is its own scene (it loads the pick-and-place one and pins its knobs)
+  export AM_ISAAC_SCENE_SCRIPT="$REPO_ROOT/application/robotic_arm/07_px4_t650_aerial_manipulator_mail_delivery.py"
+  export AM_ISAAC_SCENE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-WB-L1-4D-MAIL}"
+  unset PEGASUS_PNP_TASK
+else
+  export AM_ISAAC_SCENE_LABEL="${AM_ISAAC_SCENE_LABEL:-AM-T650-WB-L1-4D-PNP}"
+fi
 # the scene's demonstration (07: payload, pillar heights, the bin) follows the
 # profile unless set explicitly
-export PEGASUS_PNP_TASK="${PEGASUS_PNP_TASK:-$_PNP_TASK}"
+[[ "$_PNP_TASK" == mail ]] || export PEGASUS_PNP_TASK="${PEGASUS_PNP_TASK:-$_PNP_TASK}"
 # ... and the arm ground station opens on that demonstration's tab (Pick & Place /
 # Pick & Drop; ARM_GS_START_TAB overrides)
 export ARM_GS_START_TAB="${ARM_GS_START_TAB:-$_PNP_TAB}"
@@ -58,7 +70,7 @@ export ARM_GS_START_TAB="${ARM_GS_START_TAB:-$_PNP_TAB}"
 # (list-sessions, not `tmux info`: info needs an attached client, and a
 # background launch has none -- the knobs then silently never arrive)
 if tmux list-sessions >/dev/null 2>&1; then
-  for v in PEGASUS_PNP_TASK PEGASUS_PNP_BIN PEGASUS_PNP_BIN_SIZE PEGASUS_PNP_BIN_YAW_DEG PEGASUS_PNP_PAYLOAD PEGASUS_PNP_PAYLOAD_USD PEGASUS_PNP_FIN_GRIP_MM PEGASUS_PNP_PICK_PILLAR_HEIGHT PEGASUS_PNP_PLACE_PILLAR_HEIGHT PEGASUS_PNP_GRIP_FRICTION PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_PLATFORM PEGASUS_PNP_HAT_USD PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG; do
+  for v in PEGASUS_PNP_TASK PEGASUS_PNP_BIN PEGASUS_PNP_BIN_SIZE PEGASUS_PNP_BIN_YAW_DEG PEGASUS_PNP_PAYLOAD PEGASUS_PNP_PAYLOAD_USD PEGASUS_PNP_FIN_GRIP_MM PEGASUS_PNP_PICK_PILLAR_HEIGHT PEGASUS_PNP_PLACE_PILLAR_HEIGHT PEGASUS_PNP_GRIP_FRICTION PEGASUS_PNP_PAYLOAD_MASS PEGASUS_PNP_PAYLOAD_YAW_DEG PEGASUS_PNP_HANDLE_THICKNESS PEGASUS_PNP_PLATFORM PEGASUS_PNP_HAT_USD PEGASUS_PNP_CAP_DIAMETER PEGASUS_PNP_GRIP_TORQUE PEGASUS_PNP_GRASP_TEST PEGASUS_PNP_WAYPOINTS PEGASUS_PNP_SPAWN_XY PEGASUS_PNP_SPAWN_YAW_DEG PEGASUS_MAIL_ENVELOPE_SIZE PEGASUS_MAIL_ENVELOPE_MASS PEGASUS_MAIL_ENVELOPE_COM PEGASUS_MAIL_OVERHANG PEGASUS_MAIL_ENVELOPE_YAW_DEG PEGASUS_MAIL_GRIP_MM PEGASUS_MAIL_PILLAR_XY PEGASUS_MAIL_PILLAR_HEIGHT PEGASUS_MAIL_TABLE_FRONT_X PEGASUS_MAIL_TABLE_Y PEGASUS_MAIL_RED_Y PEGASUS_MAIL_BLUE_Y PEGASUS_MAIL_BOX_SIZE PEGASUS_MAIL_WALL PEGASUS_MAIL_MOUTH PEGASUS_MAIL_Q2_LIMIT_DEG PEGASUS_MAIL_AM_ASSET; do
     if [[ -n "${!v:-}" ]]; then
       tmux setenv -g "$v" "${!v}"
       echo -e "\033[1;33m  scene knob $v=${!v}\033[0m"
@@ -98,6 +110,11 @@ case "${PNP_FEEDBACK:-fused}" in
 esac
 [[ -x "$LAUNCHER" ]] || { echo "ERROR: missing executable $LAUNCHER" >&2; exit 1; }
 
+if [[ "$_PNP_TASK" == mail ]]; then
+  _PNP_DESC="THE MAIL DELIVERY: a red envelope (${PEGASUS_MAIL_ENVELOPE_SIZE:-0.150,0.090,0.004} m, ${PEGASUS_MAIL_ENVELOPE_MASS:-0.060} kg) flat on the PICK hat (pillar ${PEGASUS_MAIL_PILLAR_HEIGHT:-0.77} m at ${PEGASUS_MAIL_PILLAR_XY:-1.0,1.0}), inserted through the front mouth (${PEGASUS_MAIL_MOUTH:-0.190,0.090,0.2025}) of the RED mailbox on the console table (front x ${PEGASUS_MAIL_TABLE_FRONT_X:-1.70}); the BLUE one is scenery"
+  echo -e "\033[1;35mMAIL-DELIVERY SCENE ($AM_ISAAC_SCENE_LABEL, WB_SIM_PROFILE=$WB_SIM_PROFILE, ${PNP_FEEDBACK:-fused} feedback): $_PNP_DESC; vehicle at ${PEGASUS_PNP_SPAWN_XY:-0.10,-0.07} facing +x. Mocap: /obj_0/mocap = the envelope, /drop_0/mocap = the red mouth.\033[0m"
+  exec "$LAUNCHER" "$@"
+fi
 if [[ "$PEGASUS_PNP_TASK" == drop ]]; then
   _PNP_DESC="PICK-AND-DROP: the real payload (Box_Assembly; ${PEGASUS_PNP_PAYLOAD:-assembly}) on the PICK hat, pillar tops ${PEGASUS_PNP_PICK_PILLAR_HEIGHT:-0.77} / ${PEGASUS_PNP_PLACE_PILLAR_HEIGHT:-0.77} m, dropped into the plastic tray (the bin cut to 35 mm walls, 371 x 290 mm, turned 90 deg) on the PLACE hat"
 else

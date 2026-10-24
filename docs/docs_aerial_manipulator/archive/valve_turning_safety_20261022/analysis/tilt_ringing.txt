@@ -1,0 +1,12 @@
+s22_final_gov_hv   ABORT turn 18.3 s  tilt mean 3.24 max 14.86  ring x 0.71 deg @0.91 Hz  y 0.79 deg @0.91 Hz  odom 120.0 Hz
+s22_final_hw_2     ok    turn 36.0 s  tilt mean 2.32 max  7.30  ring x 1.76 deg @0.94 Hz  y 1.14 deg @0.84 Hz  odom 120.0 Hz
+s22_final_hw_3     ok    turn 36.0 s  tilt mean 1.86 max  4.41  ring x 1.05 deg @0.84 Hz  y 1.06 deg @0.81 Hz  odom 120.0 Hz
+s22_final_hw_4     ok    turn 36.0 s  tilt mean 1.76 max  4.29  ring x 1.02 deg @0.78 Hz  y 0.89 deg @0.72 Hz  odom 120.0 Hz
+s22_final_mfd_2    ABORT turn 15.0 s  tilt mean 1.80 max 14.77  ring x 0.82 deg @0.82 Hz  y 0.90 deg @0.73 Hz  odom 120.0 Hz
+s22_final_mfd_late ABORT turn 31.1 s  tilt mean 2.14 max 14.54  ring x 1.21 deg @0.85 Hz  y 1.03 deg @0.81 Hz  odom 120.0 Hz
+s22_final_mfd      ABORT turn 34.8 s  tilt mean 1.36 max  5.92  ring x 0.66 deg @0.65 Hz  y 0.68 deg @0.68 Hz  odom 120.0 Hz
+s22_final_nom_1    ok    turn 36.0 s  tilt mean 2.02 max  4.53  ring x 1.24 deg @0.88 Hz  y 0.82 deg @0.72 Hz  odom 120.1 Hz
+s22_final_nom_2    ok    turn 36.0 s  tilt mean 2.86 max  6.29  ring x 1.00 deg @0.91 Hz  y 0.52 deg @0.81 Hz  odom 120.0 Hz
+s22_nom_1          ABORT turn 36.0 s  tilt mean 3.47 max 10.08  ring x 2.52 deg @0.94 Hz  y 2.44 deg @1.03 Hz  odom 120.0 Hz
+s22_nom_2          ok    turn 36.0 s  tilt mean 2.26 max  6.45  ring x 1.32 deg @0.84 Hz  y 1.54 deg @0.84 Hz  odom 120.1 Hz
+s22_nom_3          ok    turn 36.0 s  tilt mean 1.98 max  5.26  ring x 0.96 deg @0.78 Hz  y 1.22 deg @0.78 Hz  odom 120.0 Hz

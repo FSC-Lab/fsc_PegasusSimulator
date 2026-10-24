@@ -1,0 +1,22 @@
+
+===== 170123  (DIRECT 12.6-93.6 s, claw on the handle 36.5-46.6 s)
+  planner tilt (limit 10 deg, after Go To Start)  max  5.64  p99  4.93
+  node tilt watchdog (15 deg, all DIRECT)         max  5.64
+  node rate watchdog (360 deg/s)                  max    36  p99.9   30
+  node drift watchdog (0.75 m)                    max 0.129 m
+  claw force (5 N for 0.3 s, on the handle)       max  2.73 N  (raw |F| rms  9.5 N)
+  box tilt (2 deg for 0.2 s, on the handle)       max  3.10 deg
+  box lag (40 mm for 0.2 s, push flying)          max  23.5 mm
+  q3 (static 10 deg for 0.2 s)                    min  -7.3 deg in the window + 0.6 s
+  mocap guard (CONFIRMED 0.15 s / LOST 1.0 s)     non-MOCAP samples 1, worst age 0.025 s, max state 1
+
+===== 172853  (DIRECT 11.4-111.5 s, claw on the handle 45.0-48.8 s)
+  planner tilt (limit 10 deg, after Go To Start)  max  4.08  p99  2.94
+  node tilt watchdog (15 deg, all DIRECT)         max  4.08
+  node rate watchdog (360 deg/s)                  max    33  p99.9   26
+  node drift watchdog (0.75 m)                    max 0.093 m
+  claw force (5 N for 0.3 s, on the handle)       max  1.98 N  (raw |F| rms  4.7 N)
+  box tilt (2 deg for 0.2 s, on the handle)       max  0.75 deg
+  box lag (40 mm for 0.2 s, push flying)          max   0.0 mm
+  q3 (static 10 deg for 0.2 s)                    min  14.1 deg in the window + 0.6 s
+  mocap guard (CONFIRMED 0.15 s / LOST 1.0 s)     non-MOCAP samples 1, worst age 0.022 s, max state 1

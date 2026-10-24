@@ -1,0 +1,11 @@
+tag          outcome                      turn s   beam  lag rms/max  lead stop%  q3min swing  tilt    Ft | back deg back d/s    q3r tiltr
+l6_ship_1    complete                       37.5    363   5.0/ 14.4    54  13.1   14.4  10.2   5.9  0.50 |        4       16   22.0   5.0
+l6_ship_2    complete                       37.5    364   4.7/ 11.6    58  12.8   11.0  10.7   5.5  0.53 |        5       14   20.7   5.2
+ld_base1     complete                       37.5    365   6.3/ 15.8    38   8.7    9.7  10.6   5.2  0.50 |        4       12   21.4   2.9
+ld_d050      complete                       37.5    360   9.2/ 20.1    22   4.1   14.2   7.8   5.1  0.85 |        1        5   15.8   2.9
+ld_w010r     ABORT SAFETY GUARD: tilt 11.0 de   30.0    355   6.2/ 14.5    58  10.7   10.3  10.6  10.9  0.81 |      121       38   15.4  10.8
+ld_w020      ABORT SAFETY GUARD: tilt 10.2 de   18.1    145   9.6/ 24.1    45   6.6   14.7   9.0  10.5  1.01 |      552     1061  -69.2  12.7
+ld_w020r     ABORT SAFETY GUARD: tilt 11.9 de   23.3    269   8.9/ 20.3    49   6.5    6.4  10.9  11.5  1.03 |      268       14   17.0  13.5
+ld_w020r_relfirst ABORT left DIRECT while exit com   37.5    361   9.4/ 23.7    46   1.6   -3.0   9.6   9.9  1.03 |      120       82   -6.9 179.7
+ld_w040r     ABORT SAFETY GUARD: tilt 10.3 de   27.9    335  13.3/ 29.7    58  13.9    1.0  12.2  10.7  1.47 |      174      103  -90.0 179.5
+ld_base1_relfirst ABORT left DIRECT while exit com   37.5    366   5.0/ 13.6    47  13.3    3.0  11.6   5.9  0.50 |       91      308    1.1  43.9

@@ -1,0 +1,9 @@
+run      flown end                    | S 5/R 5: t q3 q2 q4            | S 5/R10: t q3 q2 q4            | S10/R10: t q3 q2 q4           
+gg_s1    no abort                     | -                              | -                              | -                             
+gg_s2    abort  2.55 s after Ready    | -                              |  1.82s  11.4  45.0  -57.0      |  1.82s  11.4  45.0  -57.0     
+gg_s3    no abort                     | -                              | -                              | -                             
+gg_s4    no abort                     | -                              | -                              | -                             
+gg_s5    abort  0.98 s after Ready    |  0.97s  10.0  45.0  -21.0      |  0.94s  11.3  45.0  -21.0      |  0.94s  11.3  45.0  -21.0     
+gg_s6    no abort                     | -                              | -                              | -                             
+gg_s7    abort 18.33 s after Ready    | -                              | -                              | -                             
+gg_s8    no abort                     | -                              | -                              | -                             

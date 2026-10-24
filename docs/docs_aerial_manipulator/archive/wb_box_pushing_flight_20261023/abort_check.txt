@@ -1,0 +1,4 @@
+PX4 tilt during the abort: max 4.0 deg (hover after it: mean 1.4, max 1.8)
+|e_R| max 0.121; joint torque |tau| max [0.34 1.31 0.59 0.09] N.m; n_sat>0 ticks 0; unallocated thrust min -3.60 N
+arm in the abort: q2 34.1..45.4, q3 14.1..38.6; gripper open (>1.0 rad) at 49.36 s
+box: Ready end -> trip moved 26 mm, yaw +5.5 deg; after the abort 9 mm from its Ready-end pose, tilt 0.5 deg

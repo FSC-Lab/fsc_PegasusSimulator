@@ -1,0 +1,45 @@
+Q2MAX 45.0 deg. Trip time relative to the window end (the recorded abort / DIRECT loss / exit start) and q3 there. '-' = never fires in the window.
+
+run                outcome    q3min |     STATIC      |      RATE       |   RATE_Q2CAP    |    RATE_LIM0    |    RATE_T01    
+HW 170123          q3guard      5.0 |  -0.02s q3  5.1 |  -8.49s q3 21.6 |  -8.49s q3 21.6 |  -0.36s q3 14.1 |  -0.37s q3 14.4
+HW 172853          q3guard     16.7 |        -        |  -0.02s q3 18.0 |        -        |        -        |        -       
+SIM cal45_1        q3guard     -5.1 |        -        |  -0.30s q3 21.0 |  -0.30s q3 21.0 |  -0.27s q3 15.9 |  -0.26s q3 14.8
+SIM cal45_2        q3guard      2.5 |        -        |  -0.30s q3 15.9 |  -0.26s q3 11.3 |  -0.26s q3 11.7 |  -0.27s q3 12.6
+SIM f_cal0_1       completed   14.8 |        -        |  -5.12s q3 19.5 |        -        |        -        |        -       
+SIM g_cal0_1       q3guard     -3.0 |  -0.09s q3  0.3 |  -9.44s q3 16.2 |  -9.41s q3 14.7 |  -0.39s q3 15.2 |  -9.36s q3 12.7
+SIM g_ship_2       completed   11.9 |        -        |  -7.70s q3 16.1 |  -7.70s q3 16.1 |        -        |        -       
+SIM h_ship_4       completed   13.9 |        -        | -26.64s q3 15.5 | -26.64s q3 15.5 |        -        |        -       
+SIM h_ship_5       buckle     -28.9 |  +0.03s q3-45.4 |  -0.31s q3 14.4 |  -0.31s q3 14.4 |  -0.20s q3  7.3 |  -0.26s q3 11.7
+SIM j_fwx15_2      q3guard      5.9 |  -0.08s q3  6.3 |  -0.39s q3 15.4 |  -0.39s q3 15.4 |  -0.29s q3  9.0 |  -0.35s q3 12.5
+SIM j_fwx15_3      completed   14.0 |        -        |  -0.45s q3 20.3 |  -0.38s q3 16.0 |        -        |        -       
+SIM k_w09_5        guard       21.3 |        -        |        -        |        -        |        -        |        -       
+SIM l_wb05_5       guard       18.8 |        -        |        -        |        -        |        -        |        -       
+SIM p1_ship_1      completed    7.9 |  -7.21s q3  8.6 |  -7.94s q3 23.2 |  -7.48s q3 10.7 |  -7.89s q3 17.4 |  -7.88s q3 15.6
+SIM p1_ship_2      completed    9.2 |        -        |  -7.54s q3 14.1 |  -7.50s q3 12.1 |        -        |  -7.52s q3 12.7
+SIM p1_ship_3      completed   11.4 |        -        |  -7.55s q3 15.7 |  -7.50s q3 12.5 |        -        |  -7.52s q3 13.4
+SIM p2_fw_2        q3guard     -4.7 |  -0.03s q3 -3.6 |  -8.14s q3 17.9 |  -8.14s q3 17.9 |  -0.18s q3  5.5 |  -0.26s q3 10.2
+SIM r_freeze       guard       21.6 |        -        |        -        |        -        |        -        |        -       
+SIM r_heavy        guard       17.3 |        -        |        -        |        -        |        -        |        -       
+SIM r_side         guard       22.8 |        -        |        -        |        -        |        -        |        -       
+SIM r_stop         guard       22.9 |        -        |        -        |        -        |        -        |        -       
+SIM v_ship_6       q3guard     18.2 |        -        |  -0.01s q3 18.3 |        -        |        -        |        -       
+SIM v_ship_7       q3guard     16.5 |        -        |  -0.00s q3 16.5 |        -        |        -        |        -       
+SIM z_final_7      q3guard     -6.5 |  -0.15s q3 -6.5 |  -0.38s q3 12.0 |  -0.38s q3 12.0 |  -0.31s q3  6.6 |  -0.35s q3  9.8
+SIM z_final_8      guard       17.4 |        -        |        -        |        -        |        -        |        -       
+SIM z_ship_6       buckle     -17.5 |  +0.08s q3-47.8 |  -0.25s q3 14.6 |  -0.25s q3 14.6 |  -0.14s q3  7.4 |  -0.19s q3 11.4
+SIM z_ship_7       buckle     -18.0 |  +0.09s q3-49.0 |  -0.26s q3 15.8 |  -0.25s q3 15.6 |  -0.16s q3  8.7 |  -0.20s q3 11.8
+SIM z_ship_8       q3guard      5.4 |  -0.12s q3  5.6 |  -0.47s q3 13.8 |  -0.45s q3 12.6 |  -0.34s q3  7.7 |  -0.43s q3 11.6
+
+completed runs (no guard of any kind): 48; false trips:
+  STATIC       1  ['SIM p1_ship_1']
+  RATE         7  ['SIM f_cal0_1', 'SIM g_ship_2', 'SIM h_ship_4', 'SIM j_fwx15_3', 'SIM p1_ship_1', 'SIM p1_ship_2', 'SIM p1_ship_3']
+  RATE_Q2CAP   6  ['SIM g_ship_2', 'SIM h_ship_4', 'SIM j_fwx15_3', 'SIM p1_ship_1', 'SIM p1_ship_2', 'SIM p1_ship_3']
+  RATE_LIM0    1  ['SIM p1_ship_1']
+  RATE_T01     3  ['SIM p1_ship_1', 'SIM p1_ship_2', 'SIM p1_ship_3']
+
+buckles (left DIRECT): 3; caught BEFORE the DIRECT loss (lead time, q3):
+  STATIC      0/3  []
+  RATE        3/3  [('SIM h_ship_5', np.float64(0.31), 14.4), ('SIM z_ship_6', np.float64(0.25), 14.6), ('SIM z_ship_7', np.float64(0.26), 15.8)]
+  RATE_Q2CAP  3/3  [('SIM h_ship_5', np.float64(0.31), 14.4), ('SIM z_ship_6', np.float64(0.25), 14.6), ('SIM z_ship_7', np.float64(0.25), 15.6)]
+  RATE_LIM0   3/3  [('SIM h_ship_5', np.float64(0.2), 7.3), ('SIM z_ship_6', np.float64(0.14), 7.4), ('SIM z_ship_7', np.float64(0.16), 8.7)]
+  RATE_T01    3/3  [('SIM h_ship_5', np.float64(0.26), 11.7), ('SIM z_ship_6', np.float64(0.19), 11.4), ('SIM z_ship_7', np.float64(0.2), 11.8)]

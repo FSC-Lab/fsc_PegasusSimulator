@@ -1,0 +1,4 @@
+coasts 12: mean decel 3.446 +- 0.555 (spread)
+with the tilt term: a = 3.632 rad/s^2, g = 1.091 rad/s^2 at b = -57 deg; residual spread 0.493
+geometry predicts g = 0.636 rad/s^2 at b = -163 deg
+tilt term fixed at the geometric prediction: a = 3.434, residual spread 0.700

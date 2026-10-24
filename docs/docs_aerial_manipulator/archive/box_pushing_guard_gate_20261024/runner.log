@@ -1,0 +1,83 @@
+[12:27:39] start gg_s1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+[gg_s1] completed
+[12:32:01] start gg_s2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[gg_s2] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+[12:35:31] start gg_s3 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+[gg_s3] completed
+[12:39:52] start gg_s4 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+[gg_s4] completed
+[12:44:29] start gg_s5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+[gg_s5] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING (SAFETY GUARD: q3 10.0 deg falling at 48.1 deg/s -> 0.4 deg in 0.20 s (0.1 d
+[12:48:37] start gg_s6 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=6
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 6
+[gg_s6] completed
+[12:53:20] start gg_s7 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=7
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 7
+[gg_s7] ABORTED: timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=HOLD push_pull=DONE ready next=push (CONTACT on: the gripper closes first)]
+[12:57:48] start gg_s8 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=8
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 8
+[gg_s8] completed
+[13:02:07] queue empty -- simulation closed
+[13:02:22] STOP
+[13:02:28] RUNNER DONE

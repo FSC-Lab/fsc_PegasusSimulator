@@ -1,0 +1,776 @@
+<title>Valve Turning Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one full-width column; switches drive every view; drawings to scale, in the valve's own frame (mm). Single dark theme. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #111214;
+  --line: #2a2c30;
+  --ink: #ecebe6;
+  --ink-2: #b9b8b0;
+  --ink-3: #85847d;
+  --accent: #8fb8e8;
+  --m-flat: #3987e5;      /* markers flat on the beam */
+  --m-post: #d95926;      /* the marker on the post */
+  --m-five: #199e70;      /* the fifth marker, 5-marker plan only */
+  --rotor: #cfc8b8;
+  --rotor-2: #9c9384;
+  --rotor-3: #6b6255;
+  --plate: #4a4c50;
+  --felt: #b04f8a;        /* felt pads */
+  --bracket: #7b8794;     /* printed brackets / sleeve */
+  --grease: #e0a63a;      /* the grease film */
+  --thread: #5fc6d8;      /* the measuring thread */
+  --good: #0ca30c;
+  --warn: #fab219;
+  --bad: #d03b3b;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 36px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 10px 0 12px; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 25px; margin: 48px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; }
+h3 { font-family: var(--f-display); font-weight: 600; font-size: 19px; margin: 28px 0 8px; text-wrap: balance; }
+p { margin: 0 0 12px; }
+.lede { font-size: 18px; color: var(--ink-2); }
+ul, ol { margin: 0 0 12px; padding-left: 22px; }
+li { margin: 5px 0; }
+.mono, code { font-family: var(--f-mono); font-size: .9em; overflow-wrap: anywhere; }
+strong { font-weight: 600; color: var(--ink); }
+a { color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+nav.toc { margin: 14px 0 0; font-size: 14px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 18px; }
+nav.toc a { color: var(--ink-2); }
+
+.switch { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 22px 0 6px; }
+.swlabel { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { font: 500 15px var(--f-body); color: var(--ink-2); background: var(--panel); border: 0; padding: 8px 16px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: #1d2a3a; color: var(--ink); }
+.plan-note { font-size: 14px; color: var(--ink-2); }
+.plan-note b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin: 6px 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.sq { width: 12px; height: 11px; display: inline-block; border-radius: 2px; }
+.hatch { width: 14px; height: 11px; display: inline-block; border: 1px solid var(--bad);
+  background: repeating-linear-gradient(135deg, transparent 0 3px, var(--bad) 3px 4px); }
+
+figure { margin: 14px 0 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+figcaption { font-size: 14px; color: var(--ink-2); margin-top: 8px; }
+figcaption b { color: var(--ink); font-weight: 600; }
+.viewbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.viewbar button { font: 500 13px var(--f-body); color: var(--ink-2); background: #1a1b1e; border: 1px solid var(--line); border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+.viewbar button:hover { color: var(--ink); }
+#v3d { width: 100%; height: 540px; }
+.scroll { overflow-x: auto; }
+.scroll svg { display: block; min-width: 640px; width: 100%; height: auto; }
+svg text { font-family: var(--f-mono); }
+
+.tables { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; }
+@media (max-width: 760px) { .tables { grid-template-columns: minmax(0, 1fr); } }
+.tscroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--line); }
+th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; background: var(--panel); }
+td.n { text-align: right; white-space: nowrap; font-family: var(--f-mono); font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+tr.close td { color: var(--ink); background: #1d2a3a; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+@media (max-width: 900px) { .three { grid-template-columns: minmax(0, 1fr); } }
+.calc input:disabled { opacity: 0.4; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.card h3 { margin-top: 0; }
+.note { font-size: 14px; color: var(--ink-2); border-left: 2px solid var(--line); padding: 2px 0 2px 12px; margin: 14px 0; }
+
+.target { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0 18px; }
+@media (max-width: 760px) { .target { grid-template-columns: minmax(0, 1fr); } }
+.target .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.target .v { font-family: var(--f-display); font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.target .d { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+
+.calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; margin: 10px 0 8px; }
+.calc label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-3); font-family: var(--f-mono); letter-spacing: .03em; }
+.calc input, .calc select { font: 500 15px var(--f-mono); color: var(--ink); background: #0a0b0c; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; width: 100%; box-sizing: border-box; }
+.result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.result .big { font-family: var(--f-display); font-size: 26px; font-weight: 600; }
+.result .sub { font-size: 14px; color: var(--ink-2); }
+.pill { font-family: var(--f-mono); font-size: 12px; padding: 3px 9px; border-radius: 3px; border: 1px solid currentColor; }
+.pill.good { color: var(--good); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+.why { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Valve-turning rig · OptiTrack rigid body obj_0 · drawn on Valve_Assembly.stl</div>
+  <h1>Valve Turning Design</h1>
+  <p class="lede">Two things to build before the hardware turn: where to stick the motion-capture markers on the valve's rotor, and how to give its bearing the right amount of resistance.</p>
+  <nav class="toc" aria-label="Contents"><a href="#markers">1. Marker layout</a><a href="#friction">2. Adding friction</a><a href="#measure">3. Measuring the resistance</a></nav>
+
+  <div class="switch">
+    <span class="swlabel">Markers</span>
+    <div class="seg" role="group" aria-label="Marker plan">
+      <button type="button" id="plan4" aria-pressed="true">4 markers</button>
+      <button type="button" id="plan5" aria-pressed="false">5 markers</button>
+    </div>
+    <span class="swlabel">Friction add-on</span>
+    <div class="seg" role="group" aria-label="Friction add-on">
+      <button type="button" id="addNone" aria-pressed="true">None</button>
+      <button type="button" id="addPads" aria-pressed="false">Felt pads</button>
+      <button type="button" id="addGrease" aria-pressed="false">Grease sleeve</button>
+    </div>
+  </div>
+  <div class="plan-note" id="planNote"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--m-flat)"></i>marker, flat on the beam</span>
+    <span><i class="dot" style="background:var(--m-post)"></i>marker on a 30 mm post</span>
+    <span><i class="dot" style="background:var(--m-five)"></i>fifth marker (5-marker plan only)</span>
+    <span><i class="sq" style="background:var(--felt)"></i>felt pad</span>
+    <span><i class="sq" style="background:var(--bracket)"></i>printed bracket / sleeve</span>
+    <span><i class="sq" style="background:var(--grease)"></i>grease</span>
+  </div>
+
+  <figure>
+    <div class="viewbar">
+      <button type="button" data-view="iso">3D</button>
+      <button type="button" data-view="top">Top</button>
+      <button type="button" data-view="side">Side</button>
+      <button type="button" data-view="hub">Hub close-up</button>
+    </div>
+    <div id="v3d" role="img" aria-label="Rotatable 3D model of the valve with the markers and the friction add-on"></div>
+    <figcaption><b>Fig. 1.</b> The valve from the CAD, to scale, with the chosen marker plan and friction add-on. Drag to rotate, scroll to zoom, hover a marker for its position. The red, green and blue arrows are obj_0's x, y and z, starting at the pivot: the bearing axis at table level.</figcaption>
+  </figure>
+
+  <h2 id="markers">1. Marker layout</h2>
+  <h3>Top view, for placing them with a ruler</h3>
+  <p>All positions are millimetres from the <strong>centre of the axis hole</strong>. Measure x along the beam toward the fin and y across it from the beam's centre line. Stand at the hub end and look toward the fin: <strong>+y is on your left</strong>.</p>
+  <figure>
+    <div class="scroll"><svg id="top" role="img" aria-label="Top view of the beam with marker positions"></svg></div>
+    <figcaption><b>Fig. 2.</b> Top view, to scale. Grey shades are the rotor's upward faces from the CAD: the flat top at 50 mm, the raised bracket at 54 mm, the fin root and the fin. The circles are the marker bases, 12 mm across. The dash-dot line is the beam's centre line (y = 0).</figcaption>
+  </figure>
+
+  <h3>Side view, with the drone's clearance</h3>
+  <figure>
+    <div class="scroll"><svg id="side" role="img" aria-label="Side view of the valve with marker heights"></svg></div>
+    <figcaption><b>Fig. 3.</b> Side view, to scale, heights above the table. During the turn the claw holds the fin about 25 mm below its top, and the landing gear passes about 18 cm above the table. Both are estimates from the simulation's turn pose. The post marker's top is about 9 cm below the gear.</figcaption>
+  </figure>
+
+  <h3>Positions and distances</h3>
+  <div class="tables">
+    <div class="tscroll"><table id="posTable"></table></div>
+    <div class="tscroll"><table id="distTable"></table></div>
+  </div>
+  <p class="note">Motive tells the markers apart by their distances to each other, so no two may be equal. The highlighted rows are the closest pair of distances. Heights are marker centres above the table, assuming 4 mm bases and 12.7 mm spheres.</p>
+
+  <h3>Fitting them</h3>
+  <div class="two">
+    <div class="card">
+      <h3>On the rotor</h3>
+      <ol>
+        <li>Mark the beam's centre line with a pencil from the axis hole to the bracket.</li>
+        <li>Measure each marker's x along that line from the hole's centre, then its y across it. M2 sits on a 30 mm post; glue the post square to the beam.</li>
+        <li>Every base has at least 2.5 mm of flat top around it, so a marker placed within 2 mm of its spot still sits flat. Bases up to 17 mm across also fit.</li>
+        <li>Keep everything off the bracket from x = 135 mm outward: the fin, the claw's jaws and the bracket's screws are there.</li>
+        <li>For the 5-marker plan, fit M1 to M4 exactly as in the 4-marker plan and add M5. Nothing moves.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>In Motive</h3>
+      <ol>
+        <li>Turn the valve so the beam points along the room's +x, fin toward +x, then create the rigid body from the markers. Its x axis then lies along the beam.</li>
+        <li>Name it <span class="mono">obj_0</span>.</li>
+        <li>Move the pivot to the bearing axis at table level. To find the axis, turn the beam slowly through a quarter turn or more: each marker traces a circle around it.</li>
+        <li>Turn the valve through a full revolution and watch for a flipped or jumping solution. There should be none.</li>
+      </ol>
+      <p class="note">The planner reads the valve's axis and beam angle from obj_0. A pivot 5 mm off puts the claw 5 mm off the fin.</p>
+    </div>
+  </div>
+
+  <h2 id="friction">2. Adding friction to the bearing</h2>
+  <p>The sealed 608 bearing measured under 32 mN·m and is probably a few mN·m. In the simulation a frictionless valve failed 2 of 3 turns, so if the bearing is below about 5 mN·m, add resistance on purpose. What the simulation flew:</p>
+  <div class="target">
+    <div class="card"><div class="k">Constant friction</div><div class="v">10–40 mN·m</div><div class="d">0.06–0.25 N at the fin. Turns completed from 5 to 48 mN·m. A hanging weight adding a constant 100 mN·m made it worse.</div></div>
+    <div class="card"><div class="k">Speed-dependent damping</div><div class="v">≈ 0.5 N·m·s/rad</div><div class="d">The best single turn on record (one flight). 2.0 aborted on the claw-force guard.</div></div>
+    <div class="card"><div class="k">Adding weight</div><div class="v" id="wOut">0.06 mN·m per kg</div><div class="d">A ball bearing's friction barely depends on load, so stacking weight does not work. Weight off the axis only adds inertia.</div></div>
+  </div>
+
+  <h3>Option A: two spring-loaded felt pads on the hub</h3>
+  <p>Two pads on printed brackets screwed to the base plate pinch the hub's exposed side from opposite directions, so the bearing sees no side load. The hub is exposed in a 20 mm band between the plate top (20 mm) and the beam's underside (40 mm), and the beam sweeps over everything outside the hub, so keep the brackets below about 36 mm, a few millimetres under the beam. A screw compressing a small spring behind each pad sets the force.</p>
+  <figure>
+    <div class="scroll"><svg id="padFig" role="img" aria-label="Top section of the hub with two spring-loaded felt pads"></svg></div>
+    <figcaption><b>Fig. 4.</b> Section through the hub at 30 mm height, seen from above, to scale. Each pad presses with force N; the friction torque is 2·μ·N·r with r = 25 mm, the hub radius.</figcaption>
+  </figure>
+  <div class="card">
+    <div class="calc">
+      <label for="padMu">Pad material, μ<select id="padMu"><option value="0.3" selected>felt on PLA, 0.3</option><option value="0.15">PTFE tape, 0.15</option><option value="0.5">cork, 0.5</option></select></label>
+      <label for="padN">Force per pad, N<input id="padN" type="number" min="0" step="0.1" value="1.3"></label>
+      <label for="padK">Spring rate, N/mm<input id="padK" type="number" min="0.05" step="0.05" value="0.5"></label>
+      <label for="padR">Contact radius, mm<input id="padR" type="number" min="5" step="0.5" value="25"></label>
+    </div>
+    <div class="result" id="padOut"></div>
+    <div class="why" id="padWhy"></div>
+  </div>
+  <p class="note">Use felt or PTFE, not rubber. Rubber grips harder at rest than in motion, so the beam would stick and then jump, and every jump is a jolt on the claw.</p>
+
+  <h3>Option B: a grease-filled sleeve around the hub</h3>
+  <p>A printed sleeve stands up from a new base plate around the hub, leaving a thin gap filled with silicone damping grease or very thick silicone fluid. The film shears as the valve turns, so the resistance grows with speed and is zero at rest. This is the kind of resistance the simulation liked best.</p>
+  <figure>
+    <div class="scroll"><svg id="greaseFig" role="img" aria-label="Section through the valve axis with the grease sleeve"></svg></div>
+    <figcaption><b>Fig. 5.</b> Section through the bearing axis, to scale except the gap, which is drawn 4 times wider so it shows. The damping is c = η·2π·r³·h / gap, with the film over the sleeve's height h.</figcaption>
+  </figure>
+  <div class="card">
+    <div class="calc">
+      <label for="gVisc">Fluid, cSt (×0.97 = mPa·s)<input id="gVisc" type="number" min="1000" step="10000" value="150000"></label>
+      <label for="gGap">Gap, mm<input id="gGap" type="number" min="0.1" step="0.1" value="0.5"></label>
+      <label for="gH">Wetted height h, mm<input id="gH" type="number" min="2" step="1" value="18"></label>
+      <label for="gR">Hub radius r, mm<input id="gR" type="number" min="5" step="0.5" value="25"></label>
+    </div>
+    <div class="result" id="gOut"></div>
+    <div class="why" id="gWhy"></div>
+  </div>
+  <p class="note">Silicone fluids thin with temperature and shear, so treat the number as a starting point and measure what you build. An off-the-shelf rotary damper through a 3:1 gear step-up (about 12 N·cm at 20 rpm on the damper side) gives the same behaviour without the mess. The two options can be combined: a few mN·m of felt so the beam never free-wheels, plus damping.</p>
+
+  <h2 id="measure">3. Measuring the resistance</h2>
+  <p>At the fin the target friction is only 0.06–0.25 N, too small for a 10 N spring gauge. Measure on the hub instead. A thread wound round the hub (r = 25 mm) needs 6.4 times the force for the same torque, and a hanging weight read on a kitchen scale gives the torque to about 0.25 mN·m. Measure the bare bearing first. Fit the felt pads only if it reads under 5 mN·m, then measure again while setting their screws.</p>
+  <figure>
+    <div class="scroll"><svg id="rigSide" role="img" aria-label="Side view of the hub thread, pulley and hanging weight"></svg></div>
+    <div class="scroll" style="margin-top:10px"><svg id="rigTop" role="img" aria-label="Top view of the hub thread, pulley and C-clamps"></svg></div>
+    <figcaption><b>Fig. 6.</b> The test rig, to scale. Top: from the table's end, heights above the table top. Bottom: from above. The thread leaves the hub along the side of the plate and runs over a pulley at the table edge to a hanging cup. Nothing on the rotor outside the hub reaches below 40 mm, so the beam passes over the thread and the pulley and the valve can turn full circles. The C-clamps are drawn where they may be; keep the thread beside yours.</figcaption>
+  </figure>
+  <div class="tables">
+    <div class="tscroll"><table id="forceTable"></table></div>
+    <div class="card">
+      <h3>Reading to torque</h3>
+      <div class="calc">
+        <label for="mMethod">What you read<select id="mMethod"><option value="w" selected>weight, hub (g)</option><option value="gh">gauge, hub (N)</option><option value="gf">gauge, fin (N)</option></select></label>
+        <label for="mVal">Reading<input id="mVal" type="number" min="0" step="1" value="82"></label>
+        <label for="mPul">Pulley friction, g<input id="mPul" type="number" min="0" step="1" value="0"></label>
+      </div>
+      <div class="result" id="mOut"></div>
+      <div class="why" id="mWhy"></div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Wind 2–3 turns of strong thread (fishing line) round the hub just above the plate, at about 22 mm, and tape the end to the hub. With the felt pads fitted, the winding must stay below them; their bottom is at 24 mm.</li>
+    <li>Clamp a small ball-bearing pulley to the table edge beside the C-clamp, its top level with the winding. It must stay below 38 mm so the beam passes over it. Lead the thread straight along the side of the plate, over the pulley, and hang a light cup from it.</li>
+    <li><strong>Starting friction:</strong> from rest, add weight in 5 g steps until the valve starts to turn by itself.</li>
+    <li><strong>Running friction</strong>, the value that matters for the turn: take weight off until the valve, nudged by hand, stops by itself. The smallest weight that keeps a nudged valve turning is the running friction.</li>
+    <li>Repeat at three beam angles a quarter turn apart, and in the other direction (wind the thread the other way round and move the pulley to the other end of the plate).</li>
+    <li><strong>Pulley check:</strong> hang equal cups on both ends of the thread over the pulley alone and add weight to one side until it moves. Subtract that from every reading.</li>
+    <li>Torque = (weight − pulley weight) × 9.81 × 0.025 m. The target band is 41–163 g (10–40 mN·m). Under 20 g (5 mN·m) the bearing is in the weak range: fit the pads and set the screws until the running friction reads about 80 g.</li>
+  </ol>
+
+  <div class="three">
+    <div class="card">
+      <h3>With the spring gauge instead</h3>
+      <p>No pulley needed: hook the gauge on the hub thread and pull it level along the side of the plate, slowly and steadily, reading while the valve turns. Torque = reading × 0.025 m. Each 0.1 N division is 2.5 mN·m, so the target band reads 0.4–1.6 N.</p>
+    </div>
+    <div class="card">
+      <h3>Cross-check with mocap</h3>
+      <ol>
+        <li>Record the markers: <span class="mono">ros2 bag record /vrpn_mocap/obj_0/pose</span>.</li>
+        <li>Flick the beam to about half a turn to one turn per second and let it coast to a stop. Repeat 5 times, from different angles.</li>
+        <li>Friction torque = rotor inertia × deceleration. The rotor's inertia is about 2.6 × 10⁻³ kg·m², plus about 2 % for the markers.</li>
+      </ol>
+      <p class="why" id="spinOut"></p>
+      <p class="why">This measures the friction while turning and shows whether it grows with speed. Its accuracy rests on the inertia estimate, about ±5–10 %, so trust the weights for the number.</p>
+    </div>
+    <div class="card">
+      <h3>Grease sleeve or damper</h3>
+      <p>The sleeve covers the hub and a damper has no resistance at rest, so the weights cannot measure it. Pull the fin with the gauge, at right angles to the beam, at a steady pace while mocap records the beam angle.</p>
+      <p>Damping = (gauge × 0.160 m − running friction) ÷ turning speed in rad/s. At 0.5 N·m·s/rad the gauge reads about 0.7 N at 12°/s (the fin moving 33 mm/s) and 1.4 N at 25°/s (70 mm/s).</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-gl3d-dist-min@2.35.2/plotly-gl3d.min.js"></script>
+<script>
+const D = __DATA__;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+const I_ROTOR = 2.6e-3, R_FIN = 0.160, R_HUB = 0.025, G = 9.81;
+let plan = 4, addon = "none";
+try { const s = localStorage.getItem("valveMarkerPlan"); if (s === "5") plan = 5; const a = localStorage.getItem("valveAddon"); if (a === "pads" || a === "grease") addon = a; } catch (e) {}
+const inPlan = m => m.plans.includes(plan);
+const colorOf = m => m.name === "M5" ? css("--m-five") : (m.post > 0 ? css("--m-post") : css("--m-flat"));
+function el(tag, attrs, parent, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+function arrowDefs(svg, colors) {
+  const defs = el("defs", {}, svg);
+  for (const c of colors) { const mk = el("marker", { id: "ah" + c.replace("#", ""), viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0,0L10,5L0,10Z", fill: c }, mk); }
+  return defs;
+}
+
+// ---------- 3D primitives ----------
+function sphere(cx, cy, cz, r, n) {
+  const x = [], y = [], z = [], i = [], j = [], k = [];
+  for (let a = 0; a <= n; a++) { const th = Math.PI * a / n;
+    for (let b = 0; b < 2 * n; b++) { const ph = Math.PI * b / n;
+      x.push(cx + r * Math.sin(th) * Math.cos(ph)); y.push(cy + r * Math.sin(th) * Math.sin(ph)); z.push(cz + r * Math.cos(th)); } }
+  for (let a = 0; a < n; a++) for (let b = 0; b < 2 * n; b++) {
+    const p = a * 2 * n + b, q = a * 2 * n + (b + 1) % (2 * n), p2 = p + 2 * n, q2 = q + 2 * n;
+    i.push(p, q); j.push(p2, p2); k.push(q, q2); }
+  return { x, y, z, i, j, k };
+}
+function cylinder(cx, cy, z0, z1, r, n) {
+  const x = [], y = [], z = [], i = [], j = [], k = [];
+  for (const zz of [z0, z1]) for (let b = 0; b < n; b++) { x.push(cx + r * Math.cos(2 * Math.PI * b / n)); y.push(cy + r * Math.sin(2 * Math.PI * b / n)); z.push(zz); }
+  x.push(cx, cx); y.push(cy, cy); z.push(z0, z1); const c0 = 2 * n, c1 = 2 * n + 1;
+  for (let b = 0; b < n; b++) { const a0 = b, a1 = (b + 1) % n, t0 = b + n, t1 = (b + 1) % n + n;
+    i.push(a0, a1, c0, c1); j.push(a1, t1, a1, t0); k.push(t0, t0, a0, t1); }
+  return { x, y, z, i, j, k };
+}
+function box(x0, x1, y0, y1, z0, z1) {
+  const x = [x0, x1, x1, x0, x0, x1, x1, x0], y = [y0, y0, y1, y1, y0, y0, y1, y1], z = [z0, z0, z0, z0, z1, z1, z1, z1];
+  const f = [[0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6], [0, 4, 5], [0, 5, 1], [1, 5, 6], [1, 6, 2], [2, 6, 7], [2, 7, 3], [3, 7, 4], [3, 4, 0]];
+  return { x, y, z, i: f.map(t => t[0]), j: f.map(t => t[1]), k: f.map(t => t[2]) };
+}
+function ring(rIn, rOut, z0, z1, n) {
+  const x = [], y = [], z = [], i = [], j = [], k = [];
+  for (const [r, zz] of [[rIn, z0], [rOut, z0], [rIn, z1], [rOut, z1]]) for (let b = 0; b < n; b++) { x.push(r * Math.cos(2 * Math.PI * b / n)); y.push(r * Math.sin(2 * Math.PI * b / n)); z.push(zz); }
+  const q = (s, b) => s * n + (b % n);
+  for (let b = 0; b < n; b++) {
+    for (const [s0, s1] of [[1, 3], [2, 0]]) { i.push(q(s0, b), q(s0, b)); j.push(q(s0, b + 1), q(s1, b + 1)); k.push(q(s1, b + 1), q(s1, b)); }   // outer + inner walls
+    for (const [s0, s1] of [[2, 3], [1, 0]]) { i.push(q(s0, b), q(s0, b)); j.push(q(s0, b + 1), q(s1, b + 1)); k.push(q(s1, b + 1), q(s1, b)); }   // top + bottom
+  }
+  return { x, y, z, i, j, k };
+}
+const meshTrace = (m, color, name, extra) => Object.assign({ type: "mesh3d", x: m.x, y: m.y, z: m.z, i: m.i, j: m.j, k: m.k,
+  color, flatshading: true, name, hoverinfo: "skip", lighting: { ambient: 0.55, diffuse: 0.8, specular: 0.1, roughness: 0.8 },
+  lightposition: { x: 200, y: -300, z: 600 } }, extra || {});
+
+// the add-ons, in the valve frame (mm): plate top 20, hub r 25 between 10 and 40, beam underside 40
+function padSide(s) {      // s = +1 (front, +x) or -1 (back, -x)
+  const X = v => s * v, xr = (a, b) => s > 0 ? [a, b] : [-b, -a];
+  const out = [];
+  out.push(meshTrace(box(...xr(25.2, 28), -7, 7, 24, 34), css("--felt"), "felt pad", { hoverinfo: "text", hovertext: "felt pad" }));
+  out.push(meshTrace(box(...xr(28, 30), -8, 8, 23, 35), css("--bracket"), "pad carrier"));
+  out.push(meshTrace(box(...xr(30, 46), -10, 10, 20, 23), css("--bracket"), "bracket base", { hoverinfo: "text", hovertext: "printed bracket, screwed to the plate" }));
+  out.push(meshTrace(box(...xr(40, 44), -10, 10, 23, 36), css("--bracket"), "bracket upright"));
+  const hx = [], hy = [], hz = [];
+  for (let t = 0; t <= 1; t += 0.01) { hx.push(X(30 + 8 * t)); hy.push(3.2 * Math.cos(2 * Math.PI * 6 * t)); hz.push(29 + 3.2 * Math.sin(2 * Math.PI * 6 * t)); }
+  out.push({ type: "scatter3d", mode: "lines", x: hx, y: hy, z: hz, line: { color: "#d9dce0", width: 4 }, hoverinfo: "text", hovertext: "spring", showlegend: false });
+  out.push({ type: "scatter3d", mode: "lines", x: [X(38), X(52)], y: [0, 0], z: [29, 29], line: { color: "#9aa0a8", width: 7 }, hoverinfo: "text", hovertext: "adjusting screw", showlegend: false });
+  return out;
+}
+function addonTraces() {
+  if (addon === "pads") return [...padSide(1), ...padSide(-1)];
+  if (addon === "grease") return [
+    meshTrace(ring(25.0, 26.5, 20, 38, 96), css("--grease"), "grease", { hoverinfo: "text", hovertext: "grease film (0.5 mm, drawn thicker)" }),
+    meshTrace(ring(26.5, 30.5, 20, 38, 96), css("--bracket"), "sleeve", { opacity: 0.55, hoverinfo: "text", hovertext: "printed sleeve, part of a new base plate" }),
+  ];
+  return [];
+}
+
+// ---------- 3D ----------
+const VIEWS = {   // Plotly scene-normalised coordinates (about 0.0053 per mm here; the hub is at about (-0.40, -0.12, -0.46))
+  iso: { eye: { x: 0.9, y: -1.25, z: 0.75 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0.05, y: 0, z: -0.1 } },
+  top: { eye: { x: -0.05, y: -0.117, z: 2.6 }, up: { x: 0, y: 1, z: 0 }, center: { x: -0.05, y: -0.117, z: -0.357 } },
+  side: { eye: { x: -0.05, y: -2.0, z: -0.08 }, up: { x: 0, y: 0, z: 1 }, center: { x: -0.05, y: -0.117, z: -0.08 } },
+  hub: { eye: { x: -0.30, y: -0.95, z: -0.30 }, up: { x: 0, y: 0, z: 1 }, center: { x: -0.397, y: -0.117, z: -0.464 } },
+};
+let camera = VIEWS.iso;
+function draw3d() {
+  if (typeof Plotly === "undefined") { document.getElementById("v3d").textContent = "The 3D view needs the plotting library, which did not load. The figures below show the same layout."; return; }
+  const tr = [];
+  tr.push(meshTrace(D.meshes.plate, css("--plate"), "plate"));
+  tr.push(meshTrace(D.meshes.bearing, "#777a80", "bearing"));
+  tr.push(meshTrace(D.meshes.rotor, css("--rotor"), "rotor"));
+  tr.push(...addonTraces());
+  for (const m of D.markers) {
+    if (!inPlan(m)) continue;
+    const c = colorOf(m), hov = `${m.name}<br>x ${m.x}, y ${m.y} mm<br>${m.post ? "on a " + m.post + " mm post<br>" : ""}centre ${m.z_centre.toFixed(1)} mm above the table`;
+    if (m.post) tr.push(meshTrace(cylinder(m.x, m.y, D.beam_top, D.beam_top + m.post, 3.5, 20), "#8a8d93", "post"));
+    tr.push(meshTrace(cylinder(m.x, m.y, m.z_base, m.z_base + D.base_h, D.base_d / 2, 24), "#2b2d31", "base"));
+    tr.push(meshTrace(sphere(m.x, m.y, m.z_centre, D.marker_d / 2, 10), c, m.name, { hoverinfo: "text", hovertext: hov }));
+    tr.push({ type: "scatter3d", mode: "text", x: [m.x], y: [m.y], z: [m.z_centre + 15], text: [m.name], hoverinfo: "skip",
+      textfont: { color: css("--ink"), size: 13, family: "IBM Plex Mono, monospace" }, showlegend: false });
+  }
+  // from the pivot (the bearing axis at table level, inside the plate): long enough to show beyond it
+  const ax = [["x", [1, 0, 0], "#e66767", 215], ["y", [0, 1, 0], "#3fbf7f", 60], ["z", [0, 0, 1], "#5a9be8", 225]];
+  for (const [n, v, c, L] of ax) {
+    tr.push({ type: "scatter3d", mode: "lines", x: [0, v[0] * L], y: [0, v[1] * L], z: [0, v[2] * L], line: { color: c, width: 6 }, hoverinfo: "skip", showlegend: false });
+    tr.push({ type: "cone", x: [v[0] * L], y: [v[1] * L], z: [v[2] * L], u: [v[0]], v: [v[1]], w: [v[2]], sizemode: "absolute", sizeref: 9, anchor: "tail",
+      colorscale: [[0, c], [1, c]], showscale: false, hoverinfo: "skip" });
+  }
+  const axis = { visible: false };
+  const layout = { paper_bgcolor: css("--panel"), margin: { l: 0, r: 0, t: 0, b: 0 }, showlegend: false, uirevision: "keep",
+    scene: { aspectmode: "data", xaxis: axis, yaxis: axis, zaxis: axis, bgcolor: css("--panel"), camera } };
+  Plotly.react("v3d", tr, layout, { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["toImage"] });
+}
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => {
+  camera = VIEWS[b.dataset.view];
+  if (typeof Plotly !== "undefined") Plotly.relayout("v3d", { "scene.camera": camera });
+}));
+
+// ---------- top view ----------
+function drawTop() {
+  const svg = document.getElementById("top"); svg.innerHTML = "";
+  const X0 = -88, X1 = 218, Y0 = -66, Y1 = 50, S = 3.4;            // mm extents, px per mm
+  const W = (X1 - X0) * S, H = (Y1 - Y0) * S;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const px = x => (x - X0) * S, py = y => (Y1 - y) * S;
+  const defs = arrowDefs(svg, ["#e66767", "#3fbf7f"]);
+  el("rect", { x: px(-75), y: py(25), width: 150 * S, height: 50 * S, fill: "none", stroke: css("--plate"), "stroke-width": 1.5, "stroke-dasharray": "5 4" }, svg);
+  el("text", { x: px(-72), y: py(-21), fill: css("--ink-3"), "font-size": 11 }, svg, "base plate (under the beam)");
+  const shades = { "50.0": css("--rotor"), "52.0": css("--rotor-2"), "54.0": css("--rotor-2"), "57.4": css("--rotor-3"), "74.0": css("--rotor-3"), "204.0": "#3f3a33" };
+  for (const z of Object.keys(D.top_levels).sort((a, b) => +a - +b)) {
+    let d = "";
+    for (const t of D.top_levels[z]) d += `M${px(t[0]).toFixed(1)},${py(t[1]).toFixed(1)}L${px(t[2]).toFixed(1)},${py(t[3]).toFixed(1)}L${px(t[4]).toFixed(1)},${py(t[5]).toFixed(1)}Z`;
+    el("path", { d, fill: shades[z] || css("--rotor"), stroke: shades[z] || css("--rotor"), "stroke-width": 0.4 }, svg);
+  }
+  const pat = el("pattern", { id: "hatch", width: 7, height: 7, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
+  el("line", { x1: 0, y1: 0, x2: 0, y2: 7, stroke: css("--bad"), "stroke-width": 2 }, pat);
+  el("rect", { x: px(135), y: py(26.5), width: 66 * S, height: 52 * S, fill: "url(#hatch)", "fill-opacity": 0.55, stroke: css("--bad"), "stroke-width": 1.5 }, svg);
+  el("text", { x: px(168), y: py(30), fill: css("--bad"), "font-size": 12, "text-anchor": "middle" }, svg, "keep clear from x = 135");
+  el("line", { x1: px(-30), y1: py(0), x2: px(205), y2: py(0), stroke: css("--ink-3"), "stroke-width": 1, "stroke-dasharray": "10 4 2 4" }, svg);
+  el("path", { d: `M${px(-6)},${py(0)}H${px(6)}M${px(0)},${py(-6)}V${py(6)}`, stroke: css("--ink"), "stroke-width": 1.5 }, svg);
+  el("text", { x: px(0), y: py(-33), fill: css("--ink-3"), "font-size": 11, "text-anchor": "middle" }, svg, "axis hole = (0, 0)");
+  const ar = (x1, y1, x2, y2, c, t, dx, dy) => { el("line", { x1: px(x1), y1: py(y1), x2: px(x2), y2: py(y2), stroke: c, "stroke-width": 2.5, "marker-end": "url(#ah" + c.slice(1) + ")" }, svg);
+    el("text", { x: px(x2) + dx, y: py(y2) + dy, fill: c, "font-size": 12 }, svg, t); };
+  ar(-82, -60, -58, -60, "#e66767", "x", 6, 4);
+  ar(-82, -60, -82, -36, "#3fbf7f", "+y", 6, 2);
+  const yDim = -54;
+  el("line", { x1: px(0), y1: py(yDim), x2: px(140), y2: py(yDim), stroke: css("--ink-3"), "stroke-width": 1 }, svg);
+  el("path", { d: `M${px(0)},${py(yDim) - 6}V${py(yDim) + 6}`, stroke: css("--ink-3"), "stroke-width": 1 }, svg);
+  el("text", { x: px(0), y: py(yDim) + 18, fill: css("--ink-3"), "font-size": 11, "text-anchor": "middle" }, svg, "0");
+  for (const m of D.markers) {
+    if (!inPlan(m)) continue;
+    const c = colorOf(m), g = el("g", {}, svg);
+    el("title", {}, g, `${m.name}: x ${m.x}, y ${m.y} mm${m.post ? ", on a " + m.post + " mm post" : ""}`);
+    el("line", { x1: px(m.x), y1: py(m.y), x2: px(m.x), y2: py(yDim), stroke: c, "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0.7 }, g);
+    el("path", { d: `M${px(m.x)},${py(yDim) - 6}V${py(yDim) + 6}`, stroke: c, "stroke-width": 1.5 }, g);
+    el("text", { x: px(m.x), y: py(yDim) + 18, fill: css("--ink-2"), "font-size": 11, "text-anchor": "middle" }, g, `${m.x}`);
+    if (m.post) el("circle", { cx: px(m.x), cy: py(m.y), r: (D.base_d / 2 + 2.5) * S, fill: "none", stroke: c, "stroke-width": 1, "stroke-dasharray": "2 2" }, g);
+    el("circle", { cx: px(m.x), cy: py(m.y), r: D.base_d / 2 * S, fill: c, stroke: "#000", "stroke-width": 1 }, g);
+    // labels off the light beam: above it for +y markers, below it for -y ones
+    const up = m.y > 0;
+    el("text", { x: px(m.x), y: py(up ? 38 : -31), fill: css("--ink"), "font-size": 13, "font-weight": 600, "text-anchor": "middle" }, g, m.name);
+    el("text", { x: px(m.x), y: py(up ? 30 : -36) + (up ? 0 : 6), fill: css("--ink-2"), "font-size": 11, "text-anchor": "middle" }, g,
+      `(${m.x}, ${m.y > 0 ? "+" : ""}${m.y})${m.post ? " post" : ""}`);
+  }
+  el("text", { x: px(70), y: py(yDim) + 34, fill: css("--ink-3"), "font-size": 11, "text-anchor": "middle" }, svg, "x along the beam from the axis [mm]");
+}
+
+// ---------- side view ----------
+function drawSide() {
+  const svg = document.getElementById("side"); svg.innerHTML = "";
+  const X0 = -88, X1 = 236, Z0 = -16, Z1 = 232, S = 2.6;
+  const W = (X1 - X0) * S, H = (Z1 - Z0) * S;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const px = x => (x - X0) * S, pz = z => (Z1 - z) * S;
+  const rect = (x0, x1, z0, z1, f, s) => el("rect", { x: px(x0), y: pz(z1), width: (x1 - x0) * S, height: (z1 - z0) * S, fill: f, stroke: s || "none", "stroke-width": 1 }, svg);
+  el("rect", { x: px(X0), y: pz(188), width: W, height: 8 * S, fill: "#2a2216" }, svg);
+  el("text", { x: px(X0) + 8, y: pz(188) - 6, fill: "#c9a46a", "font-size": 12 }, svg, "landing gear passes ≈ 180–188 mm above the table (sim estimate)");
+  el("line", { x1: px(120), y1: pz(179), x2: px(X1), y2: pz(179), stroke: css("--bad"), "stroke-width": 1.2, "stroke-dasharray": "6 4" }, svg);
+  el("text", { x: px(X1) - 6, y: pz(179) + 16, fill: css("--bad"), "font-size": 12, "text-anchor": "end" }, svg, "claw grips here (179 mm)");
+  el("line", { x1: px(X0), y1: pz(0), x2: px(X1), y2: pz(0), stroke: css("--ink-3"), "stroke-width": 1.5 }, svg);
+  el("text", { x: px(X0) + 8, y: pz(0) + 14, fill: css("--ink-3"), "font-size": 11 }, svg, "table top = plate bottom = z 0");
+  rect(-75, 75, 0, 20, css("--plate"));
+  rect(-25, 25, 10, 40, css("--rotor-2"));
+  rect(-25, 200.1, 40, 50, css("--rotor"));
+  rect(134.9, 185.1, 50, 54, css("--rotor-2"));
+  rect(154.9, 165.1, 54, 74, css("--rotor-3"));
+  rect(157.4, 162.6, 74, 204, "#3f3a33", "#5c564c");
+  el("text", { x: px(166), y: pz(130), fill: css("--ink-2"), "font-size": 11 }, svg, "fin");
+  el("text", { x: px(-20), y: pz(45) + 4, fill: "#3a3833", "font-size": 11 }, svg, "beam, flat top 50 mm");
+  el("rect", { x: px(135), y: pz(212), width: 65 * S, height: 162 * S, fill: "none", stroke: css("--bad"), "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+  for (const m of D.markers) {
+    if (!inPlan(m)) continue;
+    const c = colorOf(m), g = el("g", {}, svg);
+    el("title", {}, g, `${m.name}: centre ${m.z_centre.toFixed(1)} mm above the table`);
+    if (m.post) el("rect", { x: px(m.x - 3.5), y: pz(D.beam_top + m.post), width: 7 * S, height: m.post * S, fill: "#8a8d93" }, g);
+    el("rect", { x: px(m.x - D.base_d / 2), y: pz(m.z_base + D.base_h), width: D.base_d * S, height: D.base_h * S, fill: "#2b2d31", stroke: "#555", "stroke-width": 0.8 }, g);
+    el("circle", { cx: px(m.x), cy: pz(m.z_centre), r: D.marker_d / 2 * S, fill: c, stroke: "#000", "stroke-width": 1 }, g);
+    el("text", { x: px(m.x), y: pz(m.z_centre + D.marker_d / 2) - 8, fill: css("--ink"), "font-size": 12, "font-weight": 600, "text-anchor": "middle" }, g, m.name);
+  }
+  for (const z of [0, 50, 100, 150, 200]) {
+    el("line", { x1: px(X1) - 10, y1: pz(z), x2: px(X1), y2: pz(z), stroke: css("--ink-3"), "stroke-width": 1 }, svg);
+    el("text", { x: px(X1) - 14, y: pz(z) + 4, fill: css("--ink-3"), "font-size": 10, "text-anchor": "end" }, svg, z);
+  }
+}
+
+// ---------- Fig. 4: felt pads, section at z = 30 seen from above ----------
+function drawPads() {
+  const svg = document.getElementById("padFig"); svg.innerHTML = "";
+  const X0 = -82, X1 = 82, Y0 = -40, Y1 = 40, S = 6.5;
+  svg.setAttribute("viewBox", `0 0 ${(X1 - X0) * S} ${(Y1 - Y0) * S}`);
+  const px = x => (x - X0) * S, py = y => (Y1 - y) * S;
+  const felt = css("--felt"), brk = css("--bracket");
+  arrowDefs(svg, [css("--ink"), css("--warn")]);
+  el("rect", { x: px(-75), y: py(25), width: 150 * S, height: 50 * S, fill: "#1b1c1f", stroke: css("--plate"), "stroke-width": 1.5 }, svg);
+  el("text", { x: px(-73), y: py(-31), fill: css("--ink-3"), "font-size": 11 }, svg, "base plate, 150 × 50 mm (top at 20 mm)");
+  el("circle", { cx: px(0), cy: py(0), r: 25 * S, fill: css("--rotor-2"), stroke: "#000", "stroke-width": 1 }, svg);
+  el("circle", { cx: px(0), cy: py(0), r: 11 * S, fill: "#0c0d0f" }, svg);
+  el("circle", { cx: px(0), cy: py(0), r: 4 * S, fill: "#5a5d63" }, svg);
+  el("text", { x: px(9), y: py(17), fill: "#2b2a27", "font-size": 12, "text-anchor": "middle" }, svg, "hub");
+  el("text", { x: px(0), y: py(-7), fill: css("--ink-3"), "font-size": 10, "text-anchor": "middle" }, svg, "bore");
+  const warn = css("--warn");
+  for (const s of [1, -1]) {
+    const xr = (a, b) => s > 0 ? [a, b] : [-b, -a];
+    const R = (a, b, y0, y1, f) => { const [u, v] = xr(a, b); el("rect", { x: px(u), y: py(y1), width: (v - u) * S, height: (y1 - y0) * S, fill: f, stroke: "#000", "stroke-width": 0.8 }, svg); };
+    R(30, 46, -10, 10, brk); R(40, 44, -10, 10, "#5c6670");
+    R(28, 30, -8, 8, brk); R(25.2, 28, -7, 7, felt);
+    let d = `M${px(s * 30)},${py(0)}`;
+    for (let i = 1; i <= 8; i++) d += `L${px(s * (30 + i * 8 / 8))},${py(i % 2 ? 3.2 : -3.2)}`;
+    el("path", { d, fill: "none", stroke: "#d9dce0", "stroke-width": 1.5 }, svg);
+    el("line", { x1: px(s * 38), y1: py(0), x2: px(s * 56), y2: py(0), stroke: "#9aa0a8", "stroke-width": 3 }, svg);
+    el("rect", { x: px(s > 0 ? 56 : -59), y: py(3), width: 3 * S, height: 6 * S, fill: "#9aa0a8" }, svg);
+    // the pad's force on the hub, toward the axis
+    el("line", { x1: px(s * 24), y1: py(0), x2: px(s * 14.5), y2: py(0), stroke: warn, "stroke-width": 2.5, "marker-end": "url(#ah" + warn.slice(1) + ")" }, svg);
+    el("text", { x: px(s * 19.5), y: py(2.2), fill: warn, "font-size": 13, "text-anchor": "middle", "font-weight": 600 }, svg, "N");
+  }
+  const lab = (x, y, t, a) => el("text", { x: px(x), y: py(y), fill: css("--ink-2"), "font-size": 11, "text-anchor": a || "middle" }, svg, t);
+  lab(25, -13.5, "felt pad", "start"); lab(34, 12.5, "spring"); lab(47, 4.5, "adjusting screw", "start"); lab(36, -19.5, "printed bracket", "start");
+  el("line", { x1: px(0), y1: py(0), x2: px(-17.7), y2: py(17.7), stroke: css("--ink"), "stroke-width": 1.2, "marker-end": "url(#ah" + css("--ink").slice(1) + ")" }, svg);
+  el("text", { x: px(-3.5), y: py(14), fill: "#2b2a27", "font-size": 11, "text-anchor": "middle" }, svg, "r = 25");
+  el("path", { d: `M${px(31 * Math.cos(2.1))},${py(31 * Math.sin(2.1))} A${31 * S},${31 * S} 0 0 1 ${px(31 * Math.cos(1.2))},${py(31 * Math.sin(1.2))}`, fill: "none", stroke: css("--ink-3"), "stroke-width": 1.5, "marker-end": "url(#ah" + css("--ink").slice(1) + ")" }, svg);
+  lab(0, 35.5, "friction torque 2·μ·N·r");
+  lab(-78, 31, "the beam sweeps over at 40 mm", "start");
+}
+
+// ---------- Fig. 5: grease sleeve, section through the axis ----------
+function drawGrease() {
+  const svg = document.getElementById("greaseFig"); svg.innerHTML = "";
+  const X0 = -84, X1 = 84, Z0 = -6, Z1 = 60, S = 6.4, G = 4;   // G: gap drawn G times wider
+  svg.setAttribute("viewBox", `0 0 ${(X1 - X0) * S} ${(Z1 - Z0) * S}`);
+  const px = x => (x - X0) * S, pz = z => (Z1 - z) * S;
+  const rect = (x0, x1, z0, z1, f, s) => el("rect", { x: px(x0), y: pz(z1), width: (x1 - x0) * S, height: (z1 - z0) * S, fill: f, stroke: s || "#000", "stroke-width": 0.8 }, svg);
+  const lab = (x, z, t, a, c) => el("text", { x: px(x), y: pz(z), fill: c || css("--ink-2"), "font-size": 11, "text-anchor": a || "middle" }, svg, t);
+  el("line", { x1: px(X0), y1: pz(0), x2: px(X1), y2: pz(0), stroke: css("--ink-3"), "stroke-width": 1.2 }, svg);
+  const gap = 0.5 * G, rS = 25 + gap;
+  // the CAD's base plate (hub pocket r 25 down to z 10, shaft r 4 up to z 20) + the new sleeve
+  rect(-75, -25, 0, 20, css("--plate")); rect(25, 75, 0, 20, css("--plate")); rect(-25, 25, 0, 10, css("--plate"));
+  rect(-4, 4, 10, 20, css("--plate"));
+  rect(-rS - 4, -rS, 20, 38, css("--bracket")); rect(rS, rS + 4, 20, 38, css("--bracket"));
+  rect(-rS, -25, 20, 38, css("--grease"), "none"); rect(25, rS, 20, 38, css("--grease"), "none");
+  rect(-25, -11, 10, 40, css("--rotor-2")); rect(11, 25, 10, 40, css("--rotor-2"));     // hub, bored r 11
+  rect(-11, -4, 10, 17, "#8a8d93"); rect(4, 11, 10, 17, "#8a8d93");                     // 608 rings
+  rect(-25, -11, 40, 50, css("--rotor")); rect(11, 85, 40, 50, css("--rotor"));          // beam
+  el("line", { x1: px(0), y1: pz(-4), x2: px(0), y2: pz(58), stroke: css("--ink-3"), "stroke-width": 1, "stroke-dasharray": "8 3 2 3" }, svg);
+  lab(2, 56, "bearing axis", "start"); lab(55, 44, "beam", "middle", "#2b2a27"); lab(18, 30, "hub", "middle", "#2b2a27");
+  lab(-60, 9, "base plate", "middle", css("--ink")); lab(-6, 25, "608", "middle", css("--ink-2"));
+  el("line", { x1: px(-6), y1: pz(23.5), x2: px(-7.5), y2: pz(17.5), stroke: css("--ink-2"), "stroke-width": 1 }, svg);
+  lab(-rS - 6, 32, "printed sleeve", "end");
+  lab(37, 32, "grease in a 0.5 mm gap", "start", css("--grease"));
+  lab(37, 28, "(gap drawn 4 × wider)", "start");
+  // h and r dimensions
+  el("line", { x1: px(33.5), y1: pz(20), x2: px(33.5), y2: pz(38), stroke: css("--ink"), "stroke-width": 1 }, svg);
+  for (const z of [20, 38]) el("line", { x1: px(32), y1: pz(z), x2: px(35), y2: pz(z), stroke: css("--ink"), "stroke-width": 1 }, svg);
+  lab(37, 21.5, "h = 18 mm", "start", css("--ink"));
+  el("line", { x1: px(0), y1: pz(-3), x2: px(25), y2: pz(-3), stroke: css("--ink"), "stroke-width": 1 }, svg);
+  lab(12.5, -5.2, "r = 25 mm", "middle", css("--ink"));
+}
+
+// ---------- tables ----------
+function drawTables() {
+  const ms = D.markers.filter(inPlan);
+  let h = "<thead><tr><th>Marker</th><th class='n'>x</th><th class='n'>y</th><th>Mount</th><th class='n'>Centre height</th><th class='n'>From axis</th></tr></thead><tbody>";
+  for (const m of ms) h += `<tr><td><i class="dot" style="background:${colorOf(m)};margin-right:8px;vertical-align:-1px"></i>${m.name}</td>` +
+    `<td class="n">${m.x}</td><td class="n">${m.y > 0 ? "+" : ""}${m.y}</td><td>${m.post ? m.post + " mm post" : "flat"}</td>` +
+    `<td class="n">${m.z_centre.toFixed(1)}</td><td class="n">${m.r_axis.toFixed(1)}</td></tr>`;
+  document.getElementById("posTable").innerHTML = h + "</tbody>";
+  const ds = D.distances[String(plan)];
+  let gi = 0, gmin = Infinity;
+  for (let i = 1; i < ds.length; i++) { const g = ds[i].d - ds[i - 1].d; if (g < gmin) { gmin = g; gi = i; } }
+  let t = "<thead><tr><th>Pair</th><th class='n'>Distance</th><th class='n'>Gap to next</th></tr></thead><tbody>";
+  ds.forEach((e, i) => { const nxt = i + 1 < ds.length ? (ds[i + 1].d - e.d).toFixed(1) : "–";
+    t += `<tr class="${i === gi || i === gi - 1 ? "close" : ""}"><td>${e.a}–${e.b}</td><td class="n">${e.d.toFixed(1)}</td><td class="n">${nxt}</td></tr>`; });
+  document.getElementById("distTable").innerHTML = t + "</tbody>";
+  const addTxt = { none: "", pads: " · friction add-on: felt pads", grease: " · friction add-on: grease sleeve" }[addon];
+  document.getElementById("planNote").innerHTML = `<b>${ms.length}</b> markers, <b>${ds.length}</b> distances, closest two differ by <b>${gmin.toFixed(1)} mm</b>` +
+    (plan === 5 ? " (M1–M4 unchanged)" : "") + addTxt;
+}
+
+// ---------- calculators ----------
+const num = id => parseFloat(document.getElementById(id).value);
+const pill = (cls, t) => `<span class="pill ${cls}">${t}</span>`;
+function frictionVerdict(mNm) {
+  if (!(mNm > 0)) return [pill("bad", "enter a value"), ""];
+  if (mNm < 5) return [pill("bad", "too little"), "Below every turn that passed in simulation; the frictionless valve failed 2 of 3."];
+  if (mNm < 10) return [pill("warn", "low"), "The simulation completed 2 of 2 turns at 5 mN·m, the lowest friction it flew."];
+  if (mNm <= 40) return [pill("good", "in the target band"), "Inside 10–40 mN·m. The simulation completed all 3 turns it flew in this band, at 10 and 16 mN·m."];
+  if (mNm <= 48) return [pill("warn", "high"), "Up to 48 mN·m, the simulation's default, where 23 of 26 turns completed."];
+  return [pill("bad", "too much"), "Above anything flown; a hanging weight adding 100 mN·m made the turn worse."];
+}
+function calcPads() {
+  const mu = num("padMu"), N = num("padN"), k = num("padK"), r = num("padR") / 1000;
+  const tau = 2 * mu * N * r * 1000, finN = tau / 1000 / R_FIN, comp = N / k;
+  const [p, why] = frictionVerdict(tau);
+  document.getElementById("padOut").innerHTML = `<span class="big">${tau.toFixed(1)} mN·m</span>${p}<span class="sub">${finN.toFixed(2)} N at the fin · ${(N / 9.81 * 1000).toFixed(0)} g of force per pad · compress the spring ${isFinite(comp) ? comp.toFixed(1) : "–"} mm</span>`;
+  document.getElementById("padWhy").textContent = why;
+}
+function calcGrease() {
+  const eta = num("gVisc") * 1e-6 * 970, gap = num("gGap") / 1000, h = num("gH") / 1000, r = num("gR") / 1000;
+  const c = eta * 2 * Math.PI * r ** 3 * h / gap;
+  const t12 = c * 12 * Math.PI / 180 * 1000, t25 = c * 25 * Math.PI / 180 * 1000;
+  let p, why;
+  if (!(c > 0)) { p = pill("bad", "enter a value"); why = ""; }
+  else if (c < 0.25) { p = pill("warn", "weak"); why = "Well below the one damper value flown (0.5); expect little effect."; }
+  else if (c < 0.4) { p = pill("warn", "below the flown value"); why = "Not flown; probably helps, less than 0.5 did."; }
+  else if (c <= 0.6) { p = pill("good", "near the flown value"); why = "Close to 0.5 N·m·s/rad, the best single turn in simulation."; }
+  else if (c < 2) { p = pill("warn", "above the flown value"); why = "Not flown; the claw has to push harder at speed."; }
+  else { p = pill("bad", "too much"); why = "A 2.0 N·m·s/rad valve aborted on the claw-force guard."; }
+  document.getElementById("gOut").innerHTML = `<span class="big">${c.toFixed(2)} N·m·s/rad</span>${p}<span class="sub">${t12.toFixed(0)} mN·m at 12°/s · ${t25.toFixed(0)} mN·m (${(t25 / 1000 / R_FIN).toFixed(1)} N at the fin) at the turn's peak 25°/s · ${eta.toFixed(0)} Pa·s</span>`;
+  document.getElementById("gWhy").textContent = why;
+}
+function calcSpin() {
+  const a = 0.020 / I_ROTOR;                  // a 20 mN·m example
+  document.getElementById("spinOut").textContent = `For example, 20 mN·m slows the rotor by ${(a * 180 / Math.PI).toFixed(0)}°/s², so a one-turn-per-second flick stops in about ${(2 * Math.PI / a).toFixed(1)} s. That is about 100 samples at 120 Hz.`;
+}
+document.getElementById("wOut").textContent = `${(0.5 * 0.0015 * 9.81 * 0.008 * 1000).toFixed(2)} mN·m per kg`;
+for (const id of ["padMu", "padN", "padK", "padR"]) document.getElementById(id).addEventListener("input", calcPads);
+for (const id of ["gVisc", "gGap", "gH", "gR"]) document.getElementById(id).addEventListener("input", calcGrease);
+
+function render() {
+  document.getElementById("plan4").setAttribute("aria-pressed", plan === 4);
+  document.getElementById("plan5").setAttribute("aria-pressed", plan === 5);
+  for (const [id, a] of [["addNone", "none"], ["addPads", "pads"], ["addGrease", "grease"]]) document.getElementById(id).setAttribute("aria-pressed", addon === a);
+  drawTables(); drawTop(); drawSide(); draw3d();
+}
+for (const n of [4, 5]) document.getElementById("plan" + n).addEventListener("click", () => {
+  plan = n; try { localStorage.setItem("valveMarkerPlan", String(n)); } catch (e) {} render();
+});
+for (const [id, a] of [["addNone", "none"], ["addPads", "pads"], ["addGrease", "grease"]]) document.getElementById(id).addEventListener("click", () => {
+  addon = a; try { localStorage.setItem("valveAddon", a); } catch (e) {}
+  if (a !== "none") { camera = VIEWS.hub; }
+  render();
+});
+// ---------- Fig. 6: the measuring rig ----------
+function rigPads(R, xr, w) {   // the felt-pad hardware, both sides; w = each part's extent across the view
+  for (const s of [1, -1]) {
+    const B = (a, b, c, d, f) => { const [u, v] = xr(s, a, b); R(u, v, c, d, f); };
+    B(30, 46, ...w.base, css("--bracket")); B(40, 44, ...w.upright, "#5c6670");
+    B(28, 30, ...w.carrier, css("--bracket")); B(25.2, 28, ...w.felt, css("--felt"));
+  }
+}
+function drawRigSide() {
+  const svg = document.getElementById("rigSide"); svg.innerHTML = "";
+  const X0 = -100, X1 = 228, Z0 = -100, Z1 = 100, S = 3.2;
+  svg.setAttribute("viewBox", `0 0 ${(X1 - X0) * S} ${(Z1 - Z0) * S}`);
+  const px = x => (x - X0) * S, pz = z => (Z1 - z) * S;
+  const thread = css("--thread"), ink2 = css("--ink-2"), ink3 = css("--ink-3"), metal = "#8a8d93";
+  arrowDefs(svg, [ink2]);
+  const R = (x0, x1, z0, z1, f, extra) => el("rect", Object.assign({ x: px(x0), y: pz(z1), width: (x1 - x0) * S, height: (z1 - z0) * S, fill: f, stroke: "#000", "stroke-width": 0.8 }, extra || {}), svg);
+  const lab = (x, z, t, a, c, fs) => el("text", { x: px(x), y: pz(z), fill: c || ink2, "font-size": fs || 12, "text-anchor": a || "start" }, svg, t);
+  const line = (x1, z1, x2, z2, c, w, extra) => el("line", Object.assign({ x1: px(x1), y1: pz(z1), x2: px(x2), y2: pz(z2), stroke: c || ink3, "stroke-width": w || 1 }, extra || {}), svg);
+  R(-75, 75, -22, 0, "#26282c");
+  lab(-72, -14, "table top (the table is 0.80 m tall)", "start", ink3, 11);
+  R(-75, 75, 0, 20, css("--plate"));
+  R(-25, 25, 20, 40, css("--rotor-2"));
+  rigPads(R, (s, a, b) => s > 0 ? [a, b] : [-b, -a], { base: [20, 23], upright: [23, 36], carrier: [23, 35], felt: [24, 34] });
+  R(-25, 200, 40, 50, css("--rotor"));
+  R(134.9, 185.1, 50, 54, css("--rotor-2"));
+  R(154.9, 165.1, 54, 74, css("--rotor-3"));
+  R(157.4, 162.6, 74, 92, "#3f3a33", { stroke: "#5c564c" });
+  el("path", { d: `M${px(154)},${pz(91)} L${px(158)},${pz(95)} L${px(161)},${pz(90)} L${px(166)},${pz(94)}`, stroke: ink3, fill: "none", "stroke-width": 1.2 }, svg);
+  lab(169, 87, "fin, continues to 204 mm", "start", ink3, 11);
+  lab(60, 43.6, "beam", "middle", "#2b2a27", 11);
+  lab(0, 28, "hub", "middle", "#2b2a27", 11);
+  lab(-48, 27, "felt pad, if fitted", "end", ink3, 11);
+  // the clamp-on pulley at the table edge
+  R(66, 92, 0, 5, metal); R(84, 92, -28, 12, metal); R(66, 92, -28, -22, metal); R(88, 100, 12, 16, metal);
+  el("circle", { cx: px(100), cy: pz(14), r: 8 * S, fill: "#b9bcc2", stroke: "#000", "stroke-width": 0.8 }, svg);
+  el("circle", { cx: px(100), cy: pz(14), r: 1.5 * S, fill: "#2b2d31" }, svg);
+  // the thread: winding, run, over the wheel, down to the cup
+  R(-25, 25, 21.2, 22.8, thread, { stroke: "none" });
+  el("path", { d: `M${px(0)},${pz(22)} L${px(100)},${pz(22)} A${8 * S},${8 * S} 0 0 1 ${px(108)},${pz(14)} L${px(108)},${pz(-45)}`, fill: "none", stroke: thread, "stroke-width": 2 }, svg);
+  for (const z of [-47, -51]) line(104, z - 1.5, 112, z + 1.5, ink2, 1.2);
+  line(108, -53, 108, -66, thread, 2);
+  R(99, 117, -92, -66, "#6b6e74");
+  lab(108, -81, "cup", "middle", "#1b1c1f", 11);
+  // clearance over the pulley
+  line(120, 23, 120, 39, ink2, 1.2, { "marker-start": "url(#ah" + ink2.slice(1) + ")", "marker-end": "url(#ah" + ink2.slice(1) + ")" });
+  lab(124, 33, "18 mm clear: the beam passes over,", "start", ink2, 11);
+  lab(124, 27, "so the valve can turn full circles", "start", ink2, 11);
+  lab(114, 12, "ball-bearing pulley,", "start", ink2, 11);
+  lab(114, 6, "top level with the thread", "start", ink2, 11);
+  lab(-95, 78, "thread: 2–3 turns round the hub,", "start", thread, 12);
+  lab(-95, 72, "22 mm up, below the pads (24 mm)", "start", thread, 12);
+  line(-50, 68, -12, 22.8, ink3, 1);
+  lab(122, -49, "~0.75 m of drop ≈ 4.8 turns of the hub", "start", ink2, 11);
+  lab(122, -72, "torque = m × 9.81 × 0.025 m", "start", ink2, 12);
+  lab(122, -79, "kitchen scale: 1 g = 0.25 mN·m", "start", ink3, 11);
+}
+function drawRigTop() {
+  const svg = document.getElementById("rigTop"); svg.innerHTML = "";
+  const X0 = -100, X1 = 215, Y0 = -62, Y1 = 72, S = 3.2;
+  svg.setAttribute("viewBox", `0 0 ${(X1 - X0) * S} ${(Y1 - Y0) * S}`);
+  const px = x => (x - X0) * S, py = y => (Y1 - y) * S;
+  const thread = css("--thread"), ink2 = css("--ink-2"), ink3 = css("--ink-3"), warn = css("--warn"), metal = "#8a8d93";
+  arrowDefs(svg, [warn, css("--ink")]);
+  const R = (x0, x1, y0, y1, f, extra) => el("rect", Object.assign({ x: px(x0), y: py(y1), width: (x1 - x0) * S, height: (y1 - y0) * S, fill: f, stroke: "#000", "stroke-width": 0.8 }, extra || {}), svg);
+  const lab = (x, y, t, a, c, fs) => el("text", { x: px(x), y: py(y), fill: c || ink2, "font-size": fs || 12, "text-anchor": a || "start" }, svg, t);
+  R(-75, 75, Y0, Y1, "#1b1c1f", { stroke: "none" });
+  for (const x of [-75, 75]) el("line", { x1: px(x), y1: py(Y0), x2: px(x), y2: py(Y1), stroke: ink3, "stroke-width": 1, "stroke-dasharray": "5 4" }, svg);
+  lab(-72, 64, "table, 150 mm deep (it continues along its length)", "start", ink3, 11);
+  R(-75, 75, -25, 25, css("--plate"));
+  for (const s of [1, -1]) {      // C-clamps, indicative
+    const [a, b] = s > 0 ? [52, 75] : [-75, -52], [c, d] = s > 0 ? [75, 86] : [-86, -75];
+    R(a, b, -12, 12, css("--bracket"), { opacity: 0.5 }); R(c, d, -12, 12, css("--bracket"), { opacity: 0.5 });
+  }
+  lab(64, -54, "C-clamps (yours may sit elsewhere)", "middle", ink3, 11);
+  el("circle", { cx: px(0), cy: py(0), r: 25 * S, fill: css("--rotor-2"), stroke: "#000", "stroke-width": 0.8 }, svg);
+  el("circle", { cx: px(0), cy: py(0), r: 11 * S, fill: "#0c0d0f" }, svg);
+  rigPads(R, (s, a, b) => s > 0 ? [a, b] : [-b, -a], { base: [-10, 10], upright: [-10, 10], carrier: [-8, 8], felt: [-7, 7] });
+  lab(-50, -33, "felt pads, if fitted", "middle", ink2, 11);
+  el("line", { x1: px(0), y1: py(0), x2: px(-17.7), y2: py(17.7), stroke: css("--ink"), "stroke-width": 1.2, "marker-end": "url(#ah" + css("--ink").slice(1) + ")" }, svg);
+  lab(-21, 15, "r = 25 mm", "end", css("--ink"), 11);
+  // the thread round the hub and along the plate's side to the pulley
+  el("circle", { cx: px(0), cy: py(0), r: 25.8 * S, fill: "none", stroke: thread, "stroke-width": 2 }, svg);
+  el("line", { x1: px(0), y1: py(25.8), x2: px(100), y2: py(25.8), stroke: thread, "stroke-width": 2 }, svg);
+  lab(-72, 33, "thread leaves the hub along the plate's side", "start", thread, 12);
+  R(66, 92, 28, 36, metal); R(92, 108, 23.8, 27.8, "#b9bcc2");
+  el("circle", { cx: px(108), cy: py(25.8), r: 7 * S, fill: "none", stroke: ink2, "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+  lab(116, 31, "the cup hangs here", "start", ink2, 11);
+  lab(112, 41, "pulley, clamped to the table edge", "start", ink2, 11);
+  // the beam above, as an outline
+  el("path", { d: `M${px(200)},${py(25)} L${px(0)},${py(25)} A${25 * S},${25 * S} 0 0 0 ${px(0)},${py(-25)} L${px(200)},${py(-25)} Z`, fill: "none", stroke: css("--rotor"), "stroke-width": 1.2, "stroke-dasharray": "7 5" }, svg);
+  el("rect", { x: px(157.4), y: py(20.6), width: 5.2 * S, height: 40 * S, fill: "none", stroke: css("--rotor"), "stroke-width": 1, "stroke-dasharray": "4 3" }, svg);
+  lab(125, -33, "beam above, 40–50 mm up (dashed outline)", "start", ink3, 11);
+  // which way it turns
+  el("path", { d: `M${px(31.2)},${py(-18)} A${36 * S},${36 * S} 0 0 1 ${px(-31.2)},${py(-18)}`, fill: "none", stroke: warn, "stroke-width": 2, "marker-end": "url(#ah" + warn.slice(1) + ")" }, svg);
+  lab(0, -44, "the weight turns the valve clockwise (seen from above)", "middle", warn, 11);
+}
+function forceTable() {
+  const rows = [[5, "weak end: below this, fit the pads"], [10, "bottom of the target band"], [20, "middle of the target band"],
+                [32, "your gauge's upper bound on the bare bearing"], [40, "top of the target band"]];
+  let h = "<thead><tr><th class='n'>Torque, mN·m</th><th class='n'>Gauge at the fin, N</th><th class='n'>Gauge on the hub thread, N</th><th class='n'>Weight on the hub thread, g</th><th></th></tr></thead><tbody>";
+  for (const [t, note] of rows) {
+    const tau = t / 1000;
+    h += `<tr class="${t >= 10 && t <= 40 ? "close" : ""}"><td class="n">${t}</td><td class="n">${(tau / R_FIN).toFixed(2)}</td><td class="n">${(tau / R_HUB).toFixed(2)}</td><td class="n">${Math.round(tau / (G * R_HUB) * 1000)}</td><td>${note}</td></tr>`;
+  }
+  document.getElementById("forceTable").innerHTML = h + "</tbody>";
+}
+const M_DEFAULT = { w: ["82", "1"], gh: ["0.8", "0.1"], gf: ["0.13", "0.01"] };
+function calcMeasure() {
+  const m = document.getElementById("mMethod").value, v = num("mVal"), pul = num("mPul") || 0;
+  document.getElementById("mPul").disabled = m !== "w";
+  const tau = m === "w" ? Math.max(0, v - pul) / 1000 * G * R_HUB : m === "gh" ? v * R_HUB : v * R_FIN;
+  const res = m === "w" ? "1 g reads 0.25 mN·m" : m === "gh" ? "a 0.1 N division reads 2.5 mN·m" : "a 0.1 N division reads 16 mN·m: too coarse for the target band";
+  const [p, why] = frictionVerdict(tau * 1000);
+  document.getElementById("mOut").innerHTML = `<span class="big">${(tau * 1000).toFixed(1)} mN·m</span>${p}<span class="sub">${(tau / R_FIN).toFixed(3)} N at the fin · ${res}</span>`;
+  document.getElementById("mWhy").textContent = why;
+}
+document.getElementById("mMethod").addEventListener("change", () => {
+  const [val, step] = M_DEFAULT[document.getElementById("mMethod").value];
+  const box = document.getElementById("mVal"); box.value = val; box.step = step; calcMeasure();
+});
+for (const id of ["mVal", "mPul"]) document.getElementById(id).addEventListener("input", calcMeasure);
+drawPads(); drawGrease(); calcPads(); calcGrease(); calcSpin();
+drawRigSide(); drawRigTop(); forceTable(); calcMeasure();
+render();
+</script>

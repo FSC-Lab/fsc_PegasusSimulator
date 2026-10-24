@@ -1,0 +1,21 @@
+[22:51:32] start ld_w020 PEGASUS_VALVE_LOAD_TORQUE=0.20
+[ld_w020] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.2 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[22:55:32] start ld_w020r PEGASUS_VALVE_LOAD_TORQUE=0.20,PEGASUS_VALVE_RATCHET=1
+[ld_w020r] ABORTED: left DIRECT while exit complete
+[22:59:25] start ld_w010r PEGASUS_VALVE_LOAD_TORQUE=0.10,PEGASUS_VALVE_RATCHET=1
+[ld_w010r] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 11.0 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[23:03:47] start ld_w040r PEGASUS_VALVE_LOAD_TORQUE=0.40,PEGASUS_VALVE_RATCHET=1
+[23:05:06] start ld_base1 baseline
+[ld_base1] ABORTED: left DIRECT while exit complete
+[23:09:07] start ld_w040r PEGASUS_VALVE_LOAD_TORQUE=0.40,PEGASUS_VALVE_RATCHET=1
+[23:09:53] --- restart with --open-first-exit (the valve's exit) ---
+[23:10:02] start ld_base1 baseline
+[ld_base1] completed
+[23:14:37] start ld_w040r PEGASUS_VALVE_LOAD_TORQUE=0.40,PEGASUS_VALVE_RATCHET=1
+[ld_w040r] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.3 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[23:18:21] start ld_d050 PEGASUS_VALVE_DAMPING=0.5
+[ld_d050] completed
+[23:23:00] start ld_w020r PEGASUS_VALVE_LOAD_TORQUE=0.20,PEGASUS_VALVE_RATCHET=1
+[ld_w020r] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 11.9 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+skip ld_base2 (flown)
+[23:27:12] CHAIN DONE

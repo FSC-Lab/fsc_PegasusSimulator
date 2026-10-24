@@ -1,0 +1,15 @@
+
+172853: room hold 45.00-47.79 s (2.79 s), 28 arrival samples; claw speed in the hold median 15 / p75 19 / p90 22 mm/s
+  |e|<=25, across<=8                   met  57.1 % of the hold; wait from a random start: median 0.00 s, worst 1.20 s
+  |e|<=25, across<=8, claw<=25 mm/s    met  53.6 % of the hold; wait from a random start: median 0.00 s, worst 1.20 s, never from 1 of 28 starts
+  |e|<=25, across<=8, claw<=30 mm/s    met  53.6 % of the hold; wait from a random start: median 0.00 s, worst 1.20 s, never from 1 of 28 starts
+  |e|<=25, across<=8, claw<=35 mm/s    met  57.1 % of the hold; wait from a random start: median 0.00 s, worst 1.20 s
+  |e|<=20, across<=3                   met   3.6 % of the hold; wait from a random start: median 1.35 s, worst 2.70 s
+  hover above the handle (40.14-41.81 s): claw speed median 22 / p90 27 mm/s
+
+170123: room hold 36.50-39.55 s (3.05 s), 31 arrival samples; claw speed in the hold median 30 / p75 44 / p90 47 mm/s
+  |e|<=25, across<=8                   met  80.6 % of the hold; wait from a random start: median 0.00 s, worst 0.40 s
+  |e|<=25, across<=8, claw<=25 mm/s    met  22.6 % of the hold; wait from a random start: median 0.30 s, worst 0.90 s
+  |e|<=25, across<=8, claw<=30 mm/s    met  38.7 % of the hold; wait from a random start: median 0.10 s, worst 0.90 s
+  |e|<=25, across<=8, claw<=35 mm/s    met  51.6 % of the hold; wait from a random start: median 0.00 s, worst 0.90 s
+  |e|<=20, across<=3                   met  32.3 % of the hold; wait from a random start: median 0.20 s, worst 0.90 s

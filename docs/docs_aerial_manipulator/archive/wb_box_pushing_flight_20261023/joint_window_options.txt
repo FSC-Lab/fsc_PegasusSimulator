@@ -1,0 +1,7 @@
+pose / limits                           claw out  claw z |         room OUT |          room IN
+today [0,32,28,0]                        267.1mm -131.6mm |  22.0 mm  q3 guard |  35.5 mm   q3 wall
+[0,30,30,0]                              263.7mm -134.6mm |  25.0 mm  q3 guard |  32.5 mm   q3 wall
+[0,27.5,32.5,0]                          259.3mm -138.2mm |  28.5 mm  q3 guard |  29.0 mm   q3 wall
+[0,26,34,0] (the 10-07 pose)             256.6mm -140.2mm |  31.0 mm  q3 guard |  27.0 mm   q3 wall
+today, q3 guard 5 deg                    267.1mm -131.6mm |  24.0 mm   q2 wall |  35.5 mm   q3 wall
+today, q3 guard 5 + q2 wall 50           267.1mm -131.6mm |  26.5 mm  q3 guard |  35.5 mm   q3 wall

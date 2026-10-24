@@ -1,0 +1,16 @@
+
+horizontal: path to the q2 wall = 23.8 mm (q2 45.0, q3 7.8 there); q3 falls 0.84 deg per mm
+    claw speed |  static | rate (flown) |  q2-aware   [mm of travel before the rule fires]
+        5 mm/s |    21.8 |         22.2 |      22.2
+       20 mm/s |    21.8 |         17.8 |      17.8
+       50 mm/s |    21.8 |         12.4 |      12.4
+       88 mm/s |    21.8 |          6.0 |       6.0
+      150 mm/s |    21.8 |          0.0 |       0.0
+
+fold-held (10-23): path to the q2 wall = 29.5 mm (q2 45.0, q3 15.0 there); q3 falls 0.44 deg per mm
+    claw speed |  static | rate (flown) |  q2-aware   [mm of travel before the rule fires]
+        5 mm/s |   never |        never |     never
+       20 mm/s |   never |        never |     never
+       50 mm/s |   never |        never |     never
+       88 mm/s |   never |         23.3 |     never
+      150 mm/s |   never |         11.0 |     never

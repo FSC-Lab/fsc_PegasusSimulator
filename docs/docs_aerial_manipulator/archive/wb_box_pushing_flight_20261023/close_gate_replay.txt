@@ -1,0 +1,16 @@
+
+172853: open-jaw room hold from 45.00 s, flown close at 47.79 s (2.79 s of hold), arrival_error at 10 Hz
+  today: |e|<=20, across<=3              closes at  47.77 s (hold 2.77 s): |e| 10.0, across  -2.2 mm; claw   35, base   46 mm/s
+  |e|<=20, across<=8                     closes at  47.47 s (hold 2.47 s): |e| 19.8, across  -7.5 mm; claw    8, base   27 mm/s
+  |e|<=25, across<=8                     closes at  46.26 s (hold 1.26 s): |e| 22.7, across  -7.1 mm; claw   16, base   26 mm/s
+  |e|<=20, across<=8, claw<=25 mm/s      closes at  47.47 s (hold 2.47 s): |e| 19.8, across  -7.5 mm; claw    8, base   27 mm/s
+  |e|<=25, across<=8, claw<=25 mm/s      closes at  46.26 s (hold 1.26 s): |e| 22.7, across  -7.1 mm; claw   16, base   26 mm/s
+  |e|<=25, across<=10, claw<=30 mm/s     closes at  46.16 s (hold 1.16 s): |e| 23.7, across  -9.0 mm; claw   18, base   30 mm/s
+
+170123: open-jaw room hold from 36.50 s, flown close at 39.55 s (3.05 s of hold), arrival_error at 10 Hz
+  today: |e|<=20, across<=3              closes at  36.91 s (hold 0.41 s): |e|  5.8, across  +2.4 mm; claw   49, base   39 mm/s
+  |e|<=20, across<=8                     closes at  36.61 s (hold 0.11 s): |e| 15.4, across  +7.2 mm; claw   40, base   42 mm/s
+  |e|<=25, across<=8                     closes at  36.61 s (hold 0.11 s): |e| 15.4, across  +7.2 mm; claw   40, base   42 mm/s
+  |e|<=20, across<=8, claw<=25 mm/s      closes at  37.31 s (hold 0.81 s): |e|  9.3, across  -6.2 mm; claw   13, base   37 mm/s
+  |e|<=25, across<=8, claw<=25 mm/s      closes at  37.31 s (hold 0.81 s): |e|  9.3, across  -6.2 mm; claw   13, base   37 mm/s
+  |e|<=25, across<=10, claw<=30 mm/s     closes at  37.31 s (hold 0.81 s): |e|  9.3, across  -6.2 mm; claw   13, base   37 mm/s

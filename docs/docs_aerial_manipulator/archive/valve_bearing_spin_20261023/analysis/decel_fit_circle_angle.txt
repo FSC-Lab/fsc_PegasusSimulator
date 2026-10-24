@@ -1,0 +1,18 @@
+coast  w0[deg/s]  travel[deg]  mean decel a_seg [rad/s^2]
+  42.0     194      105   3.238
+  48.0     375      289   4.006
+  50.2     267      140   3.724
+  56.0     343      299   3.407
+  58.5     276      222   2.961
+  63.8     219      162   2.604
+  77.8     303      241   2.937
+  81.1     200       69   6.239
+  88.2     260      160   4.218
+  90.8     335      261   3.962
+  outlier dropped: coast 81.1 (a_seg 6.24 vs median 3.57, 3 MAD = 2.33)
+per-coast mean decel: mean 3.451  std 0.559  SE 0.186  (n 9)
+pooled Coulomb-only a = 3.486;  Coulomb+viscous a = 2.016, c = 0.494 1/s
+bootstrap over coasts (median [95%]):  Coulomb-only a 3.484 [3.121, 3.843] |  a 2.062 [1.346, 2.924]  c 0.479 [0.209, 0.727]
+  decel at   24 deg/s (a + c w): 2.263 [1.641, 3.031]
+  decel at  115 deg/s (a + c w): 3.012 [2.745, 3.423]
+  decel at  344 deg/s (a + c w): 4.953 [4.055, 5.740]

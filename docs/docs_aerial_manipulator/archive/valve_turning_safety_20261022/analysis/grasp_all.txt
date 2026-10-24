@@ -1,0 +1,33 @@
+run              along fin  radial rotor turned   outcome
+s22_fa0_hw_1        +13.0mm   +0.8mm       -0.0deg   complete
+s22_fa0_hw_2         -9.4mm   +0.7mm       +4.7deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 0.5 deg < 3.0 deg (t
+s22_fa0_hw_3        -59.5mm  -11.2mm      +19.9deg   timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=HOLD push_pull=DONE ready next=
+s22_fa0_nom_1        +6.0mm   +1.6mm       +0.0deg   complete
+s22_fa_hw_1         +11.9mm   +1.4mm       -0.1deg   complete
+s22_fa_hw_2         -35.8mm   -2.9mm      +16.6deg   timeout (15 s): the GS's automatic Push  [mode=DIRECT plan=HOLD push_pull=DONE ready next=
+s22_fa_hw_3          -8.5mm   -1.2mm       +2.0deg   complete
+s22_final_gov_hv     +9.7mm   +2.9mm       +0.1deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -17.5 deg < 3.0 deg 
+s22_final_hw_2      -15.7mm   +2.3mm       +6.9deg   complete
+s22_final_hw_3       -4.0mm   +0.6mm       +2.3deg   complete
+s22_final_hw_4      +13.8mm   +0.9mm       +0.4deg   complete
+s22_final_mfd_2      +4.9mm   +3.4mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen
+s22_final_mfd_late     +2.2mm   +4.5mm       +0.2deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen
+s22_final_mfd        +3.3mm   +0.2mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen
+s22_final_nom_1      +0.0mm   +4.0mm       +0.0deg   complete
+s22_final_nom_2      +9.1mm   +1.3mm       +0.0deg   complete
+s22_heavy            +9.0mm   +1.9mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 0.3 deg < 3.0 deg (t
+s22_hw_1             -7.3mm   +3.7mm       +1.5deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 0.9 deg < 3.0 deg (t
+s22_hw_2            -36.8mm   -0.1mm       +8.5deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 10.2 N > 5.0
+s22_hw_3            -35.4mm   -2.9mm      +11.9deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: push force 12.6 N > 5.0
+s22_jump_rotor       +3.0mm   -0.2mm       +0.0deg   complete
+s22_mfd_fix_1        +7.2mm   -0.3mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen
+s22_mf_drone         +5.2mm   +3.1mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen
+s22_mf_rotor        +11.6mm   +1.8mm       -0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box's mocap (/obj_0
+s22_nom_1            +0.6mm   +3.5mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 11.0 deg > 10.0 de
+s22_nom_2            -1.5mm   -0.1mm       +0.3deg   complete
+s22_nom_3            -2.2mm   +1.3mm       +0.0deg   complete
+s22_um_ab20          +1.8mm   +1.5mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing
+s22_um_ab33          +8.2mm   -0.5mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing
+s22_um_hv_1          +3.1mm   +2.6mm       +0.0deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -5.4 deg < 3.0 deg (
+s22_um_hv_2          +4.2mm   +4.3mm       +0.2deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 0.8 deg < 3.0 deg (t
+s22_um_mfd           +2.6mm   +3.3mm       +0.4deg   push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen

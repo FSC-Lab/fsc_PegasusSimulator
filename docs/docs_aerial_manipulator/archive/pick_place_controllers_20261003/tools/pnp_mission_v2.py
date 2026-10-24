@@ -373,6 +373,10 @@ class Driver(Node):
         q = self.payload0[3:7]
         yaw = np.arctan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] ** 2 + q[3] ** 2))
         axis = np.array([-np.sin(yaw), np.cos(yaw), 0.0])
+        if self.a.mail:
+            # the envelope (2026-10-23): the wrist rolled 90 deg, the jaws close
+            # VERTICALLY on its flat face (the arm GS's Mail Envelope gate)
+            axis = np.array([0.0, 0.0, 1.0])
         while True:
             ok = (self.arrival is not None and int(self.arrival[0]) == leg_k and self.arrival[1] > 0.5
                   and self.arrival[2] <= self.a.grip_tol)
@@ -452,7 +456,7 @@ class Driver(Node):
         # the box payload's HOOK grasp (2026-10-07): the fingers close AROUND the
         # 3 mm stem without clamping it, so a full close IS the grasp (the arm GS's
         # hook mode accepts it the same way)
-        if not res.stalled and not self.a.hook_place:
+        if not res.stalled and not (self.a.hook_place or self.a.mail):
             raise Abort("the gripper closed on NOTHING -- not lifting")
 
     def gripper_action_open(self, what):
@@ -584,6 +588,36 @@ class Driver(Node):
         else:
             time.sleep(a.leg_pause)
         self.leg("execute_place", "ready_place")
+        if a.mail:
+            # THE MAIL INSERT (2026-10-23, the arm GS's Mail Envelope tab): Insert
+            # slides the envelope in through the mouth (the planner's descend_place),
+            # the gripper OPENS once the EE is within grip_tol, and the exit starts
+            # only on the open's SUCCEEDED -- backing out with the jaws still
+            # closing would drag the envelope back out of the mouth
+            self.descend(3, "place")
+            if a.grip_via_action:
+                self.gripper_action_open("open")
+            else:
+                self.gripper(GRIP_OPEN, "open")
+            time.sleep(a.release_dwell)
+            self.mark("place:end")
+            self.exit(3, "exit_place")
+            self.grip_cmd = GRIP_CLOSE          # the GS closes it once the exit is done
+            self.ev("exit_place done -- gripper CLOSE")
+            if a.timetable:
+                self.align("ready_place:start", a.slot_land_start, "go_to_land_start")
+            else:
+                time.sleep(a.leg_pause)
+            self.leg("go_to_land_start", "go_to_land_start")
+            if a.timetable:
+                self.align("go_to_land_start:start", a.slot_land, "execute_land")
+            else:
+                time.sleep(a.leg_pause)
+            self.leg("execute_land", "execute_land")
+            self.wait(lambda: self.pp_status.startswith("COMPLETE"), 10, "COMPLETE")
+            time.sleep(a.post_hold)
+            self.phase = "done"
+            return
         if a.drop_place:
             # the DROP place (2026-10-14, user design): the leg already holds on
             # the drop point above the bin -- let the claw settle, OPEN (the
@@ -739,6 +773,9 @@ def main():
     ap.add_argument("--grip-closed-m", type=float, default=-0.010, help="the GS's gripper_closed [m]")
     ap.add_argument("--hook-place", action="store_true",
                     help="the box payload's hook place: jaws closed through the descent, then open and exit at once")
+    ap.add_argument("--mail", action="store_true",
+                    help="the mail delivery (2026-10-23): the pick's axis gate is VERTICAL (q4 90 deg), any close "
+                         "result is the grasp, the place is the insert (gated descend, OPEN, exit on its SUCCEEDED)")
     ap.add_argument("--drop-place", action="store_true",
                     help="the planner's pick_place_place_drop: Place only opens the gripper on the drop point")
     ap.add_argument("--drop-dwell", type=float, default=2.0, help="hover on the drop point before opening [s]")

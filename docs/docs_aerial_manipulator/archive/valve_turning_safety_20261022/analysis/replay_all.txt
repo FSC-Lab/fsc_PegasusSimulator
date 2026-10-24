@@ -1,0 +1,91 @@
+118 runs: 57 complete, 50 failed, 11 injected aborts
+
+THE TURN LAG (planned claw rotation - measured rotor rotation, deg)
+  complete runs: max |lag| 125.3 deg (p95 of the per-run max 59.1)
+    results_r3_a3    125.3
+    results_r3_a1    122.7
+    results_r2_a2     66.5
+    results_r1_a1     57.2
+    fa_w1_2           29.1
+    fa_w1_1           28.1
+  lag >  8.0 deg for 0.2 s: false trips 15/57 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 19/50 failures ['a_abort20(-0.4s)', 'base_visc(-9.1s)', 'c_oct05(-0.8s)', 'd_kv20_r2(-0.2s)', 'd_t24(-3.9s)', 'f032(-9.5s)', 'fa_w1_oct29_1(-31.9s)', 'fa_w1_oct29_2(-24.2s)']
+  lag > 10.0 deg for 0.2 s: false trips 15/57 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 15/50 failures ['a_abort20(-0.2s)', 'base_visc(-4.0s)', 'c_oct05(-0.6s)', 'd_kv20_r2(-0.1s)', 'd_t24(-3.0s)', 'f032(-6.4s)', 'fa_w1_oct29_1(-25.5s)', 'fa_w1_oct29_2(-22.2s)']
+  lag > 12.0 deg for 0.2 s: false trips 13/57 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 9/50 failures ['a_abort20(-0.1s)', 'c_oct05(-0.1s)', 'd_t24(-1.9s)', 'fa_w1_oct29_1(-25.4s)', 'fa_w1_oct29_2(-21.9s)', 'results_r2_a1(-22.0s)', 'results_r2_a3(-21.9s)', 'results_r3_a2(-36.3s)']
+  lag > 15.0 deg for 0.2 s: false trips 13/57 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 7/50 failures ['d_t24(-0.7s)', 'fa_w1_oct29_1(-24.5s)', 'fa_w1_oct29_2(-1.4s)', 'results_r2_a1(-21.9s)', 'results_r2_a3(-21.7s)', 'results_r3_a2(-36.1s)', 'v4(-3.2s)']
+  lag > 20.0 deg for 0.2 s: false trips 10/57 ['c5_ship_1', 'fa_f005_1', 'fa_f0_1', 'fa_w1_1', 'fa_w1_2', 'fa_w1_3']; before the end in 5/50 failures ['fa_w1_oct29_1(-24.2s)', 'results_r2_a1(-17.9s)', 'results_r2_a3(-20.4s)', 'results_r3_a2(-35.7s)', 'v4(-0.6s)']
+
+q3 (hardware-like signal)
+  complete runs' q3 min: lowest -5.9, p5 0.6, median 11.0 deg
+    base_stuck         -5.9  
+    pf_visc            -3.1  
+    base_n1            -1.9  
+    i_old_b3            1.2  
+    c5_ship_2           1.4  CURRENT
+    f016                1.8  
+    results_r1_a3       3.0  
+    e_oct2_r2           3.3  
+
+  rule                                  false trips (complete)   failures caught before the end [s, q3 at trip]
+  static q3<10                          20/57   b_f010_1,base_n1,base_stuck,c5_ship_2  32/50 base_visc(-5.0,5) c_free(-0.4,-13) c_hold(-9.7,10) c_t48(-34.4,7) d_t24(-0.1,-73) e_oct29(-34.6,9) f000(-12.1,9)
+  rate q3<10 tau 0.2 rate>5             41/57   b_f005_1,b_f005_2,b_f010_1,base_n1  43/50 a_abort20(-18.2,16) base_visc(-24.7,18) c_free(-32.2,16) c_hold(-11.6,13) c_oct05(-20.2,15) c_t48(-35.9,14) d_kv20_r2(-23.8,16)
+  static q3<5                            6/57   base_stuck,e_oct2_r2,f016,fa_f0_1  21/50 base_visc(-4.8,3) c_free(-0.4,-13) c_hold(-6.1,-7) d_t24(-0.1,-73) f000(-11.1,3) fa_w1_oct29_1(-0.0,4) fa_w1_oct29_2(-1.0,1)
+  rate q3<5 tau 0.2 rate>5              27/57   b_f005_1,base_n1,base_stuck,c5_ship_2  35/50 base_visc(-5.3,9) c_free(-0.7,15) c_hold(-7.5,12) c_t48(-34.7,11) d_t24(-13.1,14) e_oct29(-40.1,14) f000(-11.5,8)
+  rate q3<5 tau 0.2 rate>20             26/57   b_f005_1,base_n1,base_stuck,c5_ship_2  34/50 base_visc(-5.3,9) c_free(-0.7,15) c_hold(-7.5,12) c_t48(-34.7,11) d_t24(-13.1,14) e_oct29(-40.1,14) f000(-11.5,8)
+  static q3<0                            2/57   base_stuck,pf_visc              14/50 base_visc(-3.7,-11) c_free(-0.3,-12) c_hold(-6.0,-5) d_t24(-0.1,-73) f000(-1.7,-15) fa_w1_oct29_2(-0.7,-1) g_oct2_h(-13.7,-11)
+  rate q3<0 tau 0.2 rate>5              12/57   base_n1,base_stuck,c5_ship_2,e_oct2_r2  29/50 base_visc(-4.0,1) c_free(-0.7,11) c_hold(-7.5,9) d_t24(-0.5,16) f000(-2.0,3) fa_w1_oct29_2(-1.3,5) g_oct29_h(-25.4,7)
+  rate q3<0 tau 0.2 rate>20             12/57   base_n1,base_stuck,c5_ship_2,e_oct2_r2  29/50 base_visc(-4.0,0) c_free(-0.7,11) c_hold(-7.5,9) d_t24(-0.5,16) f000(-2.0,3) fa_w1_oct29_2(-1.3,5) g_oct29_h(-25.4,7)
+  rate q3<0 tau 0.3 rate>30             26/57   b_f005_1,base_n1,base_stuck,c5_ship_2  33/50 base_visc(-5.2,8) c_free(-0.7,16) c_hold(-7.5,12) c_t48(-34.7,10) d_t24(-13.1,15) e_oct29(-40.1,14) f000(-1.9,1)
+  static q3<-3                           1/57   base_stuck                      12/50 base_visc(-3.7,-11) c_free(-0.3,-12) c_hold(-6.0,-5) d_t24(-0.1,-73) f000(-1.6,-18) g_oct2_h(-13.6,-12) i_rel_b3(-0.0,-46)
+  rate q3<-3 tau 0.2 rate>20             8/57   base_n1,base_stuck,c5_ship_2,i_old_b1  26/50 base_visc(-4.0,-1) c_free(-0.6,8) c_hold(-7.4,7) d_t24(-0.4,13) f000(-1.9,1) g_oct29_h(-25.3,6) g_oct29_h_r2(-0.0,19)
+
+FAILURES (end = tilt-guard abort or DIRECT loss): q3 at the end, the fastest fold in its last second
+  a_abort20        tilt/guard   q3 end   50.0  fold      0 deg/s  lag max  14.2  CURRENT
+  base_visc        tilt/guard   q3 end  -12.4  fold    -60 deg/s  lag max  11.4  
+  c_free           left DIRECT  q3 end  -46.7  fold   -317 deg/s  lag max   9.6  
+  c_hold           left DIRECT  q3 end    5.4  fold    -61 deg/s  lag max   3.2  
+  c_oct05          tilt/guard   q3 end   50.0  fold      0 deg/s  lag max  16.8  
+  c_t48            left DIRECT  q3 end   49.8  fold    -47 deg/s  lag max  10.5  
+  d_kv20_r2        tilt/guard   q3 end   50.0  fold      0 deg/s  lag max  14.1  
+  d_t24            tilt/guard   q3 end  -44.7  fold   -623 deg/s  lag max  25.1  
+  e_oct29          left DIRECT  q3 end   22.4  fold    -32 deg/s  lag max   4.1  
+  e_oct2_p15       left DIRECT  q3 end   26.1  fold    -73 deg/s  lag max   6.6  
+  f000             left DIRECT  q3 end  -32.1  fold    -63 deg/s  lag max   5.8  
+  f032             left DIRECT  q3 end   49.9  fold    -64 deg/s  lag max  14.4  
+  fa_w1_oct29_1    tilt/guard   q3 end    3.3  fold    -21 deg/s  lag max  25.4  
+  fa_w1_oct29_2    tilt/guard   q3 end    7.9  fold    -15 deg/s  lag max  21.0  
+  g_oct29_h        left DIRECT  q3 end   -2.7  fold   -122 deg/s  lag max   4.1  
+  g_oct29_h_r2     left DIRECT  q3 end   14.4  fold   -206 deg/s  lag max   6.7  
+  g_oct29_h_r3     left DIRECT  q3 end   28.7  fold   -190 deg/s  lag max  24.5  
+  g_oct2_h         left DIRECT  q3 end   49.9  fold   -114 deg/s  lag max  10.8  
+  h_oct29_r2       left DIRECT  q3 end   22.7  fold    -26 deg/s  lag max   5.0  
+  h_oct29_sh       left DIRECT  q3 end   20.1  fold    -66 deg/s  lag max   5.1  
+  h_oct29_sh_r2    left DIRECT  q3 end   21.0  fold    -13 deg/s  lag max   3.7  
+  i_rel_b3         left DIRECT  q3 end  -52.2  fold   -293 deg/s  lag max   6.0  
+  ld_base1_relfirst tilt/guard   q3 end   25.6  fold    -46 deg/s  lag max   5.8  CURRENT
+  ld_w010r         tilt/guard   q3 end   40.3  fold    -60 deg/s  lag max   6.4  CURRENT
+  ld_w020          tilt/guard   q3 end   27.2  fold    -35 deg/s  lag max   8.1  CURRENT
+  ld_w020r         tilt/guard   q3 end   44.2  fold    -40 deg/s  lag max   7.3  CURRENT
+  ld_w020r_relfirst tilt/guard   q3 end   27.6  fold    -30 deg/s  lag max   8.5  CURRENT
+  ld_w040r         tilt/guard   q3 end   18.5  fold    -64 deg/s  lag max   9.9  CURRENT
+  p_f000_1         tilt/guard   q3 end   48.9  fold    -29 deg/s  lag max   6.1  CURRENT
+  p_fused_2        tilt/guard   q3 end  -33.4  fold   -204 deg/s  lag max  10.8  CURRENT
+  p_fused_3        tilt/guard   q3 end  -23.8  fold   -164 deg/s  lag max   7.7  CURRENT
+  pf_n1            left DIRECT  q3 end  -20.0  fold   -211 deg/s  lag max   6.7  
+  pf_n4            left DIRECT  q3 end    5.7  fold   -124 deg/s  lag max   6.7  
+  pf_win1          tilt/guard   q3 end  -17.9  fold   -227 deg/s  lag max  11.6  
+  pf_win2          tilt/guard   q3 end  -23.4  fold   -201 deg/s  lag max  10.5  
+  results_r2_a1    left DIRECT  q3 end   16.5  fold    -17 deg/s  lag max  69.5  
+  results_r2_a3    left DIRECT  q3 end   19.3  fold    -12 deg/s  lag max 106.6  
+  results_r3_a2    left DIRECT  q3 end   17.8  fold     -3 deg/s  lag max 104.4  
+  s2_abort20_f0    tilt/guard   q3 end   28.6  fold   -127 deg/s  lag max   9.1  CURRENT
+  s_abort33        tilt/guard   q3 end   49.8  fold    -68 deg/s  lag max   6.9  CURRENT
+  v1               tilt/guard   q3 end   50.0  fold      0 deg/s  lag max  13.9  
+  v2               tilt/guard   q3 end   50.0  fold      0 deg/s  lag max  25.1  
+  v4               left DIRECT  q3 end    3.7  fold    -70 deg/s  lag max 136.3  
+  v5               left DIRECT  q3 end   12.6  fold    -73 deg/s  lag max   6.6  
+  v6               left DIRECT  q3 end   -0.4  fold    -94 deg/s  lag max   6.9  
+  v7_gs_check      left DIRECT  q3 end   25.3  fold   -170 deg/s  lag max  11.3  
+  win_adapt2       left DIRECT  q3 end    4.8  fold    -99 deg/s  lag max   9.4  CURRENT
+  valve_rep1       tilt/guard   q3 end   41.0  fold    -72 deg/s  lag max   5.5  CURRENT
+  valve_rep2       tilt/guard   q3 end   47.4  fold    -19 deg/s  lag max   7.6  CURRENT
+  valve_rep3       tilt/guard   q3 end   49.1  fold    -66 deg/s  lag max   8.0  CURRENT

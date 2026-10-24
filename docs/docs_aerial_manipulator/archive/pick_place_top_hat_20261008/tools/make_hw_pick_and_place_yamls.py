@@ -9,6 +9,7 @@ pick_and_place, used by the experiment AND the simulation).
     in : config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml
     out: config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_pick_and_place.yaml
     out: config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_pick_and_drop.yaml
+    out: config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_mail_delivery.yaml
   decoupled geometric + L1:
     in : config/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml
     out: config/params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_pick_and_place.yaml
@@ -63,6 +64,26 @@ SET_DOWN = {
     "pick_place_carry_pose_deg": "[12.0, 38.0, 42.0, 0.0]",
 }
 
+# THE MAIL DELIVERY (2026-10-23, user design; Pegasus archive/mail_delivery_20261023): the
+# envelope picked flat off the pick hat with the wrist rolled 90 deg and INSERTED through the
+# front mouth of the red mailbox on the console table (the planner's insert place). The SAME
+# task block as its simulation twin (make_pick_place_yaml.py, profile mail_delivery) -- the
+# lab's points are measured on the day (the Envelope row's Get; the Mailbox row from the
+# envelope held in the mouth, README) and typed in the arm GS's Mail Envelope tab.
+MAIL = {
+    "pick_place_place_start": "[1.0, 0.25, 1.1, 0.0]",
+    "pick_place_land_start": "[0.0, 0.0, 1.0, 0.0]",
+    "pick_place_land": "[0.0, 0.0, 0.35, 0.0]",
+    "pick_place_pick_pose_deg": "[0.0, 36.0, 44.0, 90.0]",
+    "pick_place_place_pose_deg": "[0.0, 36.0, 44.0, 90.0]",
+    "pick_place_carry_pose_deg": "[0.0, 36.0, 44.0, 90.0]",
+    "pick_place_sweep_lo_deg": "[0.0, 36.0, 44.0, 90.0]",
+    "pick_place_sweep_hi_deg": "[0.0, 36.0, 44.0, 90.0]",
+    "pick_place_ee_offset": "[-0.06, 0.0, 0.0]",
+    "pick_place_place_point": "[1.709, 0.25, 1.024, 0.0]",
+    "pick_place_place_drop": "false",
+}
+
 RIGS = {
     "wb": dict(
         src="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml",
@@ -94,6 +115,16 @@ RIGS = {
         added=None,
         planner_overrides={},    # the source's task block IS the drop's
         title="WHOLE-BODY 4-D L1, HARDWARE, PICK-AND-DROP"),
+    "wb_mail": dict(
+        src="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml",
+        dst="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_mail_delivery.yaml",
+        name="AM-T650-WB-L1-4D-HW-MAIL",
+        overrides=None,          # = the pick-and-drop's (filled in below)
+        added=None,
+        planner_overrides=MAIL,
+        planner_note=("# Planner task block (the MAIL DELIVERY: the envelope inserted through the mailbox mouth;\n"
+                      "# the source carries the pick-and-drop's):"),
+        title="WHOLE-BODY 4-D L1, HARDWARE, MAIL DELIVERY"),
     "geo": dict(
         src="params_single_aerial_manipulator_geometric_l1_direct_actuation_t650.yaml",
         dst="params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_pick_and_place.yaml",
@@ -114,6 +145,17 @@ RIGS["wb_drop"]["overrides"] = {}
 RIGS["wb_drop"]["added"] = RIGS["wb"]["added"]
 RIGS["wb_drop"]["note"] = ("# Attitude wb_k_r / wb_k_w = the free-flight H1b 2.134 / 1.567, NOT the pick-and-place's\n"
                            "# 1.6 / 1.2 (2026-10-16, Pegasus archive/lift_lurch_gains_20261016).")
+# The mail delivery flies the pick-and-drop's controller (a 60 g envelope is model uncertainty
+# like the basket), plus the two insert keys after pick_place_place_exit_back.
+RIGS["wb_mail"]["overrides"] = {}
+RIGS["wb_mail"]["added"] = dict(RIGS["wb"]["added"])
+RIGS["wb_mail"]["added"]["pick_place_place_insert"] = ("pick_place_place_exit_back",
+    "    # THE INSERT PLACE (the mail delivery, 2026-10-23): Ready To Place holds the claw\n"
+    "    # pick_place_place_approach_back (the arm GS's Insert Margin) in front of the mouth, level\n"
+    "    # with the target; Place (the GS's Insert) slides it straight in.\n"
+    "    pick_place_place_insert: true\n"
+    "    pick_place_place_approach_back: 0.15")
+RIGS["wb_mail"]["note"] = RIGS["wb_drop"]["note"]
 
 
 def header(rig, r):
@@ -128,7 +170,9 @@ def header(rig, r):
         lines.append(f"#   + {k}")
     if r.get("note"):
         lines.append(r["note"])
-    if r["planner_overrides"]:
+    if r["planner_overrides"] and r.get("planner_note"):
+        lines.append(r["planner_note"])
+    elif r["planner_overrides"]:
         lines.append("# Planner task block (the set-down place the hardware flew 10-09/10-10; the source")
         lines.append("# carries the DROP's -- AM_HW_PROFILE=pick_and_drop flies that one):")
         for k, v in r["planner_overrides"].items():
@@ -156,7 +200,8 @@ def generate(rig):
         ms = re.findall(pat, out, flags=re.M)
         if len(ms) != 1:
             sys.exit(f"{rig}: {k} found {len(ms)} times in {r['src']} (need exactly 1)")
-        out = re.sub(pat, lambda m: f"{m.group(1)}{v}  # PICK-AND-PLACE (set-down) OVERRIDE (source: {m.group(2)})",
+        tag = "MAIL DELIVERY" if rig == "wb_mail" else "PICK-AND-PLACE (set-down)"
+        out = re.sub(pat, lambda m: f"{m.group(1)}{v}  # {tag} OVERRIDE (source: {m.group(2)})",
                      out, flags=re.M)
     for k, (after, text) in r["added"].items():
         if re.search(rf"^    {re.escape(k)}:", out, flags=re.M):

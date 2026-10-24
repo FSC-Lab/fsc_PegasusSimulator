@@ -1,0 +1,57 @@
+60 runs: 33 complete, 16 failed, 11 injected aborts
+
+THE TURN LAG (planned claw rotation - measured rotor rotation, deg)
+  complete runs: max |lag| 29.1 deg (p95 of the per-run max 25.5)
+    fa_w1_2           29.1
+    fa_w1_1           28.1
+    fa_f005_1         23.7
+    c5_ship_1         23.6
+    fa_f0_1           22.7
+    fa_w1_3           21.7
+  lag >  8.0 deg for 0.2 s: false trips 10/33 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 3/16 failures ['a_abort20(-0.4s)', 'ld_w040r(-10.4s)', 'p_fused_2(-0.9s)']
+  lag > 10.0 deg for 0.2 s: false trips 10/33 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 2/16 failures ['a_abort20(-0.2s)', 'p_fused_2(-0.7s)']
+  lag > 12.0 deg for 0.2 s: false trips 9/33 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 1/16 failures ['a_abort20(-0.1s)']
+  lag > 15.0 deg for 0.2 s: false trips 9/33 ['c5_ship_1', 'c5_ship_2', 'c5_ship_f0', 'fa_f005_1', 'fa_f0_1', 'fa_f0_2']; before the end in 0/16 failures []
+  lag > 20.0 deg for 0.2 s: false trips 6/33 ['c5_ship_1', 'fa_f005_1', 'fa_f0_1', 'fa_w1_1', 'fa_w1_2', 'fa_w1_3']; before the end in 0/16 failures []
+
+q3 (hardware-like signal)
+  complete runs' q3 min: lowest 1.4, p5 4.5, median 13.9 deg
+    c5_ship_2           1.4  CURRENT
+    fa_f0_1             4.5  CURRENT
+    fa_w1_1             4.5  CURRENT
+    pose525_3           8.4  CURRENT
+    win_prof1           8.8  CURRENT
+    b_f010_1            9.6  CURRENT
+    ld_base1            9.7  CURRENT
+    final_wb_r3_a1      9.8  CURRENT
+
+  rule                                  false trips (complete)   failures caught before the end [s, q3 at trip]
+  static q3<10                           6/33   b_f010_1,c5_ship_2,fa_f0_1,fa_w1_1  8/16 ld_base1_relfirst(-5.5,4) ld_w020r(-1.7,7) ld_w020r_relfirst(-18.0,1) ld_w040r(-8.4,5) p_f000_1(-18.9,9) p_fused_2(-4.1,8) p_fused_3(-0.5,-25)
+  rate q3<10 tau 0.2 rate>5             22/33   b_f005_1,b_f005_2,b_f010_1,c5_ship_2  14/16 a_abort20(-18.2,16) ld_base1_relfirst(-5.8,13) ld_w010r(-25.4,12) ld_w020(-18.8,20) ld_w020r(-2.7,18) ld_w020r_relfirst(-22.0,20) ld_w040r(-9.6,20)
+  static q3<5                            1/33   fa_f0_1                         5/16 ld_base1_relfirst(-5.3,3) ld_w020r_relfirst(-17.3,0) ld_w040r(-7.5,3) p_fused_2(-0.2,-33) p_fused_3(-0.5,-25)
+  rate q3<5 tau 0.2 rate>5               9/33   b_f005_1,c5_ship_2,c5_ship_f0,fa_f0_1  10/16 ld_base1_relfirst(-5.7,9) ld_w020r(-2.6,15) ld_w020r_relfirst(-18.3,14) ld_w040r(-9.5,17) p_f000_1(-19.2,13) p_fused_2(-0.5,17) p_fused_3(-0.9,22)
+  rate q3<5 tau 0.2 rate>20              8/33   b_f005_1,c5_ship_2,c5_ship_f0,fa_w1_1  10/16 ld_base1_relfirst(-5.7,9) ld_w020r(-2.6,15) ld_w020r_relfirst(-18.3,14) ld_w040r(-9.5,17) p_f000_1(-19.2,13) p_fused_2(-0.5,17) p_fused_3(-0.9,22)
+  static q3<0                            0/33                                   2/16 p_fused_2(-0.2,-33) p_fused_3(-0.4,-31)
+  rate q3<0 tau 0.2 rate>5               1/33   c5_ship_2                       8/16 ld_base1_relfirst(-5.5,4) ld_w020r(-2.6,12) ld_w020r_relfirst(-18.3,12) ld_w040r(-8.7,9) p_fused_2(-0.5,13) p_fused_3(-0.8,18) s2_abort20_f0(-1.6,19)
+  rate q3<0 tau 0.2 rate>20              1/33   c5_ship_2                       8/16 ld_base1_relfirst(-5.5,4) ld_w020r(-2.6,12) ld_w020r_relfirst(-18.3,12) ld_w040r(-8.7,9) p_fused_2(-0.5,13) p_fused_3(-0.8,18) s2_abort20_f0(-1.6,19)
+  rate q3<0 tau 0.3 rate>30              8/33   b_f005_1,c5_ship_2,c5_ship_f0,fa_w1_1  9/16 ld_w020r(-2.6,17) ld_w020r_relfirst(-18.3,15) ld_w040r(-9.5,18) p_f000_1(-19.2,13) p_fused_2(-0.6,19) p_fused_3(-0.9,26) s2_abort20_f0(-1.6,24)
+  static q3<-3                           0/33                                   2/16 p_fused_2(-0.1,-36) p_fused_3(-0.4,-31)
+  rate q3<-3 tau 0.2 rate>20             1/33   c5_ship_2                       7/16 ld_w020r(-2.6,10) ld_w020r_relfirst(-18.3,10) ld_w040r(-8.7,8) p_fused_2(-0.5,10) p_fused_3(-0.8,15) s2_abort20_f0(-1.6,18) win_adapt2(-3.5,17)
+
+FAILURES (end = tilt-guard abort or DIRECT loss): q3 at the end, the fastest fold in its last second
+  a_abort20        tilt/guard   q3 end   50.0  fold      0 deg/s  lag max  14.2  CURRENT
+  ld_base1_relfirst tilt/guard   q3 end   25.6  fold    -46 deg/s  lag max   5.8  CURRENT
+  ld_w010r         tilt/guard   q3 end   40.3  fold    -60 deg/s  lag max   6.4  CURRENT
+  ld_w020          tilt/guard   q3 end   27.2  fold    -35 deg/s  lag max   8.1  CURRENT
+  ld_w020r         tilt/guard   q3 end   44.2  fold    -40 deg/s  lag max   7.3  CURRENT
+  ld_w020r_relfirst tilt/guard   q3 end   27.6  fold    -30 deg/s  lag max   8.5  CURRENT
+  ld_w040r         tilt/guard   q3 end   18.5  fold    -64 deg/s  lag max   9.9  CURRENT
+  p_f000_1         tilt/guard   q3 end   48.9  fold    -29 deg/s  lag max   6.1  CURRENT
+  p_fused_2        tilt/guard   q3 end  -33.4  fold   -204 deg/s  lag max  10.8  CURRENT
+  p_fused_3        tilt/guard   q3 end  -23.8  fold   -164 deg/s  lag max   7.7  CURRENT
+  s2_abort20_f0    tilt/guard   q3 end   28.6  fold   -127 deg/s  lag max   9.1  CURRENT
+  s_abort33        tilt/guard   q3 end   49.8  fold    -68 deg/s  lag max   6.9  CURRENT
+  win_adapt2       left DIRECT  q3 end    4.8  fold    -99 deg/s  lag max   9.4  CURRENT
+  valve_rep1       tilt/guard   q3 end   41.0  fold    -72 deg/s  lag max   5.5  CURRENT
+  valve_rep2       tilt/guard   q3 end   47.4  fold    -19 deg/s  lag max   7.6  CURRENT
+  valve_rep3       tilt/guard   q3 end   49.1  fold    -66 deg/s  lag max   8.0  CURRENT

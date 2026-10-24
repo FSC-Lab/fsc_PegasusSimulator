@@ -1,0 +1,13 @@
+q2 limit assumed | false trips (48 completed) | buckles caught (lead s, q3) | HW 10-23 | HW 10-21
+   44.0          |  5                         | [('h_ship_5', np.float64(0.3), 13.9), ('z_ship_6', np.float64(0.23), 13.8), ('z_ship_7', np.float64(0.24), 15.1)] | - | -8.49s
+   44.5          |  6                         | [('h_ship_5', np.float64(0.31), 14.2), ('z_ship_6', np.float64(0.24), 14.2), ('z_ship_7', np.float64(0.25), 15.3)] | - | -8.49s
+   45.0          |  6                         | [('h_ship_5', np.float64(0.31), 14.4), ('z_ship_6', np.float64(0.25), 14.6), ('z_ship_7', np.float64(0.25), 15.6)] | - | -8.49s
+   45.5          |  6                         | [('h_ship_5', np.float64(0.31), 14.4), ('z_ship_6', np.float64(0.25), 14.6), ('z_ship_7', np.float64(0.26), 15.8)] | - | -8.49s
+   46.0          |  6                         | [('h_ship_5', np.float64(0.31), 14.4), ('z_ship_6', np.float64(0.25), 14.6), ('z_ship_7', np.float64(0.26), 15.8)] | - | -8.49s
+   47.0          |  6                         | [('h_ship_5', np.float64(0.31), 14.4), ('z_ship_6', np.float64(0.25), 14.6), ('z_ship_7', np.float64(0.26), 15.8)] | - | -8.49s
+
+After the recorded q3-guard trips (window extended 0.5 s past the trip; the abort is acting):
+  HW 170123      at the trip q2  44.9 q3   4.9; next 0.5 s q3 min  -5.2, q2 max  45.3; RATE_Q2CAP -0.44 s
+  HW 172853      at the trip q2  43.9 q3  16.4; next 0.5 s q3 min  14.1, q2 max  45.4; RATE_Q2CAP never
+  SIM v_ship_6   at the trip q2  45.0 q3  18.1; next 0.5 s q3 min  14.9, q2 max  45.0; RATE_Q2CAP never
+  SIM v_ship_7   at the trip q2  45.0 q3  16.3; next 0.5 s q3 min   8.8, q2 max  45.0; RATE_Q2CAP +0.02 s

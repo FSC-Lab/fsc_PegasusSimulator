@@ -416,7 +416,11 @@ PLANNER_BLOCK = """
     #     <= 0.7 deg; each for box_persist_s;
     #   box_stale_s: no box sample for 0.5 s -- the two above are blind without it;
     #   q3_min_deg: q3 < 10 deg on the handle -- the buckle itself, whatever
-    #     caused it (nominal >= 19 deg).
+    #     caused it (nominal >= 19 deg). Shared by the rate guard below. Lowered to 5
+    #     and put BACK to 10 the same day (2026-10-24, archive/box_pushing_guard_gate_20261024):
+    #     in Isaac a SLOW fold with q2 pinned on its 45 deg wall (q3 16 -> 5.5 deg at ~10 deg/s)
+    #     escaped a 5 deg rate threshold and the abort that followed crashed; at 10 the rate
+    #     rule fires 0.7 s earlier, at q3 11.4.
     # THE ABORT ON THE BOX (2026-10-16): with the claw on the box the abort holds the
     # MEASURED pose (not the reference the push was cut at -- a jammed box leaves the
     # planned claw 40+ mm ahead, and holding it dragged the claw along the fin and
@@ -441,7 +445,7 @@ PLANNER_BLOCK = """
     push_pull_guard_box_stale_s: 0.50
     push_pull_guard_q3_min_deg: 10.0
     # THE q3 RATE GUARD (2026-10-22, archive/box_pushing_contact_stability_tune_20261021
-    # section 6): the check above fires only after the fold has passed 10 deg -- the arm folds
+    # section 6): the check above fires only after the fold has passed its limit -- the arm folds
     # at 51-356 deg/s, and in three Isaac crashes it would have fired only after the node left
     # DIRECT. This one predicts q3 0.2 s ahead from its own rate on every joint sample and
     # aborts while q3 is still above the limit (replayed: 0.25-0.35 s earlier, at q3 12-21 deg;
@@ -450,6 +454,13 @@ PLANNER_BLOCK = """
     push_pull_guard_q3_rate_min_deg_s: 5.0
     push_pull_guard_q3_rate_persist_s: 0.05
     push_pull_guard_q3_rate_filter_s: 0.02
+    # THE q2 WALL IN THE RATE GUARD (2026-10-24, archive/wb_box_pushing_flight_20261023): the
+    # 10-23 hardware push aborted on the rate guard at q3 18 deg falling at 67 deg/s while q2 rose
+    # to the arm's +45 deg wall (the U2D2 board) with the fold held -- q3 stopped at 14.1. The
+    # projection now also projects q2 and takes back the part of its rise the wall forbids. Every
+    # Isaac buckle (q2 already pinned) still trips at the same moment. = the arm controller's
+    # q2 max_position. 0 = off (the plain rate rule).
+    push_pull_guard_q2_max_deg: 45.0
     # THE BOX SAMPLE GATE (2026-10-21, the first hardware push; archive/box_mocap_gate_20261021):
     # obj_0 mis-solved -- a 94-96 deg roll with the origin 61 mm off, or a 180 deg flip -- 80
     # samples in 24 short runs over that flight, 2 of them with the claw on the box, where they

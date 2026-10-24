@@ -1,0 +1,11 @@
+69 runs; buckles = runs that left DIRECT; 'false' = a trip on a run that completed
+static S / rate R  false trips  buckles caught: lead s @ q3 deg            HW 172853 (10-23)  HW 170123 (10-21)
+S 10 / R 10                  6  0.31@14.4, 0.25@14.6, 0.25@15.6                            -     -8.49s q3 21.6
+                    false: SIM g_ship_2, SIM h_ship_4, SIM j_fwx15_3, SIM p1_ship_1, SIM p1_ship_2, SIM p1_ship_3
+S  5 / R 10                  6  0.31@14.4, 0.25@14.6, 0.25@15.6                            -     -8.49s q3 21.6
+                    false: SIM g_ship_2, SIM h_ship_4, SIM j_fwx15_3, SIM p1_ship_1, SIM p1_ship_2, SIM p1_ship_3
+S  0 / R 10                  6  0.31@14.4, 0.25@14.6, 0.25@15.6                            -     -8.49s q3 21.6
+                    false: SIM g_ship_2, SIM h_ship_4, SIM j_fwx15_3, SIM p1_ship_1, SIM p1_ship_2, SIM p1_ship_3
+S  5 / R  5                  2  0.25@11.2, 0.19@11.1, 0.20@12.1                            -     -0.41s q3 18.5
+                    false: SIM p1_ship_2, SIM p1_ship_3
+S  0 / R  0                  0  0.20@7.3, 0.14@7.4, 0.16@8.7                               -                  -

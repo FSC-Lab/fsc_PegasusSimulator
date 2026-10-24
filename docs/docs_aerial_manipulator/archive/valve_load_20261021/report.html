@@ -1,0 +1,321 @@
+<title>Valve Resistance Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one full-width column (no paragraph cap), bench-report voice; data first, then reasoning. Single dark theme by the reader's standing request. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #121315;
+  --line: #2a2c30;
+  --ink: #ecebe6;
+  --ink-2: #b9b8b0;
+  --ink-3: #85847d;
+  --accent: #8fb8e8;
+  --s-none: #3987e5;      /* series: no load (categorical slot 1) */
+  --s-weight: #d95926;    /* series: hanging weight (slot 2) */
+  --s-damper: #199e70;    /* series: rotary damper (slot 3) */
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --warn: #fab219;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 10px 0 14px; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 24px; margin: 48px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; }
+h3 { font-family: var(--f-display); font-weight: 500; font-size: 18px; margin: 28px 0 8px; color: var(--ink); }
+p { margin: 0 0 12px; }
+.lede { font-size: 18px; color: var(--ink-2); }
+ul, ol { margin: 0 0 12px; padding-left: 22px; }
+li { margin: 4px 0; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; overflow-wrap: anywhere; }
+strong { color: var(--ink); font-weight: 600; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* the verdict: three findings, each with its own state chip */
+.verdict { display: grid; gap: 10px; margin: 22px 0 8px; }
+.finding { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+.finding > div { min-width: 0; }
+.chip { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; margin-top: 2px; }
+.chip.no { color: var(--critical); }
+.chip.yes { color: var(--good); }
+.chip.num { color: var(--warn); }
+.finding p { margin: 0; }
+.finding .head { font-weight: 600; margin-bottom: 2px; }
+
+nav.toc { margin: 26px 0 0; font-size: 14px; color: var(--ink-2); }
+nav.toc ol { display: flex; flex-wrap: wrap; gap: 4px 18px; list-style: none; padding: 0; margin: 6px 0 0; counter-reset: s; }
+nav.toc li { margin: 0; counter-increment: s; }
+nav.toc li::before { content: counter(s) ". "; color: var(--ink-3); font-family: var(--f-mono); font-size: 12px; }
+
+.tscroll { overflow-x: auto; margin: 12px 0 16px; border: 1px solid var(--line); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; background: var(--panel); }
+td.n { text-align: right; white-space: nowrap; font-family: var(--f-mono); font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+tr.hi td { background: color-mix(in oklab, var(--s-damper) 12%, transparent); }
+tr.dim td { color: var(--ink-3); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.bad { color: var(--critical); font-weight: 500; }
+.ok { color: var(--good); font-weight: 500; }
+
+figure { margin: 18px 0 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 14px 10px; }
+figcaption { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+figcaption b { color: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+.legend i.bar { height: 10px; width: 10px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--ink-2) 0 4px, transparent 4px 7px); }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--f-mono); font-size: 11px; fill: var(--ink-3); }
+.chart .lab { fill: var(--ink-2); }
+.tip { position: absolute; pointer-events: none; background: #1d1f22; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font-family: var(--f-mono); font-size: 12px; color: var(--ink); white-space: nowrap; z-index: 2; }
+.tip[hidden] { display: none !important; }
+.tip .row { display: flex; align-items: center; gap: 6px; }
+
+.spec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 14px; }
+@media (max-width: 640px) { .spec { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.spec div { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.spec .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.spec .v { font-family: var(--f-display); font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.spec .d { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.note { font-size: 14px; color: var(--ink-2); border-left: 2px solid var(--line); padding: 2px 0 2px 12px; margin: 12px 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Isaac Sim · AM-T650 whole-body 4-D L1 · valve turning · 2026-10-21</div>
+  <h1>Valve Resistance Test</h1>
+  <p class="lede">Should the valve resist the turn with a hanging payload on a drum, and how much torque should it resist? Six simulated flights compare no load, a hanging weight at 0.10–0.40&nbsp;N·m (with and without a one-way ratchet), and a rotary damper.</p>
+
+  <div class="verdict">
+    <div class="finding"><span class="chip no">Do not use</span><div><p class="head">Hanging weight: makes the turn worse and is unsafe without a ratchet.</p><p>Every weight from 0.10 to 0.40&nbsp;N·m roughly doubled the peak tilt (9.9–11.5° vs ≤&nbsp;6°), and 4 of 5 weighted turns tripped the 10° safety guard. Without a ratchet, opening the jaws let the weight spin the beam back 552° at up to 1060°/s.</p></div></div>
+    <div class="finding"><span class="chip yes">Promising</span><div><p class="head">Rotary damper, 0.5&nbsp;N·m·s/rad: the best turn on record (one flight).</p><p>Base lead 22&nbsp;mm (38–58 unloaded), arm on a joint stop 4&nbsp;% of the turn (9–13&nbsp;%), less arm swing, the same tilt, and nothing stored to spring back at release.</p></div></div>
+    <div class="finding"><span class="chip num">Target</span><div><p class="head">About 0.1–0.2&nbsp;N·m during the turn, from speed-proportional damping.</p><p>That is 0.6–1.25&nbsp;N at the 0.160&nbsp;m handle radius. A damping coefficient near 0.5&nbsp;N·m·s/rad gives it at the turn's 12–25°/s; 2.0 was too much in an earlier stress run.</p></div></div>
+  </div>
+
+  <nav class="toc" aria-label="Contents">Contents
+    <ol>
+      <li><a href="#setup">What was simulated</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#weight">Why the weight fails</a></li>
+      <li><a href="#damper">The damper</a></li>
+      <li><a href="#build">What to build</a></li>
+      <li><a href="#limits">Limits and next steps</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="setup">1. What was simulated</h2>
+  <p>Every flight is the shipped valve-turning mission: the whole-body 4-D L1 controller, the arm pose [0, 5, 25, 0]°, a planned 360° turn in 37.5&nbsp;s (peak 25°/s), the 10° tilt guard, headless Isaac at real time, raw mocap feedback, and the valve's measured-bound bearing friction of 0.048&nbsp;N·m. Only the valve's resistance changes from run to run.</p>
+  <ul>
+    <li><strong>Hanging weight.</strong> A constant torque <span class="mono">m·g·r</span> that resists the turn's direction. The string starts just taut with the payload on the floor, takes the full weight after 3° of winding, and goes slack if the drum unwinds past the start. It stays on whenever nothing holds the valve, so it back-drives the valve the moment the jaws let go.</li>
+    <li><strong>Ratchet.</strong> A one-way pawl: backward rotation is stopped and the pawl carries the weight.</li>
+    <li><strong>Rotary damper.</strong> A torque proportional to the valve's speed, in both directions, zero at rest.</li>
+  </ul>
+  <p>What each weight torque means in hardware (handle radius 0.160&nbsp;m):</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Torque</th><th class="n">Force at the handle</th><th class="n">Payload, 20&nbsp;mm drum</th><th class="n">Payload, 40&nbsp;mm drum</th><th class="n">Lift per turn (20 / 40&nbsp;mm)</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">0.10 N·m</td><td class="n">0.63 N</td><td class="n">0.51 kg</td><td class="n">0.25 kg</td><td class="n">0.13 / 0.25 m</td></tr>
+      <tr><td class="mono">0.20 N·m</td><td class="n">1.25 N</td><td class="n">1.02 kg</td><td class="n">0.51 kg</td><td class="n">0.13 / 0.25 m</td></tr>
+      <tr><td class="mono">0.40 N·m</td><td class="n">2.50 N</td><td class="n">2.04 kg</td><td class="n">1.02 kg</td><td class="n">0.13 / 0.25 m</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="results">2. Results</h2>
+  <figure>
+    <div class="legend"><span><i class="bar" style="background:var(--s-none)"></i>No load</span><span><i class="bar" style="background:var(--s-damper)"></i>Rotary damper</span><span><i class="bar" style="background:var(--s-weight)"></i>Hanging weight</span><span><i class="dash"></i>10° safety guard</span></div>
+    <div class="chart" id="c-bars" role="img" aria-label="Peak tilt during the turn for each flight; the table below lists the same values"></div>
+    <figcaption><b>Fig. 1.</b> Peak vehicle tilt during the turn, one flight per design. Every weighted turn reached the 10° guard; the unloaded and damped turns stayed near 5°.</figcaption>
+  </figure>
+
+  <div class="tscroll"><table>
+    <thead><tr><th>Flight</th><th>Valve resistance</th><th>Outcome</th><th class="n">Peak tilt</th><th class="n">Arm on a stop</th><th class="n">Lowest q3</th><th class="n">Arm swing (std)</th><th class="n">Base lead</th><th class="n">Beam back after release</th></tr></thead>
+    <tbody>
+      <tr class="dim"><td class="mono">l6_ship_1/2</td><td><span class="sw" style="background:var(--s-none)"></span>none (10-18 baseline)</td><td class="ok">complete ×2</td><td class="n">5.5–5.9°</td><td class="n">13 %</td><td class="n">11–14°</td><td class="n">10.2–10.7°</td><td class="n">54–58 mm</td><td class="n">4–5°</td></tr>
+      <tr><td class="mono">ld_base1</td><td><span class="sw" style="background:var(--s-none)"></span>none</td><td class="ok">complete</td><td class="n">5.2°</td><td class="n">8.7 %</td><td class="n">9.7°</td><td class="n">10.6°</td><td class="n">38 mm</td><td class="n">4°</td></tr>
+      <tr class="hi"><td class="mono">ld_d050</td><td><span class="sw" style="background:var(--s-damper)"></span>damper 0.5 N·m·s/rad</td><td class="ok">complete</td><td class="n">5.1°</td><td class="n">4.1 %</td><td class="n">14.2°</td><td class="n">7.8°</td><td class="n">22 mm</td><td class="n">1°</td></tr>
+      <tr><td class="mono">ld_w010r</td><td><span class="sw" style="background:var(--s-weight)"></span>weight 0.10 N·m + ratchet</td><td class="bad">guard abort at 355°</td><td class="n">10.9°</td><td class="n">10.7 %</td><td class="n">10.3°</td><td class="n">10.6°</td><td class="n">58 mm</td><td class="n">n/a</td></tr>
+      <tr><td class="mono">ld_w020r</td><td><span class="sw" style="background:var(--s-weight)"></span>weight 0.20 N·m + ratchet</td><td class="bad">guard abort at 269°</td><td class="n">11.5°</td><td class="n">6.5 %</td><td class="n">6.4°</td><td class="n">10.9°</td><td class="n">49 mm</td><td class="n">n/a</td></tr>
+      <tr><td class="mono">ld_w020</td><td><span class="sw" style="background:var(--s-weight)"></span>weight 0.20 N·m, no ratchet</td><td class="bad">guard abort at 145°</td><td class="n">10.5°</td><td class="n">6.6 %</td><td class="n">14.7°</td><td class="n">9.0°</td><td class="n">45 mm</td><td class="n bad">552° at 1060°/s</td></tr>
+      <tr><td class="mono">ld_w040r</td><td><span class="sw" style="background:var(--s-weight)"></span>weight 0.40 N·m + ratchet</td><td class="bad">guard abort at 335°, then flipped</td><td class="n">10.7°</td><td class="n">13.9 %</td><td class="n">1.0°</td><td class="n">12.2°</td><td class="n">58 mm</td><td class="n">n/a</td></tr>
+      <tr class="dim"><td class="mono">ld_w020r_relfirst</td><td><span class="sw" style="background:var(--s-weight)"></span>weight 0.20 N·m + ratchet</td><td>turn complete; exit failed (harness, §6)</td><td class="n">9.9°</td><td class="n">1.6 %</td><td class="n">−3.0°</td><td class="n">9.6°</td><td class="n">46 mm</td><td class="n">n/a</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Columns cover the turn itself. <b>Arm on a stop</b> = share of the turn with q2 below −19.5° or q3 above 49.5°. <b>Lowest q3</b> below 0° means the arm entered its elbow-singular branch. <b>Base lead</b> = the vehicle's largest offset along its circle. The ratchet model leaks after an abort, so a ratchet run's back rotation after the abort is not shown (§6).</p>
+
+  <h2 id="weight">3. Why the weight fails</h2>
+  <h3>During the turn: the tilt doubles and the arm swings</h3>
+  <figure>
+    <div class="legend"><span><i style="background:var(--s-none)"></i>No load (ld_base1)</span><span><i style="background:var(--s-damper)"></i>Damper 0.5 (ld_d050)</span><span><i style="background:var(--s-weight)"></i>Weight 0.20 + ratchet (ld_w020r)</span><span><i class="dash"></i>10° guard</span></div>
+    <div class="chart" id="c-tilt" role="img" aria-label="Vehicle tilt through the turn for three flights"></div>
+    <figcaption><b>Fig. 2.</b> Vehicle tilt through the turn (maximum in each 0.1&nbsp;s). For the first 15&nbsp;s all three track alike (peak 2.6–3.9°). After that the weighted turn's tilt grows and reaches the guard at 23&nbsp;s, 269° into the turn; the unloaded and damped turns stay under 5.5° to the end.</figcaption>
+  </figure>
+  <ul>
+    <li>The weighted turns start like the others and fall apart in the middle or the end of the turn: the tilt grows over a few seconds until the guard trips (at 145°, 269°, 335° and 355°).</li>
+    <li>An arm-yaw / wrist-roll swing of about 1&nbsp;Hz grows before the trip. In ld_w020, q1 swung −12…+22° and q4 −25…+12° between 12 and 18&nbsp;s; over the same window the unloaded turns kept q1 within −8…+3° and q4 within −5…+9°. In ld_w010r the same swing grew in the deceleration (q1 to +18°, q4 to −18°).</li>
+    <li>The arm swings toward its elbow-singular branch. Two of the five weighted turns took q3 below 5° (1.0° at 0.40&nbsp;N·m, −3.0° in the second 0.20&nbsp;N·m run); no unloaded turn went below 9.7°. At 0.40&nbsp;N·m the arm then buckled through q3&nbsp;=&nbsp;0 within 0.5&nbsp;s of the abort and the vehicle flipped.</li>
+    <li>A lighter weight does not fix it: 0.10&nbsp;N·m tripped the guard at 355°, in the turn's deceleration.</li>
+  </ul>
+
+  <h3>At release: the weight spins the valve back into the claw</h3>
+  <figure>
+    <div class="legend"><span><i style="background:var(--s-none)"></i>No load (ld_base1)</span><span><i style="background:var(--s-weight)"></i>Weight 0.20, no ratchet (ld_w020)</span></div>
+    <div class="chart" id="c-beam" role="img" aria-label="Valve beam angle over time for two flights"></div>
+    <figcaption><b>Fig. 3.</b> Valve angle from the start of the turn. Without a ratchet the weighted valve reached 147°, the guard aborted at 18&nbsp;s, and once the jaws opened the weight drove the beam back to −407°, peaking at 1060°/s. The swinging handle threw the arm to q3&nbsp;=&nbsp;−69°.</figcaption>
+  </figure>
+  <ul>
+    <li>0.20&nbsp;N·m on the 2.6×10⁻³&nbsp;kg·m² rotor (plus the payload's own inertia) is about 70&nbsp;rad/s². The handle moves about 25&nbsp;mm back within 0.07&nbsp;s of the jaws loosening and over 200&nbsp;mm within 0.2&nbsp;s, much faster than the vehicle can climb clear.</li>
+    <li>This happens at every release: the planned exit, an abort, or a dropped grip. On the real rig a falling payload would also swing on its string.</li>
+    <li>A ratchet holds the valve at release (ld_w020r_relfirst held at 360–361° after its turn), but it does nothing for the turn itself.</li>
+  </ul>
+
+  <h2 id="damper">4. The damper</h2>
+  <p>The damper resists only while the valve moves, in proportion to its speed. At 0.5&nbsp;N·m·s/rad that is about 0.22&nbsp;N·m at the turn's 25°/s peak and zero at rest. It absorbs energy instead of storing it, and there is nothing to spring back when the jaws open. In this flight the valve also turned most evenly: its speed varied by 7.5°/s (std, 8–18&nbsp;s into the turn) against 9.3–10.7°/s unloaded and 10.1–13.2°/s with a weight.</p>
+  <div class="spec">
+    <div><div class="k">Base lead</div><div class="v">22 mm</div><div class="d">38–58 mm unloaded</div></div>
+    <div><div class="k">Arm on a joint stop</div><div class="v">4.1 %</div><div class="d">8.7–13 % unloaded</div></div>
+    <div><div class="k">Arm swing (std)</div><div class="v">7.8°</div><div class="d">10.2–10.7° unloaded</div></div>
+    <div><div class="k">Lowest q3</div><div class="v">14.2°</div><div class="d">9.7–14° unloaded</div></div>
+    <div><div class="k">Peak tilt</div><div class="v">5.1°</div><div class="d">5.2–5.9° unloaded</div></div>
+    <div><div class="k">Cost</div><div class="v">9 mm</div><div class="d">rms beam lag vs plan (5–6 mm unloaded)</div></div>
+  </div>
+  <p>The useful window is bounded above. An earlier stress run at 2.0&nbsp;N·m·s/rad (about 0.9&nbsp;N·m at peak speed) aborted on the 5&nbsp;N handle-force guard. So the range to explore is roughly 0.25–1.0, with 0.5 the one point flown.</p>
+
+  <h2 id="build">5. What to build</h2>
+  <ul>
+    <li><strong>A two-way rotary damper on the valve shaft</strong>, about 0.5&nbsp;N·m·s/rad: 0.1&nbsp;N·m at 12°/s, 0.2&nbsp;N·m at 25°/s. Choose a silicone-fluid (viscous) type with no one-way clutch.</li>
+    <li><strong>Your gear idea fits here.</strong> With an n:1 step-up the damper sees n times the speed and needs only 1/n² of the coefficient. At 3:1 that is about 0.056&nbsp;N·m·s/rad, roughly 12&nbsp;N·cm at 20&nbsp;rpm on the damper side, a common size for small rotary dampers.</li>
+    <li><strong>Bench check before flying:</strong> hang a weight on a string at the handle (r&nbsp;=&nbsp;0.160&nbsp;m) and time the turn. 130&nbsp;g (0.20&nbsp;N·m) should pull it round at about 25°/s. Here the weight is a calibration tool, not part of the experiment.</li>
+    <li><strong>Keep the payload-lift idea only as a demonstration</strong>, if at all. It needs a ratchet, and even the lightest load tested here (0.10&nbsp;N·m) doubled the tilt. Nothing below 0.10 was tested.</li>
+  </ul>
+
+  <h2 id="limits">6. Limits and next steps</h2>
+  <ul>
+    <li><strong>One flight per design.</strong> The unloaded valve turn completes about 6 of 9 times in this simulation, so a single flight cannot rank designs alone. The weight finding stands on five flights that all doubled the tilt. The damper finding stands on one.</li>
+    <li><strong>Next:</strong> two more damper flights at 0.5 and one each at 0.25 and 1.0 (about 20 minutes) before buying parts. Also measure the real bearing's breakaway torque; it is at most 32&nbsp;mN·m and likely a few.</li>
+    <li><strong>Model limits.</strong> The payload's own inertia is left out, so a modelled back-spin is about 15&nbsp;% faster than real. The ratchet model holds during and after a normal turn but leaks slowly after an abort. The simulation's Coulomb friction cannot make a valve stick, which is why friction brakes were not tested above 0.048&nbsp;N·m.</li>
+    <li><strong>A harness defect found and fixed during the test.</strong> Since 10-19 the shared mission driver defaults to the box-pushing exit (CoM anchor before the jaws open), and the valve harness silently flew it. That exit is known to fail on the free valve handle, and it caused the two exit failures marked in the table. The harness now requests the valve's exit by name, and a baseline flown with it completed as on 10-18.</li>
+  </ul>
+  <p class="note">Data: <span class="mono">docs/docs_aerial_manipulator/archive/valve_load_20261021/</span> (README, scores, chain and scorer). Runs: <span class="mono">valve_turning_20261015/runs/ld_*</span>. Scene knobs: <span class="mono">PEGASUS_VALVE_LOAD_TORQUE</span>, <span class="mono">PEGASUS_VALVE_RATCHET</span>, <span class="mono">PEGASUS_VALVE_DAMPING</span>.</p>
+</div>
+
+<script>
+const DATA = {"tilt":{"ld_base1":{"t":[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9,3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8.0,8.1,8.2,8.3,8.4,8.5,8.6,8.7,8.8,8.9,9.0,9.1,9.2,9.3,9.4,9.5,9.6,9.7,9.8,9.9,10.0,10.1,10.2,10.3,10.4,10.5,10.6,10.7,10.8,10.9,11.0,11.1,11.2,11.3,11.4,11.5,11.6,11.7,11.8,11.9,12.0,12.1,12.2,12.3,12.4,12.5,12.6,12.7,12.8,12.9,13.0,13.1,13.2,13.3,13.4,13.5,13.6,13.7,13.8,13.9,14.0,14.1,14.2,14.3,14.4,14.5,14.6,14.7,14.8,14.9,15.0,15.1,15.2,15.3,15.4,15.5,15.6,15.7,15.8,15.9,16.0,16.1,16.2,16.3,16.4,16.5,16.6,16.7,16.8,16.9,17.0,17.1,17.2,17.3,17.4,17.5,17.6,17.7,17.8,17.9,18.0,18.1,18.2,18.3,18.4,18.5,18.6,18.7,18.8,18.9,19.0,19.1,19.2,19.3,19.4,19.5,19.6,19.7,19.8,19.9,20.0,20.1,20.2,20.3,20.4,20.5,20.6,20.7,20.8,20.9,21.0,21.1,21.2,21.3,21.4,21.5,21.6,21.7,21.8,21.9,22.0,22.1,22.2,22.3,22.4,22.5,22.6,22.7,22.8,22.9,23.0,23.1,23.2,23.3,23.4,23.5,23.6,23.7,23.8,23.9,24.0,24.1,24.2,24.3,24.4,24.5,24.6,24.7,24.8,24.9,25.0,25.1,25.2,25.3,25.4,25.5,25.6,25.7,25.8,25.9,26.0,26.1,26.2,26.3,26.4,26.5,26.6,26.7,26.8,26.9,27.0,27.1,27.2,27.3,27.4,27.5,27.6,27.7,27.8,27.9,28.0,28.1,28.2,28.3,28.4,28.5,28.6,28.7,28.8,28.9,29.0,29.1,29.2,29.3,29.4,29.5,29.6,29.7,29.8,29.9,30.0,30.1,30.2,30.3,30.4,30.5,30.6,30.7,30.8,30.9,31.0,31.1,31.2,31.3,31.4,31.5,31.6,31.7,31.8,31.9,32.0,32.1,32.2,32.3,32.4,32.5,32.6,32.7,32.8,32.9,33.0,33.1,33.2,33.3,33.4,33.5,33.6,33.7,33.8,33.9,34.0,34.1,34.2,34.3,34.4,34.5,34.6,34.7,34.8,34.9,35.0,35.1,35.2,35.3,35.4,35.5,35.6,35.7,35.8,35.9,36.0,36.1,36.2,36.3,36.4,36.5,36.6,36.7,36.8,36.9,37.0,37.1,37.2,37.3,37.4,37.5,37.6,37.7,37.8,37.9,38.0],"y":[1.03,0.54,0.25,0.09,0.59,1.21,1.77,2.28,2.49,2.45,2.36,2.33,2.24,1.97,1.15,0.57,0.57,0.57,0.61,0.55,1.02,1.9,2.51,2.57,2.41,2.34,2.26,1.44,0.45,0.44,0.67,1.64,2.87,3.36,3.33,3.03,2.86,2.24,1.28,1.25,1.24,0.78,0.45,1.51,2.74,3.2,3.2,2.81,2.61,2.61,2.37,1.57,1.21,1.58,1.48,0.98,0.86,2.62,3.46,3.44,2.82,2.26,2.54,2.58,2.33,1.68,1.69,1.65,1.37,0.87,1.6,3.01,3.61,3.58,3.34,2.94,2.15,1.52,1.51,1.34,0.9,0.55,0.44,0.54,1.84,3.21,3.67,3.54,2.85,2.21,1.82,1.78,1.71,1.69,1.45,0.97,0.65,0.37,1.23,2.61,3.39,3.46,3.4,3.08,2.2,2.13,2.68,2.7,2.4,1.6,1.39,2.12,2.42,2.39,2.24,2.82,3.14,3.11,2.84,2.59,2.4,2.19,1.79,1.27,2.51,3.27,3.46,3.34,3.08,2.74,2.31,2.43,2.55,2.49,2.13,2.02,1.68,2.58,3.4,3.6,3.59,3.44,2.92,2.66,2.89,2.89,2.72,2.3,1.81,3.42,4.13,4.32,4.31,3.77,2.79,3.89,4.29,4.15,3.43,2.22,3.89,3.94,3.46,2.87,2.36,2.1,2.12,2.05,2.05,2.02,1.93,1.92,1.84,1.78,1.88,1.92,1.87,1.79,1.81,1.77,1.63,1.61,1.53,1.46,1.51,1.46,1.38,1.22,1.21,1.41,1.62,1.89,2.13,2.13,2.01,1.71,1.73,1.88,1.87,1.67,1.52,1.44,2.13,3.03,3.2,3.05,2.35,1.51,1.79,2.21,2.29,2.2,2.15,2.09,2.19,2.72,2.74,2.49,2.07,1.87,1.52,1.54,1.67,1.67,1.65,1.58,1.58,1.66,1.78,1.91,2.25,2.62,2.67,2.68,2.52,2.36,2.83,2.89,2.74,2.36,1.67,2.91,3.23,3.24,3.22,3.03,2.83,2.6,2.71,2.7,2.43,2.32,2.03,2.5,2.5,2.52,2.56,2.6,2.54,2.15,1.69,2.23,2.39,2.24,1.99,2.02,2.88,3.1,3.04,2.67,2.25,1.46,1.24,1.29,1.11,1.07,1.47,2.29,2.97,3.0,2.91,2.72,2.09,1.2,1.02,1.36,1.65,1.71,1.62,1.61,1.75,1.79,1.96,2.48,2.87,2.88,2.76,2.58,2.37,2.08,2.38,2.37,2.12,1.7,1.08,2.38,3.4,3.66,3.99,4.03,3.8,3.07,1.79,1.08,1.35,1.11,1.68,3.44,4.35,4.47,4.34,3.7,2.42,1.29,2.09,2.12,1.47,2.47,4.33,5.2,5.21,4.57,3.6,2.03,1.94,2.45,2.26,1.88,4.2,4.81,4.77,4.22,3.07,2.12,1.69,1.55,1.09,1.16,2.63,3.79,3.89,3.79,3.18,2.42,1.78,1.53,1.83,1.87,1.75,1.55,1.77,2.21,2.35,2.37,2.27,2.07,1.93,1.82,1.61,1.45,1.42,1.28,1.22,1.24,1.26,1.33,1.23,1.87,2.53,2.71,2.68],"abort":null,"end":37.53},"ld_d050":{"t":[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9,3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8.0,8.1,8.2,8.3,8.4,8.5,8.6,8.7,8.8,8.9,9.0,9.1,9.2,9.3,9.4,9.5,9.6,9.7,9.8,9.9,10.0,10.1,10.2,10.3,10.4,10.5,10.6,10.7,10.8,10.9,11.0,11.1,11.2,11.3,11.4,11.5,11.6,11.7,11.8,11.9,12.0,12.1,12.2,12.3,12.4,12.5,12.6,12.7,12.8,12.9,13.0,13.1,13.2,13.3,13.4,13.5,13.6,13.7,13.8,13.9,14.0,14.1,14.2,14.3,14.4,14.5,14.6,14.7,14.8,14.9,15.0,15.1,15.2,15.3,15.4,15.5,15.6,15.7,15.8,15.9,16.0,16.1,16.2,16.3,16.4,16.5,16.6,16.7,16.8,16.9,17.0,17.1,17.2,17.3,17.4,17.5,17.6,17.7,17.8,17.9,18.0,18.1,18.2,18.3,18.4,18.5,18.6,18.7,18.8,18.9,19.0,19.1,19.2,19.3,19.4,19.5,19.6,19.7,19.8,19.9,20.0,20.1,20.2,20.3,20.4,20.5,20.6,20.7,20.8,20.9,21.0,21.1,21.2,21.3,21.4,21.5,21.6,21.7,21.8,21.9,22.0,22.1,22.2,22.3,22.4,22.5,22.6,22.7,22.8,22.9,23.0,23.1,23.2,23.3,23.4,23.5,23.6,23.7,23.8,23.9,24.0,24.1,24.2,24.3,24.4,24.5,24.6,24.7,24.8,24.9,25.0,25.1,25.2,25.3,25.4,25.5,25.6,25.7,25.8,25.9,26.0,26.1,26.2,26.3,26.4,26.5,26.6,26.7,26.8,26.9,27.0,27.1,27.2,27.3,27.4,27.5,27.6,27.7,27.8,27.9,28.0,28.1,28.2,28.3,28.4,28.5,28.6,28.7,28.8,28.9,29.0,29.1,29.2,29.3,29.4,29.5,29.6,29.7,29.8,29.9,30.0,30.1,30.2,30.3,30.4,30.5,30.6,30.7,30.8,30.9,31.0,31.1,31.2,31.3,31.4,31.5,31.6,31.7,31.8,31.9,32.0,32.1,32.2,32.3,32.4,32.5,32.6,32.7,32.8,32.9,33.0,33.1,33.2,33.3,33.4,33.5,33.6,33.7,33.8,33.9,34.0,34.1,34.2,34.3,34.4,34.5,34.6,34.7,34.8,34.9,35.0,35.1,35.2,35.3,35.4,35.5,35.6,35.7,35.8,35.9,36.0,36.1,36.2,36.3,36.4,36.5,36.6,36.7,36.8,36.9,37.0,37.1,37.2,37.3,37.4,37.5,37.6,37.7,37.8,37.9,38.0],"y":[1.64,2.3,2.33,2.09,1.92,1.79,1.44,0.91,0.97,0.99,0.92,1.01,1.06,1.33,2.09,2.32,2.32,2.0,1.75,1.62,1.47,1.15,0.73,0.76,0.64,0.55,0.52,1.13,1.66,1.91,2.25,2.27,2.17,2.04,1.91,1.77,1.37,0.82,0.84,0.82,0.64,0.69,0.9,1.29,1.72,2.18,2.36,2.33,2.06,1.62,1.24,1.04,0.72,0.46,0.76,1.12,1.3,1.29,1.25,1.25,1.23,1.33,1.6,1.62,1.58,1.54,1.37,1.3,1.44,1.56,1.68,1.66,1.12,0.75,0.77,0.83,1.03,1.26,1.42,1.53,1.5,1.48,1.5,1.79,2.0,2.0,1.85,1.59,1.4,0.99,0.91,1.19,1.4,1.47,1.59,1.59,1.34,1.64,1.81,1.79,1.49,1.22,1.07,0.89,0.73,1.1,1.35,1.34,1.26,1.22,1.46,1.64,1.63,1.43,1.28,1.48,1.78,2.06,2.24,2.45,2.49,2.42,1.77,1.13,1.28,1.26,1.02,1.04,1.08,1.22,1.31,1.37,1.46,1.47,1.42,1.37,1.37,1.4,1.67,2.04,2.44,2.52,2.55,2.58,2.59,2.47,1.98,1.3,1.47,1.47,1.49,1.94,2.5,2.7,2.7,2.62,2.6,2.53,1.97,0.99,1.26,1.27,1.0,1.68,3.17,3.37,3.12,2.64,2.34,1.92,1.12,1.09,1.07,0.83,0.76,1.54,2.7,3.63,3.7,3.43,2.95,2.71,2.57,1.98,1.26,1.26,1.16,1.07,1.18,1.88,2.86,3.72,4.46,4.49,4.14,3.51,2.37,1.54,2.51,2.6,2.5,1.96,2.01,4.04,5.04,5.06,4.47,3.93,4.49,4.47,3.71,2.64,1.98,3.09,3.13,2.82,1.77,2.89,3.44,3.54,3.62,3.8,4.28,4.48,4.45,3.75,1.98,3.98,4.36,4.18,2.9,2.45,4.03,4.26,3.98,2.81,2.49,2.79,2.79,2.63,2.37,1.73,2.28,3.11,3.2,3.06,2.27,1.9,2.63,2.89,2.83,2.01,1.18,2.9,3.64,3.63,2.95,2.42,2.46,2.64,2.68,2.55,1.98,1.09,0.98,1.46,1.6,1.55,1.68,2.66,3.2,3.23,3.13,2.63,2.37,2.44,2.42,1.99,2.66,3.42,3.49,3.35,2.31,0.92,1.94,2.33,2.29,2.17,2.6,2.62,2.61,2.61,2.36,1.95,1.82,1.68,1.27,1.86,2.81,3.09,3.06,2.87,2.46,2.26,3.21,3.21,2.5,1.88,2.78,3.54,3.55,3.28,2.77,1.73,1.0,1.39,1.36,1.16,2.15,2.93,3.01,3.02,2.89,2.44,1.89,1.07,1.36,1.59,1.98,2.28,2.6,2.66,2.62,2.66,2.6,2.4,2.11,1.85,1.65,1.6,1.61,1.62,1.64,1.67,1.87,1.98,2.06,2.15,2.18,2.19,2.2,2.16,2.17,2.17,2.18,2.21,2.19,2.21,2.28,2.3,2.32,2.36,2.33,2.32,2.31,2.34,2.31,2.35,2.35,2.38,2.48,2.54,2.6,2.64,2.63,2.56,2.5,2.23,2.17,2.21,1.99],"abort":null,"end":37.53},"ld_w020r":{"t":[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9,3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8.0,8.1,8.2,8.3,8.4,8.5,8.6,8.7,8.8,8.9,9.0,9.1,9.2,9.3,9.4,9.5,9.6,9.7,9.8,9.9,10.0,10.1,10.2,10.3,10.4,10.5,10.6,10.7,10.8,10.9,11.0,11.1,11.2,11.3,11.4,11.5,11.6,11.7,11.8,11.9,12.0,12.1,12.2,12.3,12.4,12.5,12.6,12.7,12.8,12.9,13.0,13.1,13.2,13.3,13.4,13.5,13.6,13.7,13.8,13.9,14.0,14.1,14.2,14.3,14.4,14.5,14.6,14.7,14.8,14.9,15.0,15.1,15.2,15.3,15.4,15.5,15.6,15.7,15.8,15.9,16.0,16.1,16.2,16.3,16.4,16.5,16.6,16.7,16.8,16.9,17.0,17.1,17.2,17.3,17.4,17.5,17.6,17.7,17.8,17.9,18.0,18.1,18.2,18.3,18.4,18.5,18.6,18.7,18.8,18.9,19.0,19.1,19.2,19.3,19.4,19.5,19.6,19.7,19.8,19.9,20.0,20.1,20.2,20.3,20.4,20.5,20.6,20.7,20.8,20.9,21.0,21.1,21.2,21.3,21.4,21.5,21.6,21.7,21.8,21.9,22.0,22.1,22.2,22.3,22.4,22.5,22.6,22.7,22.8,22.9,23.0,23.1,23.2,23.3,23.4,23.5,23.6,23.7],"y":[1.28,1.16,1.05,0.73,0.22,0.23,1.1,1.97,2.18,2.15,2.14,2.17,2.17,2.11,1.73,1.05,0.66,0.66,0.55,0.49,0.47,0.49,0.56,0.75,1.58,2.2,2.23,2.09,1.99,1.95,1.83,1.57,1.1,0.56,0.59,0.58,0.48,0.35,0.23,1.38,2.74,3.47,3.47,3.09,2.67,2.2,1.51,1.05,0.91,0.79,0.57,0.48,0.5,0.5,1.02,1.95,2.67,2.81,2.74,2.49,2.5,2.41,1.78,1.12,0.58,0.43,0.4,0.26,0.34,0.42,0.91,1.37,1.7,1.77,1.6,1.24,1.07,0.75,0.35,0.17,0.46,0.7,1.01,1.46,1.57,1.48,1.15,1.24,1.2,0.84,0.54,0.61,1.23,2.05,2.38,2.48,2.48,2.02,1.02,1.65,1.63,1.32,0.99,1.55,1.95,1.96,1.84,1.76,1.69,1.69,1.56,1.16,1.25,1.26,1.13,1.43,2.31,3.55,3.75,3.66,3.39,2.09,2.03,2.4,2.46,2.35,2.03,2.87,3.7,3.9,3.85,3.38,2.82,2.24,1.69,1.87,1.82,1.35,1.63,2.94,3.81,3.82,3.51,3.1,2.85,1.89,0.96,1.13,1.36,1.39,1.53,2.21,3.44,4.41,4.58,4.33,3.92,3.34,2.02,2.5,3.01,3.02,2.64,1.96,4.77,6.39,6.53,6.05,4.31,1.84,3.07,3.89,3.91,3.52,1.81,5.0,6.43,6.41,4.82,3.21,4.35,4.53,4.5,3.94,2.56,4.54,6.1,6.2,5.54,3.76,4.16,6.08,6.6,6.44,4.87,3.37,7.37,8.45,8.26,5.26,4.1,6.91,8.47,8.51,7.15,4.79,9.31,10.13,9.38,4.69,6.32,8.39,9.38,9.34,8.15,6.38,7.24,7.24,6.08,3.12,4.0,7.96,9.9,9.9,8.63,5.94,7.67,9.16,9.08,6.17,5.41,9.99,11.52,11.32,7.61,6.58,8.03,7.88],"abort":23.25,"end":null}},"beam":{"ld_base1":{"t":[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9,3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8.0,8.1,8.2,8.3,8.4,8.5,8.6,8.7,8.8,8.9,9.0,9.1,9.2,9.3,9.4,9.5,9.6,9.7,9.8,9.9,10.0,10.1,10.2,10.3,10.4,10.5,10.6,10.7,10.8,10.9,11.0,11.1,11.2,11.3,11.4,11.5,11.6,11.7,11.8,11.9,12.0,12.1,12.2,12.3,12.4,12.5,12.6,12.7,12.8,12.9,13.0,13.1,13.2,13.3,13.4,13.5,13.6,13.7,13.8,13.9,14.0,14.1,14.2,14.3,14.4,14.5,14.6,14.7,14.8,14.9,15.0,15.1,15.2,15.3,15.4,15.5,15.6,15.7,15.8,15.9,16.0,16.1,16.2,16.3,16.4,16.5,16.6,16.7,16.8,16.9,17.0,17.1,17.2,17.3,17.4,17.5,17.6,17.7,17.8,17.9,18.0,18.1,18.2,18.3,18.4,18.5,18.6,18.7,18.8,18.9,19.0,19.1,19.2,19.3,19.4,19.5,19.6,19.7,19.8,19.9,20.0,20.1,20.2,20.3,20.4,20.5,20.6,20.7,20.8,20.9,21.0,21.1,21.2,21.3,21.4,21.5,21.6,21.7,21.8,21.9,22.0,22.1,22.2,22.3,22.4,22.5,22.6,22.7,22.8,22.9,23.0,23.1,23.2,23.3,23.4,23.5,23.6,23.7,23.8,23.9,24.0,24.1,24.2,24.3,24.4,24.5,24.6,24.7,24.8,24.9,25.0,25.1,25.2,25.3,25.4,25.5,25.6,25.7,25.8,25.9,26.0,26.1,26.2,26.3,26.4,26.5,26.6,26.7,26.8,26.9,27.0,27.1,27.2,27.3,27.4,27.5,27.6,27.7,27.8,27.9,28.0,28.1,28.2,28.3,28.4,28.5,28.6,28.7,28.8,28.9,29.0,29.1,29.2,29.3,29.4,29.5,29.6,29.7,29.8,29.9,30.0,30.1,30.2,30.3,30.4,30.5,30.6,30.7,30.8,30.9,31.0,31.1,31.2,31.3,31.4,31.5,31.6,31.7,31.8,31.9,32.0,32.1,32.2,32.3,32.4,32.5,32.6,32.7,32.8,32.9,33.0,33.1,33.2,33.3,33.4,33.5,33.6,33.7,33.8,33.9,34.0,34.1,34.2,34.3,34.4,34.5,34.6,34.7,34.8,34.9,35.0,35.1,35.2,35.3,35.4,35.5,35.6,35.7,35.8,35.9,36.0,36.1,36.2,36.3,36.4,36.5,36.6,36.7,36.8,36.9,37.0,37.1,37.2,37.3,37.4,37.5,37.6,37.7,37.8,37.9,38.0,38.1,38.2,38.3,38.4,38.5,38.6,38.7,38.8,38.9,39.0,39.1,39.2,39.3,39.4,39.5,39.6,39.7,39.8,39.9,40.0,40.1,40.2,40.3,40.4,40.5,40.6,40.7,40.8,40.9,41.0,41.1,41.2,41.3,41.4,41.5,41.6,41.7,41.8,41.9,42.0,42.1,42.2,42.3,42.4,42.5,42.6,42.7,42.8,42.9,43.0,43.1,43.2,43.3,43.4,43.5,43.6,43.7,43.8,43.9,44.0,44.1,44.2,44.3,44.4,44.5,44.6,44.7,44.8,44.9,45.0],"y":[0.8,0.8,0.9,1.3,1.7,2.4,2.7,2.9,2.6,2.4,2.0,1.7,1.1,0.7,0.4,0.4,0.7,1.2,1.7,2.1,2.3,2.8,2.6,2.4,2.0,1.7,1.2,1.1,1.4,1.9,2.6,3.4,3.7,3.7,3.1,2.3,1.5,0.6,-0.0,0.0,0.5,1.6,2.5,3.4,4.0,4.0,3.2,2.4,2.0,1.4,0.7,0.3,0.2,1.0,1.7,2.6,3.7,4.4,5.0,4.8,4.1,3.5,3.2,2.9,2.4,2.0,1.8,2.1,3.1,4.3,5.1,5.6,5.5,5.5,5.2,4.4,3.5,3.2,3.5,4.0,4.9,5.7,6.3,7.1,8.0,8.9,9.2,9.2,9.0,8.9,9.2,9.3,9.6,9.9,10.4,11.1,12.1,13.4,14.4,15.3,16.1,16.5,16.2,16.0,16.2,16.4,17.2,18.7,20.6,22.4,23.5,24.4,25.3,26.2,26.9,27.5,28.2,28.6,28.9,29.4,30.5,32.4,34.8,36.9,39.5,40.9,41.4,42.2,42.9,43.5,43.9,44.7,46.2,47.8,50.3,52.8,55.0,57.5,59.4,60.6,61.4,62.2,63.0,64.3,65.5,67.1,69.8,73.0,76.1,78.1,80.0,81.9,82.8,83.3,84.3,85.6,87.8,90.9,95.0,98.6,101.6,104.6,106.5,107.9,109.3,110.8,112.5,114.2,116.1,118.2,120.5,123.0,125.7,128.5,131.2,134.0,136.5,139.1,141.5,143.6,145.6,147.7,149.8,151.7,154.0,156.3,158.9,161.6,164.5,167.5,170.3,172.5,174.7,176.8,178.7,180.4,182.5,184.7,187.2,190.2,192.9,195.9,199.2,202.0,204.2,205.8,207.1,208.6,210.5,213.0,216.0,218.8,222.0,225.0,228.0,230.7,232.5,234.3,236.1,238.0,240.0,242.1,244.4,246.8,248.9,251.3,253.7,256.3,258.8,261.3,263.6,265.7,267.4,268.9,269.9,271.0,272.5,274.4,277.4,280.4,283.0,286.2,289.7,291.6,293.0,293.9,294.3,294.7,295.6,297.4,299.6,302.3,304.8,307.6,309.8,311.6,312.8,313.7,314.3,315.0,315.7,316.6,318.3,319.9,322.3,324.7,326.5,327.9,328.6,329.0,329.6,330.2,331.2,332.6,334.0,335.6,337.1,338.6,339.8,340.6,340.8,341.1,341.9,342.6,343.6,344.5,345.6,346.6,347.6,348.6,349.5,350.5,351.5,352.5,352.9,352.9,352.8,352.6,352.5,352.5,352.7,353.1,353.9,355.2,356.3,357.6,358.5,358.8,359.1,359.1,358.4,357.4,356.8,356.7,357.3,358.4,360.0,361.2,361.2,361.0,360.3,359.4,358.6,358.2,358.6,359.6,361.6,363.1,363.5,363.5,363.0,361.7,360.4,359.6,359.6,360.4,361.6,363.6,364.4,364.7,364.0,362.9,361.8,361.4,361.3,361.7,362.8,363.7,365.0,365.4,365.4,364.3,363.2,362.3,361.8,361.4,361.3,361.7,362.0,362.5,363.0,363.2,363.3,363.2,363.0,362.6,362.2,361.8,361.5,361.3,361.4,361.5,361.8,362.0,362.6,363.1,363.5,363.6,364.0,363.7,363.3,362.5,361.7,361.3,361.5,362.2,362.8,363.0,363.0,363.0,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,362.9,363.0,363.0,362.8,362.4,362.3,362.2,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3,362.3],"abort":null,"end":37.53},"ld_w020":{"t":[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.1,2.2,2.3,2.4,2.5,2.6,2.7,2.8,2.9,3.0,3.1,3.2,3.3,3.4,3.5,3.6,3.7,3.8,3.9,4.0,4.1,4.2,4.3,4.4,4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9,6.0,6.1,6.2,6.3,6.4,6.5,6.6,6.7,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6,7.7,7.8,7.9,8.0,8.1,8.2,8.3,8.4,8.5,8.6,8.7,8.8,8.9,9.0,9.1,9.2,9.3,9.4,9.5,9.6,9.7,9.8,9.9,10.0,10.1,10.2,10.3,10.4,10.5,10.6,10.7,10.8,10.9,11.0,11.1,11.2,11.3,11.4,11.5,11.6,11.7,11.8,11.9,12.0,12.1,12.2,12.3,12.4,12.5,12.6,12.7,12.8,12.9,13.0,13.1,13.2,13.3,13.4,13.5,13.6,13.7,13.8,13.9,14.0,14.1,14.2,14.3,14.4,14.5,14.6,14.7,14.8,14.9,15.0,15.1,15.2,15.3,15.4,15.5,15.6,15.7,15.8,15.9,16.0,16.1,16.2,16.3,16.4,16.5,16.6,16.7,16.8,16.9,17.0,17.1,17.2,17.3,17.4,17.5,17.6,17.7,17.8,17.9,18.0,18.1,18.2,18.3,18.4,18.5,18.6,18.7,18.8,18.9,19.0,19.1,19.2,19.3,19.4,19.5,19.6,19.7,19.8,19.9,20.0,20.1,20.2,20.3,20.4,20.5,20.6,20.7,20.8,20.9,21.0,21.1,21.2,21.3,21.4,21.5,21.6,21.7,21.8,21.9,22.0,22.1,22.2,22.3,22.4,22.5,22.6,22.7,22.8,22.9,23.0,23.1,23.2,23.3,23.4,23.5,23.6,23.7,23.8,23.9,24.0,24.1,24.2,24.3,24.4,24.5,24.6,24.7,24.8,24.9,25.0,25.1,25.2,25.3,25.4,25.5,25.6,25.7,25.8,25.9,26.0,26.1,26.2,26.3,26.4,26.5,26.6,26.7,26.8,26.9,27.0,27.1,27.2,27.3,27.4,27.5,27.6,27.7,27.8,27.9,28.0,28.1,28.2,28.3,28.4,28.5,28.6,28.7,28.8,28.9,29.0,29.1,29.2,29.3,29.4,29.5,29.6,29.7,29.8,29.9,30.0,30.1,30.2,30.3,30.4,30.5,30.6,30.7,30.8,30.9,31.0,31.1,31.2,31.3,31.4,31.5,31.6,31.7,31.8,31.9,32.0,32.1,32.2,32.3,32.4,32.5,32.6,32.7,32.8,32.9,33.0,33.1,33.2,33.3,33.4,33.5,33.6,33.7,33.8,33.9,34.0,34.1,34.2,34.3,34.4,34.5,34.6,34.7,34.8,34.9,35.0,35.1,35.2,35.3,35.4,35.5,35.6,35.7,35.8,35.9,36.0,36.1,36.2,36.3,36.4,36.5,36.6,36.7,36.8,36.9,37.0,37.1,37.2,37.3,37.4,37.5,37.6,37.7,37.8,37.9,38.0,38.1,38.2,38.3,38.4,38.5,38.6,38.7,38.8,38.9,39.0,39.1,39.2,39.3,39.4,39.5,39.6,39.7,39.8,39.9,40.0,40.1,40.2,40.3,40.4,40.5,40.6,40.7,40.8,40.9,41.0,41.1,41.2,41.3,41.4,41.5,41.6,41.7,41.8,41.9,42.0,42.1,42.2,42.3,42.4,42.5,42.6,42.7,42.8,42.9,43.0,43.1,43.2,43.3,43.4,43.5,43.6,43.7,43.8,43.9,44.0,44.1,44.2,44.3,44.4,44.5,44.6,44.7,44.8,44.9,45.0],"y":[-0.6,-0.8,-1.1,-1.3,-1.2,-1.0,-0.7,-0.4,-0.1,0.1,0.1,0.1,-0.0,-0.0,-0.4,-0.7,-0.2,0.2,0.5,0.4,0.0,-0.1,-0.5,-1.2,-1.9,-2.3,-2.4,-2.1,-1.3,-0.2,0.8,1.2,0.6,-0.2,-1.5,-2.5,-2.5,-2.0,-1.3,0.1,1.2,1.0,0.3,-1.2,-2.7,-3.3,-3.1,-2.5,-0.5,1.6,1.9,1.1,-0.5,-2.2,-2.8,-2.3,-1.1,0.4,1.1,1.7,1.5,1.0,0.7,-0.0,-1.0,-1.8,-1.7,-0.9,0.0,1.4,2.4,2.5,1.9,0.7,-0.2,-0.3,-0.3,0.9,3.0,4.0,3.8,3.1,1.8,0.6,0.9,1.5,2.8,3.4,5.8,7.4,7.3,6.9,6.1,4.3,2.9,3.3,4.5,7.0,10.4,13.0,15.4,15.8,15.3,14.3,13.8,13.7,13.8,14.5,16.1,18.1,19.9,22.2,23.3,23.1,22.8,22.6,22.7,23.3,24.6,26.6,28.5,30.0,31.6,33.3,33.7,33.7,34.4,35.1,36.5,38.2,40.2,42.5,45.1,47.4,48.9,49.3,49.9,51.4,52.5,53.1,54.0,55.2,57.0,59.4,62.5,65.7,68.0,69.9,71.9,73.2,73.2,73.2,73.5,74.9,77.9,82.2,86.8,89.7,90.9,92.2,93.6,94.9,95.8,96.5,98.2,101.8,106.4,110.0,112.2,113.2,114.8,116.7,118.1,118.5,120.4,124.4,129.4,133.1,135.9,138.5,141.6,144.2,143.8,143.0,142.7,144.7,146.0,144.0,147.1,146.7,144.2,140.5,137.8,134.2,135.6,128.6,109.7,97.2,87.4,74.7,66.1,64.9,70.2,82.6,102.6,129.0,136.5,129.8,94.2,26.8,-64.7,-153.3,-221.9,-279.7,-326.9,-363.0,-388.5,-403.2,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3,-407.3],"abort":18.13,"end":null}}};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function ticks(lo, hi, step) { const t = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) t.push(+v.toFixed(6)); return t; }
+
+function tipAt(box, tip, x, y, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const bw = box.clientWidth, tw = tip.offsetWidth;
+  tip.style.left = Math.min(Math.max(0, x + 12), bw - tw) + "px"; tip.style.top = Math.max(0, y - 10) + "px";
+}
+
+function barChart(id, rows, opt) {
+  const box = document.getElementById(id); box.innerHTML = "";
+  const W = box.clientWidth, narrow = W < 560;
+  const L = narrow ? 128 : 200, Rm = 44, T = 8, rowH = 30, H = T + rows.length * rowH + 30;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H }, box);
+  const x = v => L + (v / opt.max) * (W - L - Rm);
+  for (const v of ticks(0, opt.max, 2)) {
+    el("line", { x1: x(v), x2: x(v), y1: T, y2: H - 26, stroke: css("--line"), "stroke-width": 1 }, svg);
+    el("text", { x: x(v), y: H - 10, "text-anchor": "middle" }, svg).textContent = v + "°";
+  }
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+  rows.forEach((r, i) => {
+    const y0 = T + i * rowH + 6, h = rowH - 12, x0 = x(0), x1 = x(r.v), rr = Math.min(4, x1 - x0);
+    el("path", { d: `M${x0},${y0} H${x1 - rr} Q${x1},${y0} ${x1},${y0 + rr} V${y0 + h - rr} Q${x1},${y0 + h} ${x1 - rr},${y0 + h} H${x0} Z`, fill: css(r.c) }, svg);
+    const lab = el("text", { x: L - 8, y: y0 + h / 2 + 4, "text-anchor": "end", class: "lab" }, svg); lab.textContent = narrow ? r.short : r.label;
+    el("text", { x: x1 + 6, y: y0 + h / 2 + 4, class: "lab" }, svg).textContent = r.v.toFixed(1) + "°";
+    const hit = el("rect", { x: 0, y: T + i * rowH, width: W, height: rowH, fill: "transparent" }, svg);
+    hit.addEventListener("pointermove", e => { const b = box.getBoundingClientRect(); tipAt(box, tip, e.clientX - b.left, e.clientY - b.top, `${r.label}<br>peak tilt ${r.v.toFixed(1)}° · ${r.out}`); });
+    hit.addEventListener("pointerleave", () => tip.hidden = true);
+  });
+  const g = x(opt.guard);
+  el("line", { x1: g, x2: g, y1: T - 2, y2: H - 26, stroke: css("--ink-2"), "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+  el("text", { x: g + 4, y: T + 8, class: "lab" }, svg).textContent = "guard";
+  el("line", { x1: x(0), x2: x(0), y1: T, y2: H - 26, stroke: css("--ink-3"), "stroke-width": 1 }, svg);
+}
+
+function lineChart(id, series, opt) {
+  const box = document.getElementById(id); box.innerHTML = "";
+  const W = box.clientWidth, H = opt.h || 280, L = 52, Rm = 14, T = 12, B = 44;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H }, box);
+  const x = t => L + (t / opt.xmax) * (W - L - Rm), y = v => T + (1 - (v - opt.ymin) / (opt.ymax - opt.ymin)) * (H - T - B);
+  for (const v of ticks(opt.ymin, opt.ymax, opt.ystep)) {
+    el("line", { x1: L, x2: W - Rm, y1: y(v), y2: y(v), stroke: css("--line"), "stroke-width": 1 }, svg);
+    el("text", { x: L - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v + opt.yunit;
+  }
+  for (const t of ticks(0, opt.xmax, opt.xstep)) el("text", { x: x(t), y: H - B + 16, "text-anchor": "middle" }, svg).textContent = t + " s";
+  el("text", { x: L + (W - L - Rm) / 2, y: H - 4, "text-anchor": "middle" }, svg).textContent = opt.xlabel;
+  if (opt.guard != null) {
+    el("line", { x1: L, x2: W - Rm, y1: y(opt.guard), y2: y(opt.guard), stroke: css("--ink-2"), "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+    el("text", { x: W - Rm, y: y(opt.guard) - 5, "text-anchor": "end", class: "lab" }, svg).textContent = opt.guardLabel;
+  }
+  for (const ev of opt.events || []) {
+    el("line", { x1: x(ev.t), x2: x(ev.t), y1: T, y2: H - B, stroke: css(ev.c), "stroke-width": 1, "stroke-dasharray": "2 3", opacity: .8 }, svg);
+    el("text", { x: x(ev.t) + (ev.left ? -4 : 4), y: T + 10 + (ev.dy || 0), "text-anchor": ev.left ? "end" : "start", class: "lab" }, svg).textContent = ev.label;
+  }
+  for (const s of series) {
+    let d = ""; s.t.forEach((t, i) => { if (t <= opt.xmax) d += (d ? "L" : "M") + x(t).toFixed(1) + "," + y(Math.max(opt.ymin, Math.min(opt.ymax, s.y[i]))).toFixed(1); });
+    el("path", { d, fill: "none", stroke: css(s.c), "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+  }
+  el("line", { x1: L, x2: W - Rm, y1: y(opt.ymin < 0 && opt.ymax > 0 ? 0 : opt.ymin), y2: y(opt.ymin < 0 && opt.ymax > 0 ? 0 : opt.ymin), stroke: css("--ink-3"), "stroke-width": 1 }, svg);
+  // hover: crosshair + values of every series at the nearest sample
+  const cross = el("line", { y1: T, y2: H - B, stroke: css("--ink-2"), "stroke-width": 1, visibility: "hidden" }, svg);
+  const dots = series.map(s => el("circle", { r: 4, fill: css(s.c), stroke: css("--panel"), "stroke-width": 2, visibility: "hidden" }, svg));
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+  const hit = el("rect", { x: L, y: T, width: W - L - Rm, height: H - T - B, fill: "transparent" }, svg);
+  hit.addEventListener("pointermove", e => {
+    const b = box.getBoundingClientRect(), px = e.clientX - b.left, t = (px - L) / (W - L - Rm) * opt.xmax;
+    cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+    let html = `t = ${t.toFixed(1)} s`;
+    series.forEach((s, k) => {
+      const i = Math.round(t / 0.1);
+      if (i < 0 || i >= s.t.length) { dots[k].setAttribute("visibility", "hidden"); return; }
+      const v = s.y[i]; dots[k].setAttribute("cx", x(s.t[i])); dots[k].setAttribute("cy", y(Math.max(opt.ymin, Math.min(opt.ymax, v)))); dots[k].setAttribute("visibility", "visible");
+      html += `<div class="row"><span class="sw" style="background:${css(s.c)}"></span>${s.name}: ${v.toFixed(opt.dp)}${opt.yunit}</div>`;
+    });
+    tipAt(box, tip, px, e.clientY - b.top, html);
+  });
+  hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); });
+}
+
+function draw() {
+  barChart("c-bars", [
+    { label: "No load", short: "No load", v: 5.2, c: "--s-none", out: "complete" },
+    { label: "Damper 0.5 N·m·s/rad", short: "Damper 0.5", v: 5.1, c: "--s-damper", out: "complete" },
+    { label: "Weight 0.10 + ratchet", short: "W 0.10 + R", v: 10.9, c: "--s-weight", out: "guard abort at 355°" },
+    { label: "Weight 0.20 + ratchet", short: "W 0.20 + R", v: 11.5, c: "--s-weight", out: "guard abort at 269°" },
+    { label: "Weight 0.20, no ratchet", short: "W 0.20", v: 10.5, c: "--s-weight", out: "guard abort at 145°" },
+    { label: "Weight 0.40 + ratchet", short: "W 0.40 + R", v: 10.7, c: "--s-weight", out: "guard abort at 335°, flipped" },
+  ], { max: 12, guard: 10 });
+  const T = DATA.tilt;
+  lineChart("c-tilt", [
+    { name: "no load", c: "--s-none", t: T.ld_base1.t, y: T.ld_base1.y },
+    { name: "damper", c: "--s-damper", t: T.ld_d050.t, y: T.ld_d050.y },
+    { name: "weight 0.20+R", c: "--s-weight", t: T.ld_w020r.t, y: T.ld_w020r.y },
+  ], { xmax: 40, xstep: 5, ymin: 0, ymax: 12, ystep: 2, yunit: "°", dp: 1, guard: 10, guardLabel: "10° guard",
+       xlabel: "time from the start of the turn", events: [{ t: T.ld_w020r.abort, c: "--s-weight", label: "weight run aborts", dy: 14 }, { t: 37.53, c: "--ink-3", label: "turn ends", left: true }] });
+  const Bm = DATA.beam;
+  lineChart("c-beam", [
+    { name: "no load", c: "--s-none", t: Bm.ld_base1.t, y: Bm.ld_base1.y },
+    { name: "weight, no ratchet", c: "--s-weight", t: Bm.ld_w020.t, y: Bm.ld_w020.y },
+  ], { xmax: 45, xstep: 5, ymin: -450, ymax: 400, ystep: 100, yunit: "°", dp: 0, h: 300,
+       xlabel: "time from the start of the turn", events: [{ t: Bm.ld_w020.abort, c: "--s-weight", label: "abort: jaws open", dy: 0 }] });
+}
+draw();
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(draw, 120); });
+</script>

@@ -45,7 +45,12 @@ echo "[$(date +%T)] planner up, turn $off deg"
 # VALVE_WINDOWED=1 (2026-10-18): the scene with its window on DISPLAY :1 (it slows to RTF
 # ~0.83 in contact -- the windowed failures); default headless
 HL="PEGASUS_HEADLESS=1"; [[ "${VALVE_WINDOWED:-0}" == 1 ]] && HL="DISPLAY=:1"
+# ARM_GS_AUTO_EXIT_DELAY=0.0 / ARM_GS_AUTO_STEPS=false (the defaults, 2026-10-22): the arm GS's
+# Valve Turning tab runs Ready / Turn / Exit by itself since that day (the box push's automation),
+# which would race pl_mission.py's own steps; set them (0.2 / true) with PL_DRIVER_ARGS=--gs-auto
+# for the station to fly them, as on hardware, while the driver watches.
 (setsid nohup env $HL VALVE_FEEDBACK="$FB" WB_SIM_PROFILE=valve_turning \
+   ARM_GS_AUTO_EXIT_DELAY="${ARM_GS_AUTO_EXIT_DELAY:-0.0}" ARM_GS_AUTO_STEPS="${ARM_GS_AUTO_STEPS:-false}" \
    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_valve_turning_sitl.sh" --in-terminal shiqi_machine \
    > "$RUNS/$TAG.scene.log" 2>&1 &)
 echo "[$(date +%T)] waiting for the valve (Isaac)"

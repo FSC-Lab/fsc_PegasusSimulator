@@ -1,0 +1,52 @@
+s22_fa0_hw_1   ok          beam   +360 | lon  11.3 mm  e_R  -11.6 mrad | q2 -15.5 q3   4.0..50.0 stop  6.1% | tilt  6.8 | F p95 3.68
+s22_fa0_hw_2   q3 guard    beam   +346 | lon   4.5 mm  e_R   -4.3 mrad | q2 -12.1 q3 -16.0..46.8 stop  0.0% | tilt  6.3 | F p95 2.25 | after: tilt   3.4, z min 1.23, moved 0.01 m, DIRECT kept, upright at 34.8 s
+                TRUTH after the abort (10 s): tilt max   3.4, z min 1.23 m, moved 0.01 m, DIRECT kept; tilt at the record's end  0.6 deg
+s22_fa0_hw_3   (no turn)
+                TRUTH after the abort (10 s): tilt max   2.8, z min 1.23 m, moved 0.02 m, DIRECT kept; tilt at the record's end  1.8 deg
+s22_fa0_nom_1  ok          beam   +351 | lon  22.5 mm  e_R  -25.9 mrad | q2  -7.4 q3  10.5..40.7 stop  0.0% | tilt  4.5 | F p95 2.29
+s22_fa_hw_1    ok          beam   +356 | lon  13.0 mm  e_R  -15.7 mrad | q2 -17.6 q3   8.9..50.0 stop  5.1% | tilt  5.9 | F p95 3.67
+s22_fa_hw_2    (no turn)
+                TRUTH after the abort (10 s): tilt max   3.6, z min 1.24 m, moved 0.02 m, DIRECT kept; tilt at the record's end  2.3 deg
+s22_fa_hw_3    ok          beam   +365 | lon  14.9 mm  e_R  -14.0 mrad | q2 -12.1 q3  12.6..44.8 stop  0.0% | tilt  4.6 | F p95 2.59
+s22_final_gov_hv q3 guard    beam   +104 | lon  17.7 mm  e_R  -22.3 mrad | q2 -20.0 q3 -24.2..50.0 stop 15.9% | tilt 14.9 | F p95 5.60 | after: tilt  18.7, z min 1.11, moved 0.72 m, DIRECT lost, upright at 15.6 s
+                TRUTH after the abort (10 s): tilt max  18.7, z min 1.11 m, moved 0.60 m, DIRECT LOST; tilt at the record's end  0.9 deg
+s22_final_hw_2 ok          beam   +365 | lon  15.9 mm  e_R  -15.3 mrad | q2  -8.5 q3  13.8..39.8 stop  0.0% | tilt  7.3 | F p95 2.30
+s22_final_hw_3 ok          beam   +369 | lon  12.6 mm  e_R  -13.2 mrad | q2 -10.1 q3   4.1..41.7 stop  0.0% | tilt  4.4 | F p95 2.33
+s22_final_hw_4 ok          beam   +364 | lon  23.7 mm  e_R  -30.1 mrad | q2 -13.4 q3  13.7..47.9 stop  0.0% | tilt  4.3 | F p95 2.66
+s22_final_mfd_2 mocap guard beam     -4 | lon  13.9 mm  e_R  -21.9 mrad | q2  -3.9 q3  20.2..39.4 stop  0.0% | tilt 14.8 | F p95 2.21 | after: tilt  17.2, z min 1.23, moved 0.25 m, DIRECT lost, upright at 12.3 s
+                TRUTH after the abort (10 s): tilt max  17.2, z min 1.21 m, moved 0.60 m, DIRECT LOST; tilt at the record's end  1.8 deg
+s22_final_mfd_late mocap guard beam   +362 | lon  13.5 mm  e_R  -14.4 mrad | q2  -7.5 q3  16.1..44.3 stop  0.0% | tilt 14.8 | F p95 2.72 | after: tilt  40.8, z min 0.78, moved 1.14 m, DIRECT lost, NOT UPRIGHT at 30.3 s
+                TRUTH after the abort (10 s): tilt max  40.8, z min 0.83 m, moved 0.22 m, DIRECT LOST; tilt at the record's end 164.2 deg
+s22_final_mfd  mocap guard beam    +49 | lon   2.7 mm  e_R   -2.7 mrad | q2  -2.7 q3  20.5..41.2 stop  0.0% | tilt  5.9 | F p95 1.17 | after: tilt   5.9, z min 1.23, moved 0.01 m, DIRECT kept, upright at 12.3 s
+                TRUTH after the abort (10 s): tilt max   5.9, z min 1.23 m, moved 0.01 m, DIRECT kept; tilt at the record's end  3.1 deg
+s22_final_nom_1 ok          beam   +354 | lon  19.0 mm  e_R  -20.4 mrad | q2  -6.8 q3  12.9..40.0 stop  0.0% | tilt  4.5 | F p95 2.10
+s22_final_nom_2 ok          beam   +355 | lon  16.1 mm  e_R  -22.5 mrad | q2 -16.0 q3   3.9..50.0 stop  4.2% | tilt  6.3 | F p95 3.50
+s22_heavy      q3 guard    beam   +117 | lon  10.9 mm  e_R  -20.6 mrad | q2 -19.9 q3 -44.1..50.0 stop 19.4% | tilt 14.6 | F p95 3.52 | after: tilt 121.3, z min 0.93, moved 0.38 m, DIRECT lost, NOT UPRIGHT at 17.1 s
+                TRUTH after the abort (10 s): tilt max 121.3, z min 0.93 m, moved 0.38 m, DIRECT LOST; tilt at the record's end 117.9 deg
+s22_hw_1       q3 guard    beam     +2 | lon   9.2 mm  e_R   -7.4 mrad | q2 -16.8 q3 -49.2..43.8 stop  0.0% | tilt 16.2 | F p95 1.81 | after: tilt  24.5, z min 0.59, moved 0.63 m, DIRECT lost, upright at  8.0 s
+                TRUTH after the abort (10 s): tilt max  24.5, z min 0.59 m, moved 0.48 m, DIRECT LOST; tilt at the record's end  1.9 deg
+s22_hw_2       force guard beam   +112 | lon  39.0 mm  e_R  -69.2 mrad | q2 -20.0 q3  24.9..50.0 stop 47.9% | tilt 16.6 | F p95 8.31 | after: tilt 173.5, z min -11.05, moved 1.79 m, DIRECT lost, NOT UPRIGHT at  3.0 s
+                TRUTH after the abort (10 s): tilt max 180.0, z min 0.13 m, moved 1.85 m, DIRECT LOST; tilt at the record's end 164.2 deg
+s22_hw_3       force guard beam    +48 | lon  27.3 mm  e_R  -59.7 mrad | q2 -20.0 q3  27.1..50.0 stop 29.3% | tilt 16.9 | F p95 6.18 | after: tilt  39.3, z min 0.24, moved 1.52 m, DIRECT lost, upright at  3.0 s
+                TRUTH after the abort (10 s): tilt max  39.3, z min 0.24 m, moved 1.59 m, DIRECT LOST; tilt at the record's end  0.0 deg
+s22_jump_rotor ok          beam   +362 | lon  27.5 mm  e_R  -29.1 mrad | q2 -20.0 q3  15.2..50.0 stop  4.1% | tilt  4.9 | F p95 1.81
+s22_mfd_fix_1  mocap guard beam    +15 | lon  -1.0 mm  e_R   -0.7 mrad | q2 -18.1 q3  13.0..47.9 stop  0.0% | tilt 14.8 | F p95 2.56 | after: tilt  36.3, z min 0.32, moved 1.49 m, DIRECT lost, upright at 12.2 s
+                TRUTH after the abort (10 s): tilt max  37.4, z min 0.24 m, moved 1.67 m, DIRECT LOST; tilt at the record's end  1.3 deg
+s22_mf_drone   mocap guard beam    +55 | lon   0.9 mm  e_R   -1.6 mrad | q2 -16.1 q3  10.9..45.5 stop  0.0% | tilt 14.7 | F p95 3.67 | after: tilt  79.9, z min -4.91, moved 17.43 m, DIRECT lost, NOT UPRIGHT at 12.3 s
+                TRUTH after the abort (10 s): tilt max  78.6, z min 0.24 m, moved 15.93 m, DIRECT LOST; tilt at the record's end 179.9 deg
+s22_mf_rotor   box feed    beam    +38 | lon   2.0 mm  e_R   -2.1 mrad | q2 -14.3 q3  12.5..46.3 stop  0.0% | tilt  3.2 | F p95 1.37 | after: tilt   3.2, z min 1.23, moved 0.02 m, DIRECT kept, upright at 12.5 s
+                TRUTH after the abort (10 s): tilt max   3.2, z min 1.23 m, moved 0.02 m, DIRECT kept; tilt at the record's end  3.2 deg
+s22_nom_1      tilt guard  beam   +356 | lon  12.8 mm  e_R  -14.3 mrad | q2 -20.0 q3  11.5..50.0 stop 12.1% | tilt 10.1 | F p95 3.03 | after: tilt  10.0, z min 1.21, moved 0.03 m, DIRECT kept, upright at 33.1 s
+                TRUTH after the abort (10 s): tilt max  10.0, z min 1.21 m, moved 0.03 m, DIRECT kept; tilt at the record's end  2.8 deg
+s22_nom_2      ok          beam   +362 | lon  26.5 mm  e_R  -30.5 mrad | q2 -20.0 q3  12.8..50.0 stop  9.4% | tilt  6.5 | F p95 2.49
+s22_nom_3      ok          beam   +360 | lon  26.5 mm  e_R  -29.2 mrad | q2 -20.0 q3  14.1..50.0 stop  5.0% | tilt  5.3 | F p95 2.06
+s22_um_ab20    injected    beam   +258 | lon  16.0 mm  e_R  -19.8 mrad | q2 -20.0 q3  15.7..50.0 stop 19.8% | tilt 16.1 | F p95 2.64 | after: tilt 179.6, z min -13.60, moved 3.84 m, DIRECT lost, NOT UPRIGHT at 20.0 s
+                TRUTH after the abort (10 s): tilt max 179.9, z min 0.13 m, moved 1.54 m, DIRECT LOST; tilt at the record's end 164.2 deg
+s22_um_ab33    injected    beam   +365 | lon   1.9 mm  e_R   -1.7 mrad | q2 -17.0 q3   6.5..50.0 stop  0.6% | tilt  6.2 | F p95 2.05 | after: tilt   6.2, z min 1.23, moved 0.00 m, DIRECT kept, upright at 33.0 s
+                TRUTH after the abort (10 s): tilt max   6.2, z min 1.23 m, moved 0.01 m, DIRECT kept; tilt at the record's end  2.8 deg
+s22_um_hv_1    q3 guard    beam   +219 | lon  17.7 mm  e_R  -24.7 mrad | q2 -19.4 q3 -64.8..50.0 stop 16.7% | tilt 16.6 | F p95 3.71 | after: tilt  37.6, z min 0.58, moved 1.04 m, DIRECT lost, upright at 21.4 s
+                TRUTH after the abort (10 s): tilt max  37.6, z min 0.58 m, moved 1.13 m, DIRECT LOST; tilt at the record's end  1.0 deg
+s22_um_hv_2    q3 guard    beam   +201 | lon  19.8 mm  e_R  -27.6 mrad | q2 -18.4 q3 -49.8..50.0 stop 15.5% | tilt 17.7 | F p95 3.53 | after: tilt 177.2, z min -12.15, moved 6.57 m, DIRECT lost, NOT UPRIGHT at 20.6 s
+                TRUTH after the abort (10 s): tilt max 179.8, z min 0.13 m, moved 1.08 m, DIRECT LOST; tilt at the record's end 164.2 deg
+s22_um_mfd     mocap guard beam    +26 | lon  -1.6 mm  e_R    0.4 mrad | q2 -16.8 q3  18.7..50.0 stop  2.4% | tilt 15.1 | F p95 2.56 | after: tilt  32.6, z min 0.38, moved 1.44 m, DIRECT lost, upright at 12.2 s
+                TRUTH after the abort (10 s): tilt max  33.0, z min 0.35 m, moved 0.59 m, DIRECT LOST; tilt at the record's end  4.7 deg

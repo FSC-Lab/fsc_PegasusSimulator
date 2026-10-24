@@ -1246,7 +1246,7 @@ During the flight (after step 3: DIRECT, planner HOLD)
   0.1 s, the force the law reads on the claw stays above 5 N for 0.3 s (from the grasp to the exit), the
   arm's joint states go silent for 0.5 s, and (2026-10-16) if the BOX is
   more than 40 mm behind / ahead of its plan (2026-10-21: the plan plus the law's free-axis shift) or tilts more than 2 deg (0.2 s), its mocap goes
-  silent for 0.5 s, or q3 drops below 10 deg; Plan refuses a push that would leave the box
+  silent for 0.5 s, or q3 drops below 5 deg (10 until 2026-10-24); Plan refuses a push that would leave the box
   within 3 cm of the table's edge (a box turned 180 deg, a too-long distance). A guard trip
   names itself in the status line.
 - Scene knobs (env, before step 2): `PEGASUS_PUSH_BOX_MASS`, `PEGASUS_PUSH_FRICTION_STATIC` /
@@ -1385,6 +1385,23 @@ The abort it starts is unchanged. Isaac check (4 flights): on the old config's c
 tilt); no trip on the completed runs. Rebuild `fsc_trajectory_planner` (Orin); both whole-body hardware stacks refuse an
 older planner.
 
+**2026-10-24 -- q2's wall in the q3 rate guard** (`archive/wb_box_pushing_flight_20261023/README.md` section 9). On
+10-23 the rate guard aborted a grasp where q2 rose into its 45 deg wall while q3 fell at a constant fold; the wall
+stopped q3 dead. The prediction now adds `max(0, q2 + 0.2 s * q2_dot - 45)` (`push_pull_guard_q2_max_deg: 45` in the
+box-pushing yamls; 0 = the rule above; no credit more than 1 deg past the wall). The 10-23 stretch no longer trips; a
+q3 fold with q2 on the wall still does. Not flown. Rebuild `fsc_trajectory_planner` (Orin); both whole-body hardware
+stacks refuse an older planner.
+
+**2026-10-24 -- the q3 limit 10 -> 5 deg** (same record, section 10). `push_pull_guard_q3_min_deg` (both q3 guards) is
+5 in the box-pushing yamls. q3 is singular at -34 deg; 5 deg keeps twice the planner's margin. At 10 a level stretch
+onto the q2 wall (q3 7.6 deg there) tripped. Yaml only, not flown; both whole-body hardware stacks expect 5.0.
+Isaac (2026-10-24, `archive/box_pushing_guard_gate_20261024`) found the cost: a slow fold on the q2 wall escapes 5 deg
+and the abort that followed crashed; going back to 10 is recommended, not yet done.
+
+**2026-10-24 -- the arm GS's close gate** (Box Pushing tab; same record). The gripper closes within 25 mm of the grasp
+point, within 8 mm across the fin (3 mm in Isaac) and with the claw slower than 30 mm/s; not met within 2.5 s, the
+station ABORTS with the jaws open. Rebuild `utils_custom_ground_station` (laptop).
+
 ### 17.x Comparison rig: coordinated admittance framework (Liu et al., CEP 146 (2024) 105898)
 
 The paper's method as an INDEPENDENT fork, same scene, same box, same driver timetable (2026-10-10;
@@ -1446,9 +1463,8 @@ leads its circle ~2.5 mm per deg/s of yaw rate and the world-held arm absorbs it
 or its ~6 s fore-aft slosh grows past the watchdog (72 s); a CoM-anchored turn wrenched the fin out. A
 tuning campaign, not a scene defect. Record + every flight:
 `docs/docs_aerial_manipulator/archive/valve_turning_20261015/README.md`. **Tuned 2026-10-17/18** (that README's
-section 8): the valve yaml has its own controller tune -- `wb_l1_omega_c_t` 2.0, `wb_ee_anchor_blend_s` 3.0 -- and the
-release must open the jaws with the claw still world-held, THEN Exit (the Valve Turning tab's Exit still releases
-first, like the box push: use the gripper's Open button, wait ~1 s, then Exit). Results: `results/simulation_results/README.md`.
+section 8): the valve yaml has its own controller tune -- `wb_l1_omega_c_t` 2.0, `wb_ee_anchor_blend_s` 1.0 -- and the
+release must open the jaws with the claw still world-held, THEN Exit (the Valve Turning tab's Exit does exactly that). Results: `results/simulation_results/README.md`.
 **Path following (2026-10-18, README section 11):** planner `push_pull_follow` (default false, left off) flies the turn at a governed
 progress that slows or holds on the valve's lag, the tilt or the wrist roll. On the measured bearing it never acts (the nominal failure is
 the arm's angle-locked fold, not the speed); with a speed-sensitive heavy valve it completed where the scheduled turn hit the force guard.
@@ -1499,10 +1515,9 @@ come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle
 - **The ~4 cm in-turn airframe offset (README 13, 15.3):** the law's CoM parks 20-30 mm ahead along the nose =
   `T e_R / k_x` of a standing pitch error that tracks the arm's FOLD (not the turn's speed: a 48 s turn and a third
   of the bearing friction change nothing) -- fold, pitch error, lead, more fold, closed at the stops.
-  omega_c_t 2.927 cuts it ~20 % (3 of 3), not shipped. The free-axis anchor (`wb_ee_anchor_free_axis_weight`,
-  node option, OFF in the valve yaml) lets the lead turn the valve instead of folding the arm (11 of 11, incl.
-  frictionless) but removes the claw's tether on the base (wander x1.5-2, once q1 on its stop and q3 -16 deg);
-  never with 2.927. README 15.6 / 15.9; final config 15.10.
+  omega_c_t 2.927 cuts it ~20 % (3 of 3), not shipped. The free-axis anchor (`wb_ee_anchor_free_axis_weight`)
+  lets the lead turn the valve instead of folding the arm; ON since 2026-10-22 (0.75, latched from the room
+  hold -- the box push's setting), see below. Never with 2.927. README 15.6 / 15.9.
 
 **SAFETY FOR THE VALVE (2026-10-18, README 15) -- what changed, and the hardware run:**
 - **A failed turn used to be a crash**: the node's 15 deg watchdog tripped first and handed over to SAFETY with
@@ -1520,6 +1535,18 @@ come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle
 - **The bearing's friction is a safety parameter**: the shipped turn completes from 0.005 N.m up and only 1 of 3
   frictionless. The real 608RS is <= 32 mN.m and "probably a few": measure its breakaway torque before the first
   turn (a weight on a string at the fin, r = 0.160 m: 3 g = 5 mN.m); below ~5 mN.m add friction to the shaft.
+**THE BOX PUSH'S SAFETY FEATURES ON THE VALVE (2026-10-22, `archive/valve_turning_safety_20261022/README.md`):**
+- Carried over: the raw-mocap guard (estimator + planner + node), the rotor sample gate (20 mm / 10 deg),
+  the rotor tilt (2 deg) and stale-feed (0.5 s) guards, the q3 guard at the VALVE's 3 deg, the arm GS's
+  automatic Ready / Turn / Exit + mocap lamp on the Valve Turning tab (its own exit kept), and the free-axis
+  anchor 0.75 (on_world). Not carried over: the q3 rate guard, a turn-lag guard, the abort unbuckle.
+- Under the box push's hardware-like drift model (`PEGASUS_PLANT_FORCE_NOISE=0.32,0.12,<seed>`) the
+  previous valve config failed 3 of 3; the final config completed 3 of 3, and 3 of 3 nominal.
+- Planner: a mocap-guard abort is never room-held, releases in 0.7 s (`push_pull_abort_mocap_release_wait_s`),
+  then climbs; a turn's close gate follows the LIVE handle (the open jaws can turn the free rotor before the grasp).
+- NOT solved: a drone-mocap freeze while clamped (1 clean / 1 safe / 1 crash in 3) -- fly a hover yaw sweep at
+  the valve with raw VRPN recorded first (the turn crosses the 0924 Motive stall headings); and a valve much
+  heavier than the measured one (0 of 4).
 - **Hardware run** (Orin: rebuild `fsc_trajectory_planner` and `fsc_autopilot_ros2`; laptop: rebuild
   `utils_custom_ground_station`; MEASURE `push_pull_table` / `push_pull_obstacle` into
   `archive/valve_turning_20261015/tools/make_hw_valve_turning_yaml.py` and regenerate):
@@ -1527,3 +1554,34 @@ come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle
 # fsc_autopilot_ros2/scripts/indoor_exp/ -- the RAW-mocap whole-body stack, not the _fused one
 AM_HW_PROFILE=valve_turning ./start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh
 ```
+
+## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
+
+**shiqi_machine** (2026-10-23, the final pick-and-place experiment): a red envelope (150 x 90 x 4 mm, 60 g,
+its far end weighted -- centre of mass 40 mm from it) lies flat on the pick hat at (1, 1), its near edge
+70 mm past the rim; the drone (yaw 0 throughout, arm [0, 36, 44, 90] deg: the wrist rolled 90 deg, the
+jaws close vertically) picks it from behind and slides it through the 190 x 90 mm mouth of the RED
+mailbox on the console table (front x 1.70; red y +0.25, blue y -0.25; mouth top edge 25 mm under the box
+top). Arm GS tab **Mail Envelope** (Envelope / Mailbox Start / Mailbox; Ready To Insert / Insert / Exit
+To Insert; the **Insert Margin** box = `pick_place_place_approach_back`, 0.15 m). Insert opens the gripper
+once the claw is within 20 mm; Exit To Insert starts on the OPEN report. Design, numbers and flights:
+`archive/mail_delivery_20261023/README.md`.
+
+```bash
+# 0. clean slate (TWO separate calls)
+~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh
+~/fsc_PegasusSimulator/scripts/kill_stale_sim_processes.sh -y
+
+# 1. stack
+WB_SIM_PROFILE=mail_delivery ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh shiqi_machine uav_0
+
+# 2. the mail-delivery scene + PX4 + torque-mode arm stack + arm GS (opens on Mail Envelope)
+WB_SIM_PROFILE=mail_delivery ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh shiqi_machine
+
+# 3. take off and switch to DIRECT -- as section 16 step 3; then the Mail Envelope tab
+FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
+  /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up --hover-z 1.0 --settle 0
+```
+Hardware: `AM_HW_PROFILE=mail_delivery` on the fused whole-body stack (Orin: rebuild `fsc_trajectory_planner`;
+laptop: rebuild `utils_custom_ground_station`). Mailbox row: the envelope laid flat on the mouth's lower lip,
+pushed in to the back wall, Get, then x - 0.036 and z + 0.065 by hand (three decimals: `ros2 param set`).

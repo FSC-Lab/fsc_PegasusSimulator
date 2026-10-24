@@ -1,0 +1,65 @@
+====================================================================================================
+claw room (mm) from the push pose q2/q3 (32.0, 28.0), first limit in brackets
+option                                        out           out+up               up            in+up               in          in+down             down         out+down    10-23 stretch
+A today                            22.0    q3>=10   28.5    q2<=45   68.5    q2<=45   43.5    q3<=50   35.5    q3<=50   76.0    q3<=50   71.0    q3>=10   25.5    q3>=10   30.5    q2<=45
+B q3 floor 5                       24.0    q2<=45   28.5    q2<=45   68.5    q2<=45   43.5    q3<=50   35.5    q3<=50   76.0    q3<=50   82.0     q3>=5   31.0     q3>=5   30.5    q2<=45
+C q3 floor 0                       24.0    q2<=45   28.5    q2<=45   68.5    q2<=45   43.5    q3<=50   35.5    q3<=50   76.0    q3<=50   91.0     q3>=0   36.0 q2<=45+q3>=0   30.5    q2<=45
+D floor 5, q3 max 60               24.0    q2<=45   28.5    q2<=45   68.5    q2<=45   68.5    q3<=60   54.5    q3<=60  120.0      >120   82.0     q3>=5   31.0     q3>=5   30.5    q2<=45
+E floor 5, q3 max 65               24.0    q2<=45   28.5    q2<=45   68.5    q2<=45   82.5    q3<=65   64.5    q3<=65  120.0      >120   82.0     q3>=5   31.0     q3>=5   30.5    q2<=45
+F E + q2 max 50 (board moved)      26.5     q3>=5   38.0    q2<=50   88.0    q2<=50   82.5    q3<=65   64.5    q3<=65  120.0      >120   82.0     q3>=5   31.0     q3>=5   40.5    q2<=50
+
+where the q2 <= 45 wall meets each q3 floor (constant-height = horizontal stretch out):
+  A today             : out  22.0 mm, stops at q2  43.9 / q3   9.6 (q3>=10)
+  B q3 floor 5        : out  24.0 mm, stops at q2  45.2 / q3   7.6 (q2<=45)
+  C q3 floor 0        : out  24.0 mm, stops at q2  45.2 / q3   7.6 (q2<=45)
+  horizontal stretch onto the q2 wall ignoring the floor: q3 there 7.6 deg (24.0 mm out)
+
+singularity margin sigma_nd at each q3 floor (keep-out 0.10, singular at q3 -34.2):
+  q3 +10 deg: sigma_nd 0.215
+  q3  +5 deg: sigma_nd 0.192
+  q3  +0 deg: sigma_nd 0.169
+  q3  -5 deg: sigma_nd 0.145
+
+arm shape at the in-limit (claw positions, mm, model base frame) -- never flown above q3 50:
+  C q3 floor 0                     in  35.5 mm: q2  16.5, q3  50.2 (fold  66.6); claw y  231.6, z -131.6
+  D floor 5, q3 max 60             in  54.5 mm: q2   8.7, q3  60.3 (fold  69.0); claw y  212.6, z -131.6
+  E floor 5, q3 max 65             in  64.5 mm: q2   4.7, q3  65.2 (fold  69.9); claw y  202.6, z -131.6
+  F E + q2 max 50 (board moved)    in  64.5 mm: q2   4.7, q3  65.2 (fold  69.9); claw y  202.6, z -131.6
+  home [0,40,40,0]                 claw y  252.9, z  -60.7
+  push pose                        claw y  267.1, z -131.6
+
+re-centred push pose at the same claw height (floor 5): claw moved in by s, room out / in / 10-23 dir
+  q3 max   50: s  0.0 mm -> pose [0, 32.0, 28.0, 0]: out  24.0  in  35.5  10-23 dir  30.5
+  q3 max   50: s  2.0 mm -> pose [0, 31.0, 29.4, 0]: out  26.0  in  33.5  10-23 dir  32.5
+  q3 max   50: s  4.0 mm -> pose [0, 30.1, 30.8, 0]: out  28.0  in  31.5  10-23 dir  35.0
+  q3 max   50: s  6.0 mm -> pose [0, 29.2, 32.2, 0]: out  30.0  in  29.5  10-23 dir  37.5
+  q3 max   50: s  8.0 mm -> pose [0, 28.3, 33.5, 0]: out  32.0  in  27.5  10-23 dir  39.5
+  q3 max   50: s 10.0 mm -> pose [0, 27.4, 34.9, 0]: out  34.0  in  25.5  10-23 dir  42.0
+  q3 max   50: s 12.0 mm -> pose [0, 26.5, 36.2, 0]: out  36.0  in  23.5  10-23 dir  44.0
+  q3 max   50: s 14.0 mm -> pose [0, 25.6, 37.5, 0]: out  38.0  in  21.5  10-23 dir  46.5
+  q3 max   50: s 16.0 mm -> pose [0, 24.7, 38.7, 0]: out  40.0  in  19.5  10-23 dir  48.5
+  q3 max   50: s 18.0 mm -> pose [0, 23.8, 40.0, 0]: out  42.0  in  17.5  10-23 dir  51.0
+  q3 max   50: s 20.0 mm -> pose [0, 23.0, 41.2, 0]: out  44.0  in  15.5  10-23 dir  53.0
+  q3 max   50: s 22.0 mm -> pose [0, 22.1, 42.4, 0]: out  46.0  in  13.5  10-23 dir  55.0
+  q3 max   50: s 24.0 mm -> pose [0, 21.3, 43.6, 0]: out  48.0  in  11.5  10-23 dir  57.0
+  q3 max   50: s 26.0 mm -> pose [0, 20.4, 44.8, 0]: out  50.0  in   9.5  10-23 dir  59.5
+  q3 max   50: s 28.0 mm -> pose [0, 19.6, 45.9, 0]: out  52.0  in   7.5  10-23 dir  61.5
+  q3 max   50: s 30.0 mm -> pose [0, 18.7, 47.1, 0]: out  54.0  in   5.5  10-23 dir  63.5
+  -> q3 max 50: balanced at s 6 mm, pose [0, 29.2, 32.2, 0]: out 30.0 / in 29.5 / 10-23 dir 37.5 mm
+  q3 max   60: s  0.0 mm -> pose [0, 32.0, 28.0, 0]: out  24.0  in  54.5  10-23 dir  30.5
+  q3 max   60: s  2.0 mm -> pose [0, 31.0, 29.4, 0]: out  26.0  in  52.5  10-23 dir  32.5
+  q3 max   60: s  4.0 mm -> pose [0, 30.1, 30.8, 0]: out  28.0  in  50.5  10-23 dir  35.0
+  q3 max   60: s  6.0 mm -> pose [0, 29.2, 32.2, 0]: out  30.0  in  48.5  10-23 dir  37.5
+  q3 max   60: s  8.0 mm -> pose [0, 28.3, 33.5, 0]: out  32.0  in  46.5  10-23 dir  39.5
+  q3 max   60: s 10.0 mm -> pose [0, 27.4, 34.9, 0]: out  34.0  in  44.5  10-23 dir  42.0
+  q3 max   60: s 12.0 mm -> pose [0, 26.5, 36.2, 0]: out  36.0  in  42.5  10-23 dir  44.0
+  q3 max   60: s 14.0 mm -> pose [0, 25.6, 37.5, 0]: out  38.0  in  40.5  10-23 dir  46.5
+  q3 max   60: s 16.0 mm -> pose [0, 24.7, 38.7, 0]: out  40.0  in  38.5  10-23 dir  48.5
+  q3 max   60: s 18.0 mm -> pose [0, 23.8, 40.0, 0]: out  42.0  in  36.5  10-23 dir  51.0
+  q3 max   60: s 20.0 mm -> pose [0, 23.0, 41.2, 0]: out  44.0  in  34.5  10-23 dir  53.0
+  q3 max   60: s 22.0 mm -> pose [0, 22.1, 42.4, 0]: out  46.0  in  32.5  10-23 dir  55.0
+  q3 max   60: s 24.0 mm -> pose [0, 21.3, 43.6, 0]: out  48.0  in  30.5  10-23 dir  57.0
+  q3 max   60: s 26.0 mm -> pose [0, 20.4, 44.8, 0]: out  50.0  in  28.5  10-23 dir  59.5
+  q3 max   60: s 28.0 mm -> pose [0, 19.6, 45.9, 0]: out  52.0  in  26.5  10-23 dir  61.5
+  q3 max   60: s 30.0 mm -> pose [0, 18.7, 47.1, 0]: out  54.0  in  24.5  10-23 dir  63.5
+  -> q3 max 60: balanced at s 16 mm, pose [0, 24.7, 38.7, 0]: out 40.0 / in 38.5 / 10-23 dir 48.5 mm
