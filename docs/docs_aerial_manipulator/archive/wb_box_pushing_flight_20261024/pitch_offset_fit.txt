@@ -1,0 +1,3 @@
+162850: short-along vs pitch error: slope 0.56 mm/mrad (r 0.84, n 305); u1/k_x = 0.71 mm/mrad
+163413: short-along vs pitch error: slope 0.71 mm/mrad (r 0.95, n 303); u1/k_x = 0.75 mm/mrad
+164419: short-along vs pitch error: slope 0.65 mm/mrad (r 0.90, n 304); u1/k_x = 0.71 mm/mrad

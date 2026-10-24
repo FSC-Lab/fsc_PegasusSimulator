@@ -1,0 +1,51 @@
+
+================ 151634   duration 68.4 s
+     0.32  PX4 ARMED STAB
+     7.47  PX4 ARMED OFFBOARD
+     0.10  NODE SAFETY
+    14.90  NODE DIRECT
+     0.06  CTRL Baseline (Safety)
+    14.90  CTRL Whole-Body Direct Actuation
+     0.29  PLANNER IDLE
+    14.90  PLANNER HOLD
+    20.08  PLANNER CALCULATING
+    20.10  PLANNER EXECUTING T=24.6s
+    44.69  PLANNER HOLD
+    46.33  PLANNER CALCULATING
+    46.35  PLANNER EXECUTING T=3.2s
+    47.89  PLANNER CALCULATING
+    47.92  PLANNER EXECUTING T=11.4s
+    59.37  PLANNER HOLD
+    60.20  PLANNER CALCULATING
+    60.22  PLANNER EXECUTING T=32.7s
+     0.29  PUSH NOT IN DIRECT
+    14.91  PUSH NOT PLANNED: press Plan
+    18.98  PUSH PLANNING
+    19.07  PUSH READY next=go_to_start
+    20.08  PUSH FLYING go_to_start
+    20.10  PUSH FLYING go_to_start T=24.6s
+    44.69  PUSH DONE go_to_start next=ready (the gripper opens first) -- claw 82 mm from the point above the handle (tolerance 50 mm)
+    46.33  PUSH FLYING ready
+    46.35  PUSH FLYING ready T=3.2s
+    47.89  PUSH ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+    59.37  PUSH ABORTED -- holding higher, arm home, contact off; go_to_land_start to leave the table, or Get the box and press Plan
+    60.20  PUSH FLYING go_to_land_start
+    60.22  PUSH FLYING go_to_land_start T=32.7s
+    45.76  GRIP status [2, 2]
+    46.26  GRIP status [4, 4]
+    47.89  GRIP status [4]
+    47.94  GRIP status [4]
+     0.91  GUARD MOCAP cause=0 src=0 ekf=1  age=0.005 rej=0 ep=0 rate=121
+          GUARD final: rejected=0 episodes=0 last cause=0.0 dur=nan
+  airborne (z>0.40) 6.3 .. 68.4 s, z max 1.549, tilt max airborne 4.3 deg, xy span x[-1.61,0.62] y[-0.78,1.11]
+  box start (0.573,0.153,0.849) end (1.647,0.046,0.107) moved 1079 mm
+     2.96  ROSOUT[30] uav_0.whole_body_trajectory_planner: New subscription discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', requesting incompatible QoS. No messages will be sent to it. Last incompatible
+     9.95  ROSOUT[30] rosbag2_recorder: New publisher discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', offering incompatible QoS. No messages will be sent to it. Last incompatible poli
+    14.90  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    44.02  ROSOUT[30] uav_0.whole_body_trajectory_planner: box mocap: sample DROPPED by the gate, 28 mm / 3 deg from the last good one 7 ms ago (> 20 mm / 10 deg + the growth over the gap) -- 1 dropped since start
+    44.17  ROSOUT[30] broadcast_position_velocity: FEEDBACK LOST!! RECEIVEING VRPN FROM THE FOLLOWING TOPICS:
+    44.17  ROSOUT[30] broadcast_position_velocity: NO DATA: /vrpn_mocap/obj_0/pose
+    45.03  ROSOUT[30] uav_0.whole_body_trajectory_planner: box mocap: sample DROPPED by the gate, 751 mm / 103 deg from the last good one 1017 ms ago (> 20 mm / 10 deg + the growth over the gap) -- 111 dropped since start
+    47.89  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull: ABORT: contact off, release back then up 0.30 m and the arm home, from the MEASURED pose (back 0.03 m against the push first); once the jaws are open the arm unbuckles from q2/q3 36.0/2
+    47.92  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull ABORT: [1] settle 1.5 s | [2] T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.830, peak |v| 0.02 m/s, tau_j 0.78 N.m, rotor 469.6/483.9, solve 10.1 ms | [3] T = 3.95 s (a_m
+    59.37  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull: ABORT complete -- holding, arm home.

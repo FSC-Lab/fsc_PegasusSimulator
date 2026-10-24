@@ -85,3 +85,39 @@ fsc_open_manipulator `e646d34`, Pegasus `260ed1f`. Item 2 is open.
    when the claw arrives far off. The GS can ABORT at DONE ready if the claw is > ~40 mm off,
    before the arm winds up (the hardware arrivals were ~15 and ~30 mm). Better: a planner arrival
    gate and a retry. Also: check the box hasn't moved since Get before closing.
+
+## Why the claw arrives far off (2026-10-24, `tools/arrival_errors.py`, `arrival_errors.txt`)
+
+71 Isaac pushes with the GS's automatic steps (this campaign + the 10-22 campaign):
+
+| arrival error at Ready's end | runs | complete |
+|---|---|---|
+| 0–20 mm | 45 | 39 |
+| 20–30 mm | 8 | 7 |
+| 30–40 mm | 6 | 5 |
+| **> 40 mm** | **12** | **0** |
+
+Hardware: 15 mm (10-21) and 26 mm (10-23, 21 mm across).
+
+- **It is not the start of the descent.** The error at Ready's start does not predict the arrival
+  error (correlation 0.01), so a stricter Ready start gate would not help.
+- **It is an open finger landing ON TOP of the fin.**
+  - In all 12 bad runs the claw touches the box ~1.85 s into the 3.2 s descent and STAYS there,
+    ~225 mm above the box origin, to the end of the leg. Good runs finish at ~183 mm, the grasp
+    height.
+  - So the bad arrivals are the claw hung 40 mm high, short along the nose, and off across.
+  - The across error grows during the descent from ~4 mm at 1.0 s to 13–35 mm at the touch in the
+    bad runs; good runs stay at ~6–7 mm.
+  - The base's wander drifts the claw sideways just as the pads reach the fin, and with more than
+    the jaw clearance a pad lands on the fin top. Isaac's clearance is 8.75 mm a side (20 mm grip
+    shim); the real gripper's is ~25 mm a side (inferred, bench-check it). The 10-23 hardware
+    arrival was 21 mm across, inside that but not by much.
+- **Then the room hold engages** and pulls the hung claw down and in. The arm winds onto its walls
+  (seeds 2 and 5), or the jaws shove the box (seed 7, baseline seed 8).
+
+**Fixes, NOT applied:**
+1. Quick safety net (arm GS): at DONE ready, if the claw is > 40 mm from the grasp point or > 20 mm
+   above it (a finger on the fin top), ABORT at once, before the room hold winds the arm up.
+2. The real fix (planner + GS): end Ready with the pads ABOVE the fin top. Hold there, safe because
+   nothing touches, until the claw is centred across within a fraction of the jaw clearance and
+   slow. Then lower the last few cm straight down (~1 s), and engage the room hold at the bottom.

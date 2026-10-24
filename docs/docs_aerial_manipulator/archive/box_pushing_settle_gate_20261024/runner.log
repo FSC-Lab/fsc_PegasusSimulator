@@ -1,0 +1,46 @@
+[18:38:58] start sg_s2 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[sg_s2] completed
+[18:43:15] start sg_s5 | MASS=0.500 DIST=0.50 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5
+  push_pull_push_distance -> 0.50
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+[sg_s5] completed
+[18:47:55] start sg_s1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+[sg_s1] completed
+[18:52:30] queue empty -- simulation closed
+[18:52:45] STOP
+[18:52:50] RUNNER DONE
+[18:56:20] start sg15_s1 | MASS=0.240 DIST=0.10 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.10
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+[sg15_s1] ABORTED: push-and-pull ABORTED while go_to_land_start complete: ABORTING (SAFETY GUARD: tilt 10.0 deg > 10.0 deg) -- gripper open, contact off, climbi
+[19:00:29] queue empty -- simulation closed
+[19:00:44] STOP
+[19:00:49] RUNNER DONE

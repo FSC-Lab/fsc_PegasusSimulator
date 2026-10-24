@@ -294,6 +294,28 @@ PLANNER_BLOCK = """
     # a trim measured CoM-anchored is the base's wander (cad_20 trimmed 9.3 mm).
     push_pull_world_anchor_ready: false
     push_pull_world_anchor_on_handle: true
+    # THE HAND-OVER SETTLE (2026-10-24 hardware flights, archive/wb_box_pushing_flight_20261024
+    # README 7): the room hold engaged the instant Ready ended while the base was 28-36 mm off
+    # the grasp point along the push (its pitch error) or still swinging, the arm made up the
+    # gap (q3 -13..-19 deg at 47-62 deg/s) and the q3 rate guard aborted before the jaws
+    # closed. Now the claw keeps following the vehicle after Ready and is held in the room
+    # only once it is within 25 mm, 15 mm across, slower than 30 mm/s, for 0.3 s. The drone's
+    # hold drift met "slower than 30 mm/s for 0.5 s" 79 % of the time on the 10-24 holds.
+    # ACROSS 15 mm, not the GS gate's 8 (Isaac 2026-10-24 evening, archive/
+    # box_pushing_settle_gate_20261024): the pulls this gate prevents were ALONG the arm; a
+    # sideways offset stays put while the claw follows the vehicle (seed 1 sat 8-12 mm across
+    # for 6 s, 0.15 s short of the GS's 6 s settle limit) and the room hold closes it, after
+    # which the GS's close gate checks 8 mm across before it grips.
+    push_pull_handle_settle_tol: 0.025
+    push_pull_handle_settle_axis_tol: 0.015
+    push_pull_handle_settle_max_speed: 0.030
+    push_pull_handle_settle_dwell_s: 0.3
+    # THE READY SETTLE (same record): Ready started 1.6-2.8 s after Go To Start while its
+    # arrival overshoot (45-68 mm) still swung the claw; now it also needs the claw slower
+    # than 30 mm/s for 0.5 s (within push_pull_arrival_tol). The arm GS's automatic Ready
+    # retries the "wait for it to settle" refusal.
+    push_pull_ready_max_speed: 0.030
+    push_pull_ready_settle_s: 0.5
     push_pull_descent_trim: false
     # Land: back over the START MARK (2026-10-21, user: no 0.5 m backward offset;
     # it was 0.5 m behind it), yaw -360 = 270 deg CLOCKWISE on from the push

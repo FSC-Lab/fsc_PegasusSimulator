@@ -1,0 +1,68 @@
+== sg_s2   (GS log joint_plot_inverted_81595_1792881601395.log)
+  Ready done at 60.57, settling statuses 4, hand-over 0.37 s after Ready; last settling status: claw 9 mm, 16 mm/s
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (24 mm/s; slower than 30 mm/s for 0.1 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (42 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (39 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (37 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (52 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (26 mm/s; slower than 30 mm/s for 0.4 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: the claw is held in the room -- the close gate's 2.5 s wait starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: claw 9 mm from the grasp point (-1.9 mm across the handle, 16 mm/s) after 0.00 s -- gripper CLOSE
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: the push is done -- the exit starts by itself (push_pull_auto_exit_delay_s 0.2 s) once the vehicle is calm
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: calm: 11 mm/s after 0.41 s -- the exit starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: gripper open -- the exit starts
+
+== sg_s5   (GS log joint_plot_inverted_84823_1792881858417.log)
+  Ready done at 63.91, settling statuses 4, hand-over 0.46 s after Ready; last settling status: claw 16 mm, 4 mm/s
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (22 mm/s; slower than 30 mm/s for 0.2 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (54 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (37 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (40 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (51 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (48 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (26 mm/s; slower than 30 mm/s for 0.1 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: the claw is held in the room -- the close gate's 2.5 s wait starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: claw 16 mm from the grasp point (-1.3 mm across the handle, 4 mm/s) after 0.00 s -- gripper CLOSE
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: the push is done -- the exit starts by itself (push_pull_auto_exit_delay_s 0.2 s) once the vehicle is calm
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: calm: 19 mm/s after 1.12 s -- the exit starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: gripper open -- the exit starts
+
+== sg_s1   (GS log joint_plot_inverted_88038_1792882139235.log)
+  Ready done at 64.86, settling statuses 59, hand-over 6.15 s after Ready; last settling status: claw 13 mm, 13 mm/s
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (9 mm/s; slower than 30 mm/s for 0.1 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (48 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (16 mm/s; slower than 30 mm/s for 0.1 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (40 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (4 mm/s; slower than 30 mm/s for 0.4 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (52 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (46 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (39 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (34 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (2 mm/s; slower than 30 mm/s for 0.4 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (31 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (45 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (36 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (21 mm/s; slower than 30 mm/s for 0.2 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: the claw is held in the room -- the close gate's 2.5 s wait starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: claw 13 mm from the grasp point (2.8 mm across the handle, 22 mm/s) after 1.09 s -- gripper CLOSE
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: the push is done -- the exit starts by itself (push_pull_auto_exit_delay_s 0.2 s) once the vehicle is calm
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: calm: 27 mm/s after 1.94 s -- the exit starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: gripper open -- the exit starts
+
+== sg15_s1   (GS log joint_plot_inverted_91816_1792882643676.log)
+  Ready done at 59.39, settling statuses 12, hand-over 1.19 s after Ready; last settling status: claw 11 mm, 24 mm/s
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Ready To Push (automatic): ready: the claw is still moving (28 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: the claw is held in the room -- the close gate's 2.5 s wait starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Push: claw 4 mm from the grasp point (1.3 mm across the handle, 26 mm/s) after 0.39 s -- gripper CLOSE
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: the push is done -- the exit starts by itself (push_pull_auto_exit_delay_s 0.2 s) once the vehicle is calm
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: calm: 21 mm/s after 0.31 s -- the exit starts
+  GS: [uav_0.fsc_open_manipulator.arm_joint_plot_inverted]: Exit To Push: gripper open -- the exit starts
+

@@ -1,0 +1,69 @@
+
+================ 164419   duration 131.3 s
+     0.17  PX4 ARMED STAB
+     4.36  PX4 ARMED OFFBOARD
+    97.49  PX4 ARMED STAB
+    99.41  PX4 disarmed STAB
+     0.04  NODE SAFETY
+     9.39  NODE DIRECT
+    97.50  NODE SAFETY
+     0.05  CTRL Baseline (Safety)
+     9.39  CTRL Whole-Body Direct Actuation
+    97.50  CTRL Baseline (Safety)
+     0.21  PLANNER IDLE
+     9.39  PLANNER HOLD
+    13.78  PLANNER CALCULATING
+    13.80  PLANNER EXECUTING T=25.5s
+    39.33  PLANNER HOLD
+    40.96  PLANNER CALCULATING
+    40.98  PLANNER EXECUTING T=3.2s
+    44.16  PLANNER HOLD
+    44.72  PLANNER CALCULATING
+    44.76  PLANNER EXECUTING T=11.5s
+    56.23  PLANNER HOLD
+    57.90  PLANNER CALCULATING
+    57.92  PLANNER EXECUTING T=32.7s
+    90.63  PLANNER HOLD
+    91.01  PLANNER CALCULATING
+    91.02  PLANNER EXECUTING T=7.4s
+    97.50  PLANNER IDLE
+     0.20  PUSH NOT IN DIRECT
+     9.39  PUSH NOT PLANNED: press Plan
+    12.36  PUSH PLANNING
+    12.45  PUSH READY next=go_to_start
+    13.78  PUSH FLYING go_to_start
+    13.80  PUSH FLYING go_to_start T=25.5s
+    39.34  PUSH DONE go_to_start next=ready (the gripper opens first) -- claw 52 mm from the point above the handle (tolerance 50 mm)
+    40.96  PUSH FLYING ready
+    40.98  PUSH FLYING ready T=3.2s
+    44.16  PUSH DONE ready next=push (CONTACT on: the gripper closes first)
+    44.72  PUSH ABORTING (SAFETY GUARD: q3 16.9 deg falling at 38.7 deg/s -> 9.1 deg in 0.20 s (q2 37.5 deg) < 10.0 deg (the arm folding toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+    56.23  PUSH ABORTED (SAFETY GUARD: q3 16.9 deg falling at 38.7 deg/s -> 9.1 deg in 0.20 s (q2 37.5 deg) < 10.0 deg (the arm folding toward its elbow-singular branch)) -- holding higher, arm home, contact off; go_to_land_start to leave the tab
+    57.90  PUSH FLYING go_to_land_start
+    57.92  PUSH FLYING go_to_land_start T=32.7s
+    90.63  PUSH DONE go_to_land_start next=land (off the table after the abort)
+    91.01  PUSH FLYING land
+    91.02  PUSH FLYING land T=7.4s
+    97.50  PUSH NOT IN DIRECT
+    40.40  GRIP status [2, 2]
+    40.90  GRIP status [4, 4]
+    44.77  GRIP status [4]
+    44.82  GRIP status [4]
+     0.17  GUARD MOCAP cause=0 src=0 ekf=1  age=0.004 rej=0 ep=0 rate=120
+          GUARD final: rejected=0 episodes=0 last cause=0.0 dur=nan
+  airborne (z>0.40) 3.4 .. 96.4 s, z max 1.483, tilt max airborne 5.3 deg, xy span x[-1.73,0.57] y[-1.46,1.06]
+  box start (0.529,0.097,0.862) end (0.529,0.097,0.861) moved 0 mm
+     9.99  ROSOUT[30] rosbag2_recorder: New publisher discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', offering incompatible QoS. No messages will be sent to it. Last incompatible poli
+     9.99  ROSOUT[30] uav_0.whole_body_trajectory_planner: New subscription discovered on topic '/uav_0/fsc_open_manipulator/external_torque_controller/reference_joint_trajectory', requesting incompatible QoS. No messages will be sent to it. Last incompatible
+    12.40  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0
+    44.72  ROSOUT[30] uav_0.whole_body_trajectory_planner: arm is NOT at rest at capture: max |qdot| = 0.743 rad/s (> 0.05 rad/s). Settle the arm before engaging DIRECT.
+    44.73  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull: ABORT: contact off, release back then up 0.30 m and the arm home, from the MEASURED pose (back 0.03 m against the push first); once the jaws are open the arm unbuckles from q2/q3 37.5/1
+    44.73  ROSOUT[40] uav_0.whole_body_trajectory_planner: push-and-pull SAFETY GUARD: q3 16.9 deg falling at 38.7 deg/s -> 9.1 deg in 0.20 s (q2 37.5 deg) < 10.0 deg (the arm folding toward its elbow-singular branch) -- ABORT: contact off, release back then 
+    44.76  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull ABORT: [1] settle 1.5 s | [2] T = 3.00 s (T_min, 0 dilations), defect 0.0e+00 m, sigma_nd 0.799, peak |v| 0.02 m/s, tau_j 0.83 N.m, rotor 468.2/485.2, solve 10.0 ms | [3] T = 3.95 s (a_m
+    56.22  ROSOUT[30] uav_0.whole_body_trajectory_planner: push-and-pull: ABORT complete -- holding, arm home.
+    97.50  ROSOUT[40] uav_0.fsc_autopilot_ros2: [1;31mPX4 LEFT OFFBOARD while in whole-body DIRECT (nav_state 15, armed): the pilot or a PX4 failsafe has the vehicle. Releasing the rotors to PX4 and reverting to SAFETY -- nothing reaches the motor
+    97.50  ROSOUT[30] uav_0.fsc_autopilot_ros2: Reference re-seeded to current pose: [-1.46 -0.16 0.33] m, yaw -179.2 deg
+    97.50  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+    97.50  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+    97.80  ROSOUT[30] uav_0.fsc_open_manipulator.external_torque_controller: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+    99.50  ROSOUT[30] uav_0.fsc_autopilot_ros2: [1;33mSAFETY guard: arm folding HOME (Homing over 1.500000 s.)[0m

@@ -1,0 +1,7 @@
+150423: EE Offset in use (Ready target - obj_0, box frame) = across   -0.4, along   +0.0, up +183.4 mm  (n=53)
+150423: jaws on the fin 50.2-52.4 s: claw - obj_0 = across  -37.9, along   +5.3, up +174.0 mm  -> the fin is -37.9 mm across from obj_0
+151159: EE Offset in use (Ready target - obj_0, box frame) = across   -0.2, along   -0.1, up +183.2 mm  (n=44)
+162850: EE Offset in use (Ready target - obj_0, box frame) = across   -0.3, along   -0.2, up +183.3 mm  (n=50)
+162850: jaws on the fin 47.6-56.4 s: claw - obj_0 = across   -1.1, along   +4.6, up +177.6 mm  -> the fin is -1.1 mm across from obj_0
+163413: EE Offset in use (Ready target - obj_0, box frame) = across   -0.1, along   -0.1, up +183.5 mm  (n=42)
+164419: EE Offset in use (Ready target - obj_0, box frame) = across   -0.6, along   +0.1, up +183.6 mm  (n=38)

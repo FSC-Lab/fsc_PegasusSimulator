@@ -1,0 +1,9 @@
+flight    |  GoToStart end | wait |  Ready start |    Ready end |  eCoM end | q3 drop  fall | outcome
+          |  short  across |    s |    short acr |    short acr |     short |     deg deg/s |
+10-21     |    +27     -6 |  2.0 |   -15   -17  |   +19   +11  |      +14 |    -0.4   -75 | closed 2.8 s after Ready, pushed, abort 10.1 s after Ready
+10-23     |    -35    -18 |  1.7 |   -25    +1  |   -16   -21  |      -16 |    +0.0    +0 | closed 3.2 s after Ready, abort 3.8 s after Ready
+10-24 #1  |    -20    +26 |  1.7 |   -25    -3  |   +36   +12  |      +32 |    -1.8   -14 | closed 1.9 s after Ready, pushed, abort 4.9 s after Ready
+10-24 #2  |    -41     -9 |  2.8 |   -39   -27  |   +28   -12  |      +25 |   -22.0   -51 | abort 1.2 s after Ready
+10-24 A   |    -46    +12 |  2.2 |   -45   -16  |   +29    +4  |      +26 |   -12.7   -47 | closed 1.5 s after Ready, pushed, abort 11.1 s after Ready
+10-24 B   |    -51    -21 |  1.6 |   -49   -11  |   -28    +3  |      -30 |   -18.6   -62 | abort 1.1 s after Ready
+10-24 C   |    -46    -26 |  1.6 |   -15   -33  |   +35    +4  |      +32 |   -16.2   -47 | abort 0.6 s after Ready

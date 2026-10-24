@@ -6530,6 +6530,88 @@ the box 26 mm / 5.5° and extended the arm. Isaac's 3.0 s open-jaw waits fail th
 was calm (tilt ≤ 4°, box back to 9 mm). Mocap vs PX4 attitude differ 2.8° pitch today (3.1° roll on
 10-21): the rigid-body frame, not the cause.
 
+**1024 HARDWARE BOX PUSH (3 flights, 240 g): THE NEW GUARDS AND GATE WORKED; THE FIN WAS 35 mm FROM
+WHERE THE PLANNER AIMED (2026-10-24, user request; `archive/wb_box_pushing_flight_20261024/README.md`).**
+#1 gripped and pushed ~70 mm, then the box-tilt guard aborted (box 6.3°); #2 missed the fin, q3 rate
+guard; #3's box was BLOWN OFF the table by the downwash during Go To Start. **With the jaws on the fin
+the FK claw sits 34.8 mm across from obj_0 + EE offset (10-21: 5.5, 10-23: 1.5)**: the user re-placed
+the box's markers, so obj_0's origin moved 35 mm toward room +x (the table's far side) of the fin; the
+real fin was toward room −x (near side, the drone's right while pushing at heading −90). Only the
+across offset is measurable from the grip (the fin is 60 mm wide and tall). obj_0 z 0.850 = 10-21's,
+so the height did NOT change (10-23's 0.870 was the table at another spot). So Get aimed 35 mm beside
+the fin. **Markers as in `Box_Assembly_Push.stl` (five on posts) put Motive's default pivot (their
+centroid) 10 mm across / 20 mm along / 30 mm above the box centre**, so matching the STL alone still
+aims 10 mm beside and 5 mm above the fin top: move the pivot to the box centre or use EE Offset
+(+0.010, −0.020, 0.153) (`tools/marker_centroid.py`). In #1 the claw held ~25 mm from the real fin (inside the ~25 mm jaw
+clearance), the gate closed (7.5 mm from the AIMED point, 13 mm/s, after 1.49 s; the calmest open-jaw
+hold so far, CoM across 4 mm rms vs 34 on 10-23), and the closing pads dragged the 240 g box 38 mm
+sideways. The base was already drifting sideways at 20-40 mm/s, which the gate's CLAW speed cannot see
+(the room hold keeps the claw still); the drift reached 108 mm and the clamped box tilted. q3 guards
+silent in #1, correct fast-fold trip in #2 (q2 39°, no credit). Nothing checks the box is still where
+Get put it before Ready (#3 descended to an empty table). Yaw imbalance unchanged (CW pair +0.20 over
+CCW in hover, every flight); battery 24.76 → 23.49 V across the three. Recommended, NOT applied: fix
+the aim (re-define obj_0 / EE offset x = −0.035 for the 10-24 markers, verify the FK claw on the fin before each session), a
+box-moved check before Ready and the close, base speed in the gate, a fresh pack per push.
+Report page: artifact "1024 Box-Pushing Flights" (https://claude.ai/artifact/8128dFtRPArxQLSD1xpzJb), built by
+the folder's `tools/build_report.py` from `report_template.html` + `report_data.json`. After the grip the base
+swung out 104 mm and back to −91 mm (reference 48.80 s) while the clamped box stayed ~80 mm out.
+
+**1024 AFTERNOON BOX PUSHES (A 162850, B 163413, C 164419): AIM FIXED, THE GRASP HAND-OVER IS
+THE PROBLEM (2026-10-24, user request; same folder's README section 7, report artifact v3).** Fin now
+1.1 mm across from obj_0 (pivot re-defined). All three tripped the q3 RATE guard and every trip was a real
+pull into q2's wall (q3 bottomed 7–12°, q2 41–45°): B/C at the grasp, A in the release. **Mechanism:** at
+Ready's DONE edge the planner switches the claw to the room hold (`push_pull_world_anchor_on_handle`, 1 s
+blend; the free-axis weight ramps in over the same second), while the base is 28–36 mm off the grasp point
+along the push, so the arm reaches (q3 −13..−19° at 47–62°/s). The jaws "miss" because the close gate
+(25 mm) is never met before the trip (the fin is 60 mm long: 30 mm short = its back end). The base error
+IS the pitch error: along-push CoM error vs attitude error about model x, slope 0.56–0.71 mm/mrad (r 0.84–0.95)
+vs u1/k_x 0.71–0.75; 60–95 mrad at Go To Start's end (overshoot 45–68 mm, every flight since 10-23) and
+during Ready's descent (30–45 mm behind), from 0.15–0.25 N·m pitch-moment changes the filtered rotational
+estimate learns 1.5–2 s late (ω_c,r 0.74). A's push: j2/j3 STUCK (zero velocity) 3.5 s while j2 torque rose
+0.44 N·m (measured-velocity friction FF gives a stuck joint nothing), box dragged 22 mm back, the observer
+booked the stuck joints as a 4.6 N contact force (force guard 4.7 of 5 N), box-lag guard 22 of 40 mm (the
+free-axis correction excused ~60 mm); then a 60°/s break-loose threw the box 190 mm at 240 mm/s and the auto
+Exit (0.24 s later) released mid-swing. **Proposed, NOT applied:** settle gate before the room hold (≤15 mm,
+<30 mm/s, 0.5 s; GS close timer starts there), auto Ready/Exit on calm instead of fixed delays, Isaac study
+of the stuck-arm push, unfold the arm before Go To Start's final straight. Do not loosen the q3 guard.
+
+**THE HAND-OVER SETTLE + THE CALM EXIT, APPLIED THE SAME EVENING (2026-10-24, user: "go ahead 1-3";
+same README section 8; uncommitted, NOT flown).** fsc_trajectory_planner node (default off; on in the
+three box yamls via `make_push_pull_yaml.py`):
+- `push_pull_handle_settle_tol` 0.025 / `_axis_tol` 0.015 (0.008 until the Isaac check below) / `_max_speed` 0.030 / `_dwell_s` 0.3. After
+  Ready the claw stays on the CoM anchor until it is near the grasp point and still, then the room hold.
+  25 mm, not the proposed 15, equals the GS close gate.
+- Status `DONE ready next=push (settling: ...)`; info [87] settling, [88] seconds (89 values).
+- `push_pull_ready_max_speed` 0.030 / `_ready_settle_s` 0.5: Ready refused until the claw has been still
+  0.5 s at Go To Start's hold; the GS's automatic Ready already retries that refusal.
+
+Arm GS Box Pushing tab:
+- The close gate stays shut while [87] = 1. Its 2.5 s limit starts at the hand-over.
+- `push_pull_box_settle_wait_max_s` 6 s, else ABORT with the jaws open.
+- The automatic Exit waits for `current_base` slower than `push_pull_auto_exit_max_speed` 40 mm/s for
+  `_calm_s` 0.3 s, at most `_calm_max_s` 3 s; with no `current_base` it exits as before.
+
+Hardware stacks: both whole-body stacks expect the six keys and refuse a planner without
+`push_pull_handle_settle_tol`; the Isaac scene check compares them.
+
+Verified: loopback ALL PASS on the sim + hw yamls ([5r], [5h]; `back_on_handle` now waits for the
+hand-over); gtests 27 + 31; GS harness new P1-P3 / K1-K3 plus all other box/valve panel harnesses; stack
+dry runs 60/60 and 58/58; a stale-planner refusal.
+
+Orin: rebuild fsc_trajectory_planner, pull fsc_autopilot_ros2. Laptop: rebuild
+utils_custom_ground_station.
+
+**Isaac, same evening (user: "test it, at least 1-3"; `archive/box_pushing_settle_gate_20261024/`):**
+the 10-24 morning condition (hardware-like drift, GS-run steps, hardware guards), paired seeds.
+Seeds 2 and 5 (the morning's "claw 52-89 mm off" failures) now COMPLETE; seed 1 completed too but
+its hand-over took 6.15 s, 0.15 s short of the GS's 6 s settle limit: the claw sat 8-12 mm ACROSS
+the fin, which the CoM anchor cannot remove. User chose `push_pull_handle_settle_axis_tol`
+**0.008 -> 0.015** (the pulls were along the arm; the GS close gate keeps 8 mm across after the
+hand-over). Re-fly of seed 1: hand-over 1.19 s, close 0.39 s later at 4 mm, exit clean -- then the
+planner's 10 deg tilt guard aborted the WAY HOME (24 s after the release) on the known sim-only
+1.3-1.7 Hz attitude mode (roll 1.33 Hz, grew 3.7 -> 12 deg with the arm parked; the abort climbed,
+still in DIRECT when the recording ended 4 s later). Ready refusals cost 1-7 s of the GS's 10 s retry budget.
+
 **VALVE BEARING FROM A FREE-SPIN BENCH TEST: ~9 mN·m RUNNING, NOT ~38 (2026-10-23, user request:
 "is our bearing-friction estimate accurate?"; record
 `docs/docs_aerial_manipulator/archive/valve_bearing_spin_20261023/README.md`).** The bag

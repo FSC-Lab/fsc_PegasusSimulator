@@ -1,0 +1,541 @@
+<title>1024 Box-Pushing Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: one full-width column (max 1040 px), numbered sections, data in panels.
+   Dark only, by the user's standing request: black page, near-black panels. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #141413;
+  --rule: #2a2a27;
+  --fg: #f0efec;
+  --fg2: #c3c2b7;
+  --muted: #8f8e86;
+  --accent: #d9a35c;
+  --s-claw: #3987e5;
+  --s-box: #d95926;
+  --s-base: #199e70;
+  --s-grip: #9085e9;
+  --f-a: #199e70;
+  --f-b: #d95926;
+  --f-c: #9085e9;
+  --bad: #e66767;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-head: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-head); font-size: 34px; line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--fg2); margin: 0; }
+h2 { font-family: var(--font-head); font-size: 24px; margin: 40px 0 10px; text-wrap: balance; scroll-margin-top: 16px; }
+h2 .n { color: var(--accent); margin-right: 10px; font-family: var(--font-mono); font-size: 20px; }
+h3 { font-size: 17px; margin: 26px 0 6px; text-wrap: balance; scroll-margin-top: 16px; }
+p { margin: 8px 0; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+code { font-family: var(--font-mono); font-size: 13px; color: var(--fg2); overflow-wrap: anywhere; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.verdict { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 18px; margin: 18px 0 6px; }
+.verdict p { margin: 4px 0; }
+.verdict strong { color: var(--accent); font-weight: 600; }
+nav.toc { margin: 20px 0 4px; font-size: 14px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+nav.toc a { color: var(--fg2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--fg); border-bottom-color: var(--accent); outline: none; }
+.tscroll { overflow-x: auto; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td:first-child { white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+tr.hi td { color: var(--fg); background: rgba(217, 163, 92, 0.08); }
+.bad { color: var(--bad); }
+figure { margin: 18px 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 14px 10px; }
+figcaption { color: var(--fg2); font-size: 14px; margin-top: 8px; }
+figcaption b { color: var(--fg); font-weight: 500; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg2); margin: 0 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 18px; height: 2px; display: inline-block; border-radius: 1px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--fg2) 0 4px, transparent 4px 7px); }
+.tip { position: absolute; pointer-events: none; background: #1f1f1d; border: 1px solid var(--rule); border-radius: 4px;
+  padding: 6px 9px; font-family: var(--font-mono); font-size: 12px; color: var(--fg); white-space: nowrap; }
+.tip .k { color: var(--muted); }
+footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+@media (max-width: 560px) { h1 { font-size: 27px; } h2 { font-size: 21px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">T650-AM whole-body · box pushing · 240 g · 2026-10-24</div>
+  <h1>1024 Box-Pushing Flights</h1>
+  <p class="sub">Six flights: three in the morning with the new q3 guard and close gate, three in the afternoon after
+  re-defining the box's mocap body. Why does the safety guard still trip, why do the jaws miss the fin, and what comes next?</p>
+</header>
+
+<div class="verdict">
+  <p><strong>Afternoon (A, B, C): the aim is fixed, the hand-over is not.</strong> With the jaws on the fin the claw now sits
+  1 mm from where the planner aims (35 mm in the morning).</p>
+  <p><strong>Every guard trip was real.</strong> Each time, the arm was being pulled toward its q2 wall at 40–65°/s; q3 bottomed at 6–12°.</p>
+  <p><strong>The pull comes from the hand-over at the end of Ready.</strong> The claw is 28–36 mm short of the fin along the push,
+  and the planner holds it in the room anyway, so the arm has to make up the gap. The base is short because of a 3–5° pitch error,
+  which the law turns into 0.7 mm of position error per mrad along the nose.</p>
+  <p><strong>The jaws "miss" because they never close.</strong> 28–36 mm short puts the claw at the fin's back end, outside the 25 mm
+  close gate. In B and C the guard aborted first.</p>
+  <p><strong>Next:</strong> keep the claw on the vehicle until it is within about 15 mm and slow, then hand it to the room hold.</p>
+  <p><strong>Morning (#1–#3):</strong> the new guard and gate worked. #1 failed on a 35 mm aim error (re-placed markers), and #3's box
+  was blown off the table by the downwash.</p>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <span class="eyebrow">Contents</span>
+  <ol>
+    <li><a href="#s1">1 The six flights</a></li>
+    <li><a href="#s2">2 Afternoon: why the guard trips and the jaws miss</a></li>
+    <li><a href="#s3">3 What to change before the next flight</a></li>
+    <li><a href="#s4">4 Morning: were the changes valid?</a></li>
+    <li><a href="#s5">5 Morning: why #1 looked less stable</a></li>
+    <li><a href="#s6">6 Morning: flights #2 and #3</a></li>
+    <li><a href="#s7">7 Battery and yaw budget</a></li>
+    <li><a href="#s8">8 Morning recommendations</a></li>
+  </ol>
+</nav>
+
+<h2 id="s1"><span class="n">1</span>The six flights</h2>
+<div class="tscroll"><table>
+  <tr><th>Flight</th><th>Outcome</th><th>Cause found in the data</th></tr>
+  <tr><td class="n">#1 15:04</td><td>Gripped and pushed about 70 mm, then the box-tilt guard aborted (box 6.3°)</td>
+      <td>The fin was 35 mm from the planner's aimed point, toward the near side of the table; closing the jaws dragged the box sideways</td></tr>
+  <tr><td class="n">#2 15:11</td><td>No grasp; q3 rate-guard abort 1.2 s after Ready</td>
+      <td>The claw arrived about 47 mm beside the real fin; the room hold stretched the arm</td></tr>
+  <tr><td class="n">#3 15:16</td><td>Box blown off the table during Go To Start; the operator aborted the descent</td>
+      <td>Downwash from 0.46 m above and 0.36 m behind the box; nothing checks the box before Ready</td></tr>
+  <tr class="hi"><td class="n">A 16:28</td><td>Gripped, pushed 154 of 150 mm; q3 rate-guard abort 0.7 s after the push, in the release</td>
+      <td>The box stuck for 3.5 s and then lurched 190 mm; the release started while the vehicle was still swinging</td></tr>
+  <tr class="hi"><td class="n">B 16:34</td><td>No grasp; q3 rate-guard abort 1.1 s after Ready</td>
+      <td>Ready ended with the base swinging back; the room hold made the arm reach</td></tr>
+  <tr class="hi"><td class="n">C 16:44</td><td>No grasp; q3 rate-guard abort 0.6 s after Ready</td>
+      <td>Ready ended 35 mm short; the room hold made the arm reach</td></tr>
+</table></div>
+
+<h2 id="s2"><span class="n">2</span>Afternoon: why the guard trips and the jaws miss</h2>
+<h3>The aim is fixed</h3>
+<p>All three flights used EE Offset (0, 0, 0.183). In A, with the jaws on the fin, the claw sat <span class="num">−1.1 mm</span> across from
+the mocap origin; in the morning it was <span class="num">−35 to −38 mm</span>. The re-defined box body puts the fin where the planner aims.</p>
+
+<h3>Ready ends 28–36 mm short, and the room hold makes the arm reach</h3>
+<p>The table gives the claw's error from the planner's own telemetry. "Short" is the distance along the push the claw still has to go
+(+ = not yet there, − = past it).</p>
+<div class="tscroll"><table>
+  <tr><th>Flight</th><th>Go To Start ends</th><th>Ready starts after</th><th>Ready ends</th><th>q3 in the next 1.5 s</th><th>Grasp</th></tr>
+  <tr><td>10-21</td><td class="n">+27 mm</td><td class="n">2.0 s</td><td class="n">+19 mm</td><td class="n">−0.4°</td><td>closed 2.8 s after Ready</td></tr>
+  <tr><td>10-23</td><td class="n">−35 mm</td><td class="n">1.7 s</td><td class="n">−16 mm</td><td class="n">0.0°</td><td>closed 3.2 s after Ready</td></tr>
+  <tr><td>10-24 #1</td><td class="n">−20 mm</td><td class="n">1.7 s</td><td class="n">+36 mm</td><td class="n">−1.8°</td><td>closed 1.9 s after Ready</td></tr>
+  <tr><td>10-24 #2</td><td class="n">−41 mm</td><td class="n">2.8 s</td><td class="n">+28 mm</td><td class="n bad">−22.0° at 51°/s</td><td>aborted 1.2 s after Ready</td></tr>
+  <tr class="hi"><td>A</td><td class="n">−46 mm</td><td class="n">2.2 s</td><td class="n">+29 mm</td><td class="n">−12.7° at 47°/s</td><td>closed 1.5 s after Ready</td></tr>
+  <tr class="hi"><td>B</td><td class="n">−51 mm</td><td class="n">1.6 s</td><td class="n">−28 mm</td><td class="n bad">−18.6° at 62°/s</td><td>aborted 1.1 s after Ready</td></tr>
+  <tr class="hi"><td>C</td><td class="n">−46 mm</td><td class="n">1.6 s</td><td class="n">+35 mm</td><td class="n bad">−16.2° at 47°/s</td><td>aborted 0.6 s after Ready</td></tr>
+</table></div>
+<p>When Ready's 3.2 s move ends, the planner switches the claw from following the vehicle to a fixed point in the room, blended over 1 s.
+The free-axis anchor ramps in over the same second and takes up only part of the along-push error. So for that second the arm has to
+close the gap itself: q2 rises and q3 falls. In C the base was 33 mm short and still; in B it was swinging back 65 mm in 1 s. The guard
+tripped at q3 17–18° in both. q3 then bottomed at 9–12° with q2 at 41–43° (#2: 6°). The guard was right to stop it.</p>
+<p>The morning's #1 had the same 36 mm shortfall, and its arm barely moved. Its base happened to be moving forward at the hand-over and
+closed the gap by itself within 0.7 s. Same software; the phase of the vehicle's swing decided it.</p>
+
+<figure>
+  <div class="legend" id="legend2"></div>
+  <div class="chart" id="chart2" role="img" aria-label="Flights A, B and C aligned at the end of Ready: the claw's shortfall along the push, and joints q2 and q3"></div>
+  <figcaption><b>Figure 2. The grasp hand-over, A, B and C, aligned at the end of Ready (t = 0).</b> Top: how far the claw is short of the
+  grasp point along the push (cut where the guard tripped); the band is the close gate's 25 mm. Bottom: q3 (solid) and q2 (dashed); the
+  10° line is the q3 guard's limit and 45° q2's wall. After t = 0 the arm folds toward q2's wall within half a second in B and C.
+  Hover for values.</figcaption>
+</figure>
+
+<h3>Why the jaws "miss" the fin</h3>
+<p>The gripper's close gate waits until the claw is within 25 mm of the grasp point, within 8 mm across, and slower than 30 mm/s. In B and C
+the claw never got that close before the guard aborted, so the jaws never closed (the finger stayed at +19 mm). The fin is 60 mm long along
+the push, so a claw 28–36 mm short sits at the fin's back end. Closing there would have caught the end of the fin or nothing; the gate
+was right to wait. In the morning's #2 the miss was the 35 mm aim error instead.</p>
+
+<h3>Why the base is short: a 3–5° pitch error</h3>
+<p>The CoM's along-push error follows its pitch attitude error, at <span class="num">0.56–0.71 mm per mrad</span> (correlation 0.84–0.95).
+The law's structure predicts <span class="num">0.71–0.75</span>: thrust over the position gain, about 36 N / 50 N/m. The attitude loop has no integral, so
+a pitch moment it does not know parks the attitude at moment / k_R, and the position loop then parks at that tilt times thrust / k_x.</p>
+<p>Pitch errors of 60–95 mrad (3.4–5.4°) appear twice per approach:</p>
+<ul>
+  <li><b>At the end of Go To Start.</b> The arm finishes unfolding and the vehicle stops; the base runs 45–68 mm past its point.</li>
+  <li><b>During Ready's 150 mm descent.</b> The base falls 30–45 mm behind.</li>
+</ul>
+<p>Each is a change of 0.15–0.25 N·m in the pitch moment. The fast estimate inside the observer sees it at once; the filtered
+estimate the law uses follows 1.5–2 s later (ω<sub>c,r</sub> 0.74 rad/s). Where the moment comes from is not in the bag: the arm unfolding
+during the final approach (the valve study's mechanism), and something during the descent above the table. Ready also starts only
+1.6–2.2 s after Go To Start, while the base is still 15–49 mm past its point.</p>
+
+<figure>
+  <div class="legend" id="legend3"></div>
+  <div class="chart" id="chart3" role="img" aria-label="Scatter of the CoM's along-push error against the pitch attitude error, flights A, B and C, with the predicted line"></div>
+  <figcaption><b>Figure 3. Along-push error against pitch error, Go To Start to the end of Ready, every 0.1 s.</b> The dashed line is the
+  prediction, thrust / k_x = 0.71–0.75 mm per mrad. Positive = the base short of its reference.</figcaption>
+</figure>
+
+<h3>Flight A: the push stuck, lurched, and the release came mid-swing</h3>
+<ol>
+  <li><b>The grasp survived.</b> q3 dipped 12.7° and the jaws closed 1.5 s after Ready, with the claw 7–12 mm from the grasp point.</li>
+  <li><b>The push stuck for 3.5 s.</b> q2 and q3 stood exactly still (zero velocity) from 48.0 to 51.5 s while the law raised j2's torque
+  from 0.89 to 1.33 N·m: joint stiction. The arm-side friction feed-forward follows measured velocity, so it gives a stuck joint nothing.
+  Meanwhile the vehicle drifted 27 mm back and dragged the box 22 mm back with it; the base fell 82 mm behind its reference.</li>
+  <li><b>The guards nearly tripped, on the wrong reading.</b> The observer booked the stuck joints as a 4.6 N contact force, against a
+  box that slides at about 0.6 N. The force guard reached 4.7 of its 5 N. The box-lag guard read only 22 of 40 mm, because its free-axis
+  correction excused about 60 mm.</li>
+  <li><b>Then the joints broke loose</b> at about 60°/s and threw the box 190 mm forward at up to 240 mm/s (planned: 21 mm/s). The push
+  ended at 154 of 150 mm with the vehicle swinging 65 mm sideways and about 110 mm along the push.</li>
+  <li><b>The release came mid-swing.</b> The automatic Exit started 0.24 s after the push, while the base moved back at about 100 mm/s.
+  The jaws take about 0.5 s to open, so the clamped arm stretched: q3 26 → 7°. The guard tripped at q3 17°.</li>
+</ol>
+
+<h2 id="s3"><span class="n">3</span>What to change before the next flight</h2>
+<ol>
+  <li><b>Settle before the room hold (planner code change).</b> After Ready's move, keep the claw following the vehicle, and hand it to
+  the room only when the claw is within about 15 mm of the grasp point (8 mm across) and slower than 30 mm/s for 0.5 s. Wait up to
+  about 6 s; if it does not settle, stay on the vehicle and say so. The arm then has to make up only a few millimetres, not 30. The arm
+  GS's 2.5 s close-gate timer must start at that hand-over, not at the end of Ready.</li>
+  <li><b>Start Ready after Go To Start's overshoot has settled.</b> Start the automatic Ready on the claw's error and speed rather than
+  after a fixed 1.0 s (<code>push_pull_auto_ready_delay_s</code>), or raise the delay to about 3 s as a stop-gap.</li>
+  <li><b>Release only when the vehicle is calm.</b> Start the automatic Exit on the base's speed and CoM error, not 0.2 s after the
+  push.</li>
+  <li><b>The push's stick-slip needs its own fix.</b> A stuck arm gets no help from a friction feed-forward driven by measured velocity,
+  and the box guards read the stuck phase as normal. Try in Isaac first, with the hardware-like drift model and joint stiction.</li>
+  <li><b>Then reduce the pitch-moment change itself.</b> Unfold the arm before Go To Start's final straight run, not during it. Hover 10 s
+  at the Ready-end pose with the jaws open, to see whether the moment stays (an effect near the table) or decays.</li>
+  <li><b>Do not loosen the q3 guard.</b> In every afternoon trip the arm was being pulled into its q2 wall at 40–65°/s. Remove the pull.</li>
+</ol>
+
+<h2 id="s4"><span class="n">4</span>Morning: were the changes valid?</h2>
+<h3>The close gate closed early and calm</h3>
+<p>On flight #1 the gripper closed <span class="num">1.49 s</span> after Ready, with the claw <span class="num">14 mm</span> from the aimed
+point, <span class="num">7.5 mm</span> across it and moving at <span class="num">13 mm/s</span>. The old 3 mm gate would have kept waiting.
+The open-jaw hold before the close was the calmest of all three hardware pushes:</p>
+<div class="tscroll"><table>
+  <tr><th>Push</th><th>Hold before the close</th><th>CoM error across, rms / max</th><th>Arm motion in the hold</th></tr>
+  <tr><td>10-21</td><td class="n">3.0 s</td><td class="n">14 / 32 mm</td><td>q2 16–39°, q3 12–45° (along-arm swing)</td></tr>
+  <tr><td>10-23</td><td class="n">2.8 s</td><td class="n">34 / 46 mm</td><td>q1 −8.7…−0.3° (sideways twist)</td></tr>
+  <tr class="hi"><td>10-24 #1</td><td class="n">1.5 s</td><td class="n">4 / 8 mm</td><td>q2 32.2–32.3°, q3 26.5–28.4° (still)</td></tr>
+</table></div>
+<h3>The q3 guards behaved correctly</h3>
+<ul>
+  <li>Flight #1: silent; q3 never went below <span class="num">14.2°</span>.</li>
+  <li>Flight #2: fired on a real fast fold, q3 <span class="num">15.3°</span> falling at <span class="num">47°/s</span>.
+  q2 was at <span class="num">39°</span>, 6° short of its stop, so the new q2 credit correctly gave nothing.</li>
+</ul>
+<h3>One weakness the flight exposed</h3>
+<p>The gate's speed check looks at the claw. While the claw is held in the room, the arm absorbs the drone's motion, so the claw read
+13 mm/s while the drone was already drifting sideways at 20–40 mm/s. A check on the drone's speed would have held the close about 0.5 s.</p>
+
+<h2 id="s5"><span class="n">5</span>Morning: why #1 looked less stable</h2>
+<h3>The fin was 35 mm from where the planner aimed</h3>
+<p>While the jaws hold the fin, the claw is on the fin. So the planner's model claw minus the grasp point it computes from the box's mocap
+pose (<code>obj_0</code> + EE offset) measures where the fin really is:</p>
+<div class="tscroll"><table>
+  <tr><th>Push</th><th>Across the fin</th><th>Along the push</th><th>Up</th></tr>
+  <tr><td>10-21</td><td class="n">−5.5 mm</td><td class="n">+4.9 mm</td><td class="n">−3.9 mm</td></tr>
+  <tr><td>10-23</td><td class="n">−1.5 mm</td><td class="n">−0.7 mm</td><td class="n">−4.5 mm</td></tr>
+  <tr class="hi"><td>10-24 #1</td><td class="n bad">−34.8 mm</td><td class="n">+2.3 mm</td><td class="n">−8.4 mm</td></tr>
+</table></div>
+<p>The model error is a few millimetres (10-21, 10-23). On 10-24 the aim was 35 mm off.</p>
+<p><b>Which way.</b> "Across" is the box's x axis, the jaws' closing axis (the fin is a 5 mm plate whose faces point along x). The box sat at
+yaw −0.1°, so box x is room x. The drone took off at x −1.47 and hovered behind the box with its nose toward −y, the push direction. The
+planner aims directly above the mocap origin (EE Offset 0, 0, 0.183). The real fin was 34.8 mm toward room −x of that point: the near side
+of the table, toward the take-off spot, which is the drone's right while it pushes. The fin did not move on the box. The markers were
+re-placed, so the mocap origin moved 35 mm toward the far side (+x) of the fin.</p>
+<p><b>Only the across offset is measured.</b> The closed jaws centre the 5 mm fin across, but the fin is 60 mm wide along the push and
+tall, so any shift of the origin along the push or up is not visible from the grip. The box's height is unchanged: z
+<span class="num">0.8498</span> on 10-24 against <span class="num">0.8508</span> on 10-21. The <span class="num">0.8704</span> on 10-23 came
+with the table at another place (box at x 1.31), so it says nothing about the markers.</p>
+
+<figure>
+  <div class="legend" id="legend"></div>
+  <div class="chart" id="chart" role="img" aria-label="Flight 1, 47 to 53 seconds: claw position across the fin, sideways drift of the drone and the box, and the gripper opening"></div>
+  <figcaption><b>Figure 1. Flight #1 around the grasp.</b> Top: the claw sat 24–26 mm beside the real fin through the hold, inside the jaws'
+  roughly 25 mm clearance; closing pulled it onto the fin. Middle: the drone was already drifting sideways from 48.85 s; during the close the box
+  moved with it (38 mm by 49.65 s). After the grip the drone swung out to 104 mm and back to −91 mm, while the clamped box stayed about 80 mm out. Bottom: the gripper closed from +19 to about −9 mm in 0.6 s.
+  Hover for values.</figcaption>
+</figure>
+
+<h3>What happened, in order</h3>
+<ol>
+  <li><b>Hold (47.52–49.02 s).</b> The claw held still, 24–26 mm beside the real fin, the near pad next to it.</li>
+  <li><b>Drift starts (from 48.85 s).</b> The drone began sliding sideways at 20–40 mm/s; the wrist rolled 4 → 10° to keep the claw still.</li>
+  <li><b>Close (49.02–49.65 s).</b> The pads pulled the claw onto the fin and dragged the 240 g box 38 mm sideways.</li>
+  <li><b>After the grip.</b> The drone swung out to 104 mm, then back to −91 mm by 52.7 s; the clamped box stayed about 80 mm out.
+  The roll attitude error reached 136 mrad, and one rotor pair hit 0.00 twice (49.05 and 49.60 s).</li>
+  <li><b>Abort (52.41 s).</b> The clamped box was dragged sideways and tilted 6.3°; the box-tilt guard aborted 1.26 s into the slide.</li>
+</ol>
+
+<h2 id="s6"><span class="n">6</span>Morning: flights #2 and #3</h2>
+<h3>#2: the claw missed the fin</h3>
+<p>The claw arrived about 12 mm from the aimed point, which with the 35 mm aim error put it about 47 mm beside the real fin, outside the
+jaws. It also drifted 6 → 43 mm short along the push during the hold. The room hold stretched the arm (q2 rising at 30°/s, q3 falling
+at 47°/s) until the rate guard aborted 1.2 s after Ready.</p>
+<h3>#3: the box was blown off before the descent</h3>
+<p>At the end of Go To Start (43.4–44.2 s) the box slid 15, then 46, then 122 mm, flipped and fell to the floor. The drone was hovering
+0.46 m above it and 0.36 m behind it, at the same place as on flights #1 and #2. Nothing noticed: the GS started Ready 2 s later toward
+the captured grasp point, and the operator aborted at 47.89 s. The box guards act only with the claw on the box.</p>
+
+<h2 id="s7"><span class="n">7</span>Battery and yaw budget</h2>
+<p>The afternoon flights started on 24.86, 24.30 and 24.68 V with hover commands of 0.577, 0.595 and 0.574, like the morning's #1:
+the battery did not limit them.</p>
+<div class="tscroll"><table>
+  <tr><th>Flight</th><th>Battery at start</th><th>Hover rotor command</th><th>CW − CCW pair</th><th>Rotor at a limit, hold + push</th></tr>
+  <tr><td>10-21</td><td class="n">24.30 V</td><td class="n">0.586</td><td class="n">+0.206</td><td class="n">0.6 %</td></tr>
+  <tr><td>10-23</td><td class="n">24.74 V</td><td class="n">0.576</td><td class="n">+0.204</td><td class="n">0.0 %</td></tr>
+  <tr class="hi"><td>10-24 #1</td><td class="n">24.76 V</td><td class="n">0.577</td><td class="n">+0.203</td><td class="n">5.7 %</td></tr>
+  <tr><td>10-24 #2</td><td class="n">23.72 V</td><td class="n">0.597</td><td class="n">+0.181</td><td class="n">0.0 %</td></tr>
+  <tr><td>10-24 #3</td><td class="n">23.49 V</td><td class="n">0.616</td><td class="n">+0.205</td><td class="n">—</td></tr>
+</table></div>
+<ul>
+  <li><b>The battery did not limit flight #1.</b> Its hover command matches 10-21 and 10-23. Flights #2 and #3 needed 3–7 % more
+  command on the weaker pack: the "flying lower" you saw.</li>
+  <li><b>The standing yaw imbalance is unchanged on every flight.</b> The clockwise pair runs 0.20 above the counter-clockwise pair
+  (the loose front-left arm, 10-14). It leaves the counter-clockwise pair about 0.48 from zero, so a hard transient saturates yaw first:
+  5.7 % of #1's hold and push.</li>
+</ul>
+
+<h2 id="s8"><span class="n">8</span>Morning recommendations</h2>
+<ol>
+  <li><b>Fix the aim (done for the afternoon flights: the fin is within 1 mm).</b> Best: move the box body's pivot in Motive back onto the fin's plane, directly below the fin as before. Quick fix
+  for the present markers: EE Offset x = −0.035 m (box frame; the sign follows from the measurement, fin = origin − 34.8 mm along box x).
+  The quick fix corrects only the across offset, because the along and vertical offsets of the new origin were not measured.
+  Placing the markers as in <code>Box_Assembly_Push.stl</code> makes the layout repeatable, but it does not set the origin by itself. Motive
+  puts a new body's pivot at the marker centroid, and for that layout the centroid is 10 mm across, 20 mm along and 30 mm above the box
+  centre. The planner's EE Offset (0, 0, 0.183) is measured from the box centre, so with an unmoved pivot the claw would aim 10 mm beside
+  the fin and 5 mm above its top. Either move the pivot to the box centre, or keep the centroid and use EE Offset (+0.010, −0.020, 0.153)
+  in the simulation's box axes (the signs depend on how the body's axes are set in Motive; the sizes do not). Before each
+  session, put the claw on the fin by hand and compare the planner's model claw with Get's grasp point: they must agree within about 5 mm.</li>
+  <li><b>Check the box before Ready and before the close.</b> Refuse if the live box moved more than about 10 mm or tilted more than about 2°
+  since Get. That would have stopped flight #3's descent toward an empty table.</li>
+  <li><b>Downwash.</b> Flight #3's box was blown off at the same hover point as #1 and #2. Use the heavier box (500 g target) or hover higher or
+  further back before Ready.</li>
+  <li><b>Add the drone's speed to the close gate.</b> Check its strictness on the three hardware holds first.</li>
+  <li><b>Fresh pack per push,</b> or check at least 24 V before Go To Start.</li>
+</ol>
+
+<footer>Bags: <code>docs/experimental_data_ros2_bag/1024 - T650-AM whole-body Box-Pushing-…/</code> (morning 150423, 151159,
+151634; afternoon 162850 = A, 163413 = B, 164419 = C).
+Analysis, tools and numbers: <code>docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261024/README.md</code>.</footer>
+</div>
+
+<script>
+const D = /*DATA*/null;
+const C = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const PANELS = [
+  { title: "claw minus the real fin, across [mm]", lo: -40, hi: 45, ticks: [-25, 0, 25],
+    series: [{ k: "claw_fin", name: "claw", c: "--s-claw" }],
+    refs: [{ y: 34.8, label: "planner's aimed point", dash: true }, { y: 0, label: "fin" }],
+    band: [-25, 25], bandLabel: "jaw clearance ≈ ±25" },
+  { title: "sideways drift since 48.80 s [mm]", lo: -100, hi: 115, ticks: [-100, -50, 0, 50, 100],
+    series: [{ k: "base_d", name: "drone", c: "--s-base" }, { k: "box_d", name: "box", c: "--s-box" }], refs: [{ y: 0 }] },
+  { title: "gripper finger [mm]", lo: -12, hi: 22, ticks: [-9, 0, 19],
+    series: [{ k: "grip", name: "gripper", c: "--s-grip" }], refs: [] },
+];
+const PHASES = [[47.52, 49.02, "hold"], [49.02, 49.65, "close"], [49.65, 51.15, "settle"], [51.15, 52.41, "slide"], [52.41, 53.0, "abort"]];
+function legend() {
+  const items = [["claw", "--s-claw"], ["drone", "--s-base"], ["box", "--s-box"], ["gripper", "--s-grip"]];
+  document.getElementById("legend").innerHTML = items.map(([n, c]) =>
+    `<span><i style="background:var(${c})"></i>${n}</span>`).join("") + `<span><i class="dash"></i>aimed point</span>`;
+}
+function draw() {
+  const host = document.getElementById("chart");
+  if (!D) { host.textContent = "No chart data."; return; }
+  const W = Math.max(320, host.clientWidth), ph = W < 600 ? 120 : 140, gap = 34, top = 40, left = 44, right = 18, bottom = 24;
+  const H = top + PANELS.length * ph + (PANELS.length - 1) * gap + bottom;
+  const t0 = D.t[0], t1 = D.t[D.t.length - 1];
+  const X = (t) => left + (t - t0) / (t1 - t0) * (W - left - right);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  PANELS.forEach((p, i) => {
+    const y0 = top + i * (ph + gap), Y = (v) => y0 + (p.hi - v) / (p.hi - p.lo) * ph;
+    PHASES.forEach(([a, b, n], j) => {
+      if (j % 2 === 0) s += `<rect x="${X(a)}" y="${y0}" width="${X(b) - X(a)}" height="${ph}" fill="${C("--fg")}" fill-opacity="0.04"/>`;
+      if (i === 0) s += `<text x="${(X(a) + X(b)) / 2}" y="12" text-anchor="middle">${n}</text>`;
+    });
+    if (p.band) s += `<rect x="${left}" y="${Y(p.band[1])}" width="${W - left - right}" height="${Y(p.band[0]) - Y(p.band[1])}" fill="${C("--s-claw")}" fill-opacity="0.07"/>` +
+      `<text x="${W - right - 4}" y="${Y(p.band[1]) + 13}" text-anchor="end">${p.bandLabel}</text>`;
+    p.ticks.forEach((v) => {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C("--rule")}" stroke-width="1"/>` +
+        `<text x="${left - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+    });
+    p.refs.forEach((r) => {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(r.y)}" y2="${Y(r.y)}" stroke="${C("--fg2")}" stroke-width="1" ${r.dash ? 'stroke-dasharray="4 3"' : 'stroke-opacity="0.5"'}/>`;
+      if (r.label) s += `<text x="${left + 4}" y="${Y(r.y) - 4}">${r.label}</text>`;
+    });
+    p.series.forEach((se) => {
+      const d = D.t.map((t, k) => `${k ? "L" : "M"}${X(t).toFixed(1)},${Y(Math.max(p.lo, Math.min(p.hi, D[se.k][k]))).toFixed(1)}`).join("");
+      s += `<path d="${d}" fill="none" stroke="${C(se.c)}" stroke-width="2" stroke-linejoin="round"/>`;
+    });
+    s += `<text x="${left}" y="${y0 - 7}" style="fill:${C("--fg2")}">${p.title}</text>`;
+  });
+  [48, 49, 50, 51, 52, 53].forEach((t) => {
+    s += `<text x="${X(t)}" y="${H - 6}" text-anchor="${t === 53 ? "end" : "middle"}">${t} s</text>`;
+  });
+  s += `<line id="xh" x1="0" x2="0" y1="${top}" y2="${H - bottom}" stroke="${C("--fg2")}" stroke-width="1" visibility="hidden"/>`;
+  s += `<rect id="hit" x="${left}" y="0" width="${W - left - right}" height="${H}" fill="transparent"/></svg>`;
+  host.innerHTML = s + `<div class="tip" id="tip" hidden></div>`;
+  const svg = host.querySelector("svg"), xh = svg.querySelector("#xh"), tip = host.querySelector("#tip");
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = t0 + (px - left) / (W - left - right) * (t1 - t0);
+    const k = Math.max(0, Math.min(D.t.length - 1, Math.round((t - t0) / (D.t[1] - D.t[0]))));
+    xh.setAttribute("x1", X(D.t[k])); xh.setAttribute("x2", X(D.t[k])); xh.setAttribute("visibility", "visible");
+    const ph_ = PHASES.find(([a, b]) => D.t[k] >= a && D.t[k] < b);
+    tip.innerHTML = `<div>${D.t[k].toFixed(2)} s${ph_ ? " · " + ph_[2] : ""}</div>` +
+      `<div><span class="k">claw−fin</span> ${D.claw_fin[k].toFixed(1)} mm</div>` +
+      `<div><span class="k">drone</span> ${D.base_d[k].toFixed(1)} mm · <span class="k">box</span> ${D.box_d[k].toFixed(1)} mm</div>` +
+      `<div><span class="k">gripper</span> ${D.grip[k].toFixed(1)} mm</div>`;
+    tip.hidden = false;
+    const tx = (X(D.t[k]) / W) * r.width;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, Math.max(4, tx + 12)) + "px";
+    tip.style.top = "8px";
+  };
+  svg.querySelector("#hit").addEventListener("pointermove", move);
+  svg.querySelector("#hit").addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+// ---- the afternoon figures (report_data_pm.json) ----
+const D2 = /*DATA2*/null;
+const FL = [["A", "--f-a"], ["B", "--f-b"], ["C", "--f-c"]];
+function legend2() {
+  document.getElementById("legend2").innerHTML = FL.map(([n, c]) =>
+    `<span><i style="background:var(${c})"></i>${n}</span>`).join("") +
+    `<span><i style="background:var(--fg2)"></i>q3 (solid)</span><span><i class="dash"></i>q2 (dashed)</span>`;
+  document.getElementById("legend3").innerHTML = FL.map(([n, c]) =>
+    `<span><i style="background:var(${c})"></i>${n}</span>`).join("") + `<span><i class="dash"></i>prediction</span>`;
+}
+function draw2() {
+  const host = document.getElementById("chart2");
+  if (!D2) { host.textContent = "No chart data."; return; }
+  const W = Math.max(320, host.clientWidth), ph = W < 600 ? 130 : 160, gap = 34, top = 24, left = 44, right = 18, bottom = 24;
+  const P = [{ title: "claw short of the grasp point, along the push [mm]", lo: -40, hi: 150, ticks: [0, 25, 50, 100, 150] },
+             { title: "joints [deg]", lo: 0, hi: 50, ticks: [10, 20, 30, 40, 45] }];
+  const H = top + 2 * ph + gap + bottom, T = D2.t, t0 = T[0], t1 = T[T.length - 1];
+  const X = (t) => left + (t - t0) / (t1 - t0) * (W - left - right);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  const path = (arr, Y, p) => {
+    let d = "", pen = false;
+    arr.forEach((v, k) => {
+      if (v === null) { pen = false; return; }
+      d += `${pen ? "L" : "M"}${X(T[k]).toFixed(1)},${Y(Math.max(p.lo, Math.min(p.hi, v))).toFixed(1)}`; pen = true;
+    });
+    return d;
+  };
+  P.forEach((p, i) => {
+    const y0 = top + i * (ph + gap), Y = (v) => y0 + (p.hi - v) / (p.hi - p.lo) * ph;
+    if (i === 0) s += `<rect x="${left}" y="${Y(25)}" width="${W - left - right}" height="${Y(-25 < p.lo ? p.lo : -25) - Y(25)}" fill="${C("--s-claw")}" fill-opacity="0.07"/>` +
+      `<text x="${W - right - 4}" y="${Y(25) + 13}" text-anchor="end">close gate ±25 mm</text>`;
+    p.ticks.forEach((v) => {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C("--rule")}" stroke-width="1"/>` +
+        `<text x="${left - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+    });
+    if (i === 0) s += `<line x1="${left}" x2="${W - right}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C("--fg2")}" stroke-opacity="0.5"/>` +
+      `<text x="${left + 4}" y="${Y(0) - 4}">grasp point</text>`;
+    if (i === 1) {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(10)}" y2="${Y(10)}" stroke="${C("--bad")}" stroke-dasharray="4 3"/>` +
+        `<text x="${left + 4}" y="${Y(10) - 4}">q3 guard 10°</text>` +
+        `<line x1="${left}" x2="${W - right}" y1="${Y(45)}" y2="${Y(45)}" stroke="${C("--fg2")}" stroke-dasharray="4 3"/>` +
+        `<text x="${left + 4}" y="${Y(45) - 4}">q2 wall 45°</text>`;
+    }
+    s += `<line x1="${X(0)}" x2="${X(0)}" y1="${y0}" y2="${y0 + ph}" stroke="${C("--fg2")}" stroke-opacity="0.6"/>`;
+    if (i === 0) s += `<text x="${X(0) + 4}" y="${y0 + 12}">Ready ends</text>`;
+    FL.forEach(([n, c]) => {
+      const f = D2.flights[n];
+      if (i === 0) s += `<path d="${path(f.short, Y, p)}" fill="none" stroke="${C(c)}" stroke-width="2" stroke-linejoin="round"/>`;
+      else {
+        s += `<path d="${path(f.q3, Y, p)}" fill="none" stroke="${C(c)}" stroke-width="2" stroke-linejoin="round"/>`;
+        s += `<path d="${path(f.q2, Y, p)}" fill="none" stroke="${C(c)}" stroke-width="1.5" stroke-dasharray="5 3"/>`;
+      }
+      if (f.trip !== null) s += `<line x1="${X(f.trip)}" x2="${X(f.trip)}" y1="${y0}" y2="${y0 + ph}" stroke="${C(c)}" stroke-width="1" stroke-dasharray="2 3"/>` +
+        (i === 1 ? `<text x="${X(f.trip) + 3}" y="${y0 + ph - 4}" style="fill:${C(c)}">${n} trip</text>` : "");
+    });
+    s += `<text x="${left}" y="${y0 - 7}" style="fill:${C("--fg2")}">${p.title}</text>`;
+  });
+  [-3, -2, -1, 0, 1].forEach((t) => { s += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle">${t > 0 ? "+" : ""}${t} s</text>`; });
+  s += `<line id="xh2" x1="0" x2="0" y1="${top}" y2="${H - bottom}" stroke="${C("--fg2")}" stroke-width="1" visibility="hidden"/>`;
+  s += `<rect id="hit2" x="${left}" y="0" width="${W - left - right}" height="${H}" fill="transparent"/></svg>`;
+  host.innerHTML = s + `<div class="tip" id="tip2" hidden></div>`;
+  const svg = host.querySelector("svg"), xh = svg.querySelector("#xh2"), tip = host.querySelector("#tip2");
+  const fmt = (v) => v === null ? "—" : v.toFixed(1);
+  svg.querySelector("#hit2").addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = t0 + (px - left) / (W - left - right) * (t1 - t0);
+    const k = Math.max(0, Math.min(T.length - 1, Math.round((t - t0) / (T[1] - T[0]))));
+    xh.setAttribute("x1", X(T[k])); xh.setAttribute("x2", X(T[k])); xh.setAttribute("visibility", "visible");
+    tip.innerHTML = `<div>${T[k] > 0 ? "+" : ""}${T[k].toFixed(2)} s</div>` + FL.map(([n]) => {
+      const f = D2.flights[n];
+      return `<div><span class="k">${n}</span> short ${fmt(f.short[k])} mm · q2 ${fmt(f.q2[k])}° · q3 ${fmt(f.q3[k])}°</div>`;
+    }).join("");
+    tip.hidden = false;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, Math.max(4, (X(T[k]) / W) * r.width + 12)) + "px";
+    tip.style.top = "8px";
+  });
+  svg.querySelector("#hit2").addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+function draw3() {
+  const host = document.getElementById("chart3");
+  if (!D2) { host.textContent = "No chart data."; return; }
+  const W = Math.max(320, host.clientWidth), H = Math.round(Math.min(420, W * 0.6)), top = 14, left = 48, right = 18, bottom = 34;
+  const xl = -110, xh = 80, yl = -80, yh = 60;
+  const X = (v) => left + (v - xl) / (xh - xl) * (W - left - right), Y = (v) => top + (yh - v) / (yh - yl) * (H - top - bottom);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  [-100, -50, 0, 50].forEach((v) => {
+    s += `<line x1="${X(v)}" x2="${X(v)}" y1="${top}" y2="${H - bottom}" stroke="${C("--rule")}"/>` +
+      `<text x="${X(v)}" y="${H - bottom + 14}" text-anchor="middle">${v}</text>`;
+  });
+  [-80, -40, 0, 40].forEach((v) => {
+    s += `<line x1="${left}" x2="${W - right}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C("--rule")}"/>` +
+      `<text x="${left - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+  });
+  const k = 0.73;
+  s += `<line x1="${X(xl)}" y1="${Y(k * xl)}" x2="${X(xh)}" y2="${Y(k * xh)}" stroke="${C("--fg2")}" stroke-dasharray="5 4"/>`;
+  const pts = [];
+  FL.forEach(([n, c]) => {
+    const tag = D2.flights[n].tag, sc = D2.scatter[tag];
+    sc.eR.forEach((e, i) => {
+      const yv = sc.short[i];
+      if (e < xl || e > xh || yv < yl || yv > yh) return;
+      pts.push([X(e), Y(yv), n, e, yv]);
+      s += `<circle cx="${X(e).toFixed(1)}" cy="${Y(yv).toFixed(1)}" r="2.2" fill="${C(c)}" fill-opacity="0.55"/>`;
+    });
+  });
+  s += `<text x="${(left + W - right) / 2}" y="${H - 4}" text-anchor="middle" style="fill:${C("--fg2")}">pitch attitude error [mrad]</text>`;
+  s += `<text x="12" y="${(top + H - bottom) / 2}" text-anchor="middle" transform="rotate(-90 12 ${(top + H - bottom) / 2})" style="fill:${C("--fg2")}">CoM short along the push [mm]</text>`;
+  s += `<circle id="hl3" r="5" fill="none" stroke="${C("--fg")}" visibility="hidden"/>`;
+  s += `<rect id="hit3" x="${left}" y="${top}" width="${W - left - right}" height="${H - top - bottom}" fill="transparent"/></svg>`;
+  host.innerHTML = s + `<div class="tip" id="tip3" hidden></div>`;
+  const svg = host.querySelector("svg"), hl = svg.querySelector("#hl3"), tip = host.querySelector("#tip3");
+  svg.querySelector("#hit3").addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width, py = (ev.clientY - r.top) * H / r.height;
+    let best = null, bd = 1e9;
+    pts.forEach((p) => { const d = (p[0] - px) ** 2 + (p[1] - py) ** 2; if (d < bd) { bd = d; best = p; } });
+    if (!best || bd > 400) { hl.setAttribute("visibility", "hidden"); tip.hidden = true; return; }
+    hl.setAttribute("cx", best[0]); hl.setAttribute("cy", best[1]); hl.setAttribute("visibility", "visible");
+    tip.innerHTML = `<div>${best[2]}: pitch error ${best[3].toFixed(1)} mrad</div><div><span class="k">short</span> ${best[4].toFixed(1)} mm</div>`;
+    tip.hidden = false;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, (best[0] / W) * r.width + 12) + "px";
+    tip.style.top = Math.max(4, (best[1] / H) * r.height - 40) + "px";
+  });
+  svg.querySelector("#hit3").addEventListener("pointerleave", () => { hl.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+legend();
+legend2();
+draw();
+draw2();
+draw3();
+let rz;
+window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { draw(); draw2(); draw3(); }, 120); });
+</script>

@@ -1221,15 +1221,17 @@ During the flight (after step 3: DIRECT, planner HOLD)
    0.15 m above the fin's grasp point.
 3. **2 Ready To Push** -- starts by itself 1 s after `DONE go_to_start` (2026-10-21; press it to go sooner):
    opens the gripper and, once it reports open, slides diagonally down-forward onto the
-   handle (CoM-anchored; the claw is world-held from its arrival).
-4. **3 Push** -- starts by itself at `DONE ready` (2026-10-21): closes the gripper once the claw is within 2 cm AND centred across the fin to 3 mm;
+   handle (CoM-anchored; the claw is world-held once it has settled on the handle, 2026-10-24).
+   Refused while the claw is still moving at Go To Start's hold (the automatic Ready retries).
+4. **3 Push** -- starts by itself at `DONE ready` (2026-10-21): once the planner holds the settled claw in the
+   room, closes the gripper when the claw is within 25 mm, 8 mm across the fin (3 mm in Isaac) and slower than 30 mm/s;
    once the jaws grip, the law goes to CONTACT (the contact line turns purple) and the box slides
    the Push Distance (1.5 s settle + the push time); the Monitor shows the box's travel and speed live,
    then the push's numbers. CONTACT ends with the push. If the gripper closes on nothing,
    nothing moves (Isaac: the grasp is a stall; hardware, 2026-10-19: a full close on the fin is the
    grasp, a close stopping wider than -0.005 m a wrong grip).
-5. **4 Exit To Push** -- starts by itself 0.2 s after `DONE push` (2026-10-21; press it to go sooner, ABORT to stop
-   it): releases, opens the gripper and, on its OPEN report, climbs 0.25 m (the gear clears the box), arm home.
+5. **4 Exit To Push** -- starts by itself 0.2 s after `DONE push`, once the drone is slower than 40 mm/s (at most
+   3 s; 2026-10-24) (press it to go sooner, ABORT to stop it): releases, opens the gripper and, on its OPEN report, climbs 0.25 m (the gear clears the box), arm home.
 6. **5 Go To Land Start** -- (2026-10-22) round the table's RIGHT (far) end, Go To Start's mirror image: on along
    the push line at the exit height, over the pushed box (the gear kept 0.05 m over the fin's top), to 0.70 m
    past the far end, then across and back along the table's front to Land Start (1.3 m over the take-off spot),
@@ -1401,6 +1403,15 @@ and the abort that followed crashed; put back to 10 the same day.
 **2026-10-24 -- the arm GS's close gate** (Box Pushing tab; same record). The gripper closes within 25 mm of the grasp
 point, within 8 mm across the fin (3 mm in Isaac) and with the claw slower than 30 mm/s; not met within 2.5 s, the
 station ABORTS with the jaws open. Rebuild `utils_custom_ground_station` (laptop).
+
+**2026-10-24 evening -- the hand-over settle and the calm exit** (`archive/wb_box_pushing_flight_20261024`
+section 8; not flown). The afternoon grasps were pulled into q2's wall at Ready's end. After Ready the claw now
+stays on the CoM anchor until it has been within 25 mm (15 mm across) and slower than 30 mm/s for 0.3 s; only then
+is it held in the room (planner `push_pull_handle_settle_*`). The status reads `DONE ready next=push (settling:
+...)`. Ready is refused until the claw has been slower than 30 mm/s for 0.5 s (`push_pull_ready_max_speed` /
+`_settle_s`). The arm GS starts its 2.5 s close limit at the hand-over and ABORTS if none comes within 6 s. Its
+automatic Exit waits for the drone to be slower than 40 mm/s for 0.3 s (at most 3 s). Orin: rebuild
+`fsc_trajectory_planner`, pull `fsc_autopilot_ros2`; laptop: rebuild `utils_custom_ground_station`.
 
 ### 17.x Comparison rig: coordinated admittance framework (Liu et al., CEP 146 (2024) 105898)
 

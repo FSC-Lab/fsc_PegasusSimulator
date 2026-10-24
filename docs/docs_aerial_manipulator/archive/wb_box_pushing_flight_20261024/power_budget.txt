@@ -1,0 +1,57 @@
+
+10-21 (170123): battery 24.30 -> 23.33 V; allocator-saturation log lines: 8
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         23.86      0.586     0.833    0.0     0.54    1.00
+  go_to_start   23.74      0.590     0.861    0.0     1.00    1.00
+  ready         23.67      0.587     0.882    0.0     1.00    1.00
+  hold          23.65      0.577     0.966    0.0     1.00    1.00
+  push          23.62      0.593     0.949    0.0     1.00    1.00
+
+10-23 (172853): battery 24.74 -> 23.48 V; allocator-saturation log lines: 2
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         24.10      0.576     0.806    0.0     0.49    1.00
+  go_to_start   23.94      0.580     0.831    0.0     1.00    1.00
+  ready         23.84      0.582     0.868    0.0     1.00    1.00
+  hold          23.81      0.584     0.836    0.0     1.00    1.00
+
+10-24 #1 (150423): battery 24.76 -> 23.62 V; allocator-saturation log lines: 5
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         24.22      0.577     0.811    0.0     0.55    1.00
+  go_to_start   24.07      0.583     0.857    0.0     1.00    1.00
+  ready         23.95      0.578     0.965    0.0     1.00    1.00
+  hold          23.91      0.553     0.996    0.6     1.00    1.00
+  push          23.90      0.577     0.999    1.0     1.00    1.00
+
+10-24 A (162850): battery 24.86 -> 23.57 V; allocator-saturation log lines: 1
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         24.24      0.577     0.797    0.0     0.41    1.00
+  go_to_start   24.06      0.579     0.863    0.0     1.00    1.00
+  ready         23.94      0.580     0.866    0.0     1.00    1.00
+  hold          23.93      0.578     0.877    0.0     1.00    1.00
+  push          23.89      0.593     0.870    0.0     1.00    1.00
+
+10-24 B (163413): battery 24.30 -> 22.95 V; allocator-saturation log lines: 0
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         23.61      0.595     0.818    0.0     0.44    1.00
+  go_to_start   23.43      0.600     0.869    0.0     1.00    1.00
+  ready         23.31      0.601     0.872    0.0     1.00    1.00
+  hold          23.29      0.603     0.847    0.0     1.00    1.00
+
+10-24 C (164419): battery 24.68 -> 23.71 V; allocator-saturation log lines: 0
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         24.29      0.574     0.794    0.0     0.55    1.00
+  go_to_start   24.13      0.577     0.851    0.0     1.00    1.00
+  ready         24.02      0.580     0.847    0.0     1.00    1.00
+  hold          24.01      0.582     0.835    0.0     1.00    1.00
+
+10-24 #2 (151159): battery 23.72 -> 22.94 V; allocator-saturation log lines: 1
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         23.57      0.597     0.822    0.0     0.47    1.00
+  go_to_start   23.39      0.602     0.892    0.0     1.00    1.00
+  ready         23.27      0.601     0.879    0.0     1.00    1.00
+  hold          23.26      0.609     0.809    0.0     1.00    1.00
+
+10-24 #3 (151634): battery 23.49 -> 22.65 V; allocator-saturation log lines: 0
+  phase             V rotor mean rotor max  sat %  u1 mean  u1 max
+  hover         22.92      0.616     0.851    0.0     0.65    1.00
+  go_to_start   22.81      0.623     0.925    0.0     1.00    1.00

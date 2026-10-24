@@ -1,0 +1,3 @@
+10-21     gripped 40.0-45.6 s: claw - assumed grasp point = across   -5.5, along   +4.9, up   -3.9 mm (median); box yaw at rest   +1.5 deg
+10-23     gripped 48.4-48.8 s: claw - assumed grasp point = across   -1.5, along   -0.7, up   -4.5 mm (median); box yaw at rest   -0.7 deg
+10-24 #1  gripped 49.7-51.0 s: claw - assumed grasp point = across  -34.8, along   +2.3, up   -8.4 mm (median); box yaw at rest   -0.1 deg

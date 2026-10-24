@@ -1,0 +1,541 @@
+<title>1024 Box-Pushing Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: one full-width column (max 1040 px), numbered sections, data in panels.
+   Dark only, by the user's standing request: black page, near-black panels. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #141413;
+  --rule: #2a2a27;
+  --fg: #f0efec;
+  --fg2: #c3c2b7;
+  --muted: #8f8e86;
+  --accent: #d9a35c;
+  --s-claw: #3987e5;
+  --s-box: #d95926;
+  --s-base: #199e70;
+  --s-grip: #9085e9;
+  --f-a: #199e70;
+  --f-b: #d95926;
+  --f-c: #9085e9;
+  --bad: #e66767;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-head: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-head); font-size: 34px; line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--fg2); margin: 0; }
+h2 { font-family: var(--font-head); font-size: 24px; margin: 40px 0 10px; text-wrap: balance; scroll-margin-top: 16px; }
+h2 .n { color: var(--accent); margin-right: 10px; font-family: var(--font-mono); font-size: 20px; }
+h3 { font-size: 17px; margin: 26px 0 6px; text-wrap: balance; scroll-margin-top: 16px; }
+p { margin: 8px 0; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+code { font-family: var(--font-mono); font-size: 13px; color: var(--fg2); overflow-wrap: anywhere; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.verdict { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 18px; margin: 18px 0 6px; }
+.verdict p { margin: 4px 0; }
+.verdict strong { color: var(--accent); font-weight: 600; }
+nav.toc { margin: 20px 0 4px; font-size: 14px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+nav.toc a { color: var(--fg2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--fg); border-bottom-color: var(--accent); outline: none; }
+.tscroll { overflow-x: auto; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td:first-child { white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+tr.hi td { color: var(--fg); background: rgba(217, 163, 92, 0.08); }
+.bad { color: var(--bad); }
+figure { margin: 18px 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 14px 10px; }
+figcaption { color: var(--fg2); font-size: 14px; margin-top: 8px; }
+figcaption b { color: var(--fg); font-weight: 500; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg2); margin: 0 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 18px; height: 2px; display: inline-block; border-radius: 1px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--fg2) 0 4px, transparent 4px 7px); }
+.tip { position: absolute; pointer-events: none; background: #1f1f1d; border: 1px solid var(--rule); border-radius: 4px;
+  padding: 6px 9px; font-family: var(--font-mono); font-size: 12px; color: var(--fg); white-space: nowrap; }
+.tip .k { color: var(--muted); }
+footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+@media (max-width: 560px) { h1 { font-size: 27px; } h2 { font-size: 21px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">T650-AM whole-body · box pushing · 240 g · 2026-10-24</div>
+  <h1>1024 Box-Pushing Flights</h1>
+  <p class="sub">Six flights: three in the morning with the new q3 guard and close gate, three in the afternoon after
+  re-defining the box's mocap body. Why does the safety guard still trip, why do the jaws miss the fin, and what comes next?</p>
+</header>
+
+<div class="verdict">
+  <p><strong>Afternoon (A, B, C): the aim is fixed, the hand-over is not.</strong> With the jaws on the fin the claw now sits
+  1 mm from where the planner aims (35 mm in the morning).</p>
+  <p><strong>Every guard trip was real.</strong> Each time, the arm was being pulled toward its q2 wall at 40–65°/s; q3 bottomed at 6–12°.</p>
+  <p><strong>The pull comes from the hand-over at the end of Ready.</strong> The claw is 28–36 mm short of the fin along the push,
+  and the planner holds it in the room anyway, so the arm has to make up the gap. The base is short because of a 3–5° pitch error,
+  which the law turns into 0.7 mm of position error per mrad along the nose.</p>
+  <p><strong>The jaws "miss" because they never close.</strong> 28–36 mm short puts the claw at the fin's back end, outside the 25 mm
+  close gate. In B and C the guard aborted first.</p>
+  <p><strong>Next:</strong> keep the claw on the vehicle until it is within about 15 mm and slow, then hand it to the room hold.</p>
+  <p><strong>Morning (#1–#3):</strong> the new guard and gate worked. #1 failed on a 35 mm aim error (re-placed markers), and #3's box
+  was blown off the table by the downwash.</p>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <span class="eyebrow">Contents</span>
+  <ol>
+    <li><a href="#s1">1 The six flights</a></li>
+    <li><a href="#s2">2 Afternoon: why the guard trips and the jaws miss</a></li>
+    <li><a href="#s3">3 What to change before the next flight</a></li>
+    <li><a href="#s4">4 Morning: were the changes valid?</a></li>
+    <li><a href="#s5">5 Morning: why #1 looked less stable</a></li>
+    <li><a href="#s6">6 Morning: flights #2 and #3</a></li>
+    <li><a href="#s7">7 Battery and yaw budget</a></li>
+    <li><a href="#s8">8 Morning recommendations</a></li>
+  </ol>
+</nav>
+
+<h2 id="s1"><span class="n">1</span>The six flights</h2>
+<div class="tscroll"><table>
+  <tr><th>Flight</th><th>Outcome</th><th>Cause found in the data</th></tr>
+  <tr><td class="n">#1 15:04</td><td>Gripped and pushed about 70 mm, then the box-tilt guard aborted (box 6.3°)</td>
+      <td>The fin was 35 mm from the planner's aimed point, toward the near side of the table; closing the jaws dragged the box sideways</td></tr>
+  <tr><td class="n">#2 15:11</td><td>No grasp; q3 rate-guard abort 1.2 s after Ready</td>
+      <td>The claw arrived about 47 mm beside the real fin; the room hold stretched the arm</td></tr>
+  <tr><td class="n">#3 15:16</td><td>Box blown off the table during Go To Start; the operator aborted the descent</td>
+      <td>Downwash from 0.46 m above and 0.36 m behind the box; nothing checks the box before Ready</td></tr>
+  <tr class="hi"><td class="n">A 16:28</td><td>Gripped, pushed 154 of 150 mm; q3 rate-guard abort 0.7 s after the push, in the release</td>
+      <td>The box stuck for 3.5 s and then lurched 190 mm; the release started while the vehicle was still swinging</td></tr>
+  <tr class="hi"><td class="n">B 16:34</td><td>No grasp; q3 rate-guard abort 1.1 s after Ready</td>
+      <td>Ready ended with the base swinging back; the room hold made the arm reach</td></tr>
+  <tr class="hi"><td class="n">C 16:44</td><td>No grasp; q3 rate-guard abort 0.6 s after Ready</td>
+      <td>Ready ended 35 mm short; the room hold made the arm reach</td></tr>
+</table></div>
+
+<h2 id="s2"><span class="n">2</span>Afternoon: why the guard trips and the jaws miss</h2>
+<h3>The aim is fixed</h3>
+<p>All three flights used EE Offset (0, 0, 0.183). In A, with the jaws on the fin, the claw sat <span class="num">−1.1 mm</span> across from
+the mocap origin; in the morning it was <span class="num">−35 to −38 mm</span>. The re-defined box body puts the fin where the planner aims.</p>
+
+<h3>Ready ends 28–36 mm short, and the room hold makes the arm reach</h3>
+<p>The table gives the claw's error from the planner's own telemetry. "Short" is the distance along the push the claw still has to go
+(+ = not yet there, − = past it).</p>
+<div class="tscroll"><table>
+  <tr><th>Flight</th><th>Go To Start ends</th><th>Ready starts after</th><th>Ready ends</th><th>q3 in the next 1.5 s</th><th>Grasp</th></tr>
+  <tr><td>10-21</td><td class="n">+27 mm</td><td class="n">2.0 s</td><td class="n">+19 mm</td><td class="n">−0.4°</td><td>closed 2.8 s after Ready</td></tr>
+  <tr><td>10-23</td><td class="n">−35 mm</td><td class="n">1.7 s</td><td class="n">−16 mm</td><td class="n">0.0°</td><td>closed 3.2 s after Ready</td></tr>
+  <tr><td>10-24 #1</td><td class="n">−20 mm</td><td class="n">1.7 s</td><td class="n">+36 mm</td><td class="n">−1.8°</td><td>closed 1.9 s after Ready</td></tr>
+  <tr><td>10-24 #2</td><td class="n">−41 mm</td><td class="n">2.8 s</td><td class="n">+28 mm</td><td class="n bad">−22.0° at 51°/s</td><td>aborted 1.2 s after Ready</td></tr>
+  <tr class="hi"><td>A</td><td class="n">−46 mm</td><td class="n">2.2 s</td><td class="n">+29 mm</td><td class="n">−12.7° at 47°/s</td><td>closed 1.5 s after Ready</td></tr>
+  <tr class="hi"><td>B</td><td class="n">−51 mm</td><td class="n">1.6 s</td><td class="n">−28 mm</td><td class="n bad">−18.6° at 62°/s</td><td>aborted 1.1 s after Ready</td></tr>
+  <tr class="hi"><td>C</td><td class="n">−46 mm</td><td class="n">1.6 s</td><td class="n">+35 mm</td><td class="n bad">−16.2° at 47°/s</td><td>aborted 0.6 s after Ready</td></tr>
+</table></div>
+<p>When Ready's 3.2 s move ends, the planner switches the claw from following the vehicle to a fixed point in the room, blended over 1 s.
+The free-axis anchor ramps in over the same second and takes up only part of the along-push error. So for that second the arm has to
+close the gap itself: q2 rises and q3 falls. In C the base was 33 mm short and still; in B it was swinging back 65 mm in 1 s. The guard
+tripped at q3 17–18° in both. q3 then bottomed at 9–12° with q2 at 41–43° (#2: 6°). The guard was right to stop it.</p>
+<p>The morning's #1 had the same 36 mm shortfall, and its arm barely moved. Its base happened to be moving forward at the hand-over and
+closed the gap by itself within 0.7 s. Same software; the phase of the vehicle's swing decided it.</p>
+
+<figure>
+  <div class="legend" id="legend2"></div>
+  <div class="chart" id="chart2" role="img" aria-label="Flights A, B and C aligned at the end of Ready: the claw's shortfall along the push, and joints q2 and q3"></div>
+  <figcaption><b>Figure 2. The grasp hand-over, A, B and C, aligned at the end of Ready (t = 0).</b> Top: how far the claw is short of the
+  grasp point along the push (cut where the guard tripped); the band is the close gate's 25 mm. Bottom: q3 (solid) and q2 (dashed); the
+  10° line is the q3 guard's limit and 45° q2's wall. After t = 0 the arm folds toward q2's wall within half a second in B and C.
+  Hover for values.</figcaption>
+</figure>
+
+<h3>Why the jaws "miss" the fin</h3>
+<p>The gripper's close gate waits until the claw is within 25 mm of the grasp point, within 8 mm across, and slower than 30 mm/s. In B and C
+the claw never got that close before the guard aborted, so the jaws never closed (the finger stayed at +19 mm). The fin is 60 mm long along
+the push, so a claw 28–36 mm short sits at the fin's back end. Closing there would have caught the end of the fin or nothing; the gate
+was right to wait. In the morning's #2 the miss was the 35 mm aim error instead.</p>
+
+<h3>Why the base is short: a 3–5° pitch error</h3>
+<p>The CoM's along-push error follows its pitch attitude error, at <span class="num">0.56–0.71 mm per mrad</span> (correlation 0.84–0.95).
+The law's structure predicts <span class="num">0.71–0.75</span>: thrust over the position gain, about 36 N / 50 N/m. The attitude loop has no integral, so
+a pitch moment it does not know parks the attitude at moment / k_R, and the position loop then parks at that tilt times thrust / k_x.</p>
+<p>Pitch errors of 60–95 mrad (3.4–5.4°) appear twice per approach:</p>
+<ul>
+  <li><b>At the end of Go To Start.</b> The arm finishes unfolding and the vehicle stops; the base runs 45–68 mm past its point.</li>
+  <li><b>During Ready's 150 mm descent.</b> The base falls 30–45 mm behind.</li>
+</ul>
+<p>Each is a change of 0.15–0.25 N·m in the pitch moment. The fast estimate inside the observer sees it at once; the filtered
+estimate the law uses follows 1.5–2 s later (ω<sub>c,r</sub> 0.74 rad/s). Where the moment comes from is not in the bag: the arm unfolding
+during the final approach (the valve study's mechanism), and something during the descent above the table. Ready also starts only
+1.6–2.2 s after Go To Start, while the base is still 15–49 mm past its point.</p>
+
+<figure>
+  <div class="legend" id="legend3"></div>
+  <div class="chart" id="chart3" role="img" aria-label="Scatter of the CoM's along-push error against the pitch attitude error, flights A, B and C, with the predicted line"></div>
+  <figcaption><b>Figure 3. Along-push error against pitch error, Go To Start to the end of Ready, every 0.1 s.</b> The dashed line is the
+  prediction, thrust / k_x = 0.71–0.75 mm per mrad. Positive = the base short of its reference.</figcaption>
+</figure>
+
+<h3>Flight A: the push stuck, lurched, and the release came mid-swing</h3>
+<ol>
+  <li><b>The grasp survived.</b> q3 dipped 12.7° and the jaws closed 1.5 s after Ready, with the claw 7–12 mm from the grasp point.</li>
+  <li><b>The push stuck for 3.5 s.</b> q2 and q3 stood exactly still (zero velocity) from 48.0 to 51.5 s while the law raised j2's torque
+  from 0.89 to 1.33 N·m: joint stiction. The arm-side friction feed-forward follows measured velocity, so it gives a stuck joint nothing.
+  Meanwhile the vehicle drifted 27 mm back and dragged the box 22 mm back with it; the base fell 82 mm behind its reference.</li>
+  <li><b>The guards nearly tripped, on the wrong reading.</b> The observer booked the stuck joints as a 4.6 N contact force, against a
+  box that slides at about 0.6 N. The force guard reached 4.7 of its 5 N. The box-lag guard read only 22 of 40 mm, because its free-axis
+  correction excused about 60 mm.</li>
+  <li><b>Then the joints broke loose</b> at about 60°/s and threw the box 190 mm forward at up to 240 mm/s (planned: 21 mm/s). The push
+  ended at 154 of 150 mm with the vehicle swinging 65 mm sideways and about 110 mm along the push.</li>
+  <li><b>The release came mid-swing.</b> The automatic Exit started 0.24 s after the push, while the base moved back at about 100 mm/s.
+  The jaws take about 0.5 s to open, so the clamped arm stretched: q3 26 → 7°. The guard tripped at q3 17°.</li>
+</ol>
+
+<h2 id="s3"><span class="n">3</span>What to change before the next flight</h2>
+<ol>
+  <li><b>Settle before the room hold (planner code change).</b> After Ready's move, keep the claw following the vehicle, and hand it to
+  the room only when the claw is within about 15 mm of the grasp point (8 mm across) and slower than 30 mm/s for 0.5 s. Wait up to
+  about 6 s; if it does not settle, stay on the vehicle and say so. The arm then has to make up only a few millimetres, not 30. The arm
+  GS's 2.5 s close-gate timer must start at that hand-over, not at the end of Ready.</li>
+  <li><b>Start Ready after Go To Start's overshoot has settled.</b> Start the automatic Ready on the claw's error and speed rather than
+  after a fixed 1.0 s (<code>push_pull_auto_ready_delay_s</code>), or raise the delay to about 3 s as a stop-gap.</li>
+  <li><b>Release only when the vehicle is calm.</b> Start the automatic Exit on the base's speed and CoM error, not 0.2 s after the
+  push.</li>
+  <li><b>The push's stick-slip needs its own fix.</b> A stuck arm gets no help from a friction feed-forward driven by measured velocity,
+  and the box guards read the stuck phase as normal. Try in Isaac first, with the hardware-like drift model and joint stiction.</li>
+  <li><b>Then reduce the pitch-moment change itself.</b> Unfold the arm before Go To Start's final straight run, not during it. Hover 10 s
+  at the Ready-end pose with the jaws open, to see whether the moment stays (an effect near the table) or decays.</li>
+  <li><b>Do not loosen the q3 guard.</b> In every afternoon trip the arm was being pulled into its q2 wall at 40–65°/s. Remove the pull.</li>
+</ol>
+
+<h2 id="s4"><span class="n">4</span>Morning: were the changes valid?</h2>
+<h3>The close gate closed early and calm</h3>
+<p>On flight #1 the gripper closed <span class="num">1.49 s</span> after Ready, with the claw <span class="num">14 mm</span> from the aimed
+point, <span class="num">7.5 mm</span> across it and moving at <span class="num">13 mm/s</span>. The old 3 mm gate would have kept waiting.
+The open-jaw hold before the close was the calmest of all three hardware pushes:</p>
+<div class="tscroll"><table>
+  <tr><th>Push</th><th>Hold before the close</th><th>CoM error across, rms / max</th><th>Arm motion in the hold</th></tr>
+  <tr><td>10-21</td><td class="n">3.0 s</td><td class="n">14 / 32 mm</td><td>q2 16–39°, q3 12–45° (along-arm swing)</td></tr>
+  <tr><td>10-23</td><td class="n">2.8 s</td><td class="n">34 / 46 mm</td><td>q1 −8.7…−0.3° (sideways twist)</td></tr>
+  <tr class="hi"><td>10-24 #1</td><td class="n">1.5 s</td><td class="n">4 / 8 mm</td><td>q2 32.2–32.3°, q3 26.5–28.4° (still)</td></tr>
+</table></div>
+<h3>The q3 guards behaved correctly</h3>
+<ul>
+  <li>Flight #1: silent; q3 never went below <span class="num">14.2°</span>.</li>
+  <li>Flight #2: fired on a real fast fold, q3 <span class="num">15.3°</span> falling at <span class="num">47°/s</span>.
+  q2 was at <span class="num">39°</span>, 6° short of its stop, so the new q2 credit correctly gave nothing.</li>
+</ul>
+<h3>One weakness the flight exposed</h3>
+<p>The gate's speed check looks at the claw. While the claw is held in the room, the arm absorbs the drone's motion, so the claw read
+13 mm/s while the drone was already drifting sideways at 20–40 mm/s. A check on the drone's speed would have held the close about 0.5 s.</p>
+
+<h2 id="s5"><span class="n">5</span>Morning: why #1 looked less stable</h2>
+<h3>The fin was 35 mm from where the planner aimed</h3>
+<p>While the jaws hold the fin, the claw is on the fin. So the planner's model claw minus the grasp point it computes from the box's mocap
+pose (<code>obj_0</code> + EE offset) measures where the fin really is:</p>
+<div class="tscroll"><table>
+  <tr><th>Push</th><th>Across the fin</th><th>Along the push</th><th>Up</th></tr>
+  <tr><td>10-21</td><td class="n">−5.5 mm</td><td class="n">+4.9 mm</td><td class="n">−3.9 mm</td></tr>
+  <tr><td>10-23</td><td class="n">−1.5 mm</td><td class="n">−0.7 mm</td><td class="n">−4.5 mm</td></tr>
+  <tr class="hi"><td>10-24 #1</td><td class="n bad">−34.8 mm</td><td class="n">+2.3 mm</td><td class="n">−8.4 mm</td></tr>
+</table></div>
+<p>The model error is a few millimetres (10-21, 10-23). On 10-24 the aim was 35 mm off.</p>
+<p><b>Which way.</b> "Across" is the box's x axis, the jaws' closing axis (the fin is a 5 mm plate whose faces point along x). The box sat at
+yaw −0.1°, so box x is room x. The drone took off at x −1.47 and hovered behind the box with its nose toward −y, the push direction. The
+planner aims directly above the mocap origin (EE Offset 0, 0, 0.183). The real fin was 34.8 mm toward room −x of that point: the near side
+of the table, toward the take-off spot, which is the drone's right while it pushes. The fin did not move on the box. The markers were
+re-placed, so the mocap origin moved 35 mm toward the far side (+x) of the fin.</p>
+<p><b>Only the across offset is measured.</b> The closed jaws centre the 5 mm fin across, but the fin is 60 mm wide along the push and
+tall, so any shift of the origin along the push or up is not visible from the grip. The box's height is unchanged: z
+<span class="num">0.8498</span> on 10-24 against <span class="num">0.8508</span> on 10-21. The <span class="num">0.8704</span> on 10-23 came
+with the table at another place (box at x 1.31), so it says nothing about the markers.</p>
+
+<figure>
+  <div class="legend" id="legend"></div>
+  <div class="chart" id="chart" role="img" aria-label="Flight 1, 47 to 53 seconds: claw position across the fin, sideways drift of the drone and the box, and the gripper opening"></div>
+  <figcaption><b>Figure 1. Flight #1 around the grasp.</b> Top: the claw sat 24–26 mm beside the real fin through the hold, inside the jaws'
+  roughly 25 mm clearance; closing pulled it onto the fin. Middle: the drone was already drifting sideways from 48.85 s; during the close the box
+  moved with it (38 mm by 49.65 s). After the grip the drone swung out to 104 mm and back to −91 mm, while the clamped box stayed about 80 mm out. Bottom: the gripper closed from +19 to about −9 mm in 0.6 s.
+  Hover for values.</figcaption>
+</figure>
+
+<h3>What happened, in order</h3>
+<ol>
+  <li><b>Hold (47.52–49.02 s).</b> The claw held still, 24–26 mm beside the real fin, the near pad next to it.</li>
+  <li><b>Drift starts (from 48.85 s).</b> The drone began sliding sideways at 20–40 mm/s; the wrist rolled 4 → 10° to keep the claw still.</li>
+  <li><b>Close (49.02–49.65 s).</b> The pads pulled the claw onto the fin and dragged the 240 g box 38 mm sideways.</li>
+  <li><b>After the grip.</b> The drone swung out to 104 mm, then back to −91 mm by 52.7 s; the clamped box stayed about 80 mm out.
+  The roll attitude error reached 136 mrad, and one rotor pair hit 0.00 twice (49.05 and 49.60 s).</li>
+  <li><b>Abort (52.41 s).</b> The clamped box was dragged sideways and tilted 6.3°; the box-tilt guard aborted 1.26 s into the slide.</li>
+</ol>
+
+<h2 id="s6"><span class="n">6</span>Morning: flights #2 and #3</h2>
+<h3>#2: the claw missed the fin</h3>
+<p>The claw arrived about 12 mm from the aimed point, which with the 35 mm aim error put it about 47 mm beside the real fin, outside the
+jaws. It also drifted 6 → 43 mm short along the push during the hold. The room hold stretched the arm (q2 rising at 30°/s, q3 falling
+at 47°/s) until the rate guard aborted 1.2 s after Ready.</p>
+<h3>#3: the box was blown off before the descent</h3>
+<p>At the end of Go To Start (43.4–44.2 s) the box slid 15, then 46, then 122 mm, flipped and fell to the floor. The drone was hovering
+0.46 m above it and 0.36 m behind it, at the same place as on flights #1 and #2. Nothing noticed: the GS started Ready 2 s later toward
+the captured grasp point, and the operator aborted at 47.89 s. The box guards act only with the claw on the box.</p>
+
+<h2 id="s7"><span class="n">7</span>Battery and yaw budget</h2>
+<p>The afternoon flights started on 24.86, 24.30 and 24.68 V with hover commands of 0.577, 0.595 and 0.574, like the morning's #1:
+the battery did not limit them.</p>
+<div class="tscroll"><table>
+  <tr><th>Flight</th><th>Battery at start</th><th>Hover rotor command</th><th>CW − CCW pair</th><th>Rotor at a limit, hold + push</th></tr>
+  <tr><td>10-21</td><td class="n">24.30 V</td><td class="n">0.586</td><td class="n">+0.206</td><td class="n">0.6 %</td></tr>
+  <tr><td>10-23</td><td class="n">24.74 V</td><td class="n">0.576</td><td class="n">+0.204</td><td class="n">0.0 %</td></tr>
+  <tr class="hi"><td>10-24 #1</td><td class="n">24.76 V</td><td class="n">0.577</td><td class="n">+0.203</td><td class="n">5.7 %</td></tr>
+  <tr><td>10-24 #2</td><td class="n">23.72 V</td><td class="n">0.597</td><td class="n">+0.181</td><td class="n">0.0 %</td></tr>
+  <tr><td>10-24 #3</td><td class="n">23.49 V</td><td class="n">0.616</td><td class="n">+0.205</td><td class="n">—</td></tr>
+</table></div>
+<ul>
+  <li><b>The battery did not limit flight #1.</b> Its hover command matches 10-21 and 10-23. Flights #2 and #3 needed 3–7 % more
+  command on the weaker pack: the "flying lower" you saw.</li>
+  <li><b>The standing yaw imbalance is unchanged on every flight.</b> The clockwise pair runs 0.20 above the counter-clockwise pair
+  (the loose front-left arm, 10-14). It leaves the counter-clockwise pair about 0.48 from zero, so a hard transient saturates yaw first:
+  5.7 % of #1's hold and push.</li>
+</ul>
+
+<h2 id="s8"><span class="n">8</span>Morning recommendations</h2>
+<ol>
+  <li><b>Fix the aim (done for the afternoon flights: the fin is within 1 mm).</b> Best: move the box body's pivot in Motive back onto the fin's plane, directly below the fin as before. Quick fix
+  for the present markers: EE Offset x = −0.035 m (box frame; the sign follows from the measurement, fin = origin − 34.8 mm along box x).
+  The quick fix corrects only the across offset, because the along and vertical offsets of the new origin were not measured.
+  Placing the markers as in <code>Box_Assembly_Push.stl</code> makes the layout repeatable, but it does not set the origin by itself. Motive
+  puts a new body's pivot at the marker centroid, and for that layout the centroid is 10 mm across, 20 mm along and 30 mm above the box
+  centre. The planner's EE Offset (0, 0, 0.183) is measured from the box centre, so with an unmoved pivot the claw would aim 10 mm beside
+  the fin and 5 mm above its top. Either move the pivot to the box centre, or keep the centroid and use EE Offset (+0.010, −0.020, 0.153)
+  in the simulation's box axes (the signs depend on how the body's axes are set in Motive; the sizes do not). Before each
+  session, put the claw on the fin by hand and compare the planner's model claw with Get's grasp point: they must agree within about 5 mm.</li>
+  <li><b>Check the box before Ready and before the close.</b> Refuse if the live box moved more than about 10 mm or tilted more than about 2°
+  since Get. That would have stopped flight #3's descent toward an empty table.</li>
+  <li><b>Downwash.</b> Flight #3's box was blown off at the same hover point as #1 and #2. Use the heavier box (500 g target) or hover higher or
+  further back before Ready.</li>
+  <li><b>Add the drone's speed to the close gate.</b> Check its strictness on the three hardware holds first.</li>
+  <li><b>Fresh pack per push,</b> or check at least 24 V before Go To Start.</li>
+</ol>
+
+<footer>Bags: <code>docs/experimental_data_ros2_bag/1024 - T650-AM whole-body Box-Pushing-…/</code> (morning 150423, 151159,
+151634; afternoon 162850 = A, 163413 = B, 164419 = C).
+Analysis, tools and numbers: <code>docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261024/README.md</code>.</footer>
+</div>
+
+<script>
+const D = {"t": [47.0, 47.04, 47.08, 47.12, 47.16, 47.2, 47.24, 47.28, 47.32, 47.36, 47.4, 47.44, 47.48, 47.52, 47.56, 47.6, 47.64, 47.68, 47.72, 47.76, 47.8, 47.84, 47.88, 47.92, 47.96, 48.0, 48.04, 48.08, 48.12, 48.16, 48.2, 48.24, 48.28, 48.32, 48.36, 48.4, 48.44, 48.48, 48.52, 48.56, 48.6, 48.64, 48.68, 48.72, 48.76, 48.8, 48.84, 48.88, 48.92, 48.96, 49.0, 49.04, 49.08, 49.12, 49.16, 49.2, 49.24, 49.28, 49.32, 49.36, 49.4, 49.44, 49.48, 49.52, 49.56, 49.6, 49.64, 49.68, 49.72, 49.76, 49.8, 49.84, 49.88, 49.92, 49.96, 50.0, 50.04, 50.08, 50.12, 50.16, 50.2, 50.24, 50.28, 50.32, 50.36, 50.4, 50.44, 50.48, 50.52, 50.56, 50.6, 50.64, 50.68, 50.72, 50.76, 50.8, 50.84, 50.88, 50.92, 50.96, 51.0, 51.04, 51.08, 51.12, 51.16, 51.2, 51.24, 51.28, 51.32, 51.36, 51.4, 51.44, 51.48, 51.52, 51.56, 51.6, 51.64, 51.68, 51.72, 51.76, 51.8, 51.84, 51.88, 51.92, 51.96, 52.0, 52.04, 52.08, 52.12, 52.16, 52.2, 52.24, 52.28, 52.32, 52.36, 52.4, 52.44, 52.48, 52.52, 52.56, 52.6, 52.64, 52.68, 52.72, 52.76, 52.8, 52.84, 52.88, 52.92, 52.96, 53.0], "claw_fin": [22.3, 22.9, 23.3, 23.6, 23.1, 22.8, 23.4, 23.1, 22.4, 22.5, 22.8, 23.2, 22.7, 21.7, 22.0, 22.4, 22.5, 22.6, 22.9, 23.0, 23.2, 23.9, 24.1, 24.2, 24.7, 25.1, 25.2, 25.8, 25.8, 25.7, 25.4, 25.2, 24.7, 24.1, 24.9, 25.6, 25.3, 25.5, 25.5, 25.4, 25.2, 25.4, 25.3, 25.4, 25.1, 24.6, 24.6, 25.0, 25.6, 25.6, 25.8, 25.5, 25.0, 23.9, 23.3, 21.7, 18.8, 16.1, 13.4, 10.2, 7.6, 5.4, 2.6, -0.2, -1.5, -0.8, -0.0, 1.1, 2.8, 2.2, 1.9, 2.7, 2.8, 2.5, 2.3, 1.3, -0.4, -0.4, -0.5, 0.1, 0.5, -0.0, -0.5, -0.6, -1.9, -3.0, -2.4, -2.1, -1.4, -2.5, -3.3, -2.2, -2.2, -1.3, -0.8, 0.1, 1.0, 1.4, 1.1, 1.1, 0.2, -0.6, -1.5, -2.2, -3.0, -2.8, -2.2, -2.6, -3.4, -3.1, -2.9, -2.2, -2.5, -3.7, -3.9, -4.6, -6.2, -6.0, -4.7, -6.2, -7.2, -8.5, -9.5, -10.3, -12.1, -12.9, -12.4, -13.7, -15.9, -15.7, -16.3, -18.4, -19.3, -20.0, -21.0, -22.2, -22.3, -21.7, -20.7, -21.4, -21.8, -23.8, -23.9, -24.9, -25.5, -24.7, -24.7, -25.7, -26.1, -24.9, -24.3], "base_d": [-15.4, -14.0, -12.9, -12.0, -11.5, -10.6, -10.4, -10.2, -9.8, -9.3, -10.3, -10.2, -9.0, -7.9, -8.8, -8.6, -8.5, -7.8, -7.5, -7.4, -8.2, -6.8, -6.6, -6.4, -6.0, -5.5, -5.6, -5.2, -4.6, -4.7, -4.5, -4.2, -4.0, -4.4, -3.1, -2.7, -2.3, -2.3, -1.5, -1.6, -1.0, -0.8, -1.9, -0.3, -0.1, 0.0, 0.8, 1.2, 2.3, 3.2, 4.0, 5.2, 6.4, 8.2, 9.6, 11.9, 14.0, 16.8, 19.8, 23.1, 26.9, 31.0, 34.3, 38.2, 43.0, 47.4, 52.9, 56.3, 62.2, 66.8, 72.4, 78.1, 83.6, 88.4, 92.8, 96.6, 98.0, 102.5, 103.8, 104.2, 103.6, 101.6, 99.8, 96.5, 91.4, 87.7, 81.9, 75.1, 69.6, 61.9, 54.1, 46.1, 36.7, 28.1, 19.1, 11.1, 2.6, -5.3, -12.8, -18.5, -23.9, -28.5, -31.2, -33.2, -33.7, -33.4, -32.5, -30.7, -27.2, -23.4, -19.1, -14.9, -10.4, -7.0, -3.8, 1.7, 4.9, 6.1, 9.0, 9.1, 8.2, 8.9, 7.2, 6.2, 3.9, 0.6, -2.6, -7.4, -12.1, -17.9, -22.7, -28.4, -34.7, -40.8, -48.4, -54.3, -60.3, -67.0, -72.9, -78.3, -82.8, -86.9, -89.8, -91.2, -90.8, -90.1, -87.1, -83.5, -80.3, -76.0, -71.3], "box_d": [-0.2, 0.1, 0.2, 0.2, 0.4, 0.4, -0.3, -0.2, 0.1, 0.2, 0.1, 0.0, 0.2, 0.2, 0.2, 0.2, 0.0, 0.2, 0.3, 0.3, 0.2, 0.2, 0.3, 0.4, 0.4, 0.5, 0.5, 0.1, 0.2, 0.0, 0.1, 0.2, 0.0, -0.1, -0.1, -0.1, 0.3, 0.1, 0.0, 0.1, 0.2, -0.0, 0.0, -0.0, -0.0, 0.0, 0.0, 0.1, 0.3, 0.6, 0.5, 1.1, 1.8, 3.0, 3.9, 5.8, 8.9, 12.5, 16.7, 21.2, 25.3, 29.6, 33.7, 37.1, 39.1, 39.4, 39.7, 40.4, 41.1, 42.2, 43.5, 45.1, 46.5, 47.8, 49.5, 51.5, 53.3, 54.1, 55.6, 56.2, 56.5, 56.5, 56.3, 55.6, 54.4, 53.4, 52.0, 50.6, 48.8, 47.7, 46.8, 45.5, 44.9, 43.2, 41.5, 39.7, 38.7, 38.1, 38.1, 38.6, 40.1, 41.4, 43.3, 45.3, 47.7, 49.5, 52.4, 55.2, 57.7, 60.1, 62.6, 64.9, 67.3, 70.0, 72.3, 74.4, 76.4, 77.9, 79.1, 80.8, 81.6, 82.1, 82.2, 81.7, 81.7, 81.0, 80.4, 80.4, 80.4, 79.6, 78.9, 78.5, 77.5, 76.2, 75.2, 74.7, 73.5, 73.2, 73.6, 74.9, 75.7, 76.1, 75.4, 76.0, 77.6, 77.8, 79.2, 80.5, 80.7, 81.0, 82.2], "grip": [19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 19.0, 18.8, 16.7, 14.6, 12.5, 10.3, 8.1, 5.9, 3.8, 1.6, -0.7, -2.9, -5.0, -7.1, -8.6, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -9.1, -8.8, -6.8, -4.7, -2.5, -0.3, 1.9, 4.1, 6.3, 8.5, 10.6, 12.8, 15.0, 17.1, 18.8], "events": [[47.52, "Ready done"], [49.02, "close"], [49.65, "gripped, push"], [51.15, "slide"], [52.41, "box-tilt abort"]]};
+const C = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const PANELS = [
+  { title: "claw minus the real fin, across [mm]", lo: -40, hi: 45, ticks: [-25, 0, 25],
+    series: [{ k: "claw_fin", name: "claw", c: "--s-claw" }],
+    refs: [{ y: 34.8, label: "planner's aimed point", dash: true }, { y: 0, label: "fin" }],
+    band: [-25, 25], bandLabel: "jaw clearance ≈ ±25" },
+  { title: "sideways drift since 48.80 s [mm]", lo: -100, hi: 115, ticks: [-100, -50, 0, 50, 100],
+    series: [{ k: "base_d", name: "drone", c: "--s-base" }, { k: "box_d", name: "box", c: "--s-box" }], refs: [{ y: 0 }] },
+  { title: "gripper finger [mm]", lo: -12, hi: 22, ticks: [-9, 0, 19],
+    series: [{ k: "grip", name: "gripper", c: "--s-grip" }], refs: [] },
+];
+const PHASES = [[47.52, 49.02, "hold"], [49.02, 49.65, "close"], [49.65, 51.15, "settle"], [51.15, 52.41, "slide"], [52.41, 53.0, "abort"]];
+function legend() {
+  const items = [["claw", "--s-claw"], ["drone", "--s-base"], ["box", "--s-box"], ["gripper", "--s-grip"]];
+  document.getElementById("legend").innerHTML = items.map(([n, c]) =>
+    `<span><i style="background:var(${c})"></i>${n}</span>`).join("") + `<span><i class="dash"></i>aimed point</span>`;
+}
+function draw() {
+  const host = document.getElementById("chart");
+  if (!D) { host.textContent = "No chart data."; return; }
+  const W = Math.max(320, host.clientWidth), ph = W < 600 ? 120 : 140, gap = 34, top = 40, left = 44, right = 18, bottom = 24;
+  const H = top + PANELS.length * ph + (PANELS.length - 1) * gap + bottom;
+  const t0 = D.t[0], t1 = D.t[D.t.length - 1];
+  const X = (t) => left + (t - t0) / (t1 - t0) * (W - left - right);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  PANELS.forEach((p, i) => {
+    const y0 = top + i * (ph + gap), Y = (v) => y0 + (p.hi - v) / (p.hi - p.lo) * ph;
+    PHASES.forEach(([a, b, n], j) => {
+      if (j % 2 === 0) s += `<rect x="${X(a)}" y="${y0}" width="${X(b) - X(a)}" height="${ph}" fill="${C("--fg")}" fill-opacity="0.04"/>`;
+      if (i === 0) s += `<text x="${(X(a) + X(b)) / 2}" y="12" text-anchor="middle">${n}</text>`;
+    });
+    if (p.band) s += `<rect x="${left}" y="${Y(p.band[1])}" width="${W - left - right}" height="${Y(p.band[0]) - Y(p.band[1])}" fill="${C("--s-claw")}" fill-opacity="0.07"/>` +
+      `<text x="${W - right - 4}" y="${Y(p.band[1]) + 13}" text-anchor="end">${p.bandLabel}</text>`;
+    p.ticks.forEach((v) => {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C("--rule")}" stroke-width="1"/>` +
+        `<text x="${left - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+    });
+    p.refs.forEach((r) => {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(r.y)}" y2="${Y(r.y)}" stroke="${C("--fg2")}" stroke-width="1" ${r.dash ? 'stroke-dasharray="4 3"' : 'stroke-opacity="0.5"'}/>`;
+      if (r.label) s += `<text x="${left + 4}" y="${Y(r.y) - 4}">${r.label}</text>`;
+    });
+    p.series.forEach((se) => {
+      const d = D.t.map((t, k) => `${k ? "L" : "M"}${X(t).toFixed(1)},${Y(Math.max(p.lo, Math.min(p.hi, D[se.k][k]))).toFixed(1)}`).join("");
+      s += `<path d="${d}" fill="none" stroke="${C(se.c)}" stroke-width="2" stroke-linejoin="round"/>`;
+    });
+    s += `<text x="${left}" y="${y0 - 7}" style="fill:${C("--fg2")}">${p.title}</text>`;
+  });
+  [48, 49, 50, 51, 52, 53].forEach((t) => {
+    s += `<text x="${X(t)}" y="${H - 6}" text-anchor="${t === 53 ? "end" : "middle"}">${t} s</text>`;
+  });
+  s += `<line id="xh" x1="0" x2="0" y1="${top}" y2="${H - bottom}" stroke="${C("--fg2")}" stroke-width="1" visibility="hidden"/>`;
+  s += `<rect id="hit" x="${left}" y="0" width="${W - left - right}" height="${H}" fill="transparent"/></svg>`;
+  host.innerHTML = s + `<div class="tip" id="tip" hidden></div>`;
+  const svg = host.querySelector("svg"), xh = svg.querySelector("#xh"), tip = host.querySelector("#tip");
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = t0 + (px - left) / (W - left - right) * (t1 - t0);
+    const k = Math.max(0, Math.min(D.t.length - 1, Math.round((t - t0) / (D.t[1] - D.t[0]))));
+    xh.setAttribute("x1", X(D.t[k])); xh.setAttribute("x2", X(D.t[k])); xh.setAttribute("visibility", "visible");
+    const ph_ = PHASES.find(([a, b]) => D.t[k] >= a && D.t[k] < b);
+    tip.innerHTML = `<div>${D.t[k].toFixed(2)} s${ph_ ? " · " + ph_[2] : ""}</div>` +
+      `<div><span class="k">claw−fin</span> ${D.claw_fin[k].toFixed(1)} mm</div>` +
+      `<div><span class="k">drone</span> ${D.base_d[k].toFixed(1)} mm · <span class="k">box</span> ${D.box_d[k].toFixed(1)} mm</div>` +
+      `<div><span class="k">gripper</span> ${D.grip[k].toFixed(1)} mm</div>`;
+    tip.hidden = false;
+    const tx = (X(D.t[k]) / W) * r.width;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, Math.max(4, tx + 12)) + "px";
+    tip.style.top = "8px";
+  };
+  svg.querySelector("#hit").addEventListener("pointermove", move);
+  svg.querySelector("#hit").addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+// ---- the afternoon figures (report_data_pm.json) ----
+const D2 = {"t": [-3.0, -2.96, -2.92, -2.88, -2.84, -2.8, -2.76, -2.72, -2.68, -2.64, -2.6, -2.56, -2.52, -2.48, -2.44, -2.4, -2.36, -2.32, -2.28, -2.24, -2.2, -2.16, -2.12, -2.08, -2.04, -2.0, -1.96, -1.92, -1.88, -1.84, -1.8, -1.76, -1.72, -1.68, -1.64, -1.6, -1.56, -1.52, -1.48, -1.44, -1.4, -1.36, -1.32, -1.28, -1.24, -1.2, -1.16, -1.12, -1.08, -1.04, -1.0, -0.96, -0.92, -0.88, -0.84, -0.8, -0.76, -0.72, -0.68, -0.64, -0.6, -0.56, -0.52, -0.48, -0.44, -0.4, -0.36, -0.32, -0.28, -0.24, -0.2, -0.16, -0.12, -0.08, -0.04, 0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.44, 0.48, 0.52, 0.56, 0.6, 0.64, 0.68, 0.72, 0.76, 0.8, 0.84, 0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12, 1.16, 1.2, 1.24, 1.28, 1.32, 1.36, 1.4], "flights": {"A": {"tag": "162850", "short": [108.6, 112.1, 114.9, 117.8, 120.4, 123.0, 125.3, 127.1, 128.9, 129.9, 130.8, 131.5, 131.9, 132.2, 131.8, 131.1, 130.3, 129.1, 127.9, 126.2, 124.3, 122.3, 120.3, 118.2, 115.9, 113.6, 111.2, 108.4, 105.6, 102.7, 99.7, 96.8, 94.2, 91.7, 89.4, 87.3, 85.3, 83.4, 81.5, 79.6, 77.7, 75.7, 73.1, 70.6, 67.8, 65.0, 62.4, 60.0, 57.6, 55.4, 53.2, 51.0, 48.8, 46.7, 44.6, 42.5, 40.6, 39.0, 37.3, 35.9, 34.6, 33.5, 32.8, 32.1, 31.4, 30.7, 30.1, 29.7, 29.2, 29.0, 28.9, 28.8, 28.9, 29.0, 29.1, 29.2, 29.4, 29.6, 29.8, 30.0, 30.2, 30.1, 29.3, 28.5, 27.5, 26.4, 25.5, 25.0, 24.6, 24.6, 24.8, 25.0, 25.7, 26.3, 26.3, 26.2, 25.9, 25.4, 24.8, 24.1, 23.3, 22.4, 21.5, 20.5, 19.2, 17.8, 16.3, 14.5, 12.7, 10.7, 8.7], "q2": [32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 32.9, 33.0, 33.5, 34.3, 35.3, 36.2, 37.1, 37.9, 38.5, 39.1, 39.3, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4, 39.4], "q3": [28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.8, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.7, 28.6, 28.3, 27.7, 26.5, 24.9, 23.1, 21.2, 19.4, 17.9, 16.7, 16.1, 16.1, 16.4, 17.1, 17.7, 18.3, 18.8, 19.1, 19.2, 19.2, 19.1, 19.1, 19.0, 19.1, 19.0, 19.1, 19.1, 19.1, 19.1, 19.1, 19.1, 19.1], "trip": null}, "B": {"tag": "163413", "short": [79.6, 80.6, 81.6, 82.6, 83.4, 84.2, 85.2, 86.1, 86.8, 87.2, 87.7, 88.2, 88.8, 89.2, 89.3, 89.4, 89.4, 89.4, 89.3, 88.9, 88.5, 88.2, 87.8, 87.0, 85.6, 84.1, 82.6, 81.2, 79.4, 77.3, 75.2, 72.7, 70.1, 67.3, 64.1, 60.9, 57.5, 54.1, 50.4, 46.1, 41.8, 37.4, 33.1, 28.6, 24.0, 19.4, 15.2, 10.9, 6.9, 3.2, -0.5, -3.9, -7.2, -10.4, -13.4, -16.3, -19.1, -21.9, -24.5, -26.7, -28.9, -30.5, -31.9, -33.2, -34.3, -35.3, -35.8, -36.1, -36.0, -35.4, -34.8, -33.7, -32.5, -31.2, -29.7, -28.1, -26.1, -24.0, -21.8, -19.3, -16.8, -14.0, -11.1, -8.3, -5.3, -2.3, 0.6, 3.5, 6.3, 8.8, 11.3, 13.6, 15.8, 18.1, 20.3, 22.6, 24.8, 27.0, 28.8, 30.1, 31.3, null, null, null, null, null, null, null, null, null, null], "q2": [36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.7, 36.6, 36.4, 36.0, 35.3, 34.6, 33.9, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.4, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.5, 33.6, 34.0, 35.0, 36.4, 38.0, 39.5, 40.9, 42.1, 42.8, 43.2, 43.3, 43.3, 43.3], "q3": [28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 27.9, 27.1, 25.7, 23.7, 21.2, 18.8, 16.3, 14.0, 12.1, 10.6, 9.7, 9.4, 9.4, 9.5], "trip": 1.09}, "C": {"tag": "164419", "short": [111.4, 111.6, 111.9, 112.3, 113.4, 114.6, 115.1, 115.5, 115.8, 116.1, 116.3, 116.4, 116.4, 116.3, 116.1, 115.9, 115.5, 115.1, 114.6, 113.6, 112.5, 111.6, 110.8, 109.8, 108.3, 106.8, 105.2, 103.6, 101.9, 100.2, 98.4, 96.4, 94.4, 92.5, 91.1, 89.7, 88.1, 86.3, 84.6, 83.0, 81.4, 79.9, 78.4, 76.9, 75.3, 73.7, 72.3, 71.1, 69.8, 68.4, 67.1, 65.3, 63.5, 61.7, 60.1, 58.5, 56.6, 54.4, 52.2, 50.2, 48.1, 46.3, 44.7, 43.1, 41.9, 40.6, 39.4, 38.2, 37.2, 36.9, 36.5, 36.2, 35.9, 35.6, 35.4, 35.2, 35.0, 34.8, 34.7, 34.9, 35.1, 35.1, 34.9, 34.6, 33.6, 32.6, 31.6, 30.5, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null], "q2": [33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.7, 33.6, 33.7, 33.7, 33.7, 33.7, 33.6, 33.7, 33.6, 33.6, 33.6, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.6, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.6, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 34.0, 34.9, 36.2, 37.7, 38.8, 39.9, 40.6, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0, 41.1, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0, 41.0], "q3": [28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.5, 28.4, 28.4, 28.3, 28.1, 28.1, 28.1, 28.1, 28.1, 28.1, 28.1, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 28.0, 27.8, 26.9, 25.6, 23.9, 22.0, 20.1, 18.3, 16.8, 15.6, 14.4, 13.2, 12.4, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9, 11.9], "trip": 0.56}}, "scatter": {"162850": {"eR": [76.9, 71.4, 66.3, 61.6, 57.8, 53.3, 48.4, 43.0, 38.3, 30.2, 26.0, 24.1, 21.2, 19.2, 19.2, 15.8, 15.8, 13.1, 11.2, 9.8, 10.0, 8.8, 8.2, 8.2, 8.8, 8.4, 8.6, 9.1, 6.7, 7.1, 7.0, 7.1, 8.5, 8.3, 11.3, 11.5, 11.4, 8.3, 8.8, 8.6, 7.4, 7.9, 6.9, 7.5, 7.6, 8.3, 5.8, 7.3, 9.2, 10.1, 15.9, 17.9, 15.5, 15.6, 17.4, 19.5, 21.9, 20.5, 19.4, 22.2, 21.1, 22.4, 22.6, 21.9, 23.3, 24.7, 25.6, 24.5, 23.9, 24.2, 23.8, 23.2, 25.5, 26.8, 28.1, 24.5, 24.4, 24.3, 26.1, 22.8, 20.3, 14.5, 3.5, -5.5, -15.6, -25.8, -31.0, -36.1, -38.4, -41.9, -46.3, -48.6, -50.8, -51.6, -53.0, -54.0, -52.1, -50.0, -48.3, -47.9, -49.4, -46.4, -39.6, -34.5, -35.9, -31.4, -29.8, -25.4, -22.8, -17.7, -14.4, -14.3, -13.4, -13.0, -11.2, -11.1, -11.1, -8.9, -6.6, -4.5, -3.9, -3.4, -2.1, -0.0, 4.4, 2.9, 3.6, 5.6, 8.2, 10.8, 11.0, 10.9, 11.4, 11.3, 11.9, 12.0, 12.6, 11.8, 11.0, 11.3, 10.8, 8.6, 8.2, 9.5, 8.7, 7.9, 9.0, 9.3, 6.2, 6.3, 5.8, 7.7, 8.0, 7.6, 5.3, 4.3, 2.2, 3.4, 3.5, 3.0, 4.0, 0.7, 2.3, 3.6, 4.1, 2.9, 2.7, 3.7, 6.1, 4.6, 1.8, 1.1, 1.3, 3.7, 3.8, 3.1, 0.8, 2.0, 0.6, 1.2, -2.0, -6.2, -8.4, -10.5, -10.3, -12.8, -13.4, -13.7, -15.1, -15.0, -18.1, -21.8, -23.1, -26.0, -27.3, -28.3, -33.1, -30.1, -33.0, -33.2, -31.9, -27.9, -22.7, -21.0, -16.5, -15.1, -11.7, -8.6, -11.5, -11.0, -11.3, -11.5, -6.8, -5.8, -3.6, -3.7, -5.4, -3.7, -0.1, 3.9, 7.8, 13.6, 18.3, 25.1, 26.0, 26.9, 28.1, 30.7, 31.2, 35.1, 29.0, 25.6, 20.4, 15.2, 10.6, 7.7, 5.1, -2.3, -4.3, -9.8, -13.4, -17.2, -26.1, -32.2, -39.5, -44.9, -50.6, -59.6, -64.4, -66.2, -64.3, -65.2, -66.8, -72.8, -77.1, -81.1, -86.3, -88.7, -88.8, -90.9, -93.7, -95.5, -94.9, -89.5, -89.5, -85.1, -79.6, -69.0, -58.6, -46.0, -33.8, -22.7, -14.3, -8.7, -0.3, 2.4, 8.7, 12.0, 13.6, 17.7, 18.8, 22.8, 24.8, 27.5, 28.2, 33.0, 35.9, 43.6, 46.7, 45.4, 42.8, 40.3, 40.2, 42.2, 41.2, 35.1, 36.4, 36.4, 36.5, 35.4, 34.8, 36.4, 38.5, 39.6, 41.2], "short": [-13.9, -11.5, -9.5, -8.1, -7.1, -6.7, -6.6, -6.5, -6.3, -5.6, -4.2, -2.7, -0.8, 1.1, 3.1, 4.4, 6.1, 7.3, 8.6, 9.3, 9.9, 9.9, 9.6, 9.1, 8.2, 6.9, 5.4, 3.8, 2.4, 1.1, -0.1, -0.7, -1.4, -1.9, -2.6, -3.0, -3.6, -4.0, -4.1, -3.7, -3.2, -2.3, -1.7, -0.6, 0.8, 2.3, 3.8, 5.5, 7.2, 9.2, 11.4, 13.4, 14.9, 15.8, 16.3, 16.4, 17.0, 17.7, 18.1, 18.8, 19.0, 19.2, 19.7, 20.0, 20.8, 21.4, 22.3, 23.0, 23.4, 23.2, 22.3, 21.0, 19.2, 17.6, 16.5, 15.8, 15.4, 15.2, 15.4, 16.1, 17.1, 17.8, 17.9, 16.6, 14.3, 10.9, 6.8, 2.7, -1.0, -4.4, -7.4, -10.0, -12.2, -13.8, -14.9, -15.5, -16.3, -16.8, -17.0, -16.8, -16.6, -16.4, -16.0, -15.0, -13.8, -12.2, -10.8, -9.4, -8.0, -6.5, -4.9, -3.3, -1.7, -0.5, 0.5, 1.2, 1.7, 2.1, 2.2, 2.4, 2.8, 3.6, 4.4, 5.4, 6.3, 7.5, 8.5, 9.3, 9.8, 10.3, 10.9, 11.4, 11.7, 11.8, 11.9, 12.0, 12.2, 12.3, 12.2, 12.0, 11.8, 11.4, 11.1, 10.7, 10.4, 10.0, 9.4, 9.3, 9.0, 8.9, 8.7, 8.5, 8.1, 8.0, 7.9, 7.8, 7.3, 6.7, 6.1, 5.7, 5.4, 4.9, 4.6, 4.1, 3.8, 3.7, 3.5, 3.4, 3.5, 3.9, 4.2, 4.0, 3.7, 3.3, 3.2, 3.2, 3.1, 2.9, 2.6, 2.3, 2.0, 1.5, 0.4, -1.2, -2.8, -4.5, -6.0, -7.6, -8.8, -9.7, -10.5, -11.4, -12.3, -13.7, -15.3, -16.8, -18.6, -20.0, -21.4, -22.6, -23.4, -24.0, -24.0, -23.0, -21.5, -19.3, -16.8, -14.0, -11.3, -9.1, -7.3, -6.2, -5.5, -5.0, -4.6, -4.1, -3.7, -3.2, -2.7, -2.2, -0.8, 1.2, 3.4, 6.6, 10.0, 13.3, 16.6, 19.6, 21.8, 24.0, 25.4, 25.9, 25.8, 24.4, 22.3, 19.2, 15.6, 11.5, 7.5, 3.4, -0.5, -4.1, -7.5, -11.2, -15.2, -19.8, -24.7, -29.8, -34.8, -40.0, -44.4, -47.9, -50.2, -51.7, -53.1, -54.2, -55.9, -57.7, -60.1, -62.2, -64.3, -66.4, -68.1, -69.2, -69.8, -69.4, -68.1, -65.9, -62.5, -57.7, -51.6, -43.9, -35.5, -26.6, -18.1, -10.1, -3.3, 2.7, 7.1, 10.7, 13.1, 14.6, 15.6, 16.4, 17.3, 18.4, 19.4, 21.0, 23.3, 26.3, 29.4, 31.7, 33.0, 33.7, 33.8, 33.4, 32.5, 31.1, 29.8, 28.5, 27.5, 26.8, 26.1, 25.9, 26.2], "slope": 0.556, "r": 0.835, "pred": 0.714}, "163413": {"eR": [18.6, 17.1, 17.1, 14.2, 10.5, 9.5, 7.6, 7.1, 7.1, 8.6, 8.8, 6.5, 3.8, -0.0, 2.6, 5.1, 5.5, 2.6, 2.8, 2.4, -2.6, -3.1, -4.5, -5.7, -5.6, -5.0, -5.7, -5.0, -5.1, -3.7, -0.5, 0.7, -1.7, 0.6, 1.8, 2.2, 4.4, 4.7, 3.3, -0.8, -3.0, -4.6, -2.6, -5.9, -9.0, -5.4, -6.4, -8.1, -5.6, -6.2, -10.0, -8.9, -10.1, -11.6, -12.1, -11.6, -13.6, -12.8, -11.2, -9.1, -11.8, -9.1, -6.6, -8.9, -8.8, -9.0, -9.0, -8.7, -7.4, -5.8, -5.6, -5.2, -3.8, -1.6, -0.8, -0.4, -2.0, -4.0, -2.5, -4.6, -6.1, -6.0, -5.0, -4.3, -5.0, -1.6, -1.0, 1.6, 1.2, 2.3, -0.6, 1.6, -0.3, -1.8, -0.9, -1.0, -0.5, 1.3, 0.3, -2.2, 3.0, 12.3, 20.8, 33.2, 40.8, 48.0, 52.4, 59.7, 63.1, 70.7, 67.7, 69.8, 70.1, 73.6, 72.5, 74.1, 72.1, 71.1, 72.6, 69.0, 70.9, 67.7, 65.1, 64.7, 62.1, 62.2, 62.1, 61.2, 59.7, 58.9, 54.9, 54.7, 53.7, 53.1, 49.4, 47.9, 48.4, 46.3, 45.6, 45.0, 44.0, 42.3, 44.8, 40.3, 40.0, 38.5, 38.4, 34.6, 34.6, 28.1, 23.8, 27.8, 24.6, 32.0, 24.5, 19.4, 16.7, 14.6, 13.4, 9.9, 10.8, 11.5, 15.1, 13.2, 12.7, 15.3, 17.6, 18.8, 15.5, 14.4, 12.2, 8.7, 6.1, 6.0, 6.8, 5.4, 6.9, 6.3, 8.2, 7.6, 7.3, 4.5, 6.3, 3.3, 4.0, 3.9, 1.7, 4.4, 0.9, -0.0, -0.5, -3.5, -5.0, -5.8, -5.6, -4.3, -0.6, -1.2, -1.3, 3.1, 9.0, 11.0, 17.6, 16.6, 14.6, 11.9, 12.6, 13.4, 10.2, 5.8, -2.0, -8.4, -11.2, -14.2, -15.9, -19.1, -24.0, -23.4, -21.3, -21.2, -21.6, -17.2, -16.1, -16.1, -17.9, -12.5, -14.8, -12.7, -10.1, -10.5, -3.7, -2.7, -4.0, -3.6, -8.8, -13.7, -20.6, -24.1, -28.0, -24.5, -19.4, -24.0, -24.3, -23.4, -27.8, -31.1, -36.7, -41.7, -47.1, -54.0, -56.2, -62.6, -66.6, -71.3, -72.8, -71.0, -71.8, -71.1, -71.3, -73.9, -73.9, -74.0, -70.9, -70.7, -71.7, -69.1, -67.5, -63.7, -59.3, -54.8, -52.2, -50.9, -51.1, -46.5, -42.6, -40.2, -32.8, -27.7, -24.3, -19.4, -14.6, -9.5, -8.4, -5.4, -6.2, -7.9, -11.9, -13.7, -19.6, -22.8, -26.9, -28.5, -32.8, -36.6, -41.4, -44.7, -45.7, -45.9, -43.8, -40.2, -35.0, -27.6, -19.5], "short": [5.7, 6.5, 6.8, 5.9, 4.5, 2.9, 1.3, -0.1, -1.1, -1.4, -1.6, -1.7, -1.6, -1.4, -1.5, -1.8, -2.0, -1.8, -1.8, -1.3, -0.9, 0.1, 1.2, 2.2, 3.2, 4.0, 4.9, 5.9, 6.6, 6.8, 6.7, 6.0, 4.8, 2.8, 0.4, -2.4, -5.1, -7.4, -8.9, -9.0, -7.8, -6.1, -3.6, -1.0, 1.7, 4.0, 5.7, 6.9, 7.4, 7.5, 7.2, 6.8, 5.9, 5.1, 4.9, 4.9, 5.5, 6.2, 6.9, 8.0, 8.8, 9.6, 10.1, 10.2, 10.5, 10.7, 10.7, 10.5, 10.4, 10.4, 10.4, 10.6, 10.8, 10.7, 10.4, 10.0, 9.7, 9.5, 9.0, 8.4, 8.1, 8.6, 9.4, 10.7, 11.8, 12.8, 13.2, 13.4, 13.2, 12.7, 11.8, 11.3, 10.7, 10.1, 9.6, 9.4, 9.4, 9.3, 9.5, 9.9, 10.1, 10.6, 11.6, 13.9, 17.3, 21.3, 25.7, 29.9, 33.8, 37.4, 40.7, 43.6, 46.0, 47.7, 48.8, 49.7, 50.0, 49.4, 48.5, 47.4, 46.8, 46.0, 45.7, 45.6, 45.6, 45.8, 45.9, 45.9, 46.2, 45.8, 45.3, 44.5, 43.5, 42.6, 41.6, 40.3, 39.0, 37.9, 37.2, 36.6, 35.8, 34.6, 33.9, 33.4, 32.9, 32.4, 31.9, 31.1, 30.2, 28.9, 27.3, 25.3, 23.5, 22.3, 21.1, 20.0, 18.8, 17.4, 16.1, 14.5, 13.2, 12.1, 11.5, 11.4, 11.5, 11.6, 12.1, 12.7, 13.6, 14.1, 14.4, 14.0, 13.2, 12.0, 10.4, 9.1, 7.8, 6.9, 6.4, 6.3, 6.4, 6.7, 6.8, 6.6, 6.6, 6.2, 5.5, 5.1, 4.0, 3.3, 2.4, 1.4, 0.3, -1.0, -2.5, -3.4, -4.1, -4.2, -4.1, -3.4, -2.0, -0.3, 2.6, 5.7, 8.8, 11.2, 12.9, 13.6, 13.4, 13.0, 11.6, 9.1, 5.9, 1.8, -2.7, -6.7, -10.7, -14.0, -16.8, -18.6, -19.6, -19.7, -18.9, -17.9, -16.4, -14.5, -12.8, -11.6, -10.4, -9.2, -7.7, -6.4, -4.8, -3.3, -2.5, -2.3, -3.3, -5.4, -8.5, -12.1, -15.2, -17.8, -19.5, -20.3, -20.6, -20.9, -21.6, -22.6, -24.4, -27.1, -30.6, -34.6, -38.8, -43.2, -47.5, -51.2, -54.3, -56.4, -57.6, -58.4, -58.7, -58.8, -58.6, -57.9, -57.3, -56.8, -55.8, -54.7, -53.6, -51.6, -49.4, -46.4, -43.4, -41.1, -38.6, -36.3, -33.6, -30.9, -27.8, -24.6, -21.1, -17.5, -13.6, -10.2, -7.0, -4.4, -2.9, -2.0, -2.7, -4.5, -7.4, -10.9, -14.5, -18.1, -21.5, -25.1, -28.6, -31.7, -34.0, -35.6, -36.0, -35.2, -33.1], "slope": 0.709, "r": 0.945, "pred": 0.754}, "164419": {"eR": [4.3, 3.8, 2.8, 3.8, -1.2, -3.2, -2.7, -3.2, -2.1, -9.5, -5.7, -4.5, -6.6, -4.8, -9.2, -7.3, -5.1, -8.2, -9.4, -11.2, -11.9, -16.3, -11.8, -14.3, -16.0, -15.2, -14.1, -12.8, -11.5, -15.4, -13.5, -15.4, -15.5, -18.4, -15.3, -15.7, -18.1, -17.4, -18.8, -19.3, -20.2, -18.9, -21.0, -21.2, -20.5, -23.1, -21.8, -24.3, -18.5, -18.4, -16.6, -16.3, -17.8, -14.8, -16.7, -13.5, -12.0, -14.5, -13.1, -16.8, -15.3, -14.8, -14.2, -16.9, -13.1, -17.0, -11.0, -12.3, -12.3, -11.4, -9.6, -9.1, -10.2, -10.9, -9.7, -10.8, -10.0, -10.4, -11.9, -12.1, -9.4, -7.8, -8.1, -7.4, -4.6, -6.4, -6.3, -4.0, -4.7, -3.2, -0.6, -0.0, -1.6, -0.3, -1.7, -1.2, 0.4, 1.6, 1.6, 5.5, 1.6, 5.7, 5.9, 8.7, 2.8, 9.8, 6.9, 9.0, 6.8, 11.3, 7.0, 10.3, 8.2, 16.5, 26.7, 23.9, 39.7, 37.3, 41.1, 46.7, 44.2, 50.7, 47.5, 50.4, 50.0, 45.1, 51.5, 55.8, 48.2, 45.8, 54.9, 53.5, 55.8, 56.7, 56.0, 52.1, 58.0, 54.7, 51.8, 54.0, 48.0, 58.7, 59.7, 48.6, 55.1, 52.4, 47.0, 45.8, 43.5, 41.3, 37.7, 53.4, 42.6, 37.6, 33.1, 33.4, 42.4, 34.4, 34.7, 30.4, 31.6, 33.5, 29.2, 31.6, 26.9, 32.4, 28.5, 33.7, 25.3, 38.1, 25.9, 27.3, 28.8, 32.8, 30.0, 29.0, 31.1, 25.0, 23.8, 26.5, 22.4, 23.4, 18.5, 14.9, 12.7, 15.2, 8.5, 6.7, 0.1, 1.0, 1.3, -2.4, -2.3, -6.9, -5.4, -7.8, -9.0, -7.0, -11.1, -9.3, -10.4, -8.6, -16.7, -11.7, -5.2, -15.6, -20.5, -24.5, -20.7, -36.3, -31.2, -29.6, -31.0, -28.4, -27.4, -27.0, -29.0, -36.5, -25.0, -35.0, -31.3, -23.1, -23.6, -26.0, -19.5, -13.9, -14.1, -12.6, -23.7, -11.3, -17.9, -9.9, -13.7, -13.4, -13.7, -22.9, -13.1, -11.6, -5.0, -10.7, -10.9, -13.1, -15.2, -11.4, -17.8, -30.3, -32.2, -35.6, -44.2, -51.3, -57.4, -60.3, -62.3, -60.6, -61.0, -48.9, -47.6, -42.6, -44.6, -42.5, -42.5, -44.8, -38.4, -39.4, -33.2, -30.9, -25.9, -32.7, -20.8, -16.1, -14.6, -19.1, -15.8, -15.2, -8.3, -6.2, 1.4, -3.5, 6.3, 8.2, 14.2, 16.7, 21.8, 24.1, 36.6, 35.3, 43.9, 47.3, 53.6, 55.3, 59.1, 58.9, 63.4, 56.1, 59.9, 53.1, 50.7, 46.5, 50.1, 46.5, 45.3, 45.7, 46.9, 52.8], "short": [-6.4, -6.2, -5.8, -5.0, -4.1, -3.3, -2.4, -1.4, -0.7, 0.2, 1.2, 2.2, 2.6, 2.9, 2.3, 1.6, 0.8, -0.2, -0.9, -1.6, -2.0, -2.0, -1.7, -1.2, -1.0, -0.8, -0.9, -0.5, -0.7, -0.8, -0.9, -1.0, -0.5, 0.1, 0.9, 1.8, 2.9, 4.0, 4.9, 5.6, 6.3, 5.9, 5.4, 4.8, 5.2, 6.1, 7.8, 9.0, 10.0, 10.6, 10.6, 10.4, 9.8, 9.1, 8.2, 7.8, 7.5, 7.3, 7.1, 7.2, 7.2, 7.2, 7.5, 7.6, 7.9, 8.0, 8.3, 8.8, 9.4, 9.6, 9.7, 10.0, 10.1, 10.3, 10.7, 11.2, 11.5, 12.1, 13.1, 14.1, 15.2, 16.2, 16.8, 17.2, 17.5, 17.5, 17.5, 17.4, 17.3, 17.0, 16.6, 16.1, 15.1, 14.3, 13.4, 12.6, 11.9, 12.4, 13.0, 13.7, 14.1, 14.7, 14.6, 15.2, 14.9, 14.9, 15.3, 15.8, 16.3, 17.1, 17.5, 18.2, 18.0, 18.1, 18.2, 18.1, 19.7, 21.1, 23.6, 26.0, 28.0, 30.0, 31.6, 33.0, 33.9, 34.5, 35.4, 36.1, 36.6, 36.4, 36.3, 36.3, 36.8, 37.2, 38.1, 39.3, 40.4, 41.6, 42.8, 43.0, 42.5, 41.5, 41.5, 41.2, 40.8, 40.1, 39.6, 38.8, 37.4, 35.7, 34.7, 34.3, 33.0, 32.3, 31.2, 30.5, 29.2, 28.5, 27.4, 26.5, 25.8, 25.1, 24.0, 23.2, 22.8, 22.0, 22.1, 21.8, 20.8, 21.3, 21.2, 21.4, 21.0, 20.9, 21.2, 21.5, 22.1, 22.0, 22.4, 22.2, 21.1, 20.3, 19.8, 18.1, 16.4, 14.6, 12.7, 10.9, 9.0, 7.3, 5.1, 3.1, 1.1, -0.8, -2.4, -3.8, -4.8, -5.5, -6.1, -6.7, -7.2, -7.2, -8.1, -8.7, -8.4, -8.4, -8.7, -9.5, -10.1, -13.1, -15.7, -18.4, -20.6, -22.1, -23.2, -23.1, -22.8, -23.0, -22.6, -22.8, -23.4, -22.2, -21.6, -20.0, -19.0, -17.2, -15.3, -13.1, -11.5, -10.1, -9.8, -9.5, -8.9, -8.8, -7.9, -8.1, -7.9, -8.3, -7.6, -7.7, -7.2, -7.0, -7.1, -7.3, -7.3, -8.7, -10.6, -13.5, -16.9, -21.1, -25.9, -31.0, -36.3, -41.1, -44.9, -46.9, -47.2, -45.8, -43.3, -40.2, -36.8, -34.1, -31.7, -30.3, -28.7, -27.1, -25.2, -23.6, -21.7, -19.7, -17.5, -15.6, -13.8, -12.4, -11.1, -9.9, -8.3, -6.8, -4.5, -2.3, -0.0, 2.3, 5.1, 8.1, 11.3, 14.7, 18.3, 22.7, 26.9, 31.2, 35.2, 39.1, 42.6, 45.2, 47.0, 47.8, 47.0, 45.3, 42.6, 40.2, 37.9, 35.5, 34.1, 33.4], "slope": 0.649, "r": 0.9, "pred": 0.708}}};
+const FL = [["A", "--f-a"], ["B", "--f-b"], ["C", "--f-c"]];
+function legend2() {
+  document.getElementById("legend2").innerHTML = FL.map(([n, c]) =>
+    `<span><i style="background:var(${c})"></i>${n}</span>`).join("") +
+    `<span><i style="background:var(--fg2)"></i>q3 (solid)</span><span><i class="dash"></i>q2 (dashed)</span>`;
+  document.getElementById("legend3").innerHTML = FL.map(([n, c]) =>
+    `<span><i style="background:var(${c})"></i>${n}</span>`).join("") + `<span><i class="dash"></i>prediction</span>`;
+}
+function draw2() {
+  const host = document.getElementById("chart2");
+  if (!D2) { host.textContent = "No chart data."; return; }
+  const W = Math.max(320, host.clientWidth), ph = W < 600 ? 130 : 160, gap = 34, top = 24, left = 44, right = 18, bottom = 24;
+  const P = [{ title: "claw short of the grasp point, along the push [mm]", lo: -40, hi: 150, ticks: [0, 25, 50, 100, 150] },
+             { title: "joints [deg]", lo: 0, hi: 50, ticks: [10, 20, 30, 40, 45] }];
+  const H = top + 2 * ph + gap + bottom, T = D2.t, t0 = T[0], t1 = T[T.length - 1];
+  const X = (t) => left + (t - t0) / (t1 - t0) * (W - left - right);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  const path = (arr, Y, p) => {
+    let d = "", pen = false;
+    arr.forEach((v, k) => {
+      if (v === null) { pen = false; return; }
+      d += `${pen ? "L" : "M"}${X(T[k]).toFixed(1)},${Y(Math.max(p.lo, Math.min(p.hi, v))).toFixed(1)}`; pen = true;
+    });
+    return d;
+  };
+  P.forEach((p, i) => {
+    const y0 = top + i * (ph + gap), Y = (v) => y0 + (p.hi - v) / (p.hi - p.lo) * ph;
+    if (i === 0) s += `<rect x="${left}" y="${Y(25)}" width="${W - left - right}" height="${Y(-25 < p.lo ? p.lo : -25) - Y(25)}" fill="${C("--s-claw")}" fill-opacity="0.07"/>` +
+      `<text x="${W - right - 4}" y="${Y(25) + 13}" text-anchor="end">close gate ±25 mm</text>`;
+    p.ticks.forEach((v) => {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C("--rule")}" stroke-width="1"/>` +
+        `<text x="${left - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+    });
+    if (i === 0) s += `<line x1="${left}" x2="${W - right}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C("--fg2")}" stroke-opacity="0.5"/>` +
+      `<text x="${left + 4}" y="${Y(0) - 4}">grasp point</text>`;
+    if (i === 1) {
+      s += `<line x1="${left}" x2="${W - right}" y1="${Y(10)}" y2="${Y(10)}" stroke="${C("--bad")}" stroke-dasharray="4 3"/>` +
+        `<text x="${left + 4}" y="${Y(10) - 4}">q3 guard 10°</text>` +
+        `<line x1="${left}" x2="${W - right}" y1="${Y(45)}" y2="${Y(45)}" stroke="${C("--fg2")}" stroke-dasharray="4 3"/>` +
+        `<text x="${left + 4}" y="${Y(45) - 4}">q2 wall 45°</text>`;
+    }
+    s += `<line x1="${X(0)}" x2="${X(0)}" y1="${y0}" y2="${y0 + ph}" stroke="${C("--fg2")}" stroke-opacity="0.6"/>`;
+    if (i === 0) s += `<text x="${X(0) + 4}" y="${y0 + 12}">Ready ends</text>`;
+    FL.forEach(([n, c]) => {
+      const f = D2.flights[n];
+      if (i === 0) s += `<path d="${path(f.short, Y, p)}" fill="none" stroke="${C(c)}" stroke-width="2" stroke-linejoin="round"/>`;
+      else {
+        s += `<path d="${path(f.q3, Y, p)}" fill="none" stroke="${C(c)}" stroke-width="2" stroke-linejoin="round"/>`;
+        s += `<path d="${path(f.q2, Y, p)}" fill="none" stroke="${C(c)}" stroke-width="1.5" stroke-dasharray="5 3"/>`;
+      }
+      if (f.trip !== null) s += `<line x1="${X(f.trip)}" x2="${X(f.trip)}" y1="${y0}" y2="${y0 + ph}" stroke="${C(c)}" stroke-width="1" stroke-dasharray="2 3"/>` +
+        (i === 1 ? `<text x="${X(f.trip) + 3}" y="${y0 + ph - 4}" style="fill:${C(c)}">${n} trip</text>` : "");
+    });
+    s += `<text x="${left}" y="${y0 - 7}" style="fill:${C("--fg2")}">${p.title}</text>`;
+  });
+  [-3, -2, -1, 0, 1].forEach((t) => { s += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle">${t > 0 ? "+" : ""}${t} s</text>`; });
+  s += `<line id="xh2" x1="0" x2="0" y1="${top}" y2="${H - bottom}" stroke="${C("--fg2")}" stroke-width="1" visibility="hidden"/>`;
+  s += `<rect id="hit2" x="${left}" y="0" width="${W - left - right}" height="${H}" fill="transparent"/></svg>`;
+  host.innerHTML = s + `<div class="tip" id="tip2" hidden></div>`;
+  const svg = host.querySelector("svg"), xh = svg.querySelector("#xh2"), tip = host.querySelector("#tip2");
+  const fmt = (v) => v === null ? "—" : v.toFixed(1);
+  svg.querySelector("#hit2").addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = t0 + (px - left) / (W - left - right) * (t1 - t0);
+    const k = Math.max(0, Math.min(T.length - 1, Math.round((t - t0) / (T[1] - T[0]))));
+    xh.setAttribute("x1", X(T[k])); xh.setAttribute("x2", X(T[k])); xh.setAttribute("visibility", "visible");
+    tip.innerHTML = `<div>${T[k] > 0 ? "+" : ""}${T[k].toFixed(2)} s</div>` + FL.map(([n]) => {
+      const f = D2.flights[n];
+      return `<div><span class="k">${n}</span> short ${fmt(f.short[k])} mm · q2 ${fmt(f.q2[k])}° · q3 ${fmt(f.q3[k])}°</div>`;
+    }).join("");
+    tip.hidden = false;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, Math.max(4, (X(T[k]) / W) * r.width + 12)) + "px";
+    tip.style.top = "8px";
+  });
+  svg.querySelector("#hit2").addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+function draw3() {
+  const host = document.getElementById("chart3");
+  if (!D2) { host.textContent = "No chart data."; return; }
+  const W = Math.max(320, host.clientWidth), H = Math.round(Math.min(420, W * 0.6)), top = 14, left = 48, right = 18, bottom = 34;
+  const xl = -110, xh = 80, yl = -80, yh = 60;
+  const X = (v) => left + (v - xl) / (xh - xl) * (W - left - right), Y = (v) => top + (yh - v) / (yh - yl) * (H - top - bottom);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  [-100, -50, 0, 50].forEach((v) => {
+    s += `<line x1="${X(v)}" x2="${X(v)}" y1="${top}" y2="${H - bottom}" stroke="${C("--rule")}"/>` +
+      `<text x="${X(v)}" y="${H - bottom + 14}" text-anchor="middle">${v}</text>`;
+  });
+  [-80, -40, 0, 40].forEach((v) => {
+    s += `<line x1="${left}" x2="${W - right}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C("--rule")}"/>` +
+      `<text x="${left - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+  });
+  const k = 0.73;
+  s += `<line x1="${X(xl)}" y1="${Y(k * xl)}" x2="${X(xh)}" y2="${Y(k * xh)}" stroke="${C("--fg2")}" stroke-dasharray="5 4"/>`;
+  const pts = [];
+  FL.forEach(([n, c]) => {
+    const tag = D2.flights[n].tag, sc = D2.scatter[tag];
+    sc.eR.forEach((e, i) => {
+      const yv = sc.short[i];
+      if (e < xl || e > xh || yv < yl || yv > yh) return;
+      pts.push([X(e), Y(yv), n, e, yv]);
+      s += `<circle cx="${X(e).toFixed(1)}" cy="${Y(yv).toFixed(1)}" r="2.2" fill="${C(c)}" fill-opacity="0.55"/>`;
+    });
+  });
+  s += `<text x="${(left + W - right) / 2}" y="${H - 4}" text-anchor="middle" style="fill:${C("--fg2")}">pitch attitude error [mrad]</text>`;
+  s += `<text x="12" y="${(top + H - bottom) / 2}" text-anchor="middle" transform="rotate(-90 12 ${(top + H - bottom) / 2})" style="fill:${C("--fg2")}">CoM short along the push [mm]</text>`;
+  s += `<circle id="hl3" r="5" fill="none" stroke="${C("--fg")}" visibility="hidden"/>`;
+  s += `<rect id="hit3" x="${left}" y="${top}" width="${W - left - right}" height="${H - top - bottom}" fill="transparent"/></svg>`;
+  host.innerHTML = s + `<div class="tip" id="tip3" hidden></div>`;
+  const svg = host.querySelector("svg"), hl = svg.querySelector("#hl3"), tip = host.querySelector("#tip3");
+  svg.querySelector("#hit3").addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width, py = (ev.clientY - r.top) * H / r.height;
+    let best = null, bd = 1e9;
+    pts.forEach((p) => { const d = (p[0] - px) ** 2 + (p[1] - py) ** 2; if (d < bd) { bd = d; best = p; } });
+    if (!best || bd > 400) { hl.setAttribute("visibility", "hidden"); tip.hidden = true; return; }
+    hl.setAttribute("cx", best[0]); hl.setAttribute("cy", best[1]); hl.setAttribute("visibility", "visible");
+    tip.innerHTML = `<div>${best[2]}: pitch error ${best[3].toFixed(1)} mrad</div><div><span class="k">short</span> ${best[4].toFixed(1)} mm</div>`;
+    tip.hidden = false;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, (best[0] / W) * r.width + 12) + "px";
+    tip.style.top = Math.max(4, (best[1] / H) * r.height - 40) + "px";
+  });
+  svg.querySelector("#hit3").addEventListener("pointerleave", () => { hl.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+legend();
+legend2();
+draw();
+draw2();
+draw3();
+let rz;
+window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { draw(); draw2(); draw3(); }, 120); });
+</script>

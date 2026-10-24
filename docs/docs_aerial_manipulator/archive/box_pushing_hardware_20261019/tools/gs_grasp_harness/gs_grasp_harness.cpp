@@ -26,6 +26,13 @@
 //      after the FLYING go_to_start -> DONE go_to_start edge (a settle refusal retried),
 //      Push on the FLYING ready -> DONE ready edge (the close at the gate, the push on the
 //      grasp); never on a latched DONE without the edge, never after ABORT in the delay
+//   P  (2026-10-24 afternoon) the planner's HAND-OVER SETTLE (info [87]): no close and no
+//      2.5 s limit while it settles, the close once it hands over; the settle's own limit
+//      (push_pull_box_settle_wait_max_s) aborts; the DONE ready status arriving before the
+//      info that says settling does not start the 2.5 s limit
+//   K  (2026-10-24 afternoon) the CALM automatic exit: while the vehicle (current_base) moves
+//      faster than 40 mm/s the exit waits, then starts 0.3 s after it is calm; never calm ->
+//      it starts anyway after 3 s; no current_base -> at the delay (the X cases)
 //
 // Prints "GSVAL <key> <value>" lines; the last is "GSVAL result PASS|FAIL ...".
 #include <QApplication>
@@ -45,6 +52,7 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -82,6 +90,13 @@ struct Rig
   double across{0.001}, along{0.0049}, sweep_mm_s{0.0}, sweep_amp{0.006}, sweep_stop_s{1e9};
   Clock::time_point t0{Clock::now()};
   State state{State::kOnHandle};
+  // (2026-10-24 afternoon) the hand-over settle: info [87] (published only with info_size 89;
+  // 69 = an older planner), and the vehicle's speed on current_base (< 0: not published)
+  size_t info_size{69};
+  bool settling{false};
+  double base_speed{-1.0}, base_x{0.0};
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr base_pub;
+  rclcpp::TimerBase::SharedPtr base_tick;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pl_status, status;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr info, arrival;
   std::vector<rclcpp::ServiceBase::SharedPtr> srvs;
@@ -96,11 +111,14 @@ struct Rig
     return n;
   }
 
-  Rig(const std::string & gov, bool simulation, State s, double auto_exit_s)
+  Rig(const std::string & gov, bool simulation, State s, double auto_exit_s, double settle_wait_s)
   : state(s)
   {
     node = std::make_shared<rclcpp::Node>("gs_grasp_harness", gov + "/fsc_open_manipulator");
     node->declare_parameter<bool>("simulation", simulation);
+    if (std::isfinite(settle_wait_s)) {
+      node->declare_parameter<double>("push_pull_box_settle_wait_max_s", settle_wait_s);
+    }
     // NaN = leave it undeclared: the panel then uses its OWN default (the X7 case, 2026-10-21)
     if (std::isfinite(auto_exit_s)) {node->declare_parameter<double>("push_pull_auto_exit_delay_s", auto_exit_s);}
     node->declare_parameter<double>("push_pull_release_timeout_s", 1.0);
@@ -138,6 +156,18 @@ struct Rig
             if (name == "push" && !push_ok) {push_ok = true;}   // refused once
           }));
     }
+    base_pub = planner->create_publisher<geometry_msgs::msg::PoseStamped>(
+      gov + "/whole_body_planner/current_base", 10);
+    base_tick = planner->create_wall_timer(std::chrono::milliseconds(67), [this]() {
+        if (base_speed < 0.0) {return;}
+        base_x += base_speed * 0.067;
+        geometry_msgs::msg::PoseStamped b;
+        b.header.frame_id = "map";
+        b.pose.position.x = base_x;
+        b.pose.position.z = 1.1;
+        b.pose.orientation.w = 1.0;
+        base_pub->publish(b);
+      });
     publishState();
     tick = planner->create_wall_timer(std::chrono::milliseconds(100), [this]() {
         if (state != State::kOnHandle) {return;}
@@ -181,7 +211,8 @@ struct Rig
   {
     const bool on = state != State::kAboveHandle;
     std_msgs::msg::Float64MultiArray m;
-    m.data.assign(69, 0.0);
+    m.data.assign(info_size, 0.0);
+    if (info_size >= 89) {m.data[87] = settling ? 1.0 : 0.0;}
     m.data[4] = 1.0;                  // planned
     // done: go_to_start / ready / push
     m.data[5] = state == State::kAboveHandle ? 0.0 : state == State::kPushed ? 2.0 : 1.0;
@@ -268,6 +299,7 @@ int main(int argc, char * argv[])
     std::function<void(Rig &)> act{};   // instead of / besides a press, at the same moment
     double auto_exit_s{1.0};           // push_pull_auto_exit_delay_s
     int tail_ms{900};                  // after the judge, before the next case
+    double settle_wait_s{NAN};         // push_pull_box_settle_wait_max_s (NaN: the panel's 6 s)
   };
   std::vector<Case> cases;
   const auto hw = [](Rig & r, int outcome, double pos) {r.close_outcome = outcome; r.close_pos = pos;};
@@ -532,6 +564,82 @@ int main(int argc, char * argv[])
         "C6_auto_close_after_the_sweep_stopped");
     }, [](Rig & r) {r.publishState();}, 1.0, 600});
 
+  // ---- the hand-over settle (2026-10-24 afternoon) -----------------------------------
+  cases.push_back({"P1_close_waits_for_the_hand_over", false, State::kOnHandle,
+    [&](Rig & r) {r.info_size = 89; r.settling = true; r.publishState("FLYING ready T=3.2s");},
+    "", 3000,
+    [&](Rig & r) {
+      check(r.count("close") == 0 && r.count("abort") == 0, "P1_no_close_no_abort_for_3s_while_settling");
+      check(r.lamp().find("settling") != std::string::npos, "P1_lamp_says_settling");
+      if (const char * dir = std::getenv("GS_GRASP_SHOT")) {   // the workflow page's picture
+        r.panel->grab().save(QString::fromLocal8Bit(dir) + "/gs_settle_wait.png");
+      }
+      r.settling = false;
+      r.publishState();
+      QTimer::singleShot(800, r.panel, [&]() {
+          check(r.count("close") == 1 && r.count("push") == 1 && r.count("abort") == 0,
+            "P1_closed_and_pushed_after_the_hand_over");
+        });
+    }, [](Rig & r) {r.publishState();}, 1.0, 1500});
+  cases.push_back({"P2_settle_limit_aborts", false, State::kOnHandle,
+    [&](Rig & r) {r.info_size = 89; r.settling = true; r.publishState("FLYING ready T=3.2s");},
+    "", 1000,
+    [&](Rig & r) {
+      check(r.count("abort") == 0, "P2_nothing_at_1s");
+      QTimer::singleShot(1000, r.panel, [&]() {
+          check(r.count("abort") == 1 && r.count("close") == 0, "P2_abort_at_1p5s_no_close");
+          check(r.lamp().find("did not settle") != std::string::npos, "P2_lamp_says_why");
+        });
+    }, [](Rig & r) {r.publishState();}, 1.0, 1500, 1.5});
+  cases.push_back({"P3_status_before_the_settling_info", false, State::kAboveHandle,
+    [&](Rig & r) {r.info_size = 89; r.publishState("FLYING ready T=3.2s");},
+    "", 3200,
+    [&](Rig & r) {
+      check(r.count("close") == 0 && r.count("abort") == 0, "P3_no_close_no_2p5s_abort_while_settling");
+      r.settling = false;
+      r.publishState();
+      QTimer::singleShot(800, r.panel, [&]() {
+          check(r.count("close") == 1 && r.count("abort") == 0, "P3_closed_after_the_hand_over");
+        });
+    }, [](Rig & r) {
+      std_msgs::msg::String st;   // the DONE ready status first, the info still the old one
+      st.data = "DONE ready next=push (settling: the claw 30 mm from the grasp point)";
+      r.pl_status->publish(st);
+      QTimer::singleShot(150, r.panel, [&r]() {
+          r.state = State::kOnHandle;
+          r.settling = true;
+          r.publishState();
+        });
+    }, 1.0, 1500});
+  // ---- the calm automatic exit (2026-10-24 afternoon) --------------------------------
+  cases.push_back({"K1_exit_waits_for_a_calm_vehicle", false, State::kPushing,
+    [&](Rig & r) {r.base_speed = 0.10;}, "", 1000,
+    [&](Rig & r) {
+      check(r.count("release") == 0 && r.count("open") == 0, "K1_no_release_while_moving_100mm_s");
+      check(r.lamp().find("calm") != std::string::npos, "K1_lamp_says_it_waits_for_calm");
+      if (const char * dir = std::getenv("GS_GRASP_SHOT")) {   // the workflow page's picture
+        r.panel->grab().save(QString::fromLocal8Bit(dir) + "/gs_exit_calm.png");
+      }
+      r.base_speed = 0.0;
+      QTimer::singleShot(1700, r.panel, [&]() {
+          check(r.count("release") == 1 && r.count("open") == 1 && r.count("exit") == 1,
+            "K1_release_open_exit_once_calm");
+        });
+    }, [](Rig & r) {r.finishPush();}, 0.2, 2200});
+  cases.push_back({"K2_never_calm_exits_after_3s", false, State::kPushing,
+    [&](Rig & r) {r.base_speed = 0.10;}, "", 2400,
+    [&](Rig & r) {
+      check(r.count("release") == 0, "K2_no_release_at_2p4s");
+      QTimer::singleShot(1700, r.panel, [&]() {
+          check(r.count("release") == 1 && r.count("exit") == 1, "K2_release_and_exit_by_4p1s");
+        });
+    }, [](Rig & r) {r.finishPush();}, 0.2, 2200});
+  cases.push_back({"K3_calm_vehicle_exits_at_once", false, State::kPushing,
+    [&](Rig & r) {r.base_speed = 0.005;}, "", 1400,
+    [&](Rig & r) {
+      check(r.count("release") == 1 && r.count("exit") == 1, "K3_release_and_exit_within_1p4s");
+    }, [](Rig & r) {r.finishPush();}, 0.2, 900});
+
   size_t next = 0;
   std::function<void()> run_next;
   run_next = [&]() {
@@ -544,7 +652,7 @@ int main(int argc, char * argv[])
       const std::string gov = "/uav_gsg" + std::to_string(next);
       ++next;
       rig.reset();
-      rig = std::make_unique<Rig>(gov, c.simulation, c.state, c.auto_exit_s);
+      rig = std::make_unique<Rig>(gov, c.simulation, c.state, c.auto_exit_s, c.settle_wait_s);
       c.setup(*rig);
       // let discovery, the latched topics and the parameter load settle, then press
       QTimer::singleShot(2500, &app, [&, c]() {
@@ -566,7 +674,7 @@ int main(int argc, char * argv[])
         });
     };
   QTimer::singleShot(500, &app, [&]() {run_next();});
-  QTimer::singleShot(180000, &app, [&]() {say("result", "FAIL timeout"); app.exit(1);});
+  QTimer::singleShot(300000, &app, [&]() {say("result", "FAIL timeout"); app.exit(1);});
   const int rc = app.exec();
   rig.reset();
   rclcpp::shutdown();
