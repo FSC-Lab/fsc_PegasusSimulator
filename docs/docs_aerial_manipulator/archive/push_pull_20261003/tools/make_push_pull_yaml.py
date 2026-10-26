@@ -84,10 +84,27 @@ OVERRIDES = {
     "wb_k_r": "1.6",
     "wb_k_w": "1.2",
     "wb_ky_x": "120.0",
-    "wb_ky_y": "120.0",
+    # THE PUSH AXIS AT NATURAL INERTIA (2026-10-25, after the 10-24 hardware pushes rocked
+    # the box at 0.47 Hz in contact): the law's arm term is Lambda M^-1 (D e_v + K e)
+    # - (Lambda M^-1 - I) F_hat_y, and along the push the natural task inertia is
+    # Lambda = 1.64 kg at the push pose [0, 28, 32, 0] against the designed M_y 1.0 -- the
+    # law fed 0.64 x the contact-force ESTIMATE back into the arm, the estimate that reads
+    # 1-1.5 N rms and stick-slips on hardware. M_y = 1.64 zeroes that term along the push;
+    # K_y and D_y are scaled by the same 1.64 (120 -> 196.8, 20.2 -> 33.128) so the spring
+    # and damper the arm APPLIES are exactly the 10-24 ones: in free flight (F_hat_y = 0,
+    # the 4-D design) the law is identical to the old one along any heading, and in contact
+    # the only difference is the dropped F_hat_y feedback. The box now sees the natural-
+    # inertia impedance 1.64 / 33.1 / 197 (claw deflection 3.6 mm at 0.7 N, was 5.8 mm
+    # rendered through the feedback). A version keeping K 120 / D 25.8 also softened the
+    # free-flight arm along y (Isaac 2 of 4 aborts before contact vs 0 of 4) -- replaced.
+    # M_Y IS A WORLD-AXIS DIAGONAL: world y is the push axis only when the box's mocap yaw
+    # is ~0 or ~180 deg; at 10 / 15 / 20 deg off, 97 / 94 / 89 % of the term is still
+    # removed; never ~+-90 (the push would then run along world x).
+    "wb_ky_y": "196.8",
     "wb_ky_z": "120.0",
     "wb_dy_x": "20.2",
-    "wb_dy_y": "20.2",
+    "wb_my_y": "1.64",
+    "wb_dy_y": "33.128",
     "wb_dy_z": "20.2",
     "wb_l1_omega_c_t": "1.0",
     "wb_l1_omega_x": "2.0",
@@ -214,7 +231,18 @@ PLANNER_BLOCK = """
     # 0.5 m), slide residual unchanged (0.57 vs 0.58 N). The claw moves 10 mm
     # forward / 9 mm up on the body; the skids stay 22 mm above the box top level,
     # beside it.
-    push_pull_push_pose_deg: [0.0, 32.0, 28.0, 0.0]
+    # 2026-10-25 (archive/box_pushing_pose_gain_20261025, user: 280 g, 0.40 m): the
+    # same 60 deg fold re-split to [0, 28, 32, 0]. On hardware (10-24 evening, 280 g)
+    # [0, 32, 28, 0] ran q2 19-45 (on its 45 deg wall 21 % of the push) and q3
+    # 13-44: the arm stretched toward the q3 guard, and the 510 g grasp straightened
+    # it through 0. Offline the vehicle may back away 28 mm from a clamped claw
+    # before q3 reaches 10 (was 22) and come 30 mm toward it before q3 reaches 50
+    # (was 36). Isaac, 280 g / 0.40 m / hardware-like drift, 2 seeds each: complete
+    # 2/2, q3 26.7-44.2 (was 14.2-40.2), q2 <= 33.4 (was 39.0), 0 s at either stop;
+    # [0, 22, 34, 0] had more margin but its claw (137 mm under the CoM) never
+    # settled after Ready in 1 of 2 (the station's 6 s limit). The claw moves 7 mm
+    # back and 6 mm down on the body (the vehicle flies 6 mm higher).
+    push_pull_push_pose_deg: [0.0, 28.0, 32.0, 0.0]
     # Approach: Go To Start holds the claw 0.12 m BEHIND and 0.15 m ABOVE the
     # grasp; Ready To Push slides it diagonally down-forward onto the fin (the
     # forward-pitched jaws straddle it). The vertical margin is the LANDING GEAR's:
@@ -449,8 +477,17 @@ PLANNER_BLOCK = """
     # wedged it in the open jaw), waits 1.0 s for the jaws (they take 0.75 s), backs
     # 3 cm off against the push, then climbs. Isaac 4b: with the old abort the climbing
     # open claw LIFTED a jammed 1 kg box 58 mm, it dropped off, and the vehicle flipped.
+    # 2026-10-25 (user, after the 10-24 evening 280 g push): NO back-off -- the abort
+    # holds while the jaws open, then climbs STRAIGHT up. The 3 cm back-off is a 3.0 s
+    # leg (the planner's minimum) at fin height with the jaws open; on 10-24 the
+    # vehicle drifted 30-50 mm in it, a jaw pushed the fin and the 280 g box tipped off
+    # the table. The fin's top is 25 mm above the grasp, so the open jaws clear it within
+    # ~1 s of the climb. (The valve has flown the straight climb since 10-18 for the same
+    # reason.) The 2026-10-16 reason for backing off first -- a climbing claw lifting a
+    # jammed box -- came from holding the CUT reference; the abort now holds the measured
+    # pose and waits for the jaws.
     push_pull_abort_from_measured: true
-    push_pull_abort_back: 0.03
+    push_pull_abort_back: 0.0
     push_pull_abort_release_wait_s: 1.0
     # THE UNBUCKLE (2026-10-21, the first hardware push; archive/box_abort_unbuckle_20261021):
     # the q3-guard trip held q2 on its +45 limit and q3 at ~2 deg -- the elbow-singular

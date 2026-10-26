@@ -22,12 +22,12 @@ safety margins (HW_PLANNER, HW_NODE below):
                           guard after 0.1 s -- at equal limits the node always wins and
                           hands over to SAFETY with the jaws still clamped on the box
                           (the valve's 2026-10-18 lesson). At 10 the planner's abort
-                          (jaws open, hold, back off, climb) runs first. 51 completed
+                          (jaws open, hold, climb) runs first. 51 completed
                           Isaac box-pushing missions peaked at 6.1 deg (p95 4.3); every
                           failure went past 12.
   push_pull_abort_release_wait_s 1.0 -> 1.5 (2026-10-19): an abort with the claw on the
                           fin holds the measured pose this long (the claw CoM-anchored,
-                          contact free) before it backs off and climbs. On hardware the
+                          contact free) before it climbs straight up (no back-off since 2026-10-25). On hardware the
                           planner's ABORTING reaches the laptop arm GS over WiFi, the GS's
                           OPEN goal comes back over WiFi, and the gripper then takes
                           0.65-0.70 s to settle open -- 1.0 s left 0.2-0.3 s for the two
@@ -93,6 +93,14 @@ HW_PLANNER = {
 HW_NODE = {
     "system_arm_go_home_delay_s": ("2.0", "the arm GS opens the jaws on a SAFETY revert; the "
                                    "real gripper needs ~0.7 s -- fold after it (free flight 1.0)"),
+    # 2026-10-25 (user, after the 10-24 510 g failure): SAFETY's tangent thrust map re-derived
+    # at the kf the allocator flies (4.260431e-05, t650_params' formula, m 3.746170, g 9.81),
+    # hover command 0.601 vs DIRECT's flown ~0.61; the bench-kf map (0.036758 / 0.241528,
+    # hover 0.579) sank the vehicle 0.27 m beside the table after the 10-24 revert
+    "vehicle_thrust_scaling": ("0.037947", "SAFETY map matched to the flown kf 4.260431e-05 "
+                               "(free flight: the bench-kf 0.036758) -- the revert no longer sinks ~0.2 m"),
+    "vehicle_idle_thrust": ("0.252449", "SAFETY map matched to the flown kf 4.260431e-05 "
+                            "(free flight: the bench-kf 0.241528)"),
 }
 
 HEADER = f"""# =============================================================================

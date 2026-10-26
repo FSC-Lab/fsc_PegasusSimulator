@@ -1,0 +1,21 @@
+194310 51.0-70.0s: lock-in at 0.474 Hz (period 2.11 s); phase relative to the CoM along error, + = leads
+  CoM along error [m]                        amp    0.0241  phase    +0.0 deg
+  vehicle along velocity [m/s]               amp    0.0673  phase   +91.0 deg
+  box along velocity [m/s]                   amp    0.0625  phase   +78.1 deg
+  friction on box [N]                        amp    0.4613  phase   -93.0 deg
+  pitch error e_R x (model) [rad]            amp    0.0355  phase  -100.7 deg
+  roll error e_R y (model) [rad]             amp    0.0231  phase   -87.2 deg
+  pitch moment deadbeat (model x) [N.m]      amp    0.1614  phase   -49.3 deg
+  pitch moment filtered d_hat_r x [N.m]      amp    0.0342  phase  -124.8 deg
+  force deadbeat along nose (model y) [N]    amp    1.2840  phase  +153.9 deg
+  force filtered d_hat_t y [N]               amp    0.1676  phase   +30.1 deg
+  force deadbeat z [N]                       amp    0.6005  phase  +143.4 deg
+  free-axis offset [m]                       amp    0.0179  phase    -0.7 deg
+  q2 [deg]                                   amp    4.9866  phase  +175.1 deg
+  q3 [deg]                                   amp    4.7142  phase    +3.8 deg
+  tau2 [N.m]                                 amp    0.0615  phase  -127.5 deg
+  tau3 [N.m]                                 amp    0.0091  phase    +1.5 deg
+  EE task error along (model y) [m]          amp    0.0025  phase  +140.8 deg
+  EE task error z [m]                        amp    0.0003  phase  +104.3 deg
+  F_hat_y consumed along [N]                 amp    0.3541  phase  +178.4 deg
+  F_hat_y consumed z [N]                     amp    0.0511  phase   +41.1 deg

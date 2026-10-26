@@ -1,0 +1,219 @@
+[20:11:44] start p3228_s1 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 push_pull_push_pose_deg=[0.0,32.0,28.0,0.0]
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  push_pull_push_pose_deg -> [0.0,32.0,28.0,0.0]
+[p3228_s1] completed
+[20:16:20] start p2832_s1 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 push_pull_push_pose_deg=[0.0,28.0,32.0,0.0]
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  push_pull_push_pose_deg -> [0.0,28.0,32.0,0.0]
+[p2832_s1] completed
+[20:20:55] start p2234_s1 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 push_pull_push_pose_deg=[0.0,22.0,34.0,0.0]
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  push_pull_push_pose_deg -> [0.0,22.0,34.0,0.0]
+[p2234_s1] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+[20:25:11] start p3228_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 push_pull_push_pose_deg=[0.0,32.0,28.0,0.0]
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  push_pull_push_pose_deg -> [0.0,32.0,28.0,0.0]
+[p3228_s2] completed
+[20:29:50] start p2832_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 push_pull_push_pose_deg=[0.0,28.0,32.0,0.0]
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  push_pull_push_pose_deg -> [0.0,28.0,32.0,0.0]
+[p2832_s2] completed
+[20:34:26] start p2234_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 push_pull_push_pose_deg=[0.0,22.0,34.0,0.0]
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  push_pull_push_pose_deg -> [0.0,22.0,34.0,0.0]
+[p2234_s2] completed
+[20:39:00] start h1b_p2832_s1 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1 push_pull_push_pose_deg=[0.0,28.0,32.0,0.0] wb_k_r=2.134 wb_k_w=1.567
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+  push_pull_push_pose_deg -> [0.0,28.0,32.0,0.0]
+  wb_k_r : 1.6 -> 2.134
+  wb_k_w : 1.2 -> 1.567
+[h1b_p2832_s1] completed
+[20:43:41] start h1b_p2832_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2 push_pull_push_pose_deg=[0.0,28.0,32.0,0.0] wb_k_r=2.134 wb_k_w=1.567
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+  push_pull_push_pose_deg -> [0.0,28.0,32.0,0.0]
+  wb_k_r : 1.6 -> 2.134
+  wb_k_w : 1.2 -> 1.567
+[h1b_p2832_s2] ABORTED: push-and-pull ABORTED while go_to_start complete: ABORTING (SAFETY GUARD: tilt 10.0 deg > 10.0 deg) -- gripper open, contact off, climbing 0.
+[20:46:52] queue empty -- simulation closed
+[20:47:22] STOP
+[20:47:27] RUNNER DONE
+[21:48:21] start abort8_p2832_s1 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--inject|abort@8.0 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+[abort8_p2832_s1] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+[21:52:33] start abort8_p2832_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--inject|abort@8.0 | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[abort8_p2832_s2] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+[21:56:47] start imp_s1 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=1
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 1
+[imp_s1] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+[22:01:12] start imp_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[imp_s2] completed
+[22:05:46] start base_s3 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3 wb_my_y=1.0 wb_dy_y=20.2
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+  wb_my_y : 1.64 -> 1.0
+  wb_dy_y : 25.8 -> 20.2
+[base_s3] completed
+[22:10:20] start imp_s3 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+[imp_s3] completed
+[22:15:01] start base_s4 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--stop-after-exit | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4 wb_my_y=1.0 wb_dy_y=20.2
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+  wb_my_y : 1.64 -> 1.0
+  wb_dy_y : 25.8 -> 20.2
+[base_s4] completed
+[22:18:40] start imp_s4 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--stop-after-exit | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=4
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 4
+[imp_s4] ABORTED: timeout (25 s): the GS's automatic Ready To Push  [mode=DIRECT plan=HOLD push_pull=DONE go_to_start next=ready (the gripper opens first) -- c
+[22:22:14] start imp_nom | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--stop-after-exit | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[imp_nom] completed
+[22:25:44] queue empty -- simulation closed
+[22:25:59] STOP
+[22:26:04] RUNNER DONE
+[22:46:41] start nat_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--stop-after-exit | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[nat_s2] completed
+[22:50:27] start nat_s3 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--stop-after-exit | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=3
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 3
+[nat_s3] completed
+[22:54:01] start nat_nom | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto|--stop-after-exit | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[nat_nom] completed
+[22:57:32] queue empty -- simulation closed
+[22:57:47] STOP
+[22:57:52] RUNNER DONE

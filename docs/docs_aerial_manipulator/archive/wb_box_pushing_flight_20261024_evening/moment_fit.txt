@@ -1,0 +1,32 @@
+194310 50.6..70.2: pitch moment (deadbeat, model x) = -0.131 + -0.1613 * F_box   corr -0.28  (claw 0.113 m below the CoM predicts slope ~ -/+0.11 m)
+  moment std: deadbeat 0.319, filtered 0.059 N.m; F_box std 0.56 N
+  box speed along push: mean 23.2 mm/s (plan 21.0), std 83.7, min -180, max 295
+  share of time moving BACKWARD (< -5 mm/s) 41%, ~still (|v|<5) 12%, forward 47%
+  direction reversals 17 in 19.6 s
+  CoM along-push error: rms 39 mm, p-p 167 mm, peak at 0.46 Hz
+  pitch error (model x): rms 54 mrad, range -118..143
+  CoM along-error follows F_box by 0.64 s, corr +0.81
+194310 52.0..62.0: pitch moment (deadbeat, model x) = -0.123 + -0.2059 * F_box   corr -0.36  (claw 0.113 m below the CoM predicts slope ~ -/+0.11 m)
+  moment std: deadbeat 0.319, filtered 0.061 N.m; F_box std 0.55 N
+  box speed along push: mean 31.3 mm/s (plan 21.0), std 83.7, min -108, max 295
+  share of time moving BACKWARD (< -5 mm/s) 35%, ~still (|v|<5) 12%, forward 53%
+  direction reversals 8 in 10.0 s
+  CoM along-push error: rms 39 mm, p-p 154 mm, peak at 0.20 Hz
+  pitch error (model x): rms 58 mrad, range -116..143
+  CoM along-error follows F_box by 0.60 s, corr +0.71
+194310 60.0..70.2: pitch moment (deadbeat, model x) = -0.155 + -0.0913 * F_box   corr -0.16  (claw 0.113 m below the CoM predicts slope ~ -/+0.11 m)
+  moment std: deadbeat 0.311, filtered 0.054 N.m; F_box std 0.56 N
+  box speed along push: mean 32.4 mm/s (plan 21.0), std 77.8, min -78, max 228
+  share of time moving BACKWARD (< -5 mm/s) 39%, ~still (|v|<5) 14%, forward 47%
+  direction reversals 9 in 10.2 s
+  CoM along-push error: rms 34 mm, p-p 114 mm, peak at 0.39 Hz
+  pitch error (model x): rms 49 mrad, range -118..80
+  CoM along-error follows F_box by 0.62 s, corr +0.90
+195657 52.7..53.8: pitch moment (deadbeat, model x) = +0.044 + -0.2690 * F_box   corr -0.86  (claw 0.113 m below the CoM predicts slope ~ -/+0.11 m)
+  moment std: deadbeat 0.148, filtered 0.060 N.m; F_box std 0.47 N
+  box speed along push: mean -36.1 mm/s (plan 21.0), std 33.1, min -83, max 2
+  share of time moving BACKWARD (< -5 mm/s) 62%, ~still (|v|<5) 38%, forward 0%
+  direction reversals 0 in 1.1 s
+  CoM along-push error: rms 17 mm, p-p 56 mm, peak at 0.91 Hz
+  pitch error (model x): rms 41 mrad, range -35..117
+  CoM along-error follows F_box by 0.28 s, corr +0.95

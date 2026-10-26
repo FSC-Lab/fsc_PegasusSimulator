@@ -1,0 +1,51 @@
+
+THE FLOWN POSE
+  pose [q2,q3] fold  reach   drop      h  skids sig_nd |  BACK AWAY (binds)    toward (binds)  vert |  tau2  tau3
+[0, 32, 28,0]   60    267    132    113    117  0.290 |    22 mm  q3 guard    36 mm   q3 stop    69 |  0.69  0.41
+
+largest BACK-AWAY stroke (the 10-24 failure direction); sigma_nd >= 0.15, skids >= 80 mm, toward >= 25 mm
+  pose [q2,q3] fold  reach   drop      h  skids sig_nd |  BACK AWAY (binds)    toward (binds)  vert |  tau2  tau3
+[0,  2, 38,0]   40    213    226    200    211  0.327 |    43 mm  q3 guard    25 mm   q3 stop    40 |  0.33  0.39
+[0,  4, 36,0]   40    217    225    199    210  0.320 |    39 mm  q3 guard    29 mm   q3 stop    48 |  0.35  0.39
+[0,  6, 36,0]   42    222    217    192    202  0.320 |    38 mm  q3 guard    28 mm   q3 stop    52 |  0.38  0.40
+[0,  8, 36,0]   44    227    210    184    195  0.320 |    38 mm  q3 guard    27 mm   q3 stop    58 |  0.41  0.40
+[0, 10, 36,0]   46    231    202    177    187  0.320 |    37 mm  q3 guard    27 mm   q3 stop    61 |  0.43  0.40
+[0, 12, 36,0]   48    235    194    170    179  0.320 |    36 mm  q3 guard    26 mm   q3 stop    64 |  0.46  0.40
+[0, 14, 36,0]   50    239    186    162    171  0.320 |    36 mm  q3 guard    26 mm   q3 stop    67 |  0.48  0.41
+[0,  6, 34,0]   40    221    224    198    209  0.313 |    35 mm  q3 guard    32 mm   q3 stop    50 |  0.37  0.39
+[0,  8, 34,0]   42    226    216    190    201  0.313 |    35 mm  q3 guard    31 mm   q3 stop    52 |  0.40  0.40
+[0, 16, 36,0]   52    242    177    154    162  0.320 |    35 mm  q3 guard    25 mm   q3 stop    70 |  0.51  0.41
+[0, 18, 36,0]   54    245    169    146    154  0.320 |    35 mm  q3 guard    25 mm   q3 stop    74 |  0.53  0.41
+[0, 20, 36,0]   56    248    160    139    145  0.320 |    35 mm  q3 guard    25 mm   q3 stop    78 |  0.55  0.41
+
+largest min(back away, toward)
+  pose [q2,q3] fold  reach   drop      h  skids sig_nd |  BACK AWAY (binds)    toward (binds)  vert |  tau2  tau3
+[0,  6, 34,0]   40    221    224    198    209  0.313 |    35 mm  q3 guard    32 mm   q3 stop    50 |  0.37  0.39
+[0,  8, 32,0]   40    226    222    196    207  0.306 |    32 mm  q3 guard    35 mm   q3 stop    46 |  0.40  0.39
+[0,  8, 34,0]   42    226    216    190    201  0.313 |    35 mm  q3 guard    31 mm   q3 stop    52 |  0.40  0.40
+[0, 10, 32,0]   42    231    215    189    200  0.306 |    31 mm  q3 guard    35 mm   q3 stop    48 |  0.43  0.40
+[0, 10, 34,0]   44    231    208    183    193  0.313 |    34 mm  q3 guard    31 mm   q3 stop    54 |  0.43  0.40
+[0, 12, 32,0]   44    235    206    182    191  0.306 |    31 mm  q3 guard    34 mm   q3 stop    51 |  0.45  0.40
+[0, 12, 34,0]   46    235    200    176    185  0.313 |    33 mm  q3 guard    30 mm   q3 stop    57 |  0.46  0.40
+[0, 14, 32,0]   46    239    198    174    183  0.306 |    30 mm  q3 guard    33 mm   q3 stop    53 |  0.48  0.40
+[0, 16, 32,0]   48    243    190    166    175  0.306 |    30 mm  q3 guard    33 mm   q3 stop    56 |  0.50  0.40
+[0,  4, 36,0]   40    217    225    199    210  0.320 |    39 mm  q3 guard    29 mm   q3 stop    48 |  0.35  0.39
+[0, 14, 34,0]   48    239    192    168    177  0.313 |    33 mm  q3 guard    29 mm   q3 stop    60 |  0.48  0.40
+[0, 16, 34,0]   50    243    184    160    169  0.313 |    33 mm  q3 guard    29 mm   q3 stop    63 |  0.51  0.41
+
+folds 55-70 (claw pitch 35-20 deg down, as flown 30), by back-away stroke
+  pose [q2,q3] fold  reach   drop      h  skids sig_nd |  BACK AWAY (binds)    toward (binds)  vert |  tau2  tau3
+[0, 20, 36,0]   56    248    160    139    145  0.320 |    35 mm  q3 guard    25 mm   q3 stop    78 |  0.55  0.41
+[0, 22, 34,0]   56    252    158    137    143  0.313 |    32 mm  q3 guard    28 mm   q3 stop    74 |  0.58  0.41
+[0, 24, 34,0]   58    254    149    128    134  0.313 |    31 mm  q3 guard    27 mm   q3 stop    78 |  0.60  0.41
+[0, 26, 34,0]   60    257    140    120    125  0.313 |    31 mm  q3 guard    27 mm   q3 stop    83 |  0.62  0.41
+[0, 28, 34,0]   62    258    131    112    116  0.313 |    31 mm  q3 guard    27 mm   q3 stop    82 |  0.64  0.41
+[0, 30, 34,0]   64    260    122    104    107  0.313 |    30 mm   q2 wall    27 mm   q3 stop    71 |  0.66  0.41
+[0, 24, 32,0]   56    256    155    134    140  0.306 |    28 mm  q3 guard    31 mm   q3 stop    70 |  0.60  0.41
+[0, 26, 32,0]   58    258    146    126    131  0.306 |    28 mm  q3 guard    30 mm   q3 stop    74 |  0.62  0.41
+[0, 28, 32,0]   60    260    137    118    122  0.306 |    28 mm  q3 guard    30 mm   q3 stop    80 |  0.64  0.41
+[0, 30, 32,0]   62    262    128    109    113  0.306 |    28 mm  q3 guard    30 mm   q3 stop    74 |  0.66  0.41
+[0, 32, 34,0]   66    261    113     95     98  0.313 |    27 mm   q2 wall    27 mm   q3 stop    60 |  0.68  0.41
+[0, 32, 32,0]   64    263    119    101    104  0.306 |    26 mm   q2 wall    30 mm   q3 stop    63 |  0.68  0.41
+
+345 poses inside the range with skids >= 50 mm; 174 with sigma_nd >= 0.15, skids >= 80 mm, toward >= 25 mm

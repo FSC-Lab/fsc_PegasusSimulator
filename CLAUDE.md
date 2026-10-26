@@ -6649,3 +6649,81 @@ Two mechanisms are visible:
 
 So 0.048 was conservative for force but NOT for stability. The options are the user's call: add
 shaft friction on the real valve, re-aim the claw at the live handle, or damp the q1/q4 mode.
+
+**1024 EVENING HARDWARE BOX PUSHES: THE 280 g PUSH GOES BACK AND FORTH, THE 510 g GRASP BUCKLED THE
+ARM (2026-10-25, user request: analyse; record `docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261024_evening/README.md`,
+figure `fig_flights.png`). Nothing changed in any repo.** **Box mass correction (user): the hardware box
+is 280 g, always** -- every earlier "240 g" hardware push (10-21, 10-23, 10-24) was 280 g; the second flight's
+box was 510 g (bag name "500g").
+- **280 g (`_194310`), 0.50 m at 21 mm/s:** the box reached its plan (495 vs 493 mm) when the BOX-TILT guard
+  aborted 4 s before the end (box rocked 2.6 deg sideways, lifted 3.6 mm, as the vehicle yanked it back at
+  -110 mm/s). **The back-and-forth = the vehicle oscillating along the push at 0.47 Hz (CoM 39 mm rms /
+  167 p-p, true tilt 2.1 deg along / 1.8 across vs 0.3 / 0.3 in the hover just before), carried onto the
+  clamped box by the free-axis anchor (claw target = 75 % of the CoM error)**: box backward 41 % of the
+  slide, 17 reversals, speed -180..+295 mm/s. Starts at the clamp: a ~0.4 N.m nose-down moment in the
+  deadbeat residual, learned in ~1.5 s (omega_c_r 0.74) while the vehicle pitches 7 deg and runs 79 mm.
+  Ruled out by the data: PX4 attitude estimate (0.2 deg vs mocap), rotor saturation, arm torque delivery,
+  battery. Present in EVERY hardware push (10-21 1.1/1.7, 10-24 A 1.9/1.4 deg in contact). **The
+  amplification mechanism is NOT resolved**: the exact-law bench + clamped Coulomb box (`tools/box_bench.py`)
+  does not reproduce it (with or without a clamp moment); hardware-level noise on the contact-only F_hat_y
+  rendering (Lambda_y 1.70 vs M_y 1 -> +0.70 x F_hat_y into u3; F_hat_y 1-1.5 N rms in flight) raises the
+  bench wander part of the way. Bench: free-axis anchor off buckles 3/3 (load-bearing); faster push does
+  not fix the vehicle wander.
+- **The 280 g abort knocked the box off the table**: the open claw stayed at fin height 4.5 s (1.5 s release
+  wait + 3 s "back 0.03 m" leg) while the vehicle drifted; a jaw pushed the fin and the box tipped over the
+  table's side at 75 s. Also a near-miss: in the abort's first 0.5 s (jaws still closed) q3 fell 30 -> 4.5 deg
+  with q2 on its 45 deg wall.
+- **510 g (`_195657`)**: after the close the vehicle pitched nose-up 114 mrad and backed off, dragging the
+  box 40 mm; q2 hit its 45 deg wall (arm straight), **the q3 rate guard fired at 53.68 s (q3 16 deg), q3 crossed 0
+  0.27 s later** with the jaws still opening (0.5 s); j2/j3 at the 3 N.m clamp, q2 whipped 45 -> -23 deg, tilt
+  15.2 deg -> node watchdog -> SAFETY at 55.05. In SAFETY the vehicle swung back over the table end with the arm
+  HANGING (q2 -18): the claw swept the box top and knocked it 95 mm; the claw dipped 2-15 cm below the table
+  top 8-13 cm from its edge; SAFETY sank 0.27 m (known bench-kf thrust-map gap + a 22.9 V pack); a skid end
+  crossed the table end at table-top height (within ~1 cm). The box-tilt guard missed firing first by a hair
+  (persistence reset by single samples). **Verdict: 500 g is not safe with this controller/abort -- showcase
+  280 g.** Proposed, NOT applied: G1 `push_pull_abort_back` 0 (straight climb), G2 SAFETY thrust map matched to
+  kf 4.260431e-05 (0.037947/0.252449), G3 fast CoM anchor + no mid-lurch hold on a stretch abort, G4 low-passed
+  box tilt, G5 SAFETY climb-away after a contact revert; for the wander: an A/B with `push_pull_contact: false`,
+  or k_R 2.134. Analysis traps: js column 4 (gripper) is METRES (open +0.019, closed on the fin -0.009);
+  pl_info's push heading is [81], not [80].
+
+**BOX PUSHING FOR THE 280 g / 0.40 m EXPERIMENT: PUSH POSE [0, 28, 32, 0], MATCHED SAFETY THRUST MAP, H1b
+REJECTED (2026-10-25, user decisions after the 10-24 evening flights; record
+`docs/docs_aerial_manipulator/archive/box_pushing_pose_gain_20261025/README.md`). Uncommitted.**
+- User: test only the 280 g box, push ~0.40 m (typed in the GS).
+- **SAFETY thrust map** in the HARDWARE box yaml only (`make_hw_box_pushing_yaml.py` HW_NODE):
+  0.036758 / 0.241528 (bench kf) -> 0.037947 / 0.252449, re-derived with t650_params' tangent formula at
+  the flown kf 4.260431e-05 (hover 0.579 -> 0.601 vs DIRECT's ~0.61). Both whole-body hardware stacks now
+  expect that pair on `AM_HW_PROFILE=box_pushing`, the bench pair elsewhere. Verify with a free-air revert.
+- **Push pose [0, 32, 28, 0] -> [0, 28, 32, 0]** (same 60 deg fold), from an offline stroke screen
+  (`wb_box_pushing_flight_20261024_evening/tools/pose_sweep.py`: how far the vehicle may move with the claw
+  clamped before a joint leaves its range; back-away 22 -> 28 mm, toward 36 -> 30 mm) and Isaac at 280 g /
+  0.40 m / hardware-like drift (2/2 complete, q3 26.7-44.2 vs 14.2-40.2, q2 <= 33.4 vs 39.0). [0, 22, 34, 0]:
+  claw 137 mm under the CoM, its Ready settle never converged in 1 of 2. Sim + hardware box yamls
+  regenerated (diff = the pose); both hardware stacks expect it (60/60 OK). The coordinated-admittance and
+  arbitrary-time box yamls are left at [32, 28] (STALE vs their generators; their recorded comparison flew it).
+- **H1b k_R/k_w 2.134 / 1.567 for the push: NOT adopted** -- in Isaac one run aborted before contact on a
+  growing 1.6 Hz tilt (the 10-02 mode), the other settled 5 s late. Box yaml stays 1.6 / 1.2.
+- **Isaac does not reproduce the hardware contact oscillation** (clamped tilt 0.4-1.0 vs 2.1 deg, box speed
+  std 19-27 vs 84 mm/s, q2 never on its wall); the hardware arm STICK-SLIPS in contact (q2/q3 stuck 35-41 %,
+  17-19 slips up to 77 deg/s; Isaac 17-44 deg/s). Rank hardware-oscillation fixes on hardware only.
+- Seen in every Isaac pose: the box moves 15-30 mm during the clamped 1.5 s hold, toward where the jaws
+  closed relative to the grasp point (the room target stays at the grasp point: 120 N/m x ~10 mm > the
+  0.7 N slide force); hardware 55 mm. Proposed (planner change, not built): start the push from where the
+  claw closed.
+**BOX PUSHING: THE PUSH AXIS AT NATURAL INERTIA FOR THE 10-26 HARDWARE TEST (2026-10-25, user:
+keep the chi switch, fix the impedance, check in Isaac; record `archive/box_pushing_pose_gain_20261025/README.md`
+section 5).** `wb_my_y` 1.0 -> **1.64** (= the natural task inertia along the push at [0, 28, 32, 0]),
+`wb_ky_y` 120 -> **196.8**, `wb_dy_y` 20.2 -> **33.128** (both x 1.64) in `make_push_pull_yaml.py`
+OVERRIDES; sim + hardware box yamls regenerated; both whole-body hardware stacks expect them on
+`AM_HW_PROFILE=box_pushing`. Parameters only -- law, code, observer and chi untouched. Removes the
+law's `-(Lambda_y M_y^-1 - I) F_hat_y` = 0.64 x the contact-force ESTIMATE along the push (1-1.5 N rms
+on hardware); the applied spring/damper are the 10-24 ones, so free flight is identical to the old
+law along any heading and in contact only that feedback is gone (the box sees 1.64 / 33.1 / 197).
+**M_Y is a WORLD-axis diagonal: box mocap yaw 0 or 180 +- 15 deg (97 % removed at 10, 94 % at 15,
+89 % at 20); never ~+-90.** Isaac (280 g / 0.40 m / drift): 3 of 3 complete, contact identical
+(Isaac does not show the hardware oscillation); cost: a stiffer 197 N/m spring pulls the box back
+harder at the clamp when the jaws close off the grasp point (22.6 vs 17.1 mm, seed 2). A first
+version (M 1.64, K 120, D 25.8) also softened the free-flight arm and had 2 of 4 pre-contact aborts
+(not separable from that) -- replaced. This folder's `pl_mission.py` gained `--stop-after-exit`
+(no way home / landing, ~45 s saved per run).

@@ -1,0 +1,39 @@
+A0 no box (hover on the push ref) [s1]         box v std  36.7 mm/s [  -62, 116] back  28% rev 37 | CoM al rms 25.3 p-p 116.8 mm | eR 35.4 mrad tilt  4.8 | q2 16.6..42.3 ( 0% >44) q3 14.0..43.8 | box-plan 19.3 mm tip 0.00 | q3 guard --
+A0 no box (hover on the push ref) [s2]         box v std  34.2 mm/s [  -77, 115] back  24% rev 36 | CoM al rms 19.5 p-p  88.6 mm | eR 31.9 mrad tilt  4.5 | q2 23.0..42.6 ( 0% >44) q3 14.0..37.4 | box-plan 14.9 mm tip 0.00 | q3 guard --
+A0 no box (hover on the push ref) [s3]         box v std  37.7 mm/s [  -97, 112] back  26% rev 35 | CoM al rms 19.8 p-p 104.2 mm | eR 31.4 mrad tilt  4.5 | q2 21.7..43.4 ( 0% >44) q3 13.7..38.8 | box-plan 15.1 mm tip 0.00 | q3 guard --
+A1 280 g, as flown [s1]                        box v std  29.3 mm/s [  -38, 125] back  11% rev 14 | CoM al rms 24.3 p-p 119.5 mm | eR 36.1 mrad tilt  4.9 | q2 17.0..43.3 ( 0% >44) q3 14.9..45.6 | box-plan 18.0 mm tip 0.61 | q3 guard --
+A1 280 g, as flown [s2]                        box v std  27.6 mm/s [  -54, 120] back  13% rev  8 | CoM al rms 18.7 p-p  73.6 mm | eR 30.7 mrad tilt  4.6 | q2 22.4..41.1 ( 0% >44) q3 16.1..38.3 | box-plan 13.2 mm tip 0.57 | q3 guard --
+A1 280 g, as flown [s3]                        box v std  31.5 mm/s [  -60, 114] back  12% rev 13 | CoM al rms 20.3 p-p  91.7 mm | eR 33.3 mrad tilt  4.4 | q2 21.3..42.4 ( 0% >44) q3 15.3..40.3 | box-plan 15.3 mm tip 0.65 | q3 guard TRIP -1.4s
+A2 280 g, as flown, no drift [s1]              box v std  23.6 mm/s [  -37,  97] back   7% rev 10 | CoM al rms 11.9 p-p  51.2 mm | eR 26.9 mrad tilt  4.1 | q2 24.4..41.0 ( 0% >44) q3 18.7..37.5 | box-plan  7.9 mm tip 0.58 | q3 guard --
+A2 280 g, as flown, no drift [s2]              box v std  28.7 mm/s [  -36, 130] back  11% rev 13 | CoM al rms 15.5 p-p  68.1 mm | eR 29.8 mrad tilt  4.6 | q2 22.2..39.2 ( 0% >44) q3 21.0..39.8 | box-plan 11.6 mm tip 0.62 | q3 guard --
+A2 280 g, as flown, no drift [s3]              box v std  26.8 mm/s [  -41, 116] back   6% rev  7 | CoM al rms 12.6 p-p  52.6 mm | eR 26.4 mrad tilt  3.9 | q2 21.3..36.7 ( 0% >44) q3 22.2..37.7 | box-plan  9.3 mm tip 0.60 | q3 guard --
+A3 510 g, as flown [s1]                        box v std  27.0 mm/s [  -11, 126] back   1% rev  1 | CoM al rms 23.7 p-p 120.1 mm | eR 36.1 mrad tilt  5.3 | q2 16.2..41.9 ( 0% >44) q3 18.3..48.2 | box-plan 17.3 mm tip 0.59 | q3 guard --
+A3 510 g, as flown [s2]                        box v std  26.2 mm/s [  -53, 118] back   8% rev  2 | CoM al rms 19.7 p-p  74.5 mm | eR 31.0 mrad tilt  5.0 | q2 20.7..42.0 ( 0% >44) q3 12.9..41.7 | box-plan 13.6 mm tip 0.56 | q3 guard --
+A3 510 g, as flown [s3]                        box v std  28.6 mm/s [  -26, 115] back   7% rev  4 | CoM al rms 20.3 p-p  91.6 mm | eR 33.2 mrad tilt  4.6 | q2 20.8..41.5 ( 0% >44) q3 17.3..42.6 | box-plan 16.2 mm tip 0.59 | q3 guard TRIP -1.4s
+B1 280 g, free-axis anchor OFF (w 0) [s1]      ABORT at 1.1 s
+B1 280 g, free-axis anchor OFF (w 0) [s2]      ABORT at 0.8 s
+B1 280 g, free-axis anchor OFF (w 0) [s3]      ABORT at 8.5 s
+B2 280 g, free-axis w 0.4 [s1]                 ABORT at 23.1 s
+B2 280 g, free-axis w 0.4 [s2]                 ABORT at 1.3 s
+B2 280 g, free-axis w 0.4 [s3]                 ABORT at 9.5 s
+B3 280 g, claw CoM-anchored (all axes) [s1]    box v std  41.8 mm/s [  -63, 161] back  20% rev 14 | CoM al rms 27.3 p-p 120.0 mm | eR 40.5 mrad tilt  4.4 | q2 25.9..34.8 ( 0% >44) q3 25.0..34.3 | box-plan 26.6 mm tip 0.62 | q3 guard --
+B3 280 g, claw CoM-anchored (all axes) [s2]    box v std  39.5 mm/s [  -86, 138] back  21% rev 18 | CoM al rms 22.1 p-p  91.1 mm | eR 35.6 mrad tilt  4.1 | q2 26.7..35.2 ( 0% >44) q3 24.5..33.6 | box-plan 21.3 mm tip 0.56 | q3 guard --
+B3 280 g, claw CoM-anchored (all axes) [s3]    box v std  44.4 mm/s [ -101, 136] back  20% rev 11 | CoM al rms 21.3 p-p  85.1 mm | eR 35.4 mrad tilt  3.6 | q2 26.0..36.4 ( 0% >44) q3 23.2..33.8 | box-plan 21.0 mm tip 0.63 | q3 guard --
+C1 280 g, push 30 mm/s [s1]                    box v std  34.1 mm/s [  -17, 138] back   4% rev  8 | CoM al rms 26.1 p-p 116.0 mm | eR 37.8 mrad tilt  4.9 | q2 17.0..42.6 ( 0% >44) q3 15.4..45.5 | box-plan 20.0 mm tip 0.62 | q3 guard --
+C1 280 g, push 30 mm/s [s2]                    box v std  33.2 mm/s [  -54, 121] back   9% rev  8 | CoM al rms 19.7 p-p  74.1 mm | eR 30.5 mrad tilt  4.5 | q2 21.6..41.1 ( 0% >44) q3 16.1..38.6 | box-plan 13.4 mm tip 0.57 | q3 guard --
+C1 280 g, push 30 mm/s [s3]                    box v std  37.5 mm/s [  -58, 144] back   8% rev  8 | CoM al rms 21.0 p-p  97.6 mm | eR 32.6 mrad tilt  4.4 | q2 21.3..41.9 ( 0% >44) q3 17.9..40.4 | box-plan 16.1 mm tip 0.63 | q3 guard TRIP -1.4s
+C2 280 g, push 40 mm/s [s1]                    box v std  45.8 mm/s [  -64, 178] back  10% rev  4 | CoM al rms 18.1 p-p  89.5 mm | eR 32.8 mrad tilt  5.0 | q2 17.7..39.1 ( 0% >44) q3 17.7..42.4 | box-plan 13.4 mm tip 0.62 | q3 guard TRIP +12.6s
+C2 280 g, push 40 mm/s [s2]                    box v std  38.9 mm/s [  -54, 129] back  10% rev  1 | CoM al rms 22.5 p-p  76.1 mm | eR 31.8 mrad tilt  4.5 | q2 21.3..41.2 ( 0% >44) q3 16.0..38.5 | box-plan 15.5 mm tip 0.58 | q3 guard --
+C2 280 g, push 40 mm/s [s3]                    box v std  42.5 mm/s [  -39, 172] back   5% rev  4 | CoM al rms 23.3 p-p  97.1 mm | eR 33.7 mrad tilt  4.4 | q2 21.5..40.6 ( 0% >44) q3 19.4..40.5 | box-plan 17.7 mm tip 0.62 | q3 guard TRIP -1.4s
+D1 280 g, k_R/k_w 2.134/1.567 (H1b) [s1]       box v std  27.7 mm/s [  -23, 122] back   7% rev 14 | CoM al rms 22.2 p-p 113.1 mm | eR 33.8 mrad tilt  4.9 | q2 18.0..42.8 ( 0% >44) q3 16.7..45.7 | box-plan 16.5 mm tip 0.61 | q3 guard --
+D1 280 g, k_R/k_w 2.134/1.567 (H1b) [s2]       box v std  26.5 mm/s [  -47, 116] back  11% rev  8 | CoM al rms 16.3 p-p  66.0 mm | eR 28.5 mrad tilt  5.6 | q2 22.9..40.2 ( 0% >44) q3 16.7..38.1 | box-plan 11.6 mm tip 0.57 | q3 guard --
+D1 280 g, k_R/k_w 2.134/1.567 (H1b) [s3]       box v std  29.0 mm/s [  -48, 111] back  11% rev 15 | CoM al rms 18.1 p-p  85.8 mm | eR 30.8 mrad tilt  5.7 | q2 22.0..40.4 ( 0% >44) q3 17.6..39.2 | box-plan 13.9 mm tip 0.63 | q3 guard --
+D2 280 g, omega_c_r 1.2 [s1]                   box v std  28.9 mm/s [  -27, 127] back  11% rev 14 | CoM al rms 23.5 p-p 120.0 mm | eR 35.2 mrad tilt  4.8 | q2 17.3..43.2 ( 0% >44) q3 15.1..45.7 | box-plan 17.5 mm tip 0.61 | q3 guard --
+D2 280 g, omega_c_r 1.2 [s2]                   box v std  27.1 mm/s [  -38, 121] back  13% rev 10 | CoM al rms 16.4 p-p  63.9 mm | eR 29.0 mrad tilt  5.0 | q2 22.7..40.4 ( 0% >44) q3 17.5..37.6 | box-plan 11.7 mm tip 0.57 | q3 guard --
+D2 280 g, omega_c_r 1.2 [s3]                   box v std  30.5 mm/s [  -62, 115] back  11% rev 15 | CoM al rms 18.9 p-p  86.9 mm | eR 32.2 mrad tilt  4.5 | q2 21.2..42.0 ( 0% >44) q3 17.4..39.4 | box-plan 14.4 mm tip 0.65 | q3 guard TRIP -1.4s
+E1 280 g, contact flag off (chi free) [s1]     box v std  29.5 mm/s [  -30, 124] back  12% rev 16 | CoM al rms 24.5 p-p 119.8 mm | eR 36.2 mrad tilt  4.7 | q2 18.5..45.0 ( 1% >44) q3 12.7..44.4 | box-plan 18.3 mm tip 0.61 | q3 guard --
+E1 280 g, contact flag off (chi free) [s2]     ABORT at 1.5 s
+E1 280 g, contact flag off (chi free) [s3]     box v std  31.7 mm/s [  -75, 117] back  14% rev 17 | CoM al rms 20.1 p-p  91.7 mm | eR 32.7 mrad tilt  4.6 | q2 22.6..42.0 ( 0% >44) q3 17.0..38.5 | box-plan 15.2 mm tip 0.65 | q3 guard TRIP -1.4s
+F1 510 g, free-axis anchor OFF [s1]            ABORT at 0.7 s
+F1 510 g, free-axis anchor OFF [s2]            ABORT at 0.6 s
+F1 510 g, free-axis anchor OFF [s3]            ABORT at 1.0 s
