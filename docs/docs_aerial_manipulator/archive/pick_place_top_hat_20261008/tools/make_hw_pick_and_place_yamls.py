@@ -113,7 +113,17 @@ RIGS = {
         name="AM-T650-WB-L1-4D-HW-PND",
         overrides=None,          # = the pick-and-place rig's (filled in below)
         added=None,
-        planner_overrides={},    # the source's task block IS the drop's
+        # The source's task block IS the drop's, except (2026-10-28, user decision for that
+        # day's hardware flight) a LOWER DROP: Drop Margin 0.20 -> 0.10 and Drop Start z
+        # 1.0 -> 1.21 = the release hold's body height (Drop point z 0.8455 + EE Offset z 0.16
+        # + claw 0.1016 below the body in the drop pose + 0.10), so Ready To Drop flies LEVEL
+        # instead of climbing into the tray. A different Drop point z from Get, or a different
+        # Drop Margin typed in the arm GS, moves the release height: Drop Start z = Drop point
+        # z + 0.2616 + margin. The simulation twins keep 0.20 / 1.0.
+        planner_overrides={"pick_place_place_start": "[0.8, -1.0, 1.21, -180.0]",
+                           "pick_place_drop_height": "0.10"},
+        planner_note=("# Planner task block (the source's DROP block, with a lower release: Drop Margin 0.10\n"
+                      "# and Drop Start z 1.21 = the release height, 2026-10-28):"),
         title="WHOLE-BODY 4-D L1, HARDWARE, PICK-AND-DROP"),
     "wb_mail": dict(
         src="params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml",
@@ -200,7 +210,7 @@ def generate(rig):
         ms = re.findall(pat, out, flags=re.M)
         if len(ms) != 1:
             sys.exit(f"{rig}: {k} found {len(ms)} times in {r['src']} (need exactly 1)")
-        tag = "MAIL DELIVERY" if rig == "wb_mail" else "PICK-AND-PLACE (set-down)"
+        tag = {"wb_mail": "MAIL DELIVERY", "wb_drop": "PICK-AND-DROP"}.get(rig, "PICK-AND-PLACE (set-down)")
         out = re.sub(pat, lambda m: f"{m.group(1)}{v}  # {tag} OVERRIDE (source: {m.group(2)})",
                      out, flags=re.M)
     for k, (after, text) in r["added"].items():
