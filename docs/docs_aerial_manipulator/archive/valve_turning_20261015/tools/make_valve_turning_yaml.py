@@ -39,10 +39,18 @@ DST = os.path.join(pp.CFG, "params_single_aerial_manipulator_whole_body_l1_4d_di
 VEHICLE_NAME = "AM-T650-WB-L1-4D-VALVE"
 
 # THE SCENE (07_px4_t650_aerial_manipulator_valve_turning.py): the valve's
-# bearing axis on the table's centre line at (1.20, 0.00), the plate bottom on
-# the table top (0.800 m), the beam pointing 180 deg (the fin toward the
-# start). The numbers below are the asset's (Valve_Assembly.usda, fsc:*).
-AXIS = (1.20, 0.00)
+# bearing axis on the table's centre line at (0.675, 0.00) (2026-10-28: the box
+# push's layout, the start mark at (-1.0, 0); was (1.20, 0) and (0, 0)), the
+# plate bottom on the table top (0.800 m), the beam pointing 180 deg (the fin
+# toward the start). The numbers below are the asset's (Valve_Assembly.usda /
+# Valve_Assembly_v2.usda, fsc:*).
+AXIS = (0.675, 0.00)
+START = (-1.0, 0.0)
+# THE MOCAP PIVOT (2026-10-28, user: the markers on Valve_Assembly_v2.stl): the five
+# marker balls' CENTROID, Motive's default pivot of the rigid body made from them, from
+# the axis on the plate bottom in the rotor frame (stl_to_usda_valve.py prints it;
+# fsc:mocap_pivot_*_m) -- the planner's push_pull_valve_axis_offset is minus this
+MOCAP_PIVOT = (0.0720, -0.0093, 0.0851)
 TABLE_TOP = 0.800
 FIN_RADIUS, FIN_BEARING_Y, FIN_TOP, BEAM_TOP, BEAM_REACH = 0.1600, 0.0006, 0.2040, 0.0540, 0.2001
 GRASP_BELOW_TOP = 0.025
@@ -56,10 +64,22 @@ PLANNER_BLOCK = f"""
     # of the start, its length along y; the user's VALVE MECHANISM
     # (Valve_Assembly.stl, 2026-10-15) bolted to its centre: a plate with a 608
     # bearing and a rotating 225 mm beam carrying a 5 x 40 x 130 mm FIN handle
-    # at radius 0.160 m. Mocap obj_0 = THE ROTOR: its origin on the bearing
-    # axis at the plate-bottom plane (= the table top), its yaw the beam's.
+    # at radius 0.160 m. Mocap obj_0 = THE ROTOR as Motive defines the rigid body
+    # made from its five markers (2026-10-28, Valve_Assembly_v2.stl): the DEFAULT
+    # pivot = the markers' CENTROID, the axes the rotor's -- create it with the fin
+    # pointing along the room's +x on a level table (+x along the beam toward the
+    # fin, z up), and check it with archive/valve_turning_v2_20261027/tools/
+    # valve_body_check.py, turning the beam by hand.
     #
-    # The grasp point: the axis + this offset in the ROTOR's frame -- the fin's
+    # obj_0 -> THE BEARING AXIS at the plate-bottom plane (= the table top), in
+    # obj_0's frame, turned with its yaw: the turn's centre, the live handle and the
+    # keep-outs placed from the valve are obj_0 + Rz(yaw) * this. Minus the markers'
+    # centroid ({MOCAP_PIVOT[0] * 1e3:.1f}, {MOCAP_PIVOT[1] * 1e3:.1f}, {MOCAP_PIVOT[2] * 1e3:.1f}) mm: {(MOCAP_PIVOT[0] ** 2 + MOCAP_PIVOT[1] ** 2) ** 0.5 * 1e3:.1f} mm off the shaft, so
+    # without it a 90 deg turn ends the claw ~0.10 m off the fin's circle. A body
+    # defined with its pivot ON the axis needs [0, 0, 0].
+    push_pull_valve_axis_offset: [{-MOCAP_PIVOT[0]:.4f}, {-MOCAP_PIVOT[1]:.4f}, {-MOCAP_PIVOT[2]:.4f}]
+    #
+    # The grasp point: the AXIS POINT + this offset in the ROTOR's frame -- the fin's
     # radius and bearing, the claw point 25 mm under the fin top ({FIN_TOP * 1e3:.0f} mm
     # above the plate bottom). The jaws close across the fin's 5 mm (radial);
     # the push is TANGENTIAL, through the pads' friction on the fin's 40 mm faces.
@@ -76,7 +96,15 @@ PLANNER_BLOCK = f"""
     # analytic circle on a nonic phase: the claw on its 0.160 m circle, the
     # base on a 0.25 m one behind it, yaw rate peaking at 2.46 x the mean).
     # push_pull_push_distance is ignored while this is non-zero.
-    push_pull_turn_deg: 360.0
+    # 2026-10-27 (user): THE EXPERIMENT TURNS 90 DEG, not 360 (it tests the interaction
+    # phase; the full revolution only lengthened the contact). IN 18 s (archive/
+    # valve_turning_v2_20261027): the same peak angular acceleration as the 360 deg / 36 s
+    # turn (mean 5 deg/s, peak yaw rate 12.3 deg/s). The user's 12 s design (10-26) has
+    # 2.25 x that acceleration: under the hardware-like drift the vehicle's lag at the
+    # turn's start, which the free-axis anchor carries onto the clamped fin, compressed the
+    # arm into the q3 guard 3 of 6 (all safe aborts); 18 s completed 4 of 4.
+    # The 360 deg history below stays.
+    push_pull_turn_deg: 90.0
     push_pull_push_distance: 0.50
     # 36 s for the full turn: mean 10 deg/s, peak 25 deg/s of yaw, peak CoM
     # speed ~0.11 m/s. THE TURN'S SPEED IS A TRADE (v3 / v5, 2026-10-15): the
@@ -90,7 +118,7 @@ PLANNER_BLOCK = f"""
     # inside it. Shorter is not tried: the lead would exceed the stops.
     # (2026-10-17, README 8.3: the lead is NOT rate-dependent -- 60 mm at the
     # 48 s turn's 18 deg/s vs 64 mm at 36 s; the wander is the base loop's own.)
-    push_pull_push_time_s: 36.0
+    push_pull_push_time_s: 18.0
     push_pull_push_settle_s: 1.5
     # PATH FOLLOWING (2026-10-18, README 11): true = the turn flies at a governed
     # PROGRESS -- the same rotation, slowed or held while the measured valve
@@ -159,26 +187,70 @@ PLANNER_BLOCK = f"""
     # (the node's watchdog handed over). The hover and the descent stay
     # CoM-anchored with the world hold from the arrival on the fin, no descent
     # trim (the box push's, README 4.6).
+    # 2026-10-27 (archive/valve_turning_v2_20261027, the v2 valve at its measured
+    # 0.072 N.m): THE DESCENT IS NOW ROOM-HELD TOO. Under the hardware-like drift every
+    # CoM-anchored descent let an open finger meet the fin 11-16 mm off radially and
+    # drag the valve 12-18 deg before the close (0 of 3; the settle gate 1 of 3);
+    # room-held from the end of Go To Start the arm flies the slide-in, the radial
+    # offset stayed <= 6.2 mm and the fin moved <= 0.2 deg (3 of 3 + 1 of 1 nominal).
+    # The handle settle below is then inert (it only runs when the room hold starts
+    # at the handle).
     push_pull_world_anchor_push: true
-    push_pull_world_anchor_ready: false
+    push_pull_world_anchor_ready: true
     push_pull_world_anchor_on_handle: true
+    # THE HAND-OVER SETTLE (the box push's 2026-10-24 hardware lesson, archive/
+    # wb_box_pushing_flight_20261024 section 8): the room hold waits until the claw is
+    # within settle_tol of the grasp point, axis_tol across the fin and slower than
+    # max_speed for dwell_s (a base 30 mm off when the hold engaged made the arm reach);
+    # Ready is refused until the claw has been still ready_settle_s at Go To Start.
+    # 0 = off (the 10-22 final config); the 2026-10-27 v2-valve A/B decides
+    # (archive/valve_turning_v2_20261027).
+    push_pull_handle_settle_tol: 0.0
+    push_pull_handle_settle_axis_tol: 0.0
+    push_pull_handle_settle_max_speed: 0.0
+    push_pull_handle_settle_dwell_s: 0.0
+    push_pull_ready_max_speed: 0.0
+    push_pull_ready_settle_s: 0.0
     push_pull_descent_trim: false
-    # Land: 0.5 m behind the start, yaw -360 = 270 deg CLOCKWISE on from the
-    # heading at the fin (-90). Adjust writes the measured x, y shift into both.
-    push_pull_land: [-0.5, 0.0, 0.8, -360.0]
-    push_pull_start_mark: [0.0, 0.0, 1.0, 0.0]
+    # THE WAY HOME (2026-10-27, the box push's 10-21 landing): Go To Land Start flies
+    # back over the start mark at 1.3 m, Land straight down to 0.30 m (skids ~5 cm off
+    # the floor), yaw 0 = facing the valve as at take-off (after the 90 deg turn the
+    # heading is already ~0: Go To Land Start takes the shortest turn). Adjust writes
+    # the measured x, y shift into all three.
+    # 2026-10-28: over the start mark (-1.0, 0) of the box push's layout (was (0, 0)).
+    push_pull_land: [{START[0]:.1f}, {START[1]:.1f}, 0.30, 0.0]
+    push_pull_land_start: [{START[0]:.1f}, {START[1]:.1f}, 1.3, 0.0]
+    push_pull_start_mark: [{START[0]:.1f}, {START[1]:.1f}, 1.0, 0.0]
     # THE TABLE keep-out [x_min, x_max, y_min, y_max, z_top] (world) and THE
     # VALVE's swept circle as a second one, z_top = the BEAM top (the fin is
     # the handle: the claw goes below its top on purpose, between the skids):
     # the gear and every arm point over either keep 5 cm clearance.
-    push_pull_table: [1.125, 1.275, -0.5, 0.5, {TABLE_TOP:.2f}]
+    push_pull_table: [{AXIS[0] - 0.075:.3f}, {AXIS[0] + 0.075:.3f}, -0.5, 0.5, {TABLE_TOP:.2f}]
     push_pull_obstacle: [{AXIS[0] - BEAM_REACH:.3f}, {AXIS[0] + BEAM_REACH:.3f}, {AXIS[1] - BEAM_REACH:.3f}, {AXIS[1] + BEAM_REACH:.3f}, {TABLE_TOP + BEAM_TOP:.4f}]
+    # THE KEEP-OUTS PLACED FROM THE VALVE (2026-10-27, user; the box's table-from-box):
+    # the two above are then IGNORED (they document the scene) -- at Plan the beam's
+    # swept square (+-valve_reach) is centred on the captured axis, its top
+    # valve_top_above over the axis point; the table push_pull_table_size [length, depth]
+    # centred on the axis, its depth along the line from the start, its top AT the axis
+    # point (obj_0 + push_pull_valve_axis_offset: on the plate bottom = the table top). In this
+    # scene they equal the two above to the millimetre. Plan refuses a start outside
+    # valve_start_range from the axis and a beam (obj_0 +x) more than beam_tol_deg
+    # away from the start -- the layout rule (the valve clamped in the table's middle,
+    # the vehicle in front, the fin toward it) and the catch for a turned mocap body.
+    push_pull_keepouts_from_valve: true
+    push_pull_valve_reach: {BEAM_REACH:.4f}
+    push_pull_valve_top_above: {BEAM_TOP:.4f}
+    push_pull_table_size: [1.0, 0.15]
+    push_pull_valve_start_range: [0.6, 3.0]
+    push_pull_valve_beam_tol_deg: 45.0
     push_pull_table_clearance: 0.05
     # THE LANDING GEAR: the T650's -- skids 0.2425 m under the body origin
     # (the scene's AM_T650.usda).
     push_pull_gear_depth: 0.2425
     # Isaac has no ceiling (the lab's must be set on hardware)
     push_pull_fence_max_z: 2.2
+    # the Land hover at 0.30 m (2026-10-27): the fence floor below it (node default 0.6)
+    push_pull_fence_min_z: 0.25
     # SAFETY GUARDS -> ABORT (contact off, release, climb 0.30 m, arm home):
     # tilt > 10 deg for 0.1 s; the task force the law reads > 5 N for 0.3 s
     # while in contact (the bearing needs ~0.2 N at the fin; the bench's

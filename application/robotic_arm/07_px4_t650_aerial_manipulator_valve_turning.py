@@ -20,15 +20,20 @@ the scene:
 
   field     4.5 m (x, forward) by 4.2 m (y), centred on the origin -- not
             drawn: the room's own floor
-  vehicle   spawned near the centre FACING +x (yaw 0, the arm on the nose), a
-            little off the origin, (0.10, -0.07) m, as a real start mark is
+  vehicle   spawned FACING +x (yaw 0, the arm on the nose), a little off the
+            start mark (-1.0, 0), at (-0.90, -0.07) m, as a real start mark is
   table     THE LAB'S CONSOLE TABLE, HOOBRO BB52UXG01G1 (the box-pushing
             scene's, 07_px4_t650_aerial_manipulator_box_pushing.py):
             1.000 m long x 0.150 m deep x 0.800 m tall, IN FRONT of the
-            vehicle, its length along y, centred on (1.20, 0): x 1.125..1.275,
-            y -0.50..0.50, top at 0.800 m. Static colliders.
+            vehicle, its length along y, centred on (0.675, 0): x 0.600..0.750,
+            y -0.50..0.50, top at 0.800 m -- the box push's layout since
+            2026-10-28 (its 10-21 move: the table at x 1.20 sat near the lab
+            field's edge; was centred on (1.20, 0), the start at (0, 0)).
+            Static colliders.
   valve     THE USER'S VALVE MECHANISM (Valve_Assembly.stl -> Valve_Assembly
-            .usda, 2026-10-15): a 150 x 50 x 20 mm base plate with a 608
+            .usda, 2026-10-15; since 2026-10-28 the DEFAULT is the v2 asset,
+            Valve_Assembly_v2.usda: + the fabric pad's half-rings on the hub
+            and the five MOCAP MARKERS of the experiment): a 150 x 50 x 20 mm base plate with a 608
             bearing, and ONE rotating part on it -- a 50 mm hub, a 225 x 50 x
             14 mm BEAM (0.200 m one way from the axis, 0.025 the other, top
             54 mm above the plate bottom) and, at radius 0.160 m, a vertical
@@ -44,8 +49,9 @@ the scene:
             step (PhysX maximal joints carry no friction knob). The CAD solid
             at uniform PLA density: 243 g, 0.0031 kg m^2 about the axis; the
             scene flies the printed rotor's 204 g (inertia scaled with it,
-            0.0026 kg m^2) and a conservative 0.048 N.m bearing (see the
-            PEGASUS_VALVE_FRICTION knob).
+            0.0026 kg m^2) and the bearing measured for the asset: v2 (the
+            pad) 0.072 N.m in the stick-slip drive model (the 10-27 free-spin
+            bench), v1 a conservative 0.048 N.m (see PEGASUS_VALVE_FRICTION).
 
 THE TASK (the Box Pushing tab, Turn = 360): Go To Start flies to the fin and
 yaws so the nose lies along the turn's TANGENT at the fin (the beam's yaw +
@@ -77,14 +83,20 @@ part (above the root) gets an INVISIBLE collider PEGASUS_VALVE_FIN_GRIP_MM
 wide (default 20, the box push's), standing in for the foam. 0 = the bare
 CAD fin (the claw closes on air).
 
-  mocap     obj_0 = THE ROTOR: its origin is the bearing axis on the plate-
-            bottom plane (= the table top) and its yaw the beam's angle. That
-            is what the planner's Get captures (push_pull_box_topic); the grasp
-            point = that pose + push_pull_ee_offset = [0.160, 0.0006, 0.179] m
-            turned with the beam (the fin's radius and bearing, the claw 25 mm
-            under the fin top). ON HARDWARE define the obj_0 rigid body the
-            same way: pivot ON the axis at the plate-bottom plane, x along the
-            beam toward the fin -- or move the EE offset by the difference.
+  mocap     obj_0 = THE ROTOR as Motive defines a rigid body made from its
+            markers (2026-10-28, PEGASUS_VALVE_MOCAP_PIVOT=markers, the default
+            with the v2 asset): the pivot at the markers' CENTROID (Motive's
+            default), the axes the rotor's (+x along the beam toward the fin,
+            z up -- the rigid body created with the fin pointing along the
+            room's +x on a level table). The five markers of
+            Valve_Assembly_v2.stl put it [0.0720, -0.0093, 0.0851] m from the
+            bearing axis on the plate bottom, so the planner carries
+            push_pull_valve_axis_offset = [-0.0720, 0.0093, -0.0851]: the axis
+            point = obj_0 + Rz(yaw) * that (the turn's centre, the keep-outs),
+            the grasp point = the axis point + push_pull_ee_offset = [0.160,
+            0.0006, 0.179] turned with the beam (the fin's radius and bearing,
+            the claw 25 mm under the fin top). =axis (v1's only choice): obj_0
+            on the axis at the plate-bottom plane, the axis offset 0.
             claw_0 = the real claw point, ground truth only (not mocap).
             Published as <body>/state/{pose,twist,twist_inertial}; the OptiTrack
             emulator turns obj_0 into /obj_0/mocap (the 4-D stack lists it).
@@ -92,7 +104,7 @@ CAD fin (the claw closes on air).
 06's EE marker cube is forced OFF here: it would publish obj_0 too.
 
 Knobs (environment):
-  PEGASUS_VALVE_XY               the bearing axis "x,y" [m], default "1.20,0.00" (the table's centre)
+  PEGASUS_VALVE_XY               the bearing axis "x,y" [m], default "0.675,0.00" (the table's centre)
   PEGASUS_VALVE_YAW_DEG          the beam's initial yaw [deg], default 180 (the fin toward the start)
   PEGASUS_VALVE_RISER            a block under the plate [m], default 0 (a higher valve allows a
                                  more folded arm: the gear is the limit, see GEOMETRY)
@@ -101,7 +113,10 @@ Knobs (environment):
                                  payload, same material and printer, weighs 180 g printed over
                                  172.5 cm^3 of CAD solid = 1044 kg/m^3; the rotor is 195.8 cm^3
   PEGASUS_VALVE_DAMPING          the bearing's viscous damping [N.m.s/rad], default 0.0
-  PEGASUS_VALVE_FRICTION         the bearing's Coulomb friction torque [N.m], default 0.048
+  PEGASUS_VALVE_FRICTION         the bearing's Coulomb friction torque [N.m], default per asset:
+                                 v2 (the pad, fsc:hub_pad_rings) 0.072 in the drive model = the
+                                 10-27 free-spin bench (72 mN.m [63, 84] at the 204 g rotor,
+                                 archive/valve_damper_spin_20261027); v1 0.048
                                  (applied as -f tanh(w / 0.05)). CONSERVATIVE, for robustness
                                  (user, 2026-10-17): the real valve, pulled by a 10 N spring
                                  gauge (0.2 N per division) at the fin, never passed 0.2 N =
@@ -110,6 +125,13 @@ Knobs (environment):
                                  checked -- the margin covers up to half a division). A sealed
                                  608 at this load is likely a few mN.m: fly the frictionless end
                                  too (PEGASUS_VALVE_FRICTION=0).
+  PEGASUS_VALVE_FRICTION_MODEL   tanh | drive (2026-10-26; default drive with v2, tanh with v1). tanh CANNOT hold the rotor
+                                 still: below f it creeps at tau dt / I (8 deg/s at 0.9 x 0.10 N.m)
+                                 and its momentum clamp caps the resistance at ~0.65 N.m per rad/s.
+                                 drive = stick-slip Coulomb friction in the joint drive (force limit
+                                 f): stays put at 0.9 f, slips at f (archive/valve_yaw_sweep_20261026,
+                                 tools/friction_check.py). Needs PEGASUS_VALVE_DAMPING 0.
+  PEGASUS_VALVE_STICTION_DAMPING the drive model's damping [N.m.s/rad], default 1000
   PEGASUS_VALVE_LOAD_TORQUE      a HANGING-WEIGHT load on the shaft [N.m] = m g r_drum, default 0 =
                                  off (2026-10-21, the user's drum/pulley idea). The string is
                                  just taut at the start (payload on the floor): winding in the
@@ -126,9 +148,14 @@ Knobs (environment):
                                  pawl carries the weight (it fades in below 0.02 rad/s of forward
                                  rate), default 0
   PEGASUS_VALVE_FIN_GRIP_MM      the fin's clamped width in the sim [mm], default 20; 0 = bare
-  PEGASUS_VALVE_USD              the asset, default assets/Valve_Assembly.usda
+  PEGASUS_VALVE_USD              the asset, default assets/Valve_Assembly_v2.usda (2026-10-28; was
+                                 Valve_Assembly.usda, v1: no pad, no markers)
+  PEGASUS_VALVE_MOCAP_PIVOT      markers | axis: where obj_0's origin is published, default markers
+                                 with an asset that carries them (fsc:mocap_*), else axis. markers
+                                 needs the planner's push_pull_valve_axis_offset = minus the centroid
+                                 (the valve-turning yaml carries the v2 asset's); axis needs it 0
   PEGASUS_VALVE_GRIP_TORQUE      gripper drive torque cap [N.m], default 0.3
-  PEGASUS_VALVE_SPAWN_XY         where the vehicle starts, "x,y" [m], default "0.10,-0.07"
+  PEGASUS_VALVE_SPAWN_XY         where the vehicle starts, "x,y" [m], default "-0.90,-0.07"
   PEGASUS_VALVE_SPAWN_YAW_DEG    its heading [deg], default 0 (+x)
   PEGASUS_VALVE_WAYPOINTS=0      hide the waypoint markers and labels
   PEGASUS_VALVE_AM_ASSET         airframe asset, default AM_T650.usda (the T650's 7 cm shorter gear)
@@ -174,14 +201,14 @@ def _xy(env, default):
 
 
 # ── the scene ──────────────────────────────────────────────────────────────
-SPAWN_XY = _xy("PEGASUS_VALVE_SPAWN_XY", "0.10,-0.07")
+SPAWN_XY = _xy("PEGASUS_VALVE_SPAWN_XY", "-0.90,-0.07")   # the start mark (-1.0, 0) + a placement error (2026-10-28; was 0.10,-0.07)
 SPAWN_YAW_DEG = am06._envf("PEGASUS_VALVE_SPAWN_YAW_DEG", 0.0)
 
 # THE TABLE: HOOBRO BB52UXG01G1, 39.4" W x 5.9" D x 31.5" H = 1.000 x 0.150 x
 # 0.800 m, the box-pushing scene's (the same constants; it is the experiment's
 # table too). Its LENGTH runs along y (left-right in front of the start), its
 # depth along x.
-TABLE_CENTER_XY = (1.20, 0.0)
+TABLE_CENTER_XY = (0.675, 0.0)          # the box push's layout (2026-10-28; was (1.20, 0)): x 0.600..0.750
 TABLE_LENGTH_Y  = 1.000                 # [m] 39.4 in
 TABLE_DEPTH_X   = 0.150                 # [m] 5.9 in
 TABLE_HEIGHT    = 0.800                 # [m] 31.5 in, to the top surface
@@ -192,21 +219,10 @@ TABLE_SHELF_THICK = 0.015               # [m]
 
 # THE VALVE: the asset's frame is the bearing axis on the plate-bottom plane,
 # +x along the beam toward the fin (stl_to_usda_valve.py).
-VALVE_USD = (os.environ.get("PEGASUS_VALVE_USD", "") or os.path.join(am06.ASSETS_DIR, "Valve_Assembly.usda")).strip()
-VALVE_XY  = _xy("PEGASUS_VALVE_XY", "1.20,0.00")
+VALVE_USD = (os.environ.get("PEGASUS_VALVE_USD", "") or os.path.join(am06.ASSETS_DIR, "Valve_Assembly_v2.usda")).strip()
+VALVE_XY  = _xy("PEGASUS_VALVE_XY", "0.675,0.00")
 VALVE_YAW_DEG = am06._envf("PEGASUS_VALVE_YAW_DEG", 180.0)
 VALVE_RISER = am06._envf("PEGASUS_VALVE_RISER", 0.0)
-ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.204)     # [kg] the printed rotor; 0 = the asset's
-BEARING_DAMPING = am06._envf("PEGASUS_VALVE_DAMPING", 0.0)     # [N.m.s/rad]
-BEARING_FRICTION = am06._envf("PEGASUS_VALVE_FRICTION", 0.048) # [N.m] 1.5x the measured 0.2 N x 0.160 m bound
-BEARING_FRICTION_W = 0.05               # [rad/s] the tanh width of the friction torque
-LOAD_TORQUE = am06._envf("PEGASUS_VALVE_LOAD_TORQUE", 0.0)      # [N.m] hanging weight m g r_drum, 0 = off
-LOAD_DIR = 1.0 if am06._envf("PEGASUS_VALVE_LOAD_DIR", 1.0) >= 0.0 else -1.0
-LOAD_TAKEUP_DEG = max(0.1, am06._envf("PEGASUS_VALVE_LOAD_TAKEUP_DEG", 3.0))
-RATCHET = am06._envf("PEGASUS_VALVE_RATCHET", 0.0) > 0.5
-RATCHET_W = 0.02                        # [rad/s] forward rate below which the pawl takes the weight
-FIN_GRIP_MM = am06._envf("PEGASUS_VALVE_FIN_GRIP_MM", 20.0)
-GRASP_BELOW_TOP = 0.025                 # [m] the claw point under the fin top (the box push's rule)
 if not os.path.isfile(VALVE_USD):
     raise SystemExit(f"[AM-T650-VALVE] {VALVE_USD} not found -- generate it with "
                      f"docs/docs_aerial_manipulator/archive/valve_turning_20261015/tools/stl_to_usda_valve.py")
@@ -216,7 +232,60 @@ VALVE = {k: float(_root.GetAttribute(f"fsc:{k}").Get()) for k in (
     "fin_radius_m", "fin_bearing_y_m", "fin_thickness_m", "fin_width_m", "fin_top_z_m",
     "fin_exposed_bottom_z_m", "beam_reach_m", "beam_back_m", "beam_width_m", "beam_top_z_m",
     "plate_size_x_m", "plate_size_y_m", "plate_top_z_m", "rotor_mass_kg", "rotor_inertia_axis_kgm2")}
-del _root, _valve_stage
+# (2026-10-28) optional attributes: v2's pad, and the mocap markers (stl_to_usda_valve.py)
+def _opt(name, default):
+    a = _root.GetAttribute(f"fsc:{name}")
+    return float(a.Get()) if a and a.HasAuthoredValue() else default
+VALVE_HUB_PAD = _opt("hub_pad_rings", 0.0) > 0.0
+_mk = _root.GetAttribute("fsc:mocap_markers_m")
+MOCAP_MARKERS = np.array([[float(c) for c in m] for m in _mk.Get()]) if _mk and _mk.HasAuthoredValue() else None
+MOCAP_CENTROID = (np.array([_opt("mocap_pivot_x_m", 0.0), _opt("mocap_pivot_y_m", 0.0), _opt("mocap_pivot_z_m", 0.0)])
+                  if MOCAP_MARKERS is not None else None)
+del _root, _valve_stage, _mk
+ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.204)     # [kg] the printed rotor; 0 = the asset's
+BEARING_DAMPING = am06._envf("PEGASUS_VALVE_DAMPING", 0.0)     # [N.m.s/rad]
+# [N.m] per asset (2026-10-28): v2 (the fabric pad on the hub) 0.072 = the 10-27 free-spin bench
+# (archive/valve_damper_spin_20261027); v1 (the sealed 608 alone) 0.048 = 1.5x the measured 0.2 N x
+# 0.160 m bound
+BEARING_FRICTION = am06._envf("PEGASUS_VALVE_FRICTION", 0.072 if VALVE_HUB_PAD else 0.048)
+BEARING_FRICTION_W = 0.05               # [rad/s] the tanh width of the friction torque
+# THE FRICTION MODEL (2026-10-26, the heading-channel sweep, archive/valve_yaw_sweep_20261026):
+#   tanh  (the default; every flight before 2026-10-26) -f tanh(w / 0.05) as an explicit torque,
+#         momentum-clamped to I |w| / dt. It cannot hold the rotor still (a torque below f makes it
+#         creep at tau dt / I) and never resists with more than I |w| / dt (~0.65 N.m per rad/s at
+#         250 Hz), so above ~0.08 N.m the clamp, not f, sets the resistance during a turn.
+#   drive stick-slip Coulomb friction INSIDE the solver: the joint's angular drive as a velocity
+#         constraint (target 0, damping PEGASUS_VALVE_STICTION_DAMPING) whose force limit is f. It
+#         holds any torque below f and resists with f while slipping. Replaces the viscous drive
+#         (PEGASUS_VALVE_DAMPING must be 0).
+# default: drive with v2 (the pad is Coulomb, static = kinetic on the bench), tanh with v1 (every
+# flight before 2026-10-26)
+FRICTION_MODEL = (os.environ.get("PEGASUS_VALVE_FRICTION_MODEL", "") or ("drive" if VALVE_HUB_PAD else "tanh")).strip().lower()
+STICTION_DAMPING = am06._envf("PEGASUS_VALVE_STICTION_DAMPING", 1000.0)  # [N.m.s/rad] (creep at 0.9 f: 0.013 deg/s)
+if FRICTION_MODEL not in ("tanh", "drive"):
+    raise SystemExit(f"PEGASUS_VALVE_FRICTION_MODEL must be tanh or drive, got {FRICTION_MODEL!r}")
+if FRICTION_MODEL == "drive" and BEARING_DAMPING > 0.0:
+    raise SystemExit("PEGASUS_VALVE_FRICTION_MODEL=drive uses the joint drive for the friction: "
+                     "PEGASUS_VALVE_DAMPING must be 0")
+LOAD_TORQUE = am06._envf("PEGASUS_VALVE_LOAD_TORQUE", 0.0)      # [N.m] hanging weight m g r_drum, 0 = off
+LOAD_DIR = 1.0 if am06._envf("PEGASUS_VALVE_LOAD_DIR", 1.0) >= 0.0 else -1.0
+LOAD_TAKEUP_DEG = max(0.1, am06._envf("PEGASUS_VALVE_LOAD_TAKEUP_DEG", 3.0))
+RATCHET = am06._envf("PEGASUS_VALVE_RATCHET", 0.0) > 0.5
+RATCHET_W = 0.02                        # [rad/s] forward rate below which the pawl takes the weight
+FIN_GRIP_MM = am06._envf("PEGASUS_VALVE_FIN_GRIP_MM", 20.0)
+GRASP_BELOW_TOP = 0.025                 # [m] the claw point under the fin top (the box push's rule)
+# THE MOCAP PIVOT (2026-10-28): where obj_0's origin is published, in the rotor frame --
+# Motive's DEFAULT pivot of a rigid body made from the markers (their centroid), or the axis
+MOCAP_PIVOT_MODE = (os.environ.get("PEGASUS_VALVE_MOCAP_PIVOT", "") or
+                    ("markers" if MOCAP_MARKERS is not None else "axis")).strip().lower()
+if MOCAP_PIVOT_MODE not in ("markers", "axis"):
+    raise SystemExit(f"PEGASUS_VALVE_MOCAP_PIVOT must be markers or axis, got {MOCAP_PIVOT_MODE!r}")
+if MOCAP_PIVOT_MODE == "markers" and MOCAP_MARKERS is None:
+    raise SystemExit(f"PEGASUS_VALVE_MOCAP_PIVOT=markers: {os.path.basename(VALVE_USD)} carries no mocap markers "
+                     f"(regenerate Valve_Assembly_v2.usda from the markers' STL, or use axis)")
+MOCAP_PIVOT = MOCAP_CENTROID if MOCAP_PIVOT_MODE == "markers" else np.zeros(3)
+# the planner's push_pull_valve_axis_offset to match: obj_0 -> the axis, obj_0's frame
+AXIS_OFFSET = tuple(float(-v) for v in MOCAP_PIVOT)
 # the planner's push_pull_ee_offset for this valve (rotor frame, from the axis
 # on the plate-bottom plane)
 EE_OFFSET = (VALVE["fin_radius_m"], VALVE["fin_bearing_y_m"], VALVE["fin_top_z_m"] - GRASP_BELOW_TOP)
@@ -263,8 +332,8 @@ WP_SHOW = ((0, "body", "1 Go To Start drone"), (1, "claw", "2 Grasp EE"),
            (2, "claw", "3 Turned EE"), (4, "body", "5 Land Start drone"),
            (5, "body", "6 Land drone"))
 
-CAMERA_POS    = [-1.0, 2.4, 2.3]        # behind-left of the start, high
-CAMERA_TARGET = [1.1, 0.0, 0.9]
+CAMERA_POS    = [-2.3, 2.7, 2.4]        # behind-left of the start, high (2026-10-28: the box push's; was -1.0, 2.4, 2.3)
+CAMERA_TARGET = [0.1, 0.0, 0.9]
 
 # THE T650 LANDING GEAR (the box-pushing scene's choice, 2026-10-06): the
 # experiment drone is the T650, its gear ~7 cm shorter than the X650 gear
@@ -441,7 +510,13 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         # the beam crept while the arm wound onto its stops, then the force
         # guard tripped at 9.5 N with the beam at 78 deg/s -- speed
         # proportional to force, a damper, not a runaway.)
-        drive.CreateDampingAttr(float(BEARING_DAMPING * math.pi / 180.0))
+        if FRICTION_MODEL == "drive" and BEARING_FRICTION > 0.0:
+            # stick-slip Coulomb friction: a stiff velocity drive whose torque limit is the
+            # friction (maxForce is a TORQUE for an angular drive, not per degree)
+            drive.CreateDampingAttr(float(STICTION_DAMPING * math.pi / 180.0))
+            drive.CreateMaxForceAttr(float(BEARING_FRICTION))
+        else:
+            drive.CreateDampingAttr(float(BEARING_DAMPING * math.pi / 180.0))
         drive.CreateTargetVelocityAttr(0.0)
         # every contact of the rotor's colliders reported (threshold 0): the
         # ground-truth wrench the vehicle puts on it (CONTACT_TRUTH_TOPIC)
@@ -449,7 +524,9 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         self._valve_p0 = np.array(p0)
         print(f"[AM-T650-VALVE] valve: {VALVE_USD} referenced on {VALVE_PRIM}, {n_col} colliders, rotor "
               f"{m_rotor * 1e3:.0f} g (asset {m_asset * 1e3:.0f}), bearing damping {BEARING_DAMPING} N.m.s/rad, "
-              f"Coulomb friction {BEARING_FRICTION} N.m; "
+              f"Coulomb friction {BEARING_FRICTION} N.m ("
+              + (f"STICK-SLIP in the joint drive, stiction damping {STICTION_DAMPING:g} N.m.s/rad"
+                 if FRICTION_MODEL == "drive" else "tanh, explicit") + "); "
               + (f"GRIP SHIM {FIN_GRIP_MM:.0f} mm on the {VALVE['fin_thickness_m'] * 1e3:.0f} mm fin (invisible)"
                  if shim > VALVE["fin_thickness_m"] else
                  f"NO grip shim: the bare {VALVE['fin_thickness_m'] * 1e3:.0f} mm fin (the sim claw cannot clamp it)"),
@@ -491,9 +568,13 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
               f"{VALVE['fin_width_m'] * 1e3:.0f} mm wide, top {VALVE_BASE_Z + VALVE['fin_top_z_m']:.3f} m, grasp "
               f"{VALVE_BASE_Z + EE_OFFSET[2]:.3f} m (clamped as {max(FIN_GRIP_MM, 1e3 * VALVE['fin_thickness_m']):.0f} mm). "
               f"Rotor {self._rotor_mass * 1e3:.0f} g, {VALVE['rotor_inertia_axis_kgm2'] * self._rotor_mass / VALVE['rotor_mass_kg'] * 1e3:.2f} "
-              f"x1e-3 kg m^2 about the axis -> mocap {ROTOR_BODY} (origin = the axis on the plate bottom, yaw = "
-              f"the beam's). EE offset (planner push_pull_ee_offset) [{EE_OFFSET[0]:.4f}, {EE_OFFSET[1]:.4f}, "
-              f"{EE_OFFSET[2]:.4f}] m; obstacle (push_pull_obstacle) [{ax - reach:.3f}, {ax + reach:.3f}, "
+              f"x1e-3 kg m^2 about the axis -> mocap {ROTOR_BODY} ("
+              + (f"origin = the {len(MOCAP_MARKERS)} markers' CENTROID, Motive's default pivot, "
+                 f"[{MOCAP_PIVOT[0]:.4f}, {MOCAP_PIVOT[1]:.4f}, {MOCAP_PIVOT[2]:.4f}] m from the axis on the plate "
+                 f"bottom" if MOCAP_PIVOT_MODE == "markers" else "origin = the axis on the plate bottom")
+              + f", the rotor's axes, yaw = the beam's). PLANNER: push_pull_valve_axis_offset [{AXIS_OFFSET[0]:.4f}, "
+              f"{AXIS_OFFSET[1]:.4f}, {AXIS_OFFSET[2]:.4f}], push_pull_ee_offset (from the axis) [{EE_OFFSET[0]:.4f}, "
+              f"{EE_OFFSET[1]:.4f}, {EE_OFFSET[2]:.4f}] m; obstacle (push_pull_obstacle) [{ax - reach:.3f}, {ax + reach:.3f}, "
               f"{ay - reach:.3f}, {ay + reach:.3f}, {VALVE_BASE_Z + VALVE['beam_top_z_m']:.4f}]. "
               f"Unmodelled by every controller.\033[0m", flush=True)
         if LOAD_TORQUE > 0.0:
@@ -639,8 +720,8 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         """The bearing's Coulomb friction: a torque about the world z opposing
         the rotor's angular rate, -f tanh(w / w0), momentum-clamped so it can
         never reverse the rotor in one step (I w / dt)."""
-        if BEARING_FRICTION <= 0.0 or not self._rotor_h:
-            return 0.0
+        if BEARING_FRICTION <= 0.0 or not self._rotor_h or FRICTION_MODEL == "drive":
+            return 0.0                    # (drive: the joint drive carries the friction)
         w = self._dc.get_rigid_body_angular_velocity(self._rotor_h)
         wz = float(w.z)
         I = VALVE["rotor_inertia_axis_kgm2"] * self._rotor_mass / VALVE["rotor_mass_kg"]
@@ -705,8 +786,12 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
             if P is not None:
                 m = self._rotor_msg
                 m.header.stamp = stamp
-                m.pose.position.x, m.pose.position.y, m.pose.position.z = \
-                    float(P.p.x), float(P.p.y), float(P.p.z)
+                # obj_0's origin: the rotor's frame (the axis) moved to the mocap pivot
+                # (2026-10-28: the markers' centroid, Motive's default) -- same axes
+                pos = np.array([P.p.x, P.p.y, P.p.z])
+                if MOCAP_PIVOT_MODE == "markers":
+                    pos = pos + am06.C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z) @ MOCAP_PIVOT
+                m.pose.position.x, m.pose.position.y, m.pose.position.z = map(float, pos)
                 o = m.pose.orientation
                 o.x, o.y, o.z, o.w = float(P.r.x), float(P.r.y), float(P.r.z), float(P.r.w)
                 self._rotor_pose_pub.publish(m)

@@ -9,21 +9,42 @@ The output is the hardware file BYTE FOR BYTE plus a header, vehicle_name and EX
 controller overrides, additions and planner block of the SIMULATION valve-turning yaml --
 imported from make_valve_turning_yaml.py, so the two cannot drift: the experiment flies the
 controller, the guards and the task the simulation validated. The hardware substitutions
-are lab facts, listed in HW_PLANNER below:
+are lab facts and the box push's hardware margins, listed in HW_PLANNER / HW_NODE below:
   push_pull_fence_max_z   2.2 (the sim's open world) -> 1.8 (the lab ceiling)
-  push_pull_table         KEPT at the simulation's table -- MEASURE THE LAB TABLE
-  push_pull_obstacle      KEPT at the simulation's valve (axis (1.20, 0.00), plate on a
-                          0.800 m table top, beam reach 0.200 m) -- MEASURE where the valve
-                          stands in the mocap frame and its height; the keep-out is a fixed
-                          room-frame box, Get does not move it
+  push_pull_gear_depth    0.2425 -> 0.248 (2026-10-27, the box push's 10-20 measurement: the
+                          real T650's mocap pivot reads z 0.245-0.248 m resting on the floor)
+  push_pull_abort_mocap_release_wait_s 0.7 -> 1.0 (2026-10-27): the real gripper takes
+                          0.65-0.70 s to open after the GS's OPEN, which crosses two WiFi hops
+                          (planner -> GS -> arm); Isaac has neither. Still short of the normal
+                          abort's 2.0: under a mocap fault the vehicle drifts on EKF2.
+  system_arm_go_home_delay_s 1.0 -> 2.0 (NODE, 2026-10-27, the box push's 10-19 margin): on a
+                          SAFETY revert the arm GS opens the jaws (~0.7 s on the real gripper);
+                          the arm folds home only after that.
+  vehicle_thrust_scaling / vehicle_idle_thrust 0.036758 / 0.241528 -> 0.037947 / 0.252449
+                          (NODE, 2026-10-27, the box push's 10-25 fix): SAFETY's thrust map
+                          matched to the kf the allocator flies (4.260431e-05); the bench-kf
+                          pair sank the 10-24 box revert 0.27 m beside the table.
+  THE TABLE AND THE VALVE (2026-10-27, user) PLACED FROM THE VALVE:
+                          push_pull_keepouts_from_valve (imported) -- push_pull_table and
+                          push_pull_obstacle are ignored; Get places the beam's swept square on
+                          the captured axis and the 1.000 x 0.150 m table centred on it, both
+                          tops from obj_0's height. Clamp the valve in the table's middle, start
+                          the vehicle 0.6-3.0 m in front with the fin toward it; Adjust on the
+                          ground. (Until 2026-10-27: the sim's keep-outs, to be measured.)
 Everything else -- plant, allocator, SAFETY, observer bounds, the node guards -- is the
 hardware free-flight file's. Regenerate after any edit to either source; never hand-edit the
 output. --check verifies the file on disk.
 
-THE MOCAP BODY (the sim's convention, which the planner assumes): obj_0 = the ROTOR, origin ON
-the bearing axis at the plate-bottom plane, +x along the beam toward the fin, z up -- or move
-push_pull_ee_offset ([0.160, 0.0006, 0.179]: the fin's radius, its 0.6 mm offset, 25 mm under
-its top) by the difference. Get captures that body.
+THE MOCAP BODY (2026-10-28, the sim's convention, which the planner assumes): obj_0 = the
+rigid body Motive makes from the five markers on Valve_Assembly_v2.stl with its DEFAULT pivot
+(their centroid, 72.6 mm off the shaft) and its axes the rotor's -- create it with the fin
+pointing along the room's +x on a level table. push_pull_valve_axis_offset [-0.0720, 0.0093,
+-0.0851] carries obj_0 to the bearing axis at the plate bottom; push_pull_ee_offset ([0.160,
+0.0006, 0.179]: the fin's radius, its 0.6 mm offset, 25 mm under its top) is measured from that
+axis point. Check the body with archive/valve_turning_v2_20261027/tools/valve_body_check.py
+(turn the beam by hand) and type its measured axis offset into the arm GS's Axis Offset row if
+it differs. A body defined with its pivot ON the axis needs the offset [0, 0, 0]. Get captures
+the body.
 """
 import argparse
 import importlib.util
@@ -46,6 +67,20 @@ ME = "docs/docs_aerial_manipulator/archive/valve_turning_20261015/tools/make_hw_
 # lab facts that differ from the simulation's planner block: key -> (value, why)
 HW_PLANNER = {
     "push_pull_fence_max_z": ("1.8", "the lab ceiling (sim 2.2)"),
+    "push_pull_gear_depth": ("0.248", "MEASURED: the real T650's mocap pivot reads z 0.245-0.248 m "
+                             "resting on the floor (10-20 bag) (sim asset 0.2425)"),
+    "push_pull_abort_mocap_release_wait_s": ("1.0", "the real jaws open in 0.65-0.70 s after the GS's "
+                                             "OPEN over two WiFi hops (sim 0.7)"),
+}
+# hardware margins in the NODE section (the hardware free-flight file's own value replaced):
+# key -> (value, why) -- the box push's (make_hw_box_pushing_yaml.py HW_NODE), same numbers
+HW_NODE = {
+    "system_arm_go_home_delay_s": ("2.0", "the arm GS opens the jaws on a SAFETY revert; the real "
+                                   "gripper needs ~0.7 s -- fold after it (free flight 1.0)"),
+    "vehicle_thrust_scaling": ("0.037947", "SAFETY map matched to the flown kf 4.260431e-05 "
+                               "(free flight: the bench-kf 0.036758) -- a revert no longer sinks ~0.2 m"),
+    "vehicle_idle_thrust": ("0.252449", "SAFETY map matched to the flown kf 4.260431e-05 "
+                            "(free flight: the bench-kf 0.241528)"),
 }
 
 HEADER = f"""# =============================================================================
@@ -54,10 +89,10 @@ HEADER = f"""# =================================================================
 # Flown with AM_HW_PROFILE=valve_turning. The controller overrides, the guards and the
 # planner's push-and-pull block (TURN form) are the SIMULATION valve-turning yaml's,
 # imported (so they cannot drift); the lab substitutions:
-# {", ".join(f"{k} {v[0]} ({v[1]})" for k, v in HW_PLANNER.items())}.
-# push_pull_table AND push_pull_obstacle are the SIMULATION's (the table, the valve's swept
-# circle at axis (1.20, 0.00)) -- MEASURE THE LAB TABLE AND WHERE THE VALVE STANDS and set
-# them in the generator before the first flight (the gear / arm keep-outs).
+# {", ".join(f"{k} {v[0]} ({v[1]})" for k, v in HW_PLANNER.items())};
+# node: {", ".join(f"{k} {v[0]}" for k, v in HW_NODE.items())}.
+# The table and the valve's keep-out are PLACED FROM THE VALVE at Get
+# (push_pull_keepouts_from_valve): push_pull_table / push_pull_obstacle below are ignored.
 # =============================================================================
 """
 
@@ -82,6 +117,11 @@ def build():
         if len(pat.findall(out)) != 1:
             raise SystemExit(f"{anchor}: the insertion anchor must exist exactly once")
         out = pat.sub(lambda m: m.group(1) + f"    {key}: {val}  # VALVE-TURNING ADDITION -- make_valve_turning_yaml.py\n", out)
+    for key, (val, why) in HW_NODE.items():
+        pat = re.compile(rf"^(    {re.escape(key)}:) [^\n]*$", re.M)
+        if len(pat.findall(out)) != 1:
+            raise SystemExit(f"{key}: not exactly once in the hardware file's node section")
+        out = pat.sub(lambda m: f"{m.group(1)} {val}  # HARDWARE VALVE TURNING: {why}", out)
     for key, val in SIM.pp.MUST_KEEP.items():
         m = re.search(rf"^    {re.escape(key)}: ([^\s#]+)", out, flags=re.M)
         if m is None or m.group(1) != val:

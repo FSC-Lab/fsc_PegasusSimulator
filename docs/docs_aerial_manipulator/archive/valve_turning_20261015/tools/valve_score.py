@@ -14,9 +14,14 @@ Prints, per step and for the TURN (the "push" step):
     its tangential and radial parts about the axis), the joints' range and the
     arm-torque peak, the law's debug clamp / saturation flags
   * completed / aborted, with the reason
-The axis is obj_0's position at rest (the captured body), the start is the
-box's first sample. Columns follow pl_mission.py's `L` dict.
+The axis is obj_0's position at rest (the captured body) + Rz(yaw) * the planner's
+push_pull_valve_axis_offset (2026-10-28: obj_0 = the markers' centroid, 72.6 mm off the
+shaft) -- read from the run's <tag>.yaml beside the npz, or --axis-offset; [0, 0, 0] = obj_0
+on the axis (every run before 2026-10-28). The start is the box's first sample. Columns
+follow pl_mission.py's `L` dict.
 """
+import os
+import re
 import argparse
 
 import numpy as np
@@ -45,7 +50,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("npz")
     ap.add_argument("--plot", default="")
+    ap.add_argument("--axis-offset", default="",
+                    help="'x,y,z': the planner's push_pull_valve_axis_offset (default: the run's <tag>.yaml, else 0)")
     a = ap.parse_args()
+    off = np.zeros(3)
+    if a.axis_offset:
+        off = np.array([float(v) for v in a.axis_offset.split(",")])
+    else:
+        y = os.path.splitext(a.npz)[0] + ".yaml"
+        m = re.search(r"^    push_pull_valve_axis_offset:\s*\[([^\]]*)\]", open(y).read(), re.M) if os.path.exists(y) else None
+        if m:
+            off = np.array([float(v) for v in m.group(1).split(",")])
     d = np.load(a.npz, allow_pickle=True)
     steps = ["go_to_start", "ready", "close", "push", "release", "exit", "go_to_land"]
     marks = dict(zip(d["marks_name"].tolist(), d["marks_t"].tolist()))
@@ -53,11 +68,15 @@ def main():
 
     box = d["box"]                       # t, x, y, z, qw, qx, qy, qz, step
     t_box = box[:, 0]
-    axis = box[0, 1:4]
-    beam = np.degrees(unwrap(yaw_of(box[:, 4:8])))
+    yb = yaw_of(box[:, 4:8])
+    ax_all = box[:, 1:4] + np.c_[np.cos(yb) * off[0] - np.sin(yb) * off[1],
+                                 np.sin(yb) * off[0] + np.cos(yb) * off[1], np.full(len(yb), off[2])]
+    axis = ax_all[0]
+    beam = np.degrees(unwrap(yb))
     beam -= beam[0]
-    print(f"  obj_0 (the rotor) at rest [{axis[0]:.4f}, {axis[1]:.4f}, {axis[2]:.4f}] m; moved "
-          f"{np.linalg.norm(box[:, 1:4] - axis, axis=1).max() * 1e3:.1f} mm at most (an axis must not move)")
+    print(f"  axis (obj_0 + Rz(yaw) * [{off[0]:+.4f}, {off[1]:+.4f}, {off[2]:+.4f}]) at rest [{axis[0]:.4f}, "
+          f"{axis[1]:.4f}, {axis[2]:.4f}] m; moved {np.linalg.norm(ax_all - axis, axis=1).max() * 1e3:.1f} mm at most "
+          f"(an axis must not move); obj_0 itself moved {np.linalg.norm(box[:, 1:4] - box[0, 1:4], axis=1).max() * 1e3:.1f} mm")
     print(f"  BEAM: turned {beam[-1]:+.1f} deg over the run (min {beam.min():+.1f}, max {beam.max():+.1f})")
     if "push:start" in marks and "push:end" in marks:
         m = window(t_box, marks["push:start"], marks["push:end"])

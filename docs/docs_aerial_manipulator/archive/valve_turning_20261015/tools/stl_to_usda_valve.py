@@ -2,6 +2,24 @@
 """Valve_Assembly.stl (CAD, metres, +Z up) -> Valve_Assembly.usda (2026-10-15).
 
     /usr/bin/python3 stl_to_usda_valve.py [--stl ...] [--out ...] [--density 1240 | --mass 0.243]
+    /usr/bin/python3 stl_to_usda_valve.py --stl .../Valve_Assembly_v2.stl --out .../Valve_Assembly_v2.usda
+
+V2 (2026-10-27, Valve_Assembly_v2.stl): the same three shells plus TWO STATIC HALF-RINGS
+around the hub (inner radius 27.2 mm against the 25.0 mm hub, 20 mm tall from the plate's
+pocket), holding one layer of fabric-faced pad on the hub -- the bearing's friction brake
+(bench: ~72 mN.m Coulomb, archive/valve_damper_spin_20261027). They join the BASE's visual;
+no collider (nothing reaches them: the beam passes 10 mm above, the claw grips at r 0.160).
+The pad's friction is the scene's PEGASUS_VALVE_FRICTION, not geometry. The rotor shell is
+v1's, byte for byte.
+
+V2 WITH THE MOCAP MARKERS (2026-10-28, the user's Valve_Assembly_v2.stl): + FIVE 30 mm
+marker balls on stems, on four printed mounts (a fifth mount is fused to the rotor shell),
+all on the ROTOR. They join the rotor's visual; the balls are sphere colliders (so a claw or
+a skid that touched one would show in the sim); none of it enters the rotor's mass (the
+scene's PEGASUS_VALVE_ROTOR_MASS sets that). The ball centres -- what the mocap triangulates
+-- and their CENTROID (Motive's DEFAULT pivot of the rigid body made from them) are written
+as fsc:mocap_* attributes in the asset frame: the scene publishes obj_0 there, the planner
+takes push_pull_valve_axis_offset = minus the centroid.
 
 (pxr comes from usd-core in the user site, so NOT with PYTHONNOUSERSITE=1.)
 
@@ -62,6 +80,7 @@ AXIS_MM = np.array([-1.1, 3.0])        # the bearing / shaft centre (x, y)
 PLATE_BOTTOM_MM = -4.5
 PLATE_MM = ((-76.1, 73.9), (-22.0, 28.0), (-4.5, 15.5))
 BEARING_MM = ((-12.1, 9.9), (-8.0, 14.0), (5.5, 12.5))
+RING_MM = ((-33.3, 31.0), (-36.7, 42.7), (5.5, 25.5))      # v2: the two static half-rings, together
 # the rotor's parts: (x_lo, x_hi), (y_lo, y_hi), (z_lo, z_hi)
 ROTOR_MM = {
     # the hub: a 50 mm cylinder on the bearing's outer race (bore 22 mm at the
@@ -72,6 +91,10 @@ ROTOR_MM = {
     "root": ((153.9, 163.9), (-21.4, 28.6), (49.5, 69.5)),
     "fin": ((156.4, 161.4), (-16.4, 23.6), (69.5, 199.5)),
 }
+# (2026-10-28) the marker mount FUSED to the rotor shell in the markers' CAD (marker E's,
+# beside the fin root): its vertices stand above the beam top, inside this block
+ROTOR_MOUNT_MM = ((113.9, 134.0), (-21.7, 8.4), (45.5, 59.0))
+MARKER_BALL_R_MM = 15.0                 # the CAD's marker balls (30 mm)
 COLLIDERS = ("beam", "root", "fin")
 GRIP_PARTS = ("fin", "root")               # what the claw may touch
 
@@ -133,9 +156,35 @@ def inside(V, blocks, tol=0.2):
     return ok
 
 
+def marker_ball(Tm, r_mm=MARKER_BALL_R_MM):
+    """The ball of a marker part (a ball on a stem, or a mount with none): its centre
+    [mm] by a least-squares sphere fit at either end of the part's long axis, or None.
+    A ball must put >= 1000 vertices within 0.3 mm of a sphere of radius r_mm +- 0.5."""
+    V = np.unique(np.round(Tm.reshape(-1, 3), 4), axis=0)
+    lo, hi = V.min(0), V.max(0)
+    ax = int(np.argmax(hi - lo))
+    ctr = 0.5 * (lo + hi)
+    best = None
+    for end, sgn in ((lo[ax], 1.0), (hi[ax], -1.0)):
+        c0 = ctr.copy()
+        c0[ax] = end + sgn * r_mm
+        r = r_mm
+        for _ in range(8):
+            sel = np.abs(np.linalg.norm(V - c0, axis=1) - r_mm) < 1.0
+            if sel.sum() < 20:
+                break
+            P = V[sel]
+            sol = np.linalg.lstsq(np.c_[2 * P, np.ones(len(P))], (P ** 2).sum(1), rcond=None)[0]
+            c0, r = sol[:3], float(np.sqrt(sol[3] + sol[:3] @ sol[:3]))
+        n_on = int((np.abs(np.linalg.norm(V - c0, axis=1) - r) < 0.3).sum())
+        if n_on >= 1000 and abs(r - r_mm) < 0.5 and (best is None or n_on > best[0]):
+            best = (n_on, c0)
+    return None if best is None else best[1]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stl", default=os.path.join(ASSETS, "Valve_Assembly.stl"))
+    ap.add_argument("--stl", default=os.path.join(ASSETS, "Valve_Assembly_v1.stl"))   # renamed by the user 2026-10-27
     ap.add_argument("--out", default=os.path.join(ASSETS, "Valve_Assembly.usda"))
     ap.add_argument("--density", type=float, default=1240.0,
                     help="the rotor's density [kg/m^3] (solid PLA ~1240; a printed part at 20 %% infill is ~1/3 of it)")
@@ -148,31 +197,42 @@ def main():
         raise SystemExit(f"unexpected extent {np.ptp(V, 0)} mm -- not the metre-unit 2026-10-15 valve?")
     lab = shells(T_cad)
     counts = collections.Counter(lab.tolist())
-    if len(counts) != 3:
-        raise SystemExit(f"expected 3 closed shells (plate, bearing, rotor), found {len(counts)} -- the CAD changed?")
+    if len(counts) < 3:
+        raise SystemExit(f"expected 3 closed shells (plate, bearing, rotor), 5 (v2: + two half-rings) or "
+                         f"more (+ the mocap markers), found {len(counts)} -- the CAD changed?")
     order = [k for k, _ in counts.most_common()]          # rotor (most triangles), bearing, plate
     part_of = {}
-    for k in order:
+    for i, k in enumerate(order):
         sv = T_cad[lab == k].reshape(-1, 3)
         lo, hi = sv.min(0), sv.max(0)
-        if hi[2] > 100.0:
+        if i == 0 and hi[2] > 100.0:
             part_of[k] = "rotor"
         elif hi[0] - lo[0] > 100.0:
             part_of[k] = "plate"
-        else:
+        elif inside(sv, (BEARING_MM,)).all():
             part_of[k] = "bearing"
-    if sorted(part_of.values()) != ["bearing", "plate", "rotor"]:
+        elif inside(sv, (RING_MM,)).all():
+            part_of[k] = "ring"
+        elif lo[2] > ROTOR_MM["hub"][2][1]:              # above the hub: a marker or its mount
+            part_of[k] = "marker"
+        else:
+            raise SystemExit(f"a shell at {lo.round(1)}..{hi.round(1)} mm is none of the known parts")
+    core = sorted(v for v in part_of.values() if v != "marker")
+    if core not in (["bearing", "plate", "rotor"], ["bearing", "plate", "ring", "ring", "rotor"]):
         raise SystemExit(f"could not tell the shells apart: {part_of}")
+    n_marker_parts = sum(v == "marker" for v in part_of.values())
     rotor = T_cad[np.array([part_of[k] == "rotor" for k in lab])]
-    base = T_cad[np.array([part_of[k] != "rotor" for k in lab])]
+    base = T_cad[np.array([part_of[k] in ("plate", "bearing", "ring") for k in lab])]
+    marker_parts = [T_cad[lab == k] for k in order if part_of[k] == "marker"]
     # the rotor's vertices must all lie in its declared blocks: the colliders
-    # ARE the rotor (the pockets in the beam are inside the beam block)
+    # ARE the rotor (the pockets in the beam are inside the beam block) -- with
+    # the markers, plus the one mount fused to the rotor shell
     rv = rotor.reshape(-1, 3)
-    ok = inside(rv, ROTOR_MM.values())
+    ok = inside(rv, list(ROTOR_MM.values()) + ([ROTOR_MOUNT_MM] if n_marker_parts else []))
     if not ok.all():
         raise SystemExit(f"{(~ok).sum()} rotor vertices outside the declared blocks, e.g. {rv[~ok][:5]}")
     bv = base.reshape(-1, 3)
-    ok = inside(bv, (PLATE_MM, BEARING_MM))
+    ok = inside(bv, (PLATE_MM, BEARING_MM, RING_MM))
     if not ok.all():
         raise SystemExit(f"{(~ok).sum()} base vertices outside the plate / bearing blocks, e.g. {bv[~ok][:5]}")
     # the fin IS at the declared radius: its x faces must be the block's
@@ -205,13 +265,16 @@ def main():
     root = UsdGeom.Xform.Define(stage, "/Valve_Assembly")
     stage.SetDefaultPrim(root.GetPrim())
     Usd.ModelAPI(root.GetPrim()).SetKind("component")
+    n_ring = sum(v == "ring" for v in part_of.values())
     root.GetPrim().SetDocumentation(
-        "Valve-turning mechanism, 2026-10-15: a base plate with a 608 bearing and a rotating beam "
+        ("V2 (2026-10-27): + two static half-rings holding a fabric pad on the hub (base visual only). "
+         if n_ring else "") + ("MOCAP MARKERS (2026-10-28): on the rotor, visual + sphere colliders, fsc:mocap_*. "
+         if n_marker_parts else "") + "Valve-turning mechanism, 2026-10-15: a base plate with a 608 bearing and a rotating beam "
         "carrying a fin handle at radius 0.160 m. Frame: origin = the bearing axis on the plate-"
         "bottom plane, +z up, +x = the beam toward the fin. /base is a kinematic rigid body (fixed), "
         "/rotor a dynamic one on a z revolute joint at the origin. Generated by docs/docs_aerial_"
         "manipulator/archive/valve_turning_20261015/tools/stl_to_usda_valve.py from "
-        "Valve_Assembly.stl -- regenerate, do not edit.")
+        + os.path.basename(a.stl) + " -- regenerate, do not edit.")
 
     def mesh(path, Tm, rgb):
         P = Tm.reshape(-1, 3)
@@ -301,15 +364,44 @@ def main():
         "fsc:plate_size_x_m": float(plate_hi[0] - plate_lo[0]),
         "fsc:plate_size_y_m": float(plate_hi[1] - plate_lo[1]),
         "fsc:plate_top_z_m": float(plate_hi[2]),
+        "fsc:hub_pad_rings": float(n_ring),                                # v2: the pad's two half-rings
         "fsc:rotor_mass_kg": float(mass),
         "fsc:rotor_inertia_axis_kgm2": float(I_axis),
     }
+    # THE MOCAP MARKERS (2026-10-28): the rotor's visual + a sphere collider per ball;
+    # the centres and their centroid (Motive's default pivot) for the scene and planner
+    balls = []
+    if marker_parts:
+        mesh("/Valve_Assembly/rotor/Markers", to_asset(np.concatenate(marker_parts).reshape(-1, 3)).reshape(-1, 3, 3),
+             (0.92, 0.92, 0.95))
+        for Tm in marker_parts:
+            c = marker_ball(Tm)
+            if c is not None:
+                balls.append(to_asset(c))
+        if len(balls) < 3:
+            raise SystemExit(f"found {len(balls)} marker balls among {len(marker_parts)} marker parts -- a "
+                             f"rigid body needs 3 or more (not {2 * MARKER_BALL_R_MM:.0f} mm balls?)")
+        balls.sort(key=lambda b: (round(b[0], 4), round(b[1], 4)))
+        for i, b in enumerate(balls):
+            sph = UsdGeom.Sphere.Define(stage, f"/Valve_Assembly/rotor/Collision/marker{i}")
+            sph.CreateRadiusAttr(MARKER_BALL_R_MM * 1e-3)
+            sph.AddTranslateOp().Set(Gf.Vec3d(*map(float, b)))
+            sph.CreatePurposeAttr(UsdGeom.Tokens.guide)
+            UsdPhysics.CollisionAPI.Apply(sph.GetPrim())
+            sph.GetPrim().CreateAttribute("fsc:grip", Sdf.ValueTypeNames.Bool, custom=True).Set(False)
+        pivot = np.mean(balls, axis=0)
+        feats.update({"fsc:mocap_marker_count": float(len(balls)),
+                      "fsc:mocap_pivot_x_m": float(pivot[0]), "fsc:mocap_pivot_y_m": float(pivot[1]),
+                      "fsc:mocap_pivot_z_m": float(pivot[2]),
+                      "fsc:mocap_marker_radius_m": MARKER_BALL_R_MM * 1e-3})
+        root.GetPrim().CreateAttribute("fsc:mocap_markers_m", Sdf.ValueTypeNames.Double3Array, custom=True).Set(
+            [Gf.Vec3d(*map(float, b)) for b in balls])
     for k, v in feats.items():
         root.GetPrim().CreateAttribute(k, Sdf.ValueTypeNames.Double, custom=True).Set(v)
     stage.GetRootLayer().Save()
 
     print(f"wrote {a.out}")
-    print(f"  base: {nb[0]} visual triangles, 1 plate collider; rotor: {nr[0]} triangles, {len(COLLIDERS)} colliders "
+    print(f"  base: {nb[0]} visual triangles ({n_ring} half-rings among them), 1 plate collider; rotor: {nr[0]} triangles, {len(COLLIDERS)} colliders "
           f"({', '.join(COLLIDERS)}); every rotor vertex lies in its declared blocks")
     print(f"  rotor solid {vol * 1e6:.1f} cm^3 -> {mass * 1e3:.1f} g "
           + (f"at {a.density:.0f} kg/m^3" if a.mass <= 0 else "(--mass)")
@@ -317,6 +409,15 @@ def main():
           f"about the axis {I_axis * 1e6:.1f} x1e-6 kg m^2")
     for k, v in feats.items():
         print(f"  {k} = {v:+.4f}")
+    if balls:
+        d = np.linalg.norm(np.array(balls)[:, None] - np.array(balls)[None], axis=2)[np.triu_indices(len(balls), 1)]
+        print(f"  {len(balls)} MOCAP MARKERS ({n_marker_parts} marker parts) at, asset frame [mm]:")
+        for b in balls:
+            print(f"    {np.round(b * 1e3, 1)}")
+        print(f"  their centroid (Motive's default pivot) {np.round(pivot * 1e3, 1)} mm: "
+              f"{np.hypot(pivot[0], pivot[1]) * 1e3:.1f} mm off the axis -> push_pull_valve_axis_offset "
+              f"[{-pivot[0]:.4f}, {-pivot[1]:.4f}, {-pivot[2]:.4f}]")
+        print(f"  pairwise marker distances [mm]: {np.sort(d * 1e3).round(1)}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+46 coasts
+  E fit [a]: [29.828]
+  E fit [a c]: [25.663  0.981]
+  E fit [a A B]: [30.182 -2.184 -1.036]
+  E fit [a c A B]: [24.012  1.527 -1.924 -2.49 ]
+  O fit [a]: [28.562]  angle rms 0.74 deg
+  O fit [ac]: [24.853  1.273]  angle rms 0.72 deg
+  O fit [acg]: [25.533  1.403 -3.527 -0.875]  angle rms 0.71 deg
+bootstrap over coasts (median [95 %]), E 200 / O 50 resamples:
+  Coulomb only      a:  E  29.848 [ 26.942,  32.290]   O  28.617 [ 25.593,  33.466]
+  Coulomb+viscous   a:  E  25.268 [ 13.104,  33.483]   O  28.101 [ 22.124,  34.142]
+                    c:  E   1.024 [ -0.290,   4.975]   O   0.667 [ -2.112,   2.162]
