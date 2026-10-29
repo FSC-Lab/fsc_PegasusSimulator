@@ -201,10 +201,21 @@ if [ "$STACK_DEAD" = "1" ]; then
   say "flight INVALID -- the stack died, froze or was replaced. Exit 2 (re-run)."
   exit 2
 fi
-wait "$FPID"
+wait "$FPID"; DRC=$?
 trap - INT TERM HUP
-say "flight driver exited; summary:"
+say "flight driver exited ($DRC); summary:"
 tail -20 "$OUT"
+# exit 4 = the driver REFUSED the engage: the controller asked for was not running (its status
+# publisher never appeared), so the safe controller landed the aircraft in place. That is not a flight,
+# and scored it reads LANDED (2026-10-29: the plan aircraft's turning mission, flown by nobody, came
+# down on PX4's failsafe and night_metrics called it LANDED, wb_s 0).
+if [ "$DRC" = "4" ]; then
+  tmux send-keys -t "$SESSION:10-bag" C-c 2>/dev/null
+  for _ in $(seq 1 10); do sleep 1; pgrep -f "ros2 bag record" >/dev/null || break; done
+  say "!! the driver REFUSED the engage ($CTRL was not running) -- no flight, UNSCORED; log: $OUT"
+  echo -e "${NAME}\tmodel=$MODEL ctrl=$CTRL ENGAGE REFUSED\tUNSCORED\t\t\t\t\t\t\t\t\t\t-" | tee -a "${RES:-$BAG_DIR/results.tsv}"
+  exit 3
+fi
 
 # --- 4. close the bag and score it ------------------------------------------
 # SIGINT, never -9: a SIGKILLed rosbag has no metadata.yaml.

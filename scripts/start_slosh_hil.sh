@@ -666,6 +666,30 @@ if [ -n "${VTOL_WIND:-}${VTOL_TURB:-}" ]; then
   say "    wind: $WIND_LINE"
 fi
 
+# EVERY CASCADE MUST BE RUNNING, NOT JUST STARTED (2026-10-29). The checks above read the banner, the
+# process and the node name -- all true while the node is still inside its constructor COMPILING its outer
+# solver (a new airframe digest = a new JIT key; ~2 min idle, 5+ under load), not spinning, publishing
+# nothing. The plan aircraft's turning mission was switched to the cascade in that state: no actuator
+# stream, PX4's offboard-loss failsafe brought it down (bag slosh_20261029_121144). The status publisher
+# is created after the solver is loaded, so its existence is the signal. READY_SOLVER_WAIT_S bounds the wait.
+declare -A CASC_ID=([6h-cascade]=cascade [6i-adaptive]=cascade_adaptive [6j-indi]=cascade_indi [6k-aindi]=cascade_aindi)
+for W in 6h-cascade 6i-adaptive 6j-indi 6k-aindi; do
+  tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx "$W" || continue
+  ST="/uav_0/${CASC_ID[$W]}/status"; T0=$SECONDS; NEXT=0
+  # --no-daemon: the daemon's graph can hold the torn-down stack's publisher (a false "running")
+  until timeout 15 ros2 topic info --no-daemon --spin-time 3 "$ST" 2>/dev/null | grep -q "Publisher count: [1-9]"; do
+    if [ $((SECONDS - T0)) -ge "${READY_SOLVER_WAIT_S:-900}" ]; then
+      echo "[slosh_hil] !! $W: no publisher on $ST after ${READY_SOLVER_WAIT_S:-900} s -- the node never finished"
+      echo "[slosh_hil]    building its outer solver (or hangs). Not READY."; exit 1
+    fi
+    if [ $((SECONDS - T0)) -ge "$NEXT" ]; then
+      say "    $W: waiting for the node to run (compiling its outer solver?) $((SECONDS - T0)) s"; NEXT=$((NEXT + 30))
+    fi
+    sleep 5
+  done
+  say "    $W: running ($ST has a publisher, $((SECONDS - T0)) s)"
+done
+
 # THE BAG MUST EXIST (2026-09-15): the cold-start launcher runs under `set -u` and an unbound variable
 # aborts it half-way -- Isaac, PX4 and the controllers were up (started before the abort), every
 # check above passed, the flight landed, and there was NO bag: the 10-bag window is started near the

@@ -177,7 +177,13 @@ def spin(n, secs, fn=None, hz=5.0):
         rclpy.spin_once(n, timeout_sec=0.02)
         if fn and time.time() - last > 1.0 / hz:
             last = time.time()
-            if fn() is True:
+            r = fn()
+            # a numpy bool is a "done" too. `fn() is True` alone never fired for the climb's settle test,
+            # the touchdown test (`n.p[2] < 0.35`) or the back-transition's stop: every flight before
+            # 2026-10-29 sat out each of those timers, and on the plan aircraft the safe controller then
+            # pushed it along the ground for the land timer's remaining ~30 s until it tipped onto its
+            # side (bag slosh_20261029_123421, roll 91 at t 504, 32 s after touchdown).
+            if r is True or (isinstance(r, np.bool_) and bool(r)):
                 return True
     return False
 
@@ -203,6 +209,20 @@ def ctrl_node(cid):
     return CTRL_NODE.get(cid, "/nmpc_full_smc_control")
 
 
+def pset(node, name, value):
+    """`ros2 param set` that cannot kill the driver. A node that is alive in the graph but not
+    spinning (a cascade still compiling its solver) never answers, and the bare subprocess.run
+    raised TimeoutExpired in the abort path -- the driver died and left the aircraft to PX4's
+    offboard-loss failsafe (2026-10-29, bag slosh_20261029_121144)."""
+    import subprocess
+    try:
+        subprocess.run(["ros2", "param", "set", node, name, str(value)], capture_output=True, timeout=10)
+        return True
+    except subprocess.TimeoutExpired:
+        print(f"  !! ros2 param set {node} {name} {value}: no answer in 10 s (the node is not spinning)")
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ns", default="uav_0")
@@ -210,6 +230,9 @@ def main():
     ap.add_argument("--alt", type=float, default=20.0)
     ap.add_argument("--dist", type=float, default=300.0)
     ap.add_argument("--climb-time", type=float, default=45.0)
+    ap.add_argument("--ready-wait", type=float, default=120.0,
+                    help="seconds to wait at the engage for the cascade's status publisher (= its solver is built "
+                         "and it is running); never there = no engage, land in place, exit 4")
     ap.add_argument("--cruise-time", type=float, default=70.0)
     ap.add_argument("--recover-time", type=float, default=45.0)
     ap.add_argument("--back-transition", action="store_true",
@@ -255,11 +278,28 @@ def main():
         print("  climb did not settle -- continuing anyway")
 
     print(f"\n== 2 ENGAGE {a.controller} ==")
+    # ★ NEVER HAND THE AIRCRAFT TO A CONTROLLER THAT IS NOT RUNNING (2026-10-29). A cascade joins the
+    # ROS graph and prints its banner, THEN compiles its outer solver (minutes on a new airframe
+    # digest, more under load), and creates its status publisher only after that. Switched to while it
+    # compiled, nobody published actuators: PX4's offboard-loss failsafe flew the plan aircraft down
+    # 37 m from home (bag slosh_20261029_121144). The status publisher existing = the node is built.
+    if str(a.controller).startswith("cascade"):
+        stopic = f"/{a.ns}/{a.controller}/status"
+        if not spin(n, a.ready_wait, lambda: n.count_publishers(stopic) > 0, hz=1.0):
+            print(f"  !! {a.controller} has no publisher on {stopic} after {a.ready_wait:.0f} s: it is not running "
+                  f"(still compiling its outer solver, or dead). NOT ENGAGING -- landing here on the safe controller.")
+            hx, hy = float(n.p[0]), float(n.p[1])
+            def land_here():
+                n.send([hx, hy, 0.15]); n.set_ctrl("geometric"); n.line("land")
+                return n.p[2] < 0.35
+            spin(n, a.land_time, land_here, hz=1.0)
+            print(f"  touchdown at ({n.p[0]:.2f}, {n.p[1]:.2f}, {n.p[2]:.2f}); exit 4 (engage refused, no flight)")
+            sys.exit(4)
+        print(f"  {a.controller} is running ({stopic} has a publisher)")
     if a.stage != "mission":
         # the first stage's speed cap goes in BEFORE the switch: the node settles 2 s after the engage and a
         # `ros2 param set` takes about as long -- the third staged flight's cap arrived at 3 m/s
-        import subprocess as _sp
-        _sp.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "0.0"], capture_output=True, timeout=10)
+        pset(ctrl_node(a.controller), "v_cap", "0.0")
         print("  v_cap 0 set before the engage (the hover stage's cap)")
     base = n.p.copy()
     for _ in range(12):
@@ -271,15 +311,13 @@ def main():
     # telemetry and the cascade's status feed and advances only on a go. The stages are the
     # hardware flight card's: nothing new is asked of the aircraft in a stage that the previous
     # stage did not already show.
-    import subprocess
     STAGES = [("hover", 0.0, 0.0, 2.0), ("tilt10", 3.0, 2.0, 4.5), ("tilt50", 8.0, 6.5, 9.5), ("cruise", -1.0, 13.0, 25.0)]   # name, v_cap (-1 = off), V window
     stage_abort = False
     if a.stage != "mission":
         want = [st_[0] for st_ in STAGES].index(a.stage)
         z_ref = a.alt; fails0 = None
         for nm, cap, vlo, vhi in STAGES[:want + 1]:
-            subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", f"{cap}"],
-                           capture_output=True, timeout=10)
+            pset(ctrl_node(a.controller), "v_cap", f"{cap}")
             print(f"\n== STAGE {nm}: v_cap {cap if cap >= 0 else 'off'} for {a.stage_hold:.0f} s (V window {vlo}-{vhi}) ==")
             st = {"t0": time.time(), "why": ""}
             def stage_tick(nm=nm, cap=cap, vlo=vlo, vhi=vhi, st=st):
@@ -310,7 +348,7 @@ def main():
                 print(f"  !! STAGE {nm} NO-GO: {st['why']} -- aborting through the back-transition")
                 stage_abort = True; break
             print(f"  STAGE {nm}: go ({a.stage_hold:.0f} s inside the limits)")
-        subprocess.run(["ros2", "param", "set", ctrl_node(a.controller), "v_cap", "-1.0"], capture_output=True, timeout=10)
+        pset(ctrl_node(a.controller), "v_cap", "-1.0")
         if a.stage != "mission" or stage_abort:
             # come back: the schedule's back-transition where it is, then LAND WHERE IT IS -- the
             # mission's --land-x/y is the far target, and a hover-only stage that was sent there
@@ -372,9 +410,7 @@ def main():
         print("\n== 3b BACK-TRANSITION: done by the guidance (rth) -- skipped ==")
     elif a.back_transition:
         print("\n== 3b BACK-TRANSITION (decelerate on the schedule, nose-up flare) ==")
-        import subprocess
-        subprocess.run(["ros2","param","set",ctrl_node(a.controller),"decel_now","1.0"],
-                       capture_output=True, timeout=10)
+        pset(ctrl_node(a.controller), "decel_now", "1.0")
         bt = {"zmin": 1e9, "zmax": -1e9, "aoa": 0.0, "vzmax": 0.0, "n": 0, "frozen": 0,
               "last": None}
         # ★ LATCH the stop point ONCE.  Recomputing "40 m ahead of the CURRENT heading" every
@@ -410,10 +446,8 @@ def main():
         # 02:32 came out of a 1.7 m/s "back-transition" straight into a 16 m/s cruise during the
         # RECOVER phase (which waits for V < 2) and the safe controller took a wing-borne aircraft
         # (roll 49 deg; it survived). v_cap 0 is the hover hold piece 5 built for this.
-        subprocess.run(["ros2","param","set",ctrl_node(a.controller),"v_cap","0.0"],
-                       capture_output=True, timeout=10)
-        subprocess.run(["ros2","param","set",ctrl_node(a.controller),"decel_now","0.0"],
-                       capture_output=True, timeout=10)
+        pset(ctrl_node(a.controller), "v_cap", "0.0")
+        pset(ctrl_node(a.controller), "decel_now", "0.0")
 
     print("\n== 4 RECOVER to hover ==")
     hold = [n.p[0] + 0.0, n.p[1], max(a.alt, 8.0)]

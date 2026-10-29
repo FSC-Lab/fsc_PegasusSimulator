@@ -105,7 +105,7 @@ water fold plant vs so3). Whole headless suite: 37/37 (test_state_source's `ros2
 **NOT DONE:** configs B / C (the generator takes `--config B|C`; not gated); flaps (no channel, no aero term);
 the rectangular tank's two frequencies and its shallow-water nonlinearity; the spring-mass emulator (the
 plant's tank is a pendulum: its frequency follows the load factor, a spring's does not); the rear-rotor cut-off;
-a fixed-wing-only mode; the orbit retune.
+a fixed-wing-only mode. (The orbit retune: done 10-28 in the gate, flown in HIL 10-29 -- the last paragraph of this block.)
 **2026-10-28 -- "DO THE CONTROLLERS IN fsc_autopilot WORK WITH IT?" (`scripts/airframe_ctrl_gate.sh`: every cascade
 variant on one airframe file, straight mission + BT x 8 seeds and the turning mission x 4; results
 `~/flight_bags/ctrl_gate/airframe_plan_A`; safe controller closed on so3.build_ode in `scratchpad/plan/safe_ctrl_plan.py`):**
@@ -236,6 +236,29 @@ non-emergency abort and has `--land_here`; the first CAD bag lost its flight (th
 100 MB cache held everything) -- the recorder now runs `--max-cache-size 10 MB` and logs its output + exit code to
 `bag_<stamp>.log`. **NOT DONE:** multicopter only (the autopilot has no transition); the GS active-controller hazard
 above; k_pos 0.7 is untried on the plan airframe (its ring decays at 1.0).
+**2026-10-29 -- THE RETUNED CASCADE'S TURNING MISSION, FLOWN IN HIL ON THE PLAN AIRCRAFT: LANDED 0.15 m FROM HOME, THE
+ORBIT 100.0 +- 0.04 m** (row plan_A_turns_tuned_rtf_a1_124703, bag slosh_20261029_124621; the 10-27 launch line above +
+`GUIDE="20:wp 500 0 500 400 100 400;420:rth"`; the tank cascade on the file's roll gains 6.0 / 1.8): 0/0 solve failures,
+277 s wing-borne at z 28.9-30.2, both 90 deg fly-by turns at the 25 deg bank limit (overshoot +7.6 / +6.6 m), the orbit's
+entry transient DECAYS (rho sd 4.2 -> 0.15 -> 0.03 m over ~60 s) and it then holds **100.0 +- 0.04 m at roll -17.33 +-
+0.02 for 127 s** (the gate's -0.1 +- 0.1; untuned the gate rang +-14 m), RTH armed at +0.7 deg of roll 89 m out, stopped
+12.6 m from home 7.6 s after V 12, z min 29.0. **RTF 0.38** (the user's CPU batch on 12 cores; 10-27's flight 0.42), and
+the guidance plan is WALL-clock: the gate's `150:rth` came on leg 2 (row ..123503, annotated) -- stretch a plan by 1/RTF.
+**THREE HARNESS DEFECTS THE ATTEMPTS FOUND, all fixed:** (1) **a cascade on a new airframe digest compiles its outer solver
+INSIDE its constructor, AFTER printing its banner** (11.3 min under this load; no solver existed for the plan file's
+current digest d723c89902 + the 0.8 kg mass, key 1e43592b65). READY passed on the banner, the driver switched to a node that
+published nothing, and PX4's offboard-loss failsafe descended the aircraft 37 m from home -- scored "LANDED" (row ..121220,
+annotated NOT A FLIGHT). Now: `start_slosh_hil.sh` waits for each cascade window's `/uav_0/<id>/status` PUBLISHER (created
+after the solver loads; `ros2 topic info --no-daemon`, `READY_SOLVER_WAIT_S` 900) and refuses READY without it;
+`fly_transition.py` refuses the engage without it (`--ready-wait` 120 s: lands in place on the safe controller, exit 4,
+which `fly_slosh_mission.sh` writes as UNSCORED), and every `ros2 param set` in the driver goes through `pset()` (the
+abort path's bare call had died on TimeoutExpired, leaving the aircraft to the failsafe). Before a flight under load,
+build a new key offline: `nmpc_cascade_tank_node.py --test --dur 2` with the launch env. (2) **`spin()` tested `fn() is
+True`, never true for a numpy bool:** the climb never "settled" (68 of 71 logs: every flight sat out CLIMB_T, ~150 s of
+hover), the touchdown never registered (58 of 58 "touchdown: False") and the back-transition's stop never ended early.
+On the plan aircraft the safe controller then pushed it along the ground for the rest of the land timer and it tipped
+onto its side 32 s after touchdown (row ..123503: "maxroll 91" was ON THE GROUND). Fixed in `spin()`. **Consequence: the
+engage now follows the climb within seconds** (was ~150 s of hover); the cascade's own engage hover is unchanged.
 
 
 # ★★★★★ 2026-09-25: THE ROTOR TRADE -- PREDICTED BEST MOTOR + PROP: MN4010 KV370 + A CARBON 15x8
