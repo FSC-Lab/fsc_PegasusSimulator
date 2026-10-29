@@ -16,7 +16,8 @@ PATS=(
   "nmpc6_cruise_node" "nmpc_full_smc_node" "nmpc_cascade_node" "nmpc_cascade_tank_node" "nmpc_cascade_steso_node" "nmpc_cascade_imu_node" "nmpc_cascade_indi_node"
   "mocap_to_px4_ev" "isaacsim_optitrack" "single_drone_ground_control" "fly_trajectory"
   "autopilot_sv_baseline" "ros2 bag record" "pubraw" "pubref.py"
-  "scripts/fly_transition.py" "scripts/fly_mission.py"
+  "scripts/fly_transition.py" "scripts/fly_mission.py" "scripts/fly_fsc_cpp.py"
+  "fsc_drone_state_estimator" "indoor_estimator"      # the C++ autopilot path (start_vtol_fsc_hil.sh)
 )
 # ★ THE BAG FIRST, WITH SIGINT. A SIGKILLed rosbag has no metadata.yaml and `ros2 bag` will
 # not open it -- every bag in ~/flight_bags before 2026-09-12 is db3-only for exactly this

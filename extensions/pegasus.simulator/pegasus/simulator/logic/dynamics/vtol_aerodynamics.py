@@ -338,3 +338,25 @@ class VTOLAerodynamics:
                 controls["rudder"] = float(np.clip(values[7], -1.0, 1.0))
 
         return controls
+
+
+# airframe_id.cfg [aero] key -> VTOLAerodynamicsConfig field (angles in the file are degrees). One copy:
+# the plant builder (vtol_utils.airframe_vtol_config) and the flight driver's diagnostics both use it.
+AIRFRAME_AERO_KEYS = {"rho": "rho", "s_wing": "wing_area", "b_wing": "wing_span", "c_wing": "mean_chord",
+                      "cl0": "cl0", "cla": "cl_alpha", "clq": "cl_q", "clde": "cl_elevator", "cd0": "cd0",
+                      "kind": "k_induced", "cdb2": "cd_beta2", "cyb": "cy_beta", "cydr": "cy_rudder", "cy_max": "cy_max",
+                      "clb": "cl_roll_beta", "clda": "cl_aileron", "clp": "cl_p", "clr": "cl_r", "cldr": "cl_rudder",
+                      "cm0": "cm0", "cma": "cm_alpha", "cmq": "cm_q", "cmde": "cm_elevator", "cnb": "cn_beta",
+                      "cndr": "cn_rudder", "cnr": "cn_r", "cnp": "cn_p", "cnda": "cn_aileron",
+                      "blend_m": "stall_blend_M", "min_v": "min_airspeed"}
+AIRFRAME_AERO_DEG = {"stall_deg": "stall_alpha_rad", "beta_break_deg": "sideslip_break_rad"}
+
+
+def aero_config_from_airframe(af):
+    """VTOLAerodynamicsConfig from an airframe file's [aero] (+ the surfaces' travel), as loaded by the
+    controller's airframe_id.py. On the package's own airframe_id.cfg it IS the defaults, field for field
+    (tests/test_plan_airframe.py)."""
+    kw = {f: float(getattr(af.aero, k)) for k, f in AIRFRAME_AERO_KEYS.items()}
+    kw.update({f: math.radians(float(getattr(af.aero, k))) for k, f in AIRFRAME_AERO_DEG.items()})
+    kw["max_surface_deflection_rad"] = math.radians(float(af.surfaces.max_deflection_deg))
+    return VTOLAerodynamicsConfig(**kw)

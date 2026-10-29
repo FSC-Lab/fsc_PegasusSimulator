@@ -40,9 +40,27 @@ _spec = importlib.util.spec_from_file_location(
                  "logic", "dynamics", "vtol_aerodynamics.py"))
 _aero_mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_aero_mod)
-AERO = _aero_mod.VTOLAerodynamics()
-WEIGHT = 3.45 * 9.81
-MAX_THRUST = 18.0
+# ★ THE AIRCRAFT THE DIAGNOSTICS JUDGE IS THE AIRFRAME FILE'S (2026-10-27). These were literals -- 3.45 kg (the
+# dry CAD quad, no water), an 18 N rotor with a FLAT throttle map, tilt = servo x 90, the CAD wing's aero -- so
+# the build plan's aircraft (4.94 kg, 0.45 m^2, 13x8 / 13x5.5, a 93 deg servo) flew a clean 90 deg cruise that
+# this driver called "INCONCLUSIVE: too little CONTROLLED level flight" (its flat map read ~38 N of rotors).
+# Now: the controllers' file (FSC_AIRFRAME_ID honoured) and their water rule (VTOL_TANK_KG, default 0.502).
+sys.path.insert(0, os.path.join(_HERE, ".."))
+from controller_path import load_airframe          # noqa: E402
+_AF = load_airframe()
+AERO = _aero_mod.VTOLAerodynamics(_aero_mod.aero_config_from_airframe(_AF))
+WEIGHT = (float(_AF.mass.airframe_kg) + float(os.environ.get("VTOL_TANK_KG", "0.502") or 0.502)) * 9.81
+TILT_MAX = float(_AF.tilt.max_deg); TILT_MIN = float(_AF.tilt.min_deg)
+_ROT = {k: _AF.rotors.per_rotor(k) for k in ("max_thrust", "prop_d", "prop_j0", "omega_max")}
+
+
+def rotor_thrust(throttle, i, v_axial):
+    """The plant's momentum thrust of rotor i (vtol.py, settled speed) -- its own propeller, its own inflow."""
+    tmax, D, J0, om = (float(_ROT[k][i]) for k in ("max_thrust", "prop_d", "prop_j0", "omega_max"))
+    n_max = om / (2 * math.pi)
+    ct0 = tmax / (1.225 * n_max ** 2 * D ** 4)
+    nd = float(np.clip(throttle, 0.0, 1.0)) * n_max * D
+    return max(0.0, 1.225 * D * D * (ct0 * nd * nd - (ct0 / max(J0, 1e-3)) * nd * float(v_axial)))
 
 
 class _St:
@@ -122,6 +140,11 @@ class Flight(Node):
     def casc_stopped(self):
         return "stopped=1" in self.casc_status
 
+    def _rotor_newtons(self, vb):
+        b = math.radians(float(np.clip(float(self.srv[0]) * TILT_MAX, TILT_MIN, TILT_MAX)))
+        vf = float(vb[0] * math.sin(b) + vb[2] * math.cos(b)); vr = float(vb[2])
+        return sum(rotor_thrust(self.mot[i], i, vf if i < 2 else vr) for i in range(4))
+
     def telem(self):
         """Everything needed to tell fixed-wing flight from a fast multicopter."""
         vb = self.R.T @ self.v
@@ -133,8 +156,8 @@ class Flight(Node):
         yaw = math.degrees(math.atan2(self.R[1, 0], self.R[0, 0]))
         return dict(t=time.time(), p=self.p.copy(), V=V, vz=float(self.v[2]),
                     aoa=math.degrees(AERO.last_state.alpha) if V > 1.0 else 0.0,
-                    tilt=math.degrees(float(self.srv[0]) * math.pi / 2),
-                    thrust=float(self.mot.sum()) * MAX_THRUST,
+                    tilt=float(np.clip(float(self.srv[0]) * TILT_MAX, TILT_MIN, TILT_MAX)),
+                    thrust=self._rotor_newtons(vb),
                     wing=100.0 * lift_world_z / WEIGHT,
                     roll=roll, pitch=pitch, yaw=yaw)
 
@@ -459,7 +482,8 @@ def main():
     # Requiring the rotors to be UNLOADED separates flying from falling with style.
     # NOTE these are per-column maxima over the selected samples and need NOT be simultaneous;
     # the single best simultaneous sample is printed separately below.
-    HOVER_N = 32.0                   # >= this is the safe_hover fallback, not controlled flight
+    HOVER_N = 0.945 * WEIGHT         # >= this is the safe_hover fallback (~ the weight), not controlled flight
+                                     # (32 N of the CAD's 33.8 N, as the ratio it always was)
     lg = [d for d in n.log if abs(d["vz"]) < 1.5 and d["V"] > 3.0]
     cg = [d for d in lg if d["thrust"] < HOVER_N]
     n_lvl, n_ctl = len(lg), len(cg)

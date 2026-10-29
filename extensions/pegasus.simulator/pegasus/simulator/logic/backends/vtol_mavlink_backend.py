@@ -205,9 +205,11 @@ class PX4VTOLMavlinkBackend(PX4MavlinkBackend):
 
         # PX4 sets MAV_MODE_FLAG_SAFETY_ARMED (128) when armed (mode == 129 typ.).
         armed = bool(mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+        if armed and not self._last_armed:
+            self._armed_at = time.monotonic()            # the arming edge: PX4's spool-up starts here
         self._last_armed = armed
 
-        self._command = self._map_controls(controls) if armed else {}
+        self._command = self._map_controls(controls, time.monotonic() - getattr(self, "_armed_at", 0.0)) if armed else {}
         self._last_control_time = time.monotonic()
         self._timeout_warned = False
 
@@ -227,15 +229,34 @@ class PX4VTOLMavlinkBackend(PX4MavlinkBackend):
                     f"controls[:8]={raw} -> {mapped}"
                 )
 
-    def _map_controls(self, controls) -> dict:
-        """Apply the channel_map: controls[idx]*scale + offset, NaN -> 0."""
+    # PX4's spool-up (COM_SPOOLUP_TIME, default 1 s) plus margin: the window after the arming edge in which
+    # an unwritten (0.0) output on a channel with a disarmed field is the disarmed servo, not a command
+    SPOOLUP_WINDOW_S = 2.5          # the HIL log shows the tilts unwritten for ~1.5-2 s after the arming edge
+
+    def _map_controls(self, controls, armed_for=1e9) -> dict:
+        """Apply the channel_map: controls[idx]*scale + offset, NaN -> 0.
+
+        An entry may carry a 4th field, the command for a DISARMED output (2026-10-28, the C++ autopilot
+        path: vtol_utils.px4ca_tilt_map). PX4's pwm_out_sim leaves an output it holds disarmed UNWRITTEN,
+        which arrives here as exactly 0.0 -- and PX4 holds the tilt servos disarmed through the motor
+        spool-up while the motors already make hover thrust ("as long as throttle spoolup is not completed,
+        leave the tilts in the disarmed position (in hover)"). On hardware that position is the servo's
+        configured disarmed PWM; SITL's pwm_out_sim has no PWM_MAIN_DISn, so the plant's servo honours it --
+        ONLY within SPOOLUP_WINDOW_S of the arming edge (`armed_for`). After it, 0.0 is a COMMAND: PX4 caps
+        the yaw tilt at exactly control 0 (45 deg on MINA 0 / MAXA 90), and reading that as "disarmed" took
+        the yaw torque away exactly when PX4 asked for the most (the first fix, 2026-10-28: a +-25 deg yaw
+        limit cycle, then a runaway at a stiffer MC_YAWRATE_P)."""
         command: dict = {}
         n = len(controls)
-        for channel, (idx, scale, offset) in self._channel_map.items():
+        for channel, entry in self._channel_map.items():
+            idx, scale, offset = entry[0], entry[1], entry[2]
             if 0 <= idx < n:
                 raw = float(controls[idx])
                 if math.isnan(raw):
                     raw = 0.0
+                if len(entry) > 3 and raw == 0.0 and armed_for < self.SPOOLUP_WINDOW_S:
+                    command[channel] = entry[3]
+                    continue
                 command[channel] = raw * scale + offset
         return command
 

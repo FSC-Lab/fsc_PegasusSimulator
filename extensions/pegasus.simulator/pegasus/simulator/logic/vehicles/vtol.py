@@ -161,6 +161,14 @@ class RotorConfig:
         return prop_spec(self.prop, self.prop_diameter_m, self.prop_zero_thrust_J)[1] \
             if self.prop else self.prop_zero_thrust_J
 
+    # --- per-rotor motor + propeller (2026-10-27, the build plan's 13x8 front / 13x5.5 rear) -----
+    # None = the vehicle-wide VTOLConfig value (rotor_omega_max / rotor_tau_spin / rotor_moment_ratio),
+    # which is what every airframe before this used, so they are byte-identical. An airframe whose
+    # pairs differ sets them per rotor (vtol_utils.airframe_vtol_config does, from the airframe file).
+    omega_max: float | None = None              # [rad/s] at throttle 1
+    tau_spin: float | None = None               # [s] spin-up/-down time constant
+    moment_ratio: float | None = None           # yaw reaction torque per N of thrust [m]
+
     # --- tilt mechanism (set tiltable=False for a fixed rotor) ------------
     tiltable: bool = False
     tilt_axis: str = "Y"                        # principal axis the nacelle rotates about
@@ -927,7 +935,8 @@ class VTOL(Vehicle):
         stage = self._current_stage
         prim = stage.GetPrimAtPath(prop_path)
         api = PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
-        cap = 1.5 * max(float(self._cfg.rotor_omega_max), 100.0)
+        cap = 1.5 * max(max([float(self._cfg.rotor_omega_max)]
+                            + [float(r.omega_max) for r in self._cfg.rotors if r.omega_max is not None]), 100.0)
         api.CreateMaxAngularVelocityAttr().Set(float(math.degrees(cap)))
 
     def _build_surface(self, surface: SurfaceConfig):
@@ -1161,10 +1170,10 @@ class VTOL(Vehicle):
         if dt <= 0.0:
             return
         cfg = self._cfg
-        tau = max(cfg.rotor_tau_spin, 1e-3)
         for rotor in self._rotors:
+            tau = max(cfg.rotor_tau_spin if rotor.tau_spin is None else rotor.tau_spin, 1e-3)
             throttle = float(np.clip(command.get(rotor.throttle_channel, 0.0), 0.0, 1.0))
-            omega_cmd = throttle * cfg.rotor_omega_max
+            omega_cmd = throttle * (cfg.rotor_omega_max if rotor.omega_max is None else rotor.omega_max)
             omega = self._omega[rotor.name]
             omega += (omega_cmd - omega) * min(dt / tau, 1.0)
             self._omega[rotor.name] = omega
@@ -1319,7 +1328,7 @@ class VTOL(Vehicle):
         cfg = self._cfg
         model = self._spin_model()
         dynamics = model in ("lag", "momentum")
-        omega_max_sq = max(cfg.rotor_omega_max, 1e-6) ** 2
+        omega_max_sq_cfg = max(cfg.rotor_omega_max, 1e-6) ** 2
         # body-frame airspeed, for the inflow term. Each rotor sees the component along its OWN
         # (tilted) thrust axis -- at 90 deg tilt that is the cruise airspeed, which is exactly
         # where a flat thrust model flatters the aircraft most.
@@ -1336,6 +1345,8 @@ class VTOL(Vehicle):
         _dbg_parts = []
         for rotor in self._rotors:
             th_now = self._tilt_state.get(rotor.name, 0.0) if rotor.tiltable else 0.0
+            om_max = cfg.rotor_omega_max if rotor.omega_max is None else rotor.omega_max
+            omega_max_sq = omega_max_sq_cfg if rotor.omega_max is None else max(om_max, 1e-6) ** 2
             if dynamics:
                 thrust = rotor.max_thrust * (self._omega[rotor.name] ** 2) / omega_max_sq
                 if model == "momentum":
@@ -1347,7 +1358,7 @@ class VTOL(Vehicle):
                     # thrust is preserved exactly and only the airspeed behaviour is added.
                     D = float(rotor.prop_D)
                     J0 = max(float(rotor.prop_J0), 1e-3)
-                    n_max = max(cfg.rotor_omega_max, 1e-6) / (2.0 * math.pi)
+                    n_max = max(om_max, 1e-6) / (2.0 * math.pi)
                     ct0 = rotor.max_thrust / max(rho * n_max ** 2 * D ** 4, 1e-9)
                     n = self._omega[rotor.name] / (2.0 * math.pi)
                     v_ax = float(v_body[0] * math.sin(th_now) + v_body[2] * math.cos(th_now))
@@ -1376,8 +1387,9 @@ class VTOL(Vehicle):
             # Yaw reaction (rotor drag) torque about the (tilted) spin/thrust axis.
             # Real physics regardless of the spin-up LAG (rotor_dynamics) — gives
             # differential-torque yaw authority in hover.
-            if cfg.rotor_moment_ratio != 0.0:
-                k = -rotor.spin_dir * cfg.rotor_moment_ratio * thrust
+            mr = cfg.rotor_moment_ratio if rotor.moment_ratio is None else rotor.moment_ratio
+            if mr != 0.0:
+                k = -rotor.spin_dir * mr * thrust
                 self.apply_torque([k * sx, 0.0, k * cz], body_part="/body")
         if _dbg_now and _dbg_parts:
             import carb

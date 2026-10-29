@@ -1,6 +1,11 @@
 """Commanded tilt, altitude and speed on straight and banked wing-borne legs of a bag (2026-09-23: INDI turn compensation, the cruise wander). Usage: bag_cruise_tilt.py <bag dir>"""
-import sqlite3, sys, glob, math
+import os, sqlite3, sys, glob, math
 import numpy as np
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from controller_path import load_airframe   # noqa: E402
+# the angle the PLANT flies for a servo command: vtol.py scales it by the servo travel (tilt_max_deg),
+# not by 90 (2026-10-27); the airframe file (FSC_AIRFRAME_ID) holds that travel
+TILT_SCALE = float(load_airframe().tilt.max_deg)
 from rclpy.serialization import deserialize_message
 from px4_msgs.msg import ActuatorServos
 from fsc_autopilot_ros2_msgs.msg import Mocap
@@ -16,7 +21,7 @@ def rpy(q):
     roll = math.atan2(2*(w*x+y*z), 1-2*(x*x+y*y)); pitch = math.asin(max(-1, min(1, 2*(w*y-z*x))))
     return math.degrees(roll), math.degrees(pitch)
 RP = np.array([rpy(m.pose.orientation) for _, m in moc]); Z = np.array([m.pose.position.z for _, m in moc])
-ts = np.array([t for t, _ in srv]) / 1e9; tilt = np.array([s.control[0] * 90.0 for _, s in srv])
+ts = np.array([t for t, _ in srv]) / 1e9; tilt = np.array([s.control[0] * TILT_SCALE for _, s in srv])
 i = np.clip(np.searchsorted(tm, ts), 0, len(tm) - 1)
 m = (V[i] > 14.0) & (np.abs(RP[i, 0]) < 3.0)
 print(f"straight wing-borne samples {m.sum()}: tilt cmd mean {tilt[m].mean():.1f} sd {tilt[m].std():.2f} p5 {np.percentile(tilt[m],5):.1f} min {tilt[m].min():.1f}; "

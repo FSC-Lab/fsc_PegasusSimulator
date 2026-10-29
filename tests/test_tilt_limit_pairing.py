@@ -29,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from test_slosh_import import stub_isaac, load          # noqa: E402
 sys.path.insert(0, os.path.join(HERE, ".."))
-from controller_path import controller_dir, load_airframe   # noqa: E402
+from controller_path import controller_dir, inner_dir, load_airframe   # noqa: E402
 
 CTRL = os.path.join(controller_dir(), "px4_vtol_direct_actuator", "nmpc_cascade_node.py")
 
@@ -77,6 +77,21 @@ def main():
         # 1.9 N of braking it counted on never arrived (2026-09-14).
         if r.tilt_max_deg < 90.0 - 1e-9:
             bad.append(f"{r.name}: servo tilt_max {r.tilt_max_deg} deg is SHORT of the 90 the controller plans")
+        # ★ THE SCALE (2026-10-27). The plant flies cmd x tilt_max_deg (vtol.py _tilt_target_rad), so the
+        # controllers' servo command must divide by THIS rotor's travel: airframe_id.tilt_to_servo divides
+        # by the file's tilt.max_deg. They differed by 100/90 from 2026-09-17 (every HIL cruise ~10 deg
+        # past the controller's belief, found by ana_force_model --tilt_max); hold them equal.
+        _af = load_airframe(os.path.join(inner_dir(), "airframe_id.cfg"))
+        if abs(float(_af.tilt.max_deg) - r.tilt_max_deg) > 1e-9:
+            bad.append(f"{r.name}: servo travel {r.tilt_max_deg} deg vs airframe_id.cfg tilt.max_deg {_af.tilt.max_deg}: "
+                       f"the controllers' servo command (beta / max_deg) lands at the wrong angle")
+    # and every node that PUBLISHES a tilt does it through that one function (a `beta / (pi/2)` left
+    # anywhere is the 2026-09-17..10-27 mismatch again)
+    for node in ("nmpc_cascade_node.py", "nmpc6_cruise_node.py", "nmpc_full_smc_node.py", "nmpc_so3_cascade_node.py",
+                 "nmpc_so3_transition_node.py"):
+        src = open(os.path.join(inner_dir(), node)).read()
+        if re.search(r"(_beta|beta|betacmd|_beta_cmd|tilt)\s*/\s*\(math\.pi\s*/\s*2(\.0)?\)", src):
+            bad.append(f"{node} still divides a tilt by 90 deg for the servo; use tilt_to_servo (the plant scales by its travel)")
     if len([r for r in cfg.rotors if not r.tiltable]) != 2:
         bad.append("the rear pair must be fixed (the cascade's allocation holds it vertical)")
     if sched > aft + 1e-9:

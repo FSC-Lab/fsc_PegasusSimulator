@@ -14,6 +14,11 @@ import re
 import sys
 import glob
 import sqlite3
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from controller_path import load_airframe   # noqa: E402
+# the angle the PLANT flies for a servo command: vtol.py scales it by the servo travel (tilt_max_deg),
+# not by 90 (2026-10-27); the airframe file (FSC_AIRFRAME_ID) holds that travel
+TILT_SCALE = float(load_airframe().tilt.max_deg)
 
 TRIAL = sys.argv[2] if len(sys.argv) > 2 else "?"
 PARAMS = sys.argv[3] if len(sys.argv) > 3 else ""
@@ -224,7 +229,7 @@ VV = [math.sqrt(m.twist.linear.x**2 + m.twist.linear.y**2 + m.twist.linear.z**2)
 RPY = [rpy(m.pose.orientation) for m in moc]
 # tilt: servo channel 0 is tilt_left, commanded as a fraction of tilt_max (90 deg)
 import bisect
-_tilt_src = [abs(sv.control[0]) * 90.0 for sv in srv] if srv else []
+_tilt_src = [abs(sv.control[0]) * TILT_SCALE for sv in srv] if srv else []
 def tilt_at_time(t):
     if not _tilt_src:
         return 0.0

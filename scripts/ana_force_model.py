@@ -38,10 +38,16 @@ from px4_msgs.msg import ActuatorServos, ActuatorMotors, VehicleAttitude
 import nmpc_so3_transition_node as so3
 
 AERO = so3._aero_numeric()
-args = [a for a in sys.argv[1:] if not a.startswith("--")]
+_VALUED = ("--transport", "--tilt_max", "--aero_arm")           # flags that take a value
+args = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and sys.argv[i - 1] not in _VALUED]
 bagdir = args[0]; isaac_log = args[1] if len(args) > 1 else None
 WALL = "--wall" in sys.argv
 TRANSPORT = float(sys.argv[sys.argv.index("--transport") + 1]) if "--transport" in sys.argv else 0.03
+# the plant's tilt mapping: vtol.py scales the servo command against tilt_max_deg (cmd 1 = tilt_max), so
+# the angle the plant flies is cmd x tilt_max, clipped to [tilt_min, tilt_max]. Default: the airframe
+# file's range (= the plant's RotorConfig, held by tests/test_tilt_limit_pairing.py).
+TILT_MAX = float(sys.argv[sys.argv.index("--tilt_max") + 1]) if "--tilt_max" in sys.argv else float(so3._AF.tilt.max_deg)
+TILT_MIN = float(so3._AF.tilt.min_deg)
 bag = glob.glob(os.path.join(bagdir.rstrip("/"), "*.db3"))[0]
 cur = sqlite3.connect(bag).cursor()
 topics = {tid: name for tid, name, typ in cur.execute("select id, name, type from topics")}
@@ -109,15 +115,17 @@ tg = np.arange(T[0], T[-1], DT)
 th_cmd = hold(Tm, TH, tg - TRANSPORT); sv_cmd = hold(Ts, SV, tg - TRANSPORT)
 om = np.zeros((len(tg), 4)); om[0] = th_cmd[0]
 surf = np.zeros((len(tg), 3)); tilt = np.zeros(len(tg))
-a_sp = DT / 0.12; a_sv = DT / 0.03; slew = math.radians(400.0) * DT / math.radians(25.0); tslew = math.radians(80.0) * DT
+a_sp = DT / float(so3._AF.rotors.tau_spin); a_sv = DT / float(so3._AF.surfaces.tau)
+slew = math.radians(float(so3._AF.surfaces.rate_deg_s)) * DT / math.radians(float(so3._AF.surfaces.max_deflection_deg))
+tslew = math.radians(float(so3._AF.tilt.rate_deg_s)) * DT
 for k in range(1, len(tg)):
     om[k] = om[k - 1] + a_sp * (th_cmd[k] - om[k - 1])
     s = surf[k - 1] + a_sv * (sv_cmd[k, 2:5] - surf[k - 1])
     surf[k] = surf[k - 1] + np.clip(s - surf[k - 1], -slew, slew)
-    tc = float(np.clip(sv_cmd[k, 0], -25.0 / 90.0, 1.0)) * math.pi / 2
+    tc = float(np.clip(sv_cmd[k, 0] * math.radians(TILT_MAX), math.radians(TILT_MIN), math.radians(TILT_MAX)))
     tilt[k] = tilt[k - 1] + np.clip(tc - tilt[k - 1], -tslew, tslew)
 
-n_max = 749.0 / (2 * math.pi); D = so3.PROP_D; J0 = so3.PROP_J0
+n_max = so3.PROP_OMEGA_MAX / (2 * math.pi); D = so3.PROP_D; J0 = so3.PROP_J0
 ct0 = so3.MAX_THRUST / (so3.RHO * n_max ** 2 * D ** 4)
 
 

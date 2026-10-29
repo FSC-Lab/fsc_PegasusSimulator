@@ -15,7 +15,7 @@ TAGS=${*:-"ref a16x8 d4014_16x8 c14x10 b15x8"}
 WIND_TAGS=${WIND_TAGS:-"ref a16x8 d4014_16x8 c14x10"}
 WIND_CELLS=${WIND_CELLS:-"still turb05 turb10 turb10_vc18"}
 SEEDS=${SEEDS:-8}
-export VTOL_TANK_KG=0.502 VTOL_TANK_R=0.10 VTOL_TANK_DX=0.3
+export VTOL_TANK_KG=${VTOL_TANK_KG:-0.502} VTOL_TANK_R=${VTOL_TANK_R:-0.10} VTOL_TANK_DX=${VTOL_TANK_DX:-0.3}   # the offset 100 mm tank unless the caller sets another (the plan: 0.8 kg, DZ)
 PY=~/envs/isaac_env/bin/python3
 CTRL=$HOME/envs/fsc_autopilot_ros2-master
 LINE="--est mdob --l1 --ttr 10 --lat 0.03 --comp 0.049 --slosh --noise_acc 0.02"

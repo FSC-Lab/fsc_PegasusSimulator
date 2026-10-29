@@ -41,6 +41,9 @@ from fsc_aerial_manipulation.rotorcraft import (
     fsc_cad_vtol_config,
     fsc_cad_vtol_slosh_config,
 )
+from fsc_aerial_manipulation.rotorcraft.vtol_utils import (
+    load_airframe, airframe_vtol_config, airframe_vtol_slosh_config,
+)
 from fsc_aerial_manipulation.utils import add_dome_lighting
 from pegasus.simulator.logic.dynamics.slosh import TankConfig, default_tank, describe as describe_tank
 
@@ -120,6 +123,16 @@ class VTOLPx4HilApp:
         # standing pitch moment the trim does not know about. (A 3 cm TANK offset,
         # by contrast, moves the assembled CG by 3.8 mm and is not a driver.)
         cg_dx = float(os.environ.get("VTOL_CG_DX", "0") or 0.0)
+        # ★ WHICH AIRFRAME (2026-10-27). FSC_AIRFRAME_ID names the controllers' airframe file; when that
+        # file carries a [layout] section it is a complete airframe and the PLANT is built from it too
+        # (vtol_utils.airframe_vtol_config) -- the build plan's aircraft, which has no CAD. Without one
+        # (the default airframe_id.cfg) the plant is the CAD quad, as before. The banner's af= is the
+        # file's digest; the launcher holds it to the controllers' banners.
+        af_path = os.environ.get("FSC_AIRFRAME_ID") or None
+        _af = load_airframe(af_path)
+        from_file = bool(getattr(_af, "has_layout", False))
+        carb.log_warn(f"[VTOL] airframe: {_af.path} af={_af.digest()} "
+                      + ("plant BUILT FROM THE FILE" if from_file else "plant = the CAD quad"))
         if use_slosh:
             # VTOL_TANK_KG selects the water mass (0.1 / 0.502 / 0.7 flown); the controllers read
             # the SAME variable, so a value forwarded to this pane and not to theirs is a
@@ -128,7 +141,11 @@ class VTOLPx4HilApp:
             # VTOL_TANK_DX: mount the tank this far FORWARD of the CG without telling the
             # controller -- the L1 augmentation's test bed. 0 = at the CG.
             tank_dx = float(os.environ.get("VTOL_TANK_DX", "0") or 0.0)
-            vtol_config = fsc_cad_vtol_slosh_config(tank=tank, tank_dx=tank_dx)
+            if from_file:
+                tank_dz = float(os.environ.get("VTOL_TANK_DZ", "0") or 0.0)
+                vtol_config, _ = airframe_vtol_slosh_config(af_path, tank=tank, tank_dx=tank_dx, tank_dz=tank_dz)
+            else:
+                vtol_config = fsc_cad_vtol_slosh_config(tank=tank, tank_dx=tank_dx)
             if cg_dx != 0.0:
                 from dataclasses import replace as _replace
                 c = vtol_config.body_com_offset
@@ -144,7 +161,7 @@ class VTOLPx4HilApp:
                              "MOUNTED (phase 2, dead mass)")
                           + (f"  water={tank.fluid_mass:.3f} kg  [{describe_tank(tank)}]" if use_tank else ""))
         else:
-            vtol_config = fsc_cad_vtol_config()
+            vtol_config = airframe_vtol_config(af_path)[0] if from_file else fsc_cad_vtol_config()
 
         self.vtol_path = spawn_vtol_with_mavlink(
             px4_path=self.pg.px4_path,

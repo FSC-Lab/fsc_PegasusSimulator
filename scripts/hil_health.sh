@@ -24,8 +24,12 @@ PT=$(tmux capture-pane -p -S -20  -t "$SESSION:1-px4"   2>/dev/null | grep -c  "
 # reporting "cruise" at 1 m/s. If a 6h-cascade window exists the node is required.
 TB=$(for w in 6g-full 6h-cascade 6i-adaptive 6j-indi 6k-aindi; do tmux capture-pane -p -S -60 -t "$SESSION:$w" 2>/dev/null; done | grep -ci traceback)
 NL=$(ros2 node list 2>/dev/null)
-ND=$(echo "$NL" | grep -cE "geometric_hover_control|nmpc_full_smc_control")
-NDW=2
+ND=$(echo "$NL" | grep -cE "geometric_hover_control")
+NDW=1
+# nmpc_full only when its window was started (CONTROLLERS without it: a per-pair airframe, which it refuses)
+if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6g-full; then
+  NDW=$((NDW + 1)); ND=$((ND + $(echo "$NL" | grep -cE "nmpc_full_smc_control")))
+fi
 if tmux list-windows -t "$SESSION" -F '#W' 2>/dev/null | grep -qx 6h-cascade; then
   NDW=$((NDW + 1)); ND=$((ND + $(echo "$NL" | grep -cx "/nmpc_cascade_control")))
 fi

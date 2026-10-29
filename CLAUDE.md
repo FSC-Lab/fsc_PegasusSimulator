@@ -3,6 +3,233 @@
 # This section exists only on the `slosh` branch. `pre-slosh` is the baseline.
 
 
+# ★★★★★ 2026-10-27: THE BUILD PLAN'S AIRCRAFT IS IN THE SIM -- ONE AIRFRAME FILE BUILDS THE PLANT AND FEEDS
+# EVERY CONTROLLER (FSC_AIRFRAME_ID). AND ON THE WAY: SINCE 2026-09-17 EVERY HIL FLIGHT FLEW ITS NACELLES ~10 deg
+# PAST WHERE THE CONTROLLER THOUGHT THEY WERE (the servo scale) -- FIXED.
+# Sim + controller + GS this commit. Default-file identity hashes UNCHANGED (steso 03d9a349..., IMU 4a557a30...).
+**THE ASK (the user's):** "copy the current VTOL model and add the current configuration [the build plan,
+~/Downloads/VTOL_Building_Plan.xlsx], assume the aerodynamics are the same, I will replace it when I have the CFD
+done in a month; the wing design can change but the overall system should stay consistent."
+**THE COPY IS A FILE, NOT A FORK** (this project's rule). `scripts/plan_airframe.py` writes
+`airframe_plan_<A|B|C>.cfg` into the controller package from the workbook: [mass] = the Components positions
+with the PARTS-level masses after the workbook's applied trims (the plan's own "re-baseline" step; the avionics
+re-solved to hold the CG on the datum; config A carries the tank module dry, the water is VTOL_TANK_KG), [rotors]
+= the nacelle hubs + rotor_trade's PREDICTED per-pair propulsion (4010 KV450, 13x8 folding front / 13x5.5 rear,
+UIUC Aero-naut CAM data), [tilt] the plan's spec in the SIM convention (plan beta = 90 - tilt; its -3/+115 deg
+hard stops = +93/-25), [aero] = THE CAD AIRFRAME'S COEFFICIENTS on the plan's S 0.4498 / b 2.0 / MAC 0.2276 (the
+placeholder; `--aero <cfd file>` replaces that section and nothing else), [layout] = the plant-only geometry.
+The plan's x runs AFT from the nose: the file is FLU from the bay datum, z from the CG.
+**THE FORMAT GREW TWO OPTIONAL THINGS** (airframe_id.py; a file without them loads exactly as before):
+`rear_<key>` overrides for max_thrust / cq / prop_d / prop_j0 / omega_max / tau_spin (`A.rotors.uniform`,
+`A.rotors.per_rotor(k)`), and a `[layout]` section. **A file WITH [layout] is a complete airframe: Isaac BUILDS
+its plant from it** (`vtol_utils.airframe_vtol_config`: procedural boxes, per-rotor RotorConfig.omega_max /
+tau_spin / moment_ratio -- new optional plant fields, None = the vehicle-wide value -- and the BODY LINK SOLVED
+so the assembly has exactly the file's mass, CG and inertia). Scene 03 prints `[VTOL] airframe: <file> af=<digest>`
+and builds from the file when it has [layout], the CAD quad otherwise. ONE env var selects both sides:
+`FSC_AIRFRAME_ID`; both launchers forward it to Isaac, every controller pane and the GS; `start_slosh_hil.sh`
+REFUSES READY unless Isaac's af= is the file the launcher read (the controllers' af= were already checked).
+**THE CONTROLLERS CARRY THE PAIRS** where it matters and refuse where they cannot: so3 (`thrust_to_throttle(...,
+rear=)`, `thrust_available`, per-rotor cQ in build_ode, per-pair bounds in trim_split), the cascade (the
+allocation headroom, the throttle map, B_rot's cQ, the L1's per-rotor spin lag, safe_hover, the gate plant),
+nmpc6's Tr bound, the SAFE controller (per-rotor ceilings and cQ; **its hub positions were LITERALS --
+`0.459/0.285/-0.112` -- the one airframe number piece 3 missed; now the file's**: FL roll arm 0.285 -> 0.284);
+vtol_nmpc / nmpc_full / nmpc6's own node / the SO(3) nodes `require_uniform` (SystemExit on a per-pair file).
+The cascade's `V_STALL = 14.13 sqrt(M/3.45)` was the CAD WING's: now `x sqrt(0.35 / S_WING)` (exactly 1.0 on
+it; 14.9 m/s on the plan's wing, not 16.9). The GS reads the file too (`ROS_Node/airframe.py`): mass, wing, tilt.
+**★★ THE SERVO SCALE -- A REAL BUG, FOUND ON THE WAY.** vtol.py flies a tilt command as `cmd x tilt_max_deg`;
+the 2026-09-17 build set tilt_max 100 (the specified travel) and every controller kept sending `beta / 90`. So
+**from 09-17 to today every HIL flight's nacelles sat at 1.11x the commanded tilt** -- measured, not argued:
+`scripts/ana_force_model.py --tilt_max 90|100` (the tool brought up to the current airframe: omega_max, the
+lags, the tilt rate from the file) on bag slosh_20260923_230352: cruise force residual **0.91 N / 0.34 N.m**
+with 90, **0.01 N (0.04 rms) / 0.10 N.m** with 100 -- the nacelles at 97.3 deg where the controller believed
+87.5. The offline gate is BLIND to it by construction (its plant takes the controller's beta, not the servo
+command), which is why nothing failed. Fixed: `airframe_id.tilt_to_servo(beta)` = beta / the file's max_deg in
+every publishing node; the scorers (night_metrics, ana_guided, ana_rth_onset, bag_cruise_tilt, ana_bag6) and
+the GS HUD multiply by the file's max_deg; `test_tilt_limit_pairing.py` pins the plant's travel to the file's
+AND greps every node for a leftover `/ (math.pi / 2)` (mutation-checked: fails on the old line). **Consequence:
+the next CAD-airframe HIL flight is the first since 09-17 that flies the commanded tilt** -- re-baseline the HIL
+cruise numbers on it; the INDI-only HIL cruise tilt wander (09-23) is a CANDIDATE effect (an unmodelled 0.9 N
+of down-force and 0.34 N.m in cruise), not shown.
+**THE PLAN'S AIRCRAFT, config A (Parts-level, applied trims):** dry 4.138 kg + 0.8 kg water = **4.938 kg**
+(the workbook's "after trims" 4938.5), CG on the datum at 22.9% MAC, I 0.384 / 0.266 / 0.631 dry; hubs
++-0.280 fore-aft, 0.429 front / 0.480 rear lateral, **+0.051 m ABOVE the CG** (the CAD's front hub is 0.033
+BELOW: the cruise thrust's pitch moment changes sign); front 13x8 24.8 N static (2.04x its 12.1 N hover),
+J0 0.86, cq 0.0197, tau 0.093 s; rear 13x5.5 23.2 N (1.92x), J0 0.60, cq 0.0161, tau 0.102 s (all PREDICTED;
+the thrust rig replaces them). Launch: `FSC_AIRFRAME_ID=<pkg>/airframe_plan_A.cfg VTOL_TANK_KG=0.8 VTOL_TANK_R=0.10
+VTOL_TANK_F1=1.10 VTOL_TANK_ZETA=0.006 VTOL_TANK_DX=0 VTOL_TANK_DZ=-0.076` (the 207x192 mm, 20 mm-deep tank: the
+cylinder model at R 0.10 gives its 0.624 kg sloshing mass; 1.10 Hz sits between its 1.06 / 1.14 Hz axes).
+**FOR THE PLAN:** with the Parts-level masses the Solve mode puts the avionics bundle at x 0.569 m, INSIDE the
+payload bay (0.399-0.609) -- the workbook's "clear of bay" check fails once re-baselined; behind the bay the CG
+sits +5 mm from the datum (25.1% MAC). The generator prints it and writes it in the file's header.
+**THE CAD MESHES (the user: "use the same CAD model as well").** The plant built from the file is DRESSED in the
+FSC CAD quad's parts when they are on disk (`airframe_vtol_config(cad_meshes=None)`; False = boxes): each
+rotor's CAD arm + prop on the FILE's hub with the CAD's shaft offset, the CAD body shifted so its assembled CG
+(0.176, 0, -0.035 from its origin) lands on the file's CG, the [layout] collider box as the floor. VISUAL ONLY:
+the mass solve, hubs, props and aero are the file's (the test checks boxes and meshes give identical mass
+properties). The two layouts differ -- the plan's rotors 0.43/0.48 m out and 0.05 m above the CG, the CAD's
+booms at 0.284 m -- so the props render where the thrust acts, off the CAD booms.
+**THE GATE ON THE PLAN AIRCRAFT** (`~/flight_bags/plan_airframe`; imu-mdob + L1 + pitot, the plan's tank):
+straight mission + BT 8/8, BT peak pitch 12.0-12.5, 0 solve failures, z 30.0-30.1, stop 8.7 s. Turning mission
+(wind_sweep's flags, run directly -- wind_sweep.sh refuses an uncommitted controller tree): still 8/8, corridor
+pk 14.2, 0 in-flight fails (all after the RTH stop), front throttle peak 0.76, stop 3.0 m; **0.5 m/s turbulence
+8/8 but FAILS the bars: corridor pk 18.3, V_air min 14.7 (stall 14.91), stop 15 m, front throttle 0.97** -- the
+workbook's own "T/W LOW", flown. **AND THE ORBIT RINGS:** bank -12..-15 deg mean with +-12-14 deg sd, rho 110 +-
+12 m (the CAD airframe: +-0.3 m, roll sd 0.15) -- the bank-to-turn loop tuned on the CAD airframe against this
+one's lateral dynamics (b 2.0 m with the CAD's coefficients: 2.6x the dimensional roll damping); straight legs
+are clean (worst roll 0.8). Retune after the CFD, not before: the lateral derivatives are placeholders.
+**FLOWN IN HIL, CAD-DRESSED (row plan_A_straight70_a1_234008, bag slosh_20261027_233933; the tank cascade, mocap
+state, the plan's tank; `FSC_AIRFRAME_ID=.../airframe_plan_A.cfg VTOL_TANK=slosh VTOL_TANK_KG=0.8 VTOL_TANK_R=0.10
+VTOL_TANK_F1=1.10 VTOL_TANK_ZETA=0.006 VTOL_TANK_DX=0 VTOL_TANK_DZ=-0.076 ADAPTIVE=0 INDI=0 AINDI=0 DIST=800
+CRUISE_T=70 bash scripts/run_slosh_flight.sh`): READY certified Isaac's plant af=0ed7c2f5ca = the controllers',
+the water fold (CG -12.31 mm, I 0.390/0.272/0.635 = so3's); **LANDED 0.42 m**, wing-borne 37 s, tilt 90 (servo
+0.965 x 93 deg: the scale fix delivering the commanded angle), roll <= 6, yaw <= 1, 0/0 solve failures; the
+transition 0 -> 15.9 m/s in ~13 s at z 29.9-30.0, the back-transition 15.1 -> 0.1 m/s in 12 s at z 29.9-30.0.
+The first attempt (CRUISE_T 40 on DIST 800, row ..233009, annotated) scored CRASHED from the TEST SETUP: the
+stop at x 292 left a 508 m safe-controller leg whose approach met the ground at 9.7 m/s and skidded (roll <= 4).
+**LAUNCH / TOOL FIXES THE HIL ATTEMPTS FOUND:** the pre-launch gates of a [layout] file are its own pairing
+(test_plan_airframe, with the launch's tank), not the CAD pairings (test_prop_pairing compared the CAD plant to
+the plan file and refused); a per-pair file sets `CONTROLLERS=geometric cascade` (nmpc_full refuses it and
+READY then waited forever on hil_health, which now counts nmpc_full only when its window exists); the tank
+banner's stall / installed thrust were the CAD's literals (14.13, "72 N" -- the 18 N rotors of before 09-17):
+now from the config (13.65 -> 14.91, 96 N); **fly_transition.py's diagnostics** carried 3.45 kg (dry CAD, no
+water), an 18 N flat-mapped rotor, tilt = servo x 90 and the CAD wing -- a clean plan cruise read "INCONCLUSIVE"
+(its flat map saw ~38 N of rotors); now the file's weight + VTOL_TANK_KG, travel, per-pair momentum thrust at
+each rotor's inflow (hover throttle 0.70 -> 4 x 12.1 N = the weight, as the bag shows) and aero, the
+fallback threshold 0.945 W (the CAD's 32 / 33.8). The [aero]-to-config mapping lives once, in
+vtol_aerodynamics.aero_config_from_airframe.
+**TESTS:** `tests/test_plan_airframe.py` (25 checks: the file current with the workbook; the loader; the plant
+built from the file assembles to it exactly, boxes or CAD meshes; per-rotor props; the [aero] mapping exact on
+the default file; the controllers on the plan file -- mass, hubs, the throttle map inverting the PLANT's
+momentum model per pair to 1e-14 N, cascade == so3, the safe controller's arms, the tilt scale, the guard; the
+water fold plant vs so3). Whole headless suite: 37/37 (test_state_source's `ros2 node info` read failed twice right after a HIL teardown -- the ros2 daemon's stale graph -- and passed once it refreshed; the node subscribes correctly).
+**NOT DONE:** configs B / C (the generator takes `--config B|C`; not gated); flaps (no channel, no aero term);
+the rectangular tank's two frequencies and its shallow-water nonlinearity; the spring-mass emulator (the
+plant's tank is a pendulum: its frequency follows the load factor, a spring's does not); the rear-rotor cut-off;
+a fixed-wing-only mode; the orbit retune.
+**2026-10-28 -- "DO THE CONTROLLERS IN fsc_autopilot WORK WITH IT?" (`scripts/airframe_ctrl_gate.sh`: every cascade
+variant on one airframe file, straight mission + BT x 8 seeds and the turning mission x 4; results
+`~/flight_bags/ctrl_gate/airframe_plan_A`; safe controller closed on so3.build_ode in `scratchpad/plan/safe_ctrl_plan.py`):**
+| controller (GS id) | straight + BT, 8 seeds | turning, 4 seeds | latency (straight, comp 0.049) |
+|---|---|---|---|
+| base cascade `nmpc_cascade_node` (`cascade`, start_vtol_smc_hil's default) | 8/8, **BT peak 18.4, 8 in-flight fails** (the pre-knife-edge schedule) | 4/4, orbit 110 +- 14 m | -- |
+| tank cascade (`cascade` in the slosh launcher; flown in HIL 10-27) | 8/8, BT 12.5, 0 | 4/4, orbit rings +-14 m | -- |
+| adaptive STESO (`cascade_adaptive`) / adaptive IMU-mdob | 8/8, BT 12.5, 0 / 8/8, 12.5, 0 | 4/4, rings +-14 m, stop 0.3-6 m | IMU: 50 ms clean, **65 ms BT pk 22.9, 80 ms 0/3 (ground at the BT, t 65.6)** |
+| **INDI full (`cascade_indi`) / adaptive INDI (`cascade_aindi`)** | 8/8, BT 14.1, 5 in-flight fails each | 4/4, **orbit rho 100.0 exact, roll -18 steady**; fly-by bank ~30 (34 at the RTH capture) vs the 25 limit = INDI's 09-23 CAD behaviour; stop 0.2-2.5 m | **50 / 65 / 80 ms all 3/3, BT pk 13-14.5** |
+**INDI is the better controller for this airframe as it stands:** the orbit ringing is the geometric law's (all four
+geometric-law variants ring identically), and inverting the aero removes the bigger wing's roll dynamics from the
+loop. The safe controller (`geometric`): hover / 20 m translate / 3 and 6 m/s crosswind hold all 0.00-0.03 m (the
+weathervane releases already at 3 m/s here -- the plan's fin moment ~1.8x the CAD's; clip-only at 6 m/s pins the
+integral near its 12 N clamp); **its transport-delay margin is ~45 ms vs the CAD's ~70 on the same harness, and the
+plan's PREDICTED spin lag (0.093/0.102 vs 0.067 s) is all of it** (the plan airframe with tau forced to 0.067
+reproduces the CAD's margin). Refuse the per-pair file by design: nmpc_full, nmpc6's own node, the SO(3) nodes;
+vtol_nmpc refuses on its baked-trim mass table (no 0.8 kg row); nmpc_cruise / nmpc_quad / aero_transition refuse
+on any airframe (stale model). **Not connected to the airframe file at all:** the C++ FSC autopilot
+(`autopilot_sv_baseline_node`: mass 3.4 / thrust scaling in `scripts/config/params_fsc_cad_vtol.yaml`, PX4's own
+allocation from the 4101 airframe = CAD arms and KM 0.12, `start_vtol_fsc_hil.sh` does not forward FSC_AIRFRAME_ID,
+multicopter only, not flown since the 09-06 plant fixes), `nmpc_attitude_node` (mass 3.4, hover_throttle literal,
+the same PX4 path), `tiltrotor_control_node` (legacy, CAD literals). **GS hazard (pre-existing, made reachable by a
+per-pair launch):** the GS switches `active_controller` to a node that is not running (nmpc_full / nmpc6 buttons
+on a `CONTROLLERS=geometric cascade` launch) without checking, and every running controller then goes silent.
+**2026-10-28 (later) -- RETUNED FOR IT ("can we retune the controllers to make it work"). A NEW OPTIONAL `[tuning]`
+SECTION IN THE AIRFRAME FILE** (`airframe_id.TUNING_KEYS`, `A.tune(key, default)`): each key the default of ONE
+node's gain, named for its controller (`cascade_kR_roll/kW_roll`, `safe_kR/kW`); absent = the node's shipped literal,
+so the CAD file is untouched -- **identity hashes re-run: steso 03d9a349..., IMU 4a557a30..., byte-identical**; a
+mistyped key is refused. The generator writes it (re-gate after `--aero`: it says so); `test_plan_airframe` §6 pins
+it (mutation-checked: Gains back to 9.0 FAILS). Read at the cascade's ROS default AND its gate default (`--kR_roll /
+--kW_roll` are new gate flags, default = the file's), and the safe controller's `Gains` + ROS default.
+(1) **THE ORBIT RING, DIAGNOSED AND FIXED:** the cascade's roll law is `M = -kR e - kW p` in N.m, and the plan's
+2.0 m wing has 2.6x the CAD's dimensional roll damping (Lp 4.41 vs 1.68 N.m s at 16 m/s) on 1.47x the Ixx: the
+closed roll loop `J s^2 + (Lp + kW) s + kR` puts its slow pole at **-0.56 rad/s (CAD -1.17)** -- half as fast, under
+the ~0.9 rad/s bank-to-turn loop, which then rang. **kR_roll 6.0 / kW_roll 1.8 -> -1.03** (hover zeta 0.59). Sweep
+(tank node, 2 seeds): 3/1.2 orbit +14 +- 14; 4.4/1.2 -0.2 +- 1.5; **6/1.8 -0.1 +- 0.1**; 8/2.4 -0.2 +- 0.1 but 16 fails,
+stop 12 m; `k_bank` 1.2 alone +9 +- 13 (the guidance gain is not the lever). Exact pole + hover-zeta matching gives
+~7.3/2.3, which the gate rates worse than 6/1.8. **Full gate on the file (`~/flight_bags/ctrl_gate/airframe_plan_A_tuned`):**
+tank / adaptive / imu / base cascade orbit **+14.6 +- 14.6 -> -0.1 +- 0.1**, worst bank 25.1 -> 24.4, straight + BT
+unchanged (BT pk 12.5, 0 in-flight fails), INDI / AINDI identical to the digit (full mode replaces the law).
+**Delay (imu, A/B old vs new roll gains): 65 ms 8/8 both (BT pk 28.0 / 34.6, 0 in-flight fails); 80 ms 1/6 -> 5/6;
+100 ms 0/3 both (the new gains lose it as a corridor roll departure, t 14.5).** Clean margin stays ~50 ms; INDI flies
+3/3 to 100 ms (BT pk 19.9). (2) **THE SAFE CONTROLLER: kR 9 / kW 1.8 -> 5.0 / 1.5** (`scratchpad/plan/safe_grid.py`,
+`safe_perf.py` on so3.build_ode + per-pair spin lag): delay margin ~50 -> ~100 ms (9/1.8 crashes at 75; 5/1.5 clean
+at 75, 0.15 m at 100, lost at 125); costs position hold: 6 m/s crosswind 0.02 -> 0.19 m (clip-only 0.03 -> 0.37),
+hover / 20 m translate unchanged; its hover pitch loop 0.92 -> 0.68 Hz (further from the tank's 1.10). 6/1.8 was
+the middle option (~80 ms, 0.12 m). CAD `test_geometric_hover` unchanged. `scripts/airframe_ctrl_gate.sh` gained
+`LATS=` (the delay stage). **NOT A RETUNE, STILL OPEN:** the refusing NMPC nodes need per-pair code; the C++ autopilot
+needs PX4 CA geometry from the file (4101 still has the CAD arms and KM 0.12 -- stale for the CAD since 09-17 too)
++ launcher forwarding + a HIL bring-up [DONE, the next paragraph]; INDI's ~30 deg fly-by banks (the CAD's too); the base cascade's BT 18.4 (use
+the tank node, which the plan launcher does). All on the PLACEHOLDER aero: re-gate after the CFD.
+**2026-10-28 (evening) -- THE C++ FSC AUTOPILOT FLIES THE PLAN AIRCRAFT ("lets do the C++ autopilot setup").
+TWO HIL MISSIONS, LANDED 0.00 / 0.19 m** (`autopilot_sv_baseline_node` -> body rates -> PX4 mc_rate_control + CA;
+climb 5 m, 10 m out and back, 15 s holds; `~/flight_bags/fsc_cpp`, bag fsc_20261028_143608, logs fly_final1/2_*):
+holds 0.02 / 0.12-0.15 / 0.12 m mean (worst 0.30), roll/pitch <= 8.6 deg, **heading drift 0.3 deg**.
+**`scripts/fsc_autopilot_config.py` derives everything the C++ path needs FROM THE AIRFRAME FILE** (the 4101 airframe's
+CA block is the CAD's and KM 0.12 -- wrong for both airframes since 09-17): CA rotor geometry FRD about the WET CG,
+CT per pair, KM = spin x cq (PX4: KM > 0 = CCW; the sim's reaction torque is -spin cq T), THR_MDL_FAC 1 (thrust = CT
+u^2), the tilt servos, MPC_THR_HOVER from a numpy REPLICA of PX4's pinv + normalisation
+(`ControlAllocationPseudoInverse`, v1.16: plan K 95.81 N/unit, hover t 0.506), and the YAML's `vehicle_mass`,
+`vehicle_thrust_scaling` = 4/K, idle 0 (it had mass 3.4 and a hand-tuned scaling); writes `px4_params.txt`,
+`autopilot_params.yaml`, `env.sh`; `--verify` reads PX4's `param show` back (51/51 or not READY). Its own PX4 workdir
+(`rootfs_fsc0`: SITL PERSISTS parameters in parameters.bson; a stray MC_YAWRATE_P survived a relaunch -- the yaw-rate
+gains are now pinned in the generated set). `start_vtol_fsc_hil.sh` rewritten around it: forwards FSC_AIRFRAME_ID +
+the tank env to Isaac, bags `-a`, LAUNCH_LOG line, optional GS. `scripts/fly_fsc_cpp.py` = the completion-gated driver
+(refuses: unverified params, Isaac af= not the file, no tilt-map line, vehicle not grounded/upright/still; after the
+arm it READS THE NACELLES from Isaac's HIL debug and force-disarms unless one is within 2 deg of upright and neither
+past 30; aborts on attitude / leaving OFFBOARD; exits 0/1/2/3). `tests/test_fsc_autopilot_config.py` pins all of it.
+**FOUR THINGS THE BRING-UP FOUND (none visible without flying):** (1) **PX4 numbers servos CONTROL SURFACES FIRST, then
+tilts** -- with 3 surfaces the tilts are Servo4/5, so the 4101 routing sent the aileron/elevator to the NACELLES (0 ->
+45 deg) and the tilt to the elevator: flight 1 slid 212 m along the ground. `PWM_MAIN_FUNC5..9 = 204,205,201,202,203`.
+(2) **The tilt convention:** PX4 CA drives a tilt servo -1 = MINA (upright, VT_TILT_MC) .. +1 = MAXA; the sim reads
+cmd x tilt_max. `VTOL_TILT_PX4CA="0,90"` (env.sh) makes `vtol_utils.px4ca_tilt_map` rescale the tilt channels (-1 -> 0,
+0 -> 45, +1 -> 90 deg; unset = the map unchanged, every other path byte-identical). (3) **Disarmed outputs arrive as
+0.0** (`pwm_out_sim` leaves them unwritten; SITL has no PWM_MAIN_DISn) = 45 deg under that map -> a spool-up kick
+(flight 2). The map entry carries a 4th field, the DISARMED command, applied to an exact 0.0 only for
+`SPOOLUP_WINDOW_S` 2.5 s after the arming edge (`vtol_mavlink_backend._map_controls`; 3-tuples unchanged) -- because
+PX4 ALSO sends an exact 0.0 when the yaw-by-tilt SATURATES (it caps it there): reading every 0.0 as "disarmed" ran
+the heading 180 deg. (4) `COM_ARM_EKF_*` do not exist in v1.16 (read-back 42/46 until removed).
+**THE YAW LOOP, RETUNED: `fsc_attctl_kp_angle_z` 6.0 -> 1.5 (a [tuning] key; the YAML's yaw-ANGLE gain).** With
+tilts present PX4 yaws by DIFFERENTIAL TILT, not KM: ~T_hover (pi/4) |y| / Izz = 6.4 rad/s^2 per unit, so at
+MC_YAWRATE_P 0.25 the rate loop is ~1.6 rad/s and an angle gain of 6 sat above it -- heading rang +-25 deg at 0.2 Hz
+(holds 0.18-0.21 m, attitude 14 deg). Raising MC_YAWRATE_P to 0.62 instead is UNSTABLE (yaw-by-tilt couples into roll
+on the 0.43 m arm; tipped over). At 1.5: drift 0.3 deg, holds 0.11-0.15 m, attitude 7-9 deg. The C++ node has NO live
+parameter reload (`ros2 param set` is a no-op) -- gains move through the YAML: `[tuning]` or `FSC_YAML_SET="k=v,.."`
+(recorded in the YAML header and the LAUNCH_LOG). **Whole headless suite 38/38** (the boot test refused once on the
+ros2 daemon's stale graph right after teardown, passed on a rerun); **identity hashes unchanged** (steso 03d9a349...,
+IMU 4a557a30...: the tilt map and the disarmed field are inert without VTOL_TILT_PX4CA).
+**THE CAD AIRFRAME ON THIS PATH (2026-10-28 night; default `airframe_id.cfg` + the 0.502 kg tank, the same mission;
+bags fsc_20261028_180132 / _181058, logs fly_cad*; scored with the new `scripts/ana_fsc_bag.py`) -- RETUNED, (4):**
+(1) at the base yaw gain 6.0 the heading rang +-40 deg at ~7 s (roll +-17, y +-0.8 m) and the 10 m point never
+settled -- the predicted yaw ring, worse than the plan's; (2) `FSC_YAML_SET=attctl_kp_angle_z=1.5` fixes the yaw
+(drift 0.2 deg) and the mission completes, landing 0.10 m, BUT the post-leg holds sit in a FORE-AFT LIMIT CYCLE:
+half-cycle peaks 0.27 -> 0.52 -> 0.56 m, ratio 1.05-1.45 per half-cycle, ~9 s period, pitch +-11 (the plan airframe's
+same ring DECAYS, 0.7-0.8 per half-cycle, +-0.3 m, +-6 deg); holds 0.29 / 0.23 m mean vs the plan's 0.12. The bag
+shows the C++ UDE (velocity-based, gain 2) swinging +-4.7 m/s^2 in still air and its INTEGRAL pinned at the
+`ude_disturbance_lb/ub` +-10 clamp -- `constrainDisturbance()` clamps the INTEGRAL STATE (ude_base.cpp: `ude_value =
+integral + damping`), which must grow ~7.9 per m/s of speed, so the bound is really a ~1.27 m/s windup limit (the
+plan flew its leg at 1.15, the CAD at 1.40). (3) But widening it to +-30 made it WORSE (leg 1.94 m/s, overshoot
+1.2 m, +-1 m ring still +-0.4 after 30 s, pitch 23 -- aborted and landed in place): the clamp was limiting the
+ring, not causing it. **(4) RETUNED, FLOWN, GOOD: `FSC_YAML_SET=attctl_kp_angle_z=1.5,posctl_k_pos_x=0.7,posctl_k_pos_y=0.7`
+(bag fsc_20261028_214312, log fly_cad_kpos07_*): holds 0.028 / 0.053 / 0.056 m mean (mean of means 0.046 -- the plan
+airframe's 0.093-0.101), no overshoot at either 10 m point, pitch <= 5.0, UDE x sd 0.21 N (was 2.2), heading drift
+0.3 deg, arrival 16.4 s after the reference stops (plan 12.5, the ringing CAD 16.7), LANDED 0.00 m and disarmed.**
+The mechanism, from the bags (`scripts/ana_fsc_ring.py`): the C++ position law is in NEWTONS (`pd = k_vel (k_pos e_p + e_v)`,
+robust_controller.cpp), so the same YAML is 25% hotter on the 3.95 kg CAD than on the 4.94 kg plan aircraft, and the
+attitude response lags its reference 0.47-0.66 s (kp_angle 4 + PX4's rate loop + transport; `attctl_input_tc` is NOT
+in the loop -- `rate_bf_ff_enabled false` bypasses the input shaping). With a lag tau the fore-aft loop is
+`m tau s^3 + m s^2 + k_vel s + k_vel k_pos`: zeta 0.17 (0.11 at 0.66 s) for the CAD at k_pos 1 vs the plan's 0.21;
+**`k_vel` 6 -> 4.8 buys NO damping in that model (it only slows the loop -- the cell was dropped unflown); the PD zero
+is the lever: k_pos 0.7 -> zeta 0.30, 0.5 -> 0.40.** k_pos 0.5 flew too (bag _213814): ring-free, holds 0.055, but the
+position error saturates at 1 m (`SaturationSmoothing`), so k_pos caps the approach speed at k_pos m/s -- 32 s to
+arrive. 0.7 is the pick. It is a LAUNCH OVERRIDE, not in `airframe_id.cfg` (the default file is not changed without
+a go-ahead; carrying it there needs `fsc_posctl_k_pos_x/y` in `airframe_id.TUNING_KEYS` + the generator). **ON THE WAY:**
+EKF2 initialised badly on EVERY CAD launch ('vertical velocity unstable' + 'Attitude failure (roll)' from boot, z 7 m,
+60 height resets, arming denied, the quad level and still) -- the 8-params window now restarts ekf2 on the settled
+aircraft and polls `commander check` into `px4_preflight.txt`; an abort used to leave the aircraft armed and hovering
+on the autopilot's last reference (the driver was its only streamer) -- `fly_fsc_cpp.py` now LANDS IN PLACE on a
+non-emergency abort and has `--land_here`; the first CAD bag lost its flight (the recorder died silently, rosbag2's
+100 MB cache held everything) -- the recorder now runs `--max-cache-size 10 MB` and logs its output + exit code to
+`bag_<stamp>.log`. **NOT DONE:** the CAD gains into its airframe file (above); multicopter only (the autopilot has
+no transition); the GS active-controller hazard above; k_pos 0.7 is untried on the plan airframe (its ring decays at 1.0).
+
+
 # ★★★★★ 2026-09-25: THE ROTOR TRADE -- PREDICTED BEST MOTOR + PROP: MN4010 KV370 + A CARBON 15x8
 # (MID-PITCH, CW + CCW). -35% REFERENCE-MISSION ENERGY, -181 g, EVERY FLOWN MARGIN KEPT. THE PITCH IS THE
 # LEVER, NOT THE MOTOR. AND THE AIRFRAME FILE'S 36.3 N IS A STRAIGHT-LINE EXTRAPOLATION: THE MOTOR LINE SAYS 26 N.

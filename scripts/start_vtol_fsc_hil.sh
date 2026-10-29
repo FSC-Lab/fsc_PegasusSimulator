@@ -1,43 +1,48 @@
 #!/usr/bin/env bash
 #
-# start_vtol_fsc_hil.sh — CAD VTOL under the EXISTING FSC autopilot framework
+# start_vtol_fsc_hil.sh — the VTOL under the EXISTING FSC autopilot framework
 #                         (fsc_autopilot_ros2 + fsc_drone_state_estimator_ros2),
-#                         flown as a MULTICOPTER (tilt held non-tilting).
+#                         flown as a MULTICOPTER (no transition).
 #
 # This is start_vtol_hil.sh with the direct_actuator *test* node replaced by the
 # real FSC flight-control stack. fsc_autopilot_ros2 is a PX4 OFFBOARD controller:
-# it consumes a state estimate + a position reference and publishes
-# px4_msgs/OffboardControlMode + VehicleAttitudeSetpoint to PX4 over uXRCE-DDS.
-# PX4 then runs its own multicopter rate + control-allocation on the 4101
-# tiltrotor airframe. Because fsc_autopilot is a pure multicopter controller it
-# never commands a fixed-wing transition, so PX4 stays in MC mode and the front
-# tilt servos are held vertical (0) — the VTOL is "non-tilting" by construction.
+# it consumes a state estimate + a position reference, runs its own attitude loop
+# ("apm") and publishes px4_msgs/OffboardControlMode + VehicleRatesSetpoint to PX4
+# over uXRCE-DDS. PX4 then closes the RATES and allocates through ITS control
+# allocation (CA) on the 4101 tiltrotor airframe: the tilt servos make yaw by
+# differential tilt about upright, PX4 never transitions.
+#
+# ★ 2026-10-28 — THE AIRFRAME FILE DRIVES THIS PATH TOO (FSC_AIRFRAME_ID, default the
+# package's airframe_id.cfg). Until today it flew the 4101 literals (CAD arms, KM 0.12)
+# and a YAML fitted to an 18 N rotor -- on the current CAD build that YAML asks for ~2x
+# the weight -- and since the 2026-09-07 sim re-anchor PX4's upright tilt (-1) landed on
+# the nacelles' aft stop. Now:
+#   * scripts/fsc_autopilot_config.py derives, from the file + the tank env, PX4's CA set
+#     (hubs about the wet CG, per-pair CT, KM = spin x cq, THR_MDL_FAC 1, MPC_THR_HOVER),
+#     the autopilot's YAML (the wet mass; thrust_scaling from a replica of PX4's own
+#     normalized allocation) and VTOL_TILT_PX4CA (the sim maps PX4's tilt convention onto
+#     its own -- vtol_utils.px4ca_tilt_map). Written to $FSC_CFG_DIR.
+#   * window 8-params applies the PX4 set on the console once PX4 is up, reads every value
+#     back (`param show`) and writes $FSC_CFG_DIR/px4_params.verified only if all match;
+#     scripts/fly_fsc_cpp.py refuses to arm without it.
+#   * PX4 runs in ITS OWN working dir (rootfs_fsc0): SITL persists parameters, and
+#     THR_MDL_FAC 1 would otherwise reach the direct-actuator launchers' motors.
+#   * Isaac gets FSC_AIRFRAME_ID + the tank + VTOL_TILT_PX4CA; window 9-bag records -a to
+#     $BAG_DIR; GS=0 skips the ground station (a scripted flight).
 #
 # Node graph (all under /uav_0):
-#   pane 0  Micro XRCE-DDS Agent      udp4 :8888                 (px4 <-> ros2)
-#   pane 1  PX4 SITL (4101 tiltrotor) HIL TCP 4560+id, MC mode
-#   pane 2  Isaac Sim + Pegasus       03_vtol_px4_hil.py, VTOL_ROS2_STATE=1
-#                                        -> /uav_0/state/*  (pose/twist)
-#   pane 3  mocap emulator            /uav_0/state/* -> /uav_0/mocap
-#   pane 4  state estimator (indoor)  /uav_0/mocap -> .../local_position/odom
-#                                        + /uav_0/fmu/in/vehicle_visual_odometry (EKF)
-#   pane 5  fsc_autopilot             odom + reference + /uav_0/fmu/out/*
-#                                        -> /uav_0/fmu/in/{offboard_control_mode,
-#                                                          vehicle_attitude_setpoint}
-#   pane 6  ground station GUI        publishes .../position_controller/reference
-#   pane 7  arm/offboard helper       fsc_* commands over DDS (no pxh console)
+#   0 Micro XRCE-DDS Agent   1 PX4 SITL (4101, rootfs_fsc0)   2 Isaac (03_vtol_px4_hil.py)
+#   3 mocap emulator         4 state estimator (indoor)       5 fsc_autopilot
+#   6 ground station (GS=1)  7 arm/offboard helper            8 PX4 params   9 bag
 #
-# Fly it (pane 7, arming over DDS — the GUI does NOT arm; PX4 has no pxh console
-# in HIL because we launch the px4 binary directly):
-#     fsc_ref 0 0 1.5      # stream a setpoint so the autopilot feeds PX4
-#     fsc_check            # confirm offboard setpoints are live
-#     fsc_offboard         # request OFFBOARD
-#     fsc_arm              # arm     (or one-shot: fsc_takeoff 1.5)
-# Tune the thrust mapping live if hover is off:
-#   ros2 param set /uav_0/autopilot_sv_baseline_node vehicle_thrust_scaling 0.12
+# Fly it: scripts/fly_fsc_cpp.py (scripted: verify -> reference -> OFFBOARD -> ARM -> legs ->
+# land -> disarm), or by hand in window 7: fsc_ref 0 0 1.5; fsc_check; fsc_offboard; fsc_arm.
 #
-# Usage: scripts/start_vtol_fsc_hil.sh <machine-config>       # e.g. pieper_machine
-#        scripts/start_vtol_fsc_hil.sh --here <machine-config>  (stay in terminal)
+# Usage: [FSC_AIRFRAME_ID=<cfg> VTOL_SLOSH=1 VTOL_TANK=slosh VTOL_TANK_KG=.. ...] \
+#        scripts/start_vtol_fsc_hil.sh [--here] <machine-config>       # e.g. pieper_machine
+# The CAD airframe (the default airframe_id.cfg) flies this path with
+#   FSC_YAML_SET=attctl_kp_angle_z=1.5,posctl_k_pos_x=0.7,posctl_k_pos_y=0.7
+# (2026-10-28; without it the heading rings at 6.0 and the holds limit-cycle fore-aft -- CLAUDE.md).
 
 # ============================================================================
 #  >>> tunables (override via env) <<<
@@ -53,8 +58,13 @@ UAV_PREFIX="${UAV_PREFIX:-uav_0}"                          # ns for PX4 DDS + al
 GS_DIR="${GS_DIR:-$ROS2_WS/src/ros2_ground_station_gui}"   # ground station GUI checkout
 GS_MAIN="${GS_MAIN:-single_drone_ground_control.py}"       # single-drone GUI (run from GS_DIR/src)
 GAZEBO_WS="${GAZEBO_WS:-$HOME/workspaces/gazebo}"          # overlay ws w/ fsc_autopilot+estimator+msgs
+GS="${GS:-1}"                                              # 0 = no ground station (scripted flight)
+BAG_DIR="${BAG_DIR:-$HOME/flight_bags/fsc_cpp}"
+CTRL_PKG="${CTRL_PKG:-$HOME/envs/fsc_autopilot_ros2-master/px4_vtol_direct_actuator/px4_vtol_direct_actuator}"
+AF_FILE="${FSC_AIRFRAME_ID:-$CTRL_PKG/airframe_id.cfg}"
+FSC_CFG_DIR="${FSC_CFG_DIR:-$BAG_DIR/config_$(basename "$AF_FILE" .cfg)}"
 
-PEGASUS_HIL_DEBUG="${PEGASUS_HIL_DEBUG:-0}"
+PEGASUS_HIL_DEBUG="${PEGASUS_HIL_DEBUG:-1}"   # ON here: fly_fsc_cpp.py reads the mapped tilt channels from it before the climb
 VTOL_ROS2_STATE=1                                          # REQUIRED: Isaac must publish state for mocap
 # ============================================================================
 
@@ -85,12 +95,23 @@ load_machine_config "$0" "$CFG_NAME"   # -> PX4_DIR, ISAAC_PY, FSC_PEGASUS_ROOT
 # --- resolve the Pegasus entrypoint + Isaac python --------------------------
 PEGASUS_SCRIPT="${FSC_PEGASUS_ROOT}/${PEGASUS_SCRIPT_REL}"
 [[ -f "$PEGASUS_SCRIPT" ]] || { echo "ERROR: Pegasus script not found: $PEGASUS_SCRIPT" >&2; exit 1; }
-AUTOPILOT_PARAMS="${AUTOPILOT_PARAMS:-$FSC_PEGASUS_ROOT/scripts/config/params_fsc_cad_vtol.yaml}"
-[[ -f "$AUTOPILOT_PARAMS" ]] || { echo "ERROR: autopilot params not found: $AUTOPILOT_PARAMS" >&2; exit 1; }
 ISAAC_ROOT="$(cd -- "$(dirname -- "$ISAAC_PY")" && pwd)"
 ISAAC_BUNDLED_PY="${ISAAC_ROOT}/kit/python/bin/python3"
 [[ -x "$ISAAC_BUNDLED_PY" ]] || { echo "ERROR: Isaac bundled Python not found: $ISAAC_BUNDLED_PY" >&2; exit 1; }
 BRIDGE_LIB="${ISAAC_ROOT}/exts/isaacsim.ros2.bridge/${ROS_DISTRO}/lib"
+
+# --- the configuration, DERIVED from the airframe file + the tank --------------
+[[ -f "$AF_FILE" ]] || { echo "ERROR: airframe file not found: $AF_FILE" >&2; exit 1; }
+# water aboard exactly as scene 03 decides it: VTOL_SLOSH on and VTOL_TANK not "0" (its default "1")
+case "${VTOL_SLOSH:-0}" in 0|""|false|False) TANK_KG=0 ;;
+  *) if [ "${VTOL_TANK:-1}" = 0 ]; then TANK_KG=0; else TANK_KG="${VTOL_TANK_KG:-0.502}"; fi ;; esac
+rm -f "$FSC_CFG_DIR/px4_params.verified"
+VTOL_TANK_KG="$TANK_KG" "$HOME/envs/isaac_env/bin/python3" "$SCRIPT_DIR/fsc_autopilot_config.py" \
+    --airframe "$AF_FILE" --out "$FSC_CFG_DIR" || { echo "ERROR: fsc_autopilot_config.py failed" >&2; exit 1; }
+# shellcheck source=/dev/null
+source "$FSC_CFG_DIR/env.sh"                                       # -> VTOL_TILT_PX4CA
+AUTOPILOT_PARAMS="${AUTOPILOT_PARAMS:-$FSC_CFG_DIR/autopilot_params.yaml}"
+[[ -f "$AUTOPILOT_PARAMS" ]] || { echo "ERROR: autopilot params not found: $AUTOPILOT_PARAMS" >&2; exit 1; }
 
 # --- locate the prebuilt PX4 binary + rootfs --------------------------------
 PX4_BIN="$PX4_DIR/build/px4_sitl_default/bin/px4"
@@ -98,7 +119,9 @@ PX4_BIN="$PX4_DIR/build/px4_sitl_default/bin/px4"
 if   [[ -d "$PX4_DIR/build/px4_sitl_default/rootfs" ]];     then ROOTFS_BASE="$PX4_DIR/build/px4_sitl_default/rootfs"
 elif [[ -d "$PX4_DIR/build/px4_sitl_default/tmp/rootfs" ]]; then ROOTFS_BASE="$PX4_DIR/build/px4_sitl_default/tmp/rootfs"
 else echo "ERROR: PX4 SITL rootfs not found (build px4_sitl_default)." >&2; exit 1; fi
-PX4_WORKDIR="$PX4_DIR/build/px4_sitl_default/rootfs_vtol0"
+# ITS OWN working dir: SITL persists parameters (parameters.bson), and this path's THR_MDL_FAC 1 /
+# CA geometry must never reach the direct-actuator launchers (rootfs_vtol0), nor theirs this one.
+PX4_WORKDIR="$PX4_DIR/build/px4_sitl_default/rootfs_fsc0"
 [[ -d "$PX4_WORKDIR" ]] || cp -a "$ROOTFS_BASE" "$PX4_WORKDIR"
 
 # --- resolve the airframe autostart ID from the model name, if "auto" -------
@@ -120,16 +143,19 @@ command -v MicroXRCEAgent >/dev/null 2>&1 || echo "[fsc-hil] WARN: MicroXRCEAgen
 for pkg in fsc_autopilot_ros2 fsc_drone_state_estimator_ros2 isaacsim_optitrack_ros2_emulator fsc_autopilot_ros2_msgs; do
   [[ -d "$ROS2_WS/install/$pkg" || -d "$GAZEBO_WS/install/$pkg" ]] || echo "[fsc-hil] WARN: $pkg not built in $ROS2_WS/install or $GAZEBO_WS/install."
 done
-[[ -f "$GS_DIR/src/$GS_MAIN" ]] || echo "[fsc-hil] WARN: ground station not found: $GS_DIR/src/$GS_MAIN (pane 6 will error)."
+[[ "$GS" == 1 && ! -f "$GS_DIR/src/$GS_MAIN" ]] && echo "[fsc-hil] WARN: ground station not found: $GS_DIR/src/$GS_MAIN (window 6 will error)."
 
 # ================================
 SESSION="vtol_fsc_hil"
 PX4_INSTANCE=0
 D_PX4=2; D_ISAAC=4; D_EMU=14; D_EST=16; D_AP=18; D_GS=20; D_HELP=8   # staged startup delays [s]
 HELPERS="$FSC_PEGASUS_ROOT/scripts/fsc_offboard_helpers.sh"
+mkdir -p "$BAG_DIR"
+STAMP="$(date +%Y%m%d_%H%M%S)"
 
 echo "[fsc-hil] model=$PX4_SIM_MODEL autostart=$PX4_SYS_AUTOSTART ns=$UAV_PREFIX scene=$PEGASUS_SCRIPT_REL"
-echo "[fsc-hil] TILT: held non-tilting (PX4 stays in multicopter mode; no FW transition)"
+echo "[fsc-hil] airframe=$AF_FILE  slosh=${VTOL_SLOSH:-0} tank=${VTOL_TANK:-1} water=$TANK_KG kg  config=$FSC_CFG_DIR  VTOL_TILT_PX4CA=$VTOL_TILT_PX4CA"
+echo "[fsc-hil] PX4 workdir=$PX4_WORKDIR (its own)  bag=$BAG_DIR/fsc_$STAMP"
 tmux has-session -t "$SESSION" 2>/dev/null && tmux kill-session -t "$SESSION"
 
 # Shared prelude for the ROS 2 panes: system ROS + BOTH overlay workspaces
@@ -145,8 +171,7 @@ source /opt/ros/$ROS_DISTRO/setup.bash;
 [ -f \"$GAZEBO_WS/install/setup.bash\" ] && source \"$GAZEBO_WS/install/setup.bash\";"
 
 # Each component gets its OWN full-size tmux WINDOW (not a split pane) — switch
-# with Ctrl-b <number> (0..7) or Ctrl-b w for the list. (8 tiled panes overflow
-# tmux's min pane size and the last split silently fails.)
+# with Ctrl-b <number> (0..9) or Ctrl-b w for the list.
 # ---- Window 0: Micro XRCE-DDS Agent (up before PX4's DDS client) ------------
 tmux new-session -d -s "$SESSION" -n "0-dds" "
 echo '[pane0] Micro XRCE-DDS Agent  udp4 -p $DDS_AGENT_PORT'
@@ -159,21 +184,26 @@ exec bash
 tmux new-window -t "$SESSION" -n "1-px4" "
 cd \"$PX4_DIR\" || { echo 'PX4_DIR not found'; exec bash; }
 echo '[pane1] waiting $D_PX4 s for DDS agent...'; sleep $D_PX4
-echo '[pane1] PX4 SITL model=$PX4_SIM_MODEL autostart=$PX4_SYS_AUTOSTART ns=$UAV_PREFIX (TCP $((4560 + PX4_INSTANCE)))'
+echo '[pane1] PX4 SITL model=$PX4_SIM_MODEL autostart=$PX4_SYS_AUTOSTART ns=$UAV_PREFIX (TCP $((4560 + PX4_INSTANCE))) workdir=$PX4_WORKDIR'
 PX4_SYS_AUTOSTART=$PX4_SYS_AUTOSTART PX4_SIM_MODEL=$PX4_SIM_MODEL PX4_UXRCE_DDS_NS=$UAV_PREFIX \
   \"$PX4_BIN\" -i $PX4_INSTANCE -w \"$PX4_WORKDIR\"
 echo '[pane1] PX4 SITL exited.'; exec bash
 "
 
 # ---- Window 2: Isaac Sim + Pegasus (VTOL HIL scene, publishes /uav_0/state/*)
+# the airframe file, the tank and the PX4 tilt convention travel INLINE: what Isaac builds is what
+# the config above was derived from
 tmux new-window -t "$SESSION" -n "2-isaac" "
 echo '[pane2] waiting $D_ISAAC s for PX4...'; sleep $D_ISAAC
 echo '[pane2] Isaac Sim (VTOL HIL scene, state->mocap ON)...'
 unset PYTHONHOME PYTHONPATH PYTHONEXE VIRTUAL_ENV VIRTUAL_ENV_PROMPT CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL
 export ROS_DOMAIN_ID=\${ROS_DOMAIN_ID:-0} RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export LD_LIBRARY_PATH=\"\${LD_LIBRARY_PATH:-}:$BRIDGE_LIB\"
-PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG VTOL_ROS2_STATE=$VTOL_ROS2_STATE \
-  PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
+PYTHONUNBUFFERED=1 PEGASUS_HIL_DEBUG=$PEGASUS_HIL_DEBUG VTOL_ROS2_STATE=$VTOL_ROS2_STATE FSC_AIRFRAME_ID='${FSC_AIRFRAME_ID:-}' \
+  VTOL_TILT_PX4CA='$VTOL_TILT_PX4CA' VTOL_SLOSH='${VTOL_SLOSH:-0}' VTOL_TANK='${VTOL_TANK:-1}' \
+  VTOL_TANK_KG='${VTOL_TANK_KG:-}' VTOL_TANK_R='${VTOL_TANK_R:-}' VTOL_TANK_F1='${VTOL_TANK_F1:-}' \
+  VTOL_TANK_ZETA='${VTOL_TANK_ZETA:-}' VTOL_TANK_DX='${VTOL_TANK_DX:-0}' VTOL_TANK_DZ='${VTOL_TANK_DZ:-0}' \
+  PYTHONEXE=\"$ISAAC_BUNDLED_PY\" \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\" 2>&1 | tee \"$BAG_DIR/isaac_$STAMP.log\"
 echo '[pane2] Isaac Sim exited.'; exec bash
 "
 
@@ -206,6 +236,7 @@ echo '[pane5] autopilot exited.'; exec bash
 "
 
 # ---- Window 6: ground station GUI (reference + arm/offboard commands) -------
+if [ "$GS" = 1 ]; then
 tmux new-window -t "$SESSION" -n "6-groundstn" "
 $ROS_PRELUDE
 export DISPLAY=\"\${DISPLAY:-:0}\"
@@ -213,15 +244,13 @@ echo '[pane6] waiting $D_GS s for the stack...'; sleep $D_GS
 if [ -f \"$GS_DIR/src/$GS_MAIN\" ]; then
   cd \"$GS_DIR\"                       # run from REPO ROOT (GUI reads src/ROS_Node/geofence.json relatively)
   echo '[pane6] ground station GUI ($GS_MAIN) — arm + Offboard + set a position setpoint'
-  /usr/bin/python3 \"src/$GS_MAIN\"
+  FSC_AIRFRAME_ID='${FSC_AIRFRAME_ID:-}' VTOL_TANK_KG='${VTOL_TANK_KG:-}' /usr/bin/python3 \"src/$GS_MAIN\"
 else
   echo '[pane6] ground station not found at $GS_DIR/src/$GS_MAIN.'
-  echo '        Fall back to a manual reference, e.g.:'
-  echo '        ros2 topic pub /$UAV_PREFIX/fsc_autopilot_ros2/position_controller/reference \\'
-  echo '          fsc_autopilot_ros2_msgs/msg/PositionControllerReference \"{position: {z: 1.5}}\" -r 20'
 fi
 exec bash
 "
+fi
 
 # ---- Window 7: arm/offboard helper (DDS commands — no pxh console needed) ---
 tmux new-window -t "$SESSION" -n "7-helper" "
@@ -231,5 +260,61 @@ if [ -f \"$HELPERS\" ]; then exec bash --init-file \"$HELPERS\"
 else echo '[win7] helper not found: $HELPERS'; exec bash; fi
 "
 
-tmux select-window -t "$SESSION:7-helper"   # land on the helper (Ctrl-b <n> to switch: 0dds 1px4 2isaac 3mocap 4est 5autopilot 6gs 7helper)
-tmux attach-session -t "$SESSION"
+# ---- Window 8: PX4 parameters -- the derived CA set + the HIL relaxations, then READ BACK ----
+# (COM_ARM_EKF_HGT/VEL/POS/YAW, which the other launchers still set, do not exist in PX4 v1.16: the
+#  read-back's first run refused them, 2026-10-28 -- `param set` errors and nothing is relaxed.)
+tmux new-window -t "$SESSION" -n "8-params" "
+echo '[8-params] waiting for the PX4 console (pxh>)...'
+for i in \$(seq 1 200); do
+  tmux capture-pane -p -S -80 -t '$SESSION:1-px4' 2>/dev/null | grep -q 'pxh>' && break; sleep 2
+done
+sleep 3
+{ grep -v '^#' '$FSC_CFG_DIR/px4_params.txt'
+  printf '%s\n' 'SIM_BAT_MIN_PCT 100' 'COM_LOW_BAT_ACT 0' 'BAT_LOW_THR 0.05' 'COM_DISARM_LAND 0' 'COM_DISARM_PRFLT 0' \
+                'COM_ARM_IMU_ACC 1.0' 'COM_ARM_IMU_GYR 1.0' 'COM_ARM_MAG_ANG -1'; } > '$FSC_CFG_DIR/px4_params.applied'
+while read -r name val; do
+  [ -n \"\$name\" ] || continue
+  tmux send-keys -t '$SESSION:1-px4' \"param set \$name \$val\" Enter; sleep 0.3
+done < '$FSC_CFG_DIR/px4_params.applied'
+sleep 1
+# ★ 2026-10-28: on the CAD airframe EKF2 initialised while the quad was still settling from its spawn height
+# and never recovered -- 'vertical velocity unstable' + 'Attitude failure (roll)' from boot, z 7 m, 60 height
+# resets, arming denied -- with the aircraft level and still. A restart on the settled aircraft clears it.
+tmux send-keys -t '$SESSION:1-px4' 'ekf2 stop' Enter; sleep 1
+tmux send-keys -t '$SESSION:1-px4' 'ekf2 start' Enter; sleep 5
+tmux send-keys -t '$SESSION:1-px4' 'clear' Enter; sleep 0.5
+for name in \$(cut -d' ' -f1 '$FSC_CFG_DIR/px4_params.applied'); do
+  tmux send-keys -t '$SESSION:1-px4' \"param show \$name\" Enter; sleep 0.25
+done
+sleep 2
+tmux capture-pane -p -J -S -2000 -t '$SESSION:1-px4' > '$FSC_CFG_DIR/px4_console.txt'
+\"$HOME/envs/isaac_env/bin/python3\" \"$SCRIPT_DIR/fsc_autopilot_config.py\" --verify '$FSC_CFG_DIR' \
+  && touch '$FSC_CFG_DIR/px4_params.verified'
+# PX4's own preflight, polled until it passes (the restarted EKF2 needs a few seconds of sim time); the last
+# verdict and its reasons go to px4_preflight.txt -- PX4 refuses to arm on a FAILED one either way.
+for i in \$(seq 1 12); do
+  tmux send-keys -t '$SESSION:1-px4' 'commander check' Enter; sleep 5
+  v=\$(tmux capture-pane -p -J -S -40 -t '$SESSION:1-px4' | grep -E 'Preflight check:|Preflight Fail' | tail -4)
+  echo \"\$v\" | grep 'Preflight check:' | tail -1 | grep -q OK && break
+done
+echo \"\$v\" > '$FSC_CFG_DIR/px4_preflight.txt'; echo \"[8-params] PX4 preflight: \$v\"
+exec bash
+"
+
+# ---- Window 9: the bag (all topics; kill_hil.sh SIGINTs the recorder) ----
+# ★ 2026-10-28: the CAD flight's recorder died mid-session without finalising, and rosbag2's default 100 MB write
+# cache held the whole flight in memory -- the db3 ended four minutes before teardown, and the window's output
+# (the only trace of why) died with tmux. A 10 MB cache keeps a death to ~25 s of loss, and the recorder's
+# output and exit code go to bag_<stamp>.log beside the bag.
+tmux new-window -t "$SESSION" -n "9-bag" "
+$ROS_PRELUDE
+sleep $D_AP
+echo '[9-bag] ros2 bag record -a -> $BAG_DIR/fsc_$STAMP'
+ros2 bag record -a --max-cache-size 10485760 -o \"$BAG_DIR/fsc_$STAMP\" 2>&1 | tee \"$BAG_DIR/bag_$STAMP.log\"
+echo \"[9-bag] recorder exited rc=\${PIPESTATUS[0]} at \$(date +%T)\" | tee -a \"$BAG_DIR/bag_$STAMP.log\"
+exec bash
+"
+echo "fsc_$STAMP af=$AF_FILE cfg=$FSC_CFG_DIR slosh=${VTOL_SLOSH:-0} tank=${VTOL_TANK:-1} water=$TANK_KG tilt_px4ca=$VTOL_TILT_PX4CA yaml_set=${FSC_YAML_SET:-}" >> "$BAG_DIR/LAUNCH_LOG.txt"
+
+tmux select-window -t "$SESSION:7-helper"   # land on the helper
+if [ -t 1 ] && [ "${ATTACH:-1}" = 1 ]; then tmux attach-session -t "$SESSION"; fi

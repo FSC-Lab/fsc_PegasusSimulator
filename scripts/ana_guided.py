@@ -14,6 +14,11 @@ The waypoints are the mission's defaults; edit LOITER_C / the turn windows for a
 """
 import glob, os, sqlite3, sys, math
 import numpy as np
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from controller_path import load_airframe   # noqa: E402
+# the angle the PLANT flies for a servo command: vtol.py scales it by the servo travel (tilt_max_deg),
+# not by 90 (2026-10-27); the airframe file (FSC_AIRFRAME_ID) holds that travel
+TILT_SCALE = float(load_airframe().tilt.max_deg)
 
 LOITER_C = np.array([100.0, 400.0])   # the default plan's orbit centre
 from rclpy.serialization import deserialize_message
@@ -46,7 +51,7 @@ def rpy(q):
     return roll, pitch, yaw
 E = np.degrees(np.array([rpy(q) for q in Q]))
 V = np.linalg.norm(Vv[:, :2], axis=1)
-srv = rows("/actuator_servos", ActuatorServos); Ts = np.array([t for t, _ in srv]); tilt = np.array([m.control[0] for _, m in srv]) * 90
+srv = rows("/actuator_servos", ActuatorServos); Ts = np.array([t for t, _ in srv]); tilt = np.array([m.control[0] for _, m in srv]) * TILT_SCALE
 print(f"{cid} engaged at {eng} s; bag {T[-1]:.0f} s; {len(T)} mocap")
 cmds = [(t, m.data) for t, m in rows(f"{cid}/cmd", String)] if any(v.endswith(f"{cid}/cmd") for v in topics.values()) else []
 for t, c in cmds: print(f"  cmd t={t:.1f}: {c}")

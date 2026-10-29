@@ -71,7 +71,18 @@ if [ "${SKIP_GATES:-0}" != "1" ]; then
   # drift has flown twice (the gate's --prop_J0 re-propped only the plant: 0.45 m/s of cruise
   # overspeed on less throttle; rotor_omega_max flew at 1000 while every model said 749). They are
   # pure-python and cost a couple of seconds against a 4-minute stack.
-  for t in test_slosh_scaffold test_slosh_import test_prop_pairing test_tilt_limit_pairing; do
+  # A COMPLETE airframe file (one with [layout], FSC_AIRFRAME_ID -- the build plan's aircraft) BUILDS the
+  # plant, so the CAD pairings (CAD plant vs file) do not apply to it; its own pairing (the plant built from
+  # the file vs the controllers on it, with THIS launch's tank) is tests/test_plan_airframe.py (2026-10-27).
+  _AFL=$(cd "${FSC_CONTROLLER_DIR:-$HOME/ros2_ws/src/px4_vtol_direct_actuator}/px4_vtol_direct_actuator" && \
+         /usr/bin/python3 -c "from airframe_id import AIRFRAME as A; print(int(A.has_layout))" 2>/dev/null)
+  if [ "$_AFL" = "1" ]; then
+    GATES="test_slosh_scaffold test_slosh_import test_plan_airframe"
+    say "    airframe file with [layout] ($FSC_AIRFRAME_ID): its plant is built from it -- test_plan_airframe, not the CAD pairings"
+  else
+    GATES="test_slosh_scaffold test_slosh_import test_prop_pairing test_tilt_limit_pairing"
+  fi
+  for t in $GATES; do
     if ! OUT=$(~/envs/isaac_env/bin/python3 "$ROOT/tests/$t.py" 2>&1 || /usr/bin/python3 "$ROOT/tests/$t.py" 2>&1); then
       echo "$OUT" | tail -12
       echo "[slosh_hil] !! $t FAILED -- not launching. (SKIP_GATES=1 overrides.)"
@@ -112,6 +123,14 @@ if [ -z "$AF_LINE" ]; then
   echo "[slosh_hil] !! could not load $CTRL_DIR/px4_vtol_direct_actuator/airframe_id.cfg through airframe_id.py (the controller's identified airframe). Not READY."; exit 1
 fi
 AF_M=${AF_LINE%% *}; AF_REST=${AF_LINE#* }; AF_CG=${AF_REST%% *}; AF_DIGEST=${AF_REST#* }
+# A PER-PAIR airframe (rear_* rotor keys -- the build plan's 13x8 / 13x5.5) is flown by the cascades and the
+# safe controller only; nmpc_full / vtol_nmpc / the SO(3) nodes model four identical rotors and REFUSE it
+# (airframe_id.require_uniform), so do not start one and then wait forever for it to be healthy (2026-10-27).
+AF_UNIFORM=$(cd "$CTRL_DIR/px4_vtol_direct_actuator" && /usr/bin/python3 -c "from airframe_id import AIRFRAME as A; print(int(A.rotors.uniform))" 2>/dev/null)
+if [ "$AF_UNIFORM" = "0" ]; then
+  export CONTROLLERS=${CONTROLLERS:-geometric cascade}
+  echo "[slosh_hil] airframe has a separate rear rotor pair -> CONTROLLERS='$CONTROLLERS' (nmpc_full models identical rotors)"
+fi
 echo "[slosh_hil] airframe: airframe_id.cfg digest $AF_DIGEST (M_airframe $AF_M kg, CG_X $AF_CG m)${FSC_AIRFRAME_ID:+  OVERRIDE FSC_AIRFRAME_ID=$FSC_AIRFRAME_ID}"
 if [ "$WANT_SLOSH" = "1" ] && [ "${VTOL_TANK:-1}" != "0" ]; then
   case "${CASC_NODE_PY:-}" in
@@ -225,6 +244,18 @@ if [ "$WANT_SLOSH" = "1" ] && [ "$BANNER" -lt 1 ]; then
   echo "[slosh_hil]    DO NOT FLY THIS AND CALL IT A TANK RESULT."
   exit 1
 fi
+# THE AIRFRAME THE PLANT WAS BUILT FROM (2026-10-27): the scene prints "[VTOL] airframe: <file> af=<digest>"
+# for the file FSC_AIRFRAME_ID names (a file with a [layout] section builds the plant itself -- the
+# build plan's aircraft; the default builds the CAD quad). It must be the file this launcher read, or
+# Isaac and the controllers are two different aircraft.
+IAF=$(echo "$PANE" | grep -o "\[VTOL\] airframe: .* af=[0-9a-f]*" | tail -1)
+IAFD=$(echo "$IAF" | grep -o "af=[0-9a-f]*" | cut -d= -f2)
+if [ -z "$IAFD" ] || [ "$IAFD" != "$AF_DIGEST" ]; then
+  echo "[slosh_hil] !! Isaac built its vehicle from airframe ${IAFD:-<none>} but this launcher read $AF_DIGEST"
+  echo "[slosh_hil]    (FSC_AIRFRAME_ID=${FSC_AIRFRAME_ID:-<default>}). The plant is not the aircraft the controllers model. Not READY."
+  exit 1
+fi
+say "    plant airframe: ${IAF#*airframe: }"
 # Phase 2: with the tank mounted the vehicle logs its mass fold at construction.
 # Verify THAT too -- "VTOLSlosh with no tank" and "VTOLSlosh with the tank" are
 # different aircraft, and the launcher must say which one it verified.

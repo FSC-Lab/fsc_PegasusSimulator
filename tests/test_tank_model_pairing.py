@@ -226,12 +226,15 @@ def main():
     gs = os.path.expanduser("~/ros2_ws/src/ros2_ground_station_gui/src/ROS_Node/trajectory_player.py")
     if os.path.exists(gs):
         src = open(gs).read()
-        mk = re.search(r"M_KG = ([0-9.]+) \+ WATER_KG", src)
-        hit = mk and re.search(
+        water = re.search(
             r'WATER_KG = float\(os\.environ\.get\("VTOL_TANK_KG", "0\.502"\) or 0\.502\)', src)
-        # the GS is another repo (numpy-only python) and carries the airframe as a LITERAL: pin it to the file's number
-        same = hit and abs(float(mk.group(1)) - af.mass.airframe_kg) <= 1e-6
-        print(f"  {'GS trajectory_player.py':28s} mass = {mk.group(1) if mk else '?'} + VTOL_TANK_KG   {'ok' if same else 'MISMATCH'}")
+        # since 2026-10-27 the GS reads the controllers' airframe FILE (ROS_Node/airframe.py, the
+        # controller's own loader); before, it carried the airframe as a LITERAL pinned to the file's number
+        reads_file = "M_KG = _GS_AF.mass.airframe_kg + WATER_KG" in src and "from ROS_Node.airframe import AIRFRAME as _GS_AF" in src
+        mk = re.search(r"M_KG = ([0-9.]+) \+ WATER_KG", src)
+        same = bool(water) and (reads_file or (mk is not None and abs(float(mk.group(1)) - af.mass.airframe_kg) <= 1e-6))
+        what = "the airframe file" if reads_file else (mk.group(1) if mk else "?")
+        print(f"  {'GS trajectory_player.py':28s} mass = {what} + VTOL_TANK_KG   {'ok' if same else 'MISMATCH'}")
         if not same:
             bad.append(f"the ground station's speed checks do not carry the mass as {af.mass.airframe_kg} + "
                        "VTOL_TANK_KG (default 0.502): it would quote the wrong stall speed "

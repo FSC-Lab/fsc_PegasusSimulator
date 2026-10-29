@@ -5,6 +5,11 @@ roll/yaw, motors, tilt servo, elevator/aileron/rudder + a summary. (anabag.py ch
 out-topics recorded by recbag_nmpc6.sh -- use THIS one.) Lives in the repo: /tmp gets wiped."""
 import os, sys, math
 import numpy as np
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+from controller_path import load_airframe   # noqa: E402
+# the angle the PLANT flies for a servo command: vtol.py scales it by the servo travel (tilt_max_deg),
+# not by 90 (2026-10-27); the airframe file (FSC_AIRFRAME_ID) holds that travel
+TILT_SCALE = float(load_airframe().tilt.max_deg)
 from rosbag2_py import SequentialReader, StorageOptions, ConverterOptions
 from rclpy.serialization import deserialize_message
 from fsc_autopilot_ros2_msgs.msg import Mocap
@@ -57,7 +62,7 @@ for ts, m in moc:
           % (ts-t0, p[0], p[1], p[2], V, vs, v[2], roll, pitch, yaw, aoa,
              mc[0], mc[1], mc[2], mc[3], sc[0], sc[3], sc[2], sc[4]))
     zs.append(p[2]); pit.append(pitch); aoas.append(aoa); rolls.append(roll); yaws.append(yaw)
-    tilts.append(sc[0]*90.0)
+    tilts.append(sc[0] * TILT_SCALE)
 print("--- summary ---")
 print(" altitude %.1f..%.1f (range %.1f) | pitch %.0f..%.0f | AoA %.0f..%.0f | roll %.0f..%.0f | yaw %.0f..%.0f | tilt %.0f..%.0f"
       % (min(zs), max(zs), max(zs)-min(zs), min(pit), max(pit), min(aoas), max(aoas),

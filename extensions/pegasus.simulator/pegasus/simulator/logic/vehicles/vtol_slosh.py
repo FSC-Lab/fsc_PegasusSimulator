@@ -187,7 +187,13 @@ class VTOLSlosh(VTOL):
             self._mass_props = after
             m0, c0, i0 = before
             m1, c1, i1 = after
-            stall = 14.13 * math.sqrt(m1 / m0)
+            # the CAD wing's measured 14.13 m/s at 3.45 kg on 0.35 m^2, scaled by the wing loading (same
+            # coefficients -> stall ~ sqrt(M / S)); the thrust actually installed (the old line said 72 N:
+            # the 18 N rotors of before 2026-09-17) -- both read from THIS config (2026-10-27)
+            S_w = float(getattr(config.aerodynamics, "wing_area", 0.35))
+            stall0 = 14.13 * math.sqrt((m0 / S_w) / (3.45 / 0.35))
+            stall = 14.13 * math.sqrt((m1 / S_w) / (3.45 / 0.35))
+            installed = sum(float(r.max_thrust) for r in config.rotors)
             msg = (f"[TANK] {describe_tank(tank)}  --  "
                    f"{'SLOSH (phase 3, pendulum)' if tank.slosh else 'DEAD MASS (phase 2)'}\n"
                    f"[TANK] dead mass (phase 2): {m0:.3f} -> {m1:.3f} kg "
@@ -197,8 +203,8 @@ class VTOLSlosh(VTOL):
                    f"[{1000 * float(np.linalg.norm(c1 - c0)):.2f} mm], "
                    f"I ({i0[0]:.3f},{i0[1]:.3f},{i0[2]:.3f}) -> "
                    f"({i1[0]:.3f},{i1[1]:.3f},{i1[2]:.3f})\n"
-                   f"[TANK] stall 14.13 -> {stall:.2f} m/s against a 16.0 m/s cruise; "
-                   f"hover needs {m1 * 9.81:.2f} N of 72 N installed. "
+                   f"[TANK] stall {stall0:.2f} -> {stall:.2f} m/s against a 16.0 m/s cruise; "
+                   f"hover needs {m1 * 9.81:.2f} N of {installed:.0f} N installed. "
                    f"THE CONTROLLERS MUST CARRY THE SAME MASS (so3.M) or the "
                    f"reference stops being a trim.")
             print(msg)

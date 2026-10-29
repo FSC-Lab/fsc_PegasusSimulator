@@ -6,7 +6,7 @@ safe controller has taken over), solve failures before it, the front pair's thro
     python3 scripts/rotor_gate_metrics.py [tags...]      (~/flight_bags/rotor_trade/wind/<tag>)
 """
 import glob, os, re, sys, numpy as np
-D = os.path.expanduser("~/flight_bags/rotor_trade/wind")
+D = os.path.expanduser(os.environ.get("GATE_WIND_DIR") or "~/flight_bags/rotor_trade/wind")   # GATE_WIND_DIR: another gate's wind dir
 ROW = re.compile(r"^\s+([\d.]+)\s+([\d.-]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\s+([\d.-]+)\s+([+\-\d.]+)\s+([+\-\d.]+)\s+([+\-\d.]+).*?ok=(\d)(.*)$")
 def one(path):
     rows, mots = [], []
