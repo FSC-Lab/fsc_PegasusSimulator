@@ -92,12 +92,35 @@ def main():
         kpz = af.tuning.get("fsc_attctl_kp_angle_z")
         check(kpz is not None and f"attctl_kp_angle_z: {kpz:g}   # the airframe file's [tuning]" in y,
               f"the autopilot's yaw angle gain from the file's [tuning] ({kpz})")
+        check("posctl_k_pos_x: 1.0\n" in y and "posctl_k_pos_y: 1.0\n" in y,
+              "plan file (no fsc_posctl_* key): the base YAML's k_pos 1.0 stands")
+
+    def cad_yaml(cfg_path):
+        with tempfile.TemporaryDirectory() as td:
+            env = {k: v for k, v in os.environ.items() if k not in ("FSC_AIRFRAME_ID", "FSC_YAML_SET")}
+            if cfg_path:
+                env["FSC_AIRFRAME_ID"] = cfg_path
+            r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "fsc_autopilot_config.py"), "--tank-kg",
+                                "0.502", "--out", td], env=env, capture_output=True, text=True)
+            return r.returncode, open(os.path.join(td, "autopilot_params.yaml")).read() if r.returncode == 0 else r.stderr
+    cad = os.path.join(inner_dir(), "airframe_id.cfg")
+    rc, y0 = cad_yaml(None)
+    t = load_airframe(cad).tuning
+    want = {"attctl_kp_angle_z": 1.5, "posctl_k_pos_x": 0.7, "posctl_k_pos_y": 0.7}     # flown 2026-10-28 (CLAUDE.md)
+    check(rc == 0 and all(t.get("fsc_" + k) == v and f"{k}: {v:g}   # the airframe file's [tuning]" in y0
+                          for k, v in want.items()) and "posctl_k_pos_z: 1.0\n" in y0,
+          f"airframe_id.cfg (default): its [tuning] writes yaw 1.5, k_pos_x/y 0.7, k_pos_z untouched ({t})")
     with tempfile.TemporaryDirectory() as td:
-        env = {k: v for k, v in os.environ.items() if k != "FSC_AIRFRAME_ID"}
-        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "fsc_autopilot_config.py"), "--tank-kg", "0.502",
-                        "--out", td], env=env, capture_output=True, text=True)
-        y0 = open(os.path.join(td, "autopilot_params.yaml")).read()
-        check("attctl_kp_angle_z: 6.0" in y0, "airframe_id.cfg (no [tuning]): the base YAML's 6.0 stands")
+        src = open(cad).read()
+        stripped = os.path.join(td, "no_tuning.cfg")
+        open(stripped, "w").write(src[:src.index("\n[tuning]")] + "\n")
+        rc, y1 = cad_yaml(stripped)
+        check(rc == 0 and "attctl_kp_angle_z: 6.0\n" in y1 and "posctl_k_pos_x: 1.0\n" in y1,
+              "the same file without [tuning]: the base YAML's 6.0 / 1.0 stand")
+        typo = os.path.join(td, "typo.cfg")
+        open(typo, "w").write(src.replace("fsc_posctl_k_pos_x", "fsc_posctl_kpos_x"))
+        rc, err = cad_yaml(typo)
+        check(rc != 0 and "unknown" in err, "a mistyped [tuning] key is refused")
     with tempfile.TemporaryDirectory() as td:
 
         print("4. the read-back")

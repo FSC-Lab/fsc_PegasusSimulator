@@ -195,7 +195,7 @@ parameter reload (`ros2 param set` is a no-op) -- gains move through the YAML: `
 ros2 daemon's stale graph right after teardown, passed on a rerun); **identity hashes unchanged** (steso 03d9a349...,
 IMU 4a557a30...: the tilt map and the disarmed field are inert without VTOL_TILT_PX4CA).
 **THE CAD AIRFRAME ON THIS PATH (2026-10-28 night; default `airframe_id.cfg` + the 0.502 kg tank, the same mission;
-bags fsc_20261028_180132 / _181058, logs fly_cad*; scored with the new `scripts/ana_fsc_bag.py`) -- RETUNED, (4):**
+bags fsc_20261028_180132 / _181058, logs fly_cad*; scored with the new `scripts/ana_fsc_bag.py`) -- RETUNED, (4); IN ITS FILE, (5):**
 (1) at the base yaw gain 6.0 the heading rang +-40 deg at ~7 s (roll +-17, y +-0.8 m) and the 10 m point never
 settled -- the predicted yaw ring, worse than the plan's; (2) `FSC_YAML_SET=attctl_kp_angle_z=1.5` fixes the yaw
 (drift 0.2 deg) and the mission completes, landing 0.10 m, BUT the post-leg holds sit in a FORE-AFT LIMIT CYCLE:
@@ -218,16 +218,24 @@ in the loop -- `rate_bf_ff_enabled false` bypasses the input shaping). With a la
 **`k_vel` 6 -> 4.8 buys NO damping in that model (it only slows the loop -- the cell was dropped unflown); the PD zero
 is the lever: k_pos 0.7 -> zeta 0.30, 0.5 -> 0.40.** k_pos 0.5 flew too (bag _213814): ring-free, holds 0.055, but the
 position error saturates at 1 m (`SaturationSmoothing`), so k_pos caps the approach speed at k_pos m/s -- 32 s to
-arrive. 0.7 is the pick. It is a LAUNCH OVERRIDE, not in `airframe_id.cfg` (the default file is not changed without
-a go-ahead; carrying it there needs `fsc_posctl_k_pos_x/y` in `airframe_id.TUNING_KEYS` + the generator). **ON THE WAY:**
+arrive. 0.7 is the pick. **(5) IN THE FILE (2026-10-29, the user's go-ahead): `airframe_id.cfg` GAINED A `[tuning]`
+SECTION -- `fsc_attctl_kp_angle_z = 1.5`, `fsc_posctl_k_pos_x/y = 0.7`** -- and `airframe_id.TUNING_KEYS` the two
+`fsc_posctl_k_pos_*` keys; `fsc_autopilot_config.py` now writes EVERY `fsc_<yaml key>` tuning key into the YAML (was the
+one yaw key). The CAD file's digest moves **21fad0371f -> cd130ec0e9** (one nmpc6 JIT rebuild); **identity hashes re-run
+on it: IMU 4a557a30..., steso 03d9a349... -- byte-identical** (no Python node reads an fsc_* key; `test_plan_airframe`
+§6 now pins "fsc_* keys only, every Python node on its shipped gains" instead of "no [tuning]"). `test_fsc_autopilot_config`
+pins the CAD's three values in its YAML, k_pos_z untouched, the plan's k_pos still 1.0, the same file stripped of
+`[tuning]` back on the base 6.0 / 1.0, and a mistyped key refused. **FLOWN ON A PLAIN LAUNCH (no FSC_YAML_SET; bag
+fsc_20261029_095949, log fly_cad_default_*): holds 0.033 / 0.042 / 0.039 m (mean of means 0.038), arrival 13.2 / 13.7 s,
+pitch <= 4.7, no overshoot, UDE x sd 0.22 N, heading drift 0.2 deg, LANDED 0.00 m and disarmed.** **ON THE WAY:**
 EKF2 initialised badly on EVERY CAD launch ('vertical velocity unstable' + 'Attitude failure (roll)' from boot, z 7 m,
 60 height resets, arming denied, the quad level and still) -- the 8-params window now restarts ekf2 on the settled
 aircraft and polls `commander check` into `px4_preflight.txt`; an abort used to leave the aircraft armed and hovering
 on the autopilot's last reference (the driver was its only streamer) -- `fly_fsc_cpp.py` now LANDS IN PLACE on a
 non-emergency abort and has `--land_here`; the first CAD bag lost its flight (the recorder died silently, rosbag2's
 100 MB cache held everything) -- the recorder now runs `--max-cache-size 10 MB` and logs its output + exit code to
-`bag_<stamp>.log`. **NOT DONE:** the CAD gains into its airframe file (above); multicopter only (the autopilot has
-no transition); the GS active-controller hazard above; k_pos 0.7 is untried on the plan airframe (its ring decays at 1.0).
+`bag_<stamp>.log`. **NOT DONE:** multicopter only (the autopilot has no transition); the GS active-controller hazard
+above; k_pos 0.7 is untried on the plan airframe (its ring decays at 1.0).
 
 
 # ★★★★★ 2026-09-25: THE ROTOR TRADE -- PREDICTED BEST MOTOR + PROP: MN4010 KV370 + A CARBON 15x8

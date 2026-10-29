@@ -175,12 +175,12 @@ def main():
         y, n = re.subn(rf"^(\s*{k}:\s*).*$", lambda mm, v=v: mm.group(1) + v + "   # derived from the airframe file",
                        y, flags=re.M)
         assert n == 1, f"{k} not found once in {a.base_yaml}"
-    # the airframe file's [tuning] for this controller (absent = the base YAML's value)
-    kpz = af.tune("fsc_attctl_kp_angle_z", None)
-    if kpz is not None:
-        y, n = re.subn(r"^(\s*attctl_kp_angle_z:\s*).*$", lambda mm: mm.group(1) + f"{kpz:g}   # the airframe file's [tuning]",
+    # the airframe file's [tuning] for this controller: fsc_<key> sets the YAML's <key> (absent = the base value)
+    for tk in sorted(k for k in af.tuning if k.startswith("fsc_")):
+        k, v = tk[len("fsc_"):], af.tuning[tk]
+        y, n = re.subn(rf"^(\s*{k}:\s*).*$", lambda mm, v=v: mm.group(1) + f"{v:g}   # the airframe file's [tuning]",
                        y, flags=re.M)
-        assert n == 1, f"attctl_kp_angle_z not found once in {a.base_yaml}"
+        assert n == 1, f"[tuning] {tk}: {k} not found once in {a.base_yaml}"
     # FSC_YAML_SET="key=value,key=value": an explicit, recorded override of a base gain (an experiment)
     overrides = [kv.split("=", 1) for kv in os.environ.get("FSC_YAML_SET", "").split(",") if kv.strip()]
     for k, v in overrides:

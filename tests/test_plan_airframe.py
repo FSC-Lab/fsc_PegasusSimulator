@@ -18,7 +18,8 @@ controller package) from VTOL_Building_Plan.xlsx; the simulator BUILDS its plant
      servo scale (command x the plant's tilt_max = the angle), and the uniform-rotor guard;
   5. the tank fold: the plant's CG and inertia with the water at VTOL_TANK_DZ match so3's;
   6. [tuning] (2026-10-28): the file's retuned gains reach the safe controller and the cascade's roll
-     law, the package's airframe_id.cfg has none (every node on its shipped literal), a mistyped key
+     law, the package's airframe_id.cfg has only the C++ autopilot's fsc_* keys (every Python node on its
+     shipped literal), a mistyped key
      is refused, and the cascade's ROS default and its gate default both read the file.
 Isaac is stubbed exactly as tests/test_slosh_import.py does; nothing here proves USD or PhysX.
 """
@@ -214,8 +215,9 @@ print("JSON" + json.dumps(out))
         rel = np.abs(np.array(I2) / np.array(c["I"]) - 1.0)
         check(np.all(rel < 0.01), f"wet inertia plant {np.round(I2, 4)} vs so3 {np.round(c['I'], 4)} (the water's own rigid part: {np.round(100 * rel, 2)} %)")
 
-    # 6. [tuning] is the plan's alone: the CAD file keeps every shipped literal (the identity hashes ride on
-    #    it), a mistyped key is refused, and every site that sets these gains reads the file
+    # 6. [tuning]: the CAD file keeps every Python node's shipped literal (the identity hashes ride on it; its
+    #    own [tuning] is the C++ autopilot's fsc_* keys), a mistyped key is refused, and every site that sets
+    #    these gains reads the file
     print("6. [tuning]")
     probe0 = r"""
 import json, sys
@@ -229,8 +231,11 @@ print("JSON" + json.dumps(dict(tuning=so3._AF.tuning, safe=[gh.Gains().kR, gh.Ga
                        capture_output=True, text=True, timeout=600)
     line = next((l for l in r.stdout.splitlines() if l.startswith("JSON")), None)
     c0 = json.loads(line[4:]) if line else None
-    check(c0 is not None and c0["tuning"] == {} and c0["safe"] == [9.0, 1.8] and c0["casc"] == [3.0, 1.2],
-          f"airframe_id.cfg: no [tuning], every node on its shipped gains ({c0})")
+    # the CAD file's [tuning] (2026-10-28 night) carries the C++ autopilot's fsc_* YAML gains only: no Python node
+    # reads them, so every one stays on its shipped literal
+    check(c0 is not None and all(k.startswith("fsc_") for k in c0["tuning"]) and c0["safe"] == [9.0, 1.8]
+          and c0["casc"] == [3.0, 1.2],
+          f"airframe_id.cfg: [tuning] holds fsc_* keys only, every Python node on its shipped gains ({c0})")
     with tempfile.TemporaryDirectory() as td:
         bad_cfg = os.path.join(td, "typo.cfg")
         with open(bad_cfg, "w") as f:

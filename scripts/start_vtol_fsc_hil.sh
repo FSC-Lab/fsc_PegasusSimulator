@@ -40,9 +40,9 @@
 #
 # Usage: [FSC_AIRFRAME_ID=<cfg> VTOL_SLOSH=1 VTOL_TANK=slosh VTOL_TANK_KG=.. ...] \
 #        scripts/start_vtol_fsc_hil.sh [--here] <machine-config>       # e.g. pieper_machine
-# The CAD airframe (the default airframe_id.cfg) flies this path with
-#   FSC_YAML_SET=attctl_kp_angle_z=1.5,posctl_k_pos_x=0.7,posctl_k_pos_y=0.7
-# (2026-10-28; without it the heading rings at 6.0 and the holds limit-cycle fore-aft -- CLAUDE.md).
+# Each airframe's gains for this path live in its file's [tuning] (fsc_<yaml key>): the CAD airframe's
+# (airframe_id.cfg) are yaw 1.5 + posctl k_pos_x/y 0.7, the plan's yaw 1.5 (2026-10-28, CLAUDE.md).
+# FSC_YAML_SET="k=v,.." is for an experiment on top of them, recorded in the YAML header and LAUNCH_LOG.
 
 # ============================================================================
 #  >>> tunables (override via env) <<<
