@@ -1,0 +1,17 @@
+23:35:49 start nz_s2b sim_feedback_pos_noise_m=0.0015 sim_feedback_vel_noise_mps=0.06
+  sim_feedback_pos_noise_m -> 0.0015
+  sim_feedback_vel_noise_mps -> 0.06
+[nz_s2b] completed
+23:39:19 start qg_s2 push_pull_guard_q3_lookahead_s=0.1
+  push_pull_guard_q3_lookahead_s -> 0.1
+[qg_s2] completed
+23:42:49 start qg_s3 push_pull_guard_q3_lookahead_s=0.1
+  push_pull_guard_q3_lookahead_s -> 0.1
+[qg_s3] completed
+23:46:20 start qg_s4 push_pull_guard_q3_lookahead_s=0.1
+  push_pull_guard_q3_lookahead_s -> 0.1
+[qg_s4] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.4 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+23:49:41 start qg_s5 push_pull_guard_q3_lookahead_s=0.1
+  push_pull_guard_q3_lookahead_s -> 0.1
+[qg_s5] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.7 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+23:52:50 CHAIN DONE

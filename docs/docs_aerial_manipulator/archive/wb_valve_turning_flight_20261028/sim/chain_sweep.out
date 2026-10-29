@@ -1,0 +1,47 @@
+09:50:53 start sw_ky80_s2 wb_ky_x=80.0 wb_ky_y=80.0 wb_ky_z=80.0 wb_dy_x=16.5 wb_dy_y=16.5 wb_dy_z=16.5
+  wb_ky_x : 120.0 -> 80.0
+  wb_ky_y : 120.0 -> 80.0
+  wb_ky_z : 120.0 -> 80.0
+  wb_dy_x : 20.2 -> 16.5
+  wb_dy_y : 20.2 -> 16.5
+  wb_dy_z : 20.2 -> 16.5
+[sw_ky80_s2] completed
+09:54:28 start sw_ky160_s2 wb_ky_x=160.0 wb_ky_y=160.0 wb_ky_z=160.0 wb_dy_x=23.3 wb_dy_y=23.3 wb_dy_z=23.3
+  wb_ky_x : 120.0 -> 160.0
+  wb_ky_y : 120.0 -> 160.0
+  wb_ky_z : 120.0 -> 160.0
+  wb_dy_x : 20.2 -> 23.3
+  wb_dy_y : 20.2 -> 23.3
+  wb_dy_z : 20.2 -> 23.3
+[sw_ky160_s2] completed
+09:57:58 start sw_psi1_s2 wb_ky_psi=1.0 wb_dy_psi=0.582
+  wb_ky_psi : 0.2484 -> 1.0
+  wb_dy_psi : 0.2903 -> 0.582
+[sw_psi1_s2] completed
+10:01:29 start sw_t15_s2 push_pull_push_time_s=15.0
+  push_pull_push_time_s -> 15.0
+[sw_t15_s2] ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: q3 3.0 deg falling at 32.0 deg/s -> -0.2 deg in 0.10 s (q2 23.1 deg) < 3.0 deg (
+10:05:02 start sw_ky80_s3 wb_ky_x=80.0 wb_ky_y=80.0 wb_ky_z=80.0 wb_dy_x=16.5 wb_dy_y=16.5 wb_dy_z=16.5
+  wb_ky_x : 120.0 -> 80.0
+  wb_ky_y : 120.0 -> 80.0
+  wb_ky_z : 120.0 -> 80.0
+  wb_dy_x : 20.2 -> 16.5
+  wb_dy_y : 20.2 -> 16.5
+  wb_dy_z : 20.2 -> 16.5
+[sw_ky80_s3] completed
+10:08:32 start sw_ky160_s3 wb_ky_x=160.0 wb_ky_y=160.0 wb_ky_z=160.0 wb_dy_x=23.3 wb_dy_y=23.3 wb_dy_z=23.3
+  wb_ky_x : 120.0 -> 160.0
+  wb_ky_y : 120.0 -> 160.0
+  wb_ky_z : 120.0 -> 160.0
+  wb_dy_x : 20.2 -> 23.3
+  wb_dy_y : 20.2 -> 23.3
+  wb_dy_z : 20.2 -> 23.3
+[sw_ky160_s3] completed
+10:12:08 start sw_psi1_s3 wb_ky_psi=1.0 wb_dy_psi=0.582
+  wb_ky_psi : 0.2484 -> 1.0
+  wb_dy_psi : 0.2903 -> 0.582
+[sw_psi1_s3] completed
+10:15:38 start sw_t15_s3 push_pull_push_time_s=15.0
+  push_pull_push_time_s -> 15.0
+[sw_t15_s3] completed
+10:19:04 CHAIN DONE

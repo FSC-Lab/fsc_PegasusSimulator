@@ -89,9 +89,10 @@ CAD fin (the claw closes on air).
             default), the axes the rotor's (+x along the beam toward the fin,
             z up -- the rigid body created with the fin pointing along the
             room's +x on a level table). The five markers of
-            Valve_Assembly_v2.stl put it [0.0720, -0.0093, 0.0851] m from the
+            Valve_Assembly_v2.stl (redesigned 2026-10-28 night; read from the
+            asset's fsc:mocap_*) put it [0.0935, 0.0014, 0.0899] m from the
             bearing axis on the plate bottom, so the planner carries
-            push_pull_valve_axis_offset = [-0.0720, 0.0093, -0.0851]: the axis
+            push_pull_valve_axis_offset = [-0.0935, -0.0014, -0.0899]: the axis
             point = obj_0 + Rz(yaw) * that (the turn's centre, the keep-outs),
             the grasp point = the axis point + push_pull_ee_offset = [0.160,
             0.0006, 0.179] turned with the beam (the fin's radius and bearing,

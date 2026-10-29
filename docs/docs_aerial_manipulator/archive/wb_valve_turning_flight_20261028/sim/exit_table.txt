@@ -1,0 +1,10 @@
+tag          peak tilt release/exit  peak contact F exit  ended
+base_s2         2.8 /  54.6 deg           29.7 N    push-and-pull ABORTED while exit complete: ABORTING (SAFETY GUARD: pus
+kv15_s2         2.1 / 175.8 deg           14.5 N    left DIRECT while exit complete
+fa05_s2         4.1 /   5.8 deg            3.2 N    completed
+base_s3         4.5 /   3.4 deg            2.3 N    completed
+kv15_s3         2.6 /   3.0 deg            1.3 N    completed
+fa05_s3         3.2 /   4.1 deg            3.2 N    completed
+base_s4         2.5 /   4.1 deg            3.8 N    completed
+kv15_s4         1.5 /   2.8 deg            1.9 N    completed
+fa05_s4    no release

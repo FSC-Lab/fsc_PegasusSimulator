@@ -1,0 +1,22 @@
+[17:38:35] start yw_k3_f048_2 K=3 tau_f=0.048 wb_ky_psi=3.0000 wb_dy_psi=1.0070
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ky_psi : 0.2484 -> 3.0000
+  wb_dy_psi : 0.2903 -> 1.0070
+[yw_k3_f048_2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 1.4 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)) 
+[17:41:53] end yw_k3_f048_2: ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 1.4 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[17:42:03] start yw_k6_f048_2 K=6 tau_f=0.048 wb_ky_psi=6.0000 wb_dy_psi=1.4241
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ky_psi : 0.2484 -> 6.0000
+  wb_dy_psi : 0.2903 -> 1.4241
+[yw_k6_f048_2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 13.5 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[17:45:03] end yw_k6_f048_2: ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 13.5 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[17:45:12] start yw_k10_f048_2 K=10 tau_f=0.048 wb_ky_psi=10.0000 wb_dy_psi=1.8385
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ky_psi : 0.2484 -> 10.0000
+  wb_dy_psi : 0.2903 -> 1.8385
+[yw_k10_f048_2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.1 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+[17:48:21] end yw_k10_f048_2: ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 10.1 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[17:48:30] CHAIN DONE

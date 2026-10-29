@@ -17,7 +17,8 @@ set -o pipefail   # (no -u: the ROS setup scripts read unset variables)
 TAG="${1:?tag}"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 RUNS="${PL_RUNS_DIR:-$HERE/../runs}"; mkdir -p "$RUNS"   # PL_RUNS_DIR: another campaign's runs/
-PUSH_TOOLS="$HERE/../../push_pull_20261003/tools"   # pl_mission.py lives with the box push
+PUSH_TOOLS="${PL_PUSH_TOOLS:-$HERE/../../push_pull_20261003/tools}"   # pl_mission.py lives with the box push
+# (2026-10-28: PL_PUSH_TOOLS points it at a copy, e.g. archive/wb_valve_turning_flight_20261028/tools/driver)
 PEG="$HOME/fsc_PegasusSimulator"
 STACKS="$HOME/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim"
 FB="${VALVE_FEEDBACK:-raw}"

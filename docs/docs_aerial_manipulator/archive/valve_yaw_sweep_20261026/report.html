@@ -1,0 +1,250 @@
+<title>Valve Heading-Channel Sweep</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one full-width column (no paragraph cap), bench-report voice; data first, then reasoning. Single dark theme by the reader's standing request. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #121315;
+  --line: #2a2c30;
+  --ink: #ecebe6;
+  --ink-2: #b9b8b0;
+  --ink-3: #85847d;
+  --accent: #8fb8e8;
+  --s-damper: #199e70;
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --warn: #fab219;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 10px 0 14px; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 24px; margin: 48px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; }
+h3 { font-family: var(--f-display); font-weight: 500; font-size: 18px; margin: 28px 0 8px; color: var(--ink); }
+p { margin: 0 0 12px; }
+.lede { font-size: 18px; color: var(--ink-2); }
+ul, ol { margin: 0 0 12px; padding-left: 22px; }
+li { margin: 4px 0; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; overflow-wrap: anywhere; }
+strong { color: var(--ink); font-weight: 600; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* the verdict: three findings, each with its own state chip */
+.verdict { display: grid; gap: 10px; margin: 22px 0 8px; }
+.finding { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+.finding > div { min-width: 0; }
+.chip { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; margin-top: 2px; }
+.chip.no { color: var(--critical); }
+.chip.yes { color: var(--good); }
+.chip.num { color: var(--warn); }
+.finding p { margin: 0; }
+.finding .head { font-weight: 600; margin-bottom: 2px; }
+
+nav.toc { margin: 26px 0 0; font-size: 14px; color: var(--ink-2); }
+nav.toc ol { display: flex; flex-wrap: wrap; gap: 4px 18px; list-style: none; padding: 0; margin: 6px 0 0; counter-reset: s; }
+nav.toc li { margin: 0; counter-increment: s; }
+nav.toc li::before { content: counter(s) ". "; color: var(--ink-3); font-family: var(--f-mono); font-size: 12px; }
+
+.tscroll { overflow-x: auto; margin: 12px 0 16px; border: 1px solid var(--line); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; background: var(--panel); }
+td.n { text-align: right; white-space: nowrap; font-family: var(--f-mono); font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+tr.hi td { background: color-mix(in oklab, var(--s-damper) 12%, transparent); }
+tr.dim td { color: var(--ink-3); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.bad { color: var(--critical); font-weight: 500; }
+.ok { color: var(--good); font-weight: 500; }
+
+figure { margin: 18px 0 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 14px 10px; }
+figcaption { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+figcaption b { color: var(--ink); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+.legend i.bar { height: 10px; width: 10px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--ink-2) 0 4px, transparent 4px 7px); }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--f-mono); font-size: 11px; fill: var(--ink-3); }
+.chart .lab { fill: var(--ink-2); }
+.tip { position: absolute; pointer-events: none; background: #1d1f22; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font-family: var(--f-mono); font-size: 12px; color: var(--ink); white-space: nowrap; z-index: 2; }
+.tip[hidden] { display: none !important; }
+.tip .row { display: flex; align-items: center; gap: 6px; }
+
+.spec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 14px; }
+@media (max-width: 640px) { .spec { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.spec div { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; min-width: 0; }
+.spec .k { font-family: var(--f-mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.spec .v { font-family: var(--f-display); font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.spec .d { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.note { font-size: 14px; color: var(--ink-2); border-left: 2px solid var(--line); padding: 2px 0 2px 12px; margin: 12px 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+figure img { display: block; width: 100%; height: auto; filter: invert(1) hue-rotate(180deg); border-radius: 3px; }
+.figpair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .figpair { grid-template-columns: 1fr; } }
+.figpair figure { margin: 0; }
+td.mono, th { white-space: nowrap; }
+</style>
+<div class="wrap">
+  <div class="eyebrow">Isaac Sim · AM-T650 whole-body 4-D L1 · valve turning · 2026-10-26 · 24 flights</div>
+  <h1>Valve Heading-Channel Sweep</h1>
+  <p class="lede">Can a 90° valve turn in 12&nbsp;s, with a stiffer heading impedance and more valve friction, make the end-effector impedance's heading (torque) channel show clearly, and at which friction should the rubber pads be cut? The sweep crossed the heading stiffness K<sub>ψ</sub> 0.25–10&nbsp;N·m/rad with valve friction τ<sub>f</sub> 0.05–0.25&nbsp;N·m.</p>
+
+  <div class="verdict">
+    <div class="finding"><span class="chip no">No cell</span><div><p class="head">No safe cell made the heading couple visible.</p><p>The plan's test was a mean couple of at least 0.07&nbsp;N·m resisting the turn and at least twice its spread; no run passed it. The best mean was +0.09&nbsp;N·m ± 0.12, in a K<sub>ψ</sub>&nbsp;3 run that broke three safety checks. There is no lookup table and no pad target to give.</p></div></div>
+    <div class="finding"><span class="chip num">Cause</span><div><p class="head">The claw twists on the fin, so the grasp, not K<sub>ψ</sub>, sets the couple.</p><p>In every turn the claw's heading moved 10–45° relative to the beam. The grip's torsional stiffness about the vertical was 0.1–0.8&nbsp;N·m/rad, below every K<sub>ψ</sub> tried and below the tangential channel's K·r²&nbsp;=&nbsp;3.07&nbsp;N·m/rad.</p></div></div>
+    <div class="finding"><span class="chip no">Unsafe</span><div><p class="head">K<sub>ψ</sub> ≥ 2 aborts even at the lowest friction.</p><p>A stiffer heading channel drives the ~1&nbsp;Hz q1/q4 swing into the platform's yaw. Its frequency rose from 0.92 to 1.23&nbsp;Hz, the yaw torque reached 78–112&nbsp;% of the free budget, and four aborts ended with q3 buckled or the vehicle inverted. K<sub>ψ</sub>&nbsp;1 was the one stiffer gain that flew clean, and slightly better than today's 0.25.</p></div></div>
+    <div class="finding"><span class="chip yes">Fixed</span><div><p class="head">The scene's valve friction could not hold the valve; a stick-slip model now can.</p><p>At 0.9&nbsp;τ<sub>f</sub> the old model crept at 8–20&nbsp;°/s, and it never delivered more than ~0.65&nbsp;N·m per rad/s. The new <span class="mono">PEGASUS_VALVE_FRICTION_MODEL=drive</span> holds still at 0.9&nbsp;τ<sub>f</sub> and slips at 1.1&nbsp;τ<sub>f</sub>. It is off by default, and every run here used it.</p></div></div>
+  </div>
+
+  <nav class="toc" aria-label="Contents">Contents
+    <ol>
+      <li><a href="#setup">What was simulated</a></li>
+      <li><a href="#friction">The friction check</a></li>
+      <li><a href="#map">The map</a></li>
+      <li><a href="#why">Why the couple does not show</a></li>
+      <li><a href="#next">What would work</a></li>
+      <li><a href="#limits">Limits</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="setup">1. What was simulated</h2>
+  <p>Every flight is the shipped valve-turning mission, changed only where the plan asked:</p>
+  <ul>
+    <li><strong>Controller and arm:</strong> the whole-body 4-D L1 controller, arm pose [0,&nbsp;5,&nbsp;25,&nbsp;0]°, x/y/z impedance 120&nbsp;N/m and 20.2&nbsp;N·s/m.</li>
+    <li><strong>Turn:</strong> 90° in 12&nbsp;s after a 1.5&nbsp;s settle, then 3.5&nbsp;s on the fin.</li>
+    <li><strong>Exit:</strong> the valve's own exit, which opens the jaws with the claw still held in place, then climbs.</li>
+    <li><strong>Guards:</strong> 10° tilt, 5&nbsp;N force, the q3 elbow guard, and the node's 15° watchdog.</li>
+    <li><strong>Simulation:</strong> headless Isaac at real time with raw mocap.</li>
+  </ul>
+  <p>Only two things changed from run to run:</p>
+  <ul>
+    <li><strong>The heading impedance:</strong> K<sub>ψ</sub>, with D<sub>ψ</sub>&nbsp;=&nbsp;2.6&nbsp;√(0.05&nbsp;K<sub>ψ</sub>) for a damping ratio near 1.3 and M<sub>ψ</sub>&nbsp;0.05&nbsp;kg·m².</li>
+    <li><strong>The valve's Coulomb friction</strong> τ<sub>f</sub>.</li>
+  </ul>
+  <p>A diagnostic column also turned off the free-axis anchor, a controller option shipped on 10-22 (rows tagged “anchor off”).</p>
+  <div class="spec">
+    <div><div class="k">Flights</div><div class="v">24</div><div class="d">6 reference / Stage A, 3 repeats, 7 K<sub>ψ</sub>&nbsp;1–2, 8 anchor off</div></div>
+    <div><div class="k">Plan's visibility level</div><div class="v">0.07 N·m</div><div class="d">mean couple, middle 60&nbsp;% of the turn, and ≥&nbsp;2σ</div></div>
+    <div><div class="k">Predicted heading share</div><div class="v">K<sub>ψ</sub>/(K r²+K<sub>ψ</sub>)</div><div class="d">7&nbsp;% today, 49&nbsp;% at K<sub>ψ</sub>&nbsp;3 (r 0.160&nbsp;m)</div></div>
+  </div>
+
+  <h2 id="friction">2. The friction check</h2>
+  <p>Before any flight, the valve alone took a constant torque below and above its friction (pre-check 1). The scene's original friction model failed this check.</p>
+  <div class="tscroll"><table>
+    <thead><tr><th>Model</th><th class="n">τ<sub>f</sub></th><th class="n">0.9&nbsp;τ<sub>f</sub> (must stay put)</th><th class="n">1.1&nbsp;τ<sub>f</sub> (must turn)</th><th>At rest</th></tr></thead>
+    <tbody>
+      <tr class="dim"><td>tanh, explicit (the old default)</td><td class="n">0.10</td><td class="n bad">creeps 8.0&nbsp;°/s</td><td class="n">3.85 rad/s² (Coulomb 3.89)</td><td>still</td></tr>
+      <tr class="dim"><td>tanh, explicit</td><td class="n">0.25</td><td class="n bad">creeps 20.1&nbsp;°/s</td><td class="n">9.61 (9.73)</td><td>still</td></tr>
+      <tr class="hi"><td>stick-slip joint drive (used)</td><td class="n">0.10</td><td class="n ok">0.03° in 6&nbsp;s</td><td class="n">3.84 (3.89)</td><td>still, no jitter</td></tr>
+      <tr class="hi"><td>stick-slip joint drive (used)</td><td class="n">0.25</td><td class="n ok">0.08° in 6&nbsp;s</td><td class="n">9.57 (9.73)</td><td>still, no jitter</td></tr>
+    </tbody>
+  </table></div>
+  <p>In flight the new model checks out about the bearing axis. While the valve slides, the couple plus the tangential force's moment, M&nbsp;+&nbsp;F<sub>t</sub>·r, sits on τ<sub>f</sub> (figure 3).</p>
+
+  <h2 id="map">3. The map</h2>
+  <figure>
+    <img src="figures/map.png" alt="Grid of valve friction against heading stiffness for the shipped configuration, each run coloured by outcome">
+    <figcaption><b>Figure 1.</b> The shipped configuration. Green = every safety check passed; amber = completed but a check failed; red = a guard or the watchdog ended the turn. Each cell shows the mean couple (resisting the turn = positive) and the peak tilt.</figcaption>
+  </figure>
+  <figure>
+    <img src="figures/map_anchor_off.png" alt="The same grid with the free-axis anchor turned off">
+    <figcaption><b>Figure 2.</b> The free-axis anchor turned off (diagnostic). Two of seven completed every check, one at τ<sub>f</sub>&nbsp;0.25 with K<sub>ψ</sub>&nbsp;2. Its couple averaged +0.000&nbsp;N·m.</figcaption>
+  </figure>
+  <ul>
+    <li><strong>Stage A</strong> (τ<sub>f</sub>&nbsp;0.048, each failure flown once more): K<sub>ψ</sub>&nbsp;3, 6 and 10 failed twice and drop out, which leaves the plan's Stage B empty.
+      <ul>
+        <li>K<sub>ψ</sub>&nbsp;3: 8.4° and 89&nbsp;% of the yaw budget, then the q3 guard at 1.4°.</li>
+        <li>K<sub>ψ</sub>&nbsp;6: two tilt aborts, the second ending inverted.</li>
+        <li>K<sub>ψ</sub>&nbsp;10: tilt aborts, once with a SAFETY handover.</li>
+      </ul>
+    </li>
+    <li><strong>K<sub>ψ</sub>&nbsp;1 at higher friction</strong> (an extension of the plan):
+      <ul>
+        <li>τ<sub>f</sub>&nbsp;0.05 passes every check.</li>
+        <li>τ<sub>f</sub>&nbsp;0.10–0.20 complete, but the beam turns only 81–84° and the vehicle strays up to 117&nbsp;mm.</li>
+        <li>τ<sub>f</sub>&nbsp;0.25 hits the q3 guard after the turn.</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="tscroll"><table>
+    <thead><tr><th>Run</th><th>Anchor</th><th class="n">K<sub>ψ</sub></th><th class="n">τ<sub>f</sub></th><th>Outcome</th><th class="n">Tilt</th><th class="n">Yaw τ</th><th class="n">q3 min</th><th class="n">Turned</th><th class="n">M̄ ± σ</th><th class="n">F̄<sub>t</sub>&nbsp;r</th><th class="n">Share meas / pred</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">ref_f048</td><td>0.75</td><td class="n">0.248</td><td class="n">0.048</td><td>complete, tilt>7</td><td class="n">7.2°</td><td class="n">63&nbsp;%</td><td class="n">21.7°</td><td class="n">87.7°</td><td class="n">-0.019 ± 0.078</td><td class="n">+0.040</td><td class="n">-0.88 / 0.07</td></tr>
+      <tr><td class="mono">ref_f048_2</td><td>0.75</td><td class="n">0.248</td><td class="n">0.048</td><td><span class="ok">all checks</span></td><td class="n">5.9°</td><td class="n">67&nbsp;%</td><td class="n">23.8°</td><td class="n">90.8°</td><td class="n">-0.117 ± 0.063</td><td class="n">+0.152</td><td class="n">-3.38 / 0.07</td></tr>
+      <tr><td class="mono">k1_f048</td><td>0.75</td><td class="n">1</td><td class="n">0.048</td><td><span class="ok">all checks</span></td><td class="n">5.0°</td><td class="n">49&nbsp;%</td><td class="n">22.5°</td><td class="n">87.2°</td><td class="n">-0.026 ± 0.056</td><td class="n">+0.056</td><td class="n">-0.86 / 0.25</td></tr>
+      <tr><td class="mono">k1_f050</td><td>0.75</td><td class="n">1</td><td class="n">0.050</td><td><span class="ok">all checks</span></td><td class="n">5.3°</td><td class="n">54&nbsp;%</td><td class="n">18.7°</td><td class="n">89.4°</td><td class="n">-0.131 ± 0.077</td><td class="n">+0.167</td><td class="n">-3.64 / 0.25</td></tr>
+      <tr><td class="mono">k1_f100</td><td>0.75</td><td class="n">1</td><td class="n">0.100</td><td>complete, q1 growing, q4 growing, eps>80mm, turned<85</td><td class="n">4.8°</td><td class="n">56&nbsp;%</td><td class="n">9.7°</td><td class="n">83.4°</td><td class="n">-0.130 ± 0.111</td><td class="n">+0.182</td><td class="n">-2.46 / 0.25</td></tr>
+      <tr><td class="mono">k1_f150</td><td>0.75</td><td class="n">1</td><td class="n">0.150</td><td>complete, q4 growing, turned<85</td><td class="n">4.0°</td><td class="n">58&nbsp;%</td><td class="n">15.1°</td><td class="n">83.6°</td><td class="n">-0.054 ± 0.077</td><td class="n">+0.167</td><td class="n">-0.47 / 0.25</td></tr>
+      <tr><td class="mono">k1_f200</td><td>0.75</td><td class="n">1</td><td class="n">0.200</td><td>complete, q4 growing, on stop>10%, q3<5, eps>80mm, turned<85</td><td class="n">5.2°</td><td class="n">58&nbsp;%</td><td class="n">3.0°</td><td class="n">80.8°</td><td class="n">-0.059 ± 0.141</td><td class="n">+0.213</td><td class="n">-0.38 / 0.25</td></tr>
+      <tr><td class="mono">k1_f250</td><td>0.75</td><td class="n">1</td><td class="n">0.250</td><td><span class="bad">q3 guard</span></td><td class="n">5.5°</td><td class="n">54&nbsp;%</td><td class="n">10.4°</td><td class="n">90.6°</td><td class="n">+0.025 ± 0.097</td><td class="n">+0.117</td><td class="n">—</td></tr>
+      <tr><td class="mono">k2_f048</td><td>0.75</td><td class="n">2</td><td class="n">0.048</td><td><span class="bad">q3 guard</span></td><td class="n">8.0°</td><td class="n">76&nbsp;%</td><td class="n">7.3°</td><td class="n">83.0°</td><td class="n">-0.187 ± 0.194</td><td class="n">+0.204</td><td class="n">—</td></tr>
+      <tr><td class="mono">k3_f048</td><td>0.75</td><td class="n">3</td><td class="n">0.048</td><td>complete, tilt>7, yaw torque>70%, q1 std>1.3x ref, q4 std>1.3x ref, q3<5</td><td class="n">8.4°</td><td class="n">89&nbsp;%</td><td class="n">4.2°</td><td class="n">97.1°</td><td class="n">+0.090 ± 0.119</td><td class="n">-0.077</td><td class="n">+6.85 / 0.49</td></tr>
+      <tr><td class="mono">k3_f048_2</td><td>0.75</td><td class="n">3</td><td class="n">0.048</td><td><span class="bad">q3 guard</span></td><td class="n">9.8°</td><td class="n">78&nbsp;%</td><td class="n">1.4°</td><td class="n">76.8°</td><td class="n">-0.040 ± 0.185</td><td class="n">+0.054</td><td class="n">—</td></tr>
+      <tr><td class="mono">k6_f048</td><td>0.75</td><td class="n">6</td><td class="n">0.048</td><td><span class="bad">tilt guard</span></td><td class="n">13.1°</td><td class="n">84&nbsp;%</td><td class="n">14.9°</td><td class="n">93.4°</td><td class="n">-0.015 ± 0.182</td><td class="n">+0.026</td><td class="n">—</td></tr>
+      <tr><td class="mono">k6_f048_2</td><td>0.75</td><td class="n">6</td><td class="n">0.048</td><td><span class="bad">tilt guard (ended inverted)</span></td><td class="n">inverted</td><td class="n">112&nbsp;%</td><td class="n">-26.1°</td><td class="n">3.4°</td><td class="n">-0.068 ± 0.394</td><td class="n">+0.977</td><td class="n">—</td></tr>
+      <tr><td class="mono">k10_f048</td><td>0.75</td><td class="n">10</td><td class="n">0.048</td><td><span class="bad">tilt guard + SAFETY handover</span></td><td class="n">26.2°</td><td class="n">76&nbsp;%</td><td class="n">26.1°</td><td class="n">-132.6°</td><td class="n">+0.005 ± 0.036</td><td class="n">-0.182</td><td class="n">—</td></tr>
+      <tr><td class="mono">k10_f048_2</td><td>0.75</td><td class="n">10</td><td class="n">0.048</td><td><span class="bad">tilt guard</span></td><td class="n">10.4°</td><td class="n">87&nbsp;%</td><td class="n">-4.0°</td><td class="n">0.1°</td><td class="n">+0.000 ± 0.003</td><td class="n">+0.005</td><td class="n">—</td></tr>
+      <tr><td class="mono">fa0_ref_f048</td><td>off</td><td class="n">0.248</td><td class="n">0.048</td><td><span class="ok">all checks</span></td><td class="n">6.4°</td><td class="n">55&nbsp;%</td><td class="n">16.3°</td><td class="n">89.6°</td><td class="n">-0.041 ± 0.112</td><td class="n">+0.063</td><td class="n">-1.87 / 0.07</td></tr>
+      <tr><td class="mono">fa0_k2_f048</td><td>off</td><td class="n">2</td><td class="n">0.048</td><td><span class="bad">q3 guard</span></td><td class="n">5.4°</td><td class="n">57&nbsp;%</td><td class="n">16.0°</td><td class="n">90.2°</td><td class="n">-0.007 ± 0.063</td><td class="n">+0.034</td><td class="n">—</td></tr>
+      <tr><td class="mono">fa0_k2_f200</td><td>off</td><td class="n">2</td><td class="n">0.200</td><td><span class="bad">tilt guard</span></td><td class="n">7.8°</td><td class="n">76&nbsp;%</td><td class="n">4.5°</td><td class="n">88.0°</td><td class="n">-0.033 ± 0.086</td><td class="n">+0.192</td><td class="n">—</td></tr>
+      <tr><td class="mono">fa0_k2_f250</td><td>off</td><td class="n">2</td><td class="n">0.250</td><td><span class="ok">all checks</span></td><td class="n">3.7°</td><td class="n">35&nbsp;%</td><td class="n">19.9°</td><td class="n">87.0°</td><td class="n">+0.000 ± 0.059</td><td class="n">+0.226</td><td class="n">+0.00 / 0.39</td></tr>
+      <tr><td class="mono">fa0_k3_f048</td><td>off</td><td class="n">3</td><td class="n">0.048</td><td>complete, yaw torque>70%, q4 growing</td><td class="n">6.3°</td><td class="n">79&nbsp;%</td><td class="n">16.0°</td><td class="n">92.3°</td><td class="n">+0.011 ± 0.083</td><td class="n">+0.018</td><td class="n">+0.37 / 0.49</td></tr>
+      <tr><td class="mono">fa0_k3_f100</td><td>off</td><td class="n">3</td><td class="n">0.100</td><td><span class="bad">q3 guard</span></td><td class="n">9.7°</td><td class="n">97&nbsp;%</td><td class="n">-18.8°</td><td class="n">23.5°</td><td class="n">-0.019 ± 0.063</td><td class="n">+0.024</td><td class="n">—</td></tr>
+      <tr><td class="mono">fa0_k3_f150</td><td>off</td><td class="n">3</td><td class="n">0.150</td><td><span class="bad">q3 guard (ended inverted)</span></td><td class="n">7.1°</td><td class="n">164&nbsp;%</td><td class="n">-88.7°</td><td class="n">90.2°</td><td class="n">-0.027 ± 0.058</td><td class="n">+0.155</td><td class="n">—</td></tr>
+      <tr><td class="mono">fa0_k3_f200</td><td>off</td><td class="n">3</td><td class="n">0.200</td><td><span class="bad">tilt guard</span></td><td class="n">9.3°</td><td class="n">97&nbsp;%</td><td class="n">14.8°</td><td class="n">94.5°</td><td class="n">+0.016 ± 0.109</td><td class="n">+0.103</td><td class="n">—</td></tr>
+      <tr><td class="mono">fa0_k3_f250</td><td>off</td><td class="n">3</td><td class="n">0.250</td><td>complete, q4 std>1.3x ref, q4 growing, q3<5</td><td class="n">6.3°</td><td class="n">62&nbsp;%</td><td class="n">4.2°</td><td class="n">88.0°</td><td class="n">+0.015 ± 0.054</td><td class="n">+0.206</td><td class="n">+0.07 / 0.49</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2 id="why">4. Why the couple does not show</h2>
+  <figure>
+    <img src="figures/split.png" alt="Bar chart of the couple and the tangential moment for each completed run">
+    <figcaption><b>Figure 3.</b> Completed runs, middle 60&nbsp;% of the turn: the couple (blue), the tangential force's moment F<sub>t</sub>&nbsp;r (grey), their sum (black, the valve's load), τ<sub>f</sub> (red) and the plan's predicted couple (×). The sum follows τ<sub>f</sub>; the split never follows the prediction.</figcaption>
+  </figure>
+  <p>The valve only fixes the <strong>sum</strong> of the two moments about its axis. The plan assumed the claw sits rigidly on the fin, which would make the split K<sub>ψ</sub>/(K&nbsp;r²&nbsp;+&nbsp;K<sub>ψ</sub>). It does not sit rigidly.</p>
+  <ul>
+    <li><strong>The claw twists on the fin.</strong> Isaac's true base yaw plus q1, minus the beam's yaw, moves through 10–45° in every turn (std 3–15°); a rigid grasp would hold it constant. Against that twist the couple gives an effective torsional stiffness of only 0.1–0.8&nbsp;N·m/rad. The simulated claw holds the fin between near-point finger contacts, which behave almost as a hinge about the vertical. The heading channel therefore mostly steers the claw's twist, and the couple stays at the grip's level, about ±0.1–0.2&nbsp;N·m.</li>
+    <li><strong>The free-axis anchor adds an offset.</strong> It moves the claw's position target with the base's drift along the tangent, but not its heading target. With it on, the tangential force over-drives the valve (F<sub>t</sub>&nbsp;r 0.04–0.21&nbsp;N·m) and the heading spring holds the claw back, so the couple comes out negative. With it off, the couple averages about zero and F<sub>t</sub>&nbsp;r carries the whole load.</li>
+    <li><strong>Raising K<sub>ψ</sub> stiffens that twist against the platform's yaw.</strong> The swing frequency went 0.92 → 1.0 → 1.08 → 1.23&nbsp;Hz for K<sub>ψ</sub> ≤&nbsp;1, 3, 6 and 10. The claw's twist std grew from 3 to 15°, and the yaw torque reached 78–112&nbsp;% of the free budget at K<sub>ψ</sub>&nbsp;≥&nbsp;2.</li>
+  </ul>
+  <div class="figpair">
+    <figure>
+      <img src="figures/cell_yw_k1_f200.png" alt="Time series of the K psi 1, friction 0.20 run">
+      <figcaption><b>Figure 4.</b> K<sub>ψ</sub>&nbsp;1, τ<sub>f</sub>&nbsp;0.20. The rendering works: measured and rendered couples correlate at 0.67. But the couple swings ±0.3&nbsp;N·m while F<sub>t</sub>&nbsp;r swings the other way, and its mean (−0.06) never approaches τ<sub>f</sub>.</figcaption>
+    </figure>
+    <figure>
+      <img src="figures/cell_yw_k3_f048.png" alt="Time series of the K psi 3, friction 0.048 run">
+      <figcaption><b>Figure 5.</b> K<sub>ψ</sub>&nbsp;3, τ<sub>f</sub>&nbsp;0.048. The 1&nbsp;Hz q1/q4 swing reaches ±15–20°, the tilt 8.4°, and the yaw torque 89&nbsp;% of the free budget.</figcaption>
+    </figure>
+  </div>
+
+  <h2 id="next">5. What would work</h2>
+  <ul>
+    <li><strong>Do not cut the pads for heading visibility yet.</strong> With this grasp, more friction only moves load into the tangential force.</li>
+    <li><strong>Make the grasp hold a couple first.</strong> On the bench, measure the real gripper on the fin: torque about the vertical against twist angle. It needs to be well above K<sub>ψ</sub>, several N·m/rad. A pin-in-slot, a wider two-point fin or a keyed handle would provide it.</li>
+    <li><strong>Grasp on the axis.</strong> With a knob or T-handle at r&nbsp;≈&nbsp;0, F<sub>t</sub>&nbsp;r vanishes and the whole valve load must pass through the couple; the plan's own formula then gives a share of 1. This still needs a torsionally stiff grasp.</li>
+    <li><strong>Keep K<sub>ψ</sub> ≤ 1 on this rig.</strong> K<sub>ψ</sub>&nbsp;1 flew slightly better than today's 0.25: tilt 5.0° against 5.9–7.2°, yaw torque 49&nbsp;% against 63–67&nbsp;%. That is one run each and not yet confirmed.</li>
+    <li><strong>For any future valve-friction study,</strong> use the stick-slip friction model.</li>
+  </ul>
+
+  <h2 id="limits">6. Limits</h2>
+  <ul>
+    <li>Most cells flew once. This rig scatters widely from run to run: the two reference runs differ by 1.3° in peak tilt and 0.10&nbsp;N·m in mean couple.</li>
+    <li>No hardware-like drift model was used, and nothing was flown on hardware.</li>
+    <li>The grip's twist stiffness is the simulation's; the real foam pads are unmeasured.</li>
+    <li>The plan's growth check (the swing in the last third of the turn against the first) fails by construction, because the swing starts from rest. The verdict used the last third against the middle third and the hold instead; both ratios are recorded.</li>
+    <li>The 90°/12&nbsp;s reference itself reached 7.2° of tilt once, against the plan's 7° limit.</li>
+  </ul>
+  <p class="note">Record: <span class="mono">docs/docs_aerial_manipulator/archive/valve_yaw_sweep_20261026/</span> (README, scores, figures, chains, scorer, MATLAB export of five representative runs). Runs: <span class="mono">archive/valve_turning_20261015/runs/yw_*</span>.</p>
+</div>

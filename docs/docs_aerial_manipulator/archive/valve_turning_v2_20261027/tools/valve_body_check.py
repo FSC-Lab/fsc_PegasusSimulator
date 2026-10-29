@@ -6,7 +6,7 @@ The planner (push_pull_valve_axis_offset, 2026-10-28) takes obj_0 = the rigid bo
 from the rotor's markers, with its DEFAULT pivot (the markers' centroid) and its axes the rotor's
 (+x along the beam toward the fin, z up -- create it with the fin pointing along the room's +x on
 a level table). The bearing axis at the plate-bottom plane is then obj_0 + Rz(yaw) * the axis
-offset: on Valve_Assembly_v2.stl's five markers [-0.0720, 0.0093, -0.0851] m. Get places the turn,
+offset: on Valve_Assembly_v2.stl's five markers [-0.0935, -0.0014, -0.0899] m (the redesigned layout, 2026-10-28 night). Get places the turn,
 the table and the valve's keep-out from that point, and the grasp point is it + push_pull_ee_offset.
 
 Turn the beam slowly by hand through 60 deg or more while this runs. It MEASURES the axis offset
@@ -19,7 +19,8 @@ reports:
     (obj_0 +x must run along the beam -- the drone's heading at the fin is obj_0's yaw + 90)
   - the axis's tilt from vertical (level the plate if > 1.5 deg) and obj_0's z against the shaft:
     the planner's rotor-tilt guard reads a z off the shaft as FALSE tilt during the turn, so the
-    body must be created on a LEVEL plate (within ~1 deg of the shaft for a 90 deg turn, 2 deg guard)
+    body must be created on a LEVEL plate (within ~1 deg of the shaft for a 90 deg turn: the guard is 4 deg
+    since 2026-10-28, but the clamped fin really leans up to ~2 deg, so ~2 deg are left for this artifact)
   - the axis point's height (= the table top the planner will use) and, with --table-top, the error
   - obj_0's yaw now: point the fin at the vehicle's start; the yaw must then read the bearing from
     the axis to the start (the planner refuses a beam > 45 deg off it)
@@ -41,7 +42,8 @@ def quat_to_R(q):                                   # q: (n, 4) x, y, z, w
         np.stack([2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)], -1)], 1)
 
 
-AXIS_OFFSET_CAD = (-0.0720, 0.0093, -0.0851)   # minus the v2 valve's five-marker centroid (stl_to_usda_valve.py)
+AXIS_OFFSET_CAD = (-0.0935, -0.0014, -0.0899)  # minus the v2 valve's five-marker centroid (stl_to_usda_valve.py;
+                                               # the redesigned markers, 2026-10-28 night -- was -0.0720, 0.0093, -0.0851)
 
 
 def analyse(p, q, table_top=None, axis_offset=AXIS_OFFSET_CAD, turn_deg=90.0, tilt_limit=2.0):
@@ -127,7 +129,7 @@ def analyse(p, q, table_top=None, axis_offset=AXIS_OFFSET_CAD, turn_deg=90.0, ti
                    + ("  OK" if abs(ez) <= 0.005 else "  -- the offset's z (the markers' height) is off: check the CAD"))
         ok = ok and abs(ez) <= 0.005
     # obj_0's z against the SHAFT (2026-10-28, the hardware review): the planner's rotor-tilt guard
-    # (push_pull_guard_box_tilt_deg 2.0) compares obj_0's z with its z at the grasp, so a body whose
+    # (push_pull_guard_box_tilt_deg, 4.0 since 2026-10-28) compares obj_0's z with its z at the grasp, so a body whose
     # z is gamma off the shaft reads 2 asin(sin gamma sin(theta/2)) of FALSE tilt after a turn of
     # theta -- at the 10-27 bench's 2.2 deg it would abort ~54 deg into a 90 deg turn, clamped.
     # Motive gives a new rigid body the room's vertical: LEVEL THE PLATE WHEN CREATING THE BODY
@@ -193,7 +195,10 @@ def main():
                     help="the planner's push_pull_valve_axis_offset 'x,y,z' [m] (default: the v2 valve's "
                          "five-marker centroid); 0,0,0 = a body defined with its pivot ON the axis")
     ap.add_argument("--turn-deg", type=float, default=90.0, help="the planned turn (push_pull_turn_deg)")
-    ap.add_argument("--tilt-limit", type=float, default=2.0, help="the rotor-tilt guard (push_pull_guard_box_tilt_deg)")
+    ap.add_argument("--tilt-limit", type=float, default=2.0,
+                    help="the share of the rotor-tilt guard left for the frame artifact: the guard is 4 deg "
+                         "(push_pull_guard_box_tilt_deg) and the clamped fin really leans up to ~2 deg "
+                         "(wb_valve_turning_flight_20261028 section 8), so 2")
     a = ap.parse_args()
     try:
         off = [float(v) for v in a.axis_offset.split(",")]

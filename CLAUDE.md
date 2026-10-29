@@ -6650,6 +6650,133 @@ Two mechanisms are visible:
 So 0.048 was conservative for force but NOT for stability. The options are the user's call: add
 shaft friction on the real valve, re-aim the claw at the live handle, or damp the q1/q4 mode.
 
+**VALVE v2 WITH A FABRIC PAD ON THE HUB = A FRICTION BRAKE, ~72 mN·m, NO DAMPING (2026-10-27, user
+request: torque now + good enough for the flight test?; record
+`docs/docs_aerial_manipulator/archive/valve_damper_spin_20261027/README.md`).**
+- **The v2 CAD** (`assets/Valve_Assembly_v2.stl`) adds two static half-rings around the 25 mm hub
+  (inner radius 27.2 mm, 2.2 mm gap). One pad layer fills the gap, with a woven printed fabric face
+  on the hub. The rotor shell is identical to v1, so the inertia is unchanged.
+- **Free-spin bag** `1027 - .../mocap_valve_spin_20261027_183950`: 38–46 flicks.
+- **Coulomb-equivalent deceleration 28 rad/s² [24, 33]** (energy + trajectory fits, two angle
+  measures and two start delays all give 27–30). At the CAD 204 g that is **72 mN·m [63, 84]**,
+  0.45 N at the fin (86 at 243 g); the bearing alone was 9.
+- **Viscous part consistent with zero, b ≤ 0.026 N·m·s/rad**, ≥ 10x below the planned
+  0.25–1.0. The mean coast torque is flat over 90–300°/s.
+- Spread ±33 % per coast; no 1/rev resolved.
+- **The rotation axis sat 2.6° off vertical** in this test (10-23: 0.55°), so level the plate.
+- **Not measured:** breakaway friction, the torque at the turn's ≤ 24°/s, and the rotor mass. The
+  hanging-weight test at the fin measures all three.
+- **For the flight:** 1.5x the 0.048 the final valve config was validated at. That config has never
+  been flown at 0.072 (Isaac `drive` model).
+- 0.45 N at the fin is below the ~1–1.5 N rms in-flight force-estimate noise, so the resistance
+  will not stand out in F_hat.
+
+**v2 VALVE IN ISAAC, 90° TURN, ROOM-HELD DESCENT (2026-10-27, user request: try the new mechanism and
+calibration, borrow the box-push lessons, test the interaction only, the experiment turns 90°; record
+`docs/docs_aerial_manipulator/archive/valve_turning_v2_20261027/README.md`).**
+- **Asset `Valve_Assembly_v2.usda`:** made by the 10-15 converter, extended for the 5-shell CAD. The
+  half-rings are base visual only. v1 regenerates unchanged; the scene default stays v1
+  (`PEGASUS_VALVE_USD` selects v2).
+- **Flown at `PEGASUS_VALVE_FRICTION=0.072` with `_MODEL=drive`.** The scene default (0.048) is unchanged.
+- **The valve yaml now turns 90° in 12 s** (`make_valve_turning_yaml.py`; was 360 / 36): the user's
+  experiment design.
+  - The hardware valve yaml was regenerated.
+  - The raw hardware stack now expects 90 / 12.
+  - Six settle-gate keys were added to the generator, OFF.
+- **Runs end 4 s after the exit** (`--stop-after-exit`).
+- **Results, all runs safe:**
+
+  | config | nominal | drift seeds 2/3/4 |
+  |---|---|---|
+  | A = the 10-22 final | 2/2 | 0/3 |
+  | B = A + the box push's settle gate | 2/2 | 1/3 |
+  | **W = A + `push_pull_world_anchor_ready: true`** | **1/1** | **3/3** |
+
+- **Every A/B drift failure had the same cause:** an open finger met the fin's near edge on the way
+  in, 11–16 mm off radially, and dragged the free valve 12–18°. The planner keeps the claw on the
+  ORIGINAL grasp point, so the GS's close gate is never met.
+- **The sim is harsher than hardware here.** The 20 mm grip pad leaves 8.75 mm a side; the real 5 mm
+  fin leaves ~16 mm.
+- **B's "Ready only when still" check blocked Ready for 25 s in one run.** Its settle gate acts too
+  late.
+- **W pins the radial offset to ≤ 6.2 mm** and moved the fin ≤ 0.2°. Cost: a larger arm motion in
+  the approach (≤ 14°).
+- **HARDWARE PREPARATION, same night (user: "go ahead"; README "The hardware preparation"):**
+  - **W applied in the generator.**
+  - **The table and the valve keep-out are PLACED FROM THE VALVE** (user's choice): new
+    fsc_trajectory_planner keys `push_pull_keepouts_from_valve`, `_valve_reach`, `_valve_top_above`,
+    `_valve_start_range`, `_valve_beam_tol_deg`; `wp.obstacle` is carried like `wp.table`; gtest
+    `KeepoutsPlacedFromTheValve`. The obstacle is centred on the captured axis with its top above
+    obj_0; the table is centred on the axis, its depth along the start-to-axis line, its top at obj_0.
+    Plan refuses a start outside 0.6–3 m and a beam more than 45° off the start.
+  - **The box push's way home:** Land Start 1.3 m and Land 0.30 m over the start mark, fence floor 0.25.
+  - **The hardware yaml** gets gear 0.248, mocap-abort release 1.0 s, arm-fold delay 2 s and the matched
+    SAFETY map. Both hardware stacks check 35 valve values and refuse an older planner.
+  - **The turn became 90° in 18 s.** 12 s went 3 of 6 under drift (the vehicle's lag at the turn's start,
+    carried onto the fin by the free-axis anchor, compressed the arm into the q3 guard; safe aborts);
+    18 s went 4 of 4. The q3 margin stays thin (4.4–7.8° vs the 3° guard).
+  - **obj_0's pivot must be ON the bearing axis at the plate bottom:** the 10-27 bench had it on a 73 mm
+    circle. `valve_turning_v2_20261027/tools/valve_body_check.py` checks it by a hand turn.
+    **SUPERSEDED 2026-10-28 (next entry): the pivot stays at the markers' centroid.**
+  - Nothing committed; NOT flown on hardware.
+
+**THE VALVE'S MOCAP MARKERS: obj_0 = MOTIVE'S DEFAULT-PIVOT RIGID BODY, THE PLANNER CARRIES THE AXIS
+OFFSET (2026-10-28, user request: "only get obj_0 from the rigid body it created, then the EE offset";
+check and modify the arm GS and localization logic as for the box push; record
+`archive/valve_turning_v2_20261027/README.md` section "The mocap markers and obj_0", Command.md §18).**
+- **The markers** (`Valve_Assembly_v2.stl` now 14 shells; `stl_to_usda_valve.py` reads them): five 30 mm
+  balls, all on the ROTOR. **Centroid (Motive's default pivot) (72.0, −9.3, 85.1) mm from the axis on
+  the plate bottom, rotor frame: 72.6 mm off the shaft.** The asset gains them as visual + sphere
+  colliders and `fsc:mocap_*` / `fsc:hub_pad_rings` attributes; v1 regenerates byte-identical.
+- **Planner (fsc_trajectory_planner, uncommitted): new `push_pull_valve_axis_offset`** = obj_0 → the
+  bearing axis on the plate bottom, obj_0's frame, turned with its yaw. The turn's centre, the live
+  handle, the start-range check and the keep-outs placed from the valve start from obj_0 + Rz(yaw) ×
+  offset; **in a turn the EE offset is measured from that axis point** (numbers unchanged). Default 0 =
+  unchanged; refused with a straight push. Without it a 90° turn about the centroid ends the claw
+  103 mm off the fin's circle and the table 85 mm high. gtest
+  `TheValveAxisOffsetPutsTheTurnOnTheShaft`; push-pull 29/29.
+- Both valve yamls (sim + hardware, generators) carry [−0.0720, 0.0093, −0.0851]; the scene's planner
+  check compares it; both whole-body hardware stacks expect it (61/61 on the raw stack's dry run) and
+  REFUSE a planner without it (negative-tested with a fake binary).
+- **Arm GS: an Axis Offset row** under the EE Offset on the Valve Turning tab (own request; an older
+  planner leaves it read-only); the Box Pushing tab unchanged. `tools/gs_axis_check.sh` 9/9; the old
+  valve / valve-auto / box harnesses PASS.
+- **Scene (07 valve):** obj_0 published at the centroid with the rotor's axes
+  (`PEGASUS_VALVE_MOCAP_PIVOT=markers`, default when the asset has markers; `axis` = the old way);
+  **default asset now v2** with its bearing defaults (0.072 N·m drive; v1 keeps 0.048 tanh); **layout =
+  the box push's** (table centred on (0.675, 0), start mark (−1.0, 0), spawn (−0.90, −0.07)). Isaac,
+  no flight: obj_0 (0.603, 0.009, 0.885); after Get the placed table is centred on (0.675, 0.000), top
+  0.800 = the scene's.
+- **`valve_body_check.py` now MEASURES the axis offset and the frame's turn** from a hand turn, in the
+  yaw frame the planner uses (synthetic 0 / 2 / −15° recovered exactly). **On the 10-27 bench bag:
+  obj_0's +x points −89.5° from the beam, and turned back the centroid is 0.4 mm from the CAD's** —
+  that bench already had this marker layout. 10-23: −87.6° and 4.7 mm (another layout). Procedure:
+  create the rigid body with the fin along the room's +x on a level table, keep the default pivot,
+  run the check; a different measured offset goes into the GS's Axis Offset row.
+- Markers vs the vehicle: the tallest ball tops out 140.5 mm above the plate; the skids pass ≥ 46 mm
+  above it at the grasp, the fingers ≥ 17 mm beside the nearest ball. The keep-out stays the beam's
+  (raising its top to the markers would refuse the claw itself).
+- **FLOWN, one full nominal mission, windowed, GS-run steps (`runs/mk_full_1`): COMPLETE.** The axis
+  from obj_0 + offset sat at (0.6750, 0.0000, 0.8000) and moved 0.0 mm through the turn while obj_0
+  (the centroid) moved 105 mm; claw radius 0.1608 m vs 0.1600 planned; jaws closed 4.6 mm along / 1.2
+  mm off the fin; beam +86°; q3 16–37°, 0 % on a stop; tilt ≤ 4.9°; landed. `valve_score.py` reads the
+  run's axis offset now; the 10-22 `grasp_offset.py` still assumes obj_0 on the axis.
+- **REVIEWED before hardware (same day, three independent reviews; README "Review before the
+  hardware flight").** HARDWARE-ONLY TRAP: the planner's 2° rotor-tilt guard compares obj_0's z with
+  its z at the grasp; Motive gives a new body the room's vertical, so a body γ off the shaft reads
+  2·asin(sin γ·sin(θ/2)) of FALSE tilt during the turn (10-27 bench γ 2.2° → abort ~54° into the 90°
+  turn, clamped; Isaac's joint is exactly vertical). **Level the plate when CREATING the body**;
+  `valve_body_check.py` now fails γ above ~0.95°. GS: the Valve tab gets its own hardware close
+  gate (`push_pull_valve_grip_*`: 20 mm, 8 mm across hw / 3 mm Isaac, 30 mm/s, 2.5 s → ABORT; it was
+  Isaac's 3 mm with no limit), Plan refuses unsent amber values, preview through the axis offset,
+  open-on-DIRECT-loss keyed on the GS's grip state, sent-value staging. Planner: a straight push
+  ignores the axis offset; NaN / bad start range refused at the set; Get names the axis point in a
+  turn. Every hardware-yaml key verified loaded at runtime. Tests: planner 29/29 + 31/31 + box
+  loopback, nine GS harnesses PASS, stack dry run 61/61.
+- **Not done:** the coordinated-admittance valve yaml (already stale) needs regenerating before that
+  rig flies the new scene; no drift-seed run. Orin: rebuild fsc_trajectory_planner; laptop: rebuild
+  utils_custom_ground_station.
+
 **1024 EVENING HARDWARE BOX PUSHES: THE 280 g PUSH GOES BACK AND FORTH, THE 510 g GRASP BUCKLED THE
 ARM (2026-10-25, user request: analyse; record `docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261024_evening/README.md`,
 figure `fig_flights.png`). Nothing changed in any repo.** **Box mass correction (user): the hardware box
@@ -6727,3 +6854,104 @@ harder at the clamp when the jaws close off the grasp point (22.6 vs 17.1 mm, se
 version (M 1.64, K 120, D 25.8) also softened the free-flight arm and had 2 of 4 pre-contact aborts
 (not separable from that) -- replaced. This folder's `pl_mission.py` gained `--stop-after-exit`
 (no way home / landing, ~45 s saved per run).
+
+**VALVE HEADING-CHANNEL SWEEP: NO SAFE CELL SHOWS THE HEADING COUPLE -- THE CLAW TWISTS ON THE FIN
+(2026-10-26, user's plan: 90° in 12 s, stiffer K_ψ, more valve friction, find friction -> (K_ψ, D_ψ);
+record `docs/docs_aerial_manipulator/archive/valve_yaw_sweep_20261026/README.md`, report artifact
+https://claude.ai/artifact/CGsJryjkz1RNWy5LyYaC6q; 24 headless flights, runs `valve_turning_20261015/runs/yw_*`).**
+- **The scene's valve friction could not hold the valve** (pre-check 1, `tools/friction_check.py`, valve alone): the
+  default `tanh` model (explicit, momentum-clamped to I|ω|/dt) creeps at τ dt/I below f (8 / 20 °/s at 0.9 × 0.10 / 0.25)
+  and caps the resistance at ~0.65 N·m per rad/s, so above ~0.08 N·m the set friction never reached the valve in a turn.
+  NEW scene knob `PEGASUS_VALVE_FRICTION_MODEL=drive` (default `tanh` = every earlier run unchanged; forwarded by the
+  valve wrapper): the bearing joint's drive as a velocity constraint, damping `PEGASUS_VALVE_STICTION_DAMPING` 1000,
+  force limit f -- 0.08° in 6 s at 0.9 f, Coulomb slip at 1.1 f, no jitter. Needs DAMPING 0. Use it for any friction study.
+- `pl_mission.py` gained `--stop-after-exit` / `--stop-hold` (ported from the 10-25 pose-gain copy, default off).
+- **Stage A (τ_f 0.048):** K_ψ 3 / 6 / 10 failed twice each (tilt 8.4° + yaw 89 % then q3 guard 1.4°; tilt aborts, one
+  INVERTED; tilt + SAFETY) -> the plan's Stage B is empty. K_ψ 1 flew clean and slightly better than today's 0.25. The
+  90°/12 s reference reached 7.2° once (the plan expected 5–6°: 2.25× the 360°/36 s angular acceleration).
+- **K_ψ 1 column (extension):** clean only at τ_f 0.05; 0.10–0.20 complete but the beam turns 81–84° (the free-axis
+  anchor lets it stop short with the base) and ε to 117 mm; 0.25 q3-guard abort in the release.
+- **Visibility never met** (M̄ ≥ 0.07 and ≥ 2σ): |M̄| ≤ 0.13, mostly NEGATIVE (aiding) with the anchor on.
+- **Mechanism (measured):** M + F_t r follows τ_f (the valve's load is right), but the split never follows
+  K_ψ/(K r² + K_ψ): the claw's azimuth vs the beam (true base yaw + q1 − beam yaw) moves 10–45° per turn, effective grip
+  torsional stiffness 0.1–0.8 N·m/rad -- below every K_ψ and K r² = 3.07; the sim claw's near-point finger contacts act
+  as a hinge about the vertical. Raising K_ψ stiffens that twist against the platform yaw: the ~1 Hz q1/q4 swing goes
+  0.92 → 1.23 Hz, yaw torque 78–112 % of the free budget at K_ψ ≥ 2. The free-axis anchor adds an offset (translational
+  target rides the base error, heading target does not): anchor on -> F_t r over-drives, M̄ < 0; anchor off (diagnostic,
+  `fa0`) -> M̄ ≈ 0 even at τ_f 0.25, and NOT safer for K_ψ ≥ 2 (2 of 7 complete, one inverted).
+- **Answer to the plan:** no lookup table, no safe friction band with a visible couple, no pad target. Do not cut pads
+  for heading visibility; first make the grasp torsionally stiff (bench the real gripper's twist stiffness on the fin;
+  pin-in-slot / keyed handle), or grasp on the axis (r ≈ 0 -> share → 1). Keep K_ψ ≤ 1 on this rig.
+- Scorer traps: the plan's growth check (last vs first third) fails by construction (the forced swing starts from rest)
+  -- the verdict uses last vs middle third + the hold; the per-run contact-sign power rule flipped a swinging run's
+  sign -- fixed at +1 (calibrated, constant per scene); `$!` of `setsid nohup ... &` can be the setsid wrapper, not
+  the chain (a waiter on it returned at once) -- check with `ps`. Shipped yamls unchanged; nothing committed.
+
+**1028 HARDWARE VALVE TURNING: BOTH TURNS CUT BY A FALSE TILT TRIP; THE REAL LIMITER IS A GROWING
+LATERAL CONTACT SWAY (2026-10-28, user request: analyse; record
+`docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261028/README.md`, `fig_flights.png`).**
+Bags `1028 - T650-AM whole-body Tracking, Pick&Drop, Valve-Turning-*/rosbag2_2026_10_28-18_{06_52,18_33}_Valve_Turning`
+(recorded with `-a`: no gripper action topics; the valve record command was written the same day). Flown
+config `bf7f14d` / planner `66bc2fa` (90 deg / 18 s, K_y 120, free-axis 0.75, tilt guard 2 deg / 0.2 s).
+Both aborted on "box tilted > 2.0 deg" (flight 1 +7.67 s into the turn at +26 deg, flight 2 +2.12 s), clean.
+- **The tilt reading was noise + frame artifact**: shaft 2.8 deg off vertical, obj_0 z gamma 1.5 deg off the
+  shaft (a clean 90 deg turn reads 2.1 deg by itself); obj_0's z scatter 0.3-1.7 deg rms (flight 2's body
+  1.4 deg rms on the ground, rest offset stepping 4.3 -> 7.2 deg -- a marker problem); no measurable rocking.
+  Replay reproduces flight 1's trip exactly. `push_pull_guard_box_persist_s` is SHARED with the static q3 guard.
+- **Valve angle = plan + 0.75 x fore-aft CoM wander / r** (slope 0.70-0.71, r 0.96-0.97): the free-axis
+  anchor carries the vehicle's wander along the nose = the turn's tangent; valve speed to 60 deg/s vs 12.3 plan.
+- **A growing 0.56-0.60 Hz lateral sway in contact** (flight 1: 20 -> 80 mm, doubling ~5.2 s, q1/q4 +-21 deg
+  antiphase; free hold just before: 2-3 mm sd) = the CoM loop's own mode sqrt(k_x/m) = 0.58 Hz losing damping
+  when clamped -- same family as the box-push 0.47 Hz mode. Natural task inertia at [0,5,25,0]: 1.47 nose /
+  0.47 lateral / 0.70 vertical kg, so M_y = 1 injects ~+-0.5 x F_hat_y into u3 (0.15-0.18 N rms lateral,
+  moving with the sway); `wb_impedance_shaped: false` would remove it and follow the turn (never flown).
+- **Friction: the bench 72 mN.m stands** -- flight 1 fits 65-86 mN.m but +-57 honest; the flight cannot refine it.
+- Recommended, NOT applied: tilt limit 4 deg (keep 0.2 s), level the plate + re-create obj_0, fix the marker
+  problem; then an Isaac A/B of natural impedance (+ maybe k_v ~15). Free-axis weight and the 18 s reference
+  are not the levers. Isaac was busy (another session's box-pushing campaign).
+**Isaac screen the same evening** (9 flights, drift seeds 2/3/4, `.../wb_valve_turning_flight_20261028/sim/`;
+the other session's box-pushing campaign was paused for it): flown law turn 3/3, exit 2/3; `wb_k_v` 15 turn
+3/3, exit 2/3 (its failure FLIPPED); free-axis 0.5 valve error -30..-55 % but q3 guard on the worst seed
+(arm buckling). Isaac has the valve-angle mechanism but NOT the 0.56-0.6 Hz hardware mode, so neither
+gain change is recommended. **NEW: the exit is the weakest step** -- the planner's `restoreAnchor()` at the
+exit start (1 s CoM blend) hands the accumulated drift to the OPEN claw while its fingers are still around the
+fin (25 mm below the top); seed 2 pressed a finger in at 4 -> 11 N and both seed-2 runs left DIRECT.
+10-28-layout runs fail the exit 3 of 8, the 10-27 runs 0 of 8. Proposed (NOT built): stay room-held until the
+fingers clear the fin top, then the CoM anchor.
+**APPLIED the same night (user's go-ahead):** planner `push_pull_exit_world_held_dz` (+ `_max_s` 4) -- a claw
+room-held at the exit's start stays room-held until the measured claw has climbed dz, then the CoM anchor
+(default 0 = unchanged; box pushing untouched, loopback ALL PASS); valve yamls (sim + hw, generator) 0.06 and the
+rotor-tilt limit 2 -> 4 deg; both whole-body hardware stacks expect both and REFUSE an older planner. Isaac: exit
+3 of 3 incl. seed 2 twice (peak contact 1.5 N, tilt <= 4 deg; without: 2 of 6 left DIRECT). Seed 4's turn
+buckled (q3 50 -> -59 deg in 0.6 s, q2 on its wall) -- independent of the changes; the valve's q3 RATE guard
+(off) is the next safety item. Orin: rebuild fsc_trajectory_planner. Uncommitted.
+**THE REST OF THE NIGHT (10-28/29, user requests; README section 7):** (a) the user REDESIGNED the valve
+markers (one moved past the fin, spread 188 mm): asset regenerated (old kept as
+`Valve_Assembly_v2_markers20261028am.usda`), `push_pull_valve_axis_offset` -> [-0.0935, -0.0014, -0.0899]
+everywhere (generator MOCAP_PIVOT, both stacks, valve_body_check, docs); EE offset unchanged. (b) The contact
+sway is NOT the raw mocap noise: the drone's mocap does get 5-10x noisier above 5 Hz near the valve
+(measurement, not motion -- the IMU is flat), but its share in the sway band is <= 0.11 N, and Isaac at
+contact-level noise (2 runs) shows no 0.56 Hz growing mode. (c) Turn pose re-screened on the measured arm
+motion: no pose fits; best +3 deg -- not a lever. (d) wb_l1_omega_c_t 2.927 1/3 and free-axis 1.0 1/3 vs the
+shipped 5/9 under drift -- keep the gains. (e) The q3 RATE guard (look-ahead 0.1 s, 30 deg/s, q2 wall 45)
+APPLIED to the valve yamls: replay 9/11 buckles caught before q3 < 0 (static 5/11), hardware margin 5.8-7.7
+deg, Isaac 4 runs no false trip. (f) A parallel research thread
+(`archive/observer_interaction_study_20261029/`) found the observer and the interaction logic are NOT the
+cause (energy split: the base's roll tracking error feeds the sway); hypothesis: the q1/q4 pair tilts the
+clamped claw about the nose at the 30 deg fold -> a roll moment the 4-D task cannot see; no redesign proposed.
+Harness: `run_valve.sh` takes `PL_PUSH_TOOLS` (a driver copy in the 10-28 folder low-passes the hover check
+and retries DIRECT). All uncommitted.
+**THE FIN ROLLS WITH THE CLAMPED CLAW (2026-10-29, user: the printed shaft is not stiff; README section 8,
+`tools/fin_roll.py`).** Flight 1: fin roll about the tangent grew 0.1 -> 0.4 deg rms with the sway (noise
+floor 0.04), confirmed by the marker centroid's height (corr -0.86); driven by the claw's roll / q1-q4
+(corr ~0.9), not by the radial push (0.03); the fin rolls only ~7 % of the claw's FK roll, so the grip takes
+the rest; shaft ~3-7 N.m/rad, ~70 mN.m rms couple back into the vehicle. A stiffer shaft would pass MORE
+couple (springs in series); a handle the closed jaws can turn on removes it. Real lean reached ~2 deg while
+clamped, so level the plate and re-create obj_0 or the 4 deg guard has no margin.
+**QUICK SWEEP SAME DAY (README section 9): nothing beats the shipped valve config.** Pose: the claw's roll
+coupling follows the fold (flown 0.155 deg/mm; fold 15 halves it), but every lower-coupling pose loses
+24-41 deg of stop margin. Gains (`tools/lateral_roll_model.py`, `gain_rank_model.py`: linear model from
+wb_controller.cpp's feed-forward, reproduces the 1.5 Hz roll mode, ordering only): every gain adding
+sideways damping costs the 1.5 Hz mode (H1b k_R/k_w: +40 % decay, delay margin 32.5 -> 27.5 ms); a handle
+free in roll restores full damping. Isaac, 8 flights on drift seeds 2/3: K_y 160 and K_psi 1.0 worse on both,
+the 15 s turn 1 abort + q3 to 2.2 deg, K_y 80 inside scatter. Not adopted.

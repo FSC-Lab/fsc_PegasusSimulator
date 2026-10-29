@@ -1,0 +1,11 @@
+tag          peak tilt release/exit  peak contact F exit  ended
+qg_s2           3.0 /   3.5 deg            4.6 N    completed
+qg_s3           4.9 /   2.7 deg            1.0 N    completed
+sw_ky80_s2      3.3 /   3.5 deg            2.4 N    completed
+sw_ky80_s3      2.7 /   3.3 deg            2.0 N    completed
+sw_ky160_s2      5.5 /   2.9 deg            2.5 N    completed
+sw_ky160_s3      2.8 /   3.4 deg            0.5 N    completed
+sw_psi1_s2      5.0 /   3.1 deg            0.8 N    completed
+sw_psi1_s3      2.4 /   2.9 deg            1.6 N    completed
+sw_t15_s2  no release
+sw_t15_s3       3.1 /   2.2 deg            0.0 N    completed

@@ -1,0 +1,9 @@
+21:55:34 start ex_s2a 
+[ex_s2a] completed
+21:59:00 start ex_s2b 
+[ex_s2b] completed
+22:02:26 start ex_s3 
+[ex_s3] completed
+22:05:57 start ex_s4 
+[ex_s4] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -59.3 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)
+22:09:13 CHAIN DONE

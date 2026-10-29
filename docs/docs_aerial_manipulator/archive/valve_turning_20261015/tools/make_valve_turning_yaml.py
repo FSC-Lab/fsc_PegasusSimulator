@@ -49,8 +49,11 @@ START = (-1.0, 0.0)
 # THE MOCAP PIVOT (2026-10-28, user: the markers on Valve_Assembly_v2.stl): the five
 # marker balls' CENTROID, Motive's default pivot of the rigid body made from them, from
 # the axis on the plate bottom in the rotor frame (stl_to_usda_valve.py prints it;
-# fsc:mocap_pivot_*_m) -- the planner's push_pull_valve_axis_offset is minus this
-MOCAP_PIVOT = (0.0720, -0.0093, 0.0851)
+# fsc:mocap_pivot_*_m) -- the planner's push_pull_valve_axis_offset is minus this.
+# 2026-10-28 night (user): the markers REDESIGNED for better tracking -- one moved from
+# the beam's middle to just past the fin (r 0.193 m), spreading them 188 mm (was ~120);
+# the previous layout's centroid was (0.0720, -0.0093, 0.0851).
+MOCAP_PIVOT = (0.0935, 0.0014, 0.0899)
 TABLE_TOP = 0.800
 FIN_RADIUS, FIN_BEARING_Y, FIN_TOP, BEAM_TOP, BEAM_REACH = 0.1600, 0.0006, 0.2040, 0.0540, 0.2001
 GRASP_BELOW_TOP = 0.025
@@ -168,6 +171,12 @@ PLANNER_BLOCK = f"""
     push_pull_approach_dz: 0.10
     push_pull_approach_back: 0.12
     push_pull_exit_dz: 0.20
+    # (2026-10-28, archive/wb_valve_turning_flight_20261028) the open claw stays ROOM-held for
+    # the first 60 mm of that climb -- the grasp is 25 mm under the fin top, the fingertips reach
+    # below the claw point -- then the CoM anchor. Handing it to the CoM at the exit's start gave
+    # the open jaws the vehicle's accumulated drift while still around the fin: a finger pressed
+    # into it at 4 -> 11 N and the vehicle left DIRECT in 2 of 6 Isaac exits.
+    push_pull_exit_world_held_dz: 0.06
     # WHEN the law's contact phase switches -- the GRIPPER is the signal (the
     # box push's rule): on at the Push press (the jaws' stall), free when the
     # turn completes, before the jaws open.
@@ -306,18 +315,31 @@ PLANNER_BLOCK = f"""
     #     runs; < 3 deg for 0.2 s trips none of the current config's completed turns (two old-
     #     config stress runs only) and 17 of 50 failures, 0.4-17 s before the tilt guard. It
     #     also aborts when the arm's joint states go silent for box_stale_s (the guard is blind).
-    #   q3_lookahead_s 0 (the box's RATE guard OFF): the valve's arm folds and unfolds fast in a
+    #   q3_lookahead_s 0 (the box's RATE guard OFF -- 2026-10-22; SUPERSEDED 2026-10-28 night, see below:
+    #     0.1 s with a 30 deg/s floor and the q2-wall credit): the valve's arm folds and unfolds fast in a
     #     NOMINAL turn -- at the box's 10 deg / 0.2 s it false-trips 41 of 57 completed runs, and
     #     no lower limit separates the failures from those.
     #   NO turn-lag guard (the box-lag analog): the rotor's lag behind the plan stays <= 10 deg
     #     in completed turns, but the heavy-valve failure (damping 2.0, base_visc) buckled the
     #     arm with only 11 deg of lag -- no threshold separates them; the q3 guard caught it 3.8 s
     #     before the tilt guard.
-    push_pull_guard_box_tilt_deg: 2.0
+    #   box_tilt_deg 4.0, NOT 2.0 (2026-10-28 hardware, archive/wb_valve_turning_flight_20261028):
+    #     both hardware turns were cut by a FALSE 2 deg trip -- obj_0's z axis reads 0.3-1.7 deg rms
+    #     of noise near the claw (spikes 4-10), and a body 1.5 deg off the shaft reads 2.1 deg of
+    #     tilt over a clean 90 deg turn by itself. Replayed, 3-4 deg / 0.2 s trips neither flight.
+    #     The persistence stays 0.2 s: the static q3 guard shares it.
+    push_pull_guard_box_tilt_deg: 4.0
     push_pull_guard_box_persist_s: 0.20
     push_pull_guard_box_stale_s: 0.50
     push_pull_guard_q3_min_deg: 3.0
-    push_pull_guard_q3_lookahead_s: 0.0
+    # the q3 RATE rule ON since 2026-10-28 night (0.0 = off, the 10-22 setting):
+    push_pull_guard_q3_lookahead_s: 0.1
+    # The q3 RATE rule's other settings (2026-10-28, archive/wb_valve_turning_flight_20261028). With the
+    # look-ahead 0.1 s: Isaac 4 drift runs, no false trip. Replayed on 77 valve runs, look-ahead 0.1 s / 30 deg/s / q2 wall 45 caught
+    # 9 of 11 buckles before q3 crossed 0 (the static rule: 5 of 11) with no false trip on the shipped
+    # config; the hardware flights' margin to it was 5.8-7.7 deg (0.2 s nearly false-tripped flight 2).
+    push_pull_guard_q3_rate_min_deg_s: 30.0
+    push_pull_guard_q2_max_deg: 45.0
     # THE ROTOR SAMPLE GATE (the box push's, 2026-10-21): an obj_0 sample farther than 20 mm /
     # 10 deg from the last good one (the allowance growing with the gap) is dropped before Get
     # and the guards read it; Get refuses a window with any dropped sample. The turn's own yaw

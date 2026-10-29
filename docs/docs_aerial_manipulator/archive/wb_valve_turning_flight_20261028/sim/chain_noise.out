@@ -1,0 +1,13 @@
+22:53:38 start nm_nom 
+[nm_nom] completed
+22:57:09 start nm_s2 
+[nm_s2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -0.2 deg < 3.0 deg (the arm buckling toward its elbow-singular branch))
+23:00:50 start nz_s2 sim_feedback_pos_noise_m=0.0015 sim_feedback_vel_noise_mps=0.06
+  sim_feedback_pos_noise_m -> 0.0015
+  sim_feedback_vel_noise_mps -> 0.06
+[nz_s2] ABORTED: hover did not settle
+23:04:13 start nz_s3 sim_feedback_pos_noise_m=0.0015 sim_feedback_vel_noise_mps=0.06
+  sim_feedback_pos_noise_m -> 0.0015
+  sim_feedback_vel_noise_mps -> 0.06
+[nz_s3] ABORTED: hover did not settle
+23:07:30 CHAIN DONE

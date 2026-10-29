@@ -1,0 +1,25 @@
+21:10:07 start base_s2 
+[base_s2] ABORTED: push-and-pull ABORTED while exit complete: ABORTING (SAFETY GUARD: push force 6.6 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, t
+21:13:31 start kv15_s2 wb_k_v=15.0
+  wb_k_v : 12.58 -> 15.0
+[kv15_s2] ABORTED: left DIRECT while exit complete
+21:16:51 start fa05_s2 wb_ee_anchor_free_axis_weight=0.5
+  wb_ee_anchor_free_axis_weight -> 0.5
+[fa05_s2] completed
+21:20:20 start base_s3 
+[base_s3] completed
+21:23:51 start kv15_s3 wb_k_v=15.0
+  wb_k_v : 12.58 -> 15.0
+[kv15_s3] completed
+21:27:23 start fa05_s3 wb_ee_anchor_free_axis_weight=0.5
+  wb_ee_anchor_free_axis_weight -> 0.5
+[fa05_s3] completed
+21:30:53 start base_s4 
+[base_s4] completed
+21:34:44 start kv15_s4 wb_k_v=15.0
+  wb_k_v : 12.58 -> 15.0
+[kv15_s4] completed
+21:38:29 start fa05_s4 wb_ee_anchor_free_axis_weight=0.5
+  wb_ee_anchor_free_axis_weight -> 0.5
+[fa05_s4] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -3.2 deg < 3.0 deg (the arm buckling toward its elbow-singular branch))
+21:42:22 CHAIN DONE

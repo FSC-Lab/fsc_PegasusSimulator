@@ -37,9 +37,9 @@ output. --check verifies the file on disk.
 
 THE MOCAP BODY (2026-10-28, the sim's convention, which the planner assumes): obj_0 = the
 rigid body Motive makes from the five markers on Valve_Assembly_v2.stl with its DEFAULT pivot
-(their centroid, 72.6 mm off the shaft) and its axes the rotor's -- create it with the fin
-pointing along the room's +x on a level table. push_pull_valve_axis_offset [-0.0720, 0.0093,
--0.0851] carries obj_0 to the bearing axis at the plate bottom; push_pull_ee_offset ([0.160,
+(their centroid, 93.5 mm off the shaft on the 2026-10-28-night layout) and its axes the rotor's
+-- create it with the fin pointing along the room's +x on a level table.
+push_pull_valve_axis_offset [-0.0935, -0.0014, -0.0899] carries obj_0 to the bearing axis at the plate bottom; push_pull_ee_offset ([0.160,
 0.0006, 0.179]: the fin's radius, its 0.6 mm offset, 25 mm under its top) is measured from that
 axis point. Check the body with archive/valve_turning_v2_20261027/tools/valve_body_check.py
 (turn the beam by hand) and type its measured axis offset into the arm GS's Axis Offset row if

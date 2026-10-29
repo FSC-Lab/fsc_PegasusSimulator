@@ -1,0 +1,6 @@
+tag                contact abort  fore-aft sd  lateral sd (p-p)  f_fa  f_lat  growth  |e_R|  q1 range     q2 range    q3 min  valve-plan rms (range)  slope/corr  end  reason
+nz_s2b               19.5s False     31.3 mm     21.6 (  97)   0.10  0.10  +0.04   0.071  -17.1..+11.2  -17.1..+20.3    9.9     6.4 (-12.0..+18.4)  0.55/0.97   85.5  
+qg_s2                19.5s False     27.3 mm     26.8 ( 112)   0.10  0.10  +0.06   0.068  -16.3..+21.0   -8.8..+13.9   13.4     6.0 (-12.2.. +8.9)  0.51/0.95   87.7  
+qg_s3                19.5s False     21.9 mm     11.6 (  62)   0.10  0.10  -0.02   0.042  -12.9.. +8.6   -6.7..+14.6   13.3     4.5 (-11.8.. +5.8)  0.51/0.95   81.5  
+qg_s4                 6.0s  True     21.8 mm     27.0 (  97)   0.17  0.17  +nan   0.093   -2.4..+24.6   -6.5.. +5.5   22.5     9.1 ( -9.4..+16.3)  0.90/0.97    8.5  push-and-pull ABORTED while push complet
+qg_s5                 3.6s  True     11.3 mm     20.2 (  61)   0.60  0.30  +nan   0.095  -19.4.. -4.2   -0.2..+16.3    9.0     7.0 ( -9.3..+14.4)  -0.20/-0.16   -9.7  push-and-pull ABORTED while push compl

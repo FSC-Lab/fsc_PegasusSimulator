@@ -1,0 +1,10 @@
+tag          peak tilt release/exit  peak contact F exit  ended
+nm_nom          3.2 /   2.3 deg            1.9 N    completed
+nm_s2      no release
+nz_s3           4.2 /   4.4 deg            2.4 N    completed
+oc29_s2    no release
+oc29_s3         3.6 /   3.3 deg            1.9 N    completed
+oc29_s4    no release
+fa10_s2         nan /   6.8 deg            5.0 N    push-and-pull ABORTED while the GS's Exit To Push: ABORTING (SAFETY GU
+fa10_s3    no release
+fa10_s4         3.1 /   2.6 deg            1.6 N    completed

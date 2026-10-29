@@ -1,0 +1,9 @@
+N0f FREE hold (no clamp), j1/j4 b +0.3 [s1]          ABORT at 0.9 s
+N1 clamped, j1/j4 b +0.1 [s1]                        ABORT at 13.3 s
+N2 clamped, j1/j4 b +0.2 [s1]                        ABORT at 10.1 s
+N3 clamped, j1/j4 b +0.3 [s1]                        ABORT at 0.9 s
+N4 clamped, j1 only b +0.3 [s1]                      ABORT at 2.5 s
+N5 clamped, j4 only b +0.3 [s1]                      ABORT at 2.6 s
+N3c clamped, j1/j4 b +0.3, contact flag OFF [s1]     ABORT at 0.9 s
+R1 clamped, j1/j4 relay +0.02 N.m [s1]               compl | ACROSS rms  16.6 (pre 12.1, first/last third 15.1/  7.6) mm @ 0.11 Hz gr -0.01 | ALONG  13.5 mm @ 0.19 | q1 -12.7..+15.4 q3 10.6..36.0 | tilt  4.8 F_rad sd 0.44 N F_y ac sd 0.16 | valve  +1.8 deg
+R2 clamped, j1/j4 relay +0.05 N.m [s1]               compl | ACROSS rms  16.2 (pre 11.7, first/last third 14.9/  8.5) mm @ 0.11 Hz gr +0.01 | ALONG  12.9 mm @ 0.19 | q1 -14.5..+17.6 q3 11.8..35.6 | tilt  5.5 F_rad sd 0.45 N F_y ac sd 0.19 | valve  +1.6 deg

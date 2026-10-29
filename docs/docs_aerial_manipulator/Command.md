@@ -1457,13 +1457,18 @@ is what this rig needs; the paper-literal gate against the captured box never pa
 centre (`Valve_Assembly.stl` -> `Valve_Assembly.usda`, 2026-10-15: a 150 x 50 x 20 mm plate, a 608 bearing,
 a 225 mm beam on it carrying a 5 x 40 x 130 mm FIN handle at radius 0.160 m, fin top 0.204 m above the
 plate; the rotor flown at the printed 204 g, 0.0026 kg m^2 about the axis, on a z REVOLUTE JOINT with a
-CONSERVATIVE Coulomb bearing friction 0.048 N m = 0.30 N at the fin, 1.5x the measured <= 0.2 N, no viscous term). The beam points 180 deg (the fin toward the start at
-(1.040, 0)). Mocap `obj_0` = the ROTOR: origin on the bearing axis at the plate-bottom plane (= the table
-top), yaw = the beam's -- define the hardware rigid body the same way. The mission is the push-and-pull
-mode's with **`push_pull_turn_deg` 360**: Go To Start, Ready (open, slide onto the fin), Push = the jaws
-close and the claw, the base and the heading ROTATE together about the bearing axis for one revolution
-(36 s, arm held, claw world-held, CONTACT on), Exit (open, climb, arm home), Go To Land (270 deg clockwise
-to the hover 0.5 m behind the start). Arm pose [0, 5, 25, 0] since 2026-10-18 (was [0, 10, 20, 0]; the same
+CONSERVATIVE Coulomb bearing friction 0.048 N m = 0.30 N at the fin, 1.5x the measured <= 0.2 N, no viscous term). The beam points 180 deg (the fin toward the start).
+**Since 2026-10-28** the scene flies the v2 valve by default (`Valve_Assembly_v2.usda`: the pad + the five
+mocap markers, bearing 0.072 N m in the drive model) in the box push's layout (table centred on (0.675, 0),
+start mark (-1.0, 0)). Mocap `obj_0` = the ROTOR as Motive defines it from the five markers: the DEFAULT
+pivot (their centroid, 93.5 mm off the shaft on the 10-28-night layout), the rotor's axes --
+`push_pull_valve_axis_offset` [-0.0935, -0.0014, -0.0899] carries it to the bearing axis on the plate bottom, and the EE offset is measured
+from there. Define the hardware rigid body the same way: create it with the fin along the room's +x on a level
+table, keep the default pivot. The mission is the push-and-pull
+mode's with **`push_pull_turn_deg` 90** (2026-10-27, the experiment's; was 360 in 36 s): Go To Start, Ready
+(open, slide onto the fin), Push = the jaws close and the claw, the base and the heading ROTATE together
+about the bearing axis by 90 deg (18 s, arm held, claw world-held, CONTACT on), Exit (open, climb, arm
+home), Go To Land Start (over the start mark at 1.3 m), Land (to 0.30 m). Arm pose [0, 5, 25, 0] since 2026-10-18 (was [0, 10, 20, 0]; the same
 30 deg fold, README section 12) -- the fin is low: the box push's 60 deg fold would put the T650 skids 2.7 cm
 over the beam; here they pass ~14 cm above it, below the fin top, the fin between the skids. `WB_SIM_PROFILE=valve_turning` in step 1 is REQUIRED: step 2 refuses a stack
 on another profile (it compares `push_pull_turn_deg` and `push_pull_obstacle` too). Flown 2026-10-15,
@@ -1504,16 +1509,18 @@ the arm's margin to its stops, the contact truth's tangential force).
 
 **Operating the arm GS "Valve Turning" tab** -- as the Box Pushing tab (section 17), with: **Get** on the Valve row captures the ROTOR
 (the axis + the beam's yaw); **EE Offset** [0.160, 0.0006, 0.179] m (the fin's radius and bearing, the claw
-25 mm under the fin top; rotor frame); **Turn [°]** 360 (in Push Distance's place; this tab's Plan sends it, the Box Pushing tab's Plan sets 0 -- only
+25 mm under the fin top; rotor frame); **Turn [°]** 90 (in Push Distance's place; this tab's Plan sends it, the Box Pushing tab's Plan sets 0 -- only
 the tab matching the planner's mode is active; the planner refuses a nose off the turn's tangent: `push_pull_yaw_from_box_deg` +90 for a + turn, -90 for -);
 **3 Turn** = the jaws close, CONTACT on, 1.5 s settle, the circle. The plan is refused when the gear would
 come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle) or the table.
 
-- Scene knobs (env, before step 2): `PEGASUS_VALVE_XY` (1.20,0.00), `PEGASUS_VALVE_YAW_DEG` (180),
+- Scene knobs (env, before step 2): `PEGASUS_VALVE_XY` (0.675,0.00; 1.20,0.00 before 2026-10-28), `PEGASUS_VALVE_YAW_DEG` (180),
   `PEGASUS_VALVE_RISER` (0: a block under the plate -- a higher valve allows a more folded arm),
   `PEGASUS_VALVE_ROTOR_MASS` (0.204; 0 = the asset's solid-PLA 0.243), `PEGASUS_VALVE_DAMPING` (0.0 N m s/rad),
-  `PEGASUS_VALVE_FRICTION` (0.048 N m; 0 = the frictionless end), `PEGASUS_VALVE_FIN_GRIP_MM` (20, the sim claw cannot clamp 5 mm),
-  `PEGASUS_VALVE_Q2_LIMIT_DEG` (-20,45). The yaml: `archive/valve_turning_20261015/tools/make_valve_turning_yaml.py`
+  `PEGASUS_VALVE_FRICTION` (v2 0.072 N m, v1 0.048; 0 = the frictionless end), `PEGASUS_VALVE_FRICTION_MODEL` (v2 drive, v1 tanh; `drive` =
+  stick-slip, needed for any friction study -- tanh creeps below f, archive/valve_yaw_sweep_20261026), `PEGASUS_VALVE_FIN_GRIP_MM` (20, the sim claw cannot clamp 5 mm),
+  `PEGASUS_VALVE_Q2_LIMIT_DEG` (-20,45), `PEGASUS_VALVE_USD` (Valve_Assembly_v2.usda), `PEGASUS_VALVE_MOCAP_PIVOT`
+  (markers = obj_0 at the markers' centroid; axis = on the axis, needs the axis offset 0). The yaml: `archive/valve_turning_20261015/tools/make_valve_turning_yaml.py`
   (the box push's controller tune imported; regenerate, never hand-edit).
 - **With the Isaac window (2026-10-18):** step 2 without `PEGASUS_HEADLESS=1` (or `VALVE_WINDOWED=1 run_valve.sh`,
   `tools/chain_win.sh <tag>` for the scripted mission). 06 now draws a frame only while the plant is not behind the
@@ -1558,13 +1565,45 @@ come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle
 - NOT solved: a drone-mocap freeze while clamped (1 clean / 1 safe / 1 crash in 3) -- fly a hover yaw sweep at
   the valve with raw VRPN recorded first (the turn crosses the 0924 Motive stall headings); and a valve much
   heavier than the measured one (0 of 4).
-- **Hardware run** (Orin: rebuild `fsc_trajectory_planner` and `fsc_autopilot_ros2`; laptop: rebuild
-  `utils_custom_ground_station`; MEASURE `push_pull_table` / `push_pull_obstacle` into
-  `archive/valve_turning_20261015/tools/make_hw_valve_turning_yaml.py` and regenerate):
+**THE v2 VALVE AND THE HARDWARE PREPARATION (2026-10-27, `archive/valve_turning_v2_20261027/README.md`):**
+- The v2 valve (`Valve_Assembly_v2.usda`: + the static half-rings holding a fabric pad on the hub) measured
+  ~0.072 N.m Coulomb, no damping (`archive/valve_damper_spin_20261027`). Fly it in Isaac with
+  `PEGASUS_VALVE_USD=<assets>/Valve_Assembly_v2.usda PEGASUS_VALVE_FRICTION=0.072 PEGASUS_VALVE_FRICTION_MODEL=drive`
+  (the scene's defaults since 2026-10-28).
+- **The descent is room-held** (`push_pull_world_anchor_ready: true`): CoM-anchored, the drift let an open
+  finger drag the valve 12-18 deg before the close (0 of 3); room-held 3 of 3.
+- **The 90 deg turn takes 18 s** (the 360 deg / 36 s turn's peak acceleration): in 12 s the drift's lag at the
+  turn's start, carried onto the fin by the free-axis anchor, compressed the arm into the q3 guard 3 of 6
+  (safe aborts); 18 s completed 4 of 4. The q3 margin stays thin (lowest 4.4-7.8 deg vs the 3 deg guard).
+- **The table and the valve's keep-out are PLACED FROM THE VALVE at Get** (`push_pull_keepouts_from_valve`;
+  `push_pull_table` / `push_pull_obstacle` ignored): clamp the valve in the table's middle, start the vehicle
+  0.6-3.0 m in front with the fin toward it, on the table's middle line within ~10 cm (the table's long
+  axis is taken square to the start-to-valve line), Adjust on the ground. Plan prints the placed keep-outs.
+- **obj_0 = Motive's rigid body of the five markers, its DEFAULT pivot (their centroid)**, +x along the beam
+  to the fin (2026-10-28; the planner's `push_pull_valve_axis_offset` [-0.0935, -0.0014, -0.0899] takes it to
+  the axis; the markers redesigned on 10-28 night -- the first layout's was [-0.0720, 0.0093, -0.0851]). The 10-27 bench bag had this marker layout but obj_0's +x 89.5 deg off the beam: create the body
+  with the fin along the room's +x. Check it before the first flight, turning the beam by hand:
+  `/usr/bin/python3 archive/valve_turning_v2_20261027/tools/valve_body_check.py --table-top <measured>`
+  (a different measured offset goes into the arm GS's **Axis Offset** row).
+- **Hardware run** (Orin: rebuild `fsc_trajectory_planner`, `fsc_autopilot_ros2` and
+  `fsc_drone_state_estimator_ros2`; laptop: rebuild `utils_custom_ground_station`). The hardware yaml adds the
+  box push's margins: gear 0.248, the arm's fold 2 s after a revert, the matched SAFETY thrust map, a mocap
+  abort's release 1.0 s:
 ```bash
 # fsc_autopilot_ros2/scripts/indoor_exp/ -- the RAW-mocap whole-body stack, not the _fused one
 AM_HW_PROFILE=valve_turning ./start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh
 ```
+**THE 10-28 HARDWARE FLIGHTS AND TWO CHANGES (`archive/wb_valve_turning_flight_20261028/README.md`):**
+- Both turns were cut by a FALSE rotor-tilt trip (obj_0 noise + a body 1.5 deg off a shaft 2.8 deg off
+  vertical): the limit is now **4 deg** (`push_pull_guard_box_tilt_deg`; the 0.2 s persistence stays, the q3
+  guard shares it). Still level the plate and re-create obj_0 with it level.
+- **The exit climbs room-held for its first 60 mm** (`push_pull_exit_world_held_dz: 0.06`, planner, new): the
+  CoM anchor at the exit's start pressed an open finger into the fin (Isaac: left DIRECT 2 of 6); with it the
+  exit completed 3 of 3 (1.5 N peak contact). Rebuild `fsc_trajectory_planner` on the Orin -- the stack refuses
+  an older planner.
+- **The q3 rate guard is on** (`push_pull_guard_q3_lookahead_s` 0.1, `_q3_rate_min_deg_s` 30, `_q2_max_deg` 45):
+  it aborts a fast arm fold before q3 reaches the elbow branch (replay: 9 of 11 buckles vs 5 of 11).
+- **The markers were redesigned** (10-28 night): the axis offset is now [-0.0935, -0.0014, -0.0899].
 
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 

@@ -1,0 +1,57 @@
+[18:18:29] start yw_fa0_k3_f100 K=3 tau_f=0.10 wb_ky_psi=3.0000 wb_dy_psi=1.0070 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 3.0000
+  wb_dy_psi : 0.2903 -> 1.0070
+[yw_fa0_k3_f100] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -12.9 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)
+[18:21:38] end yw_fa0_k3_f100: ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -12.9 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:21:47] start yw_fa0_k3_f150 K=3 tau_f=0.15 wb_ky_psi=3.0000 wb_dy_psi=1.0070 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 3.0000
+  wb_dy_psi : 0.2903 -> 1.0070
+[yw_fa0_k3_f150] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -5.1 deg < 3.0 deg (the arm buckling toward its elbow-singular branch))
+[18:24:53] end yw_fa0_k3_f150: ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 -5.1 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:25:03] start yw_fa0_k3_f200 K=3 tau_f=0.20 wb_ky_psi=3.0000 wb_dy_psi=1.0070 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 3.0000
+  wb_dy_psi : 0.2903 -> 1.0070
+[yw_fa0_k3_f200] ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: tilt 12.0 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then th
+[18:28:27] end yw_fa0_k3_f200: ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: tilt 12.0 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:28:37] start yw_fa0_k3_f250 K=3 tau_f=0.25 wb_ky_psi=3.0000 wb_dy_psi=1.0070 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 3.0000
+  wb_dy_psi : 0.2903 -> 1.0070
+[yw_fa0_k3_f250] completed
+[18:31:56] end yw_fa0_k3_f250: completed
+[18:32:05] start yw_fa0_k2_f048 K=2 tau_f=0.048 wb_ky_psi=2.0000 wb_dy_psi=0.8222 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 2.0000
+  wb_dy_psi : 0.2903 -> 0.8222
+[yw_fa0_k2_f048] ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: q3 1.9 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)) -- gri
+[18:35:24] end yw_fa0_k2_f048: ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: q3 1.9 deg < 3.0 deg (the arm buckling toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:35:34] start yw_fa0_k2_f200 K=2 tau_f=0.20 wb_ky_psi=2.0000 wb_dy_psi=0.8222 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 2.0000
+  wb_dy_psi : 0.2903 -> 0.8222
+[yw_fa0_k2_f200] ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: tilt 11.5 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then th
+[18:38:58] end yw_fa0_k2_f200: ABORTED: push-and-pull ABORTED while release: ABORTING (SAFETY GUARD: tilt 11.5 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[18:39:07] start yw_fa0_k2_f250 K=2 tau_f=0.25 wb_ky_psi=2.0000 wb_dy_psi=0.8222 wb_ee_anchor_free_axis_weight=0.0
+  push_pull_turn_deg -> 90.0
+  push_pull_push_time_s -> 12.0
+  wb_ee_anchor_free_axis_weight -> 0.0
+  wb_ky_psi : 0.2484 -> 2.0000
+  wb_dy_psi : 0.2903 -> 0.8222
+[yw_fa0_k2_f250] completed
+[18:42:27] end yw_fa0_k2_f250: completed
+[18:42:36] CHAIN DONE
