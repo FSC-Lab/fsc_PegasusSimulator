@@ -1,0 +1,88 @@
+wb             n= 28504  fields=3
+wbref          n=  8887  fields=47
+wbmode         n=   231  fields=1
+motors         n= 22222  fields=4
+ctype          n=   231  fields=1
+vinfo          n=   228  fields=4
+ude            n= 11399  fields=18
+pcstate        n= 11398  fields=27
+pcref          n=     1  fields=17
+attsp          n= 11389  fields=6
+odom           n= 27172  fields=19
+opti_eul       n= 27170  fields=3
+mocap          n= 27392  fields=16
+mocap_status   n=  1132  fields=1
+js             n= 28267  fields=7
+law            n= 28289  fields=3
+tcmd           n= 22247  fields=7
+armref         n= 11403  fields=10
+smooth         n= 28277  fields=7
+velobs         n= 28282  fields=7
+actlaw         n=     3  fields=1
+dxl            n= 28295  fields=7
+pl_status      n=    18  fields=1
+empty /uav_0/whole_body_planner/ee_target
+pl_pending     n=     6  fields=10
+pl_target_joints n=     7  fields=3
+pl_current_ee  n=  1709  fields=10
+pl_viz_path    n=    12  fields=3
+pl_viz_pose    n=  1778  fields=3
+vodom_px       n= 11389  fields=13
+vvo            n= 27172  fields=13
+tsync          n=   114  fields=6
+attsp_in       n=  1671  fields=6
+thr_in         n= 22222  fields=3
+act_motors     n= 22222  fields=4
+vstatus        n=   226  fields=39
+batt           n=  1121  fields=39
+vatt           n= 45543  fields=5
+vodom          n= 11389  fields=13
+sc             n= 45556  fields=10
+esf            n=   114  fields=71
+pl_current_ee_body n=  1709  fields=10
+missing /uav_0/ee_trajectory/info
+missing /uav_0/ee_trajectory/drone_reference_pose
+torque_in      n= 22222  fields=3
+missing /uav_0/state/pose
+missing /uav_0/state/twist_inertial
+missing /uav_0/whole_body_planner/ee_trajectory/status
+missing /uav_0/whole_body_planner/ee_trajectory/info
+vrpn           n= 13701  fields=10
+missing /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/l1_control_debug
+missing /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/mode
+missing /uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/motors_debug
+missing /uav_0/fsc_autopilot_ros2/attitude_controller/state
+missing /uav_0/fsc_autopilot_ros2/position_controller/reference_direct
+missing /uav_0/fsc_open_manipulator/position_controller/reference_joint_trajectory
+missing /uav_0/fsc_open_manipulator/position_controller/smoothed_reference_joint_trajectory
+pl_current_base n=  1709  fields=10
+missing /uav_0/whole_body_planner/ee_trajectory/reference_pose
+missing /uav_0/whole_body_planner/ee_trajectory/path
+missing /uav_0/whole_body_planner/ee_trajectory/start_rest
+obj            n= 13672  fields=16
+obj_vrpn       n= 13698  fields=10
+missing /uav_0/whole_body_planner/pick_place/status
+missing /uav_0/whole_body_planner/pick_place/info
+missing /uav_0/whole_body_planner/pick_place/arrival_error
+missing /uav_0/whole_body_planner/pick_place/path
+missing /uav_0/whole_body_planner/pick_place/drone_path
+missing /uav_0/fsc_open_manipulator/pick_place_fine/engaged
+missing /uav_0/fused_odom_status
+px_eul         n= 45256  fields=3
+missing /uav_0/whole_body_planner/teleop/state
+rosout         n=   329  fields=8
+pl_pstatus     n=    47  fields=1
+pl_info        n=    18  fields=3
+pl_arr         n=   398  fields=3
+pl_path        n=     4  fields=3
+pl_dpath       n=     4  fields=3
+guard          n=  5661  fields=3
+grip_status    n=     6  fields=12
+imu            n= 45249  fields=16
+ee_heading     n=  1710  fields=1
+skeleton       n=  1706  fields=3
+sysmon         n=   114  fields=1
+pevents        n=     1  fields=16
+tvsp           n= 22222  fields=3
+wrote /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261031/tools/../npz/b174943.npz
+np1-compatible: /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261031/tools/../npz/b174943.npz

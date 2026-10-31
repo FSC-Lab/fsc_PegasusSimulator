@@ -430,6 +430,16 @@ OVERRIDES = {
     "wb_dy_psi": "0.2903",
     "wb_l1_stuck_hold_j4": "false",
 }
+# the FREE-FLIGHT heading set the grip schedule flies with the jaws open: the mirror's own values
+# (the 2026-10-16 wrist fix), read here so the two cannot drift
+FREE_FLIGHT = {}
+with open(pp.SRC) as _f:
+    _mirror = _f.read()
+for _k in ("wb_ky_psi", "wb_dy_psi", "wb_l1_stuck_hold_j4"):
+    _m = re.findall(rf"^    {_k}: ([^\s#]+)", _mirror, flags=re.M)
+    if len(_m) != 1:
+        raise SystemExit(f"{_k}: found {len(_m)} times in the mirror (need exactly 1)")
+    FREE_FLIGHT[_k] = _m[0]
 # the turn's sense, from the planner block below: it signs the free-axis heading radius
 TURN_DEG = float(re.search(r"^    push_pull_turn_deg: ([-0-9.]+)", PLANNER_BLOCK, re.M).group(1))
 HEADING_RADIUS = FIN_RADIUS if TURN_DEG > 0 else -FIN_RADIUS
@@ -463,6 +473,25 @@ ADDITIONS = {
     # (push_pull_turn_deg > 0, the axis to the left of the nose); the planner refuses a turn
     # whose sense or radius disagrees with it.
     "wb_ee_anchor_free_axis_heading_radius": ("wb_ee_anchor_free_axis_on_world", f"{HEADING_RADIUS:.4f}"),
+    # THE GRIP SCHEDULE (2026-10-31, user: "the heading target should change only after hold", and
+    # "two sets of control gains or parameters, free-flight and interaction"; archive/
+    # wb_valve_turning_flight_20261031). On all three 10-31 flights the empty wrist swung +-40 deg
+    # from the start of Ready: the soft heading below holds q4 at ~0.1 N.m/rad against ~0.045 N.m of
+    # static friction (parks +-25 deg off the fin) and the companion above moved the target 5-10 deg
+    # with the base's wander before any grasp. One event -- the jaws closed, read by the node from
+    # the gripper's own joint state -- now switches (a) the heading gains from the FREE-FLIGHT set
+    # (the mirror's own 2026-10-16 wrist fix: stiff heading + j4 stuck hold, flown on hardware
+    # 10-27/28) to the soft INTERACTION set above, over 1 s, and (b) starts the companion, counted
+    # from the grasp and held at the release. Isaac's gripper bus: rad, open 0, stalled on the
+    # grip shim -0.2..-0.3 (hardware: make_hw_valve_turning_yaml.py HW_NODE).
+    "wb_ee_anchor_free_axis_heading_after_grip": ("wb_ee_anchor_free_axis_heading_radius", "true"),
+    "wb_grip_state_topic": ("wb_ee_anchor_free_axis_heading_after_grip", '"isaacsim_manipulator/gripper_state"'),
+    "wb_grip_joint_name": ("wb_grip_state_topic", '"gripper_joint"'),
+    "wb_grip_closed_below": ("wb_grip_joint_name", "-0.1"),
+    "wb_grip_blend_s": ("wb_grip_closed_below", "1.0"),
+    "wb_ky_psi_before_grip": ("wb_grip_blend_s", FREE_FLIGHT["wb_ky_psi"]),
+    "wb_dy_psi_before_grip": ("wb_ky_psi_before_grip", FREE_FLIGHT["wb_dy_psi"]),
+    "wb_stuck_hold_j4_before_grip": ("wb_dy_psi_before_grip", FREE_FLIGHT["wb_l1_stuck_hold_j4"]),
     "wb_l1_contact_hold_translation": ("wb_l1_collision_threshold_n", "false"),
     "wb_attitude_from_odometry": ("wb_dls_lambda", "false"),
     "wb_attitude_odometry_correction_rad_s": ("wb_attitude_from_odometry", "0.0"),

@@ -7475,3 +7475,48 @@ day's plan: v2 fixed fin, a ~5 s clamped STATIC HOLD first (arm GS `-p push_pull
 automatic, CLOSE by hand in the Gripper box, Exit; the law stays in FREE mode because
 `push_pull_contact_at_ready` is false), then the 90 deg turn. Rehearsed by the user in Isaac the same morning
 (`ARM_GS_AUTO_PUSH=false` on the 4-D launcher). The 10-29 recorder already holds every topic needed.
+
+**10-31 VALVE FLIGHTS: THE WRIST ROLL SWUNG +-40 DEG FROM THE START OF READY -- j4 HAD NO DAMPING LEFT, TWO
+ARM-SIDE DEFECTS FIXED (2026-10-31, user request: why does joint 4 oscillate; record
+`docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261031/README.md`, Command.md §18).** Three bags
+(`1030 - T650-AM Mail-Box & Valve-Turning-*/`: two static holds, one 30 deg turn), none grasped.
+- **The swing:** quiet through Go To Start, then from the first instant of Ready q4 +-25-40 deg at 0.22-0.35 Hz
+  with ~1 s plateaus at +-51 deg/s. It comes with q1 in antiphase +-7-13 deg and the base +-33-62 mm sideways /
+  +-2-3 deg yaw: with the claw room-held, sideways base motion must be taken up by q1/q4. **The 10-28/29 flights
+  had the same swing in Ready** (21-72 deg p-p); the jaw opening blamed then was not the cause (the jaws opened
+  at Go To Start this time).
+- **Cause (a): j4's 0.2 Hz current trim integrated the error damping away.** The damping (d 0.05) is a cut in
+  the back-EMF feed-forward, i.e. a deliberate current; the trim's target was the torque term alone. **Loopback
+  on the real controller: the old target removes 93 %** (trim -3.54 vs a 3.79-count damping duty); the flights
+  reconstruct 80-95 %. Fixed: `ExternalTorqueController::finalize_command` targets
+  `(tau_clamped + err_damp_duty) * g` (bit-identical where d = 0). Loopback 8b added, ALL PASS.
+- **Cause (b): the Valve tab's d 0.2 raise (10-30 item 7) never reached the arm.** It went to the station's
+  `controller` parameter, which a hardware station started without `controller:=` declares as
+  `position_controller` ("not reachable", a terminal WARN on all three flights; the 10-30 harness built the panel
+  without the Control tab, so it never saw it). Fixed: own parameter `push_pull_valve_arm_controller` (default
+  `external_torque_controller`), failures in red on the tab. Harness `tools/gs_valve_damping_check.sh` (station's
+  `controller` = position_controller) PASS; old panel FAIL 3.
+- **What tips it:** j4 breaks free at ~0.045 N.m; the law's hover noise reaches 0.03-0.04, and the room hold's
+  start (the 10-30 heading-radius term moving the heading target 5-10 deg in 0.5 s) or the Ready descent pushes
+  it over. Once sliding, the law's j4 torque pushes WITH the motion in the room hold (+0.02..+0.036
+  N.m.s/rad; it damps CoM-anchored). Ke and the observer are fine (Ke_true 2.587 vs 2.570). **j4's Present
+  Current is too biased to score the damping from**; the single-joint 10-16 model does not reproduce the swing
+  (no airframe coupling) -- do not rank fixes with it.
+- **THE GRIP SCHEDULE (same day, user's decisions: "the heading target should change only after hold";
+  "two sets of gains, free-flight and interaction, as long as the overall performance is better").** One event,
+  the jaws closing, read by the NODE from the gripper's own joint state (so a hand close in a static hold counts),
+  switches: heading K_psi/D_psi 2.5/0.93 + j4 stuck hold (the mirror's 10-16 free-flight set) -> the valve's soft
+  0.2484/0.2903, stuck hold off, blended over 1 s; and starts item 9 counted from the grasp (wf*(s - s_grasp)/R,
+  held at the release, faded with the free axis). Keys `wb_grip_*`, `wb_*_psi_before_grip`,
+  `wb_stuck_hold_j4_before_grip`, `wb_ee_anchor_free_axis_heading_after_grip` (empty topic = off, every other
+  config unchanged); law fields `WbGains::ee_anchor_free_heading_{on,s0,hold,s_hold}` (defaults = the 10-30 term,
+  parity unchanged); state machine `wb_grip_schedule.hpp`; debug [120..125]. Hardware gripper:
+  `fsc_open_manipulator/joint_states` `gripper_left_joint` closed below 0.0 m; Isaac:
+  `isaacsim_manipulator/gripper_state` `gripper_joint` below -0.1 rad. Checks: Wb/L1 gtests 25/25 (+ law test on
+  the fixture states, + state-machine test), node reads back every key on both valve yamls, raw hardware stack
+  dry-run 80/80 and REFUSES an old node, other profiles unchanged, planner rebuilt 6/6. NOT flown; performance
+  not yet compared (Isaac can test the law side; it has j4 friction but no PWM back-EMF).
+- **Still open:** d 0.2 on j1/j4 has never flown. Orin: rebuild `open_manipulator_x_custom_controller`,
+  `fsc_autopilot_ros2`, `fsc_trajectory_planner`; laptop: `utils_custom_ground_station`. PUSHED 2026-10-31:
+  fsc_open_manipulator `omx-torque-control` dd28bce, fsc_autopilot_ros2 `dev_robotic_arm` 2787578, Pegasus (this
+  record); fsc_trajectory_planner has no new commit -- rebuild it only (it links the law library).

@@ -1652,6 +1652,25 @@ AM_HW_PROFILE=valve_turning ./start_whole_body_l1_4d_direct_actuation_stack_t650
   it aborts a fast arm fold before q3 reaches the elbow branch (replay: 9 of 11 buckles vs 5 of 11).
 - **The markers were redesigned** (10-28 night): the axis offset is now [-0.0935, -0.0014, -0.0899].
 
+**THE 10-31 HARDWARE FLIGHTS (`archive/wb_valve_turning_flight_20261031/README.md`): the wrist roll swung
++-40 deg from the start of Ready, so the jaws never closed.** j4 had no damping left. Orin: rebuild
+`open_manipulator_x_custom_controller`, `fsc_autopilot_ros2` and `fsc_trajectory_planner`; laptop: rebuild
+`utils_custom_ground_station`. Two arm-side defects, both fixed:
+- The arm GS sent the valve mission's j1/j4 damping raise to `position_controller`, the station's `controller`
+  default. It now goes to `push_pull_valve_arm_controller` (default `external_torque_controller`), and a failure
+  shows on the tab. **Check at Go To Start:** the arm GS log says `Valve Turning: j1..j4 error damping
+  [0.20 0.00 0.00 0.20] for the mission`.
+- j4's 0.2 Hz current trim integrated the error damping away (93 % on the loopback). Its target now includes the
+  damping's own current.
+
+And one law-side change, the **grip schedule**. The node reads the jaws from the gripper's own joint state, so it
+works whether you close them by hand (static hold) or the tab does:
+- **Jaws open:** the wrist flies the free-flight heading (K_psi/D_psi 2.5/0.93 + j4 stuck hold), which holds it
+  on the fin's angle.
+- **Jaws closed:** it blends over 1 s to the valve's soft 0.2484/0.2903, and the heading-radius term starts,
+  counted from the grasp (nothing before it; held at the handle's angle after the release).
+- **Check:** the node logs `GRIP: jaws CLOSED ... -> INTERACTION set`. The stack refuses a node built before it.
+
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 
 **shiqi_machine** (2026-10-23, the final pick-and-place experiment): a red envelope (150 x 90 x 4 mm, 60 g,
