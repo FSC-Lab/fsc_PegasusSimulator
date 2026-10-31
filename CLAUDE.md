@@ -7464,3 +7464,14 @@ same 90 deg task and judge whether the design helps"; record
   mechanism, but not the mid-turn fold. Confirm with the design's own locked/free A/B, D1 hold first.
 - v3 shifts the turn's standing pitch error (sign varies, free and locked alike; v2's always negative). Cause NOT
   found -- four candidates checked and rejected, README section 2.
+
+**PUSHED FOR THE 10-31 VALVE FLIGHTS (2026-10-31, user request).** The 10-30/31 safety fixes and
+everything else outstanding: fsc_trajectory_planner `main` 987f034, fsc_autopilot_ros2 `dev_robotic_arm`
+fa8fc9f (+ the arbitrary-time fork, always built, no third-party dependency), fsc_open_manipulator
+`omx-torque-control` d4d062f, fsc_drone_state_estimator_ros2 `dev_robotic_arm` 70d547d, Pegasus cb58ab9 (no
+bags / .mat / .zip / video). Orin: rebuild fsc_autopilot_ros2, fsc_trajectory_planner,
+fsc_drone_state_estimator_ros2, open_manipulator_x_custom_controller; laptop: utils_custom_ground_station. The
+day's plan: v2 fixed fin, a ~5 s clamped STATIC HOLD first (arm GS `-p push_pull_auto_push:=false`: Ready
+automatic, CLOSE by hand in the Gripper box, Exit; the law stays in FREE mode because
+`push_pull_contact_at_ready` is false), then the 90 deg turn. Rehearsed by the user in Isaac the same morning
+(`ARM_GS_AUTO_PUSH=false` on the 4-D launcher). The 10-29 recorder already holds every topic needed.
