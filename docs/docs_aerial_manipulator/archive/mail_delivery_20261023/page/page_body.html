@@ -1,0 +1,609 @@
+<title>Envelope Mailing Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a fabrication sheet. Title block, the part in 3-D, the drawing to scale, then the build. */
+:root {
+  --bg: #f1f4f6;        /* drafting film, a cool white */
+  --panel: #ffffff;
+  --ink: #17212b;
+  --muted: #586572;
+  --hair: #c7d0d8;
+  --pla: #cbd9e6;       /* PLA in the drawings */
+  --pla-edge: #6f8598;
+  --bay: #fbfcfd;
+  --steel: #66727e;
+  --red: #c0282b;       /* the envelope */
+  --red-soft: #f6dcda;
+  --ok: #2f7d4f;
+  --pla3d: #b8cde0;
+  --steel3d: #7d8893;
+  --bg3d: #e6ecf1;
+  --ghost3d: #9aa8b5;
+  --hA: #2a78d6; --hB: #eda100; --hC: #e87ba4; --hD: #008300;   /* holder designs A-D */
+  --mailblue: #2d5bb5; --wood: #b48b5c;   /* the field: the blue mailbox, the console table */
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161c; --panel: #161e26; --ink: #e2e8ee; --muted: #93a0ad; --hair: #2e3a46;
+    --pla: #2f4356; --pla-edge: #8ba3b8; --bay: #121a21; --steel: #9aa6b2; --red: #ef6461;
+    --red-soft: #3a2224; --ok: #6cc08c; --pla3d: #7f9bb4; --steel3d: #9aa4ae; --bg3d: #1b242d; --ghost3d: #5d6b78;
+    --hA: #3987e5; --hB: #c98500; --hC: #d55181; --hD: #008300;
+    --mailblue: #6f95e0; --wood: #8f6d49;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161c; --panel: #161e26; --ink: #e2e8ee; --muted: #93a0ad; --hair: #2e3a46;
+  --pla: #2f4356; --pla-edge: #8ba3b8; --bay: #121a21; --steel: #9aa6b2; --red: #ef6461;
+  --red-soft: #3a2224; --ok: #6cc08c; --pla3d: #7f9bb4; --steel3d: #9aa4ae; --bg3d: #1b242d; --ghost3d: #5d6b78;
+  --hA: #3987e5; --hB: #c98500; --hC: #d55181; --hD: #008300;
+  --mailblue: #6f95e0; --wood: #8f6d49;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); line-height: 1; }
+h2 { font-size: 1.45rem; line-height: 1.1; }
+h3 { font-size: 1.1rem; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.82rem; color: var(--muted); }
+.mono, td.num, .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* title block */
+.title { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 32px; align-items: end; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
+.title .lede { color: var(--muted); margin-top: 10px; }
+.stamp { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-align: right; line-height: 1.6; }
+.stamp b { color: var(--red); font-weight: 500; }
+
+/* spec strip */
+.specs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--hair); background: var(--panel); }
+.spec { padding: 14px 16px; display: grid; gap: 2px; border-left: 1px solid var(--hair); min-width: 0; }
+.spec:first-child { border-left: none; }
+.spec .k { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.78rem; color: var(--muted); }
+.spec .val { font-size: 1.35rem; font-weight: 500; }
+.spec .s { font-size: 0.85rem; color: var(--muted); }
+.spec.key .val { color: var(--red); }
+
+/* panels */
+.panel { background: var(--panel); border: 1px solid var(--hair); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.panel header .note { color: var(--muted); font-size: 0.88rem; }
+
+.viewer { position: relative; width: 100%; aspect-ratio: 16 / 8; min-height: 260px; max-width: 100%; background: var(--bg3d); overflow: hidden; touch-action: none; cursor: grab; }
+.viewer:active { cursor: grabbing; }
+.viewer canvas { display: block; width: 100%; height: 100%; }
+.viewer .tag { position: absolute; transform: translate(-50%, -120%); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.78rem; color: var(--ink); background: var(--panel); border: 1px solid var(--hair); padding: 2px 7px; white-space: nowrap; pointer-events: none; }
+.viewer .tag.far { color: var(--red); border-color: var(--red); }
+.viewer .fallback[hidden] { display: none; }
+.viewer .fallback { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); padding: 16px; text-align: center; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 0.92rem; }
+.controls label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.controls .hint { color: var(--muted); margin-left: auto; font-size: 0.85rem; }
+button { font: inherit; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.86rem; padding: 7px 14px; border: 1px solid var(--ink); background: var(--panel); color: var(--ink); cursor: pointer; }
+button:hover { background: var(--bg); }
+button.primary { background: var(--red); border-color: var(--red); color: var(--panel); }
+button.primary:hover { filter: brightness(1.08); background: var(--red); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+/* drawing */
+.drawing { overflow-x: auto; }
+.drawing svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.drawing.detail svg { min-width: 520px; }
+svg text { font-family: var(--font-mono); fill: var(--ink); }
+svg .lbl { font-family: var(--font-display); letter-spacing: 0.06em; }
+svg .muted { fill: var(--muted); }
+svg .redt { fill: var(--red); }
+svg .bay { fill: var(--bay); }
+svg .pla { fill: var(--pla); }
+svg .hatch line { stroke: var(--pla-edge); stroke-width: 0.25; }
+svg .outline { fill: none; stroke: var(--ink); stroke-width: 0.45; }
+svg .edge { fill: none; stroke: var(--pla-edge); stroke-width: 0.25; }
+svg .pocket { fill: var(--bg); stroke: var(--ink); stroke-width: 0.3; }
+svg .bar { fill: var(--steel); fill-opacity: 0.35; stroke: var(--steel); stroke-width: 0.35; stroke-dasharray: 1.6 0.9; }
+svg .barsec { fill: var(--steel); stroke: var(--ink); stroke-width: 0.15; }
+svg .dim { stroke: var(--muted); stroke-width: 0.22; fill: none; }
+svg .arrow { fill: var(--muted); }
+svg .grasp { stroke: var(--red); stroke-width: 0.35; stroke-dasharray: 1.4 0.8; fill: none; }
+svg .comband { fill: var(--red-soft); }
+svg .com { fill: var(--red); }
+svg .comline { stroke: var(--red); stroke-width: 0.3; fill: none; }
+svg .pivot { stroke: var(--ink); stroke-width: 0.3; fill: none; }
+svg .cut { stroke: var(--ink); stroke-width: 0.5; fill: none; }
+svg .padbox { fill: none; stroke: var(--ink); stroke-width: 0.25; }
+.under { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 0.9rem; }
+.under .far { color: var(--red); text-align: right; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+th { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+tr.total td { border-top: 2px solid var(--ink); border-bottom: none; font-weight: 600; }
+.tscroll { overflow-x: auto; }
+.small { font-size: 0.86rem; color: var(--muted); }
+
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 14px; }
+ol.steps li { counter-increment: s; display: grid; grid-template-columns: 2.2rem minmax(0, 1fr); gap: 4px 12px; }
+ol.steps li::before { content: counter(s); font-family: var(--font-display); font-size: 1.5rem; line-height: 1.1; color: var(--red); grid-row: span 2; }
+ol.steps h3 { font-size: 1.05rem; }
+ol.steps p { color: var(--ink); }
+ol.steps p .mono { font-size: 0.9em; }
+
+.files { display: grid; gap: 12px; }
+.files .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.status { font-size: 0.88rem; color: var(--muted); min-height: 1.3em; }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--red); }
+pre { margin: 0; background: var(--bg); border: 1px solid var(--hair); padding: 12px 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; color: var(--ink); max-height: 340px; }
+code.path { font-family: var(--font-mono); font-size: 0.82rem; word-break: break-all; }
+
+@media (max-width: 860px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .specs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .spec:nth-child(3) { border-left: none; }
+  .spec:nth-child(n+3) { border-top: 1px solid var(--hair); }
+  .title { grid-template-columns: minmax(0, 1fr); }
+  .stamp { text-align: left; }
+}
+@media (max-width: 420px) {
+  .specs { grid-template-columns: minmax(0, 1fr); }
+  .spec { border-left: none; border-top: 1px solid var(--hair); }
+  .spec:first-child { border-top: none; }
+  .viewer { aspect-ratio: 4 / 3; }
+}
+
+.toc { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 16px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.88rem; }
+.toc a { color: var(--ink); text-decoration: none; border-bottom: 2px solid var(--red); padding-bottom: 1px; }
+.toc a:hover { color: var(--red); }
+h2.part { font-size: clamp(1.8rem, 3.8vw, 2.4rem); line-height: 1.05; border-bottom: 2px solid var(--ink); padding-bottom: 8px; margin-top: 18px; scroll-margin-top: 16px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; }
+h2.part .sub { font-size: 0.95rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
+.intro { color: var(--muted); margin-top: -10px; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--ink); }
+.seg label { padding: 6px 12px; border-left: 1px solid var(--ink); font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.86rem; }
+.seg label:first-child { border-left: none; }
+.seg label:has(input:checked) { background: var(--ink); color: var(--panel); }
+.seg input { accent-color: var(--red); }
+.cols.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.drawing svg.wide { min-width: 720px; }
+svg .ghost { fill: none; stroke: var(--muted); stroke-width: 0.35; stroke-dasharray: 3 1.2 0.6 1.2; }
+svg .ghostfill { fill: var(--hair); fill-opacity: 0.6; stroke: var(--muted); stroke-width: 0.3; stroke-dasharray: 1.6 0.9; }
+svg .hidden { fill: none; stroke: var(--ink); stroke-width: 0.35; stroke-dasharray: 1.8 1.1; }
+svg .envghost { fill: var(--red-soft); fill-opacity: 0.55; stroke: var(--red); stroke-width: 0.4; stroke-dasharray: 2.2 1.2; }
+svg .post { fill: var(--panel); stroke: var(--ink); stroke-width: 0.4; }
+svg .axis { stroke: var(--red); stroke-width: 0.5; fill: none; }
+svg .redline { stroke: var(--red); stroke-width: 0.8; fill: none; }
+table.offsets td:nth-child(4), table.offsets td:nth-child(5) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.offsets td:nth-child(4) { color: var(--red); }
+.formula { font-family: var(--font-mono); font-size: 0.86rem; background: var(--bg); border: 1px solid var(--hair); padding: 10px 14px; overflow-x: auto; line-height: 1.7; }
+details { border-top: 1px solid var(--hair); padding-top: 8px; }
+details summary { cursor: pointer; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.9rem; padding-block: 4px; }
+details pre { margin-top: 8px; }
+.viewer .fallback[hidden] { display: none; }
+svg .cl { stroke: var(--muted); stroke-width: 0.2; stroke-dasharray: 6 1.2 1 1.2; fill: none; }
+tr.best td { font-weight: 600; }
+/* the marker holders: one card per design */
+.hcards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.hcard { border: 1px solid var(--hair); background: var(--panel); display: grid; gap: 8px; padding: 10px; min-width: 0; align-content: start; }
+.hcard h3 { display: flex; align-items: center; gap: 8px; font-size: 1.25rem; }
+.sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; flex: none; }
+.sw.A { background: var(--hA); } .sw.B { background: var(--hB); } .sw.C { background: var(--hC); } .sw.D { background: var(--hD); }
+.hcard .viewer { aspect-ratio: 1 / 1; min-height: 0; }
+.hcard dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 10px; font-size: 0.86rem; }
+.hcard dt { color: var(--muted); }
+.hcard dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.82rem; }
+.viewer .tag .sw { width: 9px; height: 9px; margin-right: 5px; vertical-align: 0; border-radius: 2px; }
+svg .pk-A { fill: var(--hA); } svg .pk-B { fill: var(--hB); } svg .pk-C { fill: var(--hC); } svg .pk-D { fill: var(--hD); }
+svg .pktint { fill-opacity: 0.28; stroke: none; }
+svg .halo { paint-order: stroke; stroke: var(--panel); stroke-width: 0.55px; stroke-linejoin: round; }
+table.dims td:nth-child(3) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+table.dims tr.grp td { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.8rem; color: var(--muted); padding-top: 14px; border-bottom: 1px solid var(--ink); }
+@media (max-width: 860px) { .hcards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .hcards { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 860px) { .cols.even { grid-template-columns: minmax(0, 1fr); } }
+svg .fgrid { stroke: var(--hair); stroke-width: 0.3; fill: none; }
+svg .wood { fill: var(--wood); fill-opacity: 0.55; stroke: var(--ink); stroke-width: 0.35; }
+svg .mred { fill: var(--red); stroke: var(--ink); stroke-width: 0.35; }
+svg .mblue { fill: var(--mailblue); stroke: var(--ink); stroke-width: 0.35; }
+svg .mouth { stroke: var(--ink); stroke-width: 1.4; fill: none; }
+svg .wp { fill: var(--ink); }
+svg .wpred { fill: var(--red); }
+svg .ink { fill: var(--ink); }
+svg .onfill { fill: var(--panel); }
+table.field td:nth-child(2) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* the red mailbox's front face: the face, the cut-out, the envelope's pass band */
+svg .face { fill: var(--red-soft); stroke: var(--ink); stroke-width: 0.6; }
+svg .hole { fill: var(--panel); stroke: var(--ink); stroke-width: 1.0; }
+svg .band { fill: none; stroke: var(--red); stroke-width: 0.45; stroke-dasharray: 2.4 1.4; }
+</style>
+
+<div class="wrap">
+  <section class="title">
+    <div>
+      <div class="eyebrow">Mail-delivery experiment · printed parts</div>
+      <h1>Envelope Mailing Design</h1>
+      <p class="lede">Two printed parts for the mail-delivery flight. The envelope core is what the arm carries: a printed PLA plate, wrapped in red paper. The localization frame is how the ground station finds the targets: a plate with five markers on your own holders. Set it on the pick hat or on the mailbox and press Get on that row of the arm GS's Mail Envelope tab; the planner adds the frame-to-target offset itself.</p>
+      <nav class="toc" aria-label="Sections"><a href="#core">Envelope core</a><a href="#frame">Localization frame</a><a href="#holders">Marker holders</a><a href="#targets">Targets and offsets</a><a href="#field">Field setup</a><a href="#files">Files</a></nav>
+    </div>
+    <div class="stamp">
+      <div>UNITS mm · MATERIAL PLA only</div>
+      <div>CORE rev C · FRAME rev B</div>
+      <div>hat cap Ø200, measured</div>
+      <div>2026-10-30</div>
+      <div><b>far end enters the mailbox first</b></div>
+    </div>
+  </section>
+
+  <!-- ============================== ENVELOPE CORE ============================== -->
+  <h2 class="part" id="core">Envelope core <span class="sub">what the arm carries</span></h2>
+  <p class="intro">A flat PLA plate, printed in one piece with no inserts, then wrapped in red paper. Four identical rectangular windows make it lighter. They sit nearer the grip than the far end, so the far band is the largest solid area and the far end is a little heavier.</p>
+
+  <section class="specs" aria-label="Envelope core key numbers">
+    <div class="spec"><span class="k">Finished size</span><span class="val">150 × 90 × 4.1</span><span class="s">core 3.8 mm + paper</span></div>
+    <div class="spec key"><span class="k">Centre of mass</span><span class="val" id="c-com">—</span><span class="s" id="c-com-s">from the far end</span></div>
+    <div class="spec"><span class="k">Estimated mass</span><span class="val" id="c-mass">—</span><span class="s" id="c-mass-s">±10 % · weigh it</span></div>
+    <div class="spec"><span class="k">Print</span><span class="val">PLA only</span><span class="s">flat, no supports, no inserts</span></div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>The part</h2>
+      <span class="note">Bottom face down, as it lies on the hat and prints on the bed.</span>
+    </header>
+    <div class="viewer" id="c-viewer" role="img" aria-label="3-D view of the all-PLA envelope core">
+      <div class="fallback" hidden>The 3-D view needs WebGL. The drawing below has every dimension.</div>
+    </div>
+    <div class="controls" id="c-controls">
+      <label><input type="checkbox" id="c-paper"> Paper wrap</label>
+      <button type="button" id="c-reset">Reset view</button>
+      <span class="hint">Drag to turn · scroll or pinch to zoom</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Drawing 1 · Top view</h2>
+      <span class="note">Scale 1:1, mm. Datum 0,0: the near-edge, right-edge corner of the bottom face. All four windows go through. Values in brackets are for reference only.</span>
+    </header>
+    <div class="drawing"><svg id="c-top" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dimensioned top view of the envelope core"></svg></div>
+    <div class="under">
+      <span>◀ <b>Near edge.</b> The jaws grip 15 mm in; it hangs 70 mm out past the hat's rim.</span>
+      <span class="far"><b>Far end.</b> Lies on the hat, enters the mailbox first ▶</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Drawing 2 · Section A–A</h2>
+      <span class="note">On the line A–A of drawing 1 (y = 24, through the two lower windows), scale 2:1</span>
+    </header>
+    <div class="drawing"><svg id="c-sec" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Section through the envelope core showing its 3.8 mm thickness and the through windows"></svg></div>
+  </section>
+
+  <section class="cols">
+    <div class="panel">
+      <header><h2>Model it in CAD</h2><span class="note">Three features</span></header>
+      <ol class="steps">
+        <li><h3>Plate</h3><p>Sketch a 150 × 90 rectangle with one corner on the origin. Extrude it 3.8 mm.</p></li>
+        <li><h3>One window</h3><p>On the top face, sketch a 30 × 36 rectangle with its corner at <span class="mono">x 35, y 6</span>. Cut it through all.</p></li>
+        <li><h3>Pattern it</h3><p>Rectangular pattern of that cut: 2 along x at a pitch of <span class="mono">36</span>, 2 along y at a pitch of <span class="mono">42</span>. That leaves 6 mm webs everywhere and a 49 mm solid far band. Sharp corners are fine; a 1–2 mm corner fillet changes nothing.</p></li>
+      </ol>
+      <h3>Window corners from the datum</h3>
+      <div class="tscroll"><table id="c-holes">
+        <thead><tr><th>Window</th><th class="num">x from</th><th class="num">x to</th><th class="num">y from</th><th class="num">y to</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+    <div class="panel">
+      <header><h2>Mass budget</h2><span class="note">Estimate from the print settings below</span></header>
+      <div class="tscroll"><table id="c-budget">
+        <thead><tr><th>Part</th><th class="num">g</th><th class="num">from far end, mm</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="small">At 20 % infill the 6 mm webs print almost solid and the wide bands print light, so the windows save less than their area suggests.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+      <header><h2>What the missing weight changes</h2><span class="note">From the mailbox and hover-error checks</span></header>
+      <p class="small">Without the steel bar the balance point sits near the middle. Nothing in the planner changes, but two task margins shrink. On the hat the near end hangs 70 mm out, so prop wash on it can tip the envelope before the jaws close. At the mailbox, when the jaws open it can tip back out over the lip.</p>
+      <div class="tscroll"><table id="c-margins">
+        <thead><tr><th>Option</th><th class="num">mass, g</th><th class="num">CoM from far end</th><th class="num">inside the hat's rim</th><th class="num">past the mouth's lip</th><th class="num">worst release margin</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="small">Release margin: the worst of the jaws staying out of the wall and the envelope falling in, with the claw ±20 mm off along the approach. Positive means both hold. “Release 15 mm deeper” means adding +15 to the place offset's dx below. The jaw tips then stop 20 mm from the wall instead of 35.</p>
+  </section>
+
+  <section class="cols">
+    <div class="panel">
+      <header><h2>Build it</h2></header>
+      <ol class="steps">
+        <li><h3>Print</h3><p>PLA, bottom face on the bed, long edge along an axis, no supports. 0.2 mm layers, 3 walls, 4 top and 4 bottom layers, 20 % infill.</p></li>
+        <li><h3>Optional: a heavier far end</h3><p>In the slicer, put a modifier box over the far band (<span class="mono">x 101–150</span>) and set it to 100 % infill. The part stays the same shape; the balance point moves about 11 mm toward the far end. The table above shows what that buys.</p></li>
+        <li><h3>Weigh and balance it</h3><p>Weigh it, then balance it across a ruler edge and note the distance from the near edge. It is not critical now, but it tells you which row of the table above you have.</p></li>
+        <li><h3>Wrap</h3><p>Red paper around 120 g/m², glued to the core, seam on the bottom face. Keep it taut over the windows. Mark the near edge so it goes onto the hat the right way round.</p></li>
+      </ol>
+    </div>
+    <div class="panel">
+      <header><h2>What may change</h2><span class="note">If you redraw it</span></header>
+      <div class="tscroll"><table>
+        <thead><tr><th>Dimension</th><th>Range</th><th>Limit</th></tr></thead>
+        <tbody>
+          <tr><td>Length</td><td class="mono">150 ± 2</td><td>The planner grips 15 mm inside the near edge (EE Offset x −0.06), and the frame's slot fits 150</td></tr>
+          <tr><td>Width</td><td class="mono">80–90</td><td>At 100 mm nothing is left either side of the 190 mm mouth; the frame's slot is 90.6</td></tr>
+          <tr><td>Thickness</td><td class="mono">3–6</td><td>Hardly moves the mouth margin; the gripper's open gap is the limit</td></tr>
+          <tr><td>Windows</td><td class="mono">any</td><td>Keep the grip band 0–35 solid: the jaws reach 31 mm in</td></tr>
+          <tr><td>Mass</td><td class="mono">≲ 70 g</td><td>A heavier envelope tilts further in the jaws; the mouth allows 20°</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+
+  <!-- ============================== LOCALIZATION FRAME ============================== -->
+  <h2 class="part" id="frame">Localization frame <span class="sub">how Get finds the targets</span></h2>
+  <p class="intro">One frame with five markers serves both targets. The markers are the standard Ø30 balls on the four holder designs of your valve assembly (taken from <span class="mono">Valve_Assembly_v2.stl</span>), each glued into a 2 mm pocket so its height and heading are fixed. Two shallow lips (the skirts) hang under the frame's ends. On the hat their curved middle drops over the platform's rim and centres the frame. On the mailbox their flat ends close on the front and back faces. A U-slot open to one end doubles as the envelope's placement jig on the hat: slide the envelope in until it stops, and it lies exactly where the planner expects.</p>
+
+  <section class="specs" aria-label="Localization frame key numbers">
+    <div class="spec"><span class="k">Outline</span><span class="val" id="f-size">—</span><span class="s">4 mm plate, skirts 3 mm below</span></div>
+    <div class="spec key"><span class="k">Registration</span><span class="val">± 0.3 mm</span><span class="s">x and yaw on both; y by eye on the mailbox</span></div>
+    <div class="spec"><span class="k">Fits</span><span class="val" id="f-fits">—</span><span class="s">hat cap (measured) · mailbox depth</span></div>
+    <div class="spec"><span class="k">Markers</span><span class="val">5 × Ø30</span><span class="s">holders A, B, C, D, D in 2 mm pockets</span></div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>The frame</h2>
+      <span class="note">Frame axes: origin O at the centre of the underside, +x the way the drone flies at that step. Grey ring: obj_0's pivot, the markers' centroid.</span>
+    </header>
+    <div class="viewer" id="f-viewer" role="img" aria-label="3-D view of the localization frame, alone, on the hat with the envelope, or on the mailbox">
+      <div class="fallback" hidden>The 3-D view needs WebGL. The drawings below have every dimension.</div>
+    </div>
+    <div class="controls" id="f-controls">
+      <div class="seg" role="radiogroup" aria-label="Show the frame">
+        <label><input type="radio" name="f-mode" value="alone"> Alone</label>
+        <label><input type="radio" name="f-mode" value="hat" checked> On the hat</label>
+        <label><input type="radio" name="f-mode" value="box"> On the mailbox</label>
+      </div>
+      <button type="button" id="f-reset">Reset view</button>
+      <span class="hint">Red dot: the point to type · dark dot: where the claw goes</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Drawing 3 · Top view</h2>
+      <span class="note">Scale 1:1, mm, every position from O (the centre of the underside) along the centre lines. Each pocket shows its holder (letter = design), its size and the holder's turn. Dash-dot circles: the markers above them, with their centre heights above O. Dashed lines: the skirts' inner faces under the plate.</span>
+    </header>
+    <div class="drawing"><svg id="f-cad" class="wide" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dimensioned top view of the localization frame: plate, U-slot and the five holder pockets"></svg></div>
+    <div class="under">
+      <span>◀ <b>−x, open end.</b> Faces the drone's start on the hat, the mouth on the mailbox.</span>
+      <span class="far"><b>+x.</b> The way the drone flies ▶</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Drawing 4 · Skirts on the underside</h2>
+      <span class="note">Seen from above through the plate (same orientation as drawing 3), scale 1:1. Hatched: the skirts, 3 mm deep. Dashed: the <span class="mono" data-f="rin">—</span> construction circle.</span>
+    </header>
+    <div class="drawing"><svg id="f-skirt" class="wide" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dimensioned view of the two skirts on the frame's underside"></svg></div>
+  </section>
+
+  <section class="cols even">
+    <div class="panel">
+      <header><h2>Drawing 5 · On the hat</h2><span class="note">Section at y = 0, scale 6:1</span></header>
+      <div class="drawing detail"><svg id="f-sec-hat" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Section of the skirt over the hat platform's rim"></svg></div>
+      <p class="small">The skirt's curved face sits 0.3 mm outside the <span data-f="hatd">—</span> rim (your measured cap) and reaches 3 mm down its edge. The cap must be at least 3 mm thick at the rim; the drawing assumes 5. Both ends of the frame do this, so it cannot slide; it can turn, which is how you set its heading.</p>
+    </div>
+    <div class="panel">
+      <header><h2>Drawing 6 · On the mailbox</h2><span class="note">Section at y = 90, scale 4:1</span></header>
+      <div class="drawing detail"><svg id="f-sec-box" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Section of the skirt's flat end against the mailbox's back face"></svg></div>
+      <p class="small">Near the corners the skirts end in flats 125.6 mm apart: 0.3 mm clearance on the 125 mm box, front and back. That fixes x and the heading. Centre it across by eye: the frame's ends sit 17.5 mm in from each side.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Drawing 7 · The slot as the envelope's jig</h2>
+      <span class="note">On the hat, scale 1:1. Red: the envelope slid in to the stop. Grey: the hat's rim. For use, not for modelling.</span>
+    </header>
+    <div class="drawing"><svg id="f-top" class="wide" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Top view of the frame on the hat with the envelope in its slot"></svg></div>
+  </section>
+
+  <section class="panel">
+      <header><h2>Model it in CAD</h2><span class="note">Four features, all from O</span></header>
+      <ol class="steps">
+        <li><h3>Plate</h3><p>On the XY plane (z = 0 is the underside), sketch a <span class="mono" data-f="outline">—</span> rectangle centred on O. Extrude it up 4.</p></li>
+        <li><h3>Skirts</h3><p>On the same plane, sketch two rectangles from <span class="mono" data-f="xf">—</span> out to <span class="mono" data-f="xo">—</span>, full width (<span class="mono">y ±100</span>), and a circle <span class="mono" data-f="rin">—</span> on O. Extrude the regions inside the rectangles and outside the circle down 3.</p></li>
+        <li><h3>U-slot</h3><p>Rectangle from the −x edge to <span class="mono" data-f="stop">—</span>, <span class="mono" data-f="slothy">—</span>. Cut through everything, plate and skirt.</p></li>
+        <li><h3>Pockets</h3><p>On the plate top (z = 4), five rectangles centred at the pocket table's x, y (below), each the size in its row (the holder's base + 0.2 mm a side). Cut each 2 deep. The holder's 2 mm base then sits flush with the plate top.</p></li>
+      </ol>
+      <p class="small">No fillets or chamfers are needed. Every dimension is listed below.</p>
+  </section>
+
+  <section class="panel" id="dims">
+    <header><h2>Every dimension</h2><span class="note">Frame axes, mm, from O (the centre of the underside); z = 0 is the face it rests on</span></header>
+    <div class="tscroll"><table class="dims">
+      <thead><tr><th>Feature</th><th>Dimension</th><th>mm</th><th>Note</th></tr></thead>
+      <tbody id="f-dims"></tbody>
+    </table></div>
+    <h3>The five pockets</h3>
+    <div class="tscroll"><table id="f-pockets">
+      <thead><tr><th>Pocket</th><th class="num">centre x, y</th><th class="num">size x × y</th><th class="num">x from → to</th><th class="num">y from → to</th><th class="num">depth</th><th class="num">holder turn</th><th class="num">marker centre x, y, z</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="small">Each pocket is the holder's base plus 0.2 mm a side, rounded to 0.5 mm. Cut from the plate top (z = 4) down to z = 2. “Holder turn”: how far the holder is turned about z from its orientation in your valve CAD, counter-clockwise seen from above (the cards below show each one). Marker centre: where the ball's centre ends up, from O, with the holder seated on the pocket floor. The ten marker spacings (in 3-D) are all at least <span class="mono" id="f-dmin">—</span> mm and differ from each other by at least <span class="mono" id="f-ddiff">—</span> mm, so Motive tells the markers apart and the frame's heading is unambiguous.</p>
+  </section>
+
+  <section class="panel">
+      <header><h2>Drawing 8 · A holder pocket</h2><span class="note">Section through a pocket, scale 4:1; all five alike except the size</span></header>
+      <div class="drawing detail"><svg id="f-post" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Section through a holder pocket with the holder's base in it"></svg></div>
+      <h3>Derived, for checking</h3>
+      <div class="tscroll"><table>
+        <thead><tr><th>Where</th><th class="num">mm</th><th>Why</th></tr></thead>
+        <tbody id="f-derived"></tbody>
+      </table></div>
+  </section>
+
+  <h2 class="part" id="holders">Marker holders <span class="sub">which is which</span></h2>
+  <p class="intro">The four holder designs are the ones on your valve assembly, unchanged. The letters are only names for them on this page. Each colour is one design, the same in every view and in drawing 3. The valve carries one of each; its fifth marker sits on a mount that is part of the rotor, so the frame takes a second D instead. Print one A, one B, one C and two D.</p>
+
+  <section class="panel">
+    <header>
+      <h2>On your valve, and on the frame</h2>
+      <span class="note">Switch between them to match each of your holders to its pocket.</span>
+    </header>
+    <div class="viewer" id="h-viewer" role="img" aria-label="3-D view of the four holder designs, on the valve assembly or on the localization frame">
+      <div class="fallback" hidden>The 3-D view needs WebGL. The cards below list every holder.</div>
+    </div>
+    <div class="controls" id="h-controls">
+      <div class="seg" role="radiogroup" aria-label="Show the holders">
+        <label><input type="radio" name="h-mode" value="valve" checked> On your valve</label>
+        <label><input type="radio" name="h-mode" value="frame"> On the frame</label>
+      </div>
+      <button type="button" id="h-reset">Reset view</button>
+      <span class="hint">Drag to turn · scroll or pinch to zoom</span>
+    </div>
+  </section>
+
+  <section class="hcards" id="h-cards" aria-label="The four holder designs"></section>
+
+  <section class="panel">
+    <header><h2>Build and use</h2></header>
+    <ol class="steps">
+      <li><h3>Print</h3><p>PLA, skirts down on the bed, supports on the build plate only, under the plate. The underside is the datum, so keep the support's top gap at 0.2 mm. 3 walls, 20 % infill. Needs a bed of at least 210 × 210 mm.</p></li>
+      <li><h3>Check the fit</h3><p>On the hat it should drop over the rim and not slide; on the mailbox the flats should close on the front and back faces. Sand a face that binds. If it rocks more than about 0.5 mm, lower the clearance <span class="mono">CLR</span> in the source and reprint.</p></li>
+      <li><h3>Holders and markers</h3><p>Print five holders: one each of A, B and C, two of D (<span class="mono">holders/holder_*.stl</span> in the zip, or your own CAD). Glue each into its pocket, turned as drawing 3 and the holder cards show it, base pushed down to the pocket floor. Fit the five standard markers as on the valve. Mark the +x arrow on the plate with a pen.</p></li>
+      <li><h3>Define obj_0 in Motive, once</h3><p>Lay the frame on a flat table with its +x along the room's +x. Select the five markers and create the rigid body <span class="mono">obj_0</span>. Keep Motive's DEFAULT pivot, the markers' centroid: do not move it. The planner's offsets start from there.</p></li>
+      <li><h3>Pick: on the hat</h3><p>Seat the frame on the hat, open end toward the drone's start, +x along its approach. Press Get on the Envelope row. The row now reads the envelope's centre and the frame's heading. Slide the envelope in, far end first, until it touches the stop. Hold it down and lift the frame straight off.</p></li>
+      <li><h3>Place: on the mailbox</h3><p>Seat it on the mailbox top, +x pointing INTO the mouth, flats on the front and back, ends 17.5 mm in from each side. Press Get on the Mailbox row. The row now reads the release point and the mailbox's heading: nothing to correct by hand. Lift it off. Then press Plan.</p></li>
+      <li><h3>Before the flight</h3><p>Take the frame out of the field.</p></li>
+    </ol>
+  </section>
+
+  <!-- ============================== TARGETS ============================== -->
+  <h2 class="part" id="targets">Targets and offsets <span class="sub">from the frame to the arm</span></h2>
+  <p class="intro">Get reads obj_0's pivot, the markers' centroid. The planner adds a fixed offset, turned by the frame's yaw, and writes the result into the row. On the Mailbox row it also takes the yaw from the frame. The offsets sit in both mail-delivery yamls (hardware and simulation) as <span class="mono">pick_place_pick_locator</span> and <span class="mono">pick_place_place_locator</span>, and the tab shows them under its points. The claw then goes 60 mm behind the point (EE Offset x −0.06).</p>
+
+  <section class="panel">
+    <div class="tscroll"><table class="offsets" id="f-offsets">
+      <thead><tr><th>Step</th><th>Frame sits on</th><th>Get on</th><th>Planner adds to obj_0, m</th><th>Target from O, mm</th><th>Yaw</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="formula" aria-label="What the planner computes">X = X<sub>obj_0</sub> + dx·cos ψ − dy·sin ψ &nbsp;&nbsp; Y = Y<sub>obj_0</sub> + dx·sin ψ + dy·cos ψ &nbsp;&nbsp; Z = Z<sub>obj_0</sub> + dz &nbsp;&nbsp; yaw = ψ<br>ψ = the frame's yaw, averaged over the Get. The Mailbox row writes ψ as the value nearest the yaw already typed, so a typed turn keeps its direction.</div>
+    <p class="small">Get refuses a frozen, scattered or flipping obj_0, as before. To fly without the frame, set both parameters to <span class="mono">[]</span>: Get then reads obj_0 as the envelope itself.</p>
+  </section>
+
+  <section class="cols" id="mouth">
+    <div class="panel">
+      <header>
+        <h2>Drawing 9 · Red mailbox, front view</h2>
+        <span class="note">The face toward the start (−x), scale 1:1, mm, on the outer faces. White: cut out through the front wall.</span>
+      </header>
+      <div class="drawing detail"><svg id="m-front" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dimensioned front view of the red mailbox with the rectangular mouth to cut"></svg></div>
+      <p class="small">Red dot: the release point, where the Mailbox Get puts the envelope's centre. It sits <span class="mono" data-m="rel">—</span> mm above the mouth's centre because the envelope hangs 0–20° nose-down in the jaws. Dashed red: everywhere the envelope can cross the wall with the hover error the mouth was sized for (±40 mm across, ±12 mm up and down).</p>
+    </div>
+    <div class="panel">
+      <header><h2>Cut the mouth</h2><span class="note"><span data-m="size">—</span>, centred across, top edge <span data-m="top">—</span> under the top</span></header>
+      <ol class="steps">
+        <li><h3>Find the front face</h3><p>The face that looks at the start, flush with the table's front edge. Measure every height down from the top surface, the one the frame sits on.</p></li>
+        <li><h3>Centre line</h3><p>A vertical line <span class="mono" data-m="half">—</span> in from either side. Both sides should give the same line.</p></li>
+        <li><h3>Top and bottom edges</h3><p>Top edge <span class="mono" data-m="top">—</span> below the top. Bottom edge, the lip, <span class="mono" data-m="lip">—</span> below the top.</p></li>
+        <li><h3>Side edges</h3><p>Mark them <span class="mono" data-m="mhalf">—</span> each side of the centre line. They land <span class="mono" data-m="side">—</span> in from each side of the box.</p></li>
+        <li><h3>Cut</h3><p>Through the front wall only. Keep the lip straight, flat and free of burrs: the envelope slides over it. Square corners, or a corner radius up to 10 mm. Hold every edge to ±2 mm: the pass band leaves 5 mm a side and 5–6 mm above and below.</p></li>
+      </ol>
+      <h3>Where each edge goes</h3>
+      <div class="tscroll"><table id="m-edges">
+        <thead><tr><th>Edge</th><th>Measured</th><th class="num">mm</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="small">On a box of another size, keep the mouth <span data-m="size">—</span>, centred across, with its top edge <span data-m="top">—</span> under the top. The Mailbox Get measures down from the top, so the release point still lands in the mouth, and the front props still pass 77 mm over the top at the release. The design assumes 5 mm walls (115 mm deep inside). A thicker wall takes room from the envelope's far end, which stops 38 mm short of the back wall as designed.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header><h2>Where the offsets come from</h2><span class="note">Recompute these if the hat, the mailbox or its mouth differ</span></header>
+    <div class="tscroll"><table>
+      <thead><tr><th>Offset</th><th class="num">mm</th><th>From</th></tr></thead>
+      <tbody id="f-derive"></tbody>
+    </table></div>
+  </section>
+
+  <!-- ============================== FIELD SETUP ============================== -->
+  <h2 class="part" id="field">Field setup <span class="sub">where the pillar and the mailboxes go</span></h2>
+  <p class="intro">The designed layout. On the day it may sit elsewhere in the room, as long as the pillar and the mailbox keep their positions relative to each other: the two Gets measure them, Mailbox Start follows the mailbox, and Adjust moves Start, Land Start and Land to where the drone stands. Positions are in the OptiTrack room frame: origin at the field centre, +x forward (the drone's heading at takeoff), +y to the left. <b>Left</b> means the +y side as you look from the start toward the table.</p>
+
+  <section class="specs" aria-label="Field placement key numbers">
+    <div class="spec"><span class="k">Pick pillar centre</span><span class="val" id="d-pillar">—</span><span class="s">x, y in m</span></div>
+    <div class="spec"><span class="k">Table centre</span><span class="val" id="d-table">—</span><span class="s" id="d-table-s">x, y in m</span></div>
+    <div class="spec key"><span class="k">Red box, left edge</span><span class="val" id="d-red">—</span><span class="s">mm in from the table's left end</span></div>
+    <div class="spec"><span class="k">Blue box, left edge</span><span class="val" id="d-blue">—</span><span class="s">mm in from the table's left end</span></div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>The field</h2>
+      <span class="note">Grid 0.5 m. The frame is not shown: it comes off the field before the flight.</span>
+    </header>
+    <div class="viewer" id="d-viewer" role="img" aria-label="3-D view of the field: the start, the pick pillar with the envelope, the console table with the red and blue mailboxes">
+      <div class="fallback" hidden>The 3-D view needs WebGL. The plan below has every position.</div>
+    </div>
+    <div class="controls" id="d-controls">
+      <div class="seg" role="radiogroup" aria-label="View the field">
+        <label><input type="radio" name="d-mode" value="persp" checked> From the start</label>
+        <label><input type="radio" name="d-mode" value="top"> From above</label>
+      </div>
+      <button type="button" id="d-reset">Reset view</button>
+      <span class="hint">Red dot: the release point · dark dot: Mailbox Start</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header>
+      <h2>Drawing 10 · Field plan</h2>
+      <span class="note">Top view to scale, mm, from the field origin. The start is on the left; the drone flies to the right.</span>
+    </header>
+    <div class="drawing"><svg id="d-plan" class="wide" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dimensioned plan of the field: pillar, table and the two mailboxes"></svg></div>
+  </section>
+
+  <section class="panel">
+    <header><h2>Placement</h2><span class="note">What is measured, and what follows from it</span></header>
+    <div class="tscroll"><table class="field">
+      <thead><tr><th>Item</th><th>Where</th><th>Orientation</th><th>How exact</th></tr></thead>
+      <tbody id="d-table-rows"></tbody>
+    </table></div>
+    <p class="small">On the ground, before takeoff: press Adjust (it moves Start, Land Start and Land to where the drone stands, up to 2 m from the typed Start), then the Envelope Get with the frame on the hat, then the Mailbox Get with the frame on the mailbox (Mailbox Start follows it), then Plan. A Mailbox Start typed by hand is overwritten by the next Mailbox Get or Plan.</p>
+  </section>
+
+  <!-- ============================== FILES ============================== -->
+  <section class="panel" id="files">
+    <header><h2>Files</h2><span class="note">STL to print, OpenSCAD source to edit, each generated from one model</span></header>
+    <div class="files">
+      <div class="row">
+        <button type="button" class="primary" id="b-zip" hidden>Download the parts (.zip)</button>
+        <button type="button" id="b-copy-core">Copy core SCAD</button>
+        <button type="button" id="b-copy-frame">Copy frame SCAD</button>
+        <span class="status" id="status" role="status"></span>
+      </div>
+      <p class="small">The zip also has the four holder designs (<span class="mono">holders/</span>) and the frame's dimensions as JSON. In the repository: <code class="path">docs/docs_aerial_manipulator/archive/mail_delivery_20261023/cad/</code> (the parts, <span class="mono">localization_frame_assembly.stl</span> with the holders and markers in place, and the three generators) and <code class="path">page/</code> (this page's sources).</p>
+      <details><summary>Envelope core · OpenSCAD</summary><pre id="src-core"></pre></details>
+      <details><summary>Localization frame · OpenSCAD</summary><pre id="src-frame"></pre></details>
+    </div>
+  </section>
+</div>
+

@@ -843,6 +843,12 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
                 return None
         return self._dc.get_rigid_body_pose(self._payload_h)
 
+    def _pick_body_pose(self):
+        """What obj_0 publishes (an object with .p.{x,y,z} and .r.{w,x,y,z}), or
+        None to publish nothing this step: the payload body itself here. The mail
+        delivery overrides it with its printed localization frame."""
+        return self._payload_pose()
+
     def _pose(self, h):
         P = self._dc.get_rigid_body_pose(h)
         return (np.array([P.p.x, P.p.y, P.p.z]),
@@ -1082,7 +1088,7 @@ class AmT650PickAndPlace(am06.AmT650WholeBodyArmSim):
             self._fixed_twist.header.stamp = stamp
             for i, (pose_pub, twist_pubs, pose) in enumerate(self._fixed_bodies):
                 if i == 0:                    # obj_0: the payload box's live pose
-                    pb = self._payload_pose()
+                    pb = self._pick_body_pose()
                     if pb is None:
                         continue              # PhysX has not seen it yet
                     P = pb

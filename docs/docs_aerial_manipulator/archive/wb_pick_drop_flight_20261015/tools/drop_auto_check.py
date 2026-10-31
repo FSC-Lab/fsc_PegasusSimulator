@@ -147,7 +147,10 @@ def main():
     n = len(rig.drops)
     dt = rig.drops[0][0] - t_good if n else float("nan")
     released = [s for s in seen if "RELEASE signalled" in s]
-    ok = n == 1 and 0.45 <= dt <= 1.0 and bool(released)
+    # (2026-10-30) the claw's speed is measured over the last 0.5 s (fit + spread), so a
+    # claw that has just moved 30 mm must first be still for that window, then the 0.5 s
+    # dwell: 1.0 s plus a few 10 Hz ticks
+    ok = n == 1 and 0.45 <= dt <= 1.7 and bool(released)
     results.append(("all gates good -> ONE release after the dwell", ok,
                     f"{n} drop_now, {dt:.2f} s after the gates passed: {rig.drops[0][1] if n else ''}"))
     print("\n  AUTONOMOUS DROP CHECK")

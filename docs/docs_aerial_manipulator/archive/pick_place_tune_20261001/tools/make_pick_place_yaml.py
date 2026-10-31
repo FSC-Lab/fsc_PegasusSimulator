@@ -48,6 +48,7 @@ feed-forward), never a contact wrench the law renders through the impedance.
 The generator refuses an override that would switch the contact branch on.
 """
 import argparse
+import json
 import os
 import re
 import sys
@@ -110,6 +111,16 @@ GAIN_OVERRIDES_PICK_PLACE = {"wb_k_r": "1.6", "wb_k_w": "1.2",
 # python value)). The task block is the mirror's = the hardware file's, EXCEPT
 # what belongs to the demonstration's scene. (2026-10-13 a single override, the
 # place point's height 0.87 for the 10-10 flight's inferred pillars, flew a day.)
+def _frame_locator(k):
+    """The planner locator of the printed localization frame (rev B, 2026-10-29), read from the
+    frame generator's JSON exactly as the hardware generator does (make_hw_pick_and_place_yamls.py),
+    so the simulation and the hardware Gets add the same offset: (yaml text, value)."""
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "mail_delivery_20261023",
+                           "cad", "localization_frame.json")) as f:
+        v = [float(x) for x in json.load(f)["locator"][k]]
+    return "[" + ", ".join(repr(x) for x in v) + "]", v
+
+
 PROFILES = {
     # THE ORIGINAL PICK-AND-PLACE (the paper's simulation comparison, 2026-10-08/09
     # campaign, results/simulation_results): 1.0 m pillars under the hat, the
@@ -147,6 +158,10 @@ PROFILES = {
         "gains": {},    # 2026-10-16: the mirror's H1b attitude pair (see GAIN_OVERRIDES_PICK_PLACE)
         "planner": {
             "pick_place_ee_offset": ("[-0.04, 0.0, 0.16]", [-0.04, 0.0, 0.16]),
+            # 2026-10-26: Drop Margin 0.05 + Drop Start 1.15 was flown (archive/
+            # drop_margin_20261026) and NOT kept -- MAC's ~125 mm standing height error
+            # would put its basket into the tray wall; the comparison flies the mirror's
+            # 0.20 / 1.0 for all three controllers (user's call)
         },
     },
     # THE MAIL DELIVERY (2026-10-23, user design; archive/mail_delivery_20261023,
@@ -167,22 +182,66 @@ PROFILES = {
         "vehicle": "AM-T650-WB-L1-4D-MAIL",
         "gains": {},
         "planner": {
-            "pick_place_place_start": ("[1.0, 0.25, 1.1, 0.0]", [1.0, 0.25, 1.1, 0.0]),
+            # (2026-10-30, the diagonal insert) Mailbox Start at the Ready To Insert hold's height
+            "pick_place_place_start": ("[1.0, 0.25, 1.22, 0.0]", [1.0, 0.25, 1.22, 0.0]),
             "pick_place_land_start": ("[0.0, 0.0, 1.0, 0.0]", [0.0, 0.0, 1.0, 0.0]),
             "pick_place_land": ("[0.0, 0.0, 0.35, 0.0]", [0.0, 0.0, 0.35, 0.0]),
             "pick_place_pick_pose_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
-            "pick_place_place_pose_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
+            # (2026-10-30, user design: the DIAGONAL INSERT) the claw pitched 25 deg down, 13 cm
+            # under the body: the drone holds the release 6.5 cm higher, props 14 cm over the box top
+            "pick_place_place_pose_deg": ("[0.0, 20.0, 45.0, 90.0]", [0.0, 20.0, 45.0, 90.0]),
             "pick_place_carry_pose_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
             "pick_place_sweep_lo_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
             "pick_place_sweep_hi_deg": ("[0.0, 36.0, 44.0, 90.0]", [0.0, 36.0, 44.0, 90.0]),
             "pick_place_ee_offset": ("[-0.06, 0.0, 0.0]", [-0.06, 0.0, 0.0]),
             "pick_place_place_point": ("[1.709, 0.25, 1.024, 0.0]", [1.709, 0.25, 1.024, 0.0]),
             "pick_place_place_drop": ("false", False),
+            # (2026-10-30) the planner's tilt guard below the controller's 15 deg watchdog,
+            # so the planner's abort (back out of the mouth, then climb) acts first
+            "pick_place_guard_tilt_deg": ("10.0", 10.0),
         },
         # keys the mirror does not carry, appended to the sim-only block
         "added": {
             "pick_place_place_insert": ("true", True),
             "pick_place_place_approach_back": ("0.15", 0.15),
+            # (2026-10-30, user request) the Gets read the printed LOCALIZATION FRAME, as on
+            # hardware: the 07 mail scene publishes obj_0 = the frame's five markers' centroid
+            # (Motive's default pivot), on the pick hat or the red mailbox's top; the planner
+            # adds these to write the envelope centre / the release point
+            "pick_place_pick_locator": _frame_locator("pick"),
+            "pick_place_place_locator": _frame_locator("place"),
+            # (2026-10-30, user request) the layout may move: Mailbox Start follows the Mailbox
+            # Get (the designed [1.0, 0.25, 1.1, 0] as an offset from the designed release point
+            # [1.709, 0.25, 1.024, 0]) and Adjust moves only Start / Land Start / Land, up to 2 m
+            "pick_place_place_start_offset": ("[-0.709, 0.0, 0.196, 0.0]", [-0.709, 0.0, 0.196, 0.0]),
+            # (2026-10-30, user design) THE DIAGONAL INSERT: the Insert Margin back and up along a line
+            # pitched 25 deg down, the slide forward and down along it (the place pose's claw pitch);
+            # the slide untrimmed (the trim took a decaying arrival overshoot as an offset)
+            "pick_place_place_insert_pitch_deg": ("25.0", 25.0),
+            "pick_place_insert_descent_trim": ("false", False),
+            "pick_place_adjust_max": ("2.0", 2.0),
+            # (2026-10-30, after a sim flight flew into the moved mailbox: the Mailbox Get was
+            # never pressed) Plan needs the Mailbox measured; and the insert is AUTONOMOUS: the
+            # slide starts once the claw is still within 15 mm in front of the mouth for 1 s, the
+            # release once it is still at the release point (the drop_auto gates)
+            "pick_place_place_requires_get": ("true", True),
+            "pick_place_insert_auto": ("true", True),
+            "pick_place_insert_auto_tol": ("0.015", 0.015),
+            "pick_place_insert_auto_dwell_s": ("1.0", 1.0),
+            # (2026-10-30, the user's windowed rehearsal hovered in the mouth, never released) the
+            # release's wrist gate: the drop's 3 deg sits inside the wrist's standing band at q4 = 90
+            # (it parked 3.7-4.5 deg off for the whole hold); 12 deg clears the ~9-10 deg band
+            "pick_place_insert_auto_q4_tol_deg": ("12.0", 12.0),
+            # (2026-10-30, user decision) the release's claw gates: a window along the insertion line
+            # (15 mm short keeps the envelope's centre of mass past the lip, 20 mm long the jaws clear
+            # of the wall), 30 mm off it, 50 mm/s, 1 s after the slide
+            "pick_place_insert_auto_release_wait_s": ("1.0", 1.0),
+            "pick_place_insert_auto_release_short": ("0.015", 0.015),
+            "pick_place_insert_auto_release_long": ("0.020", 0.020),
+            "pick_place_insert_auto_release_off_axis": ("0.030", 0.030),
+            "pick_place_insert_auto_release_speed": ("0.05", 0.05),
+            # a Get with the frame on the wrong target (the pick and the place < 0.30 m apart) is refused
+            "pick_place_min_pick_place_dist": ("0.30", 0.30),
         },
     },
 }

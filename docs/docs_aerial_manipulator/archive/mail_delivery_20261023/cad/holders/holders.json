@@ -1,0 +1,166 @@
+{
+ "source": "extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/Valve_Assembly_v2.stl",
+ "frame": "origin = centre of the base's bottom face, valve-CAD axes, z up, mm",
+ "designs": {
+  "A": {
+   "base_size": [
+    20.109,
+    30.073
+   ],
+   "holder_height": 52.0,
+   "ball": [
+    0.036,
+    -9.998,
+    73.5
+   ],
+   "ball_r": 15.001,
+   "valve_cad_base_centre": [
+    38.928,
+    -6.831,
+    47.494
+   ],
+   "holder_triangles": 1024,
+   "marker_triangles": 6268
+  },
+  "B": {
+   "base_size": [
+    30.073,
+    20.109
+   ],
+   "holder_height": 22.0,
+   "ball": [
+    -9.998,
+    -0.036,
+    42.5
+   ],
+   "ball_r": 15.001,
+   "valve_cad_base_centre": [
+    13.837,
+    18.077,
+    45.494
+   ],
+   "holder_triangles": 1008,
+   "marker_triangles": 6268
+  },
+  "C": {
+   "base_size": [
+    15.109,
+    30.054
+   ],
+   "holder_height": 22.0,
+   "ball": [
+    -0.036,
+    9.998,
+    42.5
+   ],
+   "ball_r": 15.001,
+   "valve_cad_base_centre": [
+    191.391,
+    3.725,
+    45.494
+   ],
+   "holder_triangles": 1008,
+   "marker_triangles": 6268
+  },
+  "D": {
+   "base_size": [
+    20.109,
+    30.073
+   ],
+   "holder_height": 13.5,
+   "ball": [
+    -0.12,
+    33.0,
+    18.498
+   ],
+   "ball_r": 15.001,
+   "valve_cad_base_centre": [
+    103.855,
+    13.406,
+    47.494
+   ],
+   "holder_triangles": 996,
+   "marker_triangles": 6268
+  }
+ },
+ "valve": {
+  "holders": [
+   {
+    "t": "A",
+    "base_centre": [
+     38.928,
+     -6.831,
+     47.494
+    ]
+   },
+   {
+    "t": "B",
+    "base_centre": [
+     13.837,
+     18.077,
+     45.494
+    ]
+   },
+   {
+    "t": "C",
+    "base_centre": [
+     191.391,
+     3.725,
+     45.494
+    ]
+   },
+   {
+    "t": "D",
+    "base_centre": [
+     103.855,
+     13.406,
+     47.494
+    ]
+   }
+  ],
+  "markers": [
+   {
+    "holder": "B",
+    "ball": [
+     3.84,
+     18.041,
+     87.993
+    ]
+   },
+   {
+    "holder": "A",
+    "ball": [
+     38.965,
+     -16.829,
+     120.993
+    ]
+   },
+   {
+    "holder": "D",
+    "ball": [
+     103.735,
+     46.405,
+     65.991
+    ]
+   },
+   {
+    "holder": null,
+    "ball": [
+     124.048,
+     -39.521,
+     63.991
+    ]
+   },
+   {
+    "holder": "C",
+    "ball": [
+     191.355,
+     13.722,
+     87.993
+    ]
+   }
+  ],
+  "context_triangles": 14772,
+  "note": "valve-CAD axes, mm; each holder sits there unturned (its own frame = the valve's axes); holder null = the rotor's built-in mount"
+ }
+}

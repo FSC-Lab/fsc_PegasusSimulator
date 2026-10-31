@@ -47,8 +47,20 @@ that scene's. What this file adds:
             190 x 90 mm, centred across the face, its top edge 25 mm under the
             box top (centre 202.5 mm above the box bottom).
 
-  mocap     obj_0 = the envelope (live); drop_0 = the RED mailbox's mouth
-            centre (fixed); payload_0 / claw_0 = ground truth (the base scene)
+  frame     (2026-10-30) the printed LOCALIZATION FRAME (rev B, archive/
+            mail_delivery_20261023/cad: plate + the four holder designs + five
+            markers, drawn from their STLs), VISUAL only. Both Gets read it, as on
+            hardware: it starts on the pick hat (skirts over the rim, the envelope
+            in its slot); the operator's moves are three std_srvs/Trigger services,
+            /mail_frame/on_hat, /mail_frame/on_mailbox (on the RED box's top, +x
+            into the mouth) and /mail_frame/remove; it follows the two Gets by itself:
+            onto the mailbox after the Envelope Get, off after the Mailbox Get, before or after takeoff (PEGASUS_MAIL_FRAME_AUTO_MOVE)
+  mocap     obj_0 = the localization frame: its five markers' centroid (Motive's
+            default pivot) with the frame's axes, published only while the frame
+            is placed -- the planner adds pick_place_pick_locator /
+            _place_locator (the sim yaml carries the hardware's); drop_0 = the RED
+            mailbox's mouth centre (fixed); payload_0 = the ENVELOPE (ground
+            truth, what the scorer reads) / claw_0 (the base scene)
 
 THE TASK (planner pick-and-place mode, the INSERT place,
 pick_place_place_insert; the arm GS's "Mail Envelope" tab): the drone yaw is 0
@@ -82,6 +94,11 @@ Knobs (environment; every default is the design above):
                                bottom), default "0.190,0.090,0.2025"
   PEGASUS_MAIL_Q2_LIMIT_DEG    "lo,hi" or "asset", default "-20,45"
   PEGASUS_MAIL_AM_ASSET        airframe asset, default AM_T650.usda
+  PEGASUS_MAIL_FRAME           where the localization frame starts: hat (default) | mailbox | off
+  PEGASUS_MAIL_FRAME_AUTO_OFF  1 = lift the frame off when the vehicle takes off; 0 (default) = leave it
+                               (it is lifted off after the Mailbox Get instead: FRAME_AUTO_MOVE)
+  PEGASUS_MAIL_FRAME_AUTO_MOVE 1 (default) = after the Envelope Get the frame moves onto the mailbox, after
+                               the Mailbox Get it is lifted off (the operator's moves); 0 = the services only
 plus the pick-and-place scene's PEGASUS_PNP_SPAWN_XY / _SPAWN_YAW_DEG /
 _WAYPOINTS / _GRIP_TORQUE.
 
@@ -90,9 +107,11 @@ Run with (Command.md section 19):
 """
 
 import importlib.util
+import json
 import math
 import os
 import sys
+from types import SimpleNamespace
 
 # The pick-and-place scene reads its knobs at import: this scene builds its own
 # payload and drops the place pillar and the bin, so pin the ones that would
@@ -183,6 +202,61 @@ if not os.path.isfile(am06.USD_FILE):
     raise SystemExit(f"{am06.USD_FILE} not found -- generate it with "
                      f"robotic_arm/utils_model/make_t650_gear_asset.py (or set PEGASUS_MAIL_AM_ASSET)")
 am06.GROUND_BODY_Z = 0.305 - 0.070 if AM_ASSET == "AM_T650.usda" else 0.305
+
+# ── the printed localization frame (rev B, 2026-10-29; user request 2026-10-30: the sim's
+# Gets read it as the hardware's do) ───────────────────────────────────────────────────────
+FRAME_CAD = os.path.normpath(os.path.join(_HERE, "..", "..", "docs", "docs_aerial_manipulator", "archive",
+                                          "mail_delivery_20261023", "cad"))
+with open(os.path.join(FRAME_CAD, "localization_frame.json")) as _f:
+    FRAME = json.load(_f)
+FRAME_CENTROID = np.array(FRAME["markers"]["centroid"], float) * 1e-3   # [m] obj_0 from O, frame axes
+FRAME_LOCATOR = {k: np.array(v[:3], float) for k, v in FRAME["locator"].items()}   # the planner's
+FRAME_START = (os.environ.get("PEGASUS_MAIL_FRAME", "") or "hat").strip().lower()
+if FRAME_START not in ("hat", "mailbox", "off"):
+    raise SystemExit(f"PEGASUS_MAIL_FRAME must be hat, mailbox or off, got {FRAME_START!r}")
+# (default OFF since 2026-10-30 evening: an operator who took off first and then pressed the Gets found the
+# frame already gone -- the emulator kept republishing its last pose on the hat, so the Mailbox Get read the
+# hat. The frame now stays until the Mailbox Get, FRAME_AUTO_MOVE lifts it off then; 1 = the old takeoff rule)
+FRAME_AUTO_OFF = (os.environ.get("PEGASUS_MAIL_FRAME_AUTO_OFF", "") or "0").strip().lower() not in ("0", "false", "no")
+# (2026-10-30) the frame moves as the operator moves it, on the planner's parameter events: onto the
+# mailbox once the Envelope Get has written pick_place_pick_point, off once the Mailbox Get has written
+# pick_place_place_point -- so the two Get buttons are the whole procedure in the simulation
+FRAME_AUTO_MOVE = (os.environ.get("PEGASUS_MAIL_FRAME_AUTO_MOVE", "") or "1").strip().lower() not in ("0", "false", "no")
+FRAME_LIFT_Z = 0.15                     # [m] above the vehicle's rest height = "it took off"
+FRAME_PRIM = pnp.SCENE_ROOT + "/localization_frame"
+FRAME_RGB = (0.56, 0.69, 0.82)          # the drawing page's plate
+HOLDER_RGB = {"A": (0.165, 0.471, 0.839), "B": (0.929, 0.631, 0.0),    # the page's design colours
+              "C": (0.910, 0.482, 0.643), "D": (0.0, 0.514, 0.0)}
+MARKER_RGB = (0.95, 0.95, 0.95)
+FRAME_WHERE = {"hat": "the pick hat", "mailbox": "the red mailbox's top", "off": "lifted off"}
+
+
+def _read_stl_mm(path):
+    """A binary STL's triangles, (N, 3, 3) [mm]."""
+    with open(path, "rb") as f:
+        b = f.read()
+    n = int.from_bytes(b[80:84], "little")
+    if len(b) < 84 + 50 * n:
+        raise SystemExit(f"{TAG} {path}: not a binary STL")
+    rec = np.frombuffer(b, dtype=np.dtype([("n", "<f4", 3), ("v", "<f4", 9), ("a", "<u2")]), count=n, offset=84)
+    return rec["v"].reshape(n, 3, 3).astype(float)
+
+
+def _rz(deg):
+    c, s = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+
+
+def _frame_place(where):
+    """(O, yaw_deg) of the frame placed on `where`, or None: O = the centre of its
+    underside, world. On the hat its skirts centre it on the cap and its slot holds
+    the envelope (frame yaw = the envelope's); on the mailbox its skirt flats close
+    on the front and back faces, centred across the box, +x into the mouth."""
+    if where == "hat":
+        return np.array([PILLAR_XY[0], PILLAR_XY[1], PLATFORM_TOP]), ENV_YAW_DEG
+    if where == "mailbox":
+        return np.array([TABLE_FRONT_X + 0.5 * BOX_D, RED_Y, TABLE_HEIGHT + BOX_H]), 0.0
+    return None
 _q2_raw = (os.environ.get("PEGASUS_MAIL_Q2_LIMIT_DEG", "") or "-20,45").strip()
 Q2_LIMIT_DEG = None if _q2_raw.lower() == "asset" else _floats("PEGASUS_MAIL_Q2_LIMIT_DEG", "-20,45", 2)
 
@@ -308,6 +382,122 @@ class AmT650MailDelivery(pnp.AmT650PickAndPlace):
                 pnp._box(stage, f"{mroot}/trim{k}", c, s, TRIM_RGB)
 
         self._build_envelope(stage, env_mat)
+        self._build_frame(stage)
+
+    # ── the localization frame (visual; obj_0 while placed) ──────────────────
+    def _build_frame(self, stage):
+        """The printed frame from its CAD: the plate, then each holder and its
+        marker at their pockets (base bottom on the pocket floor, turned by the
+        holder's heading). The marker centres it draws are checked against the
+        JSON's, which the planner's locators were computed from."""
+        xf = UsdGeom.Xform.Define(stage, FRAME_PRIM)
+        self._frame_prim = xf.GetPrim()
+        self._frame_ops = (xf.AddTranslateOp(), xf.AddRotateZOp())
+
+        def mesh(path, tris_mm, rgb):
+            m = UsdGeom.Mesh.Define(stage, path)
+            pts = (tris_mm.reshape(-1, 3) * 1e-3).astype(float)
+            m.CreatePointsAttr([Gf.Vec3f(*p) for p in pts])
+            m.CreateFaceVertexCountsAttr([3] * len(tris_mm))
+            m.CreateFaceVertexIndicesAttr(list(range(len(pts))))
+            m.CreateSubdivisionSchemeAttr("none")
+            m.CreateDoubleSidedAttr(True)
+            pnp._color(m, rgb)
+
+        mesh(FRAME_PRIM + "/plate", _read_stl_mm(os.path.join(FRAME_CAD, "localization_frame.stl")), FRAME_RGB)
+        floor = FRAME["plate_t"] - FRAME["pocket_d"]           # [mm] the pockets' floor above O
+        balls = []
+        for k, h in enumerate(FRAME["holders"]):
+            R, t = _rz(h["heading"]), np.array([h["x"], h["y"], floor])
+            for part, rgb in (("holder", HOLDER_RGB[h["t"]]), ("marker", MARKER_RGB)):
+                tris = _read_stl_mm(os.path.join(FRAME_CAD, "holders", f"{part}_{h['t']}.stl"))
+                mesh(f"{FRAME_PRIM}/{part}{k}_{h['t']}", tris @ R.T + t, rgb)
+            ball = R @ np.array(FRAME["designs"][h["t"]]["ball"], float) + t
+            if np.linalg.norm(ball - np.array(h["ball"], float)) > 0.05:
+                raise SystemExit(f"{TAG} frame holder {k} ({h['t']}): marker at {ball} vs the JSON's {h['ball']}")
+            balls.append(ball)
+        if np.linalg.norm(np.mean(balls, axis=0) * 1e-3 - FRAME_CENTROID) > 5e-5:
+            raise SystemExit(f"{TAG} the frame's marker centroid does not match the JSON's")
+        self._frame_where = None
+        self._frame_req = None
+        self._frame_auto_done = False
+        self._frame_rest_z = None
+        self._set_frame(FRAME_START)
+
+    def _set_frame(self, where):
+        """Place (or lift off) the frame; obj_0 follows it. Prints what the planner's
+        Get + locator will write, against the scene's own envelope / mouth."""
+        place = _frame_place(where)
+        img = UsdGeom.Imageable(self._frame_prim)
+        self._frame_where = where
+        if place is None:
+            img.MakeInvisible()
+            self._frame_obj0 = None
+            print(f"\033[1;36m{TAG} LOCALIZATION FRAME lifted off: obj_0 is no longer published\033[0m", flush=True)
+            return
+        O, yaw = place
+        self._frame_ops[0].Set(Gf.Vec3d(*map(float, O)))
+        self._frame_ops[1].Set(float(yaw))
+        img.MakeVisible()
+        R = _rz(yaw)
+        c = O + R @ FRAME_CENTROID
+        hz = math.radians(yaw) * 0.5
+        self._frame_obj0 = SimpleNamespace(p=SimpleNamespace(x=float(c[0]), y=float(c[1]), z=float(c[2])),
+                                           r=SimpleNamespace(w=math.cos(hz), x=0.0, y=0.0, z=math.sin(hz)))
+        if where == "hat":
+            tgt = c + R @ FRAME_LOCATOR["pick"]
+            ref, what = self._payload_p0, "the envelope's centre"
+        else:
+            tgt = c + R @ FRAME_LOCATOR["place"]
+            ref, what = None, "the release point"
+        err = "" if ref is None else f" ({np.linalg.norm(tgt - ref) * 1e3:.1f} mm from the scene's envelope centre)"
+        print(f"\033[1;36m{TAG} LOCALIZATION FRAME on {FRAME_WHERE[where]}: O {np.round(O, 4).tolist()} m, yaw "
+              f"{yaw:.0f} deg; obj_0 (markers' centroid) {np.round(c, 4).tolist()} m; Get + the locator -> {what} "
+              f"{np.round(tgt, 4).tolist()} m{err}\033[0m", flush=True)
+
+    def _pick_body_pose(self):
+        return getattr(self, "_frame_obj0", None)
+
+    def _frame_service(self, where, res):
+        self._frame_req = where
+        place = _frame_place(where)
+        res.success = True
+        res.message = (f"localization frame -> {FRAME_WHERE[where]}" +
+                       ("" if place is None else
+                        f": obj_0 {np.round(place[0] + _rz(place[1]) @ FRAME_CENTROID, 4).tolist()} m, yaw {place[1]:.0f} deg"))
+        return res
+
+    def _on_planner_param(self, ev):
+        """FRAME_AUTO_MOVE: the operator's moves, from the planner's own parameter events --
+        the Envelope Get writes pick_place_pick_point, the Mailbox Get pick_place_place_point."""
+        if not ev.node.endswith("/whole_body_trajectory_planner"):
+            return
+        for p in list(ev.changed_parameters) + list(ev.new_parameters):
+            where = getattr(self, "_frame_where", None)
+            if p.name == "pick_place_pick_point" and len(p.value.double_array_value) >= 3 and where == "hat":
+                self._frame_req = "mailbox"
+                print(f"\033[1;36m{TAG} the Envelope Get is done: the frame goes onto the red mailbox's top, as the "
+                      f"operator moves it -- press the Mailbox Get next\033[0m", flush=True)
+            elif p.name == "pick_place_place_point" and where == "mailbox":
+                self._frame_req = "off"
+                print(f"\033[1;36m{TAG} the Mailbox Get is done: the frame is lifted off\033[0m", flush=True)
+
+    def _frame_step(self):
+        req = getattr(self, "_frame_req", None)
+        if req is not None:
+            self._frame_req = None
+            self._set_frame(req)
+        if not FRAME_AUTO_OFF or getattr(self, "_frame_auto_done", True) or getattr(self, "_body", None) is None:
+            return
+        z = float(self._dc.get_rigid_body_pose(self._body).p.z)
+        self._frame_rest_z = z if self._frame_rest_z is None else min(self._frame_rest_z, z)
+        if z > self._frame_rest_z + FRAME_LIFT_Z:
+            self._frame_auto_done = True
+            if self._frame_where != "off":
+                print(f"\033[1;36m{TAG} the vehicle took off (body {z:.2f} m) at t = {self._t:.1f} s: the frame is "
+                      f"lifted off, as the operator does before a flight (/mail_frame/on_hat or /on_mailbox puts it "
+                      f"back)\033[0m", flush=True)
+                self._set_frame("off")
 
     def _build_envelope(self, stage, mat):
         """THE ENVELOPE: ONE dynamic body, an UNSCALED Xform at its geometric
@@ -397,7 +587,7 @@ class AmT650MailDelivery(pnp.AmT650PickAndPlace):
         print(f"\033[1;35m{TAG} MAIL-DELIVERY SCENE: vehicle at ({pnp.SPAWN_XY[0]:.2f}, {pnp.SPAWN_XY[1]:.2f}) m, "
               f"yaw {pnp.SPAWN_YAW_DEG:.0f} deg, airframe {AM_ASSET}. PICK pillar at {PILLAR_XY}, "
               f"{PILLAR_HEIGHT:.3f} m under the hat (platform top {PLATFORM_TOP:.3f} m, radius "
-              f"{PLATFORM_RADIUS * 1e3:.1f} mm). ENVELOPE (obj_0): {ENV_L * 1e3:.0f} x {ENV_W * 1e3:.0f} x "
+              f"{PLATFORM_RADIUS * 1e3:.1f} mm). ENVELOPE (payload_0, ground truth): {ENV_L * 1e3:.0f} x {ENV_W * 1e3:.0f} x "
               f"{ENV_T * 1e3:.0f} mm, {ENV_MASS * 1e3:.0f} g, centre of mass {ENV_COM_FROM_FAR * 1e3:.0f} mm from "
               f"its far end (tip mass {self._env_tip_mass * 1e3:.0f} g), yaw {ENV_YAW_DEG:.0f} deg, centre "
               f"{np.round(self._payload_p0, 4).tolist()} m, near edge x {near:.4f} = {ENV_OVERHANG * 1e3:.0f} mm "
@@ -410,7 +600,9 @@ class AmT650MailDelivery(pnp.AmT650PickAndPlace):
               f"{RED_Y:+.3f}, BLUE y {BLUE_Y:+.3f}; MOUTH {MOUTH_W * 1e3:.0f} x {MOUTH_H * 1e3:.0f} mm, centre "
               f"{mouth_z:.4f} m ({MOUTH_Z * 1e3:.1f} mm above the box bottom; top edge "
               f"{(BOX_H - MOUTH_Z - 0.5 * MOUTH_H) * 1e3:.1f} mm under the box top {TABLE_HEIGHT + BOX_H:.4f} m). "
-              f"drop_0 = the red mouth centre.\033[0m", flush=True)
+              f"obj_0 = the LOCALIZATION FRAME's markers (starts {FRAME_WHERE[FRAME_START]}; services "
+              f"/mail_frame/on_hat, /on_mailbox, /remove; lifted off at takeoff: "
+              f"{'yes' if FRAME_AUTO_OFF else 'no'}), drop_0 = the red mouth centre.\033[0m", flush=True)
 
     def _setup_arm_ros2_bridge(self):
         super()._setup_arm_ros2_bridge()
@@ -420,6 +612,17 @@ class AmT650MailDelivery(pnp.AmT650PickAndPlace):
         pose.pose.position.x = float(TABLE_FRONT_X)
         pose.pose.position.y = float(RED_Y)
         pose.pose.position.z = float(TABLE_HEIGHT + MOUTH_Z)
+        # the operator's moves of the localization frame (applied at the next physics step)
+        if FRAME_AUTO_MOVE:
+            from rcl_interfaces.msg import ParameterEvent
+            from rclpy.qos import qos_profile_parameter_events
+            self._frame_param_sub = self._arm_node.create_subscription(
+                ParameterEvent, "/parameter_events", self._on_planner_param, qos_profile_parameter_events)
+        from std_srvs.srv import Trigger
+        self._frame_srvs = [
+            self._arm_node.create_service(Trigger, f"/mail_frame/{name}",
+                                          lambda req, res, w=where: self._frame_service(w, res))
+            for name, where in (("on_hat", "hat"), ("on_mailbox", "mailbox"), ("remove", "off"))]
 
     # ── where is the envelope? (printed on every change: the run's verdict) ────
     def _envelope_state(self):
@@ -465,6 +668,11 @@ class AmT650MailDelivery(pnp.AmT650PickAndPlace):
                   f"again\033[0m", flush=True)
 
     def _control_step_inner(self, dt):
+        try:
+            self._frame_step()
+        except Exception as exc:              # a stand-in must never stop the plant
+            self._frame_auto_done = True
+            print(f"{TAG} localization frame step failed: {exc}", flush=True)
         super()._control_step_inner(dt)
         try:
             self._release_grip_pad()

@@ -6477,6 +6477,62 @@ console table; the BLUE mailbox is scenery. Uncommitted in all four repos; NOT f
   startup guard (it reaches it after 20 s) -- poll the `pick_place/status` topic and require a `data:` line
   (`ros2 topic echo` prints its "not published yet" warning on stdout); a chain script calling the clean slate
   died at that step -- one clean-slate call per flight.
+- **The sim Gets read the printed localization frame too (2026-10-30, user request).** The 07 mail scene draws
+  the rev-B frame from its CAD STLs (visual only) and publishes obj_0 = its five markers' centroid while placed
+  (envelope = `payload_0`); it starts on the pick hat, moves by `archive/mail_delivery_20261023/tools/mail_frame.sh
+  hat|mailbox|off` (`/mail_frame/*` Trigger services) and lifts off by itself at takeoff. The sim mail yaml now
+  carries the hardware's `pick_place_pick_locator` / `_place_locator` (generator reads `cad/localization_frame.json`);
+  PnP 07 gained a `_pick_body_pose()` hook (default = the payload). Checked in Isaac: Envelope Get 0.5 mm from the
+  envelope centre, Mailbox Get = (1.709, 0.25, 1.024). The sim envelope is still the 60 g steel-tip rev B.
+- **The layout may move (2026-10-30, user request):** the pillar and the mailbox keep their relative layout but
+  may stand elsewhere, and the drone may start elsewhere. New planner key `pick_place_place_start_offset`
+  (Mailbox Start = the place point + this offset, turned by its yaw; Get/Plan write it into the GS row; Adjust
+  leaves it) + `pick_place_adjust_max` 2.0, both in both mail yamls. Loopback
+  `fsc_trajectory_planner/test/test_pick_place_layout_loopback.py` PASS (drone (-1,0), set moved (-0.2,-0.1)).
+  Procedure: on the ground ADJUST first, then the two Gets, then Plan. Orin: rebuild fsc_trajectory_planner.
+- **The insert made safe and autonomous (2026-10-30, after a sim crash: no Mailbox Get, release point inside
+  the moved mailbox).** Planner: `pick_place_place_requires_get` (Plan refused until the place point is set),
+  `pick_place_insert_auto` (slide starts once the claw is still within 15 mm for 1 s; release through the
+  drop_auto gates -> `pick_place/drop_now`, which the GS Mail tab now acts on), abort backs out of the mouth
+  before climbing, tilt guard 10 deg (mail yamls). Claw speed for the insert and drop gates = max(0.5 s LS
+  velocity, spread) -- the two-sample speed never held still. Isaac moved layout: full mission COMPLETE
+  (envelope in the red mailbox, 3.4 deg peak tilt) and an abort in the mouth (backed out 0.148 m, 3.2 deg).
+  Orin: rebuild fsc_trajectory_planner; laptop: rebuild utils_custom_ground_station (the Mail tab must act on
+  drop_now, else the envelope is never released).
+- **"Insert hovers, the gripper never opens" = THE WRIST GATE (2026-10-30, the user's windowed GS rehearsal;
+  mail README section 8).** The release reused the basket drop's 3 deg q4 gate, which sits INSIDE the wrist's
+  standing band at q4 = 90 (j4 static friction + the envelope's torque vs the 10-16 heading spring): Isaac printed
+  q4 93.6-94.5 deg through the whole 27 s hold, the planner never signalled, and the Mail tab then offered
+  neither a release nor an exit (Insert painted busy but disabled, Exit locked until its own open). A manual
+  open from the Control tab left Exit locked; open jaws in the mouth + the release kick -> 10.3 deg tilt guard
+  abort (backed out cleanly). Fixed: planner `pick_place_insert_auto_q4_tol_deg` (default 12, both mail yamls
+  12, drop keeps 3); the Mail tab's Insert is the manual release once the envelope is in the mouth (the Drop
+  button's path, Exit follows the OPEN). Both whole-body hardware stacks refuse a planner without the key.
+  Loopback (`mail_gs_check.sh`, new `MAIL_RIG_Q4_OFF_DEG` / `MAIL_RIG_PRESS_RELEASE`): 4.4 deg + gate 12
+  releases by itself; gate 3 reproduces the hover and the Insert press releases + exits; default unchanged;
+  gtests 31/31. Uncommitted. Isaac headless fused x2 (README 8.1): q4 no longer blocks, but NEITHER
+  released -- Ready To Insert's base ran 80-120 mm ahead of its reference (earlier runs <= 44): run 1 put the
+  envelope's corner on the mailbox face (watchdog), run 2's 1 s trim took the decaying overshoot as an offset
+  (claw parked 36-48 mm short, release gate 20 mm). Cause of the lead NOT found. Orin: rebuild fsc_trajectory_planner; laptop: rebuild
+  utils_custom_ground_station. NOT changed: the auto-insert start gate (absolute 15 mm vs the claw's 10-20 mm
+  standing offset in front of the mouth -- layout_auto1 never started in 60 s, the user's run 8 s).
+- **THE DIAGONAL INSERT + RELEASE WINDOW + EXIT AFTER THE OPEN (2026-10-30 evening, user design; mail README
+  section 9).** The arm alone cannot insert (q2/q3 move the claw ~2 cm along its own line; the insert needs
+  10-15 cm). New planner `pick_place_place_insert_pitch_deg` (25 in both mail yamls): the hold back AND up
+  along the pitched line, slide along it, abort backs out along it; place pose [0, 20, 45, 90] (claw 13 cm
+  under the body), Mailbox Start z 1.22; release claw point unchanged (locators valid). Props 141-145 mm over
+  the box top (was 66-77). `pick_place_insert_descent_trim` false; insert release gates
+  `pick_place_insert_auto_release_*` (1 s, -15/+20 mm along, 30 mm off, 50 mm/s). GS: Exit locked until the
+  gripper reports OPEN (3 s fallback). gtests 32/32, Mail loopback 3/3, drop check unchanged. Isaac headless
+  fused: 2 COMPLETE with the PLANNER's release 1.6 s after the slide, 1 hover trip (0.5 Hz roll, before any
+  pick). Found, not from these changes: the Ready To Insert overshoot (80-170 mm) is EKF2's x velocity biased
+  -0.09..-0.10 m/s in that leg (raw mocap 0); the auto slide's start gate rarely passes; an off-centre pick
+  (13 mm sideways, close gate centres only vertically) yaws the envelope 13 deg in the jaws; the window's
+  +20 mm let the jaws within 9.5 mm of the wall. Uncommitted; Orin: rebuild fsc_trajectory_planner; laptop:
+  rebuild utils_custom_ground_station.
+- **Plan "unclickable" = no Mailbox Get (2026-10-30):** the sim frame now moves itself after each Get (scene,
+  on the planner's parameter events), and planner `pick_place_min_pick_place_dist` 0.30 (mail yamls) refuses a
+  Get or Plan with the pick and place < 0.3 m apart -- one frame on the wrong target.
 
 **1023 HARDWARE BOX PUSH: THE q3 RATE GUARD ABORTED THE GRASP — A REACH MOTION INTO q2's LIMIT,
 NOT A BUCKLE (2026-10-23, user request: is the guard too conservative?; record

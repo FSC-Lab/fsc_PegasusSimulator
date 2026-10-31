@@ -100,6 +100,9 @@ class Driver(Node):
         sub(String, f"{ns}/{PP}/status", self.on_pp_status, LATCHED)
         sub(Float64MultiArray, f"{ns}/{PP}/info", lambda m: setattr(self, "info", np.asarray(m.data)), LATCHED)
         sub(Float64MultiArray, f"{ns}/{PP}/arrival_error", self.on_arrival, 10)
+        # the planner's autonomous release (the drop's, and since 2026-10-30 the insert's)
+        self.drop_now = None
+        sub(String, f"{ns}/{PP}/drop_now", lambda m: setattr(self, "drop_now", m.data), 10)
         sub(PoseStamped, f"{ns}/whole_body_planner/current_ee", self.on_ee, 10)
         sub(WholeBodyReference, f"{ns}/{REF_TOPIC}", self.on_ref, 50)
         sub(PoseStamped, "/payload_0/state/pose", self.on_payload, qos_profile_sensor_data)
@@ -116,8 +119,10 @@ class Driver(Node):
         self.cli = {n: self.create_client(Trigger, f"{ns}/rc/{n}") for n in ("offboard", "arm", "disarm")}
         for n in ("go_to_start", "execute_pick", "go_to_place_start", "execute_place", "go_to_land_start",
                   "execute_land", "descend_pick", "descend_place", "exit_pick", "exit_place",
-                  "adjust", "plan", "capture_pick", "reset", "abort"):
+                  "adjust", "plan", "capture_pick", "get_place", "reset", "abort"):
             self.cli[n] = self.create_client(Trigger, f"{ns}/{PP}/{n}")
+        # the 07 mail scene's localization frame (2026-10-30): the operator's moves
+        self.frame_cli = {n: self.create_client(Trigger, f"/mail_frame/{n}") for n in ("on_hat", "on_mailbox", "remove")}
         self.direct = self.create_client(SetBool, f"{ns}/{da}/set_direct_mode")
         self.clear = self.create_client(Trigger, f"{ns}/whole_body_planner/clear")
         self.create_timer(1.0 / a.rate, self.tick)
@@ -346,6 +351,16 @@ class Driver(Node):
                       T + 40, f"{name} complete")
         self.mark(f"{step}:end")
 
+    def frame(self, name):
+        """Move the 07 mail scene's localization frame (its /mail_frame/* services)."""
+        fut = self.frame_cli[name].call_async(Trigger.Request())
+        t = time.time()
+        while not fut.done():
+            if time.time() - t > 10.0:
+                raise Abort(f"/mail_frame/{name}: no answer")
+            time.sleep(0.05)
+        self.ev(f"frame: {fut.result().message}")
+
     def descend(self, leg_k, step, gate=True):
         """Pick / Place: descend (once the claw has settled above), then the EE within grip_tol
         (gate=False: return as soon as the descent leg is complete -- the hook place)."""
@@ -519,6 +534,13 @@ class Driver(Node):
         self.trig("adjust")
         time.sleep(1.0)
         self.trig("capture_pick")
+        if a.mail and self.frame_cli["on_mailbox"].wait_for_service(timeout_sec=3.0):
+            # the hardware procedure (2026-10-30): the frame from the hat onto the mailbox,
+            # the Mailbox Get, the frame off -- the planner refuses to plan without it
+            self.frame("on_mailbox")
+            time.sleep(1.5)
+            self.trig("get_place")
+            self.frame("remove")
         self.ref = self.odom[:3].copy()
         self.grip_cmd = GRIP_OPEN
         time.sleep(1.0)
@@ -573,9 +595,12 @@ class Driver(Node):
             # the operator aborts with the fingers around the stem, the basket on the hat
             time.sleep(a.abort_delay)
             self.op_abort("exit_pick")
-        if a.timetable:
+        if a.timetable and not a.drop_place:
             # the hook grasp: the fingers close AROUND the stem without clamping it,
-            # so holding here is safe; this slack absorbs the gate + close time
+            # so holding here is safe; this slack absorbs the gate + close time.
+            # NOT on a drop (2026-10-26): its jaws CLAMP the fin while the payload
+            # still sits on the pillar, a closed chain that drifts -- lift at once
+            # and absorb the slack hovering at Drop Start instead
             self.align("ready_pick:start", a.slot_exit_pick, "exit_pick")
         elif a.clamp_hold > 0.0:
             self.mark("clamp_hold:start")
@@ -583,7 +608,13 @@ class Driver(Node):
             self.mark("clamp_hold:end")
         self.exit(1, "exit_pick")
         self.leg("go_to_place_start", "go_to_place_start")
-        if a.timetable:
+        if a.timetable and a.drop_place:
+            # (2026-10-26) the pick's length varies with the descent trim and the
+            # close gate, so a drop anchors Ready To Drop to the mission start; the
+            # hover at Drop Start (payload hanging, safe) absorbs it, and its default
+            # 54 s leaves every run >= 6 s there, the planner's aim-at-the-payload window
+            self.align("go_to_start:start", a.slot_ready_drop, "ready_place")
+        elif a.timetable:
             self.align("exit_pick:start", a.slot_ready_place, "ready_place")
         else:
             time.sleep(a.leg_pause)
@@ -594,7 +625,36 @@ class Driver(Node):
             # the gripper OPENS once the EE is within grip_tol, and the exit starts
             # only on the open's SUCCEEDED -- backing out with the jaws still
             # closing would drag the envelope back out of the mouth
-            self.descend(3, "place")
+            if "slides in by itself" in (self.pp_status or ""):
+                # THE AUTONOMOUS INSERT (2026-10-30): the planner slides in once the claw
+                # is aligned and still, then signals the release once it is still at the
+                # release point (pick_place/drop_now); the arm GS opens on that
+                self.begin("place")
+                self.drop_now = None
+                self.ev("place: the planner inserts by itself (pick_place_insert_auto)")
+                if a.insert_press_after > 0.0:
+                    # (2026-10-30) as the operator did: the slide has not started -> press Insert
+                    t0 = time.time()
+                    while (time.time() - t0 < a.insert_press_after
+                           and (self.pp_status or "").startswith("WAITING execute_place")):
+                        time.sleep(0.1)
+                    if (self.pp_status or "").startswith("WAITING execute_place"):
+                        r = self.trig("descend_place", must=False)
+                        self.ev(f"place: the slide had not started after {a.insert_press_after:.0f} s -- "
+                                f"Insert pressed: {r.message}")
+                self.wait(lambda: self.status == "HOLD" and self.info is not None and int(self.info[5]) == 3
+                          and self.info[85] > 0.5, 60, "auto insert complete")
+                e = self.arrival[2] * 1e3 if self.arrival is not None else float("nan")
+                self.ev(f"place: inserted, EE {e:.1f} mm from the release point")
+                if a.abort_at == "insert":
+                    # (2026-10-30) the operator aborts with the envelope IN the mouth: the
+                    # planner must back straight out before it climbs
+                    time.sleep(a.abort_delay)
+                    self.op_abort("insert")
+                self.wait(lambda: self.drop_now is not None, 30, "the planner's release")
+                self.ev(f"place: planner released -- {self.drop_now}")
+            else:
+                self.descend(3, "place")
             if a.grip_via_action:
                 self.gripper_action_open("open")
             else:
@@ -642,10 +702,16 @@ class Driver(Node):
             else:
                 # (2026-10-14) the gripper stays OPEN through the exit and closes on
                 # the way to Land Start while the arm folds
+                if a.timetable:
+                    # hovering after the exit, the payload released: safe slack
+                    self.align("ready_place:start", a.slot_drop_land_start, "go_to_land_start")
                 self.grip_cmd = GRIP_CLOSE      # (not waited for: the leg starts at once)
                 self.ev("gripper CLOSE with Go To Land Start (the arm folds on the way)")
                 self.leg("go_to_land_start", "go_to_land_start")
-            time.sleep(a.leg_pause)
+            if a.timetable and "go_to_land_start:start" in [m[1] for m in self.marks]:
+                self.align("go_to_land_start:start", a.slot_land, "execute_land")
+            else:
+                time.sleep(a.leg_pause)
             self.leg("execute_land", "execute_land")
             self.wait(lambda: self.pp_status.startswith("COMPLETE"), 10, "COMPLETE")
             time.sleep(a.post_hold)
@@ -743,6 +809,8 @@ class Driver(Node):
                             timetable=np.array([self.a.slot_ready_pick, self.a.slot_exit_pick,
                                                 self.a.slot_ready_place, self.a.slot_land_start,
                                                 self.a.slot_land]) if self.a.timetable else np.zeros(0),
+                            timetable_drop=np.array([self.a.slot_ready_drop, self.a.slot_drop_land_start])
+                            if (self.a.timetable and self.a.drop_place) else np.zeros(0),
                             late_name=np.array([l[0] for l in self.late]),
                             late_s=np.array([l[1] for l in self.late]))
         print(f"saved {path}")
@@ -796,8 +864,11 @@ def main():
     # the stem on the pick hat (exit_pick, instead of Exit To Pick), at the place
     # touchdown (exit_place, instead of the open + Exit To Place), or --abort-delay s
     # into the carry (carry). Emulates the arm GS: gripper open, abort, close on ABORTED.
-    ap.add_argument("--abort-at", choices=["none", "exit_pick", "exit_place", "carry"], default="none")
+    ap.add_argument("--abort-at", choices=["none", "exit_pick", "exit_place", "carry", "insert"], default="none")
     ap.add_argument("--abort-delay", type=float, default=0.3, help="[s] after the trigger point (carry: into the leg)")
+    ap.add_argument("--insert-press-after", type=float, default=0.0,
+                    help="[s] the mail's autonomous insert: press Insert (descend_place) if the slide has "
+                         "not started this long after Ready To Insert (0 = never, wait for the planner)")
     ap.add_argument("--post-abort-hold", type=float, default=8.0, help="[s] watched after the abort completes")
     ap.add_argument("--timetable", action="store_true",
                     help="start every step at a fixed mission time (replaces --leg-pause / --clamp-hold)")
@@ -806,6 +877,13 @@ def main():
     ap.add_argument("--slot-ready-place", type=float, default=22.3, help="Exit To Pick start -> Ready To Place")
     ap.add_argument("--slot-land-start", type=float, default=25.0, help="Ready To Place start -> go_to_land_start")
     ap.add_argument("--slot-land", type=float, default=18.3, help="go_to_land_start start -> execute_land")
+    # the DROP timetable (2026-10-26, --timetable with --drop-place): no hold before Exit To Pick
+    # (clamped), Ready To Drop anchored to the mission start, the release drop_dwell after the
+    # Ready To Drop leg ends, Go To Land Start on its own slot
+    ap.add_argument("--slot-ready-drop", type=float, default=54.0,
+                    help="go_to_start start -> Ready To Drop (drop timetable)")
+    ap.add_argument("--slot-drop-land-start", type=float, default=26.0,
+                    help="Ready To Drop start -> go_to_land_start (drop timetable)")
     ap.add_argument("--post-hold", type=float, default=5.0)
     ap.add_argument("--abort-settle", type=float, default=6.0)
     ap.add_argument("--land-wait", type=float, default=12.0)

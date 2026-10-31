@@ -43,6 +43,8 @@ block -- is the free-flight hardware file's. Regenerate after any edit to a
 source; never hand-edit an output. --check verifies the files on disk.
 """
 import argparse
+import json
+import math
 import os
 import re
 import sys
@@ -71,17 +73,18 @@ SET_DOWN = {
 # lab's points are measured on the day (the Envelope row's Get; the Mailbox row from the
 # envelope held in the mouth, README) and typed in the arm GS's Mail Envelope tab.
 MAIL = {
-    "pick_place_place_start": "[1.0, 0.25, 1.1, 0.0]",
+    "pick_place_place_start": "[1.0, 0.25, 1.22, 0.0]",   # (2026-10-30) the diagonal insert's hold height
     "pick_place_land_start": "[0.0, 0.0, 1.0, 0.0]",
     "pick_place_land": "[0.0, 0.0, 0.35, 0.0]",
     "pick_place_pick_pose_deg": "[0.0, 36.0, 44.0, 90.0]",
-    "pick_place_place_pose_deg": "[0.0, 36.0, 44.0, 90.0]",
+    "pick_place_place_pose_deg": "[0.0, 20.0, 45.0, 90.0]",   # (2026-10-30) the claw pitched 25 deg down
     "pick_place_carry_pose_deg": "[0.0, 36.0, 44.0, 90.0]",
     "pick_place_sweep_lo_deg": "[0.0, 36.0, 44.0, 90.0]",
     "pick_place_sweep_hi_deg": "[0.0, 36.0, 44.0, 90.0]",
     "pick_place_ee_offset": "[-0.06, 0.0, 0.0]",
     "pick_place_place_point": "[1.709, 0.25, 1.024, 0.0]",
     "pick_place_place_drop": "false",
+    "pick_place_guard_tilt_deg": "10.0",   # (2026-10-30) below the controller's 15 deg watchdog
 }
 
 RIGS = {
@@ -157,6 +160,24 @@ RIGS["wb_drop"]["note"] = ("# Attitude wb_k_r / wb_k_w = the free-flight H1b 2.1
                            "# 1.6 / 1.2 (2026-10-16, Pegasus archive/lift_lurch_gains_20261016).")
 # The mail delivery flies the pick-and-drop's controller (a 60 g envelope is model uncertainty
 # like the basket), plus the two insert keys after pick_place_place_exit_back.
+def _frame_locator(k):
+    """The planner locator the localization frame's generator printed, read from its JSON (so the yaml
+    cannot drift from the printed frame): [dx, dy, dz] m + dyaw deg."""
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "mail_delivery_20261023",
+                           "cad", "localization_frame.json")) as f:
+        return "[" + ", ".join(repr(float(v)) for v in json.load(f)["locator"][k]) + "]"
+
+
+def _place_start_offset(place_start, place_point):
+    """pick_place_place_start_offset (2026-10-30): the designed Mailbox Start as an offset from the
+    designed release point, in that point's frame (turned by its yaw): [dx, dy, dz, dyaw_deg]."""
+    s, p = json.loads(place_start), json.loads(place_point)
+    c, n = math.cos(math.radians(p[3])), math.sin(math.radians(p[3]))
+    dx, dy = s[0] - p[0], s[1] - p[1]
+    d = [c * dx + n * dy, -n * dx + c * dy, s[2] - p[2], s[3] - p[3]]
+    return "[" + ", ".join(repr(round(v, 4) + 0.0) for v in d) + "]"
+
+
 RIGS["wb_mail"]["overrides"] = {}
 RIGS["wb_mail"]["added"] = dict(RIGS["wb"]["added"])
 RIGS["wb_mail"]["added"]["pick_place_place_insert"] = ("pick_place_place_exit_back",
@@ -164,7 +185,54 @@ RIGS["wb_mail"]["added"]["pick_place_place_insert"] = ("pick_place_place_exit_ba
     "    # pick_place_place_approach_back (the arm GS's Insert Margin) in front of the mouth, level\n"
     "    # with the target; Place (the GS's Insert) slides it straight in.\n"
     "    pick_place_place_insert: true\n"
-    "    pick_place_place_approach_back: 0.15")
+    "    pick_place_place_approach_back: 0.15\n"
+    "    # THE LOCALIZATION FRAME (2026-10-29, hardware only): obj_0 = the printed frame's five\n"
+    "    # markers, Motive's default pivot (their centroid), body created with the frame level and\n"
+    "    # its +x along the room's +x. Set it on the pick hat -> the Envelope row's Get writes the\n"
+    "    # frame + the pick locator; on the mailbox's top -> the Mailbox row's Get writes the frame\n"
+    "    # + the place locator AND its yaw. [dx, dy, dz] m + dyaw deg in the frame's axes, from\n"
+    "    # Pegasus archive/mail_delivery_20261023/cad/make_localization_frame.py (rev B, measured\n"
+    "    # Ø200 hat cap); [] = Get reads obj_0 itself (the envelope).\n"
+    f"    pick_place_pick_locator: {_frame_locator('pick')}\n"
+    f"    pick_place_place_locator: {_frame_locator('place')}\n"
+    "    # THE LAYOUT MAY MOVE (2026-10-30, user: the pillar and the mailbox stand roughly where\n"
+    "    # designed, their relative layout the same, and the drone may start elsewhere, e.g. (-1, 0)).\n"
+    "    # Mailbox Start follows the Mailbox Get: the designed Mailbox Start as an offset from the\n"
+    "    # designed release point, turned by its yaw; Adjust no longer moves it. Adjust (on the\n"
+    "    # ground, before takeoff) moves Start, Land Start and Land to where the vehicle stands:\n"
+    "    # allowed up to 2 m from the typed Start.\n"
+    f"    pick_place_place_start_offset: {_place_start_offset(MAIL['pick_place_place_start'], MAIL['pick_place_place_point'])}\n"
+    "    pick_place_adjust_max: 2.0\n"
+    "    # SAFE, AUTONOMOUS INSERT (2026-10-30, after a sim flight flew into the moved mailbox: the\n"
+    "    # Mailbox Get was never pressed). Plan needs the Mailbox measured (or typed) this session;\n"
+    "    # the slide starts by itself once the claw is still within 15 mm in front of the mouth for\n"
+    "    # 1 s; the release once it is still at the release point (the pick_place_drop_auto_* gates);\n"
+    "    # the arm GS exits on the OPEN report. An abort near the mouth backs out before it climbs.\n"
+    "    pick_place_place_requires_get: true\n"
+    "    pick_place_insert_auto: true\n"
+    "    pick_place_insert_auto_tol: 0.015\n"
+    "    pick_place_insert_auto_dwell_s: 1.0\n"
+    "    # the release's wrist gate (2026-10-30): the drop's 3 deg sits inside the wrist's standing\n"
+    "    # band at q4 = 90 (static friction + the envelope's torque against the heading spring, ~9 deg\n"
+    "    # on hardware); a sim rehearsal hovered 27 s in the mouth with q4 3.7-4.5 deg off, never released\n"
+    "    pick_place_insert_auto_q4_tol_deg: 12.0\n"
+    "    # THE DIAGONAL INSERT (2026-10-30, user design): the Insert Margin back and up along a line\n"
+    "    # pitched 25 deg down (the place pose's claw pitch), the slide forward and down along it -- the\n"
+    "    # drone holds the release 6.5 cm higher, props 14 cm over the box top; the slide untrimmed (the\n"
+    "    # trim took a decaying arrival overshoot as a standing offset in the sim)\n"
+    "    pick_place_place_insert_pitch_deg: 25.0\n"
+    "    pick_place_insert_descent_trim: false\n"
+    "    # the release's claw gates: a window along the insertion line (15 mm short keeps the envelope's\n"
+    "    # centre of mass past the lip, 20 mm long the jaws clear of the wall), 30 mm off it, 50 mm/s,\n"
+    "    # 1 s after the slide (the drop's 20 mm ball / 30 mm/s / 2 s rarely all held at once)\n"
+    "    pick_place_insert_auto_release_wait_s: 1.0\n"
+    "    pick_place_insert_auto_release_short: 0.015\n"
+    "    pick_place_insert_auto_release_long: 0.020\n"
+    "    pick_place_insert_auto_release_off_axis: 0.030\n"
+    "    pick_place_insert_auto_release_speed: 0.05\n"
+    "    # one frame serves both Gets: a Get with the frame still on the OTHER target (the pick and\n"
+    "    # the place points < 0.30 m apart horizontally) is refused, and so is Plan\n"
+    "    pick_place_min_pick_place_dist: 0.30")
 RIGS["wb_mail"]["note"] = RIGS["wb_drop"]["note"]
 
 

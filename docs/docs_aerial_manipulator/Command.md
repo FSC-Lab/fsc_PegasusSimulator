@@ -1613,9 +1613,18 @@ its far end weighted -- centre of mass 40 mm from it) lies flat on the pick hat 
 jaws close vertically) picks it from behind and slides it through the 190 x 90 mm mouth of the RED
 mailbox on the console table (front x 1.70; red y +0.25, blue y -0.25; mouth top edge 25 mm under the box
 top). Arm GS tab **Mail Envelope** (Envelope / Mailbox Start / Mailbox; Ready To Insert / Insert / Exit
-To Insert; the **Insert Margin** box = `pick_place_place_approach_back`, 0.15 m). Insert opens the gripper
-once the claw is within 20 mm; Exit To Insert starts on the OPEN report. Design, numbers and flights:
-`archive/mail_delivery_20261023/README.md`.
+To Insert; the **Insert Margin** box = `pick_place_place_approach_back`, 0.15 m). Since 2026-10-30 the
+insert is AUTONOMOUS and Plan is refused until the Mailbox Get: press Ready To Insert, and the planner
+slides in once the claw is still within 15 mm in front of the mouth for 1 s, then releases once it is
+still at the release point; the GS opens on that and Exit To Insert starts on the OPEN report. If the
+release does not come (the status line names the gate), press **Insert** again: once the envelope is in
+the mouth it is the manual release, as Drop is, and Exit To Insert still follows the OPEN (it stays
+locked until the gripper reports open). Since 2026-10-30 evening the insert is DIAGONAL: claw pitched
+25 deg down (place pose [0, 20, 45, 90]), the hold 15 cm back and up along that line, the slide forward
+and down along it, the drone 6.5 cm higher (props ~14 cm over the box top); the release waits for the
+claw within -15 / +20 mm along the line and 30 mm off it. An abort
+near the mouth backs out along the line before it climbs; the planner's tilt guard is 10 deg. Design, numbers
+and flights: `archive/mail_delivery_20261023/README.md`.
 
 ```bash
 # 0. clean slate (TWO separate calls)
@@ -1628,10 +1637,27 @@ WB_SIM_PROFILE=mail_delivery ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/s
 # 2. the mail-delivery scene + PX4 + torque-mode arm stack + arm GS (opens on Mail Envelope)
 WB_SIM_PROFILE=mail_delivery ~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_pick_and_place_sitl.sh shiqi_machine
 
+# 2b. both Gets read the printed LOCALIZATION FRAME, as on hardware (2026-10-30). It starts on the
+#     pick hat: press the Envelope Get, then the Mailbox Get -- the scene moves the frame onto the
+#     mailbox after the first and lifts it off after the second. By hand, if ever needed:
+~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/mail_delivery_20261023/tools/mail_frame.sh hat   # hat | mailbox | off
+
+# 2c. the layout may sit elsewhere (2026-10-30): pillar + mailbox keep their relative layout, the
+#     drone may start anywhere within 2 m of (0, 0). On the ground press ADJUST first (moves Start /
+#     Land Start / Land to the drone); Mailbox Start follows the Mailbox Get. Sim knobs for a moved set:
+#     PEGASUS_PNP_SPAWN_XY="-1.0,0.0" PEGASUS_MAIL_PILLAR_XY="0.8,0.9" PEGASUS_MAIL_TABLE_FRONT_X=1.50
+#     PEGASUS_MAIL_TABLE_Y=-0.10 PEGASUS_MAIL_RED_Y=0.15 PEGASUS_MAIL_BLUE_Y=-0.35  (in front of step 2)
+
 # 3. take off and switch to DIRECT -- as section 16 step 3; then the Mail Envelope tab
 FASTRTPS_DEFAULT_PROFILES_FILE=~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml \
   /usr/bin/python3 ~/fsc_PegasusSimulator/application/robotic_arm/utils/ps4_teleop_bringup.py up --hover-z 1.0 --settle 0
 ```
 Hardware: `AM_HW_PROFILE=mail_delivery` on the fused whole-body stack (Orin: rebuild `fsc_trajectory_planner`;
-laptop: rebuild `utils_custom_ground_station`). Mailbox row: the envelope laid flat on the mouth's lower lip,
-pushed in to the back wall, Get, then x - 0.036 and z + 0.065 by hand (three decimals: `ros2 param set`).
+laptop: rebuild `utils_custom_ground_station`). Both Gets read the printed **localization frame** (2026-10-29):
+obj_0 = its five markers, Motive's default pivot, body created with the frame level and its +x along the
+room's +x. Envelope row: frame on the pick hat, Get, slide the envelope into its slot, lift the frame off.
+Mailbox row: frame on the mailbox top, +x into the mouth, Get (x, y, z and yaw), lift it off. The planner
+adds `pick_place_pick_locator` / `pick_place_place_locator` (hardware mail yaml; the tab shows them under
+its points); The sim yaml carries the same two locators, and the 07 mail scene publishes its own frame as obj_0 (step 2b).
+`[]` = Get reads the envelope itself. Frame CAD + offsets:
+`archive/mail_delivery_20261023/cad/`, artifact "Envelope Mailing Design".
