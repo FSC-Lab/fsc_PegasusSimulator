@@ -2,12 +2,12 @@
 """Fly the free-flight trajectory-tracking table in Isaac: 2 shapes x 3 speeds x 3 methods x N runs.
 
     setsid nohup /usr/bin/python3 results/utils/run_tracking_campaign.py \
-        > results/simulation_results/free_flight_tracking/campaign.out 2>&1 < /dev/null &
+        > results/simulation_results/Isaac_simulation_data/free_flight_tracking/campaign.out 2>&1 < /dev/null &
 
 One launch condition for every flight (the 2026-10-01 RTF-1 comparison's): headless, real-time
 pacer, Isaac pinned to the P-cores (machine config), no wall-clock rescale, raw mocap feedback,
 planner time scale 1.0. Each flight is one am_compare_cycle.sh (clean slate -> stack -> Isaac ->
-am_ee_compare_driver.py). Each method flies its yaml snapshot in results/simulation_results/free_flight_tracking/configs/:
+am_ee_compare_driver.py). Each method flies its yaml snapshot in results/simulation_results/Isaac_simulation_data/free_flight_tracking/configs/:
 the same plant (every sim_* key identical), the same planner section, the same guards.
 
   shape     circle: r 0.5 m, takeoff yaw 0      figure-8: A 0.70 / B 0.35 m, takeoff yaw 45 deg
@@ -37,7 +37,8 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.abspath(os.path.join(HERE, ".."))                  # results/
-ROOT = os.path.join(RESULTS, "simulation_results")
+SIM = os.path.join(RESULTS, "simulation_results")
+ROOT = os.path.join(SIM, "Isaac_simulation_data")                    # the task folders (raw runs)
 REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 FF = os.path.join(ROOT, "free_flight_tracking")
 CONFIGS = os.path.join(FF, "configs")

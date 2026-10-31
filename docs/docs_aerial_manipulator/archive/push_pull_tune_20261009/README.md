@@ -5,7 +5,7 @@ set (UAV deviation, tracking errors) plus the IMPEDANCE RESIDUAL
 `e_imp = F_ext - (M_d edot_v + D_d e_v + K_d e_y)`; (2) a quick test to pick the simpler and
 safer of box PUSHING and box PULLING -- only that one goes into the final simulation and the
 experiment; (3) a systematic gain tune for the chosen task; (4) the results campaign ->
-`results/simulation_results/box_pushing/` + the MATLAB export.
+`results/simulation_results/Isaac_simulation_data/box_pushing/` + the MATLAB export.
 
 Scene and box: the user's CAD box (`Box_Push.stl` = `Box_Assembly.stl`, byte-identical,
 checked: the real experiment box), 400 g, mu 0.29, 5 mm fin + the sim's 20 mm grip shim, the
@@ -178,7 +178,7 @@ block exists yet).
 Three flights on the shipped push yaml (`fly.sh final_r<k>_a1`, the driver's timetable),
 3/3 completed at the first attempt, the box pushed 498 / 492 / 497 mm, 0.0-0.5 mm moved in
 the exit, tilt <= 3.1 deg, every step on its slot (phase starts agree across runs to 0.09 s --
-the grasp's own length). Copied to `results/simulation_results/box_pushing/` and built by
+the grasp's own length). Copied to `results/simulation_results/Isaac_simulation_data/box_pushing/` and built by
 `results/utils/build_box_pushing.py` into `matlab_simulation_data/box_pushing/` (README there).
 
 | run | e_imp slide rms / max | contact | hold | release rms / max | e_y slide mm | eps max / rms mm | rho max / rms | platform | EE | EE heading | q1..q4 deg |

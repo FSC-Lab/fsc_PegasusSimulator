@@ -1,0 +1,48 @@
+[16:18:59] waiting for the planner
+[16:19:06] planner up, safety margin 0.2 m
+[16:19:06] waiting for the payload (Isaac)
+[16:19:48] payload up; letting PX4 / the arm stack settle
+[16:20:33] flying
+[   0.02s] planner: IDLE
+[   0.02s] pick_place: NOT IN DIRECT
+[   1.33s] payload at rest [1.0, 1.0, 0.8105]
+[   1.38s] reset: success=True pick-and-place progress and plan cleared (captures and the Adjust offset kept)
+[   1.43s] adjust: success=True drone points moved by [0.101, -0.070, 0.000] m, yaw 0.0 deg (written into Start, Place Start, Land Start, Land; Place and the drop exit not moved); press Plan
+[   2.48s] capture_pick: success=True captured pick at [1.000, 1.000, 0.811] m, yaw 0.0 deg from /obj_0/mocap (60 samples, spread 1.5 mm); the EE offset is applied in this object frame
+[   3.53s] offboard: success=True Offboard mode request sent
+[   6.58s] arm: success=True Arm command sent
+[   8.58s] climbing to 1.0 m
+[  21.02s] planner: HOLD
+[  21.02s] pick_place: NOT PLANNED: press Plan
+[  21.07s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  21.07s] MARK direct
+[  36.08s] pick_place: PLANNING
+[  36.13s] pick_place: READY next=go_to_start
+[  36.13s] plan: success=True planning the six legs from the current hold -- the status reads READY when done
+[  36.13s] planned leg durations [3.0, 11.8, 16.0, 13.5, 16.0, 5.8] s, exits [3.2, 6.5] s
+[  36.13s] MARK go_to_start:start
+[  36.13s] planner: CALCULATING
+[  36.13s] pick_place: FLYING go_to_start
+[  36.14s] planner: EXECUTING T=3.0s
+[  36.14s] pick_place: FLYING go_to_start T=3.0s
+[  36.18s] go_to_start: success=True planning go_to_start from the current hold; it executes as soon as it is planned
+[  36.18s] go_to_start: executing, T = 3.0 s
+[  39.15s] planner: HOLD
+[  39.15s] pick_place: DONE go_to_start next=execute_pick
+[  39.19s] MARK go_to_start:end
+[  39.19s] timetable: ready_pick in 2.24 s
+[  41.44s] MARK ready_pick:start
+[  41.44s] planner: CALCULATING
+[  41.44s] pick_place: FLYING execute_pick (approach)
+[  41.45s] planner: EXECUTING T=8.8s
+[  41.45s] pick_place: FLYING execute_pick (approach) T=8.8s
+[  41.49s] execute_pick: success=True planning execute_pick from the current hold; it executes as soon as it is planned
+[  41.49s] execute_pick: executing, T = 8.8 s
+[  43.39s] planner: IDLE
+[  43.39s] pick_place: NOT IN DIRECT
+[  43.40s] ABORT: left DIRECT while execute_pick holding above
+[  49.40s] landing by reference
+[  61.47s] disarm: success=True Disarm command sent
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/pick_and_drop_comparison_20261026/tools/../runs/pnd_wb_r3_a1.npz
+ABORTED: left DIRECT while execute_pick holding above
+[16:21:35] done

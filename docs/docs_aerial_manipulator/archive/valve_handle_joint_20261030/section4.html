@@ -1,0 +1,152 @@
+  <h2 id="handle">4. A handle the claw can roll on</h2>
+  <p>With the jaws clamped on the fin, the arm's four joints are used up. Three hold the claw's position and the wrist turns the claw about its own axis. The claw's two other rotations are then set by how the drone moves, so the pads, the fin and the printed shaft take them and push back on the drone through the arm. On 10-29 that coupling grew a 0.45 Hz sway until the arm buckled, 6.9 s after the grasp. A roll joint at the top of the handle, where the claw grips, removes the coupling.</p>
+  <p class="note">The joint frees the claw; it does not add damping. Once the claw can roll, the drone gets its free-flight damping back (the 10-28 reduced model returns the sideways mode to its free-flight decay). Anything in the joint that resists the roll puts the coupling back in proportion: at the sway's 0.5 rad/s it should pass under about 5 mN·m.</p>
+
+  <div class="switch">
+    <span class="swlabel">Handle</span>
+    <div class="seg" role="group" aria-label="Handle">
+      <button type="button" id="hFixed" aria-pressed="false">Fixed fin (today)</button>
+      <button type="button" id="hHinged" aria-pressed="true">Roll fin</button>
+    </div>
+    <span class="swlabel">View</span>
+    <div class="seg" role="group" aria-label="Assembled or exploded">
+      <button type="button" id="hAsm" aria-pressed="true">Assembled</button>
+      <button type="button" id="hExp" aria-pressed="false">Exploded</button>
+    </div>
+  </div>
+  <div class="slider">
+    <label for="hAng">Roll the clamped claw about the joint</label>
+    <input type="range" id="hAng" min="-30" max="30" step="1" value="0">
+    <output id="hAngOut" for="hAng">0°</output>
+  </div>
+  <div class="plan-note" id="hNote"></div>
+  <div class="legend">
+    <span><i class="sq" style="background:var(--paddle)"></i>roll fin (turns with the claw)</span>
+    <span><i class="sq" style="background:var(--post)"></i>base (fixed, clamped on the fin's stump)</span>
+    <span><i class="sq" style="background:var(--steel)"></i>screws, nuts</span>
+    <span><i class="sq" style="background:#7a7f88"></i>O-ring</span>
+    <span><i class="sq" style="background:var(--claw)"></i>gripper, simplified</span>
+    <span><i class="sq" style="background:var(--thread)"></i>joint axis</span>
+  </div>
+  <figure>
+    <div class="viewbar">
+      <button type="button" data-hview="iso">3D</button>
+      <button type="button" data-hview="face">Face-on</button>
+      <button type="button" data-hview="claw">Along the claw</button>
+      <button type="button" data-hview="top">Top</button>
+    </div>
+    <div id="h3d" role="img" aria-label="Rotatable 3D model of the handle end of the beam, with the fixed fin or the roll-fin handle, assembled or exploded"></div>
+    <figcaption><b>Fig. 7.</b> The handle end of the beam from <span class="mono">Valve_Assembly_v2.stl</span> (markers C, D and E, their mounts), to scale, with the claw clamped at the grip point as at the flown pose [0, 5, 25, 0]°. With the roll fin, the slider rolls the claw and the fin together about the joint axis while the base stays still. <b>Exploded</b> pulls the parts apart along the screw, numbered as in the list below; hover a part for its name. The printed parts are the print files.</figcaption>
+  </figure>
+
+  <h3>The design</h3>
+  <p>The top of today's fin comes off. A printed <strong>base</strong> clamps over the 30 mm stump with two M3 bolts and holds one M4 screw along the roll axis. A printed <strong>roll fin</strong> turns on that screw. It is a flat plate, 8 mm thick, standing vertical like today's fin, and the claw grips its faces at the same grip point G. An <strong>O-ring</strong> between the base and the fin holds the fin by light friction. The fin stays vertical until the claw takes it, then turns with the claw.</p>
+  <p>That is two printed parts and four kinds of standard hardware, six pieces in all. The previous version needed eight pieces of hardware, including two washers and a nyloc nut. Two printed parts is the minimum for this joint: one part must turn, and the other must hold the screw on the 30° line. The 5 mm stump cannot hold a screw along a line in its own plane.</p>
+  <p>The fin is sized from where the jaws actually closed in the three hardware valve grasps (10-28 twice, 10-29). Along the claw the jaws closed within 4 mm of the grip point. Along the fin's length they closed 10, 22 and 13 mm short, every time toward the side the claw comes from. So the fin reaches 22 mm above the grip point along the claw (today's fin: 23–35), 34 mm toward the approach side and 22 mm the other way. A 24 mm short grasp still lands fully on the fin, and the pads reach the base's boss only 31 mm short. The handle's top is 208 mm above the table, 4 mm above today's fin.</p>
+  <p>The grip point, the planner's offsets and obj_0 stay where they are. The fin is centred where the claw holds today's fin, and the markers are not touched. Checked against every body in <span class="mono">Valve_Assembly_v2.stl</span>, nothing collides. The only overlap is the two M3 bolts through the stump, which is the drilled hole.</p>
+
+  <h3>The components</h3>
+  <div class="parts">
+    <div class="part"><img src="{{IMG:c0_cut}}" alt="Today's fin with the part to saw off shown in red, 30 mm above its root"><div class="pn">0 · today's fin</div><div class="pd">Saw it off 30 mm above its root (z 104). The red part goes; the stump stays and carries the base.</div></div>
+    <div class="part"><img src="{{IMG:c1_base}}" alt="The printed base: a clamp over the stump, a web and a boss for the screw"><div class="pn">1 · base <span class="pq">printed · 1</span></div><div class="pd">A clamp that slides over the stump, a 5 mm web, and a Ø9 boss on the claw's side that the M4 screw threads into. 13 × 65 × 90 mm, about 23 g.</div></div>
+    <div class="part"><img src="{{IMG:c2_fin}}" alt="The printed roll fin: a flat rounded plate with a bore along one edge direction"><div class="pn">2 · roll fin <span class="pq">printed · 1</span></div><div class="pd">The part the claw grips: 56 × 52 × 8 mm, rounded corners, a Ø4.4 bore along its 56 mm length. It turns on the screw. About 23 g.</div></div>
+    <div class="part"><img src="{{IMG:c3_m4}}" alt="An M4 by 70 socket head cap screw"><div class="pn">3 · M4 × 70 socket head screw <span class="pq">1</span></div><div class="pd">The joint's axle. It passes through the fin and cuts its own thread in the base's boss; its head keeps the fin on.</div></div>
+    <div class="part"><img src="{{IMG:c4_oring}}" alt="A rubber O-ring"><div class="pn">4 · O-ring, 4 × 1 mm <span class="pq">1</span></div><div class="pd">Nitrile rubber, 4 mm inside, 1 mm thick, between the base and the fin. Squeezed by the screw, it holds the fin upright.</div></div>
+    <div class="part"><img src="{{IMG:c5_m3}}" alt="An M3 by 16 socket head cap screw"><div class="pn">5 · M3 × 16 socket head screw <span class="pq">2</span></div><div class="pd">Through the clamp and the stump, from the hub side.</div></div>
+    <div class="part"><img src="{{IMG:c6_nut}}" alt="An M3 hex nut"><div class="pn">6 · M3 hex nut <span class="pq">2</span></div><div class="pd">In the hex pockets on the clamp's outer face.</div></div>
+  </div>
+
+  <h3>How the fin stays upright, and lets go</h3>
+  <p>The M4 screw squeezes the O-ring between the base and the fin. The friction holds the fin wherever it is set, so set it vertical before the flight; it stays there in the rotor wash. About 2–4 mN·m is enough. To set it on the bench, tape a 10 g weight to the fin's bottom edge, 27 mm from the screw (2.6 mN·m). Tighten the screw until the weight just fails to turn the fin, then back it off a little until the weight turns it slowly. Gravity helps a little: the fin's centre of mass is 4 mm below the screw.</p>
+  <p>The fin need not be exactly vertical. If it rests up to about 30° off, the open jaws (37 mm) still take it, and closing them squeezes it flat between the pads.</p>
+  <p>After the grasp the fin turns with the claw against the same 2–4 mN·m. Today's fixed fin passed about 70 mN·m rms on 10-29, 20 to 35 times more. During the turn the push pulls the fin up the screw, off the O-ring and onto the screw head, so the resistance falls to about 1 mN·m. Tighten the screw fully and the fin is locked; that is the locked half of a locked/free comparison.</p>
+
+  <figure>
+    <div class="scroll"><svg id="hFace" role="img" aria-label="Face-on dimensioned drawing of the roll-fin handle, seen from the beam's outer end"></svg></div>
+    <figcaption><b>Fig. 8.</b> Face-on, seen from the beam's outer end toward the hub (+y to the right), in millimetres in the valve's frame (origin on the bearing axis at table level). Hidden edges are dashed. Marker E's ball is in front of this plane and is drawn as an outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="scroll"><svg id="hSect" role="img" aria-label="Two sections: the joint cut along its axis, and the clamp cut through a bolt"></svg></div>
+    <figcaption><b>Fig. 9.</b> Left: the joint cut along its axis, in the fin's plane (s in mm from G, +s up toward +y). Right: the clamp cut through a bolt, seen from the side (+x to the right, toward the beam's end). Both to scale, the left at one and a half times the right's scale.</figcaption>
+  </figure>
+
+  <h3>Print and assemble</h3>
+  <div class="two">
+    <div class="card">
+      <h3>Print</h3>
+      <ul>
+        <li><span class="mono">handle_base.stl</span>: print upright as exported, clamp down, with a brim. No supports, unless your slicer flags the underside of the boss.</li>
+        <li><span class="mono">roll_fin.stl</span>: print flat on its face. The bore then runs flat through the plate and bridges cleanly.</li>
+        <li>PLA, 4 perimeters, 40 % infill. Holes are drawn at size (Ø4.4 fin bore, Ø3.5 pilot in the boss, Ø3.3 bolt holes); run a drill through the fin's bore and the bolt holes after printing. Leave the Ø3.5 pilot alone: the M4 cuts its thread there.</li>
+      </ul>
+      <p class="why">Files: <span class="mono">docs/docs_aerial_manipulator/archive/valve_handle_joint_20261030/stl/</span> in the Pegasus repo, in millimetres. <span class="mono">Valve_Assembly_v2_roll_fin.stl</span> beside them is your valve model with the fin cut and the handle fitted, in the model's own frame, to open over the CAD. All are generated by <span class="mono">tools/roll_grip_design.py</span>, where every dimension is a named parameter.</p>
+    </div>
+    <div class="card">
+      <h3>Hardware</h3>
+      <ul>
+        <li>1 × M4 × 70 socket head cap screw (ISO 4762).</li>
+        <li>1 × O-ring, 4 mm inside × 1 mm cross-section, nitrile.</li>
+        <li>2 × M3 × 16 socket head cap screws and 2 × M3 hex nuts.</li>
+        <li>Tools: a fine saw, Ø3.3 and Ø4.4 drills, a 10 g weight and tape for setting the hold.</li>
+      </ul>
+    </div>
+  </div>
+  <ol>
+    <li>Saw the fin off 30 mm above its root (z 104; anywhere from 98 to 106 fits) and file the cut flat.</li>
+    <li>Press the two M3 nuts into the hex pockets on the clamp's outer face (+x, away from the hub).</li>
+    <li>Slide the base down over the stump until the clamp sits on the root, boss on the side the claw comes from (−y). Drill Ø3.3 through the stump using the clamp's holes as a guide, fit the two M3 × 16 from the hub side and tighten them.</li>
+    <li>Put the O-ring over the screw's tip. Push the screw through the fin's bore, from its upper end, and turn it into the boss until the O-ring is lightly squeezed between the boss's neck and the fin.</li>
+    <li>Set the hold with the 10 g weight as above, and stand the fin vertical.</li>
+  </ol>
+  <p class="note">The roll fin is 8 mm thick, 3 mm more than today's fin, so the real gripper may stop a little before its target when it closes. Close it on the fin from the arm ground station and note where it stops. If the Valve Turning tab calls that a wrong grip, start the station with <span class="mono">push_pull_grip_max_open</span> set just wider than that position. Nothing changes in the planner or the law.</p>
+
+  <h3>Which way the joint turns</h3>
+  <p>Roll and sideways sway both turn the clamped claw about one axis. It lies in the fin's plane, square to the claw's axis: 30° above horizontal, rising toward the turn direction (+y). The screw lies along it, so the fin frees both. A horizontal axle along the fin's width would free only the part along the tangent, about half the angle. Pitch, fore-aft and vertical motion turn the claw about the jaws' closing axis instead. The joint leaves those alone, but they matter less: the drone holds its height to about ±5 mm, and the valve itself turns to follow the fore-aft motion.</p>
+  <div class="tscroll"><table id="hFreeTable"></table></div>
+  <p class="why">Grip rotation forced by each drone motion at the flown pose, with the valve held by its friction (<span class="mono">wb_valve_turning_flight_20261029/tools/handle_joint_mobility.py</span>). The flights agree: 0.10–0.15° of claw roll per mm of sideways sway, and 4.5° rms of claw-against-fin rotation about the tangent on 10-29. The axis stays within 5° of 30° over the arm poses the turn visits.</p>
+
+  <h3>Where the axis goes</h3>
+  <p>Through the grip point G, where the planner aims the claw: x 160, y 0.6, z 179 mm. The screw passes through G, so the claw point lies on the axis by construction. If the claw closes on the fin a distance d off the axis, too deep or too shallow in the jaws, it has to move d·θ to roll by θ. The law's task spring (120 N/m) resists that like a torsion spring of 120·d². Within 10 mm this is negligible. Sliding along the axis costs nothing, since a point on the axis stays on it.</p>
+  <div class="tscroll"><table id="hOffsetTable"></table></div>
+
+  <h3>What the joint needs</h3>
+  <div class="tscroll"><table id="hSpecTable"></table></div>
+
+  <h3>Clearances</h3>
+  <div class="tscroll"><table id="hClearTable"></table></div>
+  <p class="why">The OM-X fingers are taken as 20 mm wide, reaching 40 mm back toward the wrist and 20 mm past G, and the jaws as 37 mm apart at the tips when open. Check them on the real gripper. The 20 mm case is the Valve Turning tab's close gate. Numbers from <span class="mono">tools/roll_grip_design.py</span> and <span class="mono">tools/check_on_model.py</span>.</p>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card">
+      <h3>What it fixes</h3>
+      <ul>
+        <li>The roll coupling behind the 10-28 and 10-29 contact sway, for roll and sideways motion: about 99 % of the forced rotation at the flown pose, less the 2–4 mN·m the O-ring keeps.</li>
+        <li>The turn itself is unchanged. The push passes through the joint's axis, so it turns the valve as the fin did, and the jaws still close on flat faces.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What it does not</h3>
+      <ul>
+        <li>The wrist kick when the jaws open (24–41° on 10-28/29): open them earlier.</li>
+        <li>The valve following the drone's fore-aft wander: that is the free-axis anchor's share, by design.</li>
+        <li>The airframe's yaw imbalance (0.2 N·m standing trim): re-true the frame.</li>
+        <li>Isaac does not reproduce the contact sway, so only a flight can show the gain.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Testing it</h3>
+  <ol>
+    <li>On the bench: set the hold with the 10 g weight. The fin should stand vertical when you wave a hand or a fan past it. Close the real gripper on it and note where it stops. With the claw clamped by hand, the fin should roll with it.</li>
+    <li>In flight, on one battery: a 10 s clamped hold with no turn, locked (screw tight), then with the hold set. Compare the CoM error rate (the planner's sway guard aborts above 0.15 m/s) and the claw's roll from the arm's joints.</li>
+    <li>Then the 90° turn.</li>
+  </ol>
+  <p class="note">For a −90° turn, print the base mirrored in y: the boss on +y, the axis rising toward −y. The roll fin and the hardware are the same.</p>
+  <style>
+    .parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin: 12px 0 18px; }
+    .part { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px 12px; min-width: 0; }
+    .part img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 4px; }
+    .part .pn { font-family: var(--f-display); font-weight: 600; font-size: 16px; margin-top: 8px; }
+    .part .pq { font-family: var(--f-mono); font-size: 11px; letter-spacing: .04em; color: var(--ink-3); margin-left: 6px; font-weight: 400; }
+    .part .pd { font-size: 14px; color: var(--ink-2); margin-top: 4px; }
+  </style>

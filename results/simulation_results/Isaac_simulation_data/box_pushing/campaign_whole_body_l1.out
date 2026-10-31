@@ -1,0 +1,12 @@
+[20:37:13] whole_body_l1: MASS 0.280 kg, DIST 0.40 m at 0.021 m/s, slots ready 35.0 / close 8.0 / release 22.05 / land step 40.0 s, kept if pushed >= 360 mm
+[20:37:13] whole_body_l1_push_run1 attempt 1 (cmp1028_r1_a1)
+[20:42:21] whole_body_l1_push_run1 completed (298 s, box 395 mm)
+[20:42:21] whole_body_l1_push_run2 attempt 1 (cmp1028_r2_a1)
+[20:47:27] whole_body_l1_push_run2 completed (297 s, box 407 mm)
+[20:47:27] whole_body_l1_push_run3 attempt 1 (cmp1028_r3_a1)
+[20:52:35] whole_body_l1_push_run3 completed (299 s, box 399 mm)
+[20:52:35] whole_body_l1_push_run4 attempt 1 (cmp1028_r4_a1)
+[20:57:41] whole_body_l1_push_run4 completed (297 s, box 405 mm)
+[20:57:41] whole_body_l1_push_run5 attempt 1 (cmp1028_r5_a1)
+[21:02:48] whole_body_l1_push_run5 completed (298 s, box 399 mm)
+[21:02:48] campaign done -- closing the simulation

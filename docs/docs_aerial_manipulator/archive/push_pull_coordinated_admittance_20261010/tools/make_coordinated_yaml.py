@@ -171,6 +171,13 @@ PLANNER_TAIL_OVERRIDES = {"box_pushing": {"v_max": "0.20", "a_max": "0.08", "w_m
 # (the arm held while the jaws open); the TURN itself (push_pull_turn_deg, the circle's 36 s) is
 # the whole-body valve yaml's, verbatim
 PLANNER_TAIL_OVERRIDES["valve_turning"] = dict(PLANNER_TAIL_OVERRIDES["box_pushing"])
+# THIS RIG'S OWN BOX-LAG GUARD (2026-10-28, user decision for the three-controller comparison,
+# archive/box_pushing_comparison_20261028): 60 mm instead of the whole-body rig's 40 mm, the box only
+# (the valve keeps the shared value). On the 280 g / 0.40 m push this rig's decoupled base lags its
+# planned push, so the box runs 41-42 mm behind its plan at the push's peak speed (2 of 2 attempts
+# aborted at 40 mm, ~13 s in, the box not jammed, landed upright); the 2026-10-17 campaign measured
+# 35-48 mm. Every other guard stays shared. (The arbitrary-time rig carries its own 100 mm since 10-25.)
+PLANNER_TAIL_OVERRIDES["box_pushing"]["push_pull_guard_box_lag"] = "0.060"
 
 # THE RAW-MOCAP GUARD (2026-10-21, fsc_PegasusSimulator archive/mocap_safety_guard_20261021):
 # keys the whole-body box-pushing yaml carries (make_push_pull_yaml.py's planner block and

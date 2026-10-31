@@ -162,6 +162,13 @@ if [[ -n "$RENDER_ADAPTIVE_ARG" && ! "$RENDER_ADAPTIVE_ARG" =~ ^[01]$ ]]; then
   echo "ERROR: PEGASUS_RENDER_ADAPTIVE must be 0 or 1 (got '$RENDER_ADAPTIVE_ARG')." >&2
   exit 1
 fi
+# ARM SPIN DRAIN (2026-10-26, 06 only): 1 = run every ready arm-bridge callback each physics step,
+# so the newest effort command is applied (default 0 = one spin_once per step, the old behaviour).
+ARM_SPIN_DRAIN_ARG="${PEGASUS_ARM_SPIN_DRAIN:-}"
+if [[ -n "$ARM_SPIN_DRAIN_ARG" && ! "$ARM_SPIN_DRAIN_ARG" =~ ^[01]$ ]]; then
+  echo "ERROR: PEGASUS_ARM_SPIN_DRAIN must be 0 or 1 (got '$ARM_SPIN_DRAIN_ARG')." >&2
+  exit 1
+fi
 # CPU PINNING (2026-10-01): PEGASUS_ISAAC_CPUS > the machine config's ISAAC_CPUS >
 # unpinned. On a hybrid CPU (shiqi-desktop's i9-14900KF: P-cores = CPUs 0-15,
 # E-cores = 16-31) the scheduler parks Isaac's main thread on an E-core part of the
@@ -374,6 +381,7 @@ PEGASUS_EE_MARKER_CUBE=$EE_MARKER_CUBE PEGASUS_EE_MARKER_CUBE_MASS=$EE_MARKER_CU
 PEGASUS_PROFILE_START=$PROFILE_START PEGASUS_PROFILE_STEPS=$PROFILE_STEPS PEGASUS_PROFILE_OUT=$PROFILE_OUT \
 PEGASUS_REALTIME=$REALTIME_ARG PEGASUS_RENDER_EVERY=$RENDER_EVERY_ARG \
 PEGASUS_RENDER_ADAPTIVE=$RENDER_ADAPTIVE_ARG PEGASUS_RENDER_MAX_GAP_S=$RENDER_MAX_GAP_ARG \
+PEGASUS_ARM_SPIN_DRAIN=$ARM_SPIN_DRAIN_ARG \
   $ISAAC_TASKSET \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

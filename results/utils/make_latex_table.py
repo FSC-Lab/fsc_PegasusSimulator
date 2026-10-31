@@ -97,7 +97,7 @@ def sim_table(summary, sep="5pt"):
 
 
 def exp_table(cells, sep="5pt"):
-    notes = [rf"\item[] Symbols as in Table~\ref{{{SIM_LABEL}}}. Each entry is from the completed flight with the lowest end-effector position RMSE among the repeated flights of that setting.",
+    notes = [rf"\item[] Symbols as in Table~\ref{{{SIM_LABEL}}}. Each entry is the mean over two repeated one-lap tests of that setting, flown in the final flight campaign.",
              SPEED_NOTE]
     return build_table(cells, [PROPOSED, GEO], "RMSE of free-flight trajectory tracking in experiment.",
                        EXP_LABEL, notes, sep)

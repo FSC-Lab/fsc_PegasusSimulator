@@ -1,0 +1,9 @@
+[11:09:50] macfix_m200_1 (0.200 kg)
+[11:14:03] macfix_m200_1: completed | payload = 'assembly' (200 g, yaw 0.0 deg) |  claw vs the drop point, last 1.5 s before the open: |e| 172.7 mm (target - claw x +116.4, y -24.2, z +125.2 mm)| payload at rest: (-1.059, -0.970, 0.824), off the centre x -59 y +30 mm, tilt 8.7 deg -> in the tray, NOT flat|
+[11:14:12] macfix_m200_2 (0.200 kg)
+[11:18:24] macfix_m200_2: completed | payload = 'assembly' (200 g, yaw 0.0 deg) |  claw vs the drop point, last 1.5 s before the open: |e| 172.0 mm (target - claw x +113.5, y -25.6, z +126.6 mm)| payload at rest: (-1.068, -0.974, 0.813), off the centre x -68 y +26 mm, tilt 0.0 deg -> FLAT in the tray|
+[11:18:33] macfix_m100_1 (0.100 kg)
+[11:20:55] macfix_m100_1: ABORTED: left DIRECT while planner HOLD | payload = 'assembly' (100 g, yaw 0.0 deg) | 
+[11:21:05] macfix_m100_2 (0.100 kg)
+[11:25:20] macfix_m100_2: completed | payload = 'assembly' (100 g, yaw 0.0 deg) |  claw vs the drop point, last 1.5 s before the open: |e| 132.7 mm (target - claw x +83.1, y -28.9, z +99.1 mm)| payload at rest: (-1.073, -0.973, 0.813), off the centre x -73 y +27 mm, tilt 0.0 deg -> FLAT in the tray|
+[11:25:29] chain done -- simulation closed

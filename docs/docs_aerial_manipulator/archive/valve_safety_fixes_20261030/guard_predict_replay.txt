@@ -1,0 +1,56 @@
+wb_box_pushing_flight_20261021 b161745           air   32.1 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261021 b162604           air   33.1 s  EKF2 fresh 100 %   rejected    1 ->    1   episodes  1 ->  1
+wb_box_pushing_flight_20261021 b164338           air   71.5 s  EKF2 fresh 100 %   rejected    2 ->    2   episodes  2 ->  2
+wb_box_pushing_flight_20261021 b165311           air   37.3 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261021 b170123           air   83.2 s  EKF2 fresh 100 %   rejected    1 ->    1   episodes  1 ->  1
+wb_box_pushing_flight_20261023 b172853           air  104.2 s  EKF2 fresh 100 %   rejected    1 ->    1   episodes  1 ->  1
+wb_box_pushing_flight_20261024 b150423           air   96.1 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261024 b151159           air   95.7 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261024 b151634           air   60.9 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261024 b162850           air  100.0 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261024 b163413           air   99.5 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261024 b164419           air   91.5 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261024_evening b194310   air  109.0 s  EKF2 fresh 100 %   rejected    8 ->    8   episodes  3 ->  3
+wb_box_pushing_flight_20261024_evening b195657   air   54.1 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_box_pushing_flight_20261027 b171114           air  108.1 s  EKF2 fresh 100 %   rejected    1 ->    1   episodes  1 ->  1
+wb_box_pushing_flight_20261027 b172227           air  103.5 s  EKF2 fresh 100 %   rejected    2 ->    2   episodes  2 ->  2
+wb_pick_drop_flight_20261014 d1                  air  122.8 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261014 d2                  air   60.0 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261015 d1                  air   94.5 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261015 d2                  air   73.3 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261015 e1                  air   91.2 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261016 d1                  air   95.9 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261016 d2                  air   97.1 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261016 e1                  air   94.1 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_drop_flight_20261028 m12                 air  124.7 s  EKF2 fresh 100 %   rejected    5 ->    5   episodes  4 ->  4
+wb_pick_drop_flight_20261028 m5                  air   85.7 s  EKF2 fresh 100 %   rejected    1 ->    1   episodes  1 ->  1
+wb_pick_drop_flight_20261028 m6                  air  102.3 s  EKF2 fresh 100 %   rejected    7 ->    7   episodes  5 ->  5
+wb_pick_drop_flight_20261028 m8                  air   94.5 s  EKF2 fresh 100 %   rejected    3 ->    3   episodes  3 ->  3
+wb_pick_place_flight_20261009 p1                 air  180.6 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_place_flight_20261009 p2                 air  153.2 s  EKF2 fresh  89 %   rejected   11 ->   11   episodes  3 ->  3
+wb_pick_place_flight_20261009 p3                 air   74.0 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_pick_place_flight_20261010 p4                 air   75.7 s  EKF2 fresh 100 %   rejected    7 ->    0   episodes  1 ->  0
+      old: brid/jump@76.65
+      new: -
+        t  76.644 s: old 'jump' new 'good'  |p - last good|   27.2 mm (old),   27.2 mm / predicted    7.5 mm (new), EKF2 3.28 m/s
+        t  76.653 s: old 'jump' new 'good'  |p - last good|   55.1 mm (old),   27.9 mm / predicted    2.2 mm (new), EKF2 3.35 m/s
+        t  76.661 s: old 'jump' new 'good'  |p - last good|   83.6 mm (old),   28.5 mm / predicted    1.4 mm (new), EKF2 3.42 m/s
+        t  76.670 s: old 'jump' new 'good'  |p - last good|  112.4 mm (old),   28.8 mm / predicted    2.1 mm (new), EKF2 3.51 m/s
+        t  76.678 s: old 'jump' new 'good'  |p - last good|  141.9 mm (old),   29.5 mm / predicted    1.2 mm (new), EKF2 3.58 m/s
+        t  76.686 s: old 'jump' new 'good'  |p - last good|  171.9 mm (old),   30.0 mm / predicted    0.9 mm (new), EKF2 3.65 m/s
+        ... 8 samples differ in all
+wb_valve_turning_flight_20261028 b180652         air   68.7 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_valve_turning_flight_20261028 b181833         air   68.0 s  EKF2 fresh 100 %   rejected    1 ->    1   episodes  1 ->  1
+wb_valve_turning_flight_20261029 b145128         air   34.0 s  EKF2 fresh 100 %   rejected    0 ->    0   episodes  0 ->  0
+wb_valve_turning_flight_20261029 b145526         air   46.2 s  EKF2 fresh 100 %   rejected  329 ->  156   episodes  3 ->  6
+      old: conf/jump@42.19, lost/jump@42.19, brid/jump@42.19
+      new: brid/jump@43.81, brid/jump@43.98, brid/jump@44.03, conf/frozen@44.72, lost/frozen@44.72, brid/frozen@44.72
+        t  42.189 s: old 'jump' new 'good'  |p - last good|   28.2 mm (old),   28.2 mm / predicted    2.9 mm (new), EKF2 3.24 m/s
+        t  42.198 s: old 'jump' new 'good'  |p - last good|   56.7 mm (old),   28.5 mm / predicted    2.4 mm (new), EKF2 3.28 m/s
+        t  42.206 s: old 'jump' new 'good'  |p - last good|   85.9 mm (old),   29.2 mm / predicted    3.8 mm (new), EKF2 3.34 m/s
+        t  42.214 s: old 'jump' new 'good'  |p - last good|  115.3 mm (old),   29.4 mm / predicted    3.1 mm (new), EKF2 3.34 m/s
+        t  42.222 s: old 'jump' new 'good'  |p - last good|  145.2 mm (old),   30.0 mm / predicted    3.6 mm (new), EKF2 3.38 m/s
+        t  42.231 s: old 'jump' new 'good'  |p - last good|  175.6 mm (old),   30.4 mm / predicted    2.3 mm (new), EKF2 3.39 m/s
+        ... 173 samples differ in all
+
+36 flights: rejected samples 380 -> 200

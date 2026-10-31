@@ -1,0 +1,1 @@
+{"time":"2026-10-28T13:42:43-04:00","method":"coordinated_admittance","run":1,"attempt":1,"status":"failed","why":"[  72.62s] TIMETABLE LATE: close 0.97 s behind its slot","rc":0,"wall_s":285,"tag":"cmp1028_r1_a1","pushed_mm":""}

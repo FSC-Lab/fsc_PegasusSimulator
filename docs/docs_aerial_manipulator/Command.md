@@ -1279,7 +1279,7 @@ recorded reference.
 ```bash
 # the results campaign (3 runs, closes the sim at the end) and the MATLAB export
 setsid nohup ~/fsc_PegasusSimulator/results/utils/run_box_pushing_campaign.sh 3 \
-    > ~/fsc_PegasusSimulator/results/simulation_results/box_pushing/campaign.out 2>&1 < /dev/null &
+    > ~/fsc_PegasusSimulator/results/simulation_results/Isaac_simulation_data/box_pushing/campaign.out 2>&1 < /dev/null &
 PYTHONNOUSERSITE=1 /usr/bin/python3 ~/fsc_PegasusSimulator/results/utils/build_box_pushing.py
 # one tune flight: <tag> key=val ... (push_pull_* -> the planner block, wb_* / observer keys -> the law)
 bash ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_tune_20261009/tools/fly.sh t_x omega_c_t=1.5
@@ -1296,7 +1296,7 @@ the eight-step mission). 3 kept of 4 attempts: e_imp slide 0.73 N rms (max 1.44)
 eps_UAV 48.1 max / 16.8 rms mm; EE 17.9 mm; box 489-494 mm. **The failed attempt crashed in the
 release window**: the jaws opened, the base drifted 27 mm back, q2 hit its stop, q3 went through 0,
 the q3 guard tripped 1.16 s after the opening and the vehicle flipped. The 10-09/10 runs are in
-`results/simulation_results/box_pushing/previous_20261009_10/`.
+`results/simulation_results/Isaac_simulation_data/box_pushing/previous_20261009_10/`.
 
 **2026-10-17 -- the release-window fix** (record: `archive/box_pushing_release_20261017/README.md`).
 Exit To Push now RELEASES first (planner `push_pull/release`: the claw's reference back to the
@@ -1433,7 +1433,7 @@ bash ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_coord
 PYTHONNOUSERSITE=1 /usr/bin/python3 .../push_pull_coordinated_admittance_20261010/tools/summarize_cadm.py runs/<tag>.npz --metrics
 # the results campaign for this method (3 runs) and the two-method MATLAB export / tables
 METHOD=coordinated_admittance setsid nohup ~/fsc_PegasusSimulator/results/utils/run_box_pushing_campaign.sh 3 \
-    > ~/fsc_PegasusSimulator/results/simulation_results/box_pushing/campaign_cadm.out 2>&1 < /dev/null &
+    > ~/fsc_PegasusSimulator/results/simulation_results/Isaac_simulation_data/box_pushing/campaign_cadm.out 2>&1 < /dev/null &
 PYTHONNOUSERSITE=1 /usr/bin/python3 ~/fsc_PegasusSimulator/results/utils/build_box_pushing.py
 # offline: replay a recorded run's MPC chain / the sway + entry bench (OSQP backend from ~/sources/pyosqp)
 PYTHONNOUSERSITE=1 PYTHONPATH=~/sources/pyosqp /usr/bin/python3 .../tools/replay_mpc.py runs/<tag>
@@ -1450,6 +1450,51 @@ scorer books that as un-rendered impedance; lateral / vertical 0.2-0.4 N. eps_UA
 builder aligns the two methods at Ready (this rig's first transit is ~19 s longer: gentler bounds + a
 15 s dwell). The driver's live-box grasp gate (`--grip-live-box`, 4 mm across / 25 mm along the fin)
 is what this rig needs; the paper-literal gate against the captured box never passed.
+
+### 17.y Comparison rig: arbitrary-convergence-time control (Chen et al., IEEE TIE 72(12) (2025) 13693)
+
+The paper's method as an INDEPENDENT fork (2026-10-24; record
+`archive/box_pushing_arbitrary_time_20261024/README.md`): flight node
+`autopilot_arbitrary_time_direct_actuation_node`, namespace `fsc_autopilot_ros2/arbitrary_time_direct_actuation`
+(ACTNDO joint-torque observer, TSKFE fuzzy estimator, the arbitrary-time quadrotor law, the arm's
+joint-space admittance + arbitrary-time law, 250 Hz) + the TORQUE-mode arm stack (`arm_planner` on this
+node's mode topic, `torque_controller_isaac_aerial_atc.yaml`). The planner's stream is converted to a base
+reference in the node. No code shared with the whole-body law.
+```bash
+# 0. clean slate (TWO separate calls), as in 17
+# 1. stack (this flight node + fsc_trajectory_planner pointed at its mode / reference / contact service)
+WB_SIM_PROFILE=box_pushing ~/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/start_arbitrary_time_direct_actuation_t650_aerial_manipulator_stack.sh shiqi_machine uav_0
+# 2. the scene + PX4 + the torque-mode arm (arm-side friction feed-forward OFF by default for this rig)
+~/fsc_PegasusSimulator/scripts/indoor_sim/start_t650_aerial_manipulator_arbitrary_time_box_pushing_sitl.sh shiqi_machine
+# the whole mission scripted, headless (after step 0); score:
+bash ~/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/box_pushing_arbitrary_time_20261024/tools/run_pl_atc.sh <tag>
+PYTHONNOUSERSITE=1 /usr/bin/python3 .../box_pushing_arbitrary_time_20261024/tools/atc_score.py runs/<tag>.npz
+PYTHONNOUSERSITE=1 /usr/bin/python3 .../box_pushing_arbitrary_time_20261024/tools/push_timeline.py runs/<tag>.npz
+# the results campaign for this method (3 runs) and the three-method MATLAB export / tables
+METHOD=arbitrary_time MAX_ATTEMPTS=4 setsid nohup ~/fsc_PegasusSimulator/results/utils/run_box_pushing_campaign.sh 3 \
+    > ~/fsc_PegasusSimulator/results/simulation_results/Isaac_simulation_data/box_pushing/campaign_atc.out 2>&1 < /dev/null &
+PYTHONNOUSERSITE=1 /usr/bin/python3 ~/fsc_PegasusSimulator/results/utils/build_box_pushing.py
+```
+The yaml is GENERATED (`tools/make_arbitrary_time_yaml.py` from the whole-body box-pushing yaml: plant and
+planner sections verbatim); parity gtest `ArbitraryTimeParityTest` (6 tests, 1e-8, against
+`arbitrary_time_control.py`). Where the paper leaves a choice the node prints the cyan LAW CHECK line. Three
+changes the paper's values needed on this plant, each from a flight (README section 4): `obs_k` 8.2 -> 4.0 and
+the arm window / floor 2.0 / 1.0 s (the arm's ~36 ms torque path), the arm stack's friction feed-forward off
+(the ACTNDO already estimates the friction), and `atc_contact_reseat` (the base reference re-seated at the
+jaws' stall). Tuned 2026-10-25 (README section 5): the admittance H/D/K 1/4/9 -> 1/3, 1.34, 3 (the paper's
+omega 3 rad/s and zeta 0.67, one third of its stiffness; K 9 completed 2 of 12 pushes, K 3 10 of 13), and this
+rig's OWN guards in its yaml's planner section (the whole-body yamls untouched): box lag 100 mm, force 3.5 N on
+its estimate, and the new planner key `push_pull_guard_box_cross` 45 mm (the box dragged sideways; default 0 =
+off, absent from every whole-body yaml) -- its base-relative arm drags the clamped box with the soft base's
+sideways swings, and twice the box went over the table's side edge and fell. Every rig's residual is scored in
+the SAME task space (`pl_metrics.py`; this rig: the task image J^-T K_d J^-1 of its joint admittance, 686 N/m
+along the push), plus its displacement equivalent.
+Results (2026-10-25, final configuration): **3 of 5 attempts completed**, both failures the sideways guard with
+the box left on the table. Mean +- std over the 3: e_imp slide 14.6 +- 4.6 N = 23.3 +- 6.6 mm (whole-body
+0.68 N = 5.7 mm, coordinated 2.19 N = 28.1 mm), eps_UAV 58.5 / 14.2 mm, EE 15.2 mm, box 517 +- 18 mm. It tracks
+at the whole-body level in free flight; in contact the box stick-slips on its soft base (~22 N/m). The older
+campaigns (paper's K 9: 1 of 8; K 3 before the sideways guard: 3 of 4, the box fell once) are kept in the
+record folder.
 
 ## 18. Valve-turning scene (whole-body L1 4-D, contact phase, the push step as a TURN)
 
@@ -1519,7 +1564,9 @@ come within 5 cm of the beam top (`push_pull_obstacle`, the valve's swept circle
   `PEGASUS_VALVE_ROTOR_MASS` (0.204; 0 = the asset's solid-PLA 0.243), `PEGASUS_VALVE_DAMPING` (0.0 N m s/rad),
   `PEGASUS_VALVE_FRICTION` (v2 0.072 N m, v1 0.048; 0 = the frictionless end), `PEGASUS_VALVE_FRICTION_MODEL` (v2 drive, v1 tanh; `drive` =
   stick-slip, needed for any friction study -- tanh creeps below f, archive/valve_yaw_sweep_20261026), `PEGASUS_VALVE_FIN_GRIP_MM` (20, the sim claw cannot clamp 5 mm),
-  `PEGASUS_VALVE_Q2_LIMIT_DEG` (-20,45), `PEGASUS_VALVE_USD` (Valve_Assembly_v2.usda), `PEGASUS_VALVE_MOCAP_PIVOT`
+  `PEGASUS_VALVE_Q2_LIMIT_DEG` (-20,45), `PEGASUS_VALVE_USD` (Valve_Assembly_v2.usda; `Valve_Assembly_v3.usda` = the
+  roll-fin handle, 2026-10-31, with `PEGASUS_VALVE_ROLL_FRICTION` (0.002 N m) / `PEGASUS_VALVE_ROLL_LOCK=1` and the
+  rotor mass then the asset's -- archive/valve_roll_fin_sim_20261031), `PEGASUS_VALVE_MOCAP_PIVOT`
   (markers = obj_0 at the markers' centroid; axis = on the axis, needs the axis offset 0). The yaml: `archive/valve_turning_20261015/tools/make_valve_turning_yaml.py`
   (the box push's controller tune imported; regenerate, never hand-edit).
 - **With the Isaac window (2026-10-18):** step 2 without `PEGASUS_HEADLESS=1` (or `VALVE_WINDOWED=1 run_valve.sh`,

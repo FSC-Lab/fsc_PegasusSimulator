@@ -150,7 +150,16 @@ Knobs (environment):
                                  rate), default 0
   PEGASUS_VALVE_FIN_GRIP_MM      the fin's clamped width in the sim [mm], default 20; 0 = bare
   PEGASUS_VALVE_USD              the asset, default assets/Valve_Assembly_v2.usda (2026-10-28; was
-                                 Valve_Assembly.usda, v1: no pad, no markers)
+                                 Valve_Assembly.usda, v1: no pad, no markers). Valve_Assembly_v3.usda
+                                 (2026-10-31) = THE ROLL FIN: the handle a second body turning on an
+                                 M4 screw about N (the fin's plane, 30 deg up toward +y) through the
+                                 grip point; the grip shim then sits on the roll fin, the contact truth
+                                 covers both bodies and carries the roll angle ([20..22]), and the
+                                 rotor mass defaults to the asset's (226 g + the 23 g roll fin)
+  PEGASUS_VALVE_ROLL_FRICTION    (v3) the roll joint's O-ring friction [N.m], default 0.002 (the design's
+                                 2-4 mN.m hold), stick-slip in the joint drive; 0 = frictionless
+  PEGASUS_VALVE_ROLL_LOCK=1      (v3) the roll joint LOCKED (a stiff drive: the screw tightened, the
+                                 design's locked / free A/B)
   PEGASUS_VALVE_MOCAP_PIVOT      markers | axis: where obj_0's origin is published, default markers
                                  with an asset that carries them (fsc:mocap_*), else axis. markers
                                  needs the planner's push_pull_valve_axis_offset = minus the centroid
@@ -242,8 +251,29 @@ _mk = _root.GetAttribute("fsc:mocap_markers_m")
 MOCAP_MARKERS = np.array([[float(c) for c in m] for m in _mk.Get()]) if _mk and _mk.HasAuthoredValue() else None
 MOCAP_CENTROID = (np.array([_opt("mocap_pivot_x_m", 0.0), _opt("mocap_pivot_y_m", 0.0), _opt("mocap_pivot_z_m", 0.0)])
                   if MOCAP_MARKERS is not None else None)
+# (2026-10-31) v3, THE ROLL FIN (Valve_Assembly_v3.usda, archive/valve_roll_fin_sim_20261031/tools/
+# stl_to_usda_valve_v3.py): the handle is a second dynamic body, /roll_fin, turning on /roll_joint about
+# the axis N (the fin's plane, 30 deg up toward +y) through the grip point G. The claw grips the roll fin.
+ROLL_FIN = _opt("roll_fin", 0.0) > 0.0
+if ROLL_FIN:
+    ROLL_POINT = np.array([float(v) for v in _root.GetAttribute("fsc:roll_point_m").Get()])
+    ROLL_AXIS = np.array([float(v) for v in _root.GetAttribute("fsc:roll_axis").Get()])
+    ROLL_C = np.array([float(v) for v in _root.GetAttribute("fsc:roll_fin_c_axis").Get()])
+    ROLL_FIN_S = (_opt("roll_fin_s_lo_m", 0.0), _opt("roll_fin_s_hi_m", 0.0))
+    ROLL_FIN_C = (_opt("roll_fin_c_lo_m", 0.0), _opt("roll_fin_c_hi_m", 0.0))
+    ROLL_FIN_MASS = _opt("roll_fin_mass_kg", 0.0)
+GRASP_Z = _opt("grasp_z_m", float("nan"))        # v3: the claw point's height (v1/v2: fin top - 25 mm)
 del _root, _valve_stage, _mk
-ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.204)     # [kg] the printed rotor; 0 = the asset's
+# [kg] the printed rotor (v1/v2: 0.204); 0 = the asset's -- the default with the roll fin, whose asset
+# carries both bodies' masses from the design's densities (PLA 1040, steel 7850)
+ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.0 if ROLL_FIN else 0.204)
+# the roll joint (v3 only): the O-ring's Coulomb friction [N.m] in the joint drive's stick-slip model
+# (the design's 2-4 mN.m hold; ~1 mN.m once the turn's push lifts the fin off the O-ring), or LOCKED
+# (=1: a stiff drive, the screw tightened -- the design's locked/free A/B)
+ROLL_FRICTION = am06._envf("PEGASUS_VALVE_ROLL_FRICTION", 0.002)
+ROLL_LOCK = am06._envf("PEGASUS_VALVE_ROLL_LOCK", 0.0) > 0.5
+ROLL_LOCK_STIFFNESS = 1.0e4             # [N.m/rad] a locked roll joint: 0.03 mrad under a 0.3 N.m couple
+ROLL_LOCK_DAMPING = 2.0                 # [N.m.s/rad]
 BEARING_DAMPING = am06._envf("PEGASUS_VALVE_DAMPING", 0.0)     # [N.m.s/rad]
 # [N.m] per asset (2026-10-28): v2 (the fabric pad on the hub) 0.072 = the 10-27 free-spin bench
 # (archive/valve_damper_spin_20261027); v1 (the sealed 608 alone) 0.048 = 1.5x the measured 0.2 N x
@@ -289,7 +319,8 @@ MOCAP_PIVOT = MOCAP_CENTROID if MOCAP_PIVOT_MODE == "markers" else np.zeros(3)
 AXIS_OFFSET = tuple(float(-v) for v in MOCAP_PIVOT)
 # the planner's push_pull_ee_offset for this valve (rotor frame, from the axis
 # on the plate-bottom plane)
-EE_OFFSET = (VALVE["fin_radius_m"], VALVE["fin_bearing_y_m"], VALVE["fin_top_z_m"] - GRASP_BELOW_TOP)
+EE_OFFSET = (VALVE["fin_radius_m"], VALVE["fin_bearing_y_m"],
+             GRASP_Z if math.isfinite(GRASP_Z) else VALVE["fin_top_z_m"] - GRASP_BELOW_TOP)
 VALVE_BASE_Z = TABLE_HEIGHT + VALVE_RISER       # the plate bottom = obj_0's z
 
 FRICTION_STATIC  = 0.29                 # the table's (measured, 2026-10-05): the gear, if it ever lands on it
@@ -302,6 +333,10 @@ SCENE_ROOT = "/World/valve_turning"
 VALVE_PRIM = SCENE_ROOT + "/valve"
 ROTOR_PRIM = VALVE_PRIM + "/rotor"
 JOINT_PRIM = VALVE_PRIM + "/joint"
+ROLL_FIN_PRIM = VALVE_PRIM + "/roll_fin"            # v3 only
+ROLL_JOINT_PRIM = VALVE_PRIM + "/roll_joint"
+VALVE_BODIES = (ROTOR_PRIM, ROLL_FIN_PRIM) if ROLL_FIN else (ROTOR_PRIM,)
+ROLL_LOG_DEG = 2.0                      # print the roll fin's angle when it rolled this much
 WP_ROOT    = SCENE_ROOT + "/waypoints"
 ROTOR_BODY = "obj_0"                    # the rotor, live: the planner's push_pull_box_topic body
 CLAW_TRUTH_BODY = "claw_0"              # the real claw point, ground truth only
@@ -316,6 +351,8 @@ FIXED_PUB_DIV = 4                       # publish every 4th physics step (62.5 H
 #   [12:15] sum p x f, vehicle-rotor normal   [15:18] sum p x f, vehicle-rotor friction
 #   (moments about the WORLD origin)
 #   [18] interval [s]   [19] number of vehicle-rotor contact points in the interval
+#   v3 (the roll fin, whose contacts count as the valve's): [20] the roll fin's angle about N [rad],
+#   [21] its rate [rad/s], [22] the roll joint's separation [m]
 CONTACT_TRUTH_TOPIC = "/push_pull_truth/contact"
 BEAM_LOG_TURN_DEG = 2.0                 # print the beam's angle when it turned this much
 ANGLE_TOPIC = f"/{ROTOR_BODY}/state/angle"   # the beam's angle, unwrapped [rad], + the rate
@@ -480,7 +517,22 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
             raise SystemExit(f"[AM-T650-VALVE] {ROTOR_PRIM} is not the asset's rotor rigid body -- regenerate the asset")
         # the grip shim: the fin's bare part, FIN_GRIP_MM wide across the jaws
         shim = FIN_GRIP_MM * 1e-3
-        if shim > VALVE["fin_thickness_m"]:
+        if ROLL_FIN and shim > VALVE["fin_thickness_m"]:
+            # v3: on the ROLL FIN's body (it rolls with it), over the fin's whole (s, c) outline about
+            # G; the cube's axes (X, N, -C) = Rx(30 deg) of the asset's
+            ctr = ROLL_POINT + 0.5 * sum(ROLL_FIN_S) * ROLL_AXIS + 0.5 * sum(ROLL_FIN_C) * ROLL_C
+            g = UsdGeom.Cube.Define(stage, ROLL_FIN_PRIM + "/grip_shim")
+            g.CreateSizeAttr(1.0)
+            xf_g = UsdGeom.Xformable(g)
+            xf_g.AddTranslateOp().Set(Gf.Vec3d(*map(float, ctr)))
+            xf_g.AddOrientOp().Set(Gf.Quatf(math.cos(math.radians(15.0)), math.sin(math.radians(15.0)), 0.0, 0.0))
+            xf_g.AddScaleOp().Set(Gf.Vec3f(float(shim), float(ROLL_FIN_S[1] - ROLL_FIN_S[0]),
+                                           float(ROLL_FIN_C[1] - ROLL_FIN_C[0])))
+            UsdPhysics.CollisionAPI.Apply(g.GetPrim())
+            _bind_physics(g.GetPrim(), grip_mat)
+            UsdGeom.Imageable(g.GetPrim()).MakeInvisible()
+            n_col += 1
+        elif shim > VALVE["fin_thickness_m"]:
             h = VALVE["fin_top_z_m"] - VALVE["fin_exposed_bottom_z_m"]
             g = _box(stage, ROTOR_PRIM + "/grip_shim",
                      (VALVE["fin_radius_m"], VALVE["fin_bearing_y_m"], VALVE["fin_exposed_bottom_z_m"] + 0.5 * h),
@@ -522,6 +574,32 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         # every contact of the rotor's colliders reported (threshold 0): the
         # ground-truth wrench the vehicle puts on it (CONTACT_TRUTH_TOPIC)
         PhysxSchema.PhysxContactReportAPI.Apply(rotor).CreateThresholdAttr().Set(0.0)
+        roll_txt = ""
+        if ROLL_FIN:
+            fin = stage.GetPrimAtPath(ROLL_FIN_PRIM)
+            rj = stage.GetPrimAtPath(ROLL_JOINT_PRIM)
+            if not fin or not fin.HasAPI(UsdPhysics.RigidBodyAPI) or not rj or not rj.IsA(UsdPhysics.RevoluteJoint):
+                raise SystemExit(f"[AM-T650-VALVE] the roll-fin asset lacks {ROLL_FIN_PRIM} / {ROLL_JOINT_PRIM}")
+            PhysxSchema.PhysxContactReportAPI.Apply(fin).CreateThresholdAttr().Set(0.0)
+            rd = UsdPhysics.DriveAPI.Get(rj, "angular") or UsdPhysics.DriveAPI.Apply(rj, "angular")
+            rd.CreateTargetPositionAttr(0.0)
+            rd.CreateTargetVelocityAttr(0.0)
+            if ROLL_LOCK:
+                # the screw tightened: a stiff position drive (per DEGREE, as the bearing's damping)
+                rd.CreateStiffnessAttr(float(ROLL_LOCK_STIFFNESS * math.pi / 180.0))
+                rd.CreateDampingAttr(float(ROLL_LOCK_DAMPING * math.pi / 180.0))
+                roll_txt = f"; ROLL JOINT LOCKED ({ROLL_LOCK_STIFFNESS:g} N.m/rad)"
+            elif ROLL_FRICTION > 0.0:
+                # the O-ring: stick-slip Coulomb friction, the bearing's drive model
+                rd.CreateStiffnessAttr(0.0)
+                rd.CreateDampingAttr(float(STICTION_DAMPING * math.pi / 180.0))
+                rd.CreateMaxForceAttr(float(ROLL_FRICTION))
+                roll_txt = f"; ROLL JOINT FREE, O-ring friction {ROLL_FRICTION * 1e3:.1f} mN.m (stick-slip)"
+            else:
+                rd.CreateStiffnessAttr(0.0)
+                rd.CreateDampingAttr(0.0)
+                roll_txt = "; ROLL JOINT FREE, frictionless"
+            roll_txt += f", roll fin {ROLL_FIN_MASS * 1e3:.0f} g"
         self._valve_p0 = np.array(p0)
         print(f"[AM-T650-VALVE] valve: {VALVE_USD} referenced on {VALVE_PRIM}, {n_col} colliders, rotor "
               f"{m_rotor * 1e3:.0f} g (asset {m_asset * 1e3:.0f}), bearing damping {BEARING_DAMPING} N.m.s/rad, "
@@ -530,7 +608,8 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
                  if FRICTION_MODEL == "drive" else "tanh, explicit") + "); "
               + (f"GRIP SHIM {FIN_GRIP_MM:.0f} mm on the {VALVE['fin_thickness_m'] * 1e3:.0f} mm fin (invisible)"
                  if shim > VALVE["fin_thickness_m"] else
-                 f"NO grip shim: the bare {VALVE['fin_thickness_m'] * 1e3:.0f} mm fin (the sim claw cannot clamp it)"),
+                 f"NO grip shim: the bare {VALVE['fin_thickness_m'] * 1e3:.0f} mm fin (the sim claw cannot clamp it)")
+              + roll_txt,
               flush=True)
 
     def _setup_gripper_drive(self):
@@ -620,6 +699,11 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         self._ct_time = 0.0
         self._ct_npts = 0
         self._ct_err = None
+        self._ct_pairs = set()
+        self._fin_h = None
+        self._roll = None                   # [angle rad, rate rad/s, joint separation m] (v3)
+        self._roll_prev = None
+        self._roll_logged = 0.0
         try:
             from omni.physx import get_physx_simulation_interface
             self._ct_sub = get_physx_simulation_interface().subscribe_full_contact_report_events(
@@ -678,15 +762,21 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
                 a0 = str(PhysicsSchemaTools.intToSdfPath(h.actor0))
                 a1 = str(PhysicsSchemaTools.intToSdfPath(h.actor1))
                 # normalised to "the rotor is actor0": one sign convention for
-                # every pair (the box push's analysis calibrated it on the table)
-                if a0 == ROTOR_PRIM:
-                    other, sgn = a1, 1.0
-                elif a1 == ROTOR_PRIM:
-                    other, sgn = a0, -1.0
+                # every pair (the box push's analysis calibrated it on the table);
+                # v3: the roll fin is the valve too
+                if a0 in VALVE_BODIES:
+                    other, sgn, mine = a1, 1.0, a0
+                elif a1 in VALVE_BODIES:
+                    other, sgn, mine = a0, -1.0, a1
                 else:
                     continue
                 if not other.startswith(self.drone_path):
                     continue
+                if ROLL_FIN:              # which drone link touches which valve body, once each
+                    pair = (other[len(self.drone_path):], mine.rsplit("/", 1)[-1])
+                    if pair not in self._ct_pairs:
+                        self._ct_pairs.add(pair)
+                        print(f"[AM-T650-VALVE] t={self._t:7.2f}s FIRST CONTACT {pair[0]} -> valve {pair[1]}", flush=True)
                 o, n = h.contact_data_offset, h.num_contact_data
                 for i in range(o, o + n):
                     c = data[i]
@@ -711,7 +801,10 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         T = self._ct_time
         if T <= 0.0:
             return
-        self._ct_msg.data = [float(v) for v in (self._ct_acc / T)] + [float(T), float(self._ct_npts)]
+        data = [float(v) for v in (self._ct_acc / T)] + [float(T), float(self._ct_npts)]
+        if ROLL_FIN:                          # v3: [20] roll angle rad, [21] its rate rad/s, [22] the joint's separation m
+            data += [float(v) for v in (self._roll if self._roll is not None else (math.nan,) * 3)]
+        self._ct_msg.data = data              # (assign once: rclpy makes .data an array('d'), += a list raises)
         self._ct_pub.publish(self._ct_msg)
         self._ct_acc[:] = 0.0
         self._ct_time = 0.0
@@ -800,6 +893,11 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
                 for pub in self._rotor_twist_pubs:
                     pub.publish(self._rotor_twist)
                 self._track_angle(P, dt * FIXED_PUB_DIV)
+                if ROLL_FIN:
+                    try:
+                        self._track_roll(P, dt * FIXED_PUB_DIV)
+                    except Exception:         # a ground-truth signal must never stop the plant
+                        pass
             try:
                 self._publish_claw_truth(stamp)
             except Exception:                 # a ground-truth topic must never stop the plant
@@ -844,6 +942,31 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
             print(f"[AM-T650-VALVE] t={self._t:7.2f}s BEAM turned {turned:+.1f} deg from the start "
                   f"(yaw {math.degrees(yaw):.1f} deg, rate {math.degrees(rate):+.1f} deg/s, tilt {tilt:.2f} deg)",
                   flush=True)
+
+    def _track_roll(self, P, dt):
+        """(v3) The roll fin's angle about the roll axis N, relative to the rotor -- positive by the right
+        hand about N; a positive roll turns C (in the fin's plane, down) toward -X -- its rate, and how far
+        apart the two bodies' copies of the joint point G are (the joint's error). Into self._roll, on the
+        contact-truth topic; printed whenever it rolled ROLL_LOG_DEG."""
+        if not self._fin_h:
+            self._fin_h = self._dc.get_rigid_body(ROLL_FIN_PRIM)
+            if not self._fin_h:
+                return
+        F = self._dc.get_rigid_body_pose(self._fin_h)
+        Rr = am06.C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z)
+        Rf = am06.C.quat_to_rot(F.r.w, F.r.x, F.r.y, F.r.z)
+        Crel = Rr.T @ Rf @ ROLL_C
+        ang = math.atan2(-float(Crel[0]), float(Crel @ ROLL_C))
+        sep = float(np.linalg.norm((np.array([F.p.x, F.p.y, F.p.z]) + Rf @ ROLL_POINT)
+                                   - (np.array([P.p.x, P.p.y, P.p.z]) + Rr @ ROLL_POINT)))
+        rate = 0.0 if self._roll_prev is None else math.atan2(math.sin(ang - self._roll_prev),
+                                                               math.cos(ang - self._roll_prev)) / max(dt, 1e-6)
+        self._roll_prev = ang
+        self._roll = (ang, rate, sep)
+        if abs(math.degrees(ang) - self._roll_logged) >= ROLL_LOG_DEG:
+            self._roll_logged = math.degrees(ang)
+            print(f"[AM-T650-VALVE] t={self._t:7.2f}s ROLL FIN at {math.degrees(ang):+.1f} deg "
+                  f"(rate {math.degrees(rate):+.1f} deg/s, joint error {sep * 1e3:.2f} mm)", flush=True)
 
     # ── waypoint view ──────────────────────────────────────────────────────
     def _wp_setup_ros(self):

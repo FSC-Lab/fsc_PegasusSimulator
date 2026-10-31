@@ -1,0 +1,15 @@
+1. GRIP ROTATION the vehicle's motion forces, and what the 30 deg pin leaves
+   arm pose                           sideways 10 mm: forced -> left     roll 1 deg: forced -> left
+   flown grasp [0, 5, 25, 0]           1.34 ->  0.01 deg (  1 %)        0.27 ->  0.01 deg (  2 %)
+   fold [0, 10, 20, 0]                 1.28 ->  0.01 deg (  1 %)        0.30 ->  0.01 deg (  2 %)
+   fold [0, -10, 45, 0]                1.79 ->  0.16 deg (  9 %)        0.05 ->  0.01 deg ( 18 %)
+   wrist swung [10, 5, 25, -13]        1.33 ->  0.36 deg ( 27 %)        0.26 ->  0.01 deg (  4 %)
+   wrist swung [-10, 5, 25, 13]        1.33 ->  0.37 deg ( 28 %)        0.26 ->  0.02 deg (  9 %)
+   wrist swung [20, 5, 25, -26]        1.30 ->  0.69 deg ( 53 %)        0.26 ->  0.03 deg ( 11 %)
+
+2. THE SIDEWAYS MODE (reduced model): decay rate [1/s] (more negative = better damped)
+   free flight (k_s 0): -1.92
+   hardware grip k_s 3 N.m/rad: fixed fin -0.63 | roll fin, flown pose (k_s x 0.0000) -1.92 | roll fin, wrist swung 20/26 deg (k_s x 0.279) -1.17
+   hardware grip k_s 5 N.m/rad: fixed fin -0.43 | roll fin, flown pose (k_s x 0.0000) -1.92 | roll fin, wrist swung 20/26 deg (k_s x 0.279) -0.96
+   hardware grip k_s 7 N.m/rad: fixed fin -0.32 | roll fin, flown pose (k_s x 0.0000) -1.92 | roll fin, wrist swung 20/26 deg (k_s x 0.279) -0.81
+   (the O-ring: Coulomb 2-4 mN.m, i.e. a couple capped at 2-4 mN.m against the ~70 mN.m rms the fixed fin passed on 10-29; gravity 0.8 mN.m/rad)

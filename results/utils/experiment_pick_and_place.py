@@ -3,7 +3,7 @@
 
     /usr/bin/python3 results/utils/experiment_pick_and_place.py
 
-Reads each run's ros2 bag from results/experiment_results/pick_and_place/<name>/ (copied there unchanged) and writes,
+Reads each run's ros2 bag from results/experiment_results/flight_test_data/pick_and_place/<name>/ (copied there unchanged) and writes,
 under results/experiment_results/matlab_experiment_data/pick_and_place/:
   <name>.mat                      struct `run`: meta, metrics, tracking, raw -- the layout of
                                   simulation_results/matlab_simulation_data/pick_and_place/<method>_pnp_run<k>.mat
@@ -43,7 +43,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.abspath(os.path.join(HERE, ".."))
 REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 EXP = os.path.join(RESULTS, "experiment_results")
-BAG_ROOT = os.path.join(EXP, "pick_and_place")
+BAG_ROOT = os.path.join(EXP, "flight_test_data", "pick_and_place")
 MAT_DIR = os.path.join(EXP, "matlab_experiment_data", "pick_and_place")
 ARCH = os.path.join(REPO, "docs", "docs_aerial_manipulator", "archive")
 EXTRACT = os.path.join(ARCH, "wb_pick_drop_flight_20261016", "tools", "extract.py")   # 10-09 extractor + gripper
@@ -52,6 +52,8 @@ PP_TOOLS = os.path.join(ARCH, "wb_pick_place_flight_20261009", "tools")         
 CACHE = os.environ.get("AM_EXP_CACHE", "/tmp/am_experiment_cache")
 AUTOPILOT = os.environ.get("FSC_AUTOPILOT_REPO", os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2"))
 ARM_REPO = os.environ.get("FSC_OM_ARM_REPO", os.path.expanduser("~/ros2_ws/src/fsc_open_manipulator"))
+METRICS_NAME = "pick_and_place_metrics.mat"     # experiment_pick_and_drop.py reuses this module with its own names
+SCORES_NAME = "pick_and_place_scores.json"
 
 # The exported runs. name = <method>_pnp_<tag>, the simulation's naming with the flight tag for the run number.
 RUNS = {
@@ -177,7 +179,8 @@ def convert(name, r):
     cfg = copy_configs(r)
     wb_yaml = cfg[r["configs"][0][0]]
     ee_off = np.array(_yaml_list(wb_yaml, "pick_place_ee_offset"))
-    drop_h = _yaml_float(wb_yaml, "pick_place_drop_height")
+    # the drop margin: the yaml's, unless the run says it was typed on the arm GS (not in the bag: no parameter events)
+    drop_h = r.get("drop_height", _yaml_float(wb_yaml, "pick_place_drop_height"))
 
     # ---- phases: the planner's pick-and-place status (FLYING <leg> edges)
     st = PC.edges(d, t0, "pp_status")
@@ -367,7 +370,7 @@ def convert(name, r):
                 gains={k: _yaml_float(wb_yaml, k) for k in ("wb_k_r", "wb_k_w", "wb_ky_x", "wb_dy_x", "wb_ky_psi", "wb_dy_psi")})
 
 
-def stage2():
+def stage2(readme=None):
     import numpy as np
     import scipy.io
     sys.path.insert(0, HERE)
@@ -400,16 +403,16 @@ def stage2():
                  **{k: float(np.mean([f[k] for f in flat if f["method"] == m]))
                     for k in flat[0] if k not in ("name", "method", "run")})
             for m in sorted({f["method"] for f in flat})]
-    scipy.io.savemat(os.path.join(MAT_DIR, "pick_and_place_metrics.mat"),
+    scipy.io.savemat(os.path.join(MAT_DIR, METRICS_NAME),
                      {"metrics_runs": B.colstruct(flat, list(flat[0])), "metrics_mean": B.colstruct(mean, list(mean[0])),
                       "metrics_phase": B.colstruct(ph_rows, list(ph_rows[0])), "phases": out[0]["phases"],
                       "window_s": out[0]["t_end"], "L_arm_m": B.L_ARM},
                      do_compression=True, long_field_names=True, oned_as="column")
-    print("wrote", os.path.relpath(os.path.join(MAT_DIR, "pick_and_place_metrics.mat"), RESULTS), flush=True)
-    write_readme(out)
+    print("wrote", os.path.relpath(os.path.join(MAT_DIR, METRICS_NAME), RESULTS), flush=True)
+    (readme or write_readme)(out)
     json.dump([dict(name=o["name"], window=o["window"], outcome={k: (v.tolist() if hasattr(v, "tolist") else v)
                                                                  for k, v in o["outcome"].items()})
-               for o in out], open(os.path.join(CACHE, "pick_and_place_scores.json"), "w"), indent=1, default=float)
+               for o in out], open(os.path.join(CACHE, SCORES_NAME), "w"), indent=1, default=float)
 
 
 def write_readme(out):
@@ -480,7 +483,7 @@ def write_readme(out):
         "## The flight", "",
         _md_table(["run", "flown", "original ros2 bag", "what happened", "in this folder"],
                   [[t, f"2026-10-16 {hh}", f"`{b}`", wh, ex] for t, hh, b, wh, ex in SESSION]), "",
-        "The bag of the exported run is kept unchanged in `results/experiment_results/pick_and_place/<name>/` on the",
+        "The bag of the exported run is kept unchanged in `results/experiment_results/flight_test_data/pick_and_place/<name>/` on the",
         "lab desktop. The other two bags are in `docs/experimental_data_ros2_bag/1016 - T650-AM whole-body Pick&Drop-*/`.", "",
         "## How this differs from the simulation's pick-and-place", "",
         "- **The task is a pick-and-DROP.** The pick is the same hook grasp. At the place the basket is released",
@@ -554,7 +557,7 @@ def write_readme(out):
         "  b<sub>1,e,d</sub>; joints q<sub>d</sub>.",
         "- **Measured EE:** the planner model's forward kinematics of the measured platform pose and joint angles.",
         f"- **ε<sub>UAV</sub>** = ‖x<sub>b</sub> − r<sub>UAV</sub>‖; ρ<sub>UAV</sub> = ε<sub>UAV</sub> / L, L = {meta['L_arm_m']:.3f} m.", "",
-        "Regenerate (from the bag in `results/experiment_results/pick_and_place/`):", "",
+        "Regenerate (from the bag in `results/experiment_results/flight_test_data/pick_and_place/`):", "",
         "```bash", "/usr/bin/python3 results/utils/experiment_pick_and_place.py", "```", ""]
     with open(os.path.join(MAT_DIR, "README.md"), "w") as f:
         f.write("\n".join(L))

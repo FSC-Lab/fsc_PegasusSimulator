@@ -1,0 +1,18 @@
+[12:39:36] arbitrary_time: MASS 0.280 kg, DIST 0.40 m at 0.021 m/s, slots ready 35.0 / close 8.0 / release 22.05 / land step 40.0 s, kept if pushed >= 360 mm
+[12:39:36] arbitrary_time_push_run1 attempt 1 (cmp1028_r1_a1)
+[12:44:15] arbitrary_time_push_run1 attempt 1 FAILED: [  99.18s] push_pull: ABORTING (SAFETY GUARD: the box is 114 mm BEHIND its plan (> 100 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, 
+[12:44:15] arbitrary_time_push_run1 attempt 2 (cmp1028_r1_a2)
+[12:49:28] arbitrary_time_push_run1 completed (304 s, box 394 mm)
+[12:49:28] arbitrary_time_push_run2 attempt 1 (cmp1028_r2_a1)
+[12:54:31] arbitrary_time_push_run2 completed (294 s, box 405 mm)
+[12:54:31] arbitrary_time_push_run3 attempt 1 (cmp1028_r3_a1)
+[12:59:02] arbitrary_time_push_run3 attempt 1 FAILED: [  89.30s] push_pull: ABORTING (SAFETY GUARD: the box was dragged 50 mm sideways (> 45 mm: toward the table's edge)) -- gripper open, contact off, climbing 0.30
+[12:59:02] arbitrary_time_push_run3 attempt 2 (cmp1028_r3_a2)
+[13:04:05] arbitrary_time_push_run3 completed (294 s, box 406 mm)
+[13:04:05] arbitrary_time_push_run4 attempt 1 (cmp1028_r4_a1)
+[13:08:42] arbitrary_time_push_run4 attempt 1 FAILED: [  97.97s] push_pull: ABORTING (SAFETY GUARD: the box is 106 mm AHEAD OF its plan (> 100 mm: running away)) -- gripper open, contact off, climbing 0.30 m, then 
+[13:08:42] arbitrary_time_push_run4 attempt 2 (cmp1028_r4_a2)
+[13:13:44] arbitrary_time_push_run4 completed (293 s, box 413 mm)
+[13:13:44] arbitrary_time_push_run5 attempt 1 (cmp1028_r5_a1)
+[13:18:50] arbitrary_time_push_run5 completed (296 s, box 410 mm)
+[13:18:50] campaign done -- closing the simulation

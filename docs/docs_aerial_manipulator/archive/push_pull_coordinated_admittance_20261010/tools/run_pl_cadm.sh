@@ -26,16 +26,25 @@ DA="fsc_autopilot_ros2/coordinated_admittance_direct_actuation"
 export PEGASUS_PUSH_LAYOUT="${PEGASUS_PUSH_LAYOUT:-nominal}"
 export FASTRTPS_DEFAULT_PROFILES_FILE="$PEG/docs/docs_aerial_manipulator/archive/q2_sine_sim_20260924/tools/fastdds_udp_only.xml"
 cp "$YAML" "$RUNS/$TAG.yaml"
+# 2026-10-28: the flight flies THIS copy (WB_SIM_YAML below), so DIST / SPEED (env) can set its push
+# distance [m] / mean speed [m/s] like box_pushing_campaign_20261016/tools/fly.sh does for the
+# whole-body rig; unset = the generated yaml's values
+FLY_YAML="$RUNS/$TAG.yaml"
+for kv in "push_pull_push_distance=${DIST:-}" "push_pull_push_mean_speed=${SPEED:-}"; do
+  k=${kv%%=*}; v=${kv#*=}; [[ -n "$v" ]] || continue
+  grep -q "^    $k:" "$FLY_YAML" || { echo "no planner key $k in $FLY_YAML"; exit 1; }
+  sed -i -E "s|^(    $k:)\s*[^#]*(#.*)?$|\1 $v  \2|" "$FLY_YAML"; echo "  $k -> $v"
+done
 # The box and table the run flies, passed to the scene explicitly and recorded beside the npz like
 # box_pushing_campaign_20261016/tools/fly.sh's .args (2026-10-17: the real box -- 500 g, mu 0.25 / 0.25,
 # its back face 0.10 m from the table's +y end, centre y 0.28). Before 2026-10-17 this script left
 # them to the scene's defaults and wrote no .args.
 MASS=${MASS:-0.500}; MU_S=${MU_S:-0.25}; MU_K=${MU_K:-0.25}; BOX_Y0=${BOX_Y0:-0.28}
-DIST=$(sed -nE 's/^    push_pull_push_distance:\s*([0-9.]+).*/\1/p' "$YAML" | head -1)
+DIST=$(sed -nE 's/^    push_pull_push_distance:\s*([0-9.]+).*/\1/p' "$FLY_YAML" | head -1)
 REL=0; [[ " ${PL_DRIVER_ARGS:-} " == *" --release-at-open "* ]] && REL=1
 { echo "MASS=$MASS"; echo "DIST=$DIST"; echo "MU_S=$MU_S"; echo "MU_K=$MU_K"; echo "BOX_Y0=$BOX_Y0"; echo "RELEASE=$REL"; } > "$RUNS/$TAG.args"
 
-(WB_SIM_PROFILE=box_pushing setsid nohup bash "$STACK" shiqi_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
+(WB_SIM_PROFILE=box_pushing WB_SIM_YAML="$FLY_YAML" setsid nohup bash "$STACK" shiqi_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
 
 source /opt/ros/humble/setup.bash
 source "$HOME/ros2_ws/rosdeps/local_setup.bash" 2>/dev/null || true
@@ -52,7 +61,7 @@ done
 echo "[$(date +%T)] planner up, EE offset $off"
 # ARM_GS_AUTO_EXIT_DELAY=0.0 ARM_GS_AUTO_STEPS=false: pl_mission.py owns release / open / exit -- the arm GS's
 # automatic exit (2026-10-19) would race it
-(setsid nohup env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=box_pushing ARM_GS_AUTO_EXIT_DELAY=0.0 ARM_GS_AUTO_STEPS=false PEGASUS_PUSH_BOX_MASS=$MASS \
+(setsid nohup env PEGASUS_HEADLESS=1 WB_SIM_PROFILE=box_pushing WB_SIM_YAML="$FLY_YAML" ARM_GS_AUTO_EXIT_DELAY=0.0 ARM_GS_AUTO_STEPS=false PEGASUS_PUSH_BOX_MASS=$MASS \
    PEGASUS_PUSH_FRICTION_STATIC=$MU_S PEGASUS_PUSH_FRICTION_DYNAMIC=$MU_K \
    PEGASUS_PUSH_BOX_XY="${PEGASUS_PUSH_BOX_XY:-0.675,$BOX_Y0}" \
    "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_coordinated_admittance_box_pushing_sitl.sh" --in-terminal shiqi_machine \

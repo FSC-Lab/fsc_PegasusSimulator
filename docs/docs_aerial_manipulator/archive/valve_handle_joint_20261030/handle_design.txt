@@ -1,0 +1,33 @@
+THE AXIS: through G [160.    0.6 179. ] along [0.    0.866 0.5  ] (30 deg up toward +y, square to the claw axis [ 0.     0.5   -0.866] )
+  s -27.0 mm -> [160.  -22.8 165.5]
+  s -16.0 mm -> [160.  -13.3 171. ]
+  s -46.0 mm -> [160.  -39.2 156. ]
+  s -36.0 mm -> [160.  -30.6 161. ]
+  housing top z 167.9 mm (the old fin top: 204.0; the grip point 179.0)
+
+AXIS OFFSET from G: the claw point must move d*theta, against the task spring -> K_y d^2
+  d   0 mm: 0.000 N.m/rad
+  d  10 mm: 0.012 N.m/rad
+  d  20 mm: 0.048 N.m/rad
+  d  30 mm: 0.108 N.m/rad
+  d 105 mm: 1.323 N.m/rad   (a hinge at the fin's base)
+
+GRAVITY CENTRING: paddle 11.9 g, CoM 13.0 mm below the axis -> 1.31 mN.m/rad; + 10 g at its bottom (42.4 mm) -> 3.61; total 4.92 mN.m/rad
+  bearing friction 0.2 mN.m -> rests within +-2.3 deg
+  bearing friction 0.5 mN.m -> rests within +-5.8 deg
+  bearing friction 1.0 mN.m -> rests within +-11.6 deg
+
+CLEARANCE, finger (20 mm wide, 40 mm back to the wrist, 20 mm past G) to the post, at the grasp (jaws closed) and along the Ready approach (from 120 mm behind, 100 mm above):
+  claw  0.0 mm off G (worst direction):  26.0 mm at the grasp,  14.9 mm on the way in
+  claw 10.0 mm off G (worst direction):  16.0 mm at the grasp,   4.9 mm on the way in
+  claw 20.0 mm off G (worst direction):   6.0 mm at the grasp,   0.0 mm on the way in
+  gripper body, claw  0.0 mm off:  38.3 mm from the post all the way in (jaws open: the post fits between the fingers)
+  gripper body, claw 20.0 mm off:  18.3 mm from the post all the way in (jaws open: the post fits between the fingers)
+  the pads reach s = -30 mm along the pin at the worst; the boss starts at s = -16 (pads on the boss are fine: it is part of the paddle, on the axis)
+
+SWING +-20 deg about the axis:
+  -20 deg: x 146.4..182.5, z min 125.1 mm
+  +20 deg: x 137.5..173.6, z min 125.1 mm
+  marker E's ball: x >= 177.5, z 77.5..107.5; the root top z 74
+
+LOADS at the force guard (5.0 N along +y): along the pin 4.33 N (pulls the pin out of the post: an E-clip takes it), across 2.50 N; pin bending at the near bearing 0.072 N.m -> 12 MPa in a 4 mm steel pin

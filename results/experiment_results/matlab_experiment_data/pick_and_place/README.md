@@ -59,7 +59,7 @@ Raw streams are on the bag's clock: subtract `r.meta.t0_s` to put them on `track
 | D-1 | 2026-10-16 13:51 | `flight_wb_l1_4d_pick_and_drop_20261016_135100` | full mission; the gripper closed wrongly on the fin (stalled at -0.0010 m); the basket came to rest 112 mm from the drop point, tilted 25 deg | not exported |
 | D-2 | 2026-10-16 14:00 | `flight_wb_l1_4d_pick_and_drop_20261016_140020` | full mission; the basket came to rest 30 mm from the drop point, tilted 5 deg; pilot took over at 0.37 m on the final descent | **exported** |
 
-The bag of the exported run is kept unchanged in `results/experiment_results/pick_and_place/<name>/` on the
+The bag of the exported run is kept unchanged in `results/experiment_results/flight_test_data/pick_and_place/<name>/` on the
 lab desktop. The other two bags are in `docs/experimental_data_ros2_bag/1016 - T650-AM whole-body Pick&Drop-*/`.
 
 ## How this differs from the simulation's pick-and-place
@@ -155,7 +155,7 @@ measured − reference. `platform_att_err_deg` columns are `[roll pitch heading]
 - **Measured EE:** the planner model's forward kinematics of the measured platform pose and joint angles.
 - **ε<sub>UAV</sub>** = ‖x<sub>b</sub> − r<sub>UAV</sub>‖; ρ<sub>UAV</sub> = ε<sub>UAV</sub> / L, L = 0.370 m.
 
-Regenerate (from the bag in `results/experiment_results/pick_and_place/`):
+Regenerate (from the bag in `results/experiment_results/flight_test_data/pick_and_place/`):
 
 ```bash
 /usr/bin/python3 results/utils/experiment_pick_and_place.py

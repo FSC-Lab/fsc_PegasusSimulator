@@ -6,13 +6,13 @@
 # --timetable, so every step starts at the same mission time on every run and controller.
 #
 #   setsid nohup results/utils/run_pick_and_place_campaign.sh [N] [rigs...] \
-#       > results/simulation_results/pick_and_place/campaign.out 2>&1 < /dev/null &
+#       > results/simulation_results/Isaac_simulation_data/pick_and_place/campaign.out 2>&1 < /dev/null &
 #
 # Every attempt is one archive/pick_place_top_hat_20261008/tools/run_pnp.sh flight after a
 # clean slate (both clean-slate scripts, in this script's own process -- never from an
 # interactive shell, kill_stale_sim_processes.sh kills its invoking shell). A completed
 # run (driver "completed", payload placed) is copied to
-#   results/simulation_results/pick_and_place/<method>_pnp_run<k>.npz   (+ logs/<name>/)
+#   results/simulation_results/Isaac_simulation_data/pick_and_place/<method>_pnp_run<k>.npz   (+ logs/<name>/)
 # a failed one to failed/<name>_attempt<a>/. Resumes: runs already on disk are skipped.
 # campaign.jsonl gets one line per attempt. Score with build_pick_and_place.py.
 set -o pipefail
@@ -20,7 +20,7 @@ N="${1:-2}"; shift || true
 RIGS=("$@"); [[ ${#RIGS[@]} -gt 0 ]] || RIGS=(wb geo mod)
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PEG="$(cd -- "$HERE/../.." && pwd)"
-OUT="$PEG/results/simulation_results/pick_and_place"
+OUT="$PEG/results/simulation_results/Isaac_simulation_data/pick_and_place"
 TOOLS="$PEG/docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/tools"
 RUNS="$PEG/docs/docs_aerial_manipulator/archive/pick_place_top_hat_20261008/runs"
 STOP="$HOME/ros2_ws/src/fsc_autopilot_ros2/scripts/isaacsim/stop_isaacsim_stack.sh"

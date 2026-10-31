@@ -1,0 +1,885 @@
+# As flown: fsc_open_manipulator commit a0cb8b8, open_manipulator_x_custom_controller/config/external_torque_controller_hardware_aerial_pwm.yaml
+# controller_manager configuration — REAL ARM, WHOLE-BODY FLIGHT TOPOLOGY,
+# AERIAL (INVERTED) MOUNT, PWM CONTROL MODE (Operating Mode 16).
+#
+# THE arm-side config of the aerial manipulator (2026-09-02). The arm is a
+# TORQUE PASS-THROUGH: fsc_autopilot_ros2's whole-body direct-actuation node
+# computes u1, u2 AND u3 from the coupled airframe+arm law and streams the
+# four joint torques (N*m, JointState by name) to
+#   <veh>/fsc_open_manipulator/external_torque_controller/joint_torque_command
+# and ExternalTorqueController forwards them through the TorqueControllerBase
+# safety floor. In SAFETY the flight node streams its PD+gravity arm hold; in
+# DIRECT (the drone ground station's whole-body button) it streams the law's
+# tau_joint. THE ARM RUNS NO LAW OF ITS OWN and has no mode of its own -- there
+# is nothing to switch on this side. The in-process bench law this file
+# replaces (WholeBodyControllerTest, fixed/faked base) was removed 2026-09-02
+# after the 2026-09-01 flight test ran the arm on that bench law while the
+# flight node's torques went to a topic nobody consumed.
+#
+# TWO LAWS, NEVER BOTH AT ONCE, AND THE STREAM IS THE SWITCH.
+#   streaming  -> PASS-THROUGH WITH THE CALIBRATED CORRECTIONS (2026-09-14).
+#                 The whole-body law owns every torque on the arm and this
+#                 controller adds no LAW to it -- but the streamed torque is
+#                 treated as a NOMINAL torque law and receives the same
+#                 bottom-level, command-level pipeline the PD+ hold does
+#                 (doc/Calibration Result for PWM Torque Control.pdf S2.2):
+#                 kappa mapping -> + friction/viscous + dither -> clamp ->
+#                 + back-EMF feedforward + current trim, plus the measured
+#                 gravity-scale correction (S-1)*g(q). The position-error
+#                 INTEGRAL stays OFF on this path (passthrough_integral): the
+#                 flight law's disturbance observer already integrates the
+#                 joint residual. See the PASS-THROUGH CORRECTIONS block.
+#                 Before 2026-09-14 the pass-through was pure (mapping,
+#                 back-EMF and trim only); passthrough_* all false restores that.
+#   silent     -> THE LOCAL PD+ HOLD, the block below: g(q) from the published
+#                 URDF scaled by the measured gravity_scale, the tuned
+#                 per-joint kp/kd, the integral with its deadband, the
+#                 Coulomb/load friction feed-forward and the gated dither.
+#                 Standing error ~0.05 deg on this arm.
+#
+# In the flight topology the flight node streams EXACTLY while its coupled law
+# is commanding the arm -- whole-body DIRECT and airborne -- because the
+# AM-T650 yaml sets wb_arm_hold_stream: false. So in the baseline/SAFETY mode
+# the arm is held by the PD+ law below, and the moment the drone ground
+# station's whole-body button engages DIRECT the arm becomes a pure conduit
+# for the coupled law's torque. That is the invariant the 2026-09-01 flight
+# lacked.
+#
+# EVERY VALUE IN THE HOLD BLOCK IS computed_torque_controller_hardware_aerial_pwm.yaml's,
+# VERBATIM -- the campaign that measured them (utils_calibration/README
+# Sessions 1-3, doc/PWM Voltage Mode.md). THE TWO FILES MUST STAY ONE.
+#
+# What the base class does in BOTH modes, all of it safety or units:
+#   * max_effort clamp on the torque term (the validated servo envelope)
+#   * position-limit pull-back when a joint is OUTSIDE its range and the
+#     stream pushes further out (EEPROM limits do not bind in Mode 0/16)
+#   * N*m -> duty counts through the measured motor model, plus the
+#     back-EMF feedforward AFTER the clamp (PWM mode; in pass-through it
+#     compensates the velocity back_emf_velocity_source selects)
+#   * zero effort on deactivate
+#   * the velocity observer, which the hold's D term and the friction gates
+#     close on (the pass-through itself reads no velocity)
+#   * the ~/smoothed_reference_joint_trajectory stream: position/velocity is
+#     the arm reference the flight node consumes (wb_arm_reference_topic) and
+#     gates DIRECT entry on, .effort is the commanded torque the GS plots.
+#
+# WHICH LAW IS LIVE IS PUBLISHED, so a rosbag proves this rather than implying
+# it: ~/active_law (String, latched, one message per change --
+# LOCAL_PD_PLUS_HOLD / EXTERNAL_WHOLE_BODY) and ~/law_debug
+# (Float32MultiArray at state_publish_rate; layout in
+# external_torque_controller.hpp). law_debug[0] must equal the flight node's
+# wb_debug[0] at every instant, and law_debug[3] must be its complement.
+# Record both. doc/Command.md > "Whole-body torque -- inverted" has the
+# recording line and the checks.
+#
+# EVERY NUMERIC LIST HERE MUST BE ALL-FLOAT. rcl rejects a sequence that mixes
+# integer and double tokens ("Sequence should be of same type") and the node
+# aborts inside rclcpp::init, before any controller code runs.
+#
+# Loaded by
+#   ros2 launch open_manipulator_x_custom_controller \
+#       external_torque_hardware.launch.py namespace:=uav_0/fsc_open_manipulator
+# (one-command form: scripts/indoor_exp/start_open_manipulator_inverted_wb_torque.sh uav_0)
+# which also puts all four joints in Operating Mode 16 in the URDF. Do not
+# load it by hand against a current-mode bring-up: the servos would read duty
+# counts as current counts.
+#
+# TORQUE MODE ON HARDWARE: min/max_position below is the only position guard,
+# and a stopped controller drops the arm limp. The arm is LIVE on activation
+# and homes under the local PD+ hold, which then keeps holding it until the
+# whole-body law engages DIRECT. Mode 16 has NO current regulation -- stall
+# current is duty*Vs/R, bounded only by max_effort and the servo PWM Limit.
+#
+# NAMESPACE-AGNOSTIC node keys: `/**/<node>:` FLAT.
+
+/**/controller_manager:
+  ros__parameters:
+    use_sim_time: false
+    # The flight node's inner-loop rate.
+    update_rate: 250  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    external_torque_controller:
+      type: open_manipulator_x_custom_controller/ExternalTorqueController
+
+    # Present PWM / Present Temperature probe, spawned ONLY with
+    # read_present_pwm:=true. Declared unconditionally (a spawner whose type
+    # is undeclared fails to configure). In Mode 16 the delivered torque
+    # scales as 1/R and R is winding resistance, so the torque gain drifts
+    # with temperature -- this is how to see it.
+    pwm_state_broadcaster:
+      type: gpio_controllers/GpioCommandController
+
+    gripper_controller:
+      type: position_controllers/GripperActionController
+
+
+/**/joint_state_broadcaster:
+  ros__parameters:
+    publish_dynamic_joint_states: false
+
+
+/**/external_torque_controller:
+  ros__parameters:
+
+    # PIN THE CONTROLLER'S OWN RATE (2026-09-12). Without this the parameter is
+    # 0, get_update_rate() returns 0, and dt_nominal_ is left unset -- so
+    # TorqueControllerBase latches it from the FIRST update() cycle's measured dt
+    # (the one-shot `observer_rate_checked_` block) and decides three things
+    # permanently off that single noisy sample, taken at the busiest instant of
+    # the bring-up (spawners running, gripper controller loading, bus starting):
+    #   1. THE VELOCITY OBSERVER LIVES OR DIES. w*dt > 0.6 disables it, and the
+    #      D term silently falls back to the servo's raw Present Velocity
+    #      (~100 ms firmware window, -88 deg at 5 Hz) while kd here is tuned for
+    #      the 20 Hz observer.
+    #   2. WITH THE OBSERVER DEAD, `use_observer` is false, so back-EMF
+    #      compensation falls back to qd_ref in the PASS-THROUGH too -- the arm
+    #      stops being a faithful torque source for the whole-body law's u3.
+    #   3. The dither-vs-rate guard (dither_frequency_hz < 0.45*update_rate) is
+    #      skipped entirely at rate 0, so a 100 Hz dither can end up in a 124 Hz
+    #      loop, above its own stated ceiling of 55.8 Hz.
+    # Observed BOTH WAYS on the same config within half an hour on 2026-09-12:
+    # a 22:35 bring-up drew 4.0 ms (observer ON, w*dt 0.50) and a 23:03 one drew
+    # 8.1 ms (observer DISABLED, w*dt 1.02, "nominal 124 Hz"). Must match
+    # controller_manager's update_rate above.
+    update_rate: 250  # Hz
+
+    joints:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+
+    state_interfaces: [position, velocity, effort]
+
+    # ─── PURE TRACKING (2026-09-12) ─────────────────────────────────────────
+    # arm_planner owns the arm reference in SAFETY and streams it here; the
+    # flight stack's whole_body_planner publishes the SAME message on the SAME
+    # topic in DIRECT. Setting this switches the internal min-jerk generator off
+    # AT THE INTERFACE: ~/target_joint_setpoint, ~/sine_reference_trajectory and
+    # ~/go_home are no longer advertised here -- arm_planner re-advertises all
+    # three at the same names, so the ground station and the flight node's
+    # system_arm_go_home_service are unaffected.
+    #
+    # WHY IT IS SET AT ALL, since the bench ran fine without it: the flight
+    # node's DIRECT-entry gate requires this topic fresh, and it is evaluated
+    # while still in SAFETY, where whole_body_planner is silent by design. With
+    # no SAFETY-side publisher the gate NEVER opened and whole-body DIRECT was
+    # unreachable on hardware. The controller's own
+    # ~/smoothed_reference_joint_trajectory is telemetry and does not satisfy it.
+    #
+    # NEVER set this without launching arm_planner (external_torque_hardware.
+    # launch.py does) -- the pair is the topology. Alone, this leaves the arm
+    # with no reference source at all: a stale stream FREEZES the last
+    # reference, it does not fall back to the internal generator.
+    external_reference_topic: "external_torque_controller/reference_joint_trajectory"
+    external_reference_timeout: 0.2
+
+    # Inverted home [0, 40, 40, 0] deg -- identical to every aerial config and
+    # the whole-body stack's arm home. INERT under pure tracking (homing is a
+    # plan, and arm_planner owns it); kept so a bench run with
+    # external_reference_topic cleared still behaves as before.
+    home_position: [0.0, 0.698132, 0.698132, 0.0]
+    move_to_home_on_activate: true
+
+    # The aerial pace: the min-jerk reference (Go Home, Setpoints tab, the
+    # whole-body planner's arm-sync republish) is what the flight node's hold and gate
+    # track, so it must stay slow.
+    max_velocity: [0.17453, 0.17453, 0.17453, 0.17453]   # 10 deg/s -- operational bound (2026-09-08)
+    min_move_duration: 1.5
+
+    # Working range, radians -- the hardware aerial numbers (q4 +-120 deg since
+    # 2026-09-12, when the wrist was widened to match the planner, the C++
+    # WbReferenceBuilder and the Isaac config; six definitions, keep them
+    # equal). In torque mode this is the
+    # ONLY position guard on the command path; outside it the streamed
+    # torque is replaced by the kp/kd pull-back below.
+    # q2 ON THE REAL ARM IS [-20, +45] deg (the U2D2 board behind the upper
+    # arm; user, 2026-10-06), NOT the asset's [-80, +50]: the GUARD here is
+    # the real range (2026-10-08, pick-and-place hardware check -- before
+    # this nothing on the hardware side enforced it; the pick-and-place poses
+    # peak at q2 ~40 in simulation, 5 deg under the board). The planner's and
+    # the law's compiled joint box stay at the asset's [-80, 50]: a guard
+    # TIGHTER than the planner is safe, the reverse is not. The arm GS adopts
+    # this range live (the joint row reds out a plan beyond it).
+    min_position: [-0.610865, -0.349066, -0.698132, -2.0943951]
+    max_position: [ 0.610865,  0.785398,  0.872665,  2.0943951]
+
+    # ─── Units ──────────────────────────────────────────────────────────────
+    # The stream and kp/kd are N*m; the finished torque is scaled into command
+    # units at the last step. The scalar is the datasheet figure and is
+    # OVERRIDDEN by the per-joint vector below.
+    nm_to_effort: 205.0
+    # MEASURED per servo (utils_calibration/README): K2 = 173.8 +- 7.5, K3 =
+    # 146.7 +- 1.8; j1/j4 are vertical axes, unmeasurable by payload, and
+    # take the mean 160. Identical to the PD+ aerial file -- the two must
+    # stay one.
+    nm_to_effort_joints: [162.4, 154.0, 150.5, 153.4]   # CALIBRATED 2026-09-11 -- scales EVERY streamed whole-body torque
+
+    # ─── PWM CONTROL MODE, Operating Mode 16 ────────────────────────────────
+    # The motor model measured on this arm 2026-08-28 (doc/PWM Voltage Mode.md),
+    # verbatim from computed_torque_controller_hardware_aerial_pwm.yaml where
+    # it was built, tuned and validated, and identical to what the bench
+    # whole-body sessions of 2026-08-28..31 ran.
+    #
+    # Goal PWM is a VOLTAGE command. NOTHING REGULATES CURRENT: stall current
+    # is duty*Vs/R, bounded only by max_effort and by the servo's PWM Limit
+    # (EEPROM, written from the ros2_control xacro at [180, 545, 330, 180]).
+    # The controller logs the resulting per-joint scales and the free damping
+    # at configure -- read that line before moving.
+    command_mode: pwm
+    # Ohm, winding resistance seen at the servo. Delivered torque scales as
+    # 1/R and R rises ~0.4 %/degC; R_eff does not repeat between sessions
+    # either (j3: 4.24 vs 4.69 at 35 degC) -- tuning knobs, not constants.
+    motor_resistance_ohm: [5.26, 4.90, 4.53, 4.88]   # MEASURED R_eff 2026-09-11, per unit
+    # V/(rad/s) at the OUTPUT. CORRECTED 2026-09-08 to the Kt-implied values
+    # 1/(nm_to_effort_joints * current_lsb_a) = [2.323, 2.139, 2.534, 2.323],
+    # which the 09-02/09-03 flight torque-fidelity audit ("0903 - T650-AM
+    # Whole-Body" report) confirms with no free parameter: the measured droop
+    # slope b = Kt*Ke/R came out 0.950 (j2, vs Kt^2/R 0.934) and 1.41-1.48
+    # (j3, vs 1.493), R^2 0.77-0.96 over two flights. The old j2 value 2.86
+    # was 34 % above its own calibrated Kt and would over-compensate by a
+    # third the moment the compensated velocity actually moves. j1/j4 are
+    # UNMEASURED in flight (commands below the current sensor's noise floor)
+    # and take their Kt -- same machine, but bench-confirm before trusting.
+    # MEASURED 2026-09-08 by the electrical fit V = R*I + Ke*qdot on
+    # bags/2026-09-08/collect_gravity_id_a (dither off, zero-phase 10 Hz):
+    #   j2 2.415+-0.002 (r2 0.998), j3 2.478+-0.001 (0.997), j4 2.656+-0.010 (0.992).
+    # j1 never moved in that run, so it keeps the j-mean assumption -- UNMEASURED.
+    # This supersedes BOTH the 2026-08-28 joint R+Ke regression (collinear) and the
+    # 2026-09-08 Kt-implied guess (which assumed Kt = Ke, i.e. a lossless gearbox).
+    back_emf_ke: [2.427, 2.559, 2.623, 2.570]   # MEASURED 2026-09-11, per unit
+    supply_voltage_v: 12.0
+    pwm_full_scale: 885.0
+    current_lsb_a: 0.00269
+    # Scales the back-EMF feedforward, 0..1, LIVE. 0 leaves the motor's
+    # damping acting on ABSOLUTE velocity (heavy viscous drag against the
+    # intended motion -- safe, tracks poorly); 1 compensates the selected
+    # velocity fully. 1.0 was validated on the bench whole-body sessions
+    # (2026-08-28, -50 % tracking error vs 0). If the flight law ever feels
+    # over-damped, this is the first knob:
+    #   ros2 param set <ns>/external_torque_controller back_emf_ff_scale 0.5
+    # 1.0, RAMPED AND RE-PERSISTED 2026-09-12. It was briefly set 0.0 that day
+    # per this block's instruction above, then walked 0 -> 0.5 -> 1.0 live on the
+    # real arm at home. Measured at each step: position STD 0.006-0.028 deg,
+    # peak-to-peak pinned at 1-2 encoder counts (0.0879 deg/count), observer
+    # velocity STD 0.42-1.63 deg/s, NO j1 orbit, no errors, loop health 0.02%
+    # late. The three steps were indistinguishable -- as they must be, because
+    # THE HOLD COMPENSATES THE REFERENCE VELOCITY and that is zero at rest. A
+    # resting arm therefore cannot validate this number; only motion (q_dot_ref
+    # != 0) and the DIRECT pass-through (which uses the OBSERVER velocity) do.
+    #
+    # WHY IT IS PERSISTED AT 1.0 RATHER THAN LEFT AT 0.0: the live value is RAM.
+    # A stack restart at 0.0 would silently turn the arm back into a
+    # ~1.2 N*m/(rad/s) damper, and in DIRECT the coupled law's commanded torque
+    # would quietly stop being delivered as the arm moves, with no warning.
+    # Startup must match what is flown.
+    #
+    # THE CEILING IS FIRMWARE, NOT TASTE. duty = tau*N*rho + s*k_e*qdot with
+    # k_e = [171.4, 157.7, 186.9, 171.4] counts/(rad/s), and the EEPROM PWM
+    # Limit [180, 545, 330, 180] clips the TOTAL -- so at full max_effort the
+    # compensation is SILENTLY TRUNCATED above ~0.71/1.14/0.74/0.71 rad/s.
+    # On the 2026-09-03 flight j3 at 1.57 rad/s spent 293 of its 330 counts on
+    # back-EMF and had 0.29 N*m of authority left. Planner moves (10 deg/s =
+    # 0.175 rad/s) are far inside it; DIRECT is where it can bite.
+    # Back down live if the arm ever feels over-damped or chatters:
+    #   ros2 param set <ns>/external_torque_controller back_emf_ff_scale 0.5
+    # 0.0 AT STARTUP, deliberately, pending validation of the passthrough_ gate
+    # (2026-09-12). History, because it is the reason the gate exists: 1.0 was
+    # ramped live (0 -> 0.5 -> 1.0) with 6 s sampled at each step, all quiet at
+    # 1-2 encoder counts -- and then the arm SWUNG about half a minute into 1.0,
+    # in SAFETY, with nothing streaming and the local hold owning the arm.
+    # Dropping back to 0.0 stopped it immediately. Root cause and fix are in the
+    # back_emf_velocity_source note above.
+    #
+    # 1.0, VALIDATED AND PERSISTED 2026-09-12 after the passthrough_ gate.
+    # The whole-body law needs the pass-through compensated or its u3 is not
+    # delivered as the arm moves, so 1.0 is the operating value.
+    #
+    # WHAT WAS ACTUALLY MEASURED (on the gated binary, observer confirmed ON at
+    # w*dt 0.50 and the loop at its 4.0 ms nominal -- both are preconditions,
+    # see update_rate above):
+    #   scale 0.0, 60 s : p-p pinned at 1-2 encoder counts (0.0879 deg/count)
+    #   scale 0.5, 75 s : quiet, one j1 transient to 0.53 deg that self-cleared
+    #   scale 1.0, 240 s: j1 took an initial excursion to 0.70 deg and DECAYED
+    #                     to 1 count by t=60, then held for 180 s; j2/j3/j4
+    #                     never left quantization. 0 errors, 0.02% late cycles.
+    #   motion at 1.0   : home->30->home on j2/j3, settling error -0.017/+0.057
+    #                     and -0.009/-0.009 deg, NO overshoot either way,
+    #                     j1/j4 undisturbed.
+    # DECAY, not growth, is the point: pre-gate, 1.0 GREW into a swing in ~30 s.
+    #
+    # STILL UNVALIDATED: the DIRECT pass-through itself. It compensates the
+    # OBSERVER velocity and only flight exercises it -- watch wb_control_debug
+    # and joint_torque_command vs law_debug on the first DIRECT.
+    # Back down live if the arm ever chatters or feels over-damped:
+    #   ros2 param set <ns>/external_torque_controller back_emf_ff_scale 0.5
+    back_emf_ff_scale: 1.0
+
+    # ── Current trim, PER JOINT (2026-09-11) ────────────────────────────────
+    # THE SAME BOTTOM-LEVEL CURRENT LOOP THE PD+ CONFIG RUNS. Mode 16 bypasses
+    # the servo's own current controller, so nothing regulates current and a
+    # wrong R appears directly as a torque error -- including on every torque the
+    # whole-body L1 law streams, since this controller is a pure pass-through
+    # while the stream is fresh. The trim is an ACTUATOR LINEARISATION, not a
+    # control term: it runs in the pass-through AND the local hold alike, so the
+    # flight law sees the same actuator as the bench law was calibrated against.
+    #
+    # PER JOINT. Measured on the bench 2026-09-11 (sine excitation, 10/20 deg/s):
+    #   j2  mean current error +12 -> +0.1 mA,  rms 6/8 -> 4/4   <- the point
+    #   j3  mean  +7 -> +3,                     rms 7/9 -> 5/5
+    #   j1  rms 11/13 -> 14/15   HURT: near-zero current, so its current "error"
+    #   j4  rms 11/17 -> 17/24   is mostly noise and the integral chases it.
+    # Empty list => the scalar below applies to every joint (pre-2026-09-11
+    # behaviour, unchanged).
+
+    # ── j4 RE-ENABLED AT LOW BANDWIDTH (2026-09-13) ─────────────────────────
+    # The 1.5 Hz above was tuned on the gravity-loaded joints and inherited by
+    # j4 unexamined. The bench verdict "j4 HURT" is real but it is a verdict on
+    # 1.5 Hz, not on the loop: at that speed it injects ~5.0 mA of noise to
+    # chase a 12.9 mA bias. The noise is broadband and the bias is DC, so they
+    # separate in frequency, and bandwidth is the knob that separates them.
+    #
+    # Simulating THIS loop (deadband, leak, clamp and all) on the 0912 flight's
+    # j4 command and measurement, settled over the last 20 s:
+    #   bw [Hz]   settled trim   trim ripple   ripple as torque   t to 90%
+    #     0.05        -5.08 c        0.231 c       0.0016 N.m       18.5 s
+    #     0.10        -5.06          0.371         0.0025            9.8 s
+    #     0.20        -5.02          0.543         0.0037            7.3 s
+    #     1.50        -4.95          1.386         0.0093            4.5 s
+    # The BIAS IS REMOVED IN FULL AT EVERY BANDWIDTH -- the settled trim is the
+    # same -5 duty counts throughout, because an integrator nulls its input
+    # wherever its gain is finite. Bandwidth does not buy bias removal; it only
+    # sets how fast the trim arrives and how much RIPPLE it injects while it
+    # sits there, and that ripple scales as sqrt(bw) (0.231 -> 1.386 over a 30x
+    # bandwidth span, against sqrt(30) = 5.5). So the rule is: take the LOWEST
+    # bandwidth whose convergence time you can live with.
+    #
+    # 0.2 Hz -- TEMPORARY 2026-09-14, operator's call. And NOT 0.1, because the
+    # rule just above is INCOMPLETE. Convergence really is free here (the arm
+    # holds home in SAFETY too, so the trim settles long before DIRECT entry,
+    # and 9.8 s is no worse than 1.5 Hz's 4.5 s in practice), so on convergence
+    # alone the rule would say take 0.05. But bandwidth also buys AUTHORITY
+    # AGAINST THE LEAK: inside the deadband the trim bleeds with
+    # current_loop_leak_s = 0.25 s and only SHRINKING is allowed, so it survives
+    # only while the integrator can outrun the leak.
+    #   bw [Hz]   tau_int    tau_int/tau_leak   j4 may be gated up to
+    #     0.05     3.18 s         12.7x                 7.3 %
+    #     0.10     1.59 s          6.4x                13.6 %
+    #     0.20     0.80 s          3.2x                23.9 %
+    #     1.50     0.11 s          0.4x                70.2 %
+    # The 0912 flight gated j4 3.1 % of the time, so 0.1 Hz had ~4x margin --
+    # but THE GATING FRACTION IS THE FRAGILE NUMBER, and j4 is the joint the
+    # ratchet bug was measured on, "whose command sits right at the deadband"
+    # (computed_torque_controller.cpp). 0.2 Hz nearly doubles the tolerance and
+    # costs 4 % more total rms, which is the better trade while the gating is
+    # unpinned.
+    #
+    # Projected on the 0912 j4 statistics (bias 12.87 mA, sd 12.03, total rms
+    # 17.62), scaling the bench's measured 15.0 mA injection at 1.5 Hz as
+    # sqrt(bw): 0.05 -30 %, 0.10 -28 %, 0.20 -25 %, 0.50 -16 %, 1.50 +9 %.
+    # 1.5 Hz is the only setting that LOSES, and it is the one the bench
+    # measured losing (11.2 -> 17.2 mA).
+    # j4's bias is steady to +-1 mA over the whole flight (+10.0 +13.9 +14.1
+    # +14.2 +13.5 per 15 s block), so a slow loop has no drift to chase.
+    #
+    # j4 is NOT the noisy joint -- measured above 3 Hz, where this loop has no
+    # authority so loop-on and loop-off joints compare fairly, the floors are
+    # j1 21.5 / j2 20.0 / j3 23.4 / j4 10.8 mA over the quiet hold t=56-65 s
+    # (19.6 / 18.7 / 20.0 / 10.6 over all of DIRECT -- same ordering, and j4 is
+    # the QUIETEST of the four either way). The table above is all of DIRECT.
+    # What makes j1/j4 hard is the SIGNAL: they are gravity-neutral at this pose
+    # and pull 18/26 mA against j2's 354. Same noise, twenty times less signal.
+    #
+    # j1 STAYS OFF and should: its bias is -1.4 mA (0.009 N.m, under one count),
+    # and current_loop_deadband gates it 51 % of the time (j4: 3.1 %). There is
+    # nothing on j1 to correct, so the loop could only add noise.
+    #
+    # UNVERIFIED ON HARDWARE -- this is a flight-data prediction. Two things to
+    # watch, both of which would send this back to 0.0:
+    #   * j4's residual does NOT average down like noise (2.1x over a 30x
+    #     bandwidth cut, where white noise gives 5.5x), so part of it is
+    #     structured. The arm repo attributes a velocity-dependent j4 bias to a
+    #     back_emf_ke ~20 % high -- slot 4's Ke is the j3 unit's value from
+    #     another slot and day. If that is the cause, MEASURE Ke; do not let an
+    #     integrator paper over it.
+    #   * it is still unresolved whether j4's residual is a real torque error or
+    #     a current-SENSOR offset. If it is the sensor, this trim drives the
+    #     delivered torque wrong by 0.031 N.m to zero a fictitious reading. The
+    #     discriminating test is a bench run at NON-ZERO j4 load: a real error
+    #     scales with command, a sensor offset does not. THIS IS THE DOMINANT
+    #     RISK AND THE 0912 FLIGHT DID NOT SETTLE IT: j4 was commanded a mean
+    #     0.062 N.m, peaked at 0.084 and never moved, i.e. the same near-zero
+    #     load as every earlier measurement. Run that bench block before any
+    #     mission where j4 carries load.
+    #   * the choice of 0.2 over 0.1 rests on j4's DEADBAND GATING FRACTION
+    #     staying well under 24 %. It was 3.1 % on 0912. current_loop_debug
+    #     [18..21] publishes the per-joint held flag, so score it every flight;
+    #     if it climbs, RAISE the bandwidth -- do not lower it.
+    current_loop_bandwidth_hz_joints: [0.0, 1.5, 1.5, 0.2]   # j4 0.2 Hz TEMPORARY 2026-09-14: see above
+    # 2026-09-11 and it is NET HARMFUL there. It does halve j4's bias (mean
+    # current error 8.1 -> 3.4 mA, exactly what a trim should do) but more than
+    # doubles the variance (sd 7.8 -> 16.9), for a total rms of 17.2 against
+    # 11.2 mA with it off. j1/j4 carry a few mA, so their current 'error' is
+    # mostly sensor noise and the integral chases it. j2/j3 gain: j2's mean
+    # goes +12 -> +0.1 mA.
+    current_loop_bandwidth_hz: 0.0     # fallback when the list above is empty
+    current_loop_log_only: false
+    current_loop_trim_limit: 0.25
+    current_loop_deadband: 5.0
+    current_loop_leak_s: 0.25
+    # WHICH velocity the back-EMF feedforward compensates IN THE PASS-THROUGH
+    # (LIVE). THE HOLD ALWAYS USES THE REFERENCE -- true again as of 2026-09-12,
+    # and now enforced in code rather than only asserted here.
+    #
+    # It was NOT true for three days and that cost a swing on the real arm. The
+    # 2026-09-08 "one linearization for both laws" change made the selector
+    #     w_comp = use_observer ? v_hat_[i] : qd_ref
+    # apply to BOTH paths and left this note stale. In the LOCAL HOLD, v_hat is
+    # an estimate of the very velocity the term damps, so at s=1 it cancelled the
+    # whole 1.05-1.43 N*m/(rad/s) of free motor damping -- 3-16x the hold's own
+    # kd = [0.069, 0.642, 0.745, 0.327] -- and the 20 Hz observer's LAG flipped
+    # it to NEGATIVE damping in a band. Positive feedback: quiet ~6 s at rest,
+    # swinging half a minute later (arm at home, SAFETY, nothing streaming).
+    # The selector is now `(use_observer && passthrough_)`, so the hold takes
+    # qd_ref and the pass-through keeps v_hat. The linearization rule is intact:
+    # same Ke, same scale, same formula, so a PD+ calibration still transfers. "observer" makes the servo a faithful torque source:
+    # duty pays Ke*v_hat, so applied torque ~ the streamed command up to the
+    # observer bandwidth, whatever the arm is actually doing. "reference"
+    # (the pre-2026-09-08 behaviour) damps about THIS controller's min-jerk
+    # reference -- which in whole-body DIRECT is a delayed replay of the
+    # planner's move (0903 report: awake 8-14 % of DIRECT, in the wrong
+    # windows; j2/j3 delivered 67 %/54 % of the commanded torque, and the
+    # droop -b*(qd - qd_ref) fed the flight observer a phantom disturbance).
+    # With "observer" the flight law must supply ALL arm damping itself:
+    # NOT yet flown -- bench-validate, and ramp back_emf_ff_scale 0 -> 1 live
+    # on the first session (0 = maximum free damping, safe direction).
+    back_emf_velocity_source: observer
+
+    # ─── LOCAL PD+ HOLD: the law that holds the arm in the baseline mode ────
+    # Active whenever nothing is streaming on ~/joint_torque_command, and the
+    # limit pull-back in both modes. Structurally ComputedTorqueController's
+    # `feedforward_mode: gravity` -- the branch PD+ itself dropped on
+    # 2026-09-08, kept HERE because a hold wants gravity and nothing else:
+    # M/C on a hold reference are identically zero, so the RNEA form would add
+    # cost and no torque. These ARE PD+'s validated Mode 16 aerial
+    # numbers.
+    #
+    # gravity: (gravity_scale) * g_arm(q) from the published URDF via
+    # Pinocchio. MEASURED as the direction-mean of the moving residual over 3
+    # poses x 5 speeds per joint, which cancels friction: j2 0.76 (a
+    # compromise -- its gravity error changes SIGN with pose, i.e. a URDF
+    # CoM-angle error no scalar removes), j3 0.95; j1/j4 stay 1.0 because they
+    # are inert (|g| <= 0.011 N*m against ~28 counts of friction). WITHOUT it
+    # a hold at kp 3 would LIFT j2 by ~(1 - 0.76) * 0.70 / 3 = 3.2 deg, which
+    # is ABOVE the flight node's 0.05 rad DIRECT-entry gate -- that is why the
+    # flight node's own soft hold is not the one used here.
+    hold_feedforward_mode: gravity
+    gravity_scale: [1.0, 0.897, 0.969, 1.0]   # MEASURED 2026-09-11 (the hold's g, AND (S-1)*g on the pass-through -- see PASS-THROUGH CORRECTIONS)
+    # Cross-checked against the published URDF: the controller refuses to
+    # configure if the two disagree, rather than compensating gravity with the
+    # wrong sign (a 2 g error).
+    mounting_mode: aerial
+    # RELATIVE: robot_state_publisher publishes it inside this namespace.
+    robot_description_topic: robot_description
+    robot_description_timeout: 10.0
+
+    # kp/kd, N*m, per joint, LIVE (`ros2 param set`, gain_ramp.py). The hold's
+    # PD, and the position-limit pull-back in both modes. PD+'s Mode 16 set,
+    # validated on this arm 2026-08-28..30 (standing error 0.767 -> 0.047 deg):
+    # Mode 16 supplies ~1.2 N*m/(rad/s) of motor damping at ZERO phase, which
+    # is what lifted the kd ceiling that capped the whole current-mode
+    # campaign. j1's kd is deliberately low (0.075) -- above ~0.1 the
+    # zero-load vertical axis runs a 6-8 Hz backlash orbit, and j1 is the
+    # binding constraint on kp too (x4 is the last clean step there, x8 on
+    # j2/j3).
+    kp: [14.67, 101.5, 116.5, 31.4]   # rescaled by k_tau_old/k_tau_new: same duty for the same state
+    kd: [0.069, 0.642, 0.745, 0.327]   # likewise
+
+    # DUTY COUNTS. The validated hardware caps of the PD+ and bench whole-body
+    # campaigns (current-mode counts x 0.9602). At the per-joint K these are
+    # [0.38, 2.19, 1.36, 0.38] N*m -- all BELOW the flight law's own clamp
+    # wb_tau_max (3.0 N*m, params_..._whole_body_direct_actuation_t650.yaml),
+    # so THESE bind first and the law's saturation-consistent rebuild does
+    # not see it. The flight stack's rule is ONE number across law / this /
+    # driver; reconciling wb_tau_max with the servo envelope is an open
+    # tuning item, not something to widen here by default.
+    #
+    # WIDENED 2026-10-16 FOR FLIGHT (user decision, sized on every loaded hardware
+    # flight -- 10-09 PP-1..3, 10-10 PP-4, 10-14, 10-15 E-1/D-1/D-2; Pegasus
+    # docs/docs_aerial_manipulator/archive/arm_caps_20261016). Was
+    # [57.6117, 364.8743, 192.0391, 57.6117] = [0.34, 2.44, 1.42, 0.39] N*m, which
+    # the flights' DIRECT demand (pre-clamp torque term) went past:
+    #   j1  ripple from the law's arm-yaw channel (76-80 % of it above 5 Hz) peaked
+    #       at 88 % of the cap with NO payload; the SAFETY hold sat ON it at every
+    #       DIRECT->SAFETY handover -> 85 (0.50 N*m): the worst flown 51 = 60 %.
+    #   j2  the loaded lift 87 %, the old fold 103 %, the 10-10 set-down contact
+    #       113 % -> 420 (2.81 N*m): every flown peak <= 98 % (that contact spike),
+    #       <= 89 % in free flight. Stall current at 420 is 1.16 A, inside the 1.35 A
+    #       Current Limit. j2's real limit is HEAT, which a cap cannot change: its
+    #       worst 10 s mean current carrying the basket is 244-258 counts, at the
+    #       ~250 of the 2026-08-26 overload shutdown.
+    #   j3  the lift at the pick pose 97 %, the fold to the old carry pose 123 %
+    #       (2.5 s clipped on 10-15 D-1), the set-down contact 114 % -> 260
+    #       (1.92 N*m): worst flown 235 = 90 %. Stall current 0.78 A.
+    #   j4  never above 38 % -> unchanged.
+    # All still BELOW the flight law's wb_tau_max 3.0 N*m, so this clamp still
+    # binds first. The PD+ bench configs keep the old caps. The servo PWM Limit
+    # must cover max_effort + the back-EMF feed-forward: the hardware launch now
+    # DERIVES it from this file (external_torque_hardware.launch.py), so the two
+    # cannot drift apart.
+    max_effort: [85.0, 420.0, 260.0, 57.6117]
+
+    # ─── Correction terms: integral, friction, dither ───────────────────────
+    # PD+'s aerial values verbatim. Since 2026-09-14 the friction and dither
+    # terms act on the STREAMED torque too when passthrough_auxiliary_terms is
+    # set (it is, below); the integral acts on the stream only if
+    # passthrough_integral is set (it is not). Before that date all of them
+    # were hold-only.
+    #
+    # Integral: gearbox stiction is the one thing a PD cannot escape at rest.
+    # ki/i_clamp are sized for friction, not gravity (the calibrated g does
+    # that job); i_deadband is the stick-slip limit-cycle killer -- inside the
+    # band the integral freezes and leaks, and the joint rests where friction
+    # left it. Bands are 0.29/0.34/0.34/0.57 deg. If a joint HUNTS at rest,
+    # widen the band first, not the gains.
+    ki: [96.0195, 144.0293, 144.0293, 96.0195]   # duty counts (current counts x 0.9602)
+    i_clamp: [28.8059, 57.6117, 48.0098, 28.8059]   # duty counts (current counts x 0.9602)
+    i_deadband: [0.005, 0.006, 0.006, 0.010]
+    # Friction feed-forward (2026-08-26 Session 3: direction half-difference of
+    # the residual, 46 sine tiers at 0.02-0.18 rad/s, 3 poses; NNLS fit in the
+    # controller's own units, tanh duty included). Applied by the base class as
+    #   (friction_ff + friction_load_coeff * |gravity_scale * g_arm(q)| * K)
+    #     * tanh(qd_ref / friction_ff_width)  +  viscous_ff * qd_ref
+    # -- reference-driven, so exactly zero at hold and unable to chatter, and
+    # the load term multiplies the SCALED gravity, as these numbers assume.
+    # 2026-09-26 IN-FLIGHT CORRECTION (fsc_PegasusSimulator docs/docs_aerial_manipulator/
+    # sim2real_tuning_20260926/analysis/arm_comp_audit.txt): the residual
+    # tau_applied - S g(q,R0) - J qdd on the MEASURED velocity over the 0924
+    # circles reads the kinetic friction at the flown loads as j2 0.11-0.17 N.m
+    # (F2/F3/F4) against the model's 0.20, j3 0.03-0.09 against 0.11 -- the
+    # report's levels are 30-35 % high in flight. Both fc and mu are scaled so the
+    # load dependence keeps its shape: j2 x0.70, j3 x0.65. j1/j4 unchanged (no
+    # in-flight evidence: their commanded motion never left the sensor floor).
+    # Was [2.9, 4.705, 7.7776, 7.7776] / [0.0, 0.246, 0.161, 0.0].
+    # 2026-10-16 j4 7.7776 -> 4.455 (0.052 -> 0.030 N.m), FROM FLIGHT: the
+    # 10-15 pick-and-drop flights are the first where j4 really moved (the
+    # loaded swing, then the empty wrist's stick-slip). Fitted on the empty
+    # wrist's slides (gravity-neutral; D-1 after the drop and D-2 after the
+    # pull-out, R2 0.97, the two flights agree): kinetic 0.0335 N.m + viscous
+    # 0.020 N.m.s/rad, static ~0.045. The relay added 0.052 on every slide --
+    # 0.019 N.m MORE than the friction it cancels, i.e. a push WITH the motion:
+    # in an offline model built from those numbers it alone sustains the 20 deg
+    # p-p loaded swing and the 60-90 deg empty-wrist hunting the flights showed
+    # (no fitted knob). 0.030 sits ~10 % UNDER the kinetic fit on purpose: an
+    # over-compensating relay is what pumps, so it must err low (relay at exactly
+    # 0.0335 brings the swing back if the real friction is 25 % lower). Pegasus
+    # docs/docs_aerial_manipulator/archive/q4_damping_20261016. Goes with
+    # passthrough_error_damping_joints below -- validated as a pair.
+    # 2026-10-17 j1 2.9 -> 0.0, FROM THE BENCH (Orin, arm at home, LOCAL PD+ HOLD,
+    # nothing streaming; bag ~/bags/j1_touch_20261017_011053): after a touch, j1
+    # never stopped -- a 3.76 Hz limit cycle, 0.6 deg p-p (0.227 deg rms), for the
+    # whole 2 min. The link moves INSIDE the drivetrain slack: Present Current is
+    # 4.2 counts rms where a motor turning with the link would show ~17 of back-EMF
+    # alone (corr 0.46), so the motor's 1.05 N.m.s/rad of free damping never reaches
+    # the swing. What does reach it is this relay, on the MEASURED velocity since
+    # 2026-09-28 (b3cc576, "j1/j4 unchanged -- no in-flight data"): +-2.9 counts in
+    # phase with the motion, +1.2e-3 W into the cycle against kd's -0.5e-3 -- net
+    # energy IN. j1 is the gravity-free yaw joint and never needed the relay at a
+    # hold; 0 leaves kd as the only (dissipative) velocity term there. Same
+    # mechanism as j4's 10-16 fix. Same signature as the 2026-09-11 loose-screw
+    # orbit: check the j1 servo / horn screws if it ever comes back with 0 here.
+    friction_ff: [0.0, 3.294, 5.055, 4.455]   # j2/j3 as above. j4 (before 2026-10-16:)
+    # 21.22 -> 7.78 on PHYSICAL grounds: 21.22 belonged to the OLD j4 unit, and
+    # slot 4 now holds the unit from joint3, whose Coulomb friction is 7.78 duty.
+    # friction_load_coeff[3] is 0, so j4's friction is pure Coulomb and follows
+    # the UNIT. 21.22 also flips sign at every reversal -- a 42-count step against
+    # j4's max_effort of 57.6, i.e. 74 % of its entire envelope.
+    #   MEASURED: reversal excess 12.0 -> 9.6 mA, total rms UNCHANGED. NOT a win.
+    # NOTE (2026-09-14): these auxiliary terms now act on the streamed torque
+    # as well, because passthrough_auxiliary_terms is set below. On that path
+    # the load |tau_ff| in the friction term is the (gravity-corrected)
+    # streamed torque -- at a hold exactly the |gravity_scale * g| these
+    # numbers were fitted against.
+    friction_load_coeff: [0.0, 0.172, 0.105, 0.0]
+    # 2026-09-26 MODEL UPGRADE: the relay follows the MEASURED (observer)
+    # velocity, not the reference. The audit shows why the reference relay
+    # cannot work on this arm: 30-60 % of the moving-reference time the joint is
+    # STUCK, and the relay then pushes the full level in the reference direction
+    # against a joint that is not moving (the stick-slip bursts), while at every
+    # hold it pays nothing although the gearbox holds +-0.2 N.m (j2) of static
+    # residual. On the joint's own velocity the term is the friction the gearbox
+    # actually produces; width 0.03 rad/s (1.7 deg/s) sits above the 20 Hz
+    # observer's noise. UNFLOWN in this form -- first flight: watch for chatter
+    # at holds (raise friction_measured_width) before anything else.
+    friction_velocity_source: measured
+    friction_measured_width: 0.03
+    # 0.015 (was the base default 0.05): at the aerial pace the reference
+    # velocity never saturated the tanh, so the Coulomb term was half-paid
+    # exactly where stiction dominates.
+    friction_ff_width: 0.015
+    # Zero on purpose: the tanh duty already reproduces j3's measured speed
+    # dependence, and a viscous term on top overpays at speed.
+    viscous_ff: [0.0, 0.0, 0.0, 0.0]
+    # DITHER: a gated ripple at dither_frequency_hz, only while the REFERENCE
+    # moves and only while |v| < dither_v_gate -- exactly zero at a settled
+    # hold. The only thing here that pays STATIC friction: every other friction
+    # term is reference-driven and therefore zero at the instant a joint is
+    # stuck. PD+: j2 sine RMS 0.95 -> 0.275 deg, j3 0.49 -> 0.099. 100 Hz is
+    # above a rate loop's bandwidth. Cost: an audible hum while moving.
+    dither_amplitude: [0.0, 48.0098, 19.2039, 14.4029]   # duty counts
+    dither_frequency_hz: 100.0
+    dither_v_gate: 0.05
+    # Detection-based stiction escape: OFF (rate 0), as in PD+ -- measured
+    # ineffective on this arm (20 ms micro-sticks outrun any observer-based
+    # detector). Kept for the record.
+    stiction_ramp_rate: [0.0, 0.0, 0.0, 0.0]
+    stiction_ff: [0.0, 28.8059, 0.0, 0.0]   # duty counts
+    stiction_load_coeff: [0.0, 0.3, 0.0, 0.0]
+
+    # ─── Velocity observer (doc/Velocity Estimator.md) ──────────────────────
+    # Present Velocity is a ~100 ms firmware window (48-50 ms lag): the kd
+    # ceiling of the whole current-mode campaign. The 20 Hz position-only
+    # Luenberger observer (12 ms lag) closes the HOLD's D term, the friction
+    # and dither gates and the limit pull-back, and is published for the
+    # record. The pass-through itself never reads velocity. NOTE: the flight
+    # node closes its own law on Present Velocity from joint_states -- a
+    # finding for it, not a bench quirk.
+    velocity_source: observer
+    velocity_observer_bandwidth_hz: 20.0
+    velocity_observer_damping: 1.0
+    velocity_observer_topic: "~/velocity_observer"
+    velocity_observer_max_delta: 3.0
+
+    # Seconds. Leads the reference handed to the hold's PD, its integral and
+    # the back-EMF feedforward by the measured loop delay (~2 ms SyncRead age +
+    # 3-5 ms command latency). PD+ optimum 6 ms (EE loop 1.98 -> 1.86 mm).
+    reference_lead_s: 0.006
+
+    sine_ramp_time: 1.0
+
+    # Every controller tick: this stream IS the arm reference the 250 Hz
+    # flight law consumes (it uses qdot to bridge DDS arrival jitter).
+    state_publish_rate: 250.0
+    desired_states_topic: "~/smoothed_reference_joint_trajectory"
+    measured_states_topic: ""
+
+    # Stream freshness: stale after 0.3 s, re-arm pass-through only after 3
+    # consecutive valid commands (the Isaac config's pair).
+    command_timeout_s: 0.3
+    rearm_fresh_msgs: 3
+
+    # ─── PASS-THROUGH CORRECTIONS (2026-09-14) ──────────────────────────────
+    # The PD+ calibration (doc/Calibration Result for PWM Torque Control.pdf)
+    # is ONE mapping from a torque-level nominal law to a duty command, and
+    # everything below "THE MAPPING" in its S2.2 is a property of the ACTUATOR
+    # and the PLANT, not of the law above it. These three keys apply that
+    # command-level pipeline to the whole-body law's streamed u3 exactly as it
+    # is applied to the PD+ torque -- a bottom-level hardware correction that
+    # touches neither the flight law nor its disturbance observer. The flight
+    # node keeps asking for N*m and keeps receiving them; what changes is
+    # that the servo now delivers closer to what was asked, so the observer
+    # has less of the gearbox to find.
+    #
+    #   stage (report S2.3)          PD+ path        pass-through, before / after
+    #   (3) kappa_pwm mapping         yes             yes / yes
+    #   (4) friction + viscous        yes             no  / YES  <- passthrough_auxiliary_terms
+    #   (5) dither                    yes             no  / YES  <- passthrough_auxiliary_terms
+    #   (5) integral                  yes             no  / no   <- passthrough_integral (deliberately off)
+    #   (2) gravity scale (S-1)*g     yes (in tau_ff) no  / YES  <- passthrough_gravity_correction
+    #   (6) max_effort clamp          yes             yes / yes
+    #   (7) back-EMF ff + current trim yes            yes / yes
+    #   (1) reference lead, observer v inside the law -- the flight node's, not reachable here
+    #
+    # Every reference-driven term is EXACTLY ZERO while the arm reference
+    # holds (tanh(qd_d/w) at qd_d = 0, dither gated on a moving reference), so
+    # a hovering whole-body DIRECT with the arm at rest streams the torque
+    # untouched apart from the gravity correction. Live (ros2 param set), so
+    # each can be A/B'd on the bench without a relaunch. law_debug[18..21]
+    # carries what the auxiliary terms added and [22..25] the gravity
+    # correction, per tick, in duty counts -- score a bag against those.
+    #
+    # passthrough_auxiliary_terms: friction_ff / friction_load_coeff /
+    #   viscous_ff / dither_* above act on the streamed torque, driven by the
+    #   whole-body planner's qdot_d (the external reference stream). The load
+    #   term multiplies the (gravity-corrected) streamed torque, which at a
+    #   hold is the |gravity_scale * g| the coefficients were fitted against.
+    passthrough_auxiliary_terms: true
+    # passthrough_gravity_correction: adds (gravity_scale - 1) * g_urdf(q) to
+    #   the streamed torque. The flight law feeds forward ITS model's g(q); the
+    #   calibrated arm needs gravity_scale * g. VALID BECAUSE THE TWO MODELS
+    #   AGREE: wb_arm_model_check with the flight yaml's sign map [-1 1 1 -1]
+    #   puts the whole-body model's g(q) within 0.0016 N*m of the URDF's over
+    #   10 poses (2026-09-14), so the law's g IS g_urdf to 0.2 % and the
+    #   correction transfers exactly. On j2 at home that is -0.072 N*m -- the
+    #   "handover step the observer absorbs over a few seconds" CLAUDE.md
+    #   records, now paid up front. Needs hold_feedforward_mode: gravity.
+    passthrough_gravity_correction: true
+    # passthrough_integral: the base's position-error integral on the streamed
+    #   path. LEAVE FALSE. It is feedback on q_d - q, not a post-correction, and
+    #   the whole-body L1 law's arm channel (with wb_u3_internal_ff) already
+    #   integrates the joint residual; a second integrator here would quietly
+    #   take part of what the observer must estimate and corrupt its w_hat
+    #   attribution. Exposed only so the effect can be measured on the bench.
+    passthrough_integral: false
+    # passthrough_error_damping_joints (2026-10-16): per joint, the fraction d
+    #   of the motor's OWN back-EMF damping (Kt*Ke/R; j4 1.276 N.m.s/rad) the
+    #   pass-through keeps, acting on the velocity ERROR v - qd_ref at zero lag:
+    #   the feed-forward compensates v_hat - d*(v_hat - qd_ref) instead of v_hat.
+    #   A planned move is not dragged (nothing at v = qd_ref); the local hold is
+    #   untouched (it already compensates qd_ref). Logged in law_debug[28..31].
+    #   j4 = 0.05 -> +0.064 N.m.s/rad on the WRIST ROLL. Why (10-15 flights, Pegasus
+    #   docs/docs_aerial_manipulator/archive/q4_damping_20261016): the wrist had
+    #   ~no net damping -- the law's soft EE-heading task gives it ~0.045, the
+    #   feed-forward over-cancels a 1.4 % Ke error (Ke fitted 2.535 vs 2.570 here:
+    #   -0.017), and the friction relay (fixed above) pushed with the motion --
+    #   so the hanging basket (a ~0.5 Hz pendulum about the claw axis, critical
+    #   damping ~0.13-0.17) swung +-10 deg through the whole carry and pitched the
+    #   airframe 1.8 deg rms. The offline model (flight-identified, reproduces both
+    #   flown failures) with friction_ff[3] 4.455 + d 0.05: the loaded swing decays
+    #   in under a second and the wrist parks within 2.3 deg, in all 14 tested
+    #   variations of friction, Ke, law gains, L1 bandwidth and delay; a 20 deg/s
+    #   teleop roll ends 2 deg off (was 33, the stick-slip after the move). 0.07
+    #   already fails two variations (parks off target): do not raise it to "be
+    #   safe". Only acts in PWM mode with back_emf_velocity_source: observer.
+    #   LIVE:  ros2 param set <ns>/external_torque_controller \
+    #            passthrough_error_damping_joints "[0.0, 0.0, 0.0, 0.05]"
+    #   ("[0.0, 0.0, 0.0, 0.0]" = the pure pass-through, byte-identical to before;
+    #   type the zeros as 0.0 -- an all-integer list is refused as the wrong type.)
+    #   NOT YET FLOWN.
+    passthrough_error_damping_joints: [0.0, 0.0, 0.0, 0.05]
+
+
+/**/gripper_controller:
+  ros__parameters:
+    joint: gripper_left_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+    conversion_factor: 0.0001
+    # Default goal_tolerance is 0.01 m -- a third of the 29 mm stroke -- so a
+    # close reported SUCCEEDED up to 10 mm before the goal (2026-10-08, found
+    # in the pick-and-place hardware check; the other hardware yamls already
+    # carry 0.002, as doc/Key Items.md states). The pick-and-place tab lifts
+    # on the close's RESULT: it must mean the fingers have finished moving.
+    goal_tolerance: 0.002
+
+
+# Nothing subscribes to this in the control path. It is a measurement topic:
+# record it, score it with results_robotic_arm/scripts/pwm_mode_report.py.
+/**/pwm_state_broadcaster:
+  ros__parameters:
+    gpios:
+      - dxl1
+      - dxl2
+      - dxl3
+      - dxl4
+    state_interfaces:
+      dxl1:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+      dxl2:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+      dxl3:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+      dxl4:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE ARM'S PLANNER (2026-09-12) -- the hardware twin of the block in
+# torque_controller_isaac_aerial.yaml. The controller above TRACKS; this node
+# PLANS. It owns the arm reference in SAFETY -- including the ground station's
+# target_joint_setpoint / go_home interface, which the controller no longer
+# advertises -- and goes silent in whole-body DIRECT, where the flight stack's
+# whole_body_planner publishes the same message on the same topic.
+#
+# Launched by external_torque_hardware.launch.py in the same namespace with this
+# same file, so the flat /**/ wildcard keys reach it too.
+#
+# THE MOVE PROFILE IS HARDWARE'S OWN, NOT THE SIM'S: 10 deg/s, the operational
+# bound set 2026-09-08, against the Isaac config's 0.2 rad/s. It is the former
+# controller values verbatim, so the motion the bench and the station were tuned
+# against is preserved exactly.
+/**/arm_planner:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4]
+    controller_name: "external_torque_controller"
+    reference_topic: "external_torque_controller/reference_joint_trajectory"
+    joint_states_topic: "joint_states"
+    # The flight node is a FLIGHT-STACK node at the vehicle namespace while this
+    # one lives under the arm package's namespace, so this is ABSOLUTE -- and it
+    # therefore hard-codes uav_0. That matches the default of both the arm
+    # bring-up (namespace:=uav_0/fsc_open_manipulator) and the flight stack
+    # (uav_prefix uav_0). FLYING UNDER A DIFFERENT PREFIX MEANS EDITING THIS
+    # LINE: the node would simply never see DIRECT, keep streaming its SAFETY
+    # reference, and fight the whole_body_planner for the arm.
+    mode_topic: "/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/mode"
+    direct_mode_token: "DIRECT"
+
+    home_position: [0.0, 0.698132, 0.698132, 0.0]
+    max_velocity: [0.17453, 0.17453, 0.17453, 0.17453]   # 10 deg/s, hardware's bound
+    min_move_duration: 1.5
+    # q4 +-120 deg since 2026-09-12 -- must equal the controller's own
+    # min/max_position above. q2 is the REAL arm's [-20, +45] deg like the
+    # controller's guard (2026-10-09): this node clamps the SAFETY reference
+    # to it, so a ground-station target never streams into the guard's
+    # pull-back. The planner's Q_MIN/Q_MAX and the C++ kQMin/kQMax keep the
+    # asset's q2 [-80, 50] -- tighter here is safe, the reverse is not.
+    min_position: [-0.610865, -0.349066, -0.698132, -2.0943951]
+    max_position: [ 0.610865,  0.785398,  0.872665,  2.0943951]
+
+    publish_rate: 100.0
+    # The controller holds the pose it activated at until this node publishes,
+    # so homing on the first joint state reproduces the old
+    # move_to_home_on_activate behaviour -- now done by the node that owns motion.
+    # TRUE -- and THE LAUNCH GATE IS WHAT MAKES IT SAFE (2026-09-12). Keep this
+    # history: removing the gate silently re-arms a bug that swung the arm.
+    # This node used to launch in PARALLEL with the controller, so it seeded
+    # ~1.4 s early on the pose the arm was sagging through at Goal PWM = 0 and
+    # ramped toward home with nothing following it. The controller then activated
+    # ~10x past its saturation point (it saturates at 0.63-1.39 deg), slammed at
+    # full duty into a still-moving reference, overshot and swung -- on every
+    # launch, reported from the pad 2026-09-12.
+    # external_torque_hardware.launch.py now starts this node ONLY on the
+    # controller spawner's exit, so it seeds on the pose the controller is
+    # ALREADY HOLDING (zero initial error) and the ramp is tracked from the first
+    # tick. Briefly set false the same day as belt-and-braces, then restored at
+    # the user's request once the gate was verified.
+    # >> IF THE LAUNCH GATE IS EVER REMOVED, SET THIS FALSE AGAIN. <<
+    home_on_first_state: true
+    # FALSE ON HARDWARE, DELIBERATELY, AND IT IS NOT A GAP. The SAFETY-revert arm
+    # fold exists on this path already: the flight yaml sets
+    # system_arm_go_home_service to this node's go_home, so the flight node
+    # commands the fold itself, 1.0 s after the revert. The sim does the opposite
+    # (this key true, that key empty) because there the flight node's service is
+    # unset. EXACTLY ONE of the two must be active -- both would command the arm
+    # twice on every revert.
+    home_on_safety_revert: false
+    home_on_revert_delay_s: 1.0

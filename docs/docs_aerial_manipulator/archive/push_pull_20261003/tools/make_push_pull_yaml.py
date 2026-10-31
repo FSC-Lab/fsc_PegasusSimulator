@@ -153,6 +153,18 @@ ADDITIONS = {
     # the guard off the node would refuse DIRECT). The coordinated-admittance and valve
     # generators leave it out.
     "system_mocap_guard_topic": ("system_fb_land_speed", '"state_estimator/mocap_guard"'),
+    # THE EMERGENCY ABORT INSTEAD OF SAFETY (2026-10-31, user: "for an emergency it should abort,
+    # not switch to SAFETY directly"; archive/valve_safety_fixes_20261030): a tilt / drift watchdog
+    # trip with the claw at the handle (Ready, the push / turn, the exit) calls the planner's
+    # emergency abort -- the task's configured release, climb, arm home -- while the law keeps
+    # flying. SAFETY only past the body-rate limit, past system_wd_hard_tilt_deg, or when the
+    # abort is refused / never starts / is not ABORTED within system_wd_abort_timeout_s. A revert
+    # to SAFETY there left the arm to fold in place through the handle (Isaac, a forced revert 5 s
+    # into a valve turn: 60 N on the fin, the valve spun 128 deg, the vehicle thrown 3.3 m).
+    "system_wd_abort_service": ("system_mocap_guard_topic", '"whole_body_planner/push_pull/emergency_abort"'),
+    "system_wd_abort_status_topic": ("system_wd_abort_service", '"whole_body_planner/push_pull/status"'),
+    "system_wd_hard_tilt_deg": ("system_wd_abort_status_topic", "25.0"),
+    "system_wd_abort_timeout_s": ("system_wd_hard_tilt_deg", "15.0"),
     # wb_ee_anchor_free_axis_weight 0.75 (2026-10-21, THE ROOM-HELD ARM SWING; plain node
     # parameter, default 0 = off; archive/box_pushing_gain_tune_20261021): while the contact
     # flag is on (latched until the release) the claw's room-held target also rides this

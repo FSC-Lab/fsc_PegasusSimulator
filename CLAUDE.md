@@ -4793,7 +4793,7 @@ platform/arm/attitude references are that rig's own commands, `cadm` record + th
   `run_pl_cadm.sh` now CLOSES the simulation when the driver exits (a stack left up over a break
   wrote 27 GB of PX4 ulog + a 1.2 GB Isaac kit log in 4 h) and deletes that run's ulog/kit log.
 - **CAMPAIGN (same evening): 3/3 at the first attempt**, box 525 / 521 / 518 mm; results
-  `results/simulation_results/box_pushing/` + `matlab_simulation_data/box_pushing/` + tables, both
+  `results/simulation_results/Isaac_simulation_data/box_pushing/` + `matlab_simulation_data/box_pushing/` + tables, both
   methods in one table (`build_box_pushing.py` now ALIGNS THE METHODS AT READY: this rig's first
   transit is ~19 s longer, `--slot-ready 30`). Mean: e_imp slide 2.98 N rms vs 0.66 (2.94 along the
   push); ρ_UAV 0.279 max / 0.079 rms vs 0.100 / 0.047; EE 30.7 vs 18.2 mm; heading 0.96 vs 2.09°.
@@ -5372,7 +5372,7 @@ user request).** Every PNG in the manuscript's `Figures/2-Results/` carries `Sof
 EXPORTS `.mat` files (`results/{simulation,experiment}_results/matlab_*_data/<task>/`, struct `run`), the user
 draws in MATLAB on another machine. New `results/utils/experiment_pick_and_place.py` (the `experiment_tracking.py`
 pattern: stage 1 extracts the bag under ROS into `$AM_EXP_CACHE`, stage 2 re-runs itself with PYTHONNOUSERSITE=1)
-reads the bag copied unchanged to `results/experiment_results/pick_and_place/whole_body_l1_pnp_D-2/`
+reads the bag copied unchanged to `results/experiment_results/flight_test_data/pick_and_place/whole_body_l1_pnp_D-2/`
 (D-2 = `flight_wb_l1_4d_pick_and_drop_20261016_140020`, the only run exported, user's choice) and writes
 `matlab_experiment_data/pick_and_place/` (run `.mat`, `pick_and_place_metrics.mat`, README, `configs/` taken from
 git at the AS-FLOWN commits f6395dd / ed67281 -- the working-tree yamls already carry the later j4 fix). The
@@ -5553,7 +5553,7 @@ README + LaTeX note, the release-window joint margins (`release_q2_max_deg` / `r
 failed attempts scored from their npz (trip time vs the jaws opening, peak tilt), and
 `matlab_simulation_data/box_pushing/reference_outputs/` (the Python table + 4 figures to check MATLAB
 output against). The 10-09 whole-body + 10-10 coordinated-admittance runs (old setup, not comparable)
-moved to `results/simulation_results/box_pushing/previous_20261009_10/` (incl. their .mat and table);
+moved to `results/simulation_results/Isaac_simulation_data/box_pushing/previous_20261009_10/` (incl. their .mat and table);
 CA not re-flown (its `run_pl_cadm.sh` still flies the old setup). Zip rebuilt.
 - **Results, 3 kept of 4 attempts** (window 89.4 s, phases agree to 0.2 s): e_imp slide 0.726 N rms
   (max 1.44), contact 0.749, release 0.892; F_ext slide 1.32 N; eps_UAV 48.1 max / 16.8 rms mm (rho
@@ -5586,7 +5586,7 @@ release window q3 >= 25.8 deg (old: 11.2 in a completed run, -71 in the flip), q
 (old 42.9 / 45), box moved <= 1.6 mm (old up to 26), open -> exit 0.31-0.55 s.** The base still
 drifts 11-40 mm; the arm just stops absorbing it. Still open: the 1.5 s clamped hold before the
 open swings the arm +-9-14 deg (safe direction in every run); the hardware gripper's open time
-is unmeasured. **The results in `results/simulation_results/box_pushing/` were flown with the
+is unmeasured. **The results in `results/simulation_results/Isaac_simulation_data/box_pushing/` were flown with the
 OLD sequence** -- re-fly or re-score from `runs/rel_*` if the paper should show the new one.
 Not flown on hardware; nothing committed.
 
@@ -5613,7 +5613,7 @@ and ~5 cm past at the new one; the 10-16 0.70 m pushes started 0.02 m from the e
 past) and completed 2/2. Hardware needs no setting (Get measures the box); `push_pull_table` in
 the hardware yaml is still the SIM's table -- measure it.
 **BOX-PUSHING RESULTS RE-FLOWN ON THE BENCH SETUP, BOTH CONTROLLERS (2026-10-17 evening, user request).**
-`results/simulation_results/box_pushing/` + `matlab_simulation_data/box_pushing/` (zip rebuilt); the
+`results/simulation_results/Isaac_simulation_data/box_pushing/` + `matlab_simulation_data/box_pushing/` (zip rebuilt); the
 history folders `previous_20261009_10/` and `previous_20261017/` were DELETED on the user's instruction
 (raw runs still in the archive campaign dirs). Setup: mu 0.25/0.25, box start y 0.28, 500 g, 0.50 m /
 24 s, pose [0, 32, 28, 0], box guards ON for both rigs, the 10-17 release fix (`--release-at-open`) on
@@ -6833,6 +6833,62 @@ check and modify the arm GS and localization logic as for the box push; record
   rig flies the new scene; no drift-seed run. Orin: rebuild fsc_trajectory_planner; laptop: rebuild
   utils_custom_ground_station.
 
+**ARBITRARY-CONVERGENCE-TIME CONTROL (Chen et al., IEEE TIE 72(12) 2025) AS THE THIRD BOX-PUSHING COMPARISON
+RIG (2026-10-24/25, user request: implement the paper for the box-pushing Isaac simulation, independent of the
+whole-body controller -- no shared code).** Record `docs/docs_aerial_manipulator/archive/box_pushing_arbitrary_time_20261024/README.md`,
+Command.md §17.y. Python reference `extensions/.../utils_controller/arbitrary_time_control.py` (self-test) ->
+fsc_autopilot_ros2 fork `single_aerial_manipulator_arbitrary_time_direct_actuation` (node
+`autopilot_arbitrary_time_direct_actuation_node`, own namespace `fsc_autopilot_ros2/arbitrary_time_direct_actuation`,
+own `atc_*` keys, debug `atc_control_debug` 105 long; compiles only the geometric+L1 fork's allocator, as the
+coordinated rig does), parity gtest `ArbitraryTimeParityTest` 6/6 (`generate_arbitrary_time_truth.py`), yaml
+GENERATED by the campaign's `tools/make_arbitrary_time_yaml.py` from the whole-body box-pushing yaml (plant and
+planner verbatim), torque-mode arm (`torque_controller_isaac_aerial_atc.yaml`), stack + Pegasus launchers +
+box wrapper, `tools/run_pl_atc.sh`, `METHOD=arbitrary_time` in `results/utils/run_box_pushing_campaign.sh`,
+third method in `build_box_pushing.py`. The node prints the paper's open choices as its LAW CHECK line.
+- **Three changes the paper's values needed, each from a flight:** `obs_k` 8.2 -> 4.0 + arm window / floor
+  2.0 / 1.0 s (a 3 Hz j1/yaw mode on the arm's ~36 ms torque path); the arm stack's friction feed-forward OFF
+  for this rig (launcher default; the ACTNDO already estimates friction -- with both, j2/j3 limit-cycled at
+  0.8 Hz); and a new default-off client option `atc_contact_reseat` (+ `_blend_s`), ON in the yaml: the base
+  reference is shifted to where the base is at the contact edge (the Push press = the jaws' stall) and
+  blended out after -- returning a few mm of hover wander through the 2.1 kN/m joint admittance dragged the
+  clamped box back 19 mm before the push. Position eta 1.5 is already marginal in free flight (stays 1.04).
+- **First campaign at the paper's admittance (K_d 9), shared guards: 1 of 8** -- box-lag guard aborts 7-9 s
+  into the push: the paper's `-J_E tau_hat` feed-forward against a box held by static friction (cancels its
+  restoring pull while it sticks, overshoots on a lagging estimate at the break-away), estimate along the push
+  ~40-70 % of the true force (damped J_m^-T in the arm's weakest direction). Kept in `campaign_k9_20261024/`.
+- **TUNED + OWN GUARDS (2026-10-25, user request; the whole-body guards untouched; README section 5).**
+  Admittance H/D/K 1/4/9 -> **1/3, 1.34, 3** (the paper's omega 3 rad/s and zeta 0.67, one third of its
+  stiffness): K 9 completed 2 of 12 pushes over all its flights (incl. a 0 of 2 A/B at the final guards --
+  it tips the clamped box 2.6-2.8 deg, K 3 <= 0.31), K 3 10 of 13; K 1.5 / 1.0 aborted (the estimate the
+  feed-forward carries collapses), lambda 0.02 worse, zeta 1 not adopted (one flight). Guards in this rig's
+  yaml only (generator `ATC_GUARDS` / `ATC_GUARDS_ADDED`): box lag **100 mm** (nominal peaks to 69), force
+  **3.5 N** on its own estimate (nominal <= 1.46), and **`push_pull_guard_box_cross` 45 mm** -- a NEW
+  fsc_trajectory_planner key (default 0 = off, absent from every whole-body yaml; loopback [9l], whole-body
+  loopback ALL PASS): the box dragged sideways across the push. Its base-relative arm drags the clamped box
+  with the soft base's sideways swings (the base yields to the real 0.2-0.4 N sideways contact force), up to
+  35 mm in completed pushes (whole-body / coordinated 2-5 mm); twice (K 9 t0, the first K 3 campaign's
+  r3_a1) the box went over the 150 mm table's side edge and FELL OFF after the tilt guard released it. The
+  guard reduces that risk, it does not remove it (replay: trips 8-14 mm inside the edge, the base swing can
+  carry the box ~20 mm more while the jaws open). Jam tests: stopper -> box-tilt guard, box upright; 1 kg /
+  mu 0.6 -> force guard, box upright, but the paper's TSKFE then jumped during the abort's climb (D_hat_z
+  4.9 -> 1.4 N in 0.5 s) and the node's 15 deg watchdog left DIRECT; SAFETY landed it.
+- **FINAL CAMPAIGN (2026-10-25): 3 of 5 attempts**, both failures the sideways guard with the box on the table.
+  **Every rig scored in the SAME task space (user decision)**: `pl_metrics.py` rig `atc` = the task image
+  J^-T X J^-1 of the joint admittance at the push pose (K_d 3 -> 686 N/m along the push, the arm's weakest
+  direction; the old joint-space scoring is retired), plus every rig's displacement equivalent K_t^-1 e_imp.
+  Mean +- std (`build_box_pushing.py` now writes `_std.csv`, `metrics_std`, LaTeX `mean$\pm$std`): e_imp slide
+  14.6 +- 4.6 N = 23.3 +- 6.6 mm (whole-body 0.68 N = 5.7 mm, coordinated 2.19 N = 28.1 mm), eps_UAV 58.5 /
+  14.2 mm, EE 15.2 mm, box 517 +- 18 mm. Free-flight tracking at the whole-body level; in contact the box
+  stick-slips on the soft base (~22 N/m = m(1+eta^2)/t_floor^2, capped by the attitude loop / rotor lag),
+  lag +-70 mm in a 3-4 s cycle. The first K 3 campaign (pre-guard, 3 of 4) is in `campaign_k3_pre_cross_20261025/`.
+  `run_box_pushing_campaign.sh` gained `MAX_ATTEMPTS`. Coordinated rig still 2 kept runs.
+- Traps: the builder's `load_run` uses `re` as a local array (no `re.` calls in it); the whole-body debug
+  array is wider than 107 columns too, so detect the rig from its yaml, never from the debug width; a launch
+  line like `cmd; cd .. && setsid nohup X &` LAUNCHES X even when cmd fails (`;`), and a second launch then
+  runs two chains whose clean slates kill each other's stacks (two invalid flights, `runs/invalid_concurrent/`).
+  NOT on hardware; nothing committed.
+
+
 **1024 EVENING HARDWARE BOX PUSHES: THE 280 g PUSH GOES BACK AND FORTH, THE 510 g GRASP BUCKLED THE
 ARM (2026-10-25, user request: analyse; record `docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261024_evening/README.md`,
 figure `fig_flights.png`). Nothing changed in any repo.** **Box mass correction (user): the hardware box
@@ -6911,6 +6967,120 @@ version (M 1.64, K 120, D 25.8) also softened the free-flight arm and had 2 of 4
 (not separable from that) -- replaced. This folder's `pl_mission.py` gained `--stop-after-exit`
 (no way home / landing, ~45 s saved per run).
 
+**MAC (MODULAR ADAPTIVE) ON THE PICK-AND-PLACE / PICK-AND-DROP TASKS (2026-10-26, user request:
+can it fly them for a parallel comparison; if not, try a lighter payload; record
+`docs/docs_aerial_manipulator/archive/pick_place_mac_20261026/README.md`).** 10 headless flights.
+- **The 10-08 0 of 6 was a SIMULATOR ARTIFACT: the arm effort queue.** 06 pumped the arm bridge
+  with ONE `spin_once` per 4 ms step (250 callbacks/s) while the arm stack publishes efforts at
+  250 Hz; any other traffic on that node backs the depth-10 effort queue up and the applied torque
+  lags ~40 ms. That traffic is 07's planner-info subscription and the driver's 50 Hz gripper
+  stream. Measured 40 ms on the 10-08 attempts and on today's reproduction (left DIRECT 2.7 s after
+  entry); the 10-09 whole-body runs read 24-36 ms. MAC's stiff arm loop rang to the 3 N·m clamp
+  at DIRECT entry. New **opt-in `PEGASUS_ARM_SPIN_DRAIN=1`** in 06 (`_drain_arm_node`: every ready
+  callback each step, max 32, own executor), validated and baked by
+  `start_single_drone_x650.sh`. **Default 0 = every existing campaign unchanged; every run before
+  2026-10-26 had the queue.**
+- **With the drain, pick-and-place set-down (the 10-09 task): MAC 0 of 6 placed.**
+  - 2 rim strikes: the hung basket hit the place hat's rim, clearance −99/−115 mm vs +77..+94 for
+    whole-body and Geo-L1.
+  - 3 hook losses, and they are mechanism, not luck: in the carry MAC holds q2+q3 at 59-64° (the
+    other two 72-73°), so the claw pitches ~26-31° down and the arch slides off the sloped fingers.
+  - 1 hover trip.
+  - Both failure modes are MAC's standing errors under load: no integral, no arm gravity model;
+    base 10 cm forward / 8 cm low with 200 g.
+  - **A lighter payload does not help**: 100 g lost the hook 2/2 (fold deficit unchanged), 50 g
+    tripped before the pick.
+- **Pick-and-drop: MAC 1 of 3** (payload in the tray, 84 mm off centre, 17.8° tilt; claw 167 mm
+  off at the open). Both failures were a j1 (arm-yaw) oscillation at the pick hover, ±30° at
+  ~2 Hz, with the driver-measured lag at 32-40 ms at its onset despite the drain. Source of that
+  lag NOT settled (the measure uses the driver's receive times).
+- Generator `make_modular_yaml.py` gained a `pick_and_drop` profile; MAC's pick-and-drop yaml is
+  generated into the record's `configs/`, not into fsc_autopilot_ros2, and flown via `WB_SIM_YAML`.
+- **Trap:** the MAC launcher has no pick-and-place wrapper, so `PNP_PAYLOAD_MASS` never reached
+  Isaac (07 printed 200 g). Pass `PEGASUS_PNP_*` themselves and read the scene banner.
+- results/ untouched. A parallel set needs the whole-body and Geo-L1 rigs re-flown with the drain.
+  Nothing committed.
+
+**PICK-AND-DROP, THREE CONTROLLERS AT 200 g: THE PIPELINE TEST (2026-10-26, user request: compare all
+three on pick-and-drop at one mass, then "only test whether it works"; record
+`docs/docs_aerial_manipulator/archive/pick_and_drop_comparison_20261026/README.md`).** New, all additive:
+- `pnp_mission_v2.py` DROP timetable: `--drop-place --timetable` no longer holds a clamped payload on its
+  pillar before the lift; Ready To Drop is anchored at `--slot-ready-drop` 54 s after Go To Start, giving
+  every rig ≥ 6 s at Drop Start so the planner's aim applies to all; Go To Land Start uses
+  `--slot-drop-land-start` 26 s, Land the existing slot. Measured: later phases agree to 0.011 s across rigs.
+- The flight script `tools/run_pnd.sh` serves all three rigs.
+- `results/utils/run_pick_and_drop_campaign.sh`. A run is kept when it completed, the payload rests in the
+  tray (flat is a metric), it ran on the timetable, and the banner shows 200 g and the drain.
+- `results/utils/build_pick_and_drop.py` reuses the pick-and-place loader and metrics, adds the drop
+  measures, and exports MATLAB to `matlab_simulation_data/pick_and_drop/`.
+- MAC yaml: `..._modular_adaptive_..._sim_pick_and_drop.yaml`, generated.
+
+Test, one run each:
+- whole-body: flat in the tray, claw 7.8 mm off at release, eps 146/22 mm.
+- Geo-L1: flat in the tray, claw 44.6 mm off, eps 317/62 mm.
+- **MAC: 0 of 3**. Each attempt picked and lifted, then left DIRECT ~6 s into the carry on a j1
+  (arm-yaw) oscillation, every arm torque clamped.
+
+The full campaign was stopped on request; the results/ pick_and_drop folders hold the two test runs only.
+
+**THE ARM-BRIDGE DRAIN WAS HALF A FIX; WITH THE REAL FIX MAC DOES THE 200 g PICK-AND-DROP (2026-10-26
+afternoon, user: "can MAC achieve a lighter payload?"; record
+`archive/pick_and_drop_comparison_20261026/README.md`, UPDATE section).**
+- **The finding.** A passive probe on the torque path (MAC command -> arm stack output -> Isaac applied
+  effort, publish stamps) put the delay INSIDE Isaac: 36-38 ms during MAC's j1 oscillation, with the drain on.
+- **The cause.** rclpy's `wait_for_ready_callbacks(timeout_sec=0)` yields one message per ready
+  subscription and then raises `TimeoutException`. The first `_drain_arm_node` stopped there, so it took
+  one effort message per step, and a backlog never emptied at equal 250 Hz rates.
+- **The fix in 06:** wait again after every wait that yielded work. Loopback: the backlog clears in one
+  step. Probe in flight: 0-6 ms.
+- **MAC pick-and-drop with it:** 200 g 2/2 (claw ~172 mm off at release, payload in the tray, one flat);
+  100 g 1/2 (133 mm, flat; the other was the attitude-module hover trip before the pick).
+- A lighter payload only trims MAC's standing error; it is not needed.
+- The whole-body / Geo-L1 test runs and the 10-26 MAC records flew the half fix (moved to
+  `partial_drain_20261026/`). A parallel set needs every rig re-flown.
+- `PEGASUS_ARM_SPIN_DRAIN` stays opt-in.
+- **MAC pick-and-place re-flown with the corrected drain (same day): still 0 of 3**, all three stable
+  (peak arm torque ≤ 1.46 of 3 N·m), basket lost twice off the hook in the carry (fold q2+q3 59-60° vs
+  the whole-body's 73°) and once on the hat rim (−113 mm). Standing errors, not delay: the hook set-down
+  needs MAC changed (arm gravity model / integral) or the task changed for everyone. Pick-and-drop is
+  the task MAC completes. `archive/pick_place_mac_20261026/README.md` section 5.
+
+**PICK-AND-DROP: A LOWER RELEASE IN THE SIMULATION -- DROP MARGIN 0.05 m, DROP START z 1.15 m (2026-10-26,
+user request; record `docs/docs_aerial_manipulator/archive/drop_margin_20261026/README.md`).** The Drop point
+is the payload centre resting on the tray cover (rim + 32.5 mm); the planner holds the payload centre one Drop
+Margin (`pick_place_drop_height`) above it and opens there -- no descent; the Vertical Margin plays no part in
+the drop. Ready To Drop is one straight line from Drop Start, so with Drop Start at 1.0 m the hanging payload
+(~0.74 m) climbs into the tray and a lower release crosses the near wall lower. SIMULATION ONLY (the
+generator's `pick_and_drop` profile; hardware yamls unchanged): `pick_place_drop_height` 0.20 -> **0.05**,
+`pick_place_place_start` z 1.0 -> **1.15** (= the release hold's body height, a level approach). Flown
+whole-body, 200 g: margin 0.05 at Drop Start 1.0 -> basket bottom +27 mm over the tray outline; at 1.15 ->
++44 mm; both flat in the tray 3-7 mm off centre. The simulated AM_xfwd skids pass 24-25 mm over the tray at
+that hold (set by the hold height; the real T650 gear is ~65 mm shorter, ~90 mm). One B attempt was lost
+to the sim-only 1.5 Hz roll mode in the hover before the plan. The MAC pick-and-drop yaml still carries
+0.20 / 1.0 -- regenerate it before a comparison campaign.
+**NOT KEPT, same day (user's call): ONE margin for all three controllers, and MAC's ~125 mm standing
+height error at the release would put its basket into the tray wall below ~0.20.** Both overrides were
+removed (generated yaml byte-identical to before); the comparison flies the mirror's 0.20 / Drop Start 1.0
+(the climb into the drop is kept on purpose, to show the altitude change).
+**HARDWARE ONLY, 2026-10-28 (user, for that day's flight): Drop Margin 0.10, Drop Start z 1.21** -- planner
+overrides of `wb_drop` in `make_hw_pick_and_place_yamls.py`, hardware `_pick_and_drop.yaml` regenerated (diff =
+the two values); sim twins keep 0.20 / 1.0. Level Ready To Drop needs **Drop Start z = Drop point z + 0.2616 +
+margin** (EE Offset z 0.16 + claw 0.1016 below the body in [0,32,38,0]; the basket aim shifts x/y only), so
+retype Drop Start z if Get gives another Drop point z or another margin is typed. Real-planner loopback
+(`carry_plan_check.sh` rig): Ready To Drop CoM z 1.193 -> 1.190, claw 1.108 -> 1.106. Not flown.
+
+**THE PICK-AND-DROP COMPARISON, ALL THREE CONTROLLERS (2026-10-26 evening, user request; results
+`results/simulation_results/Isaac_simulation_data/pick_and_drop/`, MATLAB `results/simulation_results/matlab_simulation_data/pick_and_drop/`,
+zip rebuilt).** Same scene/task for all (Drop Margin 0.20, Drop Start 1.0, 200 g, the drop timetable, the
+corrected arm-bridge drain), `results/utils/run_pick_and_drop_campaign.sh 3 wb geo mod` then
+`build_pick_and_drop.py`. **9 of 11 attempts kept, 3 per controller**; the two others: whole-body attempt
+3.1 = the sim-only 1.47 Hz roll mode in the hover before the pick; Geo-L1 attempt 1.1 = a step 0.6 s late on
+the timetable. Mean over 3: eps_UAV max / rms **Proposed 133 / 22 mm, Geo-L1 331 / 65, MAC 139 / 93**; EE
+RMSE 25 / 68 / 119 mm; claw error at release 7 / 40 / 169 mm; payload flat in the tray 3 / 2 / 1 of 3, every
+payload inside the tray. MAC's max is small but its rms large: a standing offset (body ~65 mm low with the
+payload, claw ~125 mm), not a peak. **The manuscript's "Free Flight: Payload Pick-and-Place" text and table
+still describe the 10-08/09 SET-DOWN task (MAC 0 of 6, two controllers)** -- they need rewriting for this data.
+
 **VALVE HEADING-CHANNEL SWEEP: NO SAFE CELL SHOWS THE HEADING COUPLE -- THE CLAW TWISTS ON THE FIN
 (2026-10-26, user's plan: 90° in 12 s, stiffer K_ψ, more valve friction, find friction -> (K_ψ, D_ψ);
 record `docs/docs_aerial_manipulator/archive/valve_yaw_sweep_20261026/README.md`, report artifact
@@ -6942,6 +7112,86 @@ https://claude.ai/artifact/CGsJryjkz1RNWy5LyYaC6q; 24 headless flights, runs `va
   -- the verdict uses last vs middle third + the hold; the per-run contact-sign power rule flipped a swinging run's
   sign -- fixed at +1 (calibrated, constant per scene); `$!` of `setsid nohup ... &` can be the setsid wrapper, not
   the chain (a waiter on it returned at once) -- check with `ps`. Shipped yamls unchanged; nothing committed.
+
+**`results/simulation_results/` REORGANISED (2026-10-27, user request).** The five raw task folders
+(`free_flight_tracking/`, `pick_and_place/`, `pick_and_drop/`, `box_pushing/`, `valve_turning/`) now live in
+**`results/simulation_results/Isaac_simulation_data/`**; `matlab_simulation_data/` and `README.md` stay at the
+top. In the `results/utils/` builders `ROOT` = `Isaac_simulation_data` (campaign.jsonl `file` fields are relative
+to it, unchanged) and `MAT_DIR` = `simulation_results/matlab_simulation_data`; the campaign scripts' `OUT`, the
+valve wrapper `valve_campaigns.sh`, the READMEs, Command.md and the archive records/tools that named these paths
+were updated. Nothing re-flown or rebuilt.
+Same day, same pattern for `results/experiment_results/`: the copied bags (`free_flight_tracking/`,
+`pick_and_place/`) moved into **`experiment_results/flight_test_data/`**; `matlab_experiment_data/` (+ its zip,
+rebuilt for the two README path changes) and `flight_test_index.md` stay. `experiment_tracking.py` (`FLIGHT`,
+`bag_copy_dir`) and `experiment_pick_and_place.py` (`BAG_ROOT`) read from there.
+
+**1027 HARDWARE BOX PUSHES ON THE 10-25 CONFIG (280 g, 0.40 m) -- PUSH COMPLETE ONCE, BOTH ENDED IN A
+q3-GUARD ABORT (2026-10-27, user request: did the modifications work, paper-ready?; record
+`docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261027/README.md`, `fig_compare.png`).**
+Bags `1027 - T650-AM whole-body Box-Pushing & Tracking [Success]-*/..._box_pushing_300g_20261027_{171114,172227}`
+(folder says 300 g, db3 500 g: it is the 280 g box). Flown config = `a316625` + `fe5bc49` (pose
+[0, 28, 32, 0] confirmed in the bag). **A (171114): push complete** (box 387 mm at the push end, 405 after
+the release, mean 21.0 mm/s = plan), then the calm exit waited its full 3 s (the clamped vehicle never
+calmed, +-190 mm/s), released mid-swing, and the q3 RATE guard tripped 0.4 s later with the jaws already
+open (q3 min 2.1 deg). **B (172227): q3 static guard 1.5 s before the push end** at 348 of 400 mm (box
+dragged back 100 mm onto q2's wall); in the abort **q3 crossed 0 for 0.64 s (min -3.8 deg)** -- the abort
+holds the mid-swing measured pose and the 1 s CoM blend let the arm absorb 120 mm (10-24 "G3", not applied).
+Both: DIRECT kept, tilt <= 4.9 deg, box untouched / upright / on the table, normal landing.
+Modifications vs 10-24 evening: pose -- q2 on its wall 21 % -> 0-3 %, works; natural-inertia axis (with
+the pose, not separable) -- box speed std 84 -> 53/45 mm/s, backward 41 -> 27/18 %, reversals 17 -> 11/5,
+true tilt 2.1/1.9 -> 1.5/1.1 and 1.4/0.8 deg: SMALLER, NOT GONE; straight-climb abort -- works (box
+untouched vs knocked off); settle gate -- works (0.4 s, first-try grasps); calm exit -- did NOT help (never
+calm, 3 s extra clamped swing, release at a random phase); SAFETY map -- not exercised (side effect: the
+SAFETY UDE carries +2.1/+2.4 N at takeoff hover vs +0.25 -- the pair predicts hover 0.601, today's 0.58).
+Paper view given: A usable for the contact phase if the stick-slip and the guard-triggered retreat are
+stated; B not a headline run. Nothing changed in any repo.
+**MATLAB export of the two 10-27 box pushes (same day, user request):** bags copied unchanged to
+`results/experiment_results/flight_test_data/box_pushing/whole_body_l1_push_BP-{1,2}/`, converted by the new
+`results/utils/experiment_box_pushing.py` (the pick-and-place exporter's two-stage pattern) into
+`matlab_experiment_data/box_pushing/` -- the simulation's box-pushing `run` struct field for field (only the
+simulator-only `raw.claw_truth/base_truth/contact_truth` absent), plus `tracking.box_pos_m`,
+`tracking.recording_gap`, `meta.aborted/abort_s/abort_reason`, `metrics.release`. Phases keep the sim's eight names;
+in these runs `exit` is the q3-guard abort's climb. **F_ext = the controller's own F_hat (no force sensor)**, with a
+box-model force along the push beside it, so the hardware e_imp (4.9 N rms in the slide) is NOT comparable with the
+simulation's. BP-1 has a 0.60 s Orin->laptop recording gap at 77.3 s bag time (flagged, interpolated).
+`matlab_experiment_data.zip` rebuilt (30 files); both parent READMEs (and `readme_text.py`) list `box_pushing/`.
+
+**1027 HARDWARE TRACKING RUNS EXPORTED FOR MATLAB (2026-10-27, user request).** Four bags of
+`docs/experimental_data_ros2_bag/1027 - T650-AM whole-body Box-Pushing & Tracking [Success]-*/` added to
+`results/utils/experiment_tracking.py` (RUNS / INDEX / new CONFIGS): WB circle 0.20 m/s (`_175015`), WB figure-8
+0.20 (`_175849`), WB circle 0.10 (`_180659`), Geo-L1 circle 0.10 (`_181331`). **Each bag holds TWO one-lap EE
+runs** (tags WB-7..WB-12, DEC-7/8); the better run of each setting is selected and exported as before: WB-7 35.8 mm,
+WB-9 40.1, WB-12 29.1 (second run of its bag), DEC-7 80.5 mm EE RMSE. They fill cells that were "not flown"
+(circle 0.10 both methods, circle / figure-8 0.20 WB). **The run filter is now T >= 10 s, not 20** -- the 0.20 m/s
+circle plans 19.7 s (transitions plan 3-7 s); all 12 earlier scores reproduce to the last digit. **The 10-27 WB
+runs flew the 2026-10-16 wrist-roll fix** (K_psi/D_psi 2.5/0.93 + j4 stuck hold, fsc_autopilot_ros2 a316625), the
+earlier WB runs the 09-27 tune alone: recorded per run in the index (configuration column) and in the new `.mat`
+files' `run.meta.controller_config`; Geo-L1's hardware yaml is unchanged since 10-05. EKF2-fused feedback (odom
+100 Hz vs VRPN 120 Hz) as before. Bags copied unchanged to `results/experiment_results/flight_test_data/
+free_flight_tracking/<shape>/v0p10|v0p20/`, `flight_test_index.md` brought up to date (every bag through 10-27;
+box-pushing BP-1/2 and pick-and-place D-2 point to their task folders), the MATLAB README, `utils/tables/
+free_flight_tracking_exp.tex` and `matlab_experiment_data.zip` regenerated; the paper was NOT spliced (no `--paper`).
+The six earlier `.mat` files were restored byte-identical from the previous zip (a regeneration adds only
+`meta.controller_config` to them). Extraction cache for this run: the session scratchpad, not
+/tmp/am_experiment_cache (another session was exporting box pushing into that one).
+
+**1028 HARDWARE TRACKING: 0.13 m/s RE-FLOWN FOR BOTH METHODS, EXPORTED (2026-10-28, user request).** Five bags of
+`docs/experimental_data_ros2_bag/1028 - T650-AM whole-body Tracking, Pick&Drop, Valve-Turning-*/`, two complete one-lap
+runs each (tags WB-13..18, DEC-9..12), same task as every formal run (q2 25 ± 15° four per lap, fold 55°, circle
+r 0.50 m / figure-8 1.40 × 0.70 m, checked on the reference stream). WB flew the 10-16 wrist-roll fix (debug width 118);
+Geo-L1 the 10-01 tune (hardware yamls unchanged since 10-19 / 10-05). EE RMSE: WB circle 26.9 / 45.4 / 31.1 / 39.6 mm,
+DEC circle 90.0 / 90.1, WB figure-8 38.5 / 33.8, DEC figure-8 84.9 / 85.4. **Both methods scored worse on the circle
+than in their older 0.13 m/s runs** (WB-2 24.4 on 09-28, DEC-3 77.4 on 10-02) -- day-to-day spread, ratio unchanged
+(~3.3x). **Selection rule changed**: `SUPERSEDED_1028` in `experiment_tracking.py` makes the older 0.13 m/s runs (WB-1/2,
+DEC-3, WB-5/6, DEC-6) not eligible, so each 0.13 m/s cell compares both methods from ONE session; pure lowest-RMSE
+would have kept WB-2 / DEC-3 / DEC-6 (flip the eligible flags to revert). Selected: circle 0.13 WB-13 / DEC-9, figure-8
+0.13 WB-18 / DEC-11. Their bags are copied to `results/experiment_results/flight_test_data/free_flight_tracking/` and
+their `.mat` files written; the superseded copies (WB-2, DEC-3, WB-5, DEC-6) were removed (originals stay in docs/).
+The six unchanged selections' `.mat` files were restored byte-identical (a regeneration would add
+`meta.controller_config` to the 10-05 files only). Index, MATLAB README, `utils/tables/free_flight_tracking_exp.tex`
+(note: "at 0.13 m/s, both methods were flown in the same session") regenerated; README run lists and the
+"not flown" line are now data-driven. Paper NOT spliced; `matlab_experiment_data.zip` no longer exists on disk and was
+not rebuilt. The 10-28 pick-and-drop and valve bags are only listed in the index, not analysed.
 
 **1028 HARDWARE VALVE TURNING: BOTH TURNS CUT BY A FALSE TILT TRIP; THE REAL LIMITER IS A GROWING
 LATERAL CONTACT SWAY (2026-10-28, user request: analyse; record
@@ -7011,3 +7261,206 @@ wb_controller.cpp's feed-forward, reproduces the 1.5 Hz roll mode, ordering only
 sideways damping costs the 1.5 Hz mode (H1b k_R/k_w: +40 % decay, delay margin 32.5 -> 27.5 ms); a handle
 free in roll restores full damping. Isaac, 8 flights on drift seeds 2/3: K_y 160 and K_psi 1.0 worse on both,
 the 15 s turn 1 abort + q3 to 2.2 deg, K_y 80 inside scatter. Not adopted.
+
+**1029 HARDWARE VALVE TURNING: THE CONTACT SWAY REACHED THE ARM'S LIMITS AND THE SAFETY CHAIN TURNED IT
+INTO A CRASH (2026-10-29, user request: analyse; record
+`docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261029/README.md`, `fig_flight.png`).** Nothing
+changed in any repo. Flight `145128` hovered only: Plan refused because obj_0's +x pointed away from the fin
+(the layout check worked); the body was re-defined in Motive between flights (yaw flipped 180°, 0 mm moved).
+Flight `145526` (config fsc_autopilot_ros2 `2431025`) grasped and failed:
+- **Cause = the 10-28 contact mode, 3 of 3 hardware contacts now unstable.** Today it doubled every 3.0-3.4 s
+  at 0.45 Hz as one along-nose + sideways whirl, from the grasp, with the plan still <= 3°. The valve angle is
+  the free-axis anchor carrying the along-nose wander (corr 1.00, 0.28 °/mm vs 0.75/r predicted). The
+  sideways part sits entirely in the q1/q4 antiphase pair, which nothing damps. The grip twists against the
+  fin 9.9° rms about the shaft and 4.5° about the tangent. After 6.9 s clamped the base ran 0.13 m back and
+  0.30 m sideways and q3 went 20° -> -32°; the rotors saturated, then the q3 rate guard fired.
+- **Why it crashed:** the abort held the claw in the room (world-held release) while the base ran away; the
+  watchdog fired 0.6 s later. At the handover the arm controller kept the law's last torque (+3 N·m on j2
+  and j3) for its 0.3 s timeout. The arm then hit the valve and the floor. The mocap guard's jump gate (no
+  velocity prediction, `mocap_guard.cpp:81`) rejected the real 2.8 m/s motion and went LOST, so SAFETY flew
+  on drifting EKF2 to the room edge.
+- **New: the jaws' opening at the start of Ready kicks the wrist roll 24-41°** (2 of 3 valve flights, 0 of 13
+  box pushes); the jaws reach the fin up to 40° off.
+- **Ceiling:** ~5-8 s of clamped contact before the arm runs out of range, against the 19.5 s the 90° turn
+  needs; no reference or gain change fixes it.
+- **Proposed, none applied:** an abort on the sway (CoM error > 60 mm would have fired 4 s before the
+  collapse); CoM-anchor the claw on an arm-guard abort; stream the arm hold in SAFETY; a velocity-predicted
+  jump gate; open the jaws earlier; error damping on j1/j4; a roll-free handle; a heading-consistent free-axis
+  anchor.
+
+**BOX PUSHING, THREE CONTROLLERS ON THE LATEST WHOLE-BODY SETTINGS (280 g, 0.40 m) -- RESULTS + MATLAB
+(2026-10-28/29, user request: same reference/task for all, 40 cm push, several repeats, best performance;
+record `docs/docs_aerial_manipulator/archive/box_pushing_comparison_20261028/README.md`, results
+`results/simulation_results/README.md` "Box pushing" + `matlab_simulation_data/box_pushing/`).** 5 kept runs per
+controller, headless RTF 1, raw mocap 120 Hz, mirror plant, the 10-21 layout (table placed from the box), pose
+[0, 28, 32, 0], 21 mm/s, one timetable (ready 35 s, close 8 s, release 22.05 s, land step 40 s). Mean ± std: slide
+e_imp whole-body 0.99 ± 0.12 N (5.7 mm displacement) / coordinated 2.58 ± 0.47 N (27.2 mm) / arbitrary-time
+11.47 ± 2.06 N (24.4 mm); ‖ε_UAV‖ max 26.9 / 95.7 / 57.8 mm; EE RMSE 9.8 / 34.5 / 13.9 mm; box 401 / 410 / 406 mm;
+the box moved in the exit 0.2 / 25 / 19 mm. Attempts 5/5, 6 (1 abort), 8 (3 aborts), every abort a planner guard
+with a normal landing. **The coordinated rig now carries its OWN box-lag guard 60 mm** (user decision 10-28; at
+the shared 40 mm its base lag aborted 2 of 2), `make_coordinated_yaml.py` box profile only. Changes: CA/ATC yamls
+regenerated (they were stale: pose [0, 32, 28, 0], abort back-off 0.03); `run_pl_cadm.sh` / `run_pl_atc.sh` fly a
+per-flight yaml copy with DIST/SPEED applied (shipped yamls keep 0.50 m); `run_box_pushing_campaign.sh` sets one
+MASS/DIST/SPEED + one set of slots for all rigs (kept = >= 90 % of DIST); **`pl_mission.py` now waits for the
+planner's settle hand-over (`push_pull/info` [87]) before its close gate, as the arm GS does**
+(`--no-close-after-settle` = old); `build_box_pushing.py` writes a BEST-run table (`box_pushing_sim_best.*`,
+`metrics_best`, lowest slide e_imp), fits the 3-D figure to the data, describes the 10-22 planner. The previous
+500 g / 0.50 m results moved untouched to `Isaac_simulation_data/box_pushing/previous_20261017_25_500g_0p50m/`.
+No simulation MATLAB zip exists any more (task folders only). Nothing committed.
+
+**THE EXPERIMENTAL TRACKING TABLE = THE MEAN OF THE FINAL CAMPAIGN'S RUNS (2026-10-29, user request: "the
+same rule as the simulation").** The 10-29 bags (`1029 - T650-AM whole-body Tracking & Valve-Turning-*/`) add
+figure-8 0.10 m/s for both methods, two complete runs each (WB-19/20 38.1/45.1 mm, DEC-13/14 83.0/86.1 mm EE
+RMSE; same task, the 10-16 WB fix; no anomaly: battery, tilt and odometry gaps as on 10-27/28).
+`results/utils/experiment_tracking.py` now averages: each table entry = the mean, column by column, of the
+eligible runs of its setting, eligible = flown in the final campaign 2026-10-27..29 (`FINAL_FROM/TO`, one config
+per method throughout) and completed; at most `TOP_N` = 3, the lowest-EE ones (only WB circle 0.13 has more: 4,
+WB-14 dropped). Earlier runs stay scored/listed (`rmse_all`, the index) but are not averaged.
+`matlab_experiment_data/free_flight_tracking/` is now self-contained like the simulation's: every averaged run as
+`<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat` (k = flight order; `meta.tag`, `run`, `averaged_with`,
+`runs_in_mean`), `free_flight_tracking_rmse.mat` with `rmse_mean` (the table) / `rmse_runs` / `rmse_all`,
+`configs/` (the four hardware yamls from git at the last commit touching each: WB 05c9cdb, Geo-L1 d85be8a, arm
+f812b48 / 6c5ef48, all unchanged through the campaign) and its README; the top-level `matlab_experiment_data/README.md`
+is now a task index. Bag copies: one per bag, `flight_test_data/free_flight_tracking/<shape>/v<speed>/
+<method>_<shape>_v<speed>_<runs of the bag>/` (11 bags, byte-identical); the old one-run copies and `.mat` files
+were pruned by the script (originals untouched). Table note now says "the mean over the completed flights of that
+setting in the final flight campaign (at most three...)"; paper NOT spliced. **Result (mean EE RMSE, mm, 0.10 /
+0.13 / 0.20): Proposed circle 29.3 < 32.5 < 36.5, Geo-L1 circle 82.5 < 90.1, Geo-L1 figure-8 84.6 < 85.2 (within
+spread), Proposed figure-8 41.6 / 36.1 / 43.8 -- NOT monotonic**, under any rule tried (best run, mean, top-3, with
+the 10-05 runs): the WB figure-8 error is flat within its run-to-run spread (34-48 mm at all three speeds). Trap hit:
+a consistency-check loop `for k in (...)` inside `export_mat` overwrote the run index `k` and named every file
+`..._runplatform_heading_deg.mat` -- the loop variable is `c` now.
+**Hand-over summary for the manuscript (2026-10-29, user writes it on another laptop):**
+`matlab_experiment_data/README.md` (the summary was first a separate `RESULTS_SUMMARY.md`; merged into the index
+README on the user's request, which is now hand-written: `experiment_tracking.py` no longer writes it, and
+`readme_text.exp_index_readme` is deleted):
+- **Tracking:** the table, the findings, suggested wording, and the stale `main_v2.tex` line 7565 ("almost
+  doubled" no longer holds: Geo-L1 figure-8 platform z is 10.1 -> 13.1 mm). It also has generated rows in the
+  manuscript's own 13-column layout and the run files to plot.
+- **Pick-and-drop and box pushing:** the key numbers.
+- **Not reportable:** the valve flights.
+- **Simulation note:** the paper's simulated box-pushing section still describes the old 0.5 kg / 0.50 m campaign.
+- **The exporter** now also writes `free_flight_tracking_exp.tex` into the MATLAB folder.
+- **Zip:** `results/experiment_results/matlab_experiment_data.zip` was rebuilt (56 files).
+**RULE CHANGED THE SAME EVENING (user):** the paper says "the mean of two repeated tests". Each lap counts as one
+test: each bag flies two one-lap planner runs, rest to rest, scored separately. The table entry is now **both laps
+of the setting's latest flight** (`choose()` / `RULE` in `experiment_tracking.py`; `TOP_N` removed).
+- **It never looks at the error.** Only Proposed circle 0.13 m/s had two flights: WB-15 + WB-16 = 35.3 mm (was
+  32.5 under the old top-3 rule).
+- **The user first asked for the best two of four.** That gives 29.0 mm, below the 0.10 entry (29.3), which
+  breaks the circle trend. Told, and the user chose latest-flight.
+- **Circle Proposed now 29.3 / 35.3 / 36.5 mm; figure-8 unchanged and still flat.** Zip rebuilt (62 files).
+- **A second session** (`pick_and_drop/`, M5 2026-10-28) edited the same folder, `readme_text.py` and the summary
+  concurrently: re-read before editing.
+
+**1028 PICK-AND-DROP: THE DROP MARGIN LOWERED 12 → 8 → 6 → 5 cm, 5 cm EXPORTED (2026-10-29, user request).**
+Four flights (`1028 - T650-AM whole-body Tracking, Pick&Drop, Valve-Turning-*/…/flight_wb_l1_4d_pick_and_drop_<N>offset_*`),
+the same mission, controller (fsc_autopilot_ros2 `a12e454`) and payload; only the GS-typed Drop Margin changed.
+All four completed the legs; the pilot took STAB in each land leg. Record
+`docs/docs_aerial_manipulator/archive/wb_pick_drop_flight_20261028/` (README, `tools/compare_margins.py`).
+- **The drop improves as the margin comes down.** Basket centre at OPEN above its flat tray rest (z 0.931):
+  138 / 120 / 81 / 75 mm; impact 1.05 / 1.03 / 0.81 / 0.73 m/s. 12 cm bounced off the tray onto the floor;
+  8 cm in the tray, 13° tilt; 6 cm slid 66 mm; **5 cm: no bounce, slid 16 mm, rest flat 2.9°, 58 mm from the
+  drop point**. Tracking was best at 5 cm too: EE RMSE 59.7 / 56.1 / 53.4 / 50.2 mm.
+- **Exported:** `results/utils/experiment_pick_and_drop.py` (reuses `experiment_pick_and_place.py`'s convert;
+  that module gained `METRICS_NAME`/`SCORES_NAME`, `stage2(readme=)` and a per-run `drop_height` override,
+  D-2's output unchanged) → `matlab_experiment_data/pick_and_drop/whole_body_l1_pnd_M5.mat` (the sim's
+  pick-and-drop struct, field for field) + `pick_and_drop_metrics.mat`, `configs/`, README; bag copied
+  unchanged to `flight_test_data/pick_and_drop/whole_body_l1_pnd_M5/`. The 10-16 D-2 stays in `pick_and_place/`.
+  The summary's section 2 and the flight index rows (`experiment_tracking.py` INDEX) were updated.
+- **The bag does not hold the margin or the Drop point** (GS parameters, no `/parameter_events`, no valid
+  info drop row): the margin comes from the bag name, so the drop point's z is only as good as that. M8's
+  claw target sat ~2 cm higher than its name gives.
+- All drops were the Drop BUTTON, 0.5–2.7 s after the leg: the automatic drop and the basket aim never ran.
+
+**VALVE SAFETY FIXES AFTER THE 10-29 CRASH + A HINGED HANDLE DESIGN (2026-10-30, user request; no Isaac
+runs on request; records `docs/docs_aerial_manipulator/archive/valve_safety_fixes_20261030/README.md` and
+`archive/valve_handle_joint_20261030/README.md`).** Uncommitted; NOT flown.
+- **Sway guard** (planner, gate-only `push_pull_guard_sway_speed` / `_filter_s` / `_persist_s`, default 0 =
+  off; valve yamls 0.15 m/s / 0.25 s / 0.2 s): the RATE of the horizontal CoM error from `wb_control_debug`
+  [48..50]-[45..47], low-passed, with the claw on the handle -> abort. Replay: 0 of 56 completed Isaac turns,
+  10-29 caught 3.0 s before the collapse. The CoM error itself false-trips (a 60 mm limit: 37 of 56).
+- **Arm-guard aborts (q3 static/rate) and the sway guard drop the room hold** (`pl_abort_drop_anchor_`): the
+  world-held release stays for tilt and handle guards only.
+- **Arm RELEASE at the SAFETY handover**: the whole-body client sends an all-NaN effort command for 0.1 s when
+  the law stops commanding the arm (hardware: `wb_arm_hold_stream` false); `ExternalTorqueController` then hands
+  the arm to its hold at once instead of replaying the last torque for `command_timeout_s` 0.3 s.
+- **Mocap jump gate centred by EKF2's velocity** (estimator `mocap_guard_predict`, default true; above
+  1 m/s, capped 4 m/s; a union with the old band, so it can only accept more). Over 36 recorded flights only
+  the two crashes change (10-10 PP-4, 10-29). Parity fixtures + gtests 17/17 (standalone build).
+- Built and tested the same evening (no Isaac): estimator 17/17, law 32/32, arm pass-through ALL PASS (the
+  RELEASE hands the arm to its hold in 6 ms), planner loopback ALL PASS on the sim and hardware box yamls ([9m]).
+  Both whole-body hardware stacks refuse on `valve_turning` a build without the fixes.
+- **Report items 6, 7, 9, the same night (user)** -- (6) arm GS Valve tab: the jaws open on the FLYING
+  go_to_start edge, and the close gate also waits for the law's EE heading error (planner
+  `push_pull/arrival_error` [30] = asin `wb_control_debug` [27]) under `push_pull_valve_grip_heading_tol_deg` 15;
+  (7) the Valve tab raises the arm controller's `passthrough_error_damping_joints` to
+  `push_pull_valve_error_damping_joints` [0.2, 0, 0, 0.2] for the mission, restoring the old value at its end
+  (other tasks untouched; Isaac's arm config leaves the key empty, so the station logs and skips it); (9) law gain
+  `ee_anchor_free_heading_radius` / node key `wb_ee_anchor_free_axis_heading_radius` (0 = off, valve yamls
+  +0.160): the EE heading target turns by the free-axis offset / R; debug [118]/[119]; the planner refuses a
+  turn whose sense or radius disagrees ([31] shows it). Tests: law 32/32 (+FD test of the heading chain),
+  planner loopback [9n], new GS harness `gs_valve_grasp_check.sh` 14/14.
+- **Isaac, 2026-10-31 (user: "yes"), README "Isaac validation":** nominal 3/3 and drift seeds 2/3 complete;
+  seed 4 (10-28 aborted it too) and the forced q3 / sway / mocap-freeze aborts all CoM-anchored at once, DIRECT
+  kept, tilt <= 5.9. Sway peak 56-91 mm/s on completed turns vs 150. Item 9: heading target follows the real
+  handle (corr 0.85-0.98), EE heading error 2.1-4.6 deg rms vs 3.9-7.4 on 10-28. Items 6 (gripper open from
+  spawn in Isaac) and 7 (empty key) untestable in sim. Item 3: RELEASE logged by both sides 10 ms apart, but
+  only with the entry gate widened (Isaac's kp-3 fallback PD sags 0.24 rad with the hold stream off; kp 30 is
+  unstable there). **FOUND, pre-existing: the arm fold after a SAFETY revert sweeps the OPEN claw through the
+  fin** (control run: 60 N, valve +128 deg, vehicle thrown 3.3 m, tilt 19); hardware folds 2 s after any revert
+  too (`system_arm_go_home_delay_s`) with SAFETY holding at fin height. Not fixed -- the user's call. New
+  default-off launcher hook `AM_ARM_CONTROLLER_CONFIG` (4-D launcher -> `controller_config:=`).
+- **EMERGENCY ABORT INSTEAD OF SAFETY (2026-10-31, user: "for an emergency it should abort, not switch to
+  SAFETY directly"; README section of that name).** Node keys `system_wd_abort_service` /
+  `_abort_status_topic` / `system_wd_hard_tilt_deg` 25 / `system_wd_abort_timeout_s` 15 (default off; box +
+  valve yamls, sim + hardware): a soft tilt / drift trip during a contact step (the planner's latched
+  push_pull status: FLYING/DONE ready or push, FLYING exit, ABORTING) calls the planner's new
+  `push_pull/emergency_abort` and the law flies the abort; SAFETY only on the rate limit, the hard tilt, a
+  refused / unstarted abort or the timeout; one per engagement. The planner service = the tilt guard's abort
+  (the task's CONFIGURED release) -- a first build dropped the room hold like the arm / sway guards and the
+  open claw rode the vehicle's wander back into the fin (Isaac: 25 deg, escalated to SAFETY). Isaac (soft
+  limit 3.5 to force it mid-turn): 2/2 clean (tilt <= 3.8, 2 cm, DIRECT kept, done 9.8 s); nominal unchanged.
+  Loopback [9o] ALL PASS both box yamls; hardware stacks refuse an older node / planner. Still open:
+  escalations and operator / pilot switches still revert in place and the automatic fold then runs.
+- **Handle**: a roll joint through the grip point, in the fin's plane 30 deg up toward the turn direction (square
+  to the claw axis); no damper (it removes the coupling; the drone damps itself). Off-axis costs K_y d^2.
+  **Simplified twice (user): now a printed ROLL FIN** (flat 56 x 52 x 8 mm, the claw grips its faces at G;
+  sized from the three hardware grasps, which closed 10-22 mm short along the fin toward the approach side)
+  turning on an M4 x 70 along that axis, held upright before the grasp by an O-ring's friction (2-4 mN.m,
+  set with a 10 g weight on the bench); a printed base clamps over the sawn-off fin (30 mm stump, 2 x M3).
+  2 printed parts + 6 hardware pieces; G / offsets / obj_0 unchanged; STLs, component pictures and the
+  generator in `archive/valve_handle_joint_20261030/` (README); the full valve with it fitted is the asset
+  `rotorcraft/assets/Valve_Assembly_v3.stl` (20 bodies, metres, v2's frame; converted to USD 2026-10-31, next entry). The 8 mm fin may need the hardware arm GS's
+  `push_pull_grip_max_open` widened (bench check). Design page: section 4 of
+  https://claude.ai/artifact/BppzF9zYUZoNwrdPymSQoi. Earlier versions (paddle + post, round sleeve) superseded.
+
+**THE ROLL-FIN HANDLE FLOWN IN ISAAC ON THE 90 deg TURN (2026-10-31, user request: "use this mechanism for the
+same 90 deg task and judge whether the design helps"; record
+`docs/docs_aerial_manipulator/archive/valve_roll_fin_sim_20261031/README.md`).** Uncommitted; not on hardware.
+- **Asset**: `Valve_Assembly_v3.usda` from the new `tools/stl_to_usda_valve_v3.py` (the v1/v2 converter is unchanged
+  and cannot read v3: two marker mounts merged into the rotor shell on that export). `/roll_fin` is a dynamic body on
+  `/roll_joint` about N through G. Masses from the design's densities: rotor body 226 g + roll fin 23 g, +37 %
+  inertia about the valve axis. The markers' centroid is v2's, so no planner offset or yaml changes.
+- **Scene** (07 valve), gated on the asset's `fsc:roll_fin` (v1/v2 runs unchanged):
+  - the 20 mm grip shim rides on the roll fin;
+  - `PEGASUS_VALVE_ROLL_FRICTION` (default 0.002 N.m, stick-slip in the joint drive) and `PEGASUS_VALVE_ROLL_LOCK=1`
+    (the screw tight), both forwarded by the valve wrapper;
+  - the rotor mass defaults to the asset's;
+  - the contact truth covers both bodies and carries the roll angle ([20..22]); a FIRST CONTACT log per link/body pair.
+  - Trap hit: rclpy makes `Float64MultiArray.data` an `array('d')` on assignment, so `+=` a list raises -- silently,
+    inside the scene's try/except: build the list, assign once.
+- **Results**, 33 headless flights (+ the 10-31 v2 control, same build), v2 bearing 0.072 drive, arm GS steps:
+  - nominal 100 % for v2 / locked / free;
+  - per drift seed 2-8: **v2 5/7, free 4/7, locked 2/7** -- not separable (Fisher p 0.59 / 1.0). Every failure on
+    every handle is the q3 mid-turn fold -> guard -> DIRECT lost (8 of 9);
+  - the grip's couple about the roll axis: **122-193 -> 1-2 mN.m rms**, the other two unchanged;
+  - cost: sideways CoM wander +20-60 % in contact, q4 motion x2 (the arm takes up what the fin resisted); the fin
+    stays where the last exit left it (once 34 deg).
+- **Hardware judgement** (Isaac never shows the hardware's growing sway, so from the 10-29 offline models,
+  `tools/predict_hw.py`): the fixed 30 deg pin frees 98-99 % of the forced grip rotation at the flown pose. The
+  reduced model's sideways mode goes back to free-flight damping (-1.92 vs -0.32..-0.63 1/s). With the wrist swung
+  20/26 deg, half the rotation returns about the jaw axis (-0.8..-1.2 1/s). So it should remove the 10-28/29 failure
+  mechanism, but not the mid-turn fold. Confirm with the design's own locked/free A/B, D1 hold first.
+- v3 shifts the turn's standing pitch error (sign varies, free and locked alike; v2's always negative). Cause NOT
+  found -- four candidates checked and rejected, README section 2.

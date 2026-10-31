@@ -43,8 +43,9 @@ STRUCT_SIM = STRUCT_COMMON.format(
         "reference EE), `arm_reference`, `controller_debug` (the method's debug array), `events` (the driver's event log)")
 
 STRUCT_EXP = STRUCT_COMMON.format(
-    meta="run tag, method, shape, nominal mean speed, original bag, which run in the bag, flight date, run window "
-         "(s since the bag's first message), vehicle, feedback, trajectory, selection rule",
+    meta="run tag, run index k (`run`), the runs averaged with it (`averaged_with`, `runs_in_mean`), method, shape, "
+         "nominal mean speed, original bag, which run in the bag, flight date, run window (s since the bag's first "
+         "message), vehicle, feedback, trajectory, controller configuration, selection rule",
     raw="the bag's streams, time in s since the bag's first message: `odom` (EKF2-fused odometry: position, velocity, "
         "attitude, body rates), `joints` (q and qdot, model convention), `reference` (the planner's whole-body "
         "reference), `controller_debug` (`wb_control_debug` for the proposed method, `l1_control_debug` for Geo-L1), "
@@ -195,52 +196,66 @@ def sim_readme(summary, runs, attempts, plant, configs):
     return "\n".join(L)
 
 
-def exp_readme(sel_rows, scored_rows, index_rows, cells, not_flown):
-    """sel_rows: [(file, tag, traj, speed, method, flown, bag, run_in_bag, ee_rmse)]; scored_rows: [(tag, flown,
-    method, traj, speed, ee, platform, head, status)]; index_rows: [(n, date, bag, controller, flown, runs)];
-    cells: [(traj, speed, proposed, geo)]."""
+def exp_readme(c):
+    """README of matlab_experiment_data/free_flight_tracking/. c: files [(file, tag, flown, bag, run in bag, bag copy,
+    EE)], cells [(traj, speed, proposed, geo)], trend [(traj, method, values, grows)], scored [(tag, flown, method,
+    traj, speed, EE, platform, heading, configuration, status)], not_flown, fix_runs, nofix_runs, configs
+    [(name, source)], final (first, last day), example (a Proposed circle file)."""
+    first, last = c["final"]
     L = [
         "# Experiment results, MATLAB data (free-flight trajectory tracking)", "",
-        "This is the data behind the paper's experimental table (Table III, `tab:exp_free_flight_tracking`): the",
-        "selected hardware run of each filled setting, converted from its ros2 bag. The folder is self-contained:",
-        "these files plus MATLAB are all you need, with no ROS or custom message definitions.", "",
+        "This is the data behind the paper's experimental table (`tab:exp_free_flight_tracking`), converted from the",
+        "hardware ros2 bags. The folder is self-contained and laid out like the simulation's",
+        "`matlab_simulation_data/free_flight_tracking/`: these files plus MATLAB are all you need, with no ROS or custom",
+        "message definitions.", "",
         "## Files", "",
         "```",
-        "free_flight_tracking/<shape>/v<speed>/<method>_<shape>_v<speed>_<run>.mat   one run, struct `run`",
-        "free_flight_tracking_rmse.mat     struct `rmse` = Table III (one row per selected run)",
-        "pick_and_place/                   the pick-and-place flight: a separate task folder with its own README.md",
+        "<shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat   one run, struct `run`",
+        "free_flight_tracking_rmse.mat     rmse_mean = the table, rmse_runs = its runs, rmse_all = every scored run",
+        "free_flight_tracking_exp.tex      the table in LaTeX (tab:exp_free_flight_tracking), from rmse_mean",
+        "configs/                          the hardware configs of the final campaign (taken from git)",
         "```", "",
-        "- **`pick_and_place/`:** self-contained like the simulation's task folders; copy it alone to plot that task.",
-        "  Written by `results/utils/experiment_pick_and_place.py`, not by this folder's generator.",
         "- **`<shape>` / `v<speed>`:** as in `matlab_simulation_data` (`v0p13` = 0.13 m/s).",
         "- **`<method>`:** `whole_body_l1` (Proposed) or `geometric_l1` (Geo-L1, position-mode arm).",
-        "- **`<run>`:** the flight tag (WB-n, DEC-n) used in the lab's comparison reports.", "",
+        "- **`run<k>`:** the k-th of the runs averaged in that table entry, in flight order. `run.meta.tag` is the flight",
+        "  tag (WB-n, DEC-n) used in the lab's reports and in the index below.", "",
         "```matlab",
-        "r = load('free_flight_tracking/circle/v0p13/whole_body_l1_circle_v0p13_WB-2.mat').run;",
+        f"r = load('{c['example']}').run;",
         "plot(r.tracking.t, vecnorm(r.tracking.ee_pos_err_m, 2, 2) * 1e3)        % EE position error [mm]",
-        "T = struct2table(load('free_flight_tracking_rmse.mat').rmse);           % Table III",
+        "S = load('free_flight_tracking_rmse.mat');",
+        "T = struct2table(S.rmse_mean);     % the table: one row per (shape, speed, method)",
+        "R = struct2table(S.rmse_runs);     % every run averaged in it",
+        "A = struct2table(S.rmse_all);      % every scored run, with its status",
         "```", "",
-        "## Experiment index", "",
-        "### The runs in this folder (one per filled table cell)", "",
-        "**Selection rule:** among the repeated flights of a setting, the completed run with the lowest",
-        "end-effector position RMSE, flown with the controller version the paper compares.", "",
-        _md_table(["file", "run", "trajectory", "speed [m/s]", "method", "flown", "original ros2 bag",
-                   "run in the bag", "EE RMSE [mm]"], sel_rows), "",
-        "The bags themselves are kept in `results/experiment_results/free_flight_tracking/<shape>/v<speed>/<same name>/`",
-        "on the lab machine; the `.mat` files here hold everything the table and the plots need.", "",
-        "### Which run fills each table cell", "",
-        _md_table(["trajectory", "speed [m/s]", "Proposed", "Geo-L1"], cells), "",
-        "Not flown on hardware (\"--\" in the table): " + ", ".join(not_flown) + ".", "",
+        "## How the table is made", "",
+        "The simulation's rule: **each table entry is the mean, column by column, of the per-run RMSE of its runs.**",
+        f"- **Runs:** the completed runs of that setting flown in the final campaign, 2026-{first} to {last}, with one",
+        "  configuration per method throughout (below). Earlier flights are scored and listed but not averaged.",
+        "- **Two repeated tests per entry:** each flight (bag) flies two one-lap runs back to back, each its own",
+        "  planner run from rest to rest, and each lap counts as one test. An entry averages both laps of the",
+        "  setting's latest flight. The rule never looks at the error. Only one setting (Proposed, circle 0.13 m/s)",
+        "  was flown twice; its earlier flight is scored and listed but not averaged.", "",
+        "### The runs in each entry (mean EE position RMSE, mm)", "",
+        _md_table(["trajectory", "speed [m/s]", "Proposed", "Geo-L1"], c["cells"]), "",
+        "Not flown on hardware (\"--\" in the table): " + ", ".join(c["not_flown"]) + ".", "",
+        "### Does the error grow with the mean speed?", "",
+        _md_table(["trajectory", "method", "mean EE RMSE at 0.10 / 0.13 / 0.20 m/s [mm]", "grows"], c["trend"]), "",
+        "### The files", "",
+        _md_table(["file", "run", "flown", "original ros2 bag", "run in the bag", "bag copy", "EE RMSE [mm]"],
+                  c["files"]), "",
+        "The bag copies are in `results/experiment_results/flight_test_data/free_flight_tracking/<shape>/v<speed>/` on the",
+        "lab machine; a bag holds both runs of its flight.", "",
         "### Every scored run of the formal comparison", "",
         "Same metric definitions as the simulation table.", "",
         _md_table(["run", "flown", "method", "trajectory", "speed [m/s]", "EE RMSE [mm]", "platform RMSE [mm]",
-                   "EE heading RMSE [deg]", "status"], scored_rows), "",
-        "### Conditions of the selected runs", "",
+                   "EE heading RMSE [deg]", "configuration", "status"], c["scored"]), "",
+        "### Conditions of the final campaign", "",
         "- **Vehicle:** T650 aerial manipulator with the 4-DOF OM-X arm, total mass 3.746 kg.",
         "- **Feedback:** OptiTrack fused in PX4 EKF2, about 100 Hz; joint encoders.",
         "- **Proposed:**",
-        "  - the 2026-09-27 tune: k_x / k_v 50.03 / 12.58, k_R / k_ω 2.134 / 1.567, K_y / D_y 211.9 / 26.82,",
-        "    K_ψ / D_ψ 0.2484 / 0.2903;",
+        "  - the 2026-09-27 tune: k_x / k_v 50.03 / 12.58, k_R / k_ω 2.134 / 1.567, K_y / D_y 211.9 / 26.82;",
+        "  - with the 2026-10-16 wrist-roll fix: K_ψ / D_ψ 2.5 / 0.93 and the j4 stuck-joint hold",
+        f"    ({c['fix_runs']});",
         "  - L1 bandwidth ω_c 2.927 / 0.7428 / 0.8479 rad/s (translation / rotation / arm);",
         "  - the arm in torque mode with friction feed-forward and the velocity observer.",
         "- **Geo-L1:**",
@@ -248,10 +263,8 @@ def exp_readme(sel_rows, scored_rows, index_rows, cells, not_flown):
         "    k_ω 0.9505 / 0.4105;",
         "  - L1: A_s 4.334 / 2.791, ω_c 1.0 rad/s;",
         "  - the arm in position mode.",
-        "- **Allocator thrust coefficient:** 4.260431e-05 for both.", "",
-        "### All aerial-manipulator flight-test bags (for reference)", "",
-        "Arm-calibration bench bags and bare-T650 recordings are not listed.", "",
-        _md_table(["#", "date", "bag", "controller", "flown", "scored runs"], index_rows), "",
-        TRAJECTORY.replace("## Trajectories", "## Trajectories (hardware runs: 0.10 and 0.13 m/s only)"),
+        "- **Allocator thrust coefficient:** 4.260431e-05 for both.",
+        "- **Configs:** " + "; ".join(f"`configs/{n}` ({src})" for n, src in c["configs"]) + ".", "",
+        TRAJECTORY.replace("## Trajectories", "## Trajectories (hardware runs: 0.10, 0.13 and 0.20 m/s)"),
         "## The struct `run`", "", STRUCT_EXP, NOTATION]
     return "\n".join(L)

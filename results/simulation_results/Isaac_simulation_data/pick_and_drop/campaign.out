@@ -1,0 +1,23 @@
+[16:08:48] whole_body_l1_pnd_run1 attempt 1 (pnd_wb_r1_a1)
+[16:13:42] whole_body_l1_pnd_run1 completed (285 s, FLAT in the tray)
+[16:13:42] whole_body_l1_pnd_run2 attempt 1 (pnd_wb_r2_a1)
+[16:18:30] whole_body_l1_pnd_run2 completed (279 s, FLAT in the tray)
+[16:18:30] whole_body_l1_pnd_run3 attempt 1 (pnd_wb_r3_a1)
+[16:21:35] whole_body_l1_pnd_run3 attempt 1 FAILED: [  43.40s] ABORT: left DIRECT while execute_pick holding above
+[16:21:35] whole_body_l1_pnd_run3 attempt 2 (pnd_wb_r3_a2)
+[16:26:27] whole_body_l1_pnd_run3 completed (282 s, FLAT in the tray)
+[16:26:27] geometric_l1_pnd_run1 attempt 1 (pnd_geo_r1_a1)
+[16:31:10] geometric_l1_pnd_run1 attempt 1 FAILED: [  66.60s] TIMETABLE LATE: go_to_place_start accepted 0.60 s after its mark
+[16:31:10] geometric_l1_pnd_run1 attempt 2 (pnd_geo_r1_a2)
+[16:35:54] geometric_l1_pnd_run1 completed (274 s, FLAT in the tray)
+[16:35:54] geometric_l1_pnd_run2 attempt 1 (pnd_geo_r2_a1)
+[16:40:42] geometric_l1_pnd_run2 completed (279 s, in the tray, NOT flat)
+[16:40:42] geometric_l1_pnd_run3 attempt 1 (pnd_geo_r3_a1)
+[16:45:28] geometric_l1_pnd_run3 completed (276 s, FLAT in the tray)
+[16:45:28] modular_adaptive_pnd_run1 attempt 1 (pnd_mod_r1_a1)
+[16:49:50] modular_adaptive_pnd_run1 completed (252 s, in the tray, NOT flat)
+[16:49:50] modular_adaptive_pnd_run2 attempt 1 (pnd_mod_r2_a1)
+[16:54:17] modular_adaptive_pnd_run2 completed (256 s, FLAT in the tray)
+[16:54:17] modular_adaptive_pnd_run3 attempt 1 (pnd_mod_r3_a1)
+[16:58:43] modular_adaptive_pnd_run3 completed (257 s, in the tray, NOT flat)
+[16:58:43] campaign done -- closing the simulation

@@ -16,7 +16,7 @@ friction). Until 10-17 that hold lasted until the Exit step: the ground station 
 gripper and called Exit 1 s later (the sim driver 3 s later). With the jaws open nothing
 holds the claw, but its reference stays fixed in the room, so the arm absorbs the base's
 post-release drift (16–55 mm in every run). In the 10-17 results campaign
-(`results/simulation_results/box_pushing/failed/whole_body_l1_push_run3_attempt1/`) the base
+(`results/simulation_results/Isaac_simulation_data/box_pushing/failed/whole_body_l1_push_run3_attempt1/`) the base
 drifted 27 mm back, q2 reached its +45 ° stop at +1.0 s, q3 went through 0 ° (the
 elbow-singular branch) at +1.2 s, the planner's q3 guard tripped at +1.16 s — too late — and
 the vehicle flipped. A kept run reached q3 = 11.2 °, 1.2 ° above that guard.

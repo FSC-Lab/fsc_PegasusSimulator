@@ -3,7 +3,7 @@
 
     PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py [--paper <main.tex>] [--figdir <dir>]
 
-Reads results/simulation_results/pick_and_place/<method>_pnp_run<k>.npz (the npz written by
+Reads results/simulation_results/Isaac_simulation_data/pick_and_place/<method>_pnp_run<k>.npz (the npz written by
 docs/docs_aerial_manipulator/archive/pick_place_controllers_20261003/tools/pnp_mission_v2.py, flown by
 run_pick_and_place_campaign.sh) and writes
     simulation_results/matlab_simulation_data/pick_and_place/<name>.mat       struct `run`: meta, raw, tracking, metrics
@@ -43,11 +43,12 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.join(RESULTS, "simulation_results")
+SIM = os.path.join(RESULTS, "simulation_results")
+ROOT = os.path.join(SIM, "Isaac_simulation_data")                    # the task folders (raw runs)
 REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 PNP = os.path.join(ROOT, "pick_and_place")
 TABLES = os.path.join(HERE, "tables")
-MAT_DIR = os.path.join(ROOT, "matlab_simulation_data")
+MAT_DIR = os.path.join(SIM, "matlab_simulation_data")
 # one self-contained folder per task inside MAT_DIR (2026-10-09, user request): copy the task folder
 PNP_MAT = os.path.join(MAT_DIR, "pick_and_place")
 sys.path.insert(0, os.path.join(REPO, "extensions", "fsc_aerial_manipulation"))

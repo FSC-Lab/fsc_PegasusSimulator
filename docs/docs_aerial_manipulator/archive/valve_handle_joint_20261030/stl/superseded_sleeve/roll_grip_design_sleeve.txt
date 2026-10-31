@@ -1,0 +1,37 @@
+THE JOINT, along the axis s (mm from G, +s = up toward +y):
+  boss Ø13.0 s -43.2..-31.8 (nyloc pocket -43.2..-37.9), neck Ø8.0 -31.8..-25.8, washer, sleeve Ø16.0 -25.0..25.0, washer, head 25.8..29.8; M4 x 70 tip at s -44.2 (1.0 mm past the boss end, through the nylon)
+  boss end        s  -43.2: y  -36.8, z  157.4
+  sleeve -end     s  -25.0: y  -21.1, z  166.5
+  sleeve +end     s   25.0: y   22.3, z  191.5
+  screw head top  s   29.8: y   26.4, z  193.9
+  the handle's highest point z 198.4 (today's fin top 204.0)
+  smooth shank of the M4 x 70: s 25.8 down to -24.2; the sleeve ends at -25.0 (0.8 mm of it on the thread run-out)
+
+THE CLAMP: fin cut at z 104 (30 mm above the root top; 98..106 fits), slot 5.4 mm x 34 deep, walls 4.0 mm, x 153.3..166.7, sits on the root's ledges
+  bolts M3 at (y, z) [(-12.0, 89.0), (12.0, 89.0)]; grip length 13.4 mm -> M3 x 16 (heads on -x, nuts in 2.5 mm pockets on +x, the bolt end 2 mm proud)
+
+PRINTED PARTS: handle body 25.9 cm^3 -> 27 g; sleeve 9.3 cm^3 -> 10 g
+  the fin's top removed: 20.0 cm^3 -> 21 g; screws 12.3 g; net +28 g at r ~160 mm -> +28 % of the rotor's 2.6e-3 kg.m^2
+
+AXIS OFFSET: the sleeve is centred on the axis through G, so the claw point is on it by construction; a claw sitting d off it costs K_y d^2 (10 mm -> 12 mN.m/rad)
+
+CLEARANCES (fin plane; the closed pads touch only what is about as wide as the sleeve):
+  the pads reach the Ø13.0 boss only with the claw 21.8 mm off along the axis toward it (the close gate allows 20); the neck Ø8.0, washers Ø9.0, head Ø7.0, web 5.0 mm are all thinner than the sleeve
+  jaw side clearance at the close: (37 - 16) / 2 = 10.5 mm (close gate across 8)
+  claw  0.0 mm off G (worst direction): fingers to the clamp  42.7 mm, fingers' footprint to the boss  21.8 mm
+  claw 10.0 mm off G (worst direction): fingers to the clamp  32.7 mm, fingers' footprint to the boss  11.8 mm
+  claw 20.0 mm off G (worst direction): fingers to the clamp  22.7 mm, fingers' footprint to the boss   1.8 mm
+  gripper body to the boss/clamp all the way in, claw  0.0 mm off:  37.5 mm (open fingers pass the clamp, 13.4 mm wide, with 11.8 mm a side)
+  gripper body to the boss/clamp all the way in, claw 20.0 mm off:  17.5 mm (open fingers pass the clamp, 13.4 mm wide, with 11.8 mm a side)
+  M3 nut face (+x) to marker E's ball: 8.2 mm
+
+LOADS at the 5 N force guard (push along +y at G):
+  along the axis 4.33 N (pulls the sleeve against the washer under the head), across 2.50 N
+  M4 screw bending at the boss face: 0.159 N.m -> 52 MPa on the thread core
+  in-plane moment at the bolts 0.450 N.m -> 19 N per M3 bolt in shear
+  the same 5 N radially (claw sway) bends the web at the clamp: 2.0 MPa
+  joint friction (dry, mu 0.25): 0.44 mN.m in the turn (0.45 N push), 4.9 mN.m at the force guard
+  joint friction (greased, mu 0.1): 0.18 mN.m in the turn (0.45 N push), 2.0 mN.m at the force guard
+  locked (screw tightened, ~300-600 N clamp): 0.3 x F x 3.3 mm x 2 faces = 0.6-1.2 N.m of holding
+
+STL: handle_body.stl 13.4 x 61.7 x 103.8 mm upright (clamp down), 1332 triangles; grip_sleeve.stl Ø16.0 x 50.0 on its end, 640 triangles

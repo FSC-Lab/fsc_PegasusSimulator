@@ -1,0 +1,37 @@
+THE JOINT, along the axis s (mm from G, +s = up toward +y):
+  boss Ø9 s -47.8..-40.8 (Ø3.5 pilot: the M4 cuts its thread), neck Ø6 -40.8..-34.8, O-ring 4 x 1 squeezed to 0.8, roll fin -34..22 (bore Ø4.4), head 22.0..26.0; M4 x 70 tip at s -48.0 (0.2 mm past the boss)
+  the roll fin: 56 along the axis x 52 across x 8 thick; in the valve frame y -38.4..33.2, z 137.5..207.6 (today's fin top 204)
+  its centre of mass 4 mm below the axis: gravity alone centres it with 0.8 mN.m/rad (weak: the O-ring holds it)
+
+THE CLAMP: fin cut at z 104 (30 mm above the root top), slot 5.4 x 34 deep, walls 4.0 mm, x 153.3..166.7; M3 x 16 at (y, z) [(-12.0, 89.0), (12.0, 89.0)], nuts in 2.5 mm pockets on +x
+
+PRINTED: base 22.4 cm^3 -> 23 g; roll fin 22.3 cm^3 -> 23 g. Fin top removed 21 g, screws 9.7 g: net +35 g at r ~160 mm -> +35 % of the rotor's 2.6e-3 kg.m^2
+
+THE HOLD (O-ring between the neck and the fin, the screw head on the fin's other end):
+  squeeze 0.5 N -> friction 1.1 mN.m (rubber 0.6 at the O-ring, steel on PLA 0.25 under the head)
+  squeeze 1.0 N -> friction 2.2 mN.m (rubber 0.6 at the O-ring, steel on PLA 0.25 under the head)
+  squeeze 2.0 N -> friction 4.4 mN.m (rubber 0.6 at the O-ring, steel on PLA 0.25 under the head)
+  the turn's 0.45 N push pulls the fin 0.39 N up the screw: off the O-ring, onto the head -> at most 1.0 mN.m (from a 1 N squeeze)
+  the 5 N force guard pulls the fin 4.33 N up the screw: off the O-ring, onto the head -> at most 3.8 mN.m (from a 1 N squeeze)
+  aim: 2-4 mN.m. Holds the fin wherever it is set; today's fixed fin passed ~70 mN.m rms on 10-29 (20-35x more)
+  bench setting: a 10 g weight taped to the fin's bottom edge (27 mm from the axis) = 2.6 mN.m: it should just turn the fin
+
+CLEARANCES (fin plane):
+  pads on the fin: 56 mm along the axis for 20 mm pads -> slop 24 mm toward -s (the measured misses: 10, 22, 13), 12 toward +s; across: fin c -22..30 vs pad band -15..15
+  the pads reach the Ø9 boss only with the claw 30.8 mm off along the axis toward it (close gate 20); the neck (Ø6) and the screw head (Ø7) are thinner than the fin (8)
+  jaw side clearance at the close: (37 - 8) / 2 = 14.5 mm (close gate across 8)
+  fingertips (c +20) to the web (c +33): 13 mm with the claw on G
+  claw  0.0 mm off G (worst direction): fingers to the clamp  42.7 mm, fingers' footprint to the boss  30.8 mm
+  claw 10.0 mm off G (worst direction): fingers to the clamp  32.7 mm, fingers' footprint to the boss  20.8 mm
+  claw 20.0 mm off G (worst direction): fingers to the clamp  22.7 mm, fingers' footprint to the boss  10.8 mm
+  gripper body to the boss/clamp all the way in, claw  0.0 mm off:  43.9 mm
+  gripper body to the boss/clamp all the way in, claw 20.0 mm off:  23.9 mm
+  the fin turned 30 deg: its bottom edge moves 15 mm sideways and 4 mm toward the axis, away from the web; the open jaws (37 mm) still take it and squeeze it back flat
+
+LOADS at the 5 N force guard (push along +y at G):
+  along the axis 4.33 N (pulls the fin against the screw head), across 2.50 N
+  M4 screw bending at the boss: 0.204 N.m -> 67 MPa on the thread core
+  in-plane moment at the bolts 0.450 N.m -> 19 N per M3 bolt in shear
+  the M4 thread in the PLA pilot: 7 mm engaged, the axial load 4.3 N at most
+
+STL: handle_base.stl 13.4 x 64.6 x 90.2 mm upright; roll_fin.stl 56 x 52 x 8 mm flat on its face (the bore runs along the 56 mm side)

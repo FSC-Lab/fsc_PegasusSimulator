@@ -40,9 +40,9 @@ POSE = {2: 32.0, 3: 28.0}     # the push pose's q2 / q3 [deg]
 
 OLD = [("10-16 s3_P", os.path.join(A, "box_pushing_campaign_20261016", "runs", f"s3_P_{k}.npz")) for k in (1, 2, 3)]
 OLD += [("10-17 control", os.path.join(A, "push_cruise_20261017", "runs", f"m_nom_{k}.npz")) for k in (1, 2)]
-OLD += [("10-17 results", os.path.join(REPO, "results", "simulation_results", "box_pushing",
+OLD += [("10-17 results", os.path.join(REPO, "results", "simulation_results", "Isaac_simulation_data", "box_pushing",
                                         f"whole_body_l1_push_run{k}.npz")) for k in (1, 2, 3)]
-OLD += [("10-17 results", os.path.join(REPO, "results", "simulation_results", "box_pushing", "failed",
+OLD += [("10-17 results", os.path.join(REPO, "results", "simulation_results", "Isaac_simulation_data", "box_pushing", "failed",
                                         "whole_body_l1_push_run3_attempt1", "results_r3_a1.npz"))]
 
 

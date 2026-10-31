@@ -319,6 +319,17 @@ refuses a planner without the axis offset; the fused stack refuses the valve pro
 push-and-pull GS harnesses PASS (valve, valve auto-steps, axis row, box, grasp, release, push,
 monitor, mocap); hardware stack dry run 61/61 + the negative build test.
 
+**Confirmation flight after the fixes (`runs/mk_full_2`, headless, GS-run steps):** the new close gate
+closed 0.15 s after Ready; the turn ran on the true axis (fixed to 0.0 mm, claw radius 0.1604 m); the
+valve lagged its plan (82° at the end); after the jaws opened the room-held claw pushed it on to 90°,
+then in the Exit climb a finger caught the fin (q4 25 → 51°, beam +10°) and the 10° tilt guard aborted
+(11.6°); the abort climbed clean and the vehicle landed. The known release-window weakness, not the
+fixes (1 of 2 complete today; 10-18 final config 6 of 9).
+
+**Pushed 2026-10-28:** fsc_trajectory_planner main `66bc2fa`, fsc_autopilot_ros2 dev_robotic_arm
+`bf7f14d`, fsc_open_manipulator omx-torque-control `cb6cf54`, Pegasus dev_robotic_arm `c5dbe71`
+(this README's earlier state; the confirmation flight and these lines are after it).
+
 **Known and NOT fixed (operator rules instead):**
 - On hardware a full close on the 5 mm fin (−0.009 m) and an empty close (−0.010 m) differ by ~1 mm,
   so the GS cannot tell a grip from a miss by position; the position gate before the close is the

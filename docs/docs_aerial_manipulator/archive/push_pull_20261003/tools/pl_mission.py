@@ -168,7 +168,7 @@ class Driver(Node):
         sub(Float64MultiArray, f"{ns}/{PL}/info", lambda m: setattr(self, "info", np.asarray(m.data)), LATCHED)
         sub(Float64MultiArray, f"{ns}/{PL}/arrival_error", self.on_arrival, 10)
         sub(PoseStamped, f"{ns}/whole_body_planner/current_ee", self.on_ee, 10)
-        sub(WholeBodyReference, f"{ns}/{REF_TOPIC}", self.on_ref, 50)
+        sub(WholeBodyReference, f"{ns}/{a.ref_topic}", self.on_ref, 50)
         sub(PoseStamped, "/obj_0/state/pose", self.on_box, qos_profile_sensor_data)
         sub(JointState, f"{ns}/isaacsim_manipulator/gripper_state", self.on_grip, qos_profile_sensor_data)
         sub(PoseStamped, "/claw_0/state/pose", self.on_claw, qos_profile_sensor_data)
@@ -641,6 +641,13 @@ class Driver(Node):
                     ok = (self.arrival is not None and len(self.arrival) >= 10 and int(self.arrival[0]) == 1
                           and self.arrival[1] > 0.5 and self.arrival[2] <= a.grip_tol
                           and abs(self.arrival[9]) <= a.grip_axis_tol)
+                # 2026-10-28: the arm GS keeps its close gate shut while the planner is still SETTLING the
+                # claw before the room hold (push_pull/info [87], the 2026-10-24 hand-over gate); so does
+                # the driver now (--no-close-after-settle: the old behaviour, which closed the jaws on a
+                # claw still moving 40-65 mm/s on the coordinated-admittance rig)
+                settling = (a.close_after_settle and self.info is not None and len(self.info) > 87
+                            and float(self.info[87]) > 0.5)
+                ok = ok and not settling
                 since = (since or time.time()) if ok else None
                 if since and time.time() - since >= a.grip_dwell_in:
                     break
@@ -718,6 +725,15 @@ class Driver(Node):
             self.begin("exit")
             self.step_to_end("exit", 3, at_handle=False)
             self.mark("exit:end")
+        if a.stop_after_exit:
+            # (ported 2026-10-26 from box_pushing_pose_gain_20261025's copy) the scored windows end
+            # at exit:end -- skip the way home and the landing; the runner's clean slate closes
+            # the simulation
+            time.sleep(a.stop_hold)
+            self.ev("--stop-after-exit: stopping after the exit (no Go To Land Start, no landing)")
+            self.stopped_early = True
+            self.phase = "done"
+            return
         # 5 Go To Land Start: one table-checked transition to Land Start
         if a.timetable:
             self.align("exit:start", a.slot_land, "go_to_land_start")
@@ -767,6 +783,11 @@ class Driver(Node):
                 time.sleep(0.05)
             self.ev(f"planner abort finished: {self.pl_status}")
             time.sleep(2.0)
+            if self.a.stop_after_exit:
+                # (ported 2026-10-26) the abort is recorded to its end; no way home, no landing
+                time.sleep(self.a.stop_hold)
+                self.ev("--stop-after-exit: stopping after the abort (no Go To Land Start, no landing)")
+                return
             # 2026-10-16: an abort leaves the vehicle 0.30 m above the push point, BESIDE
             # the table -- descending in place there came down on the table / box (Isaac,
             # h_heavy, 20.6 deg). The operator's procedure, flown here: Get the box, Plan,
@@ -796,6 +817,10 @@ class Driver(Node):
                     time.sleep(2.0)
                 except Abort as e:
                     self.ev(f"after the abort, Go To Land Start not flown: {e} -- landing in place")
+        if self.a.stop_after_exit:
+            time.sleep(max(self.a.stop_hold, 3.0))       # the aftermath (a SAFETY handover) recorded
+            self.ev("--stop-after-exit: not landing")
+            return
         self.step = -1
         if self.mode == "DIRECT":
             self.ref = self.odom[:3].copy()
@@ -859,6 +884,8 @@ def main():
     ap.add_argument("--dbg-topic", default="wb_control_debug",
                     help="the debug array under --da (coordinated_control_debug on the Liu et al. rig)")
     ap.add_argument("--dbg-len", type=int, default=120)
+    ap.add_argument("--ref-topic", default=REF_TOPIC,
+                    help="the planner's WholeBodyReference stream, relative to the namespace (2026-10-24: the arbitrary-time rig streams it on its own namespace)")
     ap.add_argument("--rate", type=float, default=50.0)
     # 1.3 m (2026-10-06): the post-handle push pose holds the body lower over the
     # box; from a 1.0 m hover the planner refuses Go To Start (gear vs table)
@@ -872,6 +899,9 @@ def main():
     ap.add_argument("--grip-live-box", action="store_true",
                     help="gate the close on the measured claw vs the LIVE box pose (x across within grip_axis_tol, y along the fin within grip_tol)")
     ap.add_argument("--grip-timeout", type=float, default=30.0)
+    ap.add_argument("--no-close-after-settle", dest="close_after_settle", action="store_false", default=True,
+                    help="close as soon as the claw is within the grip gate even while the planner is still settling "
+                         "it before the room hold (push_pull/info [87]); the default waits, as the arm GS does (2026-10-28)")
     ap.add_argument("--grip-ee-offset", type=lambda v: [float(x) for x in v.split(",")], default=[0.0, 0.0],
                     help="with --grip-live-box: the grasp point's x, y in the body's frame [m] (the planner's "
                          "push_pull_ee_offset; the box 0,0, the valve 0.160,0.0006)")
@@ -889,6 +919,10 @@ def main():
     ap.add_argument("--gs-exit", action="store_true",
                     help="2026-10-21: the arm GS's automatic Exit To Push runs release / open / exit "
                          "(start the stack with ARM_GS_AUTO_EXIT_DELAY > 0); the driver only watches")
+    ap.add_argument("--stop-after-exit", action="store_true",
+                    help="end the run --stop-hold s after the exit -- no Go To Land Start, no landing; "
+                         "the runner's clean slate closes the simulation (2026-10-25 / 10-26)")
+    ap.add_argument("--stop-hold", type=float, default=1.0, help="seconds kept after the exit")
     ap.add_argument("--direct-settle", type=float, default=15.0)
     ap.add_argument("--leg-pause", type=float, default=2.0)
     ap.add_argument("--post-hold", type=float, default=5.0)
@@ -962,7 +996,7 @@ def main():
         aborted, reason = True, "interrupted"
     finally:
         try:
-            if d.armed:
+            if d.armed and not getattr(d, "stopped_early", False):
                 d.land()
         finally:
             d.save(a.out, aborted, reason)

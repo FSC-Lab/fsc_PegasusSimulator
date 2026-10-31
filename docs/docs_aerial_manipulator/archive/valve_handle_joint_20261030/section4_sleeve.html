@@ -1,0 +1,129 @@
+  <h2 id="handle">4. A handle the claw can roll on</h2>
+  <p>With the jaws clamped on the fin, the arm's four joints are used up. Three hold the claw's position and the wrist turns the claw about its own axis. The claw's two other rotations are then set by how the drone moves, so the pads, the fin and the printed shaft take them and push back on the drone through the arm. On 10-29 that coupling grew a 0.45 Hz sway until the arm buckled, 6.9 s after the grasp. A roll joint at the top of the handle, where the claw grips, removes the coupling.</p>
+  <p class="note">The joint frees the claw; it does not add damping. Once the claw can roll, the drone gets its free-flight damping back (the 10-28 reduced model returns the sideways mode to its free-flight decay). A damper in the joint would put the coupling back: at the sway's 0.5 rad/s it has to pass under 5 mN·m, so below 0.01 N·m·s/rad.</p>
+
+  <div class="switch">
+    <span class="swlabel">Handle</span>
+    <div class="seg" role="group" aria-label="Handle">
+      <button type="button" id="hFixed" aria-pressed="false">Fixed fin (today)</button>
+      <button type="button" id="hHinged" aria-pressed="true">Roll joint</button>
+    </div>
+  </div>
+  <div class="slider">
+    <label for="hAng">Roll the clamped claw about the joint</label>
+    <input type="range" id="hAng" min="-20" max="20" step="1" value="0">
+    <output id="hAngOut" for="hAng">0°</output>
+  </div>
+  <div class="plan-note" id="hNote"></div>
+  <div class="legend">
+    <span><i class="sq" style="background:var(--paddle)"></i>grip sleeve (turns with the claw)</span>
+    <span><i class="sq" style="background:var(--post)"></i>handle body (fixed, clamped on the fin's stump)</span>
+    <span><i class="sq" style="background:var(--steel)"></i>screws, washers</span>
+    <span><i class="sq" style="background:var(--claw)"></i>gripper, simplified</span>
+    <span><i class="sq" style="background:var(--thread)"></i>joint axis</span>
+  </div>
+  <figure>
+    <div class="viewbar">
+      <button type="button" data-hview="iso">3D</button>
+      <button type="button" data-hview="face">Face-on</button>
+      <button type="button" data-hview="claw">Along the claw</button>
+      <button type="button" data-hview="top">Top</button>
+    </div>
+    <div id="h3d" role="img" aria-label="Rotatable 3D model of the handle end of the beam, with the fixed fin or the roll-joint handle and the clamped claw"></div>
+    <figcaption><b>Fig. 7.</b> The handle end of the beam from <span class="mono">Valve_Assembly_v2.stl</span> (markers C, D and E, their mounts), to scale, with the claw clamped at the grip point as at the flown pose [0, 5, 25, 0]°. With the roll joint, the slider rolls the claw and the sleeve together about the joint axis; the light stripe on the sleeve shows its turn, and the handle body does not move. The printed parts are the exported print files. With the fixed fin there is no such motion, and that roll is what the pads and the shaft resist today.</figcaption>
+  </figure>
+
+  <h3>The design</h3>
+  <p>The fin's top comes off and a printed handle takes its place: two 3D-printed parts held with standard screws.</p>
+  <ul>
+    <li>The <strong>handle body</strong> stays fixed. It slides over a 30 mm stump of today's fin and is held by two M3 bolts through it. A 5 mm web, the fin's own thickness, rises to a boss on the claw's side (−y), which holds an M4 screw along the joint axis.</li>
+    <li>The <strong>grip sleeve</strong> turns. It is a round Ø16 × 50 mm sleeve on that screw, centred on the grip point G. The claw grips the sleeve instead of the fin.</li>
+  </ul>
+  <p>The sleeve is the joint. Once the jaws close on it, it turns with them about the screw, so nothing has to be released at the grasp. Nothing has to hold it before the grasp either: it is round, so at whatever angle it rests, the jaws close on the same surface.</p>
+  <p>Everything else the pads can reach is thinner than the sleeve: the web (5 mm), the neck (Ø8), the washers (Ø9) and the screw head (Ø7). The closing jaws can therefore take only the sleeve; they cannot lock the joint by catching the handle. The Ø13 boss is out of reach unless the claw closes more than 21.8 mm along the axis toward it, beyond the 20 mm close gate.</p>
+  <p>The grip point, the planner's offsets and obj_0 stay where they are: the sleeve is centred where the claw held the fin, and the markers are not touched. This replaces the hinged paddle of the first version, so there is no post, widened root, bearings, counterweight, stops or lock dowel.</p>
+  <figure>
+    <div class="scroll"><svg id="hFace" role="img" aria-label="Face-on dimensioned drawing of the roll-joint handle, seen from the beam's outer end"></svg></div>
+    <figcaption><b>Fig. 8.</b> Face-on, seen from the beam's outer end toward the hub (+y to the right), in millimetres in the valve's frame (origin on the bearing axis at table level). Hidden edges are dashed. Marker E's ball is in front of this plane and is drawn as an outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="scroll"><svg id="hSect" role="img" aria-label="Two sections: the joint cut along its axis, and the clamp cut through a bolt"></svg></div>
+    <figcaption><b>Fig. 9.</b> Left: the joint cut along its axis, in the fin's plane, with the stack the screw holds together (s in mm from G, +s up toward +y). Right: the clamp cut through a bolt, seen from the side (+x to the right, toward the beam's end). Both to scale; the left at twice the right's scale.</figcaption>
+  </figure>
+
+  <h3>Parts and assembly</h3>
+  <div class="two">
+    <div class="card">
+      <h3>Print</h3>
+      <ul>
+        <li><span class="mono">handle_body.stl</span>, 13.4 × 61.7 × 103.8 mm, about 27 g. Print upright as exported, clamp down, with a brim. The window's sides are at 60°, so no supports are needed; add some under the boss only if your slicer flags its underside.</li>
+        <li><span class="mono">grip_sleeve.stl</span>, Ø16 × 50 mm, about 10 g. Print standing on its end. The layer lines then run round it, which helps the pads hold the push along it.</li>
+        <li>PLA, 4 perimeters, 40 % infill: the clamp, boss and sleeve then come out mostly solid. Holes are drawn at size (Ø4.4 bore, Ø3.3 bolt holes); run a drill through them after printing.</li>
+      </ul>
+      <p class="why">Files: <span class="mono">docs/docs_aerial_manipulator/archive/valve_handle_joint_20261030/stl/</span> in the Pegasus repo, in millimetres. They are generated by <span class="mono">tools/roll_grip_design.py</span>, where every dimension is a named parameter.</p>
+    </div>
+    <div class="card">
+      <h3>Hardware</h3>
+      <ul>
+        <li>1 × M4 × 70 socket head cap screw (ISO 4762). Its 50 mm smooth shank carries the sleeve.</li>
+        <li>1 × M4 nyloc nut.</li>
+        <li>2 × M4 washers (ISO 7089, 9 mm across).</li>
+        <li>2 × M3 × 16 socket head cap screws and 2 × M3 hex nuts.</li>
+        <li>A little grease, silicone or lithium.</li>
+        <li>Tools: a fine saw, a Ø3.2 mm drill for the stump, Ø3.3 and Ø4.4 drills to clean the printed holes.</li>
+      </ul>
+    </div>
+  </div>
+  <ol>
+    <li>Saw the fin off 30 mm above its root (z 104; anywhere from 98 to 106 fits) and file the cut flat. The markers stay where they are, so obj_0 does not change.</li>
+    <li>Clean the printed holes with the drills. Press the two M3 nuts into the hex pockets on the clamp's outer face (+x, away from the hub). Press the M4 nyloc into the pocket at the boss's end, nylon side out.</li>
+    <li>Slide the handle down over the stump until the clamp sits on the root, with the boss on the side the claw comes from (−y). Drill Ø3.2 through the stump, using the clamp's holes as a guide. Fit the two M3 × 16 from the hub side and tighten them.</li>
+    <li>Grease the screw's shank lightly. Thread on a washer, the sleeve and the second washer, then push the screw through the neck and the boss into the nyloc.</li>
+    <li>Tighten until the sleeve is clamped: this is <strong>locked</strong>. Back the screw off half a turn: this is <strong>free</strong>. The sleeve then turns with a fingertip and has about 0.3 mm of end play. The nyloc holds either setting.</li>
+  </ol>
+  <p class="note">On hardware, start the arm ground station with the grasp rule for a round grip: append <span class="mono">-p push_pull_full_close_is_grasp:=false</span> to <span class="mono">scripts/indoor_exp/start_ground_station_inverted.sh</span>. The jaws stop on the 16 mm sleeve, so a stall is the grasp and a full close means they missed it. The default rule (a full close is the grasp) suits the thin fin; with it the Valve Turning tab would refuse the sleeve. The rule is read at start-up and the Box Pushing tab shares it, so use it for valve sessions only. Nothing changes in the planner or the law.</p>
+
+  <h3>Which way the joint turns</h3>
+  <p>Roll and sideways sway both turn the clamped claw about one axis. It lies in the fin's plane, square to the claw's axis: 30° above horizontal, rising toward the turn direction (+y). The sleeve's axis lies along it, so the sleeve frees both. A horizontal axle along the fin's width would free only the part along the tangent, about half the angle. Pitch, fore-aft and vertical motion turn the claw about the jaws' closing axis instead. The joint leaves those alone, but they matter less: the drone holds its height to about ±5 mm, and the valve itself turns to follow the fore-aft motion.</p>
+  <div class="tscroll"><table id="hFreeTable"></table></div>
+  <p class="why">Grip rotation forced by each drone motion at the flown pose, with the valve held by its friction (<span class="mono">wb_valve_turning_flight_20261029/tools/handle_joint_mobility.py</span>). The flights agree: 0.10–0.15° of claw roll per mm of sideways sway, and 4.5° rms of claw-against-fin rotation about the tangent on 10-29. The axis stays within 5° of 30° over the arm poses the turn visits.</p>
+
+  <h3>Where the axis goes</h3>
+  <p>Through the grip point G, where the planner aims the claw: x 160, y 0.6, z 179 mm. The sleeve is centred there, so the claw point lies on the axis by construction. If the claw closes on the sleeve a distance d off its axis, too deep or too shallow in the jaws, it has to move d·θ to roll by θ. The law's task spring (120 N/m) resists that like a torsion spring of 120·d². Within 10 mm this is negligible. Sliding along the sleeve costs nothing, since a point on the axis stays on it.</p>
+  <div class="tscroll"><table id="hOffsetTable"></table></div>
+
+  <h3>What the joint needs</h3>
+  <div class="tscroll"><table id="hSpecTable"></table></div>
+
+  <h3>Clearances</h3>
+  <div class="tscroll"><table id="hClearTable"></table></div>
+  <p class="why">The OM-X fingers are taken as 20 mm wide, reaching 40 mm back toward the wrist and 20 mm past G, and the jaws as 37 mm apart at the tips when open. Check them on the real gripper. The 20 mm case is the Valve Turning tab's close gate. Numbers from <span class="mono">tools/roll_grip_design.py</span>.</p>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card">
+      <h3>What it fixes</h3>
+      <ul>
+        <li>The roll coupling behind the 10-28 and 10-29 contact sway, for roll and sideways motion: about 99 % of the forced rotation at the flown pose.</li>
+        <li>The turn itself is unchanged. The push passes through the joint's axis, so it turns the valve as the fin did.</li>
+        <li>A missed grasp now shows. With the stall rule, a close that misses the sleeve ends fully closed and the tab refuses to turn. On the thin fin a grasp and a miss looked the same.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What it does not</h3>
+      <ul>
+        <li>The wrist kick when the jaws open (24–41° on 10-28/29): open them earlier.</li>
+        <li>The valve following the drone's fore-aft wander: that is the free-axis anchor's share, by design.</li>
+        <li>The airframe's yaw imbalance (0.2 N·m standing trim): re-true the frame.</li>
+        <li>Pitch about the jaws' closing axis is now held by the pads' friction along two lines, not on a flat face. Check on the bench that the clamped claw cannot be twisted about that axis by hand.</li>
+        <li>Isaac does not reproduce the contact sway, so only a flight can show the gain.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Testing it</h3>
+  <ol>
+    <li>On the bench, free: the sleeve turns with a fingertip. Locked: it does not turn by hand. Close the real gripper on the sleeve from the arm ground station. The tab should report the grasp, and the clamped claw should roll by hand with the sleeve.</li>
+    <li>In flight, on one battery: a 10 s clamped hold with no turn, locked, then free. Compare the CoM error rate (the planner's sway guard aborts above 0.15 m/s) and the claw's roll from the arm's joints.</li>
+    <li>Then the 90° turn, free.</li>
+  </ol>
+  <p class="note">For a −90° turn, print the handle body mirrored in y: the boss on +y, the axis rising toward −y. The sleeve and the screws are the same.</p>

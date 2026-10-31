@@ -1,0 +1,282 @@
+# fsc_open_manipulator 6c5ef48 (2026-10-09): open_manipulator_x_custom_controller/config/position_controller_hardware_aerial.yaml, unchanged through the final campaign
+# controller_manager configuration — REAL HARDWARE, POSITION MODE, AERIAL
+# (INVERTED) MOUNT
+#
+# Use when the arm hangs upside-down — under the bench table first, under the
+# drone later. The ground twin is position_controller_hardware.yaml; read its
+# header for the sim/hardware boundary and the effort-unit note, all of which
+# applies here unchanged.
+#
+# Meant to be selected by
+#   position_control_hardware.launch.py mode:=aerial
+# which builds the URDF with invert:=true together with loading this file. In
+# position mode the invert flag only changes the world->link1 transform (TF,
+# RViz, and the ground station's mount cross-check read it); the servos run
+# Operating Mode 3 either way and never see gravity compensation, so there is
+# no sign anywhere that could be wrong. That is exactly why position mode is
+# the SAFE first bring-up on a new mount: validate the geometry and the working
+# range inverted in position mode before trusting the torque law with it.
+#
+# Differences from the ground hardware file:
+#   * max_velocity 0.3 -> 0.2  — slower still for the first inverted runs, the
+#     same caution step the torque aerial config takes: an oscillation up there
+#     shakes the mount, not just the desk, and the arm falls TOWARD the
+#     operator's workspace when something is wrong.
+#   * min_move_duration 1.0 -> 1.5 — matches the torque aerial config, so the
+#     two laws pace their moves the same way on this mount.
+# Raise both toward the ground values once inverted motion has been watched
+# end to end.
+
+# NAMESPACE-AGNOSTIC node keys (2026-08-15). `/**/<node>:` matches that node at
+# whatever namespace the launch puts it in — `/fsc_open_manipulator` on the
+# bench, `/uav_0/fsc_open_manipulator` under the drone — so the launch's
+# `namespace` argument is the SINGLE source of truth and this file never has to
+# be edited in step with it. The desired/measured logging topics below are
+# RELATIVE for the same reason.
+#   TRAP: the wildcard must be FLAT, `/**/controller_manager:`. The nested shape
+#   (`/**:` with the node key indented under it) parses as valid YAML and then
+#   matches NOTHING — parameters silently stop applying, `joints` comes back
+#   empty, and the controllers fail to configure.
+
+/**/controller_manager:
+  ros__parameters:
+    use_sim_time: false           # <-- differs from Gazebo
+    # 250 Hz to match the flight controller's loop. joint_state_broadcaster
+    # publishes once per cycle, so this IS the rate of joint_states, which
+    # fsc_autopilot_ros2 reads at 250 Hz for the CoM feedforward; at 100 Hz
+    # that was a 2.5:1 ratio and the sample age feeding r_com(q) cycled
+    # instead of staying bounded. Arm tracking itself does not improve — that
+    # ceiling is Present Velocity (filtered, late, quantised at 0.024 rad/s),
+    # not the loop rate.
+    update_rate: 250  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    position_controller:
+      type: open_manipulator_x_custom_controller/PositionController
+
+    gripper_controller:
+      type: position_controllers/GripperActionController
+
+    # Present PWM probe (2026-08-28). Spawned ONLY when the bring-up is given
+    # read_present_pwm:=true — the same flag that puts "Present PWM" on the
+    # servo gpios in the ros2_control xacro, so the two cannot drift apart:
+    # without it there is no such state interface and this controller would
+    # fail to configure. Declaring the type costs nothing while it is not
+    # spawned, which is the ordinary case.
+    pwm_state_broadcaster:
+      type: gpio_controllers/GpioCommandController
+
+
+# dynamic_joint_states is OFF (2026-08-17). joint_state_broadcaster publishes
+# BOTH /joint_states and /dynamic_joint_states; the second carries the same
+# position/velocity/effort in the generic ros2_control encoding, repeating the
+# interface-name STRINGS per joint per message. Our state_interfaces are exactly
+# that triple, so it was pure duplication with no subscriber anywhere in this
+# stack -- and at 250 Hz it is no longer free.
+#   The parameter is READ-ONLY: it is applied at configure time and cannot be
+#   flipped on a running controller.
+/**/joint_state_broadcaster:
+  ros__parameters:
+    publish_dynamic_joint_states: false
+
+
+/**/position_controller:
+  ros__parameters:
+
+    joints:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+
+    state_interfaces: [position, velocity, effort]
+
+    # Inverted home is NOT all-zero: [0, 40, 40, 0] deg folds the arm so the
+    # EE sits reached-out under the mount at world (0.258, 0, mount_height
+    # - 0.059) m, instead of hanging straight down. The arm drives here on
+    # activation and on every go_home. Within the working range (j2 [-80,50],
+    # j3 [-40,50] deg); out-of-range values would be clamped with a warning.
+    # Keep all four aerial configs (position/torque x gazebo/hardware) on the
+    # SAME home, or switching control laws on the mount moves the arm.
+    home_position: [0.0, 0.698132, 0.698132, 0.0]
+    move_to_home_on_activate: true
+
+    # Deliberately below even the ground bring-up's 0.3; see the header.
+    max_velocity: [0.2, 0.2, 0.2, 0.2]
+
+    min_move_duration: 1.5
+
+    # Working range validated on the drone, in radians:
+    #     joint1  -35 .. 35     joint2  -20 .. 45
+    #     joint3  -40 .. 50     joint4 -120 .. 120   (degrees)
+    # Identical to external_torque_controller_hardware_aerial_pwm.yaml — the
+    # working range is a property of the robot, not of the backend, so it must
+    # not drift. q2 is the REAL arm's range (the U2D2 board behind the upper
+    # arm, user 2026-10-06), not the asset's -80 .. 50: aligned 2026-10-09
+    # with the torque config's 2026-10-08 guard. Here it CLAMPS every command
+    # (a tighter guard than the planner is safe); the pick-and-place poses
+    # and home sit at q2 32-40 deg.
+    min_position: [-0.610865, -0.349066, -0.698132, -2.0943951]
+    max_position: [ 0.610865,  0.785398,  0.872665,  2.0943951]
+
+    state_publish_rate: 50.0
+    desired_states_topic: "~/smoothed_reference_joint_trajectory"
+    # MEASURED state is NOT published (empty = disabled, 2026-08-17). It was a
+    # second full copy of the measurement stream: the controller republished the
+    # SAME hardware interfaces that joint_state_broadcaster already puts on
+    # <ns>/joint_states. Verified bit-identical against collect_friction_id_a --
+    # 210338/210338 timestamps matched with ZERO difference in position and
+    # effort -- differing only in joint order ([joint1..joint4] here vs
+    # [joint2, joint3, joint1, joint4] there) and in omitting the grippers.
+    #   friction_id_report.py was the only reader; it now maps BY NAME and takes
+    #   /joint_states, which is also the faster source (update_rate, not
+    #   state_publish_rate). Old bags still read: it tries this topic first.
+    measured_states_topic: ""
+
+    # PURE TRACKING (2026-09-26): the hardware twin of the Isaac position
+    # bring-up's 2026-09-18 topology (position_controller_isaac_aerial.yaml),
+    # so the DECOUPLED flight stack (geometric+L1 drone law + this position-mode
+    # arm) can fly the trajectory planner's end-effector trajectories from the
+    # arm ground station's EE Trajectory tab, exactly as the whole-body stack
+    # does. The controller no longer generates motion; it tracks the streamed
+    # JointTrajectory below sample for sample and FREEZES if the stream stops.
+    # Who streams it:
+    #   SAFETY  arm_planner (section below, started by
+    #           position_control_hardware.launch.py mode:=aerial) -- owns
+    #           home_position / max_velocity / min_move_duration and
+    #           re-advertises the ground station's
+    #           position_controller/target_joint_setpoint + go_home at the
+    #           SAME names the controller used to, so the station and every
+    #           saved runbook line work unchanged.
+    #   DIRECT  the whole-body trajectory planner (fsc_trajectory_planner),
+    #           launched by the decoupled flight stack with its
+    #           arm_reference_topic pointed HERE, publishing the joint half of
+    #           its flat-output plan -- the same plan whose airframe half the
+    #           reference bridge converts for the drone law. ONE motion, two
+    #           controllers.
+    # THE PAIR IS THE TOPOLOGY: this key without arm_planner leaves the arm
+    # with no reference at all (a stale stream freezes, it does not fall
+    # back). With it set, ~/target_joint_setpoint, ~/sine_reference_trajectory
+    # and ~/go_home are NOT advertised here and move_to_home_on_activate is
+    # ignored (homing is a plan; arm_planner's home_on_first_state does it).
+    external_reference_topic: "position_controller/reference_joint_trajectory"
+    external_reference_timeout: 0.2
+
+# THE ARM'S PLANNER in SAFETY (2026-09-26) -- the same node the torque stack's
+# hardware bring-up runs (external_torque_hardware.launch.py, 2026-09-12); only
+# the controller name, the reference topic and the FLIGHT NODE's mode topic
+# differ. The move profile is THIS FILE's own (0.2 rad/s, 1.5 s), so the tuned
+# inverted motion is preserved.
+/**/arm_planner:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4]
+    controller_name: "position_controller"
+    reference_topic: "position_controller/reference_joint_trajectory"
+    joint_states_topic: "joint_states"
+    # The flight node is a FLIGHT-STACK node at the vehicle namespace, while
+    # this one lives under the arm package's namespace, so this is ABSOLUTE
+    # and hard-codes uav_0: flying under another prefix means editing it,
+    # otherwise this node never sees DIRECT, keeps streaming its SAFETY
+    # reference and fights the trajectory planner for the arm. The decoupled
+    # rig's flight node is the geometric+L1 fork.
+    mode_topic: "/uav_0/fsc_autopilot_ros2/geometric_l1_direct_actuation/mode"
+    direct_mode_token: "DIRECT"
+    home_position: [0.0, 0.698132, 0.698132, 0.0]
+    max_velocity: [0.2, 0.2, 0.2, 0.2]
+    min_move_duration: 1.5
+    min_position: [-0.610865, -0.349066, -0.698132, -2.0943951]
+    max_position: [ 0.610865,  0.785398,  0.872665,  2.0943951]
+    publish_rate: 100.0
+    home_on_first_state: true
+    # SAFETY guard: on a DIRECT -> SAFETY revert the flight node hovers in
+    # place and this node folds the arm home after the delay. TRUE here, unlike
+    # the torque hardware yaml, because the geometric+L1 flight node has NO
+    # system_arm_go_home_service hook (only the whole-body node does) -- so
+    # this node is the fold's ONLY owner. EXACTLY ONE owner per stack.
+    home_on_safety_revert: true
+    home_on_revert_delay_s: 1.0
+
+/**/gripper_controller:
+  ros__parameters:
+    joint: gripper_left_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+    conversion_factor: 0.0001
+
+    # Grasp semantics (servo runs Mode 5, current-based position, in BOTH arm
+    # modes — dxl5 is configured unconditionally in the ros2_control xacro):
+    # closing on an object stalls the fingers short of the target, and that
+    # stall IS the grip. The action result for a grasp is therefore
+    # ABORTED + stalled=1; the GUI reads that combination as "gripped". See
+    # position_controller_hardware.yaml for the full story.
+    goal_tolerance: 0.002
+
+
+# ── Present PWM probe (2026-08-28) ──────────────────────────────────────────
+# Republishes the raw per-servo registers on ~/gpio_states
+# (control_msgs/DynamicInterfaceGroupValues) so position mode and torque mode
+# can be compared AT THE ACTUATOR. See the block comment in
+# open_manipulator_x_system.ros2_control.xacro for why Present PWM is the only
+# register that shows the difference, and for the sign trap that makes the
+# gpio's "[unit info]" override mandatory.
+#
+# STATE-ONLY ON PURPOSE. No command_interfaces key appears below, so this
+# controller claims nothing exclusive and can run beside the arm controller in
+# either mode. GpioCommandController refuses to configure only when command AND
+# state interfaces are both empty; a state-only config is supported.
+#
+# All five registers come from ONE bus read, so they share a timestamp exactly.
+# That is the point of routing them through here rather than pairing gpio_states
+# against joint_states after the fact: the motor equation
+#     V_applied = duty * V_supply = R*I + Ke*N*q_dot
+# is a per-sample regression, and a half-cycle misalignment between duty and
+# q_dot biases Ke directly. Present Position/Velocity/Current are duplicated
+# from joint_states on purpose for the same reason — and they arrive here in
+# per-servo order with no joint remap and no unit conversion.
+#
+# Nothing subscribes to this in the control path. It is a measurement topic:
+# record it, score it with results_robotic_arm/scripts/pwm_mode_report.py.
+/**/pwm_state_broadcaster:
+  ros__parameters:
+    gpios:
+      - dxl1
+      - dxl2
+      - dxl3
+      - dxl4
+    state_interfaces:
+      dxl1:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+      dxl2:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+      dxl3:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature
+      dxl4:
+        interfaces:
+          - Present PWM
+          - Present Current
+          - Present Velocity
+          - Present Position
+          - Present Input Voltage
+          - Present Temperature

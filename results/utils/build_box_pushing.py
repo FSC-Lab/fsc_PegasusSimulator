@@ -4,7 +4,7 @@ and figures.
 
     PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_box_pushing.py [--paper <main.tex>] [--figdir <dir>]
 
-Reads results/simulation_results/box_pushing/<method>_push_run<k>.npz (+ <name>.yaml, the controller config the
+Reads results/simulation_results/Isaac_simulation_data/box_pushing/<method>_push_run<k>.npz (+ <name>.yaml, the controller config the
 run flew -- the impedance gains come from it), written by
 docs/docs_aerial_manipulator/archive/push_pull_20261003/tools/pl_mission.py --timetable and copied there by
 run_box_pushing_campaign.sh, and writes
@@ -56,11 +56,12 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.abspath(os.path.join(HERE, ".."))
-ROOT = os.path.join(RESULTS, "simulation_results")
+SIM = os.path.join(RESULTS, "simulation_results")
+ROOT = os.path.join(SIM, "Isaac_simulation_data")                    # the task folders (raw runs)
 REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 BP = os.path.join(ROOT, "box_pushing")
 TABLES = os.path.join(HERE, "tables")
-MAT_DIR = os.path.join(ROOT, "matlab_simulation_data")
+MAT_DIR = os.path.join(SIM, "matlab_simulation_data")
 BP_MAT = os.path.join(MAT_DIR, "box_pushing")
 sys.path.insert(0, os.path.join(REPO, "extensions", "fsc_aerial_manipulation"))
 sys.path.insert(0, os.path.join(REPO, "docs", "docs_aerial_manipulator", "archive", "push_pull_20261003", "tools"))
@@ -71,13 +72,20 @@ METHODS = {
     # interaction", CEP 146 (2024): decoupled UAV PD + momentum wrench estimator + admittance on the
     # EE reference + force-adaptive kinematic MPC (archive/push_pull_coordinated_admittance_20261010)
     "coordinated_admittance": ("Coordinated [Liu 2024]", "Coordinated admittance + kinematic MPC (Liu et al., CEP 2024)"),
+    # Chen et al., "Arbitrary Convergence Time Control of Unmanned Aerial Manipulator for Active
+    # Interaction and Dynamic Tracking", IEEE TIE 72(12) 2025: ACTNDO joint-torque observer + TSKFE
+    # fuzzy estimator + arbitrary-time quadrotor law + joint-space arm admittance; torque-mode arm
+    # (archive/box_pushing_arbitrary_time_20261024)
+    "arbitrary_time": ("Arbitrary-time [Chen 2025]", "Arbitrary-convergence-time control + ACTNDO/TSKFE (Chen et al., IEEE TIE 2025)"),
 }
-ORDER = ["whole_body_l1", "coordinated_admittance"]
-COLORS = {"whole_body_l1": "#0072BD", "coordinated_admittance": "#D95319"}
-NAME = re.compile(r"^(whole_body_l1|coordinated_admittance)_push_run(\d+)$")
+ORDER = ["whole_body_l1", "coordinated_admittance", "arbitrary_time"]
+COMPARISON = ("coordinated_admittance", "arbitrary_time")
+COLORS = {"whole_body_l1": "#0072BD", "coordinated_admittance": "#D95319", "arbitrary_time": "#7E2F8E"}
+NAME = re.compile(r"^(whole_body_l1|coordinated_admittance|arbitrary_time)_push_run(\d+)$")
 # the as-flown config's name in matlab_simulation_data/box_pushing/configs
 CONFIG_NAME = {"whole_body_l1": "whole_body_l1_4d_sim_box_pushing.yaml",
-               "coordinated_admittance": "coordinated_admittance_sim_box_pushing.yaml"}
+               "coordinated_admittance": "coordinated_admittance_sim_box_pushing.yaml",
+               "arbitrary_time": "arbitrary_time_sim_box_pushing.yaml"}
 # the eight contiguous phases: (key, label, the driver mark that starts it, the mark that ends it).
 # 2026-10-16 the planner's last leg became Go To Land Start (one transition off the table) + Land.
 PHASES = [("go_to_start", "Go to start", "go_to_start:start", "ready:start"),
@@ -141,7 +149,7 @@ def scene_text(T):
 
 
 def task_text(T):
-    return (f"grasp the fin and push the box {T['distance_m']:.2f} m along the table (toward -y) in {T['push_time_s']:g} s "
+    return (f"grasp the fin and push the box {T['distance_m']:.2f} m along the table (toward -y) in {T['push_time_s']:.1f} s "
             f"(after a {T['settle_s']:g} s settle), the arm held at [{', '.join(f'{v:g}' for v in T['pose_deg'])}] deg, "
             "the claw world-held, the law in CONTACT from the grip to the end of the push")
 
@@ -206,11 +214,25 @@ def load_run(path):
         q_d = interp(tu, cadm[:, 0], cadm[:, 29:33])
         dbg = d["dbg"]
         eta_d = interp(tu, dbg[:, 0], dbg[:, 31:34])
+    # the arbitrary-time rig (Chen et al. 2025): the platform reference is the flight law's own base
+    # command p_d (atc_control_debug [62..64] -> recorder cols 64..66: the stream's x_cd - R0 r_0c(q_d)
+    # plus its contact re-seat), the attitude reference its eta_d ([29..31] -> 31..33, Z-Y-X, actual
+    # FLU body); the arm reference is the stream's q_d, as for the whole-body rig
+    _yp = path[:-4] + ".yaml"
+    arbitrary = (not coordinated) and os.path.isfile(_yp) and "\n    atc_adm_k_j1:" in open(_yp).read()   # (no re here: `re` is the EE array below)
+    if arbitrary:
+        from fsc_aerial_manipulation.robotic_arm.utils_controller import arbitrary_time_control as AT
+        dbg = d["dbg"]
+        xb_cmd = interp(tu, dbg[:, 0], dbg[:, 64:67])
+        eta_d = interp(tu, dbg[:, 0], dbg[:, 31:34])
     xb = np.zeros((n, 3)); Rref = np.zeros((n, 3, 3)); xc = np.zeros((n, 3)); re = np.zeros((n, 3)); b1e = np.zeros((n, 3))
     for i in range(n):
         if coordinated:
             xb[i] = xb_cmd[i]
             Rref[i] = CA.euler_to_r(eta_d[i])
+        elif arbitrary:
+            xb[i] = xb_cmd[i]
+            Rref[i] = AT.euler_to_r(eta_d[i])
         else:
             R0m = build_r0(x_cd_dd[i] + np.array([0.0, 0.0, G]), b1d[i])
             r0c_d, _, _ = TP.arm_fk_model(q_d[i], params)
@@ -250,7 +272,7 @@ def load_run(path):
                 xb=xb, x_cd=x_cd, xc=xc, r_ed=r_ed, re=re, att_err=att_err, az=az, az_ref=az_ref,
                 ee_head_err=ee_head_err, e_pos=e_pos, e_ee=e_ee, e_q=e_q, eps=eps, tilt=tilt, yaw=yaw,
                 yaw_ref=yaw_ref, box=box, boxm=boxm, od=od, ref=ref, js=js, order=order, imp=imp, gains=gains, yaml=ypath,
-                coordinated=coordinated, task=task)
+                coordinated=coordinated, arbitrary=arbitrary, task=task)
 
 
 def task_of(ypath, apath):
@@ -337,7 +359,8 @@ def imp_metrics(imp):
                       e_imp_psi_rms_nm=float(v["e_psi"][0]), e_imp_psi_max_nm=float(v["e_psi"][1]),
                       F_ext_rms_n=float(v["F_xyz"][0]), F_ext_max_n=float(v["F_xyz"][1]),
                       M_ext_psi_rms_nm=float(v["F_psi"][0]),
-                      e_y_rms_mm=float(v["ey_mm"][0]), e_y_max_mm=float(v["ey_mm"][1]))
+                      e_y_rms_mm=float(v["ey_mm"][0]), e_y_max_mm=float(v["ey_mm"][1]),
+                      e_imp_mm_rms=float(v["e_mm"][0]), e_imp_mm_max=float(v["e_mm"][1]))
     return out
 
 
@@ -416,6 +439,7 @@ def main():
                    e_imp_contact_rms_n=im["CONTACT"]["e_imp_rms_n"], e_imp_contact_max_n=im["CONTACT"]["e_imp_max_n"],
                    e_imp_hold_rms_n=im["HOLD"]["e_imp_rms_n"], e_imp_release_rms_n=im["RELEASE"]["e_imp_rms_n"],
                    e_imp_slide_psi_rms_nm=im["SLIDE"]["e_imp_psi_rms_nm"],
+                   e_imp_slide_mm_rms=im["SLIDE"]["e_imp_mm_rms"], e_imp_contact_mm_rms=im["CONTACT"]["e_imp_mm_rms"],
                    F_ext_slide_rms_n=im["SLIDE"]["F_ext_rms_n"], e_y_slide_rms_mm=im["SLIDE"]["e_y_rms_mm"],
                    box_pushed_mm=R["boxm"]["pushed_mm"], box_yaw_change_deg=R["boxm"]["yaw_change_deg"],
                    box_exit_move_mm=R["boxm"]["exit_move_mm"], box_tilt_max_deg=R["boxm"]["tilt_max_deg"],
@@ -448,9 +472,17 @@ def main():
                     window=f"the whole mission, t = 0 (start of go to start) to {T_common:.2f} s (end of land, shortest run)",
                     impedance_windows=dict(CONTACT="ready end -> exit start (the law in contact)",
                                            HOLD="ready end -> slide start (the grip and the 1.5 s settle)",
-                                           SLIDE=f"the {R['task']['push_time_s']:g} s move", RELEASE="push end -> exit start"),
-                    impedance_gains=dict(M_d=R["gains"]["my"], D_d=R["gains"]["dy"], K_d=R["gains"]["ky"],
-                                         channels="x y z [N] heading [N.m]", lowpass_hz=FC_HZ),
+                                           SLIDE=f"the {R['task']['push_time_s']:.1f} s move", RELEASE="push end -> exit start"),
+                    impedance_gains=(dict(M_d=R["gains"]["my"], D_d=R["gains"]["dy"], K_d=R["gains"]["ky"],
+                                          channels="x y z [N] heading [N.m]", lowpass_hz=FC_HZ)
+                                     if R["gains"].get("rig") != "atc" else
+                                     dict(H_d_joint=R["gains"]["Hq"], D_d_joint=R["gains"]["Dq"], K_d_joint=R["gains"]["Kq"],
+                                          M_task_at_push_pose=R["gains"]["Mt"], D_task_at_push_pose=R["gains"]["Dt"],
+                                          K_task_at_push_pose=R["gains"]["Kt"],
+                                          channels="joint [N.m]; task matrices = J^-T X J^-1 on [x y z heading] of the "
+                                                   "MODEL frame at the push pose -- the impedance the residual is scored "
+                                                   "against, in the task space like the other rigs",
+                                          lowpass_hz=FC_HZ)),
                     L_arm_m=L_ARM, base_com_model_m=BASE_COM, aborted=bool(d["aborted"]), t0_driver_s=R["t0"],
                     t_shift_s=float(R.get("t_shift", 0.0)),
                     clock="driver clock [s] (raw streams); tracking.t / impedance.t are s since the start of go to start")
@@ -481,8 +513,11 @@ def main():
                         ee_heading_deg=R["az"], ee_heading_ref_deg=R["az_ref"], ee_heading_err_deg=R["ee_head_err"],
                         q_deg=np.degrees(R["q"]), q_ref_deg=np.degrees(R["q_d"]), q_err_deg=R["e_q"],
                         columns="platform_att_err_deg = [roll pitch heading] (body axes); xyz columns are world ENU")
-        impedance = dict(t=ser["t"] - R["t0"], e_imp=ser["e_imp"], F_ext=ser["F"], rendered=ser["rendered"], e_y=ser["e_y"],
-                         columns="e_imp / F_ext / rendered: [x y z heading] in [N N N N.m]; e_y: [m m m sin(heading error)]; "
+        impedance = dict(t=ser["t"] - R["t0"], e_imp=ser["e_imp"], e_imp_mm=ser["e_imp_mm"], F_ext=ser["F"],
+                         rendered=ser["rendered"], e_y=ser["e_y"],
+                         columns="e_imp / F_ext / rendered: [x y z heading] in [N N N N.m]; e_imp_mm: the residual's "
+                                 "displacement equivalent (the declared compliance applied to e_imp), [x y z] mm; "
+                                 "e_y: [m m m sin(heading error)]; "
                                  "every term low-passed (zero phase) at impedance_gains.lowpass_hz; t covers the CONTACT window",
                          windows=dict(name=np.array(list(im.keys()), dtype=object),
                                       start_s=np.array([R["marks"]["ready:end"] - R["t0"] if w in ("CONTACT", "HOLD") else
@@ -503,26 +538,51 @@ def main():
             "e_imp_slide_rms_n", "e_imp_slide_max_n", "e_imp_contact_rms_n", "e_imp_contact_max_n", "e_imp_hold_rms_n",
             "e_imp_release_rms_n", "e_imp_slide_psi_rms_nm", "F_ext_slide_rms_n", "e_y_slide_rms_mm",
             "box_pushed_mm", "box_yaw_change_deg", "box_exit_move_mm", "box_tilt_max_deg", "tilt_max_deg",
-            "release_q2_max_deg", "release_q3_min_deg"]
-    summary = []
+            "release_q2_max_deg", "release_q3_min_deg", "e_imp_slide_mm_rms", "e_imp_contact_mm_rms"]
+    # mean AND sample standard deviation (ddof 1; 0 for a single run) over each method's kept runs
+    # (2026-10-25, user request: the final evaluation is mean and STD over >= 3 successful runs)
+    summary, summary_std = [], []
     for method in ORDER:
         rr = [r for r in rows if r["method"] == method]
         if not rr:
             continue
-        s = dict(method=method, runs=len(rr))
-        for kk in keys:
-            s[kk] = float(np.mean([r[kk] for r in rr]))
+        vals = {kk: [r[kk] for r in rr] for kk in keys}
         for j, ax in enumerate("xyz"):
-            s[f"platform_{ax}_mm"] = float(np.mean([r["platform_pos_xyz_mm"][j] for r in rr]))
-            s[f"ee_{ax}_mm"] = float(np.mean([r["ee_pos_xyz_mm"][j] for r in rr]))
-            s[f"e_imp_slide_{ax}_rms_n"] = float(np.mean([r["impedance"]["SLIDE"]["e_imp_xyz_rms_n"][j] for r in rr]))
+            vals[f"platform_{ax}_mm"] = [r["platform_pos_xyz_mm"][j] for r in rr]
+            vals[f"ee_{ax}_mm"] = [r["ee_pos_xyz_mm"][j] for r in rr]
+            vals[f"e_imp_slide_{ax}_rms_n"] = [r["impedance"]["SLIDE"]["e_imp_xyz_rms_n"][j] for r in rr]
         for j in range(4):
-            s[f"q{j + 1}_deg"] = float(np.mean([r["joints_deg"][j] for r in rr]))
-        summary.append(s)
+            vals[f"q{j + 1}_deg"] = [r["joints_deg"][j] for r in rr]
+        s = dict(method=method, runs=len(rr), **{k: float(np.mean(v)) for k, v in vals.items()})
+        sd = dict(method=method, runs=len(rr),
+                  **{k: float(np.std(v, ddof=1)) if len(v) > 1 else 0.0 for k, v in vals.items()})
+        summary.append(s); summary_std.append(sd)
+    # the BEST run per method (2026-10-28, user: "repeat several times and obtain their best performance"):
+    # the kept run with the lowest SLIDE impedance residual -- the physical-interaction metric, the same rule
+    # the figures use to pick the run they plot. Written beside the mean +- std as its own table.
+    best = []
+    for method in ORDER:
+        rr = [r for r in rows if r["method"] == method]
+        if not rr:
+            continue
+        b = min(rr, key=lambda r: r["e_imp_slide_rms_n"])
+        for r in rr:
+            r["best_run"] = r is b
+        bv = {kk: b[kk] for kk in keys}
+        for j, ax in enumerate("xyz"):
+            bv[f"platform_{ax}_mm"] = b["platform_pos_xyz_mm"][j]
+            bv[f"ee_{ax}_mm"] = b["ee_pos_xyz_mm"][j]
+            bv[f"e_imp_slide_{ax}_rms_n"] = b["impedance"]["SLIDE"]["e_imp_xyz_rms_n"][j]
+        for j in range(4):
+            bv[f"q{j + 1}_deg"] = b["joints_deg"][j]
+        best.append(dict(method=method, runs=len(rr), best_name=b["name"], **bv))
+        alls = ", ".join("%.3f" % r_["e_imp_slide_rms_n"] for r_ in rr)
+        print(f"best {method}: {b['name']} (e_imp slide {b['e_imp_slide_rms_n']:.3f} N of {alls})")
     wins = sorted(set(round(r["total_window_s"], 1) for r in rows))
     print("window per run [s]:", wins, "(must be one value)" if len(wins) > 1 else "")
     with open(os.path.join(TABLES, "box_pushing_sim.json"), "w") as f:
-        json.dump(dict(runs=rows, mean_over_runs=summary, L_arm_m=L_ARM), f, indent=1, default=float)
+        json.dump(dict(runs=rows, mean_over_runs=summary, std_over_runs=summary_std, best_run=best, L_arm_m=L_ARM), f, indent=1,
+                  default=float)
     cols = ["method", "runs", "total_window_s", "eps_uav_max_mm", "eps_uav_rms_mm", "rho_uav_max", "rho_uav_rms",
             "platform_x_mm", "platform_y_mm", "platform_z_mm", "platform_heading_deg", "platform_roll_deg",
             "platform_pitch_deg", "ee_x_mm", "ee_y_mm", "ee_z_mm", "ee_heading_deg", "q1_deg", "q2_deg", "q3_deg",
@@ -530,11 +590,13 @@ def main():
             "e_imp_slide_y_rms_n", "e_imp_slide_z_rms_n", "e_imp_slide_psi_rms_nm", "e_imp_contact_rms_n",
             "e_imp_contact_max_n", "e_imp_hold_rms_n", "e_imp_release_rms_n", "F_ext_slide_rms_n", "e_y_slide_rms_mm",
             "box_pushed_mm", "box_yaw_change_deg", "box_exit_move_mm", "box_tilt_max_deg", "tilt_max_deg",
-            "release_q2_max_deg", "release_q3_min_deg"]
-    with open(os.path.join(TABLES, "box_pushing_sim.csv"), "w") as f:
-        f.write(",".join(cols) + "\n")
-        for s in summary:
-            f.write(",".join(str(s[c]) if isinstance(s[c], (str, int)) else f"{s[c]:.4f}" for c in cols) + "\n")
+            "release_q2_max_deg", "release_q3_min_deg", "e_imp_slide_mm_rms", "e_imp_contact_mm_rms"]
+    for fn, tab, cc in (("box_pushing_sim.csv", summary, cols), ("box_pushing_sim_std.csv", summary_std, cols),
+                        ("box_pushing_sim_best.csv", best, cols[:2] + ["best_name"] + cols[2:])):
+        with open(os.path.join(TABLES, fn), "w") as f:
+            f.write(",".join(cc) + "\n")
+            for s in tab:
+                f.write(",".join(str(s[c]) if isinstance(s[c], (str, int)) else f"{s[c]:.4f}" for c in cc) + "\n")
     ph_rows = [dict(name=r["name"], method=r["method"], run=r["run"], phase=key, label=PHASE_LABEL[key],
                     start_s=r["per_leg"][key]["start_s"], end_s=r["per_leg"][key]["end_s"],
                     eps_uav_max_mm=r["per_leg"][key]["eps_uav_max_mm"], eps_uav_rms_mm=r["per_leg"][key]["eps_uav_rms_mm"],
@@ -559,6 +621,8 @@ def main():
     scipy.io.savemat(os.path.join(BP_MAT, "box_pushing_metrics.mat"),
                      {"metrics_runs": colstruct(flat, list(flat[0].keys())),
                       "metrics_mean": colstruct(summary, cols),
+                      "metrics_std": colstruct(summary_std, cols),
+                      "metrics_best": colstruct(best, cols[:2] + ["best_name"] + cols[2:]),
                       "metrics_phase": colstruct(ph_rows, list(ph_rows[0].keys())),
                       "metrics_impedance": colstruct(imp_rows, list(imp_rows[0].keys())),
                       "phases": dict(key=np.array(PHASE_KEYS, dtype=object),
@@ -567,15 +631,17 @@ def main():
                                      end_s=np.array([PH[x][1] for x in PHASE_KEYS])),
                       "window_s": T_common, "L_arm_m": L_ARM},
                      do_compression=True, long_field_names=True, oned_as="column")
-    tex = latex_table(summary, T_common, next(iter(all_R.values()))["task"])
+    tex = latex_table(summary, T_common, next(iter(all_R.values()))["task"], summary_std)
     open(os.path.join(TABLES, "box_pushing_sim.tex"), "w").write(tex)
+    tex_best = latex_table(best, T_common, next(iter(all_R.values()))["task"], best=True)
+    open(os.path.join(TABLES, "box_pushing_sim_best.tex"), "w").write(tex_best)
     figs = make_figures(rows, loaded, a.figdir, PH, T_common)
-    write_readme(rows, summary, PH, T_common, all_R)
+    write_readme(rows, summary, PH, T_common, all_R, summary_std, best)
     # the Python scorer's table and figures beside the MATLAB data, to check a MATLAB table / plot against
     import shutil
     refdir = os.path.join(BP_MAT, "reference_outputs")
     os.makedirs(refdir, exist_ok=True)
-    for f_ in [os.path.join(TABLES, "box_pushing_sim." + e) for e in ("csv", "tex")] + list(figs.values()):
+    for f_ in [os.path.join(TABLES, "box_pushing_sim" + x + "." + e) for x in ("", "_best") for e in ("csv", "tex")] + list(figs.values()):
         shutil.copy2(f_, refdir)
     if a.paper:
         splice_paper(a.paper, tex, figs)
@@ -625,7 +691,7 @@ def failed_attempts():
     return out
 
 
-def write_readme(rows, summary, PH, T_common, all_R):
+def write_readme(rows, summary, PH, T_common, all_R, summary_std=None, best=None):
     """matlab_simulation_data/box_pushing/README.md (generated) + the as-flown configs."""
     import shutil
     sys.path.insert(0, HERE)
@@ -637,6 +703,7 @@ def write_readme(rows, summary, PH, T_common, all_R):
     # the coordinated rig's, whose claw-frame admittance was printed as "the law's EE task")
     first_R = all_R[min(all_R, key=lambda mk: (ORDER.index(mk[0]), mk[1]))]
     coord_R = next((all_R[mk] for mk in sorted(all_R) if mk[0] == "coordinated_admittance"), None)
+    arb_R = next((all_R[mk] for mk in sorted(all_R) if mk[0] == "arbitrary_time"), None)
     for mth in ORDER:
         Rm_ = next((R_ for (m_, _k), R_ in all_R.items() if m_ == mth), None)
         if Rm_ is not None:
@@ -654,13 +721,23 @@ def write_readme(rows, summary, PH, T_common, all_R):
     first = min((x["time"] for x in att), default="?")[:16].replace("T", " ")
     last = max((x["time"] for x in att), default="?")[:16].replace("T", " ")
     names = {m_: METHODS[m_][0] for m_ in ORDER}
-    run_rows = [[names[r["method"]], f"`{r['name']}.mat`", f"{r['eps_uav_max_mm']:.1f}", f"{r['rho_uav_max']:.3f}",
+    run_rows = [[names[r["method"]], f"`{r['name']}.mat`" + (" **(best)**" if r.get("best_run") else ""),
+                 f"{r['eps_uav_max_mm']:.1f}", f"{r['rho_uav_max']:.3f}",
                  f"{r['eps_uav_rms_mm']:.1f}", f"{r['rho_uav_rms']:.3f}", f"{r['ee_pos_mm']:.1f}",
                  f"{r['e_imp_slide_rms_n']:.3f}", f"{r['e_imp_contact_rms_n']:.3f}", f"{r['box_pushed_mm']:.0f}"]
                 for r in sorted(rows, key=lambda x: (ORDER.index(x["method"]), x["run"]))]
-    mean_rows = [[names[x["method"]], str(x["runs"]), f"{x['eps_uav_max_mm']:.1f}", f"{x['rho_uav_max']:.3f}",
-                  f"{x['eps_uav_rms_mm']:.1f}", f"{x['rho_uav_rms']:.3f}", f"{x['ee_pos_mm']:.1f}",
-                  f"{x['e_imp_slide_rms_n']:.3f}", f"{x['e_imp_contact_rms_n']:.3f}", f"{x['box_pushed_mm']:.0f}"] for x in summary]
+    sd_by = {x["method"]: x for x in (summary_std or [])}
+    def pm(x, k, f):
+        sd = sd_by.get(x["method"], {}).get(k)
+        return f"{x[k]:{f}} ± {sd:{f}}" if sd is not None else f"{x[k]:{f}}"
+    mean_rows = [[names[x["method"]], str(x["runs"]), pm(x, "eps_uav_max_mm", ".1f"), pm(x, "rho_uav_max", ".3f"),
+                  pm(x, "eps_uav_rms_mm", ".1f"), pm(x, "rho_uav_rms", ".3f"), pm(x, "ee_pos_mm", ".1f"),
+                  pm(x, "e_imp_slide_rms_n", ".3f"), pm(x, "e_imp_contact_rms_n", ".3f"), pm(x, "box_pushed_mm", ".0f")]
+                 for x in summary]
+    best_rows = [[names[x["method"]], f"`{x['best_name']}`", f"{x['eps_uav_max_mm']:.1f}", f"{x['rho_uav_max']:.3f}",
+                  f"{x['eps_uav_rms_mm']:.1f}", f"{x['rho_uav_rms']:.3f}", f"{x['ee_pos_mm']:.1f}", f"{x['ee_heading_deg']:.2f}",
+                  f"{x['e_imp_slide_rms_n']:.3f}", f"{x['e_imp_slide_mm_rms']:.1f}", f"{x['e_imp_contact_rms_n']:.3f}",
+                  f"{x['box_pushed_mm']:.0f}"] for x in (best or [])]
     att_rows = [[names.get(m, m), str(len([y for y in att if y["method"] == m])),
                  str(sum(1 for y in att if y["method"] == m and y["status"] == "completed")),
                  "; ".join(sorted(set(y["why"] for y in att if y["method"] == m and y["status"] != "completed" and y["why"]))) or "--"]
@@ -668,20 +745,26 @@ def write_readme(rows, summary, PH, T_common, all_R):
     T = first_R["task"]
     present = [m_ for m_ in ORDER if any(r["method"] == m_ for r in rows)]
     coord = "coordinated_admittance" in present
+    arb = "arbitrary_time" in present
+    comp = coord or arb
     pose = ", ".join(f"{v:g}" for v in T["pose_deg"])
-    what = {"go_to_start": f"fly from the hover to the start waypoint (the claw {T['approach_back_m']:.2f} m behind and "
-                           f"{T['approach_dz_m']:.2f} m above the fin, the arm already in the push pose); hover",
-            "ready": "open the gripper, hover (CoM-anchored), descend diagonally onto the fin; the claw world-held from its arrival",
-            "grasp": "wait for the claw within 2 cm / 3 mm across the fin, close the gripper on the fin (the jaws' stall)",
+    what = {"go_to_start": f"fly from the hover round the table's box end (>= 0.70 m from the table seen from above) to "
+                           f"the start waypoint (the claw {T['approach_back_m']:.2f} m behind and {T['approach_dz_m']:.2f} m "
+                           "above the fin, the arm unfolding into the push pose); hover",
+            "ready": "open the gripper, hover (CoM-anchored), descend diagonally onto the fin; the claw stays CoM-anchored "
+                     "until it has settled near the grasp point (25 mm, < 30 mm/s), then is held in the room",
+            "grasp": "wait for the claw on the fin (the whole-body rig 2 cm / 3 mm across, the comparison rigs 2.5 cm / 4 mm "
+                     "against the live box), close the gripper on the fin (the jaws' stall)",
             "push": f"the law in CONTACT: {T['settle_s']:g} s settle, then the {T['distance_m']:.2f} m slide over "
-                    f"{T['push_time_s']:g} s, the arm held still; hold on the handle",
+                    f"{T['push_time_s']:.1f} s, the arm held still; hold on the handle",
             "release": "Exit To Push: the planner releases the claw (its reference back to the CoM anchor, the contact "
                        "phase off), then the gripper opens; the exit starts on its OPEN report",
             "exit": f"climb {T['exit_dz_m']:.2f} m with the jaws open, fold the arm home; hover",
-            "go_to_land_start": "one planner transition off the table to the landing hover "
-                                + (f"({T['land_start'][0]:g}, {T['land_start'][1]:g}, {T['land_start'][2]:g}) m, "
+            "go_to_land_start": "Go To Start's mirror image: on along the push line at the exit height over the pushed "
+                                "box, round the table's far end and back along its front to the landing hover "
+                                + (f"({T['land_start'][0]:g}, {T['land_start'][1]:g}, {T['land_start'][2]:g}) m in the plan's frame, "
                                    if len(T["land_start"]) >= 3 else "")
-                                + "heading turning 270 deg clockwise; hover",
+                                + "heading turning 90 deg clockwise; hover",
             "land": "straight down to the land hover"
                     + (f" at z {T['land'][2]:g} m" if len(T["land"]) >= 3 else "")
                     + " (the planner's last leg; the touchdown after it is not scored)"}
@@ -693,7 +776,7 @@ def write_readme(rows, summary, PH, T_common, all_R):
             v = x["impedance"][w]
             imp_rows.append([f"`{x['name']}`", w, f"{v['T_s']:.1f}", f"{v['e_imp_rms_n']:.3f}", f"{v['e_imp_max_n']:.3f}",
                              " / ".join(f"{c:.3f}" for c in v["e_imp_xyz_rms_n"]), f"{v['e_imp_psi_rms_nm']:.4f}",
-                             f"{v['F_ext_rms_n']:.2f}", f"{v['e_y_rms_mm']:.1f}"])
+                             f"{v['F_ext_rms_n']:.2f}", f"{v['e_y_rms_mm']:.1f}", f"{v['e_imp_mm_rms']:.2f}"])
     box_rows = [[f"`{x['name']}`", f"{x['box_pushed_mm']:.0f}", f"{x['box_yaw_change_deg']:+.1f}",
                  f"{x['box_tilt_max_deg']:.2f}", f"{x['box_exit_move_mm']:.1f}", f"{x['tilt_max_deg']:.1f}",
                  f"{x['release_q2_max_deg']:.1f}", f"{x['release_q3_min_deg']:.1f}"]
@@ -703,16 +786,28 @@ def write_readme(rows, summary, PH, T_common, all_R):
     n_runs = len(rows)
     fails = failed_attempts()
     first_name = sorted(rows, key=lambda x: (ORDER.index(x["method"]), x["run"]))[0]["name"]
-    if coord:
-        method_lines = [
-            "- **`<method>`:** `whole_body_l1` = Proposed (whole-body 4-D L1 impedance); `coordinated_admittance` =",
-            "  Liu et al., CEP 146 (2024) 105898 (decoupled UAV PD + momentum wrench estimator + admittance on the",
-            "  end-effector reference + force-adaptive kinematic MPC; position-mode arm), implemented as an independent",
-            "  comparison rig -- its platform / arm references in `run` are that rig's own planner commands.", ""]
-        align_lines = [
+    if comp:
+        method_lines = ["- **`<method>`:** `whole_body_l1` = Proposed (whole-body 4-D L1 impedance)."]
+        if coord:
+            method_lines += [
+                "  `coordinated_admittance` = Liu et al., CEP 146 (2024) 105898 (decoupled UAV PD + momentum wrench",
+                "  estimator + admittance on the end-effector reference + force-adaptive kinematic MPC; position-mode arm),",
+                "  an independent comparison rig -- its platform / arm references in `run` are that rig's own planner commands."]
+        if arb:
+            method_lines += [
+                "  `arbitrary_time` = Chen et al., IEEE TIE 72(12) (2025) 13693 (ACTNDO joint-torque observer + TSKFE fuzzy",
+                "  estimator + arbitrary-convergence-time quadrotor law + joint-space arm admittance; torque-mode arm), an",
+                "  independent comparison rig -- its platform / attitude references in `run` are that law's own commands",
+                "  (the planner's stream converted to a base reference, plus its contact re-seat), the arm reference the",
+                "  stream's q_d."]
+        method_lines += [""]
+        shifts = [abs(float(R_.get("t_shift", 0.0))) for R_ in all_R.values()]
+        align_lines = ([
             "`t = 0` is the start of the Proposed rig's first transit; the methods are ALIGNED AT READY (from Ready on",
-            "every rig flies the same slots; the coordinated rig's longer first transit starts before t = 0 and the",
-            "window drops that part; `meta.t_shift_s` is the shift applied)."]
+            "every rig flies the same slots; a comparison rig's longer first transit starts before t = 0 and the",
+            "window drops that part; `meta.t_shift_s` is the shift applied)."] if max(shifts) > 0.5 else [
+            "`t = 0` is the start of the first transit (go to start); every rig starts it at the same mission time and",
+            f"flies the same slots from there (the methods' Ready starts agree to {max(shifts):.2f} s; `meta.t_shift_s`)."])
     else:
         method_lines = [
             "- **`<method>`:** `whole_body_l1` = the proposed whole-body 4-D L1 impedance controller (the only method in",
@@ -729,7 +824,8 @@ def write_readme(rows, summary, PH, T_common, all_R):
         "## Files", "",
         "```",
         "<method>_push_run<k>.mat                 one run, struct `run`",
-        "box_pushing_metrics.mat                  metrics_mean = the table (mean over runs), metrics_runs = every run,",
+        "box_pushing_metrics.mat                  metrics_mean = the table (mean over runs), metrics_std = its sample std,",
+        "                                         metrics_best = each method's best run, metrics_runs = every run,",
         "                                         metrics_phase = every run x phase, metrics_impedance = every run x",
         "                                         contact window, phases = the common phase table, window_s, L_arm_m",
         "configs/<method>_sim_box_pushing.yaml    the controller + planner (push-and-pull block) + plant, as flown",
@@ -798,26 +894,36 @@ def write_readme(rows, summary, PH, T_common, all_R):
         f"  marks it; `run.tracking.phase_id` (1..{len(PHASE_KEYS)}) says which phase each sample is in.",
         "- **Contact windows** (`run.impedance.windows`, `run.metrics.impedance.<window>`): CONTACT = ready end to",
         f"  exit start (the law's contact phase, the claw world-held); HOLD = the grip and the {T['settle_s']:g} s settle;",
-        f"  SLIDE = the {T['push_time_s']:g} s move; RELEASE = push end to exit start (the jaws open).", "",
+        f"  SLIDE = the {T['push_time_s']:.1f} s move; RELEASE = push end to exit start (the jaws open).", "",
         "## Simulation index", "",
         f"Flown {first} to {last} (attempt end times), headless Isaac Sim at real time, raw mocap-emulator feedback.", "",
         _md_table(["method", "file", "eps max [mm]", "rho max", "eps rms [mm]", "rho rms", "EE RMSE [mm]",
                    "e_imp slide rms [N]", "e_imp contact rms [N]", "box pushed [mm]"], run_rows), "",
-        "The table is the mean over the runs:", "",
+        "The table is the mean ± sample standard deviation (ddof 1) over each method's kept runs",
+        "(`metrics_mean` / `metrics_std` in `box_pushing_metrics.mat`):", "",
         _md_table(["method", "runs", "eps max [mm]", "rho max", "eps rms [mm]", "rho rms", "EE RMSE [mm]",
                    "e_imp slide rms [N]", "e_imp contact rms [N]", "box pushed [mm]"], mean_rows), "",
+        *(["Each method's BEST run (`metrics_best` in `box_pushing_metrics.mat`, `reference_outputs/box_pushing_sim_best.*`):",
+           "the kept run with the lowest slide impedance residual, the physical-interaction metric; the figures plot",
+           "these runs.", "",
+           _md_table(["method", "best run", "eps max [mm]", "rho max", "eps rms [mm]", "rho rms", "EE RMSE [mm]",
+                      "EE heading [deg]", "e_imp slide rms [N]", "as displacement [mm]", "e_imp contact rms [N]",
+                      "box pushed [mm]"], best_rows), ""] if best_rows else []),
         "The impedance residual per contact window (`metrics_impedance`):", "",
         _md_table(["run", "window", "T [s]", "e_imp rms [N]", "e_imp max [N]", "x / y / z rms [N]", "heading rms [N.m]",
-                   "F_ext rms [N]", "e_y rms [mm]"], imp_rows), "",
+                   "F_ext rms [N]", "e_y rms [mm]", "e_imp as displacement rms [mm]"], imp_rows), "",
+        "A force residual scales with the stiffness a rig declares, so its DISPLACEMENT equivalent is given too: the",
+        "declared compliance applied to e_imp -- how far the claw is from where its own declared impedance puts it",
+        "under the measured force (`impedance.e_imp_mm`, `metrics.impedance.<window>.e_imp_mm_rms`).", "",
         "The box and the vehicle (`metrics.box`, `metrics.window`):", "",
         _md_table(["run", "box pushed [mm]", "box yaw change [deg]", "box tilt max [deg]",
                    "box moved in the exit [mm]", "vehicle tilt max [deg]", "q2 max, release + exit [deg]",
                    "q3 min, release + exit [deg]"], box_rows), "",
         "The last two columns are the release window's joint margins: q2's stop is +45 deg, the planner's arm",
         "guard aborts below q3 = 10 deg (see the attempts below).", "",
-        "Attempts (a run is kept only if it completed, pushed the box >= 0.45 m and kept every step on its slot):", "",
+        f"Attempts (a run is kept only if it completed, pushed the box >= {0.9 * T['distance_m']:.2f} m (90 % of the commanded {T['distance_m']:.2f} m) and kept every step on its slot):", "",
         _md_table(["method", "attempts", "kept", "why the others were not kept"], att_rows) if att_rows else "--", "",
-        *(["The failed attempts (kept whole in the repository under `results/simulation_results/box_pushing/failed/`):", "",
+        *(["The failed attempts (kept whole in the repository under `results/simulation_results/Isaac_simulation_data/box_pushing/failed/`):", "",
            _md_table(["attempt", "what stopped it", "when", "afterwards"], fails), ""] if fails else []),
         "## Scene and task", "",
         f"- **Table:** the HOOBRO console table (1.000 x 0.150 x 0.800 m), its length along world y: x "
@@ -835,15 +941,18 @@ def write_readme(rows, summary, PH, T_common, all_R):
         "  so the fin's bare part carries an invisible 20 mm grip shim (the real gripper's foam pads close on the",
         "  5 mm fin).",
         f"- **Task:** grasp the fin from above (go to start, ready, grasp), push the box {T['distance_m']:.2f} m along the",
-        f"  table in {T['push_time_s']:g} s (a min-snap move after a {T['settle_s']:g} s settle) with the arm held still and the",
+        f"  table in {T['push_time_s']:.1f} s (a min-snap move after a {T['settle_s']:g} s settle) with the arm held still and the",
         "  claw held in the world, release, climb out, fly off the table to the landing hover, descend. The whole-body law's",
         "  contact phase (chi) is CONTACT from the jaws' grip to the end of the push.",
         f"- **Arm pose in the push:** [{pose}] deg (fold {T['pose_deg'][1] + T['pose_deg'][2]:g} deg); airframe: the T650",
         "  landing gear; the real arm's q2 range [-20, 45] deg is enforced as hard stops in the scene.",
-        f"- **Safety guards (on in every attempt, both rigs; none tripped in the kept runs; {len(fails)} failed "
+        f"- **Safety guards (on in every attempt, every rig; none tripped in the kept runs; {len(fails)} failed "
         f"attempt{'s' if len(fails) != 1 else ''} above):** the planner refuses a push that would leave the box",
         "  within 3 cm of the table edge, and aborts on a box lagging > 40 mm behind its plan, a box tilt > 2 deg,",
-        "  q3 < 10 deg, a lost box feed, a task force > 5 N or a vehicle tilt > 15 deg.",
+        "  q3 < 10 deg (static, and q3 predicted 0.2 s ahead from its rate, with credit for q2 resting on its +45 deg",
+        "  wall), a lost box feed, a task force > 5 N or a vehicle tilt > 15 deg. The arbitrary-time rig carries its",
+        "  own box-lag / force values and one guard more, the coordinated rig its own box-lag value (both below);",
+        "  every other guard is the whole-body rig's.",
         f"- **Impedance, Proposed (the whole-body law's EE task):** M_d = diag({', '.join(f'{v:g}' for v in g['my'])}),",
         f"  D_d = diag({', '.join(f'{v:g}' for v in g['dy'])}), K_d = diag({', '.join(f'{v:g}' for v in g['ky'])})",
         "  on [x, y, z, heading] (kg, N.s/m, N/m; kg.m^2, N.m.s/rad, N.m/rad for the heading).",
@@ -851,13 +960,34 @@ def write_readme(rows, summary, PH, T_common, all_R):
            f"M_d = diag({', '.join(f'{v:g}' for v in coord_R['gains']['my'][:3])}),",
            f"  D_d = diag({', '.join(f'{v:g}' for v in coord_R['gains']['dy'][:3])}), "
            f"K_d = diag({', '.join(f'{v:g}' for v in coord_R['gains']['ky'][:3])}) (kg, N.s/m, N/m); its contact phase runs",
-           "  from the jaws' stall to the release. That rig flies the planner at 0.20 m/s / 0.08 m/s^2 / 0.20 rad/s",
-           "  (the whole-body rig 0.30 / 0.15 / 0.30) and hovers 15 s before Ready, so its first transit starts",
-           "  before t = 0; from Ready on both rigs fly the same timetable. Its box-lag guard trips are its",
-           "  decoupled base lagging the planned push (2026-10-17 campaign: the box 35-48 mm behind its plan at the",
-           "  push's peak speed, the whole-body rig 15-22 mm), not a jammed box. After the release its arm closes the remaining lag",
-           "  with the jaws open around the fin and slides the box along the push (`box moved in the exit`)."]
+           "  from the jaws' stall to the release. That rig flies the planner's transits at 0.20 m/s / 0.08 m/s^2 /",
+           "  0.20 rad/s (the whole-body rig 0.30 / 0.15 / 0.30) -- the push itself is the same move on every rig",
+           "  (distance / mean speed) -- so its transits take longer (they fit the same timetable slots); from Ready on",
+           "  every rig flies the same timetable. Its OWN box-lag guard: "
+           f"{1e3 * float(coord_R['task']['planner'].get('guard_box_lag', 0.04)):.0f} mm (2026-10-28, user decision; every",
+           "  other guard shared): its decoupled base lags the planned push, so at the shared 40 mm the box ran",
+           "  41-42 mm behind its plan at the push's peak speed and 2 of 2 attempts aborted, the box not jammed."]
           if coord_R is not None else []),
+        *([f"- **Admittance, Arbitrary-time [Chen 2025] (eq 34, JOINT space, the arm relative to the base):** H_d = "
+           f"diag({', '.join(f'{v:g}' for v in arb_R['gains']['Hq'])}), D_d = diag({', '.join(f'{v:g}' for v in arb_R['gains']['Dq'])}),",
+           f"  K_d = diag({', '.join(f'{v:g}' for v in arb_R['gains']['Kq'])}) (kg.m^2, N.m.s/rad, N.m/rad, as flown). At the push",
+           f"  pose this declares {arb_R['gains']['Kt'][1, 1]:.0f} N/m along the arm (= the push) and "
+           f"{arb_R['gains']['Kt'][0, 0]:.0f} N/m across it (J^-T K_d J^-1, `meta.impedance_gains`);",
+           "  its residual is scored against that task-space image exactly as the other rigs' (the claw's world error",
+           "  chains, the true contact wrench). Its OWN safety guards (the other rigs' untouched): box lag "
+           f"{1e3 * float(arb_R['task']['planner'].get('guard_box_lag', 0.04)):.0f} mm, contact force "
+           f"{float(arb_R['task']['planner'].get('guard_force_n', 5.0)):g} N on its own estimate, and one guard the",
+           f"  other rigs do not carry: the box dragged sideways more than "
+           f"{1e3 * float(arb_R['task']['planner'].get('guard_box_cross', 0.0)):.0f} mm (`push_pull_guard_box_cross`) --",
+           "  its base-relative arm drags the clamped box with the base's sideways swings (up to 35 mm in completed",
+           "  pushes; twice past the table's side edge in tuning, the whole-body and coordinated rigs 2-5 mm).",
+           "  From Ready on it flies the same timetable as the other rigs.",
+           "  Declared deviations from the paper (archive/box_pushing_arbitrary_time_20261024/README.md): the floored",
+           "  time-to-go, the observer gain and arm window softened for the arm's torque delay, the arm stack's friction",
+           "  feed-forward off, a bumpless contact transfer (the base reference re-seated at the jaws' stall), and the",
+           "  admittance at one third of the paper's stiffness with the paper's dynamics kept (H/D/K 1/4/9 -> 1/3, 1.34,",
+           "  3: omega 3 rad/s, zeta 0.67; tuned 2026-10-25, K 9 completed 1 push in 8)."]
+          if arb_R is not None else []),
         "- **Plant:** the free-flight mirror plant -- motor delay, model mismatch, battery sag, a standing wrench",
         "  bias, imperfect joint actuation and emulated mocap feedback (the free-flight README explains each).",
         "  Every `sim_*` key as flown:", "",
@@ -921,17 +1051,22 @@ def write_readme(rows, summary, PH, T_common, all_R):
     print("wrote", os.path.join(BP_MAT, "README.md"))
 
 
-def latex_table(summary, T_common, task=None):
+def latex_table(summary, T_common, task=None, summary_std=None, best=False):
     T = task or dict(push_time_s=24.0)
-    coord = any(x["method"] == "coordinated_admittance" for x in summary)
+    comp = any(x["method"] in COMPARISON for x in summary)
+    arb = any(x["method"] == "arbitrary_time" for x in summary)
     cols = ["e_imp_slide_rms_n", "e_imp_slide_max_n", "e_imp_contact_rms_n", "eps_uav_max_mm", "rho_uav_max", "eps_uav_rms_mm",
             "rho_uav_rms", "platform_x_mm", "platform_y_mm", "platform_z_mm", "platform_heading_deg", "platform_roll_deg",
             "platform_pitch_deg", "ee_x_mm", "ee_y_mm", "ee_z_mm", "ee_heading_deg", "q1_deg", "q2_deg", "q3_deg", "q4_deg"]
     fmt = {c: ("%.3f" if c.startswith("rho") or c.startswith("e_imp") else "%.2f") for c in cols}
-    vals = {s["method"]: {c: fmt[c] % s[c] for c in cols} for s in summary}
+    sd_by = {x["method"]: x for x in (summary_std or [])}
+    vals = {s["method"]: {c: (fmt[c] % s[c]) + ((r"$\pm$" + fmt[c] % sd_by[s["method"]][c]) if s["method"] in sd_by else "")
+                          for c in cols} for s in summary}
     lines = [r"\begin{table}[H]", r"\centering",
-             r"\caption{Box pushing in simulation: impedance residual, platform deviation and RMSE of the tracked states over the whole mission.}",
-             r"\label{tab:sim_box_push}", r"\footnotesize", r"\setlength{\tabcolsep}{3pt}", r"\begin{threeparttable}",
+             (r"\caption{Box pushing in simulation, each method's best run: impedance residual, platform deviation and RMSE of the tracked states over the whole mission.}"
+              if best else
+              r"\caption{Box pushing in simulation: impedance residual, platform deviation and RMSE of the tracked states over the whole mission.}"),
+             r"\label{tab:sim_box_push_best}" if best else r"\label{tab:sim_box_push}", r"\footnotesize", r"\setlength{\tabcolsep}{3pt}", r"\begin{threeparttable}",
              r"\begin{tabular}{l c c c c c c c c c c c c c c c c c c c c c c}", r"\toprule",
              r"& \multicolumn{3}{c}{Impedance residual} & \multicolumn{4}{c}{UAV deviation} & \multicolumn{6}{c}{Platform} & \multicolumn{4}{c}{End-effector} & \multicolumn{4}{c}{Joint} \\",
              r"\cmidrule(lr){2-4} \cmidrule(lr){5-8} \cmidrule(lr){9-14} \cmidrule(lr){15-18} \cmidrule(lr){19-22}",
@@ -943,18 +1078,22 @@ def latex_table(summary, T_common, task=None):
             continue
         lines.append(f"{METHODS[m][0]} & " + " & ".join(vals[m][c] for c in cols) + r" \\")
     lines += [r"\bottomrule", r"\end{tabular}", r"\begin{tablenotes}", r"\footnotesize",
-              r"\item[] Each entry is the mean over the completed runs. "
+              (r"\item[] Each entry is the method's best completed run (the lowest slide impedance residual). " if best else
+               r"\item[] Each entry is the mean $\pm$ the sample standard deviation over the completed runs. " if sd_by else
+               r"\item[] Each entry is the mean over the completed runs. ") +
               r"$e_{imp} = \boldsymbol{F}_{ext} - (\boldsymbol{M}_d \dot{\boldsymbol{e}}_v + \boldsymbol{D}_d \boldsymbol{e}_v + \boldsymbol{K}_d \boldsymbol{e}_y)$ "
               r"is the impedance residual on the end effector (the measured contact force minus the force the designed impedance "
-              r"would render for the measured deflection), given as the RMS and the maximum of its norm over the %g~s slide and the " % T["push_time_s"] +
+              r"would render for the measured deflection), given as the RMS and the maximum of its norm over the %.1f~s slide and the " % T["push_time_s"] +
               r"RMS over the whole contact phase (grasp to release). "
               r"$\|\varepsilon_{UAV}\| = \|\boldsymbol{r}_{UAV}^{ref} - \boldsymbol{r}_{UAV}\|$ is the platform's deviation from "
               r"its reference position and $\rho_{UAV} = \|\varepsilon_{UAV}\|/L$ its ratio to the arm's reach $L = 0.37$~m, "
               r"given as the maximum and the RMS over the window; the remaining columns are RMS tracking errors with the " +
               (r"symbols of Table~\ref{tab:sim_free_flight_tracking}. The window is the whole mission (%.1f~s), from the "
                r"start of the Proposed rig's first transit to the end of the landing leg; every run flies the same "
-               r"timetable from Ready on (the methods are aligned at Ready; the coordinated rig's longer first transit starts before the window)." % T_common
-               if coord else
+               r"timetable from Ready on (the methods are aligned at Ready; a comparison rig's longer first transit starts before the window)." % T_common
+               + (r" For Arbitrary-time [Chen 2025] the designed impedance is the task-space image $\boldsymbol{J}^{-\top}\boldsymbol{X}\boldsymbol{J}^{-1}$ "
+                  r"of the paper's joint-space admittance at the push pose." if arb else "")
+               if comp else
                r"symbols of Table~\ref{tab:sim_free_flight_tracking}. The window is the whole mission (%.1f~s), from the "
                r"start of the first transit to the end of the landing leg; every run flies the same timetable." % T_common),
               r"\end{tablenotes}", r"\end{threeparttable}", r"\end{table}", ""]
@@ -981,7 +1120,7 @@ def make_figures(rows, loaded, figdir, PH, T_common):
     tx = [x0_, x1_, x1_, x0_, x0_]; ty = [y0_, y0_, y1_, y1_, y0_]
     ax.plot(tx, ty, [zt_] * 5, color="#8899aa", lw=0.9)
     for xx, yy in ((x0_, y0_), (x1_, y0_), (x1_, y1_), (x0_, y1_)):
-        ax.plot([xx, xx], [yy, yy], [0.6, zt_], color="#8899aa", lw=0.6)   # from the plot's floor (3-D lines are not clipped)
+        ax.plot([xx, xx], [yy, yy], [0.2, zt_], color="#8899aa", lw=0.6)   # from the plot's floor (3-D lines are not clipped)
     first = True
     for m, R in sel:
         ref_mask = (R["tu"] - R["t0"]) <= T_common + 1e-9
@@ -1001,7 +1140,13 @@ def make_figures(rows, loaded, figdir, PH, T_common):
             for zz in (cz - 0.05, cz + 0.05):
                 ax.plot(X, Y, zz, color="#A2142F", lw=0.6)
     ax.set_xlabel("x (m)"); ax.set_ylabel("y (m)"); ax.set_zlabel("z (m)")
-    ax.set_xlim(-0.6, 1.6); ax.set_ylim(-1.1, 1.1); ax.set_zlim(0.6, 1.6)
+    # the limits from the data (2026-10-28: the fixed -0.6..1.6 / -1.1..1.1 cut the 10-21 layout's landing at x -1.0)
+    pts = np.vstack([np.vstack([R["P"], R["re"], R["xb"]]) for _m, R in sel] + [np.array([[x0_, y0_, zt_], [x1_, y1_, zt_]])])
+    lo, hi = pts.min(axis=0), pts.max(axis=0)
+    span = float(max(hi[0] - lo[0], hi[1] - lo[1])) + 0.2
+    cxy = 0.5 * (lo[:2] + hi[:2])
+    ax.set_xlim(cxy[0] - span / 2, cxy[0] + span / 2); ax.set_ylim(cxy[1] - span / 2, cxy[1] + span / 2)
+    ax.set_zlim(0.2, max(1.6, float(hi[2]) + 0.1))
     ax.view_init(elev=28, azim=-50)
     ax.legend(loc="upper left", fontsize=8, ncol=2, frameon=False)
     ax.set_box_aspect((1, 1, 0.45))
@@ -1056,7 +1201,7 @@ def make_figures(rows, loaded, figdir, PH, T_common):
     p = os.path.join(figdir, "sim_box_push_uav_deviation.png"); fig.savefig(p, dpi=220); plt.close(fig); out["dev"] = p
     # ---- the impedance residual and the contact force over the contact window ----
     fig, axs = plt.subplots(3, 1, figsize=(7.2, 7.0), sharex=True, constrained_layout=True)
-    styles = {m: ("-" if i == 0 else "--") for i, m in enumerate(ORDER)}   # one line style per method
+    styles = {m: ("-", "--", ":")[i] for i, m in enumerate(ORDER)}   # one line style per method
     for m, R in sel:
         s = R["imp"]["series"]; t = s["t"] - R["t0"]
         for i, (lab, col) in enumerate(zip("xyz", ("#0072BD", "#D95319", "#77AC30"))):
@@ -1070,7 +1215,7 @@ def make_figures(rows, loaded, figdir, PH, T_common):
     axs[2].set_xlabel("Time (s)")
     for ax in axs:
         ax.grid(alpha=0.3); ax.legend(fontsize=8, frameon=False, ncol=3, loc="upper right")
-    axs[0].set_title("Contact phase (shaded: the %g s slide)" % sel[0][1]["task"]["push_time_s"], fontsize=10)
+    axs[0].set_title("Contact phase (shaded: the %.1f s slide)" % sel[0][1]["task"]["push_time_s"], fontsize=10)
     p = os.path.join(figdir, "sim_box_push_impedance.png"); fig.savefig(p, dpi=220); plt.close(fig); out["imp"] = p
     return out
 
@@ -1096,7 +1241,7 @@ def splice_paper(paper, tex, figs):
         r"\label{fig:sim_box_push_trajectory_3d}", r"\end{figure}", "",
         r"\begin{figure}[H]", r"\centering",
         r"\includegraphics[width=\textwidth]{Figures/2-Results/sim_box_push_impedance.png}",
-        r"\caption{Contact force on the end effector and the impedance residual during the contact phase of the simulated box pushing (shaded: the 24~s slide).}",
+        r"\caption{Contact force on the end effector and the impedance residual during the contact phase of the simulated box pushing (shaded: the slide).}",
         r"\label{fig:sim_box_push_impedance}", r"\end{figure}", "",
         r"\begin{figure}[H]", r"\centering",
         r"\includegraphics[width=\textwidth]{Figures/2-Results/sim_box_push_tracking_error.png}",

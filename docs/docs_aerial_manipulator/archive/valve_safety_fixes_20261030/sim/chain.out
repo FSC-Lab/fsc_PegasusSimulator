@@ -1,0 +1,24 @@
+23:45:51 start vs_nom_1  
+[vs_nom_1] completed
+23:49:18 start vs_nom_2  
+[vs_nom_2] completed
+23:52:45 start vs_nom_3  
+[vs_nom_3] completed
+23:56:18 start vs_hw_s2  
+[vs_hw_s2] completed
+23:59:46 start vs_hw_s3  
+[vs_hw_s3] completed
+00:03:17 start vs_hw_s4  
+[vs_hw_s4] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 6.1 deg falling at 51.1 deg/s -> 1.0 deg in 0.10 s (q2 13.7 deg) < 3.0 
+00:06:48 start vs_q3trip push_pull_guard_q3_min_deg=25.0 
+  push_pull_guard_q3_min_deg -> 25.0
+[vs_q3trip] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 24.3 deg < 25.0 deg (the arm buckling toward its elbow-singular branch)
+00:09:59 start vs_swaytrip push_pull_guard_sway_speed=0.05 
+  push_pull_guard_sway_speed -> 0.05
+[vs_swaytrip] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the vehicle sways 59 mm/s against its CoM reference (> 50 mm/s; CoM error 
+00:13:10 start vs_safety wb_arm_hold_stream=false 
+  wb_arm_hold_stream : true -> false
+[vs_safety] ABORTED: set_direct_mode(true) refused: DIRECT entry refused: arm error 0.238769 rad > gate 0.050000; 
+00:15:50 start vs_mfreeze  --mocap-fault freeze@push+4:2.5
+[vs_mfreeze] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.19 s ago)) -- gripper open, co
+00:19:03 CHAIN DONE

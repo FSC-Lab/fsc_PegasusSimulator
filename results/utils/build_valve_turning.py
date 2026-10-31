@@ -8,10 +8,10 @@ definitions, impedance scorer and table / figure / README layout are IMPORTED, n
 push-and-pull mode's TURN form: the whole-body 4-D L1 controller grasps the fin of the user's
 bearing-mounted valve handle (Valve_Assembly, archive/valve_turning_20261015) and turns the beam one
 full revolution, the claw world-held on its 0.160 m circle, the arm held, the law in CONTACT.
-Reads results/simulation_results/valve_turning/<method>_turn_run<k>.npz (+ .yaml + .args, from
+Reads results/simulation_results/Isaac_simulation_data/valve_turning/<method>_turn_run<k>.npz (+ .yaml + .args, from
 run_valve_turning_campaign.sh) and writes
   results/utils/tables/valve_turning_sim.{csv,json,tex}
-  results/simulation_results/valve_turning/figures/sim_valve_turn_*.png
+  results/simulation_results/Isaac_simulation_data/valve_turning/figures/sim_valve_turn_*.png
   results/simulation_results/matlab_simulation_data/valve_turning/<run>.mat, valve_turning_metrics.mat,
       README.md, configs/, reference_outputs/
 What differs from the box push, and why:
@@ -686,7 +686,7 @@ def write_readme(rows, summary, PH, T_common, all_R):
         "base's lead over its moving reference is absorbed by the arm, so a margin of 0 means the arm sat on a stop.", "",
         "Attempts (a run is kept only if it completed, turned the beam >= 350 deg and kept every step on its slot):", "",
         _md_table(["method", "attempts", "kept", "why the others were not kept"], att_rows) if att_rows else "--", "",
-        *(["The failed attempts (kept whole under `results/simulation_results/valve_turning/failed/`):", "",
+        *(["The failed attempts (kept whole under `results/simulation_results/Isaac_simulation_data/valve_turning/failed/`):", "",
            _md_table(["attempt", "what stopped it", "when", "afterwards"], fails), ""] if fails else []),
         "## Scene and task", "",
         f"- **Table:** the HOOBRO console table (1.000 x 0.150 x 0.800 m), its length along world y: x "

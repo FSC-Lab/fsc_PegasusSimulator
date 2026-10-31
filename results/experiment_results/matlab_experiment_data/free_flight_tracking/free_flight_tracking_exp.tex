@@ -1,0 +1,40 @@
+\begin{table}[htbp]
+\centering
+\caption{RMSE of free-flight trajectory tracking in experiment.}
+\label{tab:exp_free_flight_tracking}
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{threeparttable}
+\begin{tabular}{c c l c c c c c c c c c c c c c c}
+\toprule
+& & & \multicolumn{6}{c}{Platform} & \multicolumn{4}{c}{End-effector} & \multicolumn{4}{c}{Joint} \\
+\cmidrule(lr){4-9} \cmidrule(lr){10-13} \cmidrule(lr){14-17}
+Trajectory & $\bar{v}$\tnote{1} & Method & $r_{0,x}$ & $r_{0,y}$ & $r_{0,z}$ & $\psi_0$ & $\phi_0$ & $\theta_0$ & $r_{e,x}$ & $r_{e,y}$ & $r_{e,z}$ & $\psi_e$ & $q_1$ & $q_2$ & $q_3$ & $q_4$ \\
+& (m/s) & & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & (mm) & (mm) & (mm) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) & ($^\circ$) \\
+\midrule
+ & \smash{\raisebox{-0.5\baselineskip}{0.10}} & Proposed & \textbf{20.34} & \textbf{18.90} & \textbf{2.51} & \textbf{0.21} & \textbf{0.61} & 2.09 & \textbf{21.42} & \textbf{19.77} & \textbf{2.84} & \textbf{0.22} & 0.18 & 3.44 & 2.02 & 0.09 \\
+ &  & Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & 49.32 & 51.86 & 10.76 & 3.09 & 0.82 & \textbf{2.07} & 56.32 & 59.40 & 9.96 & 3.14 & \textbf{0.09} & \textbf{0.88} & \textbf{0.62} & \textbf{0.07} \\
+\addlinespace
+\smash{\raisebox{-0.5\baselineskip}{Circle}} & \smash{\raisebox{-0.5\baselineskip}{0.13}} & Proposed & \textbf{25.46} & \textbf{21.84} & \textbf{4.07} & \textbf{0.22} & \textbf{0.58} & \textbf{2.08} & \textbf{26.63} & \textbf{22.73} & \textbf{4.54} & \textbf{0.49} & \textbf{0.12} & 3.32 & 1.91 & 0.88 \\
+ &  & Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & 59.38 & 52.55 & 10.30 & 3.90 & 0.63 & 2.29 & 66.93 & 59.79 & 7.24 & 3.70 & 0.17 & \textbf{1.09} & \textbf{0.81} & \textbf{0.08} \\
+\addlinespace
+ & \smash{\raisebox{-0.5\baselineskip}{0.20}} & Proposed & 25.37 & 23.94 & 3.19 & 0.26 & 0.63 & 2.10 & 26.47 & 24.57 & 3.57 & 0.33 & 0.15 & 3.19 & 1.77 & 0.47 \\
+ &  & Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+\addlinespace[0.8em]
+ & \smash{\raisebox{-0.5\baselineskip}{0.10}} & Proposed & \textbf{27.75} & \textbf{27.89} & \textbf{5.29} & \textbf{0.27} & \textbf{0.68} & \textbf{2.11} & \textbf{28.32} & \textbf{29.22} & \textbf{5.67} & \textbf{1.20} & 0.23 & 3.40 & 1.95 & 2.22 \\
+ &  & Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & 55.69 & 54.31 & 10.07 & 3.63 & 0.84 & 2.20 & 60.68 & 57.77 & 11.15 & 3.61 & \textbf{0.10} & \textbf{0.73} & \textbf{0.47} & \textbf{0.08} \\
+\addlinespace
+\smash{\raisebox{-0.5\baselineskip}{Figure-8}} & \smash{\raisebox{-0.5\baselineskip}{0.13}} & Proposed & \textbf{20.72} & \textbf{27.94} & \textbf{4.46} & \textbf{0.38} & \textbf{0.62} & \textbf{2.18} & \textbf{21.30} & \textbf{28.79} & \textbf{4.57} & \textbf{0.45} & 0.62 & 3.37 & 1.83 & 0.37 \\
+ &  & Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & 55.96 & 52.47 & 13.07 & 4.71 & 0.79 & 2.30 & 61.69 & 57.39 & 12.22 & 4.73 & \textbf{0.18} & \textbf{0.88} & \textbf{0.61} & \textbf{0.09} \\
+\addlinespace
+ & \smash{\raisebox{-0.5\baselineskip}{0.20}} & Proposed & 29.49 & 31.33 & 3.84 & 0.54 & 0.74 & 2.22 & 29.68 & 31.83 & 4.30 & 0.86 & 0.37 & 3.44 & 1.97 & 1.53 \\
+ &  & Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item[] Symbols as in Table~\ref{tab:sim_free_flight_tracking}. Each entry is the mean over two repeated one-lap tests of that setting, flown in the final flight campaign.
+\item[1] Mean speed of the end-effector along its path.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

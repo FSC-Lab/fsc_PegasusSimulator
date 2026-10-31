@@ -1,0 +1,14 @@
+[13:18:59] coordinated_admittance: MASS 0.280 kg, DIST 0.40 m at 0.021 m/s, slots ready 35.0 / close 8.0 / release 22.05 / land step 40.0 s, kept if pushed >= 360 mm
+[13:18:59] coordinated_admittance_push_run1 attempt 1 (cmp1028_r1_a1)
+[13:24:07] coordinated_admittance_push_run1 completed (299 s, box 406 mm)
+[13:24:07] coordinated_admittance_push_run2 attempt 1 (cmp1028_r2_a1)
+[13:29:14] coordinated_admittance_push_run2 completed (298 s, box 418 mm)
+[13:29:14] coordinated_admittance_push_run3 attempt 1 (cmp1028_r3_a1)
+[13:34:10] coordinated_admittance_push_run3 attempt 1 FAILED: [  89.52s] push_pull: ABORTING (SAFETY GUARD: the box is 60 mm BEHIND its plan (> 60 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, th
+[13:34:10] coordinated_admittance_push_run3 attempt 2 (cmp1028_r3_a2)
+[13:39:17] coordinated_admittance_push_run3 completed (298 s, box 421 mm)
+[13:39:17] coordinated_admittance_push_run4 attempt 1 (cmp1028_r4_a1)
+[13:44:24] coordinated_admittance_push_run4 completed (298 s, box 401 mm)
+[13:44:24] coordinated_admittance_push_run5 attempt 1 (cmp1028_r5_a1)
+[13:49:31] coordinated_admittance_push_run5 completed (298 s, box 403 mm)
+[13:49:31] campaign done -- closing the simulation

@@ -1,0 +1,7 @@
+01:33:02 start vs_emerg2 system_wd_max_tilt_deg=3.5
+  system_wd_max_tilt_deg -> 3.5
+[vs_emerg2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFET
+01:36:31 start vs_emerg3 system_wd_max_tilt_deg=3.5
+  system_wd_max_tilt_deg -> 3.5
+[vs_emerg3] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFET
+01:40:01 CHAIN3 DONE

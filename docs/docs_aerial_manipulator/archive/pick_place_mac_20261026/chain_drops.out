@@ -1,0 +1,7 @@
+[10:21:01] mod mac_drop2 (PEGASUS_ARM_SPIN_DRAIN=1 WB_SIM_YAML=/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/pick_place_mac_20261026/tools/../configs/params_single_aerial_manipulator_modular_adaptive_direct_actuation_t650_sim_pick_and_drop.yaml PEGASUS_PNP_TASK=drop)
+[10:23:34] rc=0
+[10:23:43] closed
+[10:23:52] mod mac_drop3 (PEGASUS_ARM_SPIN_DRAIN=1 WB_SIM_YAML=/home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/pick_place_mac_20261026/tools/../configs/params_single_aerial_manipulator_modular_adaptive_direct_actuation_t650_sim_pick_and_drop.yaml PEGASUS_PNP_TASK=drop)
+[10:26:32] rc=0
+[10:26:42] closed
+[10:26:42] chain done

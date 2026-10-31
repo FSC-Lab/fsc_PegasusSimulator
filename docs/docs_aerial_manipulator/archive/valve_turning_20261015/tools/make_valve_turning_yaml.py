@@ -340,6 +340,17 @@ PLANNER_BLOCK = f"""
     # config; the hardware flights' margin to it was 5.8-7.7 deg (0.2 s nearly false-tripped flight 2).
     push_pull_guard_q3_rate_min_deg_s: 30.0
     push_pull_guard_q2_max_deg: 45.0
+    # THE SWAY GUARD (2026-10-30, archive/valve_safety_fixes_20261030 after the 10-29 crash): the
+    # clamped contact's growing whirl, caught by the RATE of the horizontal CoM error (x_c - x_cd,
+    # the law's own debug), low-passed 0.25 s, above 0.15 m/s for 0.2 s with the claw on the fin
+    # -> this file's abort, but with the claw handed to the CoM at once (a base running away must
+    # not stretch the arm through a room-held release). Replayed (tools/sway_metric_replay.py):
+    # 0 of 56 completed Isaac turns trip (their worst 132 mm/s), the 10-29 collapse trips 3.0 s
+    # before the q3 rate guard (5.7 s after the grasp), 10-28 flight 1 6.9 s after the grasp. The
+    # CoM error itself is NOT the metric: a 60 mm limit tripped 37 of 56 completed Isaac turns.
+    push_pull_guard_sway_speed: 0.15
+    push_pull_guard_sway_filter_s: 0.25
+    push_pull_guard_sway_persist_s: 0.20
     # THE ROTOR SAMPLE GATE (the box push's, 2026-10-21): an obj_0 sample farther than 20 mm /
     # 10 deg from the last good one (the allowance growing with the gap) is dropped before Get
     # and the guards read it; Get refuses a window with any dropped sample. The turn's own yaw
@@ -419,6 +430,9 @@ OVERRIDES = {
     "wb_dy_psi": "0.2903",
     "wb_l1_stuck_hold_j4": "false",
 }
+# the turn's sense, from the planner block below: it signs the free-axis heading radius
+TURN_DEG = float(re.search(r"^    push_pull_turn_deg: ([-0-9.]+)", PLANNER_BLOCK, re.M).group(1))
+HEADING_RADIUS = FIN_RADIUS if TURN_DEG > 0 else -FIN_RADIUS
 ADDITIONS = {
     # the runtime EE-anchor switch's blend (node default 1.0 s): 3.0 for the valve (README section
     # 8.9) -- the exit hands the claw from the world hold to the CoM anchor while the open jaws are
@@ -442,12 +456,31 @@ ADDITIONS = {
     # omega_c_t 2.927 (0 of 2, 10-18).
     "wb_ee_anchor_free_axis_weight": ("wb_ee_anchor_blend_s", "0.75"),
     "wb_ee_anchor_free_axis_on_world": ("wb_ee_anchor_free_axis_weight", "true"),
+    # ITS HEADING COMPANION (2026-10-30, the 10-29 report's item 9): the claw's position target
+    # rides the tangent by +-50-60 mm on hardware, which turns the handle by that / r -- the
+    # heading target now turns with it, so the two stay consistent (10-29: the grip twisted up to
+    # +-20 deg against the fin). The SIGNED fin radius: + for a counter-clockwise turn
+    # (push_pull_turn_deg > 0, the axis to the left of the nose); the planner refuses a turn
+    # whose sense or radius disagrees with it.
+    "wb_ee_anchor_free_axis_heading_radius": ("wb_ee_anchor_free_axis_on_world", f"{HEADING_RADIUS:.4f}"),
     "wb_l1_contact_hold_translation": ("wb_l1_collision_threshold_n", "false"),
     "wb_attitude_from_odometry": ("wb_dls_lambda", "false"),
     "wb_attitude_odometry_correction_rad_s": ("wb_attitude_from_odometry", "0.0"),
     # THE RAW-MOCAP GUARD (2026-10-22, carried over from the box push): the node's side --
     # DIRECT entry needs the guard fresh and MOCAP, and its EKF2 bridging is not a feedback loss
     "system_mocap_guard_topic": ("system_fb_land_speed", '"state_estimator/mocap_guard"'),
+    # THE EMERGENCY ABORT INSTEAD OF SAFETY (2026-10-31, user: "for an emergency it should abort,
+    # not switch to SAFETY directly"; archive/valve_safety_fixes_20261030): a tilt / drift watchdog
+    # trip with the claw at the handle (Ready, the push / turn, the exit) calls the planner's
+    # emergency abort -- the task's configured release, climb, arm home -- while the law keeps
+    # flying. SAFETY only past the body-rate limit, past system_wd_hard_tilt_deg, or when the
+    # abort is refused / never starts / is not ABORTED within system_wd_abort_timeout_s. A revert
+    # to SAFETY there left the arm to fold in place through the handle (Isaac, a forced revert 5 s
+    # into a valve turn: 60 N on the fin, the valve spun 128 deg, the vehicle thrown 3.3 m).
+    "system_wd_abort_service": ("system_mocap_guard_topic", '"whole_body_planner/push_pull/emergency_abort"'),
+    "system_wd_abort_status_topic": ("system_wd_abort_service", '"whole_body_planner/push_pull/status"'),
+    "system_wd_hard_tilt_deg": ("system_wd_abort_status_topic", "25.0"),
+    "system_wd_abort_timeout_s": ("system_wd_hard_tilt_deg", "15.0"),
 }
 MARK = "VALVE-TURNING"
 

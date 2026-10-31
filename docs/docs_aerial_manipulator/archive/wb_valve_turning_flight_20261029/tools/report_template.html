@@ -1,0 +1,233 @@
+<title>1029 Valve-Turning Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: one full-width column (max 1040 px), numbered sections, data in panels.
+   Dark only, by the user's standing request: black page, near-black panels (same tokens as the 1024 report). */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #141413;
+  --rule: #2a2a27;
+  --fg: #f0efec;
+  --fg2: #c3c2b7;
+  --muted: #8f8e86;
+  --accent: #d9a35c;
+  --bad: #e66767;
+  --ok: #4fb38a;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-head: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-head); font-size: 34px; line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--fg2); margin: 0; }
+h2 { font-family: var(--font-head); font-size: 24px; margin: 40px 0 10px; text-wrap: balance; scroll-margin-top: 16px; }
+h2 .n { color: var(--accent); margin-right: 10px; font-family: var(--font-mono); font-size: 20px; }
+h3 { font-size: 17px; margin: 26px 0 6px; text-wrap: balance; scroll-margin-top: 16px; }
+p { margin: 8px 0; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+code { font-family: var(--font-mono); font-size: 13px; color: var(--fg2); overflow-wrap: anywhere; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.verdict { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 18px; margin: 18px 0 6px; }
+.verdict p { margin: 4px 0; }
+.verdict ul { margin: 6px 0 2px; }
+.verdict strong { color: var(--accent); font-weight: 600; }
+.keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0 4px; }
+.key { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px; align-content: start; }
+.key .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 22px; color: var(--fg); line-height: 1.25; }
+.key .l { font-size: 13px; color: var(--fg2); line-height: 1.4; }
+.key.bad .v { color: var(--bad); }
+nav.toc { margin: 20px 0 4px; font-size: 14px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+nav.toc a { color: var(--fg2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--fg); border-bottom-color: var(--accent); outline: none; }
+.tscroll { overflow-x: auto; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td:first-child { white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.hi td { color: var(--fg); background: rgba(217, 163, 92, 0.08); }
+.bad { color: var(--bad); }
+.ok { color: var(--ok); }
+figure { margin: 18px 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 14px 10px; }
+/* the matplotlib figure is drawn light; invert it so it sits on the black page with the same hues */
+figure img { display: block; width: 100%; height: auto; filter: invert(1) hue-rotate(180deg); border-radius: 3px; }
+figcaption { color: var(--fg2); font-size: 14px; margin-top: 8px; }
+figcaption b { color: var(--fg); font-weight: 500; }
+.group { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 22px 0 4px; }
+ol.recs { padding-left: 26px; }
+ol.recs li { margin: 6px 0; }
+footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+footer p { margin: 4px 0; }
+@media (max-width: 760px) { .keys { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { h1 { font-size: 27px; } h2 { font-size: 21px; } .key .v { font-size: 19px; }
+  td:first-child, td.n { white-space: normal; } th, td { padding: 6px 6px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">T650-AM whole-body 4-D L1 · valve turning · hardware · 2026-10-29</div>
+  <h1>1029 Valve-Turning Flights</h1>
+  <p class="sub">Two flights on the raw-mocap stack, config fsc_autopilot_ros2 <code>2431025</code>: a 90° turn in 18 s after a 1.5 s settle, arm pose [0, 5, 25, 0]°. Flight 1 hovered only. Flight 2 grasped the fin, failed and crashed.</p>
+</header>
+
+<div class="verdict">
+  <p><strong>In short</strong></p>
+  <ul>
+    <li>Flight 1 never reached the valve. The planner refused Plan because the valve's mocap body pointed the wrong way, so that check worked.</li>
+    <li>In flight 2 the vehicle started swaying the moment the jaws closed, in a growing whirl along the nose and sideways. The planned turn was still under 3°. After 6.9 s the vehicle ran 0.3 m sideways, the arm was stretched through q3 = 0 and the rotors saturated.</li>
+    <li>The safety chain then made it worse. The abort held the claw in the room. At the switch to SAFETY the arm replayed a +3 N·m command for 0.3 s. The mocap guard rejected the real 2.8 m/s motion, so SAFETY flew on drifting EKF2. The arm hit the valve, then the floor.</li>
+    <li>All three hardware valve contacts so far are unstable. With this grip and this law the arm runs out of range after about 5–8 s with the jaws closed, and the 90° turn needs 19.5 s.</li>
+    <li>Fix the safety chain before the next valve flight. Then test the mechanism on hardware: damping on j1/j4, opening the jaws earlier, and a handle free in roll.</li>
+  </ul>
+  <div class="keys">
+    <div class="key bad"><span class="v">3 of 3</span><span class="l">hardware valve contacts unstable (10-28 ×2, 10-29)</span></div>
+    <div class="key"><span class="v">×2 / 3–5 s</span><span class="l">sway growth with the jaws closed, at 0.45–0.6 Hz</span></div>
+    <div class="key"><span class="v">5–8 s</span><span class="l">with the jaws closed before the arm runs out of range</span></div>
+    <div class="key"><span class="v">19.5 s</span><span class="l">needed for the 90° turn (1.5 s settle + 18 s)</span></div>
+  </div>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <span class="eyebrow">Contents</span>
+  <ol>
+    <li><a href="#flight1">1 Flight 1</a></li>
+    <li><a href="#flight2">2 Flight 2 timeline</a></li>
+    <li><a href="#cause">3 The cause</a></li>
+    <li><a href="#crash">4 Why it crashed</a></li>
+    <li><a href="#kick">5 The wrist kick</a></li>
+    <li><a href="#ceiling">6 The ceiling</a></li>
+    <li><a href="#replay">7 An earlier abort</a></li>
+    <li><a href="#next">8 What to change</a></li>
+  </ol>
+</nav>
+
+<h2 id="flight1"><span class="n">1</span>Flight 1: a setup error, caught by the planner</h2>
+<p>Bag <code>flight_wb_l1_4d_valve_turning_20261029_145128</code>. Plan was refused with "the beam (obj_0 +x, yaw −0 deg) points 179 deg away from the start". The valve's rigid body (obj_0) had been created with its +x pointing away from the fin. The pilot flew the vehicle back and landed.</p>
+<p>At 77.5–79.4 s obj_0's yaw flipped by 180° with 0 mm of position change: the body was re-defined in Motive. The planner's sample gate dropped those samples, then accepted the new frame, and Get at 81.6 s captured yaw 180°. Flight 2 used that capture.</p>
+
+<h2 id="flight2"><span class="n">2</span>Flight 2: what happened</h2>
+<p>Bag <code>flight_wb_l1_4d_valve_turning_20261029_145526</code>. Times are seconds from the start of the bag.</p>
+<div class="tscroll"><table>
+  <thead><tr><th>t (s)</th><th>Event</th></tr></thead>
+  <tbody>
+    <tr><td class="n">32.29</td><td>Go To Start done; claw held in the room above the handle. CoM error sd 2.9 / 3.4 mm, calm.</td></tr>
+    <tr><td class="n">33.40</td><td>The jaws start opening. The wrist roll q4 spins to 41° at 45°/s and sticks there.</td></tr>
+    <tr><td class="n">33.93–36.96</td><td>Ready descent with the claw heading up to 40° off its reference. The open jaws push the fin (valve −5°).</td></tr>
+    <tr><td class="n">38.84</td><td>Jaws closed on the fin, 18 mm from the grasp point. The base is 38 mm sideways off, q1 +10°.</td></tr>
+    <tr><td class="n">40.34</td><td>The turn starts. The planned angle stays under 3° until 44.5 s.</td></tr>
+    <tr class="hi"><td class="n">39–45.5</td><td>Growing coupled sway: valve ±20–27°, CoM ±90 mm along the nose and sideways.</td></tr>
+    <tr><td class="n">45.63</td><td>Rotor allocator saturated (one rotor at 0.00).</td></tr>
+    <tr><td class="n">45.70</td><td>q3 rate guard: "q3 6.2° falling at 93°/s". ABORT: release with the claw held in the room.</td></tr>
+    <tr><td class="n">45.97</td><td>Arm torques at the 3 N·m clamp.</td></tr>
+    <tr><td class="n">46.30</td><td>DIRECT watchdog (tilt 15.1°, 114°/s) → SAFETY.</td></tr>
+    <tr><td class="n">46.8</td><td class="bad">61 m/s² impact: the hanging arm hit the valve and knocked it 22°.</td></tr>
+    <tr><td class="n">46.99</td><td>Mocap guard rejects the drone's real 2.8 m/s motion as a "jump"; LOST at 48.0.</td></tr>
+    <tr><td class="n">47.6</td><td class="bad">69 m/s² impact: the arm hit the floor (body at 0.35 m).</td></tr>
+    <tr><td class="n">49.42–52.05</td><td>VRPN loses the drone. When tracking returns it is on the floor at (4.54, 1.76, 0.24) m.</td></tr>
+    <tr><td class="n">53.03 / 55.87</td><td>Pilot STAB / disarm.</td></tr>
+  </tbody>
+</table></div>
+
+<figure>
+  <img src="{{FIG_FLIGHT}}" alt="Five stacked time plots of flight 145526 from 31 to 50 s: valve angle against the planned turn, CoM error along the nose and sideways, the four arm joints, tilt and attitude error, and the lowest and highest rotor command, with the events of the table marked as vertical lines.">
+  <figcaption><b>Fig. 1.</b> Flight 145526 from the end of Go To Start to the pilot's takeover. Top to bottom: valve angle against the planned turn; CoM error along the nose and sideways (the law's own debug); the arm joints in encoder convention, with the q3 guard at 3°; PX4 tilt and the law's attitude error, with the watchdog at 15°; the lowest and highest rotor command. Vertical lines mark the events in the table. The valve swings ±20° while the plan has barely moved.</figcaption>
+</figure>
+
+<h2 id="cause"><span class="n">3</span>The cause: the contact phase is unstable</h2>
+<p>This is the same mode as on 10-28. Today nothing cut the flight early, so it ran until the arm reached its limits.</p>
+<div class="tscroll"><table>
+  <thead><tr><th>Flight</th><th>Jaws closed</th><th>Sideways growth</th><th>Along-nose growth</th><th>Mode</th><th>How it ended</th></tr></thead>
+  <tbody>
+    <tr><td>10-28 180652</td><td class="n">9.2 s</td><td class="n">×2 / 5.1 s</td><td class="n">—</td><td class="n">0.56 Hz</td><td>false tilt trip</td></tr>
+    <tr><td>10-28 181833</td><td class="n">3.6 s</td><td class="n">—</td><td class="n">×2 / 2.2 s</td><td class="n">0.59 Hz</td><td>false tilt trip</td></tr>
+    <tr class="hi"><td>10-29 145526</td><td class="n">6.9 s</td><td class="n">×2 / 3.4 s</td><td class="n">×2 / 3.0 s</td><td class="n">0.45 Hz</td><td class="bad">arm collapse</td></tr>
+  </tbody>
+</table></div>
+<ul>
+  <li><strong>The turn is not the trigger.</strong> The sway grew from the grasp while the planned angle was still under 3°.</li>
+  <li><strong>The valve follows the vehicle, not the plan.</strong> Its angle is the free-axis anchor carrying the vehicle's wander along the nose: correlation 1.00, slope 0.28 °/mm against 0.27 °/mm predicted (0.75 / r). The valve swung ±20–27° while the plan was at most 8.6°.</li>
+  <li><strong>The motion along the nose and the sideways motion are one whirl.</strong> They are phase-locked at 0.46 Hz (correlation 0.76 at about 120° of phase).</li>
+  <li><strong>Nothing damps the sideways part.</strong> It is taken up entirely by q1 and q4 moving against each other (q1 −0.25 °/mm, q4 +0.33 °/mm, correlation −0.99). That pair is not a row of the 4-D task, the back-EMF feed-forward cancels the motors' own damping, and j1 has no error damping.</li>
+  <li><strong>The grip is not rigid.</strong> Since the grasp, the claw rotated against the fin by 9.9° rms about the shaft (up to 42°) and 4.5° rms about the tangent (up to 14°, correlation −0.92 with q4). The fin rolled with the claw again (marker-height correlation −0.96). The observer booked a growing roll moment (+0.08 → +0.28 N·m) and a j1 torque (+0.11–0.19 N·m) while the jaws were closed.</li>
+  <li><strong>The collapse.</strong> At 44.7–45.7 s the base moved 0.13 m back and 0.30 m sideways in about 1 s. That stretched the clamped arm: q3 went from 20° to −32°, into the elbow-singular branch, at up to about 100°/s. The rotors saturated first (45.63 s), then the q3 rate guard tripped (45.70 s), 0.1–0.2 s before q3 crossed zero.</li>
+</ul>
+<p>Ruled out: the localization (the fitted shaft is 2.6–3.5 mm from the planner's axis; centroid radius 96–97 mm against 93.5 mm in CAD), the tilt guard (peak 1.8° of 4°), and the mocap feed before the crash.</p>
+
+<h2 id="crash"><span class="n">4</span>Why the failure became a crash</h2>
+<ol>
+  <li><strong>The abort held the claw in the room while the base ran away.</strong> The valve's abort keeps the claw target fixed for its 2 s release (<code>push_pull_abort_release_world_held</code>). The base was already moving at 0.3 m/s, so the law pulled the stretched arm against it: arm torques at ±3 N·m from 45.97 s, rotors saturated, tilt 8° → 15° in 0.6 s.</li>
+  <li><strong>The switch to SAFETY replayed the law's last arm command for 0.3 s.</strong> On hardware the whole-body node stops streaming in SAFETY, and the arm controller keeps applying the last command until <code>command_timeout_s</code> (0.3 s). That command was [+0.01, +3.0, +3.0, −0.06] N·m, with j2 at full duty. The arm whipped (q2 13° ↔ 44°) while PX4 took over at 15.9° tilt and −145°/s pitch rate. Tilt reached 41° at 46.6 s and 57° at 46.9 s.</li>
+  <li><strong>The mocap guard rejected real motion.</strong> Its jump gate is a fixed band around the last good sample (20 mm + 1 m/s·dt + 1 m/s²·dt², <code>mocap_guard.cpp:81</code>), with no velocity prediction. At 2.8 m/s (22–30 mm per sample) the drone left the band at 46.99 s and could not get back in: CONFIRMED at 47.14 s, LOST at 48.0 s. Vision stopped reaching EKF2, and by 49 s EKF2 was 0.65 m off in x and 0.34 m in z. SAFETY flew on that estimate to the room edge (4.68, 2.26) m, where the drone dropped out of mocap and came down on the floor.</li>
+  <li><strong>Contributing: the standing 0.2 N·m yaw trim.</strong> In free hover the rotor pairs sit at 0.52 / 0.72 in both flights, the loose-arm imbalance seen since 10-14. It uses about 30 % of the yaw budget and leaves the high pair about 0.18 from saturation.</li>
+</ol>
+
+<h2 id="kick"><span class="n">5</span>The wrist kick at the jaw opening</h2>
+<p>When the jaws open at the start of Ready, the wrist roll q4 spins and sticks. Checked over 16 bags:</p>
+<div class="tscroll"><table>
+  <thead><tr><th></th><th>Valve flights</th><th>Box pushes</th></tr></thead>
+  <tbody>
+    <tr><td>Wrist kick at the opening before Ready</td><td class="n bad">2 of 3 (24°, 41°)</td><td class="n ok">0 of 13</td></tr>
+  </tbody>
+</table></div>
+<p>Today the kick started within 50 ms of the gripper's motion, while the law's j4 torque stayed under 0.07 N·m. j4 cannot stop it: the heading spring is only about 0.044 N·m/rad at that joint, and the back-EMF feed-forward removes the motor's damping. The consequences:</p>
+<ul>
+  <li>the open jaws reach the fin rotated (heading error up to 18, 34 and 40° in the three valve flights);</li>
+  <li>they push the free valve before the close;</li>
+  <li>the grasp starts off-centre (today 38 mm sideways, q1 +10°).</li>
+</ul>
+
+<h2 id="ceiling"><span class="n">6</span>The ceiling</h2>
+<ul>
+  <li>The sway grows at about 0.14–0.23 per second, from 15–40 mm at the grasp to about 100 mm, where the arm runs out of range. That gives <strong>about 5–8 s with the jaws closed</strong>.</li>
+  <li>The flown turn needs 19.5 s (1.5 s settle + 18 s). In 5–8 s the 18 s plan covers less than 10°.</li>
+  <li>So <strong>a 90° turn is out of reach with this grip and this law</strong>, whatever the reference. A faster or shorter turn does not help, because the sway grows with the valve standing still.</li>
+  <li>Thrust and bandwidth are not the limit. Free flight is fine: the hold above the handle is 3 mm sd, the circle 24–26 mm. The limit is the closed chain through a compliant grip.</li>
+  <li>It cannot be tuned in simulation. Isaac does not reproduce this mode, and the 10-29 gain sweep found no gain that helps.</li>
+</ul>
+
+<h2 id="replay"><span class="n">7</span>An earlier abort, replayed on the three contacts</h2>
+<p>Each criterion must hold for 0.2 s. The cells give how long before the end of the run it would have fired.</p>
+<div class="tscroll"><table>
+  <thead><tr><th>Criterion</th><th>10-28 180652</th><th>10-28 181833</th><th>10-29 145526</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td>Sideways CoM error &gt; 60 mm</td><td class="n">3.8 s before</td><td class="n">never</td><td class="n">4.0 s before the collapse</td></tr>
+    <tr><td>Along-nose CoM error &gt; 60 mm</td><td class="n">never</td><td class="n">never</td><td class="n">3.8 s before</td></tr>
+    <tr><td>|Δq4| &gt; 20°</td><td class="n">3.7 s before</td><td class="n">never</td><td class="n">3.1 s before</td></tr>
+    <tr><td>|e_R| &gt; 6°</td><td class="n">at the end</td><td class="n">never</td><td class="n">4.4 s before</td></tr>
+  </tbody>
+</table></div>
+<p>At those instants the vehicle was at 2–4° of tilt, still easy to recover. The replay covers three runs only, so any threshold must be checked against Isaac's completed turns for false trips before it is adopted. 10-28 181833 ended early on the false tilt trip, before any criterion could fire.</p>
+
+<h2 id="next"><span class="n">8</span>What to change</h2>
+<p>None of this is applied yet.</p>
+<div class="group">Before the next valve flight: safety</div>
+<ol class="recs">
+  <li><strong>Abort on the sway, not on the arm.</strong> For example a sideways or along-nose CoM error over 60 mm for 0.2 s while the jaws are closed (a planner guard). Today it would have fired 4 s before the collapse.</li>
+  <li><strong>On an arm-guard abort, drop the room hold at once</strong> (CoM anchor) and open. The room-held release suits the tilt and handle guards, not a base that is already running away.</li>
+  <li><strong>Never replay the diverging law's last torque at the switch to SAFETY.</strong> Stream the PD+gravity hold from the node in SAFETY on hardware too (<code>wb_arm_hold_stream</code>, as in Isaac), or make the arm controller drop the streamed command on the mode change.</li>
+  <li><strong>Base the mocap jump gate on the predicted position</strong> (the last good sample plus EKF2 velocity × dt, or EKF2's own prediction), so that real fast motion is not rejected.</li>
+  <li><strong>Re-true the airframe's yaw imbalance</strong> (the 0.2 N·m standing trim).</li>
+</ol>
+<div class="group">Raising the ceiling: each needs a hardware A/B, since Isaac cannot rank them</div>
+<ol class="recs" start="6">
+  <li><strong>Open the jaws earlier</strong>, for example at the start of Go To Start, far from the valve, so the wrist kick settles before the descent. Add a heading check to the close gate, which now checks position only.</li>
+  <li><strong>Damp the q1/q4 path</strong> with <code>passthrough_error_damping_joints</code> on j1 and j4 (for example 0.2). With the claw pinned, a joint damper b on q1 acts on the base's sideways motion as about 19·b N·s/m (q1 moves 4.4 rad per metre), so 0.2 adds about 30 % to k_v. This is a config change only.</li>
+  <li><strong>Use a handle the closed jaws can turn on</strong> in roll and about the shaft, for example the fin mounted on the beam through a small spherical joint, so the grip stops passing a roll couple into the arm and the base. The 10-29 reduced model says this restores the free-flight damping.</li>
+  <li><strong>Make the free-axis anchor rotate the heading target too.</strong> Today it shifts the claw's position target along the tangent (±50–60 mm here) but not its heading target, which twists the grip against the fin by up to ±20°. Rotating the heading target by w·e_f / r keeps the two consistent.</li>
+  <li><strong>Fly the 10-28 diagnostics first, with guard 1 on.</strong> D0: twist the clamped claw by hand on the ground. D1: a 10 s clamped hold with no turn (<code>push_pull_push_settle_s</code> 10). D2: the same hold with <code>push_pull_contact false</code>.</li>
+</ol>
+
+<footer>
+  <p>Record, figure and analysis scripts: <code>docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261029/</code> (README, <code>fig_flight.png</code>, <code>timeline.txt</code>, <code>tools/</code>). Bags: <code>docs/experimental_data_ros2_bag/1029 - T650-AM whole-body Tracking &amp; Valve-Turning-*/</code>.</p>
+  <p>The 10-28 flights and the follow-up studies are in <code>archive/wb_valve_turning_flight_20261028/</code>. No repository was changed by this analysis.</p>
+</footer>
+</div>

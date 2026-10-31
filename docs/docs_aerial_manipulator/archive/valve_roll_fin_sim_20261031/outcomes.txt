@@ -1,0 +1,29 @@
+seed 2
+   v2      ok | ok
+   free    ok
+   locked  ABORT 18.8s (q3 5.0 deg falling at 59.7 deg/s -> -1.0 d); DIRECT LOST
+seed 3
+   v2      ok | ok
+   free    ABORT  8.5s (q3 5.1 deg falling at 95.7 deg/s -> -4.4 d); DIRECT LOST
+   locked  ABORT  5.9s (q3 6.8 deg falling at 97.8 deg/s -> -3.0 d); DIRECT LOST
+seed 4
+   v2      ABORT 14.3s (q3 6.1 deg falling at 51.1 deg/s -> 1.0 de); DIRECT kept
+   free    ok
+   locked  ABORT  5.0s (q3 3.9 deg falling at 93.5 deg/s -> -5.5 d); DIRECT LOST
+seed 5
+   v2      ABORT  3.9s (q3 1.4 deg < 3.0 deg); DIRECT LOST
+   free    ABORT  8.2s (q3 6.8 deg falling at 118.8 deg/s -> -5.1 ); DIRECT LOST
+   locked  ok
+seed 6
+   v2      ok
+   free    ok
+   locked  ABORT 11.6s (q3 1.1 deg falling at 33.5 deg/s -> -2.2 d); DIRECT LOST
+seed 7
+   v2      ok
+   free    ABORT  8.5s (q3 4.5 deg falling at 50.0 deg/s -> -0.5 d); DIRECT LOST
+   locked  ABORT  4.7s (tilt 11.3 deg > 10.0 deg)); DIRECT LOST
+seed 8
+   v2      ok
+   free    ok
+   locked  ok
+completed / flown: v2 7/9, free 4/7, locked 2/7

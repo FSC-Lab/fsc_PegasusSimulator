@@ -150,7 +150,7 @@ The shipped configuration is cadm_21's: the generated `..._sim_push_pull.yaml` (
 (o), (p); (m), (n) retired), planner bounds 0.20 / 0.08 / 0.20, hover dwell 15 s, the driver's live-box
 grasp gate (4 mm across, 25 mm along the fin). The campaign flies three runs on the driver's timetable
 (`--slot-ready 30`, the rest the whole-body slots), copies them to
-`results/simulation_results/box_pushing/coordinated_admittance_push_run<k>.npz` and
+`results/simulation_results/Isaac_simulation_data/box_pushing/coordinated_admittance_push_run<k>.npz` and
 `build_box_pushing.py` scores both methods with one definition (see `results/simulation_results/README.md`
 and `matlab_simulation_data/box_pushing/`).
 

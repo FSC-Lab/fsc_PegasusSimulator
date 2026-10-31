@@ -429,7 +429,7 @@ of the exit) is not built. Results campaign: `results/utils/run_valve_turning_ca
 ### 8.9 Phase 7 -- THE EXIT, fixed: open the jaws while the claw is still world-held
 
 On the results timetable omega_c_t 2.0 completed 2 of 7 (runs set aside in
-`results/simulation_results/valve_turning/previous_release_at_open_20261018/`): every loss the
+`results/simulation_results/Isaac_simulation_data/valve_turning/previous_release_at_open_20261018/`): every loss the
 exit's wrist roll. **The law did not cause it** -- through the release and exit its own j4
 torque OPPOSES the roll (+0.25..+0.30 N.m once the heading error is 30 deg), the contact flag
 was already free, and the estimate feed-forward on j4 is ~0.01 N.m. The roll is EXTERNAL: with
@@ -989,7 +989,7 @@ measure the table, the valve's position and the bearing first.
 
 ## 16. The results campaign and the video on the final config (2026-10-18 evening)
 
-**Results** (`results/simulation_results/valve_turning/`, MATLAB `matlab_simulation_data/valve_turning/`, the
+**Results** (`results/simulation_results/Isaac_simulation_data/valve_turning/`, MATLAB `matlab_simulation_data/valve_turning/`, the
 earlier 02:33 campaign moved to `previous_pre_safety_pass_20261018/`). The coordinated-admittance valve yaml was
 STALE against its generator (15 deg guard, no free-handle abort) and was regenerated first, so both rigs flew
 section 15.10's guards and abort. `build_valve_turning.py` now reads the release sequence, the guards and the

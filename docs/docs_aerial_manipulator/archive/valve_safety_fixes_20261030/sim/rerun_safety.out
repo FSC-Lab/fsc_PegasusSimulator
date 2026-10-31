@@ -1,0 +1,4 @@
+00:19:52 start vs_safety2 wb_arm_hold_stream=false (arm hold kp 30)
+  wb_arm_hold_stream : true -> false
+[vs_safety2] ABORTED: hover did not settle
+00:23:11 RERUN DONE

@@ -1,0 +1,5 @@
+[1;33m  scene knob PEGASUS_PNP_TASK=drop[0m
+[1;33m  scene knob PEGASUS_PNP_PAYLOAD_MASS=0.200[0m
+[1;32mplanner: safety margin (approach_dz) 0.2 m -- start the stack with WB_PLANNER_YAML=..._sim_pick_and_place.yaml for the pick-and-place block[0m
+[1;35mPICK-AND-PLACE SCENE (AM-T650-GEO-L1-PNP): the DECOUPLED geometric+L1 controller, position-mode arm; the whole-body pick-and-place task and plant.[0m
+[1;32mplanner: pick-and-place block loaded (planner poses and waypoints + controller match the pick-and-place yamls)[0m

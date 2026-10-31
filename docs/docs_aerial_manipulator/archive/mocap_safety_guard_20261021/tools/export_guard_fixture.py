@@ -2,7 +2,9 @@
 """Write the C++ guard's parity fixture from the Python reference.
 
 For excerpts of recorded hardware flights (the freezes of 09-18 and 09-24, the
-flips of 09-21, a clean 09-28 circle) writes test/data/guard_<name>.csv (the
+flips of 09-21, a clean 09-28 circle; and, with EKF2's velocity for the
+predicted centre, the two crashes the 10-21 gate lost: 10-10 PP-4 and 10-29's
+valve flight) writes test/data/guard_<name>.csv (the
 samples, times relative to the first) and guard_<name>_events.csv (the events
 guard_reference finds on THOSE ROUNDED values, so the C++ sees exactly the same
 input). The estimator's gtest test_mocap_guard replays every stream on the same
@@ -68,17 +70,55 @@ def recorded():
     return out
 
 
-def write(name, t, p, q):
+def recorded_with_velocity():
+    """The two fast-motion crashes, with EKF2's velocity as the bridge hands it to the guard."""
+    sys.path.insert(0, os.path.join(R.ARCH, "valve_safety_fixes_20261030", "tools"))
+    import guard_predict_replay as P  # noqa: E402
+    want = {
+        "rec_1010_pp4_fast": (os.path.join(R.ARCH, "wb_pick_place_flight_20261010", "npz", "p4.npz"), (70.0, 82.0)),
+        "rec_1029_crash_fast": (os.path.join(R.ARCH, "wb_valve_turning_flight_20261029", "npz", "b145526.npz"),
+                                (36.0, 47.0)),
+    }
+    out = {}
+    for name, (f, (a, b)) in want.items():
+        (t, p, v, q), ekf = P.load(f)
+        air = np.where(p[:, 2] > R.AIR_Z)[0]
+        t0 = t[air[0]]
+        k = (t >= t0 + a) & (t <= t0 + b)
+        vel = np.full((k.sum(), 3), np.nan)
+        for j, x in enumerate(t[k]):
+            vp = G.ekf_velocity_at(ekf, x)
+            if vp is not None:
+                vel[j] = vp
+        out[name] = (t[k] - t[k][0], p[k], q[k], vel)
+    return out
+
+
+def write(name, t, p, q, vel=None):
     path = os.path.join(OUT, f"guard_{name}.csv")
     with open(path, "w") as f:
-        f.write("# t,px,py,pz,qw,qx,qy,qz -- times relative [s]\n")
+        if vel is None:
+            f.write("# t,px,py,pz,qw,qx,qy,qz -- times relative [s]\n")
+        else:
+            f.write("# t,px,py,pz,qw,qx,qy,qz,vok,vx,vy,vz -- times relative [s]; v = EKF2's fresh "
+                    "velocity for the predicted centre (vok 0: none)\n")
         for i in range(len(t)):
-            f.write(f"{t[i]:.6f},{p[i, 0]:.6f},{p[i, 1]:.6f},{p[i, 2]:.6f},"
-                    f"{q[i, 0]:.6f},{q[i, 1]:.6f},{q[i, 2]:.6f},{q[i, 3]:.6f}\n")
+            row = (f"{t[i]:.6f},{p[i, 0]:.6f},{p[i, 1]:.6f},{p[i, 2]:.6f},"
+                   f"{q[i, 0]:.6f},{q[i, 1]:.6f},{q[i, 2]:.6f},{q[i, 3]:.6f}")
+            if vel is not None:
+                ok = bool(np.all(np.isfinite(vel[i])))
+                vv = vel[i] if ok else np.zeros(3)
+                row += f",{int(ok)},{vv[0]:.6f},{vv[1]:.6f},{vv[2]:.6f}"
+            f.write(row + "\n")
     # the reference runs on the ROUNDED values, exactly what the C++ reads
     d = np.loadtxt(path, delimiter=",", comments="#")
     tt, pp, qq = d[:, 0], d[:, 1:4], d[:, 4:8]
-    ev, chk, _ = G.run_ladder(tt, pp, np.zeros_like(pp), qq, t_start=tt[0], t_end=tt[-1])
+    ekf = None
+    if vel is not None:
+        vr = d[:, 9:12].copy()
+        vr[d[:, 8] < 0.5] = np.nan
+        ekf = (tt, vr)            # each sample carries its own velocity (or none)
+    ev, chk, _ = G.run_ladder(tt, pp, np.zeros_like(pp), qq, t_start=tt[0], t_end=tt[-1], ekf=ekf)
     with open(os.path.join(OUT, f"guard_{name}_events.csv"), "w") as f:
         f.write(f"# t_start,t_end,tick = {tt[0]:.6f},{tt[-1]:.6f},0.004; rejected = {chk.n_jump + chk.n_frozen}\n")
         for e in ev:
@@ -95,6 +135,10 @@ def main():
         n, ev, rej = write(name, t, p, q)
         print(f"{name:18s} {n:6d} samples, {rej:4d} rejected, events: "
               f"{', '.join(f'{k}/{r}' for k, r in ev) or 'none'}")
+    for name, (t, p, q, vel) in recorded_with_velocity().items():
+        n, ev, rej = write(name, t, p, q, vel)
+        print(f"{name:18s} {n:6d} samples, {rej:4d} rejected, events: "
+              f"{', '.join(f'{k}/{r}' for k, r in ev) or 'none'}  (predicted centre)")
 
 
 if __name__ == "__main__":

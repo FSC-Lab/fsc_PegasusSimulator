@@ -2,6 +2,13 @@
 
 Isaac Sim runs of the T650 aerial manipulator, organised for plotting in MATLAB.
 
+```
+simulation_results/
+  Isaac_simulation_data/      the raw campaign records, one folder per task: free_flight_tracking/,
+                              pick_and_place/, pick_and_drop/, box_pushing/, valve_turning/
+  matlab_simulation_data/     MATLAB-ready: one self-contained folder per task
+```
+
 ## Free-flight trajectory tracking
 
 Three methods are compared:
@@ -27,7 +34,7 @@ Only the DIRECT control law differs between methods. For Geo-L1 the arm also run
 ```bash
 # fly (resumes: completed runs on disk are skipped)
 setsid nohup /usr/bin/python3 results/utils/run_tracking_campaign.py \
-    > results/simulation_results/free_flight_tracking/campaign.out 2>&1 < /dev/null &
+    > results/simulation_results/Isaac_simulation_data/free_flight_tracking/campaign.out 2>&1 < /dev/null &
 # score every completed run -> matlab_simulation_data/free_flight_tracking/ + results/utils/tables/free_flight_tracking_sim.csv|json
 /usr/bin/python3 results/utils/build_free_flight.py
 # the paper table (results/utils/tables/free_flight_tracking_sim.tex; --paper <main.tex> also updates the paper)
@@ -58,7 +65,7 @@ simulation_results/
       <shape>/v<speed>/<method>_<shape>_v<speed>_run<k>.mat
       free_flight_tracking_rmse.mat           the table's numbers (rmse_mean) and every run (rmse_runs)
     pick_and_place/                           README.md, configs/, the run files, pick_and_place_metrics.mat
-  free_flight_tracking/                       the raw campaign record
+  Isaac_simulation_data/free_flight_tracking/ the raw campaign record
     <shape>/v<speed>/                         shape = circle | figure8, v0p13 = 0.13 m/s
         <method>_<shape>_v<speed>_run<k>.npz  the raw run as recorded (am_ee_compare_driver.py)
         logs/<name>/                          driver, cycle, stack, Pegasus and Isaac-pane logs
@@ -130,7 +137,7 @@ makes the place descent trim sideways first on every run, so it always lasts ~8.
 ```bash
 # fly (resumes; one archive/pick_place_top_hat_20261008/tools/run_pnp.sh flight per attempt; closes the sim at the end)
 setsid nohup results/utils/run_pick_and_place_campaign.sh 2 wb geo \
-    > results/simulation_results/pick_and_place/campaign.out 2>&1 < /dev/null &
+    > results/simulation_results/Isaac_simulation_data/pick_and_place/campaign.out 2>&1 < /dev/null &
 # score -> matlab_simulation_data/pick_and_place/ (runs, metrics, README.md, configs/) + results/utils/tables/pick_and_place_sim.csv|json|tex + figures
 PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_pick_and_place.py [--paper <main.tex>]
 ```
@@ -169,7 +176,7 @@ and 21-31 cm on the decoupled one.
 
 ```
 simulation_results/
-  pick_and_place/                              the raw campaign record
+  Isaac_simulation_data/pick_and_place/        the raw campaign record
     <method>_pnp_run<k>.npz                    the mission driver's npz (pnp_mission_v2.py --timetable)
     logs/<name>/, failed/<name>_attempt<a>/    logs; failed attempts kept whole
     campaign.jsonl, campaign.out, figures/
@@ -180,48 +187,58 @@ simulation_results/
     configs/*_sim_pick_and_place.yaml         the configs as flown
 ```
 
-## Box pushing (physical interaction, 2026-10-17)
+## Box pushing (physical interaction, 2026-10-28/29, three controllers)
 
-Two controllers on the same plant, scene, mission and timetable: the proposed **whole-body 4-D L1 impedance
-controller** and the **coordinated admittance framework** of Liu et al., CEP 146 (2024) 105898 (decoupled UAV
-PD + momentum wrench estimator + admittance on the end-effector reference + force-adaptive kinematic MPC, a
-position-mode arm; implemented as a comparison rig, `docs/docs_aerial_manipulator/archive/push_pull_coordinated_admittance_20261010/README.md`).
+Three controllers on the same plant, scene, task and timetable, on the LATEST whole-body box-pushing settings
+(user request, 2026-10-28; record `docs/docs_aerial_manipulator/archive/box_pushing_comparison_20261028/README.md`):
+the proposed **whole-body 4-D L1 impedance controller**; the **coordinated admittance framework** of Liu et al.,
+CEP 146 (2024) 105898 (decoupled UAV PD + momentum wrench estimator + admittance on the end-effector reference +
+force-adaptive kinematic MPC, a position-mode arm; `docs/docs_aerial_manipulator/archive/push_pull_coordinated_admittance_20261010/README.md`);
+and the **arbitrary-convergence-time control** of Chen et al., IEEE TIE 72(12) (2025) 13693 (ACTNDO joint-torque
+observer + TSKFE fuzzy estimator + arbitrary-time quadrotor law + joint-space arm admittance, a torque-mode arm;
+`docs/docs_aerial_manipulator/archive/box_pushing_arbitrary_time_20261024/README.md`). 5 kept runs per controller.
 
-Each grasps the 5 mm fin handle of the CAD box (240 x 160 x 100 mm, **500 g**) on the console table
-(x 1.200-1.350, y -0.5..0.5 m, top 0.80 m) and pushes it **0.50 m** toward -y in 24 s (one min-snap move
-after a 1.5 s settle): the box's back face starts **0.10 m** from the table's +y end and ends at 0.60 m.
-Box / table friction **0.25 static = 0.25 sliding** (1.23 N), from the 2026-10-17 spring-gauge bench test of the
-real box on the experiment table. Arm pose in the push **[0, 32, 28, 0] deg** (the 2026-10-16 campaign,
-`docs/docs_aerial_manipulator/archive/box_pushing_campaign_20261016/README.md`), the T650 gear, the real arm's q2
-range [-20, 45] deg as hard stops (`application/robotic_arm/07_px4_t650_aerial_manipulator_box_pushing.py`).
-Exit To Push is the arm GS's sequence on both rigs: the planner releases the claw (`push_pull/release`), the
-gripper opens, the exit starts on its OPEN report. Then climb out, one planner transition off the table to the
-landing hover (270 deg clockwise), descend. The box guards are on for both rigs: refuse a push that would leave the box
-within 3 cm of the table edge; abort on a box > 40 mm behind its plan, a box tilt > 2 deg, q3 < 10 deg, a lost
-box feed, a task force > 5 N or a vehicle tilt > 15 deg. Headless Isaac at RTF 1, raw mocap, the mirror plant.
+**The task, identical for every rig:** grasp the 5 mm fin handle of the CAD box (240 x 160 x 100 mm, **280 g**,
+the real box) on the console table (the 2026-10-21 layout: x 0.600-0.750, y -0.5..0.5 m, top 0.80 m; the
+planner places the table from the box) and push it **0.40 m** toward -y at **21 mm/s** (one 19.0 s min-snap move
+after a 1.5 s settle). The box's back face starts 0.10 m from the table's +y end. Box / table friction 0.25 static
+= 0.25 sliding (0.69 N), from the 2026-10-17 bench test of the real box. Arm pose in the push **[0, 28, 32, 0] deg**,
+the T650 gear, the real arm's q2 range [-20, 45] deg as hard stops. The mission: Go To Start round the table's box
+end; Ready (the claw CoM-anchored until it settles near the grasp point, then held in the room); grasp; push in
+CONTACT; Exit To Push (`push_pull/release`, the gripper opens, the exit starts on its OPEN report); climb 0.25 m;
+the way home round the table's far end; land. Headless Isaac at RTF 1, raw mocap at 120 Hz, the mirror plant.
 
-- **Whole-body:** the box-pushing yaml (`..._whole_body_l1_4d_..._sim_box_pushing.yaml`, generated by
-  `archive/push_pull_20261003/tools/make_push_pull_yaml.py`: EE impedance K_y 120 / D_y 20.2), one flight per
-  attempt by `archive/box_pushing_campaign_20261016/tools/fly.sh`.
-- **Coordinated admittance:** its yaml (`..._coordinated_admittance_..._sim_box_pushing.yaml`, generated from
-  the whole-body one by that rig's `tools/make_coordinated_yaml.py`: plant, guards and planner block
-  verbatim except its gentler planner bounds 0.20 m/s / 0.08 m/s^2 / 0.20 rad/s and its contact flag from
-  the jaws' stall to the release), one flight per attempt by its `tools/run_pl_cadm.sh` (15 s hover before Ready,
-  the live-box grasp gate).
+- **Whole-body:** `..._whole_body_l1_4d_..._sim_box_pushing.yaml` (generated by
+  `archive/push_pull_20261003/tools/make_push_pull_yaml.py`): EE impedance along the push at the arm's natural
+  inertia (M 1.64 kg, D 33.1 N.s/m, K 196.8 N/m), across and vertical K 120 / D 20.2; the free-axis anchor 0.75
+  (latched from the room hold); one flight per attempt by `archive/box_pushing_campaign_20261016/tools/fly.sh`.
+- **Coordinated admittance:** its generated yaml (`make_coordinated_yaml.py --profile box_pushing`: plant and
+  planner block verbatim except its gentler transit bounds 0.20 m/s / 0.08 m/s^2 / 0.20 rad/s, its contact flag
+  from the jaws' stall to the release, and **its own box-lag guard 60 mm**, user decision 2026-10-28: at the
+  shared 40 mm both attempts aborted ~13 s into the push with the box 41-42 mm behind its plan, its base lag, the
+  box not jammed); one flight per attempt by `tools/run_pl_cadm.sh`.
+- **Arbitrary-time:** its generated yaml (`make_arbitrary_time_yaml.py`, the 2026-10-25 tune: joint admittance
+  H/D/K 1/3, 1.34, 3; its own guards box lag 100 mm, force 3.5 N on its own estimate, the box dragged sideways
+  45 mm); one flight per attempt by `tools/run_pl_atc.sh`.
+- **Guards** (every rig, the two comparison rigs' own values above): refuse a push that would leave the box within
+  3 cm of the table edge; abort on a box > 40 mm behind its plan, a box tilt > 2 deg, q3 < 10 deg (static and
+  0.2 s ahead from its rate), a lost box feed, a task force > 5 N or a vehicle tilt > 15 deg.
 
-**One timetable.** `pl_mission.py --timetable` on both rigs: from Ready on every step starts at the same
-mission time (land step 40 s after Go To Land Start: the coordinated rig's turn off the table takes 35.9 s,
-the whole-body rig's 23.9 s). The methods are aligned at Ready (the coordinated rig's slower first transit
-starts before t = 0); the eight phase starts agree across all five runs to 0.8 s.
+**One timetable** for all three rigs (`pl_mission.py --timetable`, each slot from the previous step's start):
+Ready 35 s after Go To Start, descent 2.5 s, close 8.0 s, release 22.05 s after Push (19.05 + 3), Go To Land Start
+8.5 s after the exit, Land 40 s after that. Every rig starts Go To Start at the same time; the eight phase starts
+agree across all 15 runs to 1.1 s (the grasp's own length varies). The two comparison rigs' runners fly a
+per-flight copy of their generated yaml with the distance and speed applied; the shipped yamls keep 0.50 m.
 
 ```bash
-# fly (resumes; closes the sim at the end)
-METHOD=whole_body_l1 setsid nohup results/utils/run_box_pushing_campaign.sh 3 \
-    > results/simulation_results/box_pushing/campaign.out 2>&1 < /dev/null &
-METHOD=coordinated_admittance setsid nohup results/utils/run_box_pushing_campaign.sh 3 \
-    > results/simulation_results/box_pushing/campaign_cadm.out 2>&1 < /dev/null &   # after the first one
+# fly (resumes; closes the sim at the end); one rig at a time, MASS 0.280 / DIST 0.40 / SPEED 0.021 by default
+METHOD=whole_body_l1 TAG_PREFIX=cmp1028 MAX_ATTEMPTS=2 setsid nohup results/utils/run_box_pushing_campaign.sh 5 \
+    > results/simulation_results/Isaac_simulation_data/box_pushing/campaign_whole_body_l1.out 2>&1 < /dev/null &
+METHOD=arbitrary_time ...           # campaign_arbitrary_time.out, after the first one
+METHOD=coordinated_admittance MAX_ATTEMPTS=3 ...   # campaign_coordinated_admittance.out
+# (archive/box_pushing_comparison_20261028/tools/chain.sh runs the three in sequence)
 # score -> matlab_simulation_data/box_pushing/ (runs, metrics, README.md, configs/, reference_outputs/)
-#          + results/utils/tables/box_pushing_sim.csv|json|tex + box_pushing/figures/
+#          + results/utils/tables/box_pushing_sim{,_std,_best}.csv|tex + box_pushing/figures/
 PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_box_pushing.py [--paper <main.tex>]
 ```
 
@@ -230,59 +247,79 @@ PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_box_pushing.py [--paper 
 - **Impedance residual** (the physical-interaction metric): e_imp = F_ext − (M_d ė_v + D_d e_v + K_d e_y)
   per task channel, F_ext the TRUE contact wrench on the claw (the box's PhysX contact report), e_y the
   true claw point minus the streamed reference, every term through one zero-phase 5 Hz low-pass; each rig
-  is scored against its own gains (whole-body: the law's M_d / D_d / K_d; coordinated: its contact-phase
-  admittance, claw frame, K 150 / 20 / 20 N/m). RMS and max over the 24 s SLIDE, the whole CONTACT, the
-  HOLD (grip + settle) and the RELEASE.
-- **UAV deviation** and the **state RMSE** as for pick-and-place (window = the whole mission, 99.8 s:
-  go to start 0-11.0, ready 11.0-18.0, grasp 18.0-18.9, push 18.9-45.9, release 45.9-46.2, exit 46.2-54.8,
-  go to land start 54.8-94.8, land 94.8-99.8 s).
-- **The box**: distance pushed (0.50 m commanded), yaw change, tilt, movement during the exit; and the
+  is scored against its own gains in the SAME task space: whole-body the law's M_d / D_d / K_d; coordinated
+  its contact-phase admittance, claw frame, K 150 / 20 / 20 N/m; arbitrary-time the task-space image
+  J^-T X J^-1 of its joint-space admittance at the push pose (618 N/m along the push, 222 across). RMS and max
+  over the 19.0 s SLIDE, the whole CONTACT, the HOLD (grip + settle) and the RELEASE. A force residual scales
+  with the stiffness a rig declares, so its DISPLACEMENT equivalent K_t^-1 e_imp is exported too.
+- **UAV deviation** and the **state RMSE** as for pick-and-place (window = the whole mission, 122.3 s:
+  go to start 0-35.0, ready 35.0-43.0, grasp 43.0-44.0, push 44.0-66.0, release 66.0-66.4, exit 66.4-74.9,
+  go to land start 74.9-114.9, land 114.9-122.3 s).
+- **The box**: distance pushed (0.40 m commanded), yaw change, tilt, movement during the exit; and the
   release window's joint margins (q2 max, q3 min from the jaws opening to the end of the exit).
+- **The best run** of each controller is its kept run with the lowest slide impedance residual (the figures
+  plot it; `metrics_best`, `box_pushing_sim_best.*`).
 
-### Campaign outcome (flown 2026-10-17 21:19 to 22:03)
+### Campaign outcome (whole-body 2026-10-28 20:37-21:03; arbitrary-time and coordinated 2026-10-29 12:39-13:50)
 
-Whole-body 3 kept of 3 attempts; coordinated admittance 2 kept of 6. Mean over the kept runs
-(`results/utils/tables/box_pushing_sim.csv`):
+Whole-body 5 kept of 5 attempts; arbitrary-time 5 of 8; coordinated admittance 5 of 6. Mean ± sample std over
+the kept runs (`results/utils/tables/box_pushing_sim.csv` / `_std.csv`):
 
-| method | runs | e_imp slide rms / max (N) | e_imp contact rms (N) | e_imp release rms (N) | F_ext slide rms (N) | ‖ε‖ max (mm) | ρ max | ‖ε‖ rms (mm) | ρ rms | EE (mm) | EE heading (°) | box pushed (mm) |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Whole-body (proposed) | 3 | 0.681 / 1.74 | 0.678 | 0.757 | 1.18 | 44.7 | 0.121 | 15.8 | 0.043 | 17.1 | 1.48 | 493 |
-| Coordinated [Liu 2024] | 2 | 2.186 / 4.84 | 2.087 | 1.950 | 1.13 | 114.3 | 0.309 | 30.1 | 0.081 | 32.9 | 0.65 | 508 |
+| method | runs | e_imp slide rms / max (N) | as displacement (mm) | e_imp contact rms (N) | e_imp release rms (N) | F_ext slide rms (N) | ‖ε‖ max (mm) | ρ max | ‖ε‖ rms (mm) | ρ rms | EE (mm) | EE heading (°) | box pushed (mm) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Whole-body (proposed) | 5 | 0.99 ± 0.12 / 2.43 ± 0.23 | 5.7 ± 0.8 | 0.94 ± 0.14 | 0.65 ± 0.08 | 0.62 ± 0.04 | 26.9 ± 2.0 | 0.073 ± 0.005 | 9.5 ± 0.6 | 0.026 ± 0.002 | 9.8 ± 0.7 | 1.10 ± 0.40 | 401 ± 5 |
+| Coordinated [Liu 2024] | 5 | 2.58 ± 0.47 / 5.45 ± 0.89 | 27.2 ± 2.4 | 2.51 ± 0.46 | 3.22 ± 0.83 | 0.59 ± 0.02 | 95.7 ± 11.8 | 0.259 ± 0.032 | 38.2 ± 0.5 | 0.103 ± 0.001 | 34.5 ± 0.3 | 1.21 ± 0.10 | 410 ± 9 |
+| Arbitrary-time [Chen 2025] | 5 | 11.47 ± 2.06 / 39.5 ± 5.2 | 24.4 ± 4.9 | 10.61 ± 1.92 | 8.24 ± 1.44 | 0.62 ± 0.01 | 57.8 ± 5.3 | 0.156 ± 0.015 | 13.6 ± 1.3 | 0.037 ± 0.003 | 13.9 ± 1.3 | 0.96 ± 0.04 | 406 ± 7 |
 
-- **Impedance:** the whole-body rig renders its impedance 3.2x more closely in the slide. The coordinated
-  rig's residual is almost all ALONG the push (2.13 of 2.19 N rms): its decoupled base lags the planned
-  push, the box then lags its plan, and the admittance presumes a base that tracks (the 2026-10-10 finding).
-  Both slide the box with the same ~1.2 N.
-- **The box guard:** the coordinated rig's box ran 35-48 mm behind its plan at the push's peak speed (the
-  whole-body rig 15-22 mm), so the 40 mm box-lag guard, sized on the whole-body rig, aborted 4 of its 6
-  attempts 10-13 s into the push. Each abort released the box and landed upright (tilt <= 5 deg). The box
-  was not jammed; the guard reads the rig's tracking lag. The two kept runs peaked at 39 and 35 mm.
-  The comparison keeps identical settings for both rigs on purpose (no per-rig guard): 2 of 6 under the
-  shared guard is part of the result.
-- **The exit:** after the release the coordinated rig's arm closes its remaining lag with the jaws open
-  around the fin and slides the box 55 / 63 mm further along the push (whole-body 0.4-1.3 mm); its ε
-  peaks there (106-122 mm). The same drag shows with the old release sequence (cadm_21, 2026-10-10: 42 mm).
-- **Whole-body:** box 498 / 489 / 492 mm, yaw −3.3 / −4.2 / −5.9 deg, vehicle tilt <= 3.9 deg; in the
-  release window q2 <= 39.0 and q3 >= 27.2 deg (the release fix holds: 17 deg above the q3 guard).
+Each controller's BEST run (`results/utils/tables/box_pushing_sim_best.csv`, `metrics_best`):
+
+| method | best run | e_imp slide rms (N) | as displacement (mm) | e_imp contact rms (N) | ‖ε‖ max (mm) | ρ max | ‖ε‖ rms (mm) | ρ rms | EE (mm) | EE heading (°) | box pushed (mm) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Whole-body (proposed) | `whole_body_l1_push_run3` | 0.78 | 4.3 | 0.71 | 27.3 | 0.074 | 8.9 | 0.024 | 9.3 | 1.35 | 399 |
+| Coordinated [Liu 2024] | `coordinated_admittance_push_run1` | 1.93 | 24.0 | 1.93 | 111.8 | 0.302 | 37.7 | 0.102 | 34.4 | 1.05 | 406 |
+| Arbitrary-time [Chen 2025] | `arbitrary_time_push_run3` | 8.07 | 16.3 | 7.54 | 51.7 | 0.140 | 11.5 | 0.031 | 11.7 | 1.00 | 405 |
+
+- **Impedance:** in the slide the whole-body rig's residual is 2.6x smaller than the coordinated rig's and
+  11.5x smaller than the arbitrary-time rig's in force, 4.8x / 4.3x as displacement (mean). The coordinated rig's
+  residual is almost all along the push (2.54 of 2.58 N rms), its base lagging the planned push; the
+  arbitrary-time rig's too (11.22 of 11.47 N), its box stick-slipping on its soft base. Every rig slides the box
+  with the same ~0.6 N of contact force.
+- **Platform and end effector:** ‖ε‖ max 26.9 / 95.7 / 57.8 mm and EE RMSE 9.8 / 34.5 / 13.9 mm (whole-body /
+  coordinated / arbitrary-time). The coordinated rig deviates in every phase that moves its base (ε max per phase,
+  mean: go to start 85, exit 96, go to land start 82 mm), its decoupled base lag; the arbitrary-time rig tracks
+  like the whole-body rig in the transits (27 / 20 vs 26 / 25 mm) and peaks in the push (49 mm) and the exit
+  (55 mm), where the whole-body rig stays at 23 / 18 mm.
+- **The exit:** the whole-body rig leaves the box where the push put it (moved ≤ 0.6 mm in the exit, every run);
+  the coordinated rig slides it 3-57 mm further after the release (mean 25 mm), the arbitrary-time rig 0-33 mm
+  (mean 19 mm). Release-window joint margins: q3 ≥ 29 deg and q2 ≤ 42 deg on every run of every rig.
+- **The failed attempts** were all planner guard aborts, each followed by a normal landing upright:
+  arbitrary-time 3 (box 114 mm behind its plan, 106 mm ahead of it, dragged 50 mm sideways: the stick-slip on
+  its soft base, larger with the light box), coordinated 1 (box 60 mm behind its plan, at its own guard).
+- **Box:** pushed 395-407 / 401-421 / 395-413 mm, yaw change within ±5 deg, box tilt ≤ 0.7 deg; vehicle tilt
+  ≤ 3.6 deg on every kept run.
 
 ### Layout
 
 ```
 simulation_results/
-  box_pushing/                                 the raw campaign record
+  Isaac_simulation_data/box_pushing/           the raw campaign record
     <method>_push_run<k>.npz / .yaml / .args   the mission driver's npz (pl_mission.py --timetable),
                                                the config as flown, the flight's settings (mass, distance, friction,
-                                               box start, release sequence); <method> = whole_body_l1 | coordinated_admittance
+                                               box start, release sequence); <method> = whole_body_l1 | coordinated_admittance | arbitrary_time
     logs/<name>/                               driver, stack, scene and console logs
-    failed/coordinated_admittance_push_run<k>_attempt<a>/   the four box-guard aborts, kept whole
-    campaign.jsonl, campaign.out, campaign_cadm.out, figures/
+    failed/<method>_push_run<k>_attempt<a>/   the guard aborts (arbitrary-time 3, coordinated 1), kept whole
+    campaign.jsonl, campaign_<method>.out, figures/
+    previous_20261017_25_500g_0p50m/           the earlier campaign (500 g, 0.50 m, pose [0, 32, 28, 0]), untouched,
+                                               with its MATLAB folder -- not comparable with these runs
   matlab_simulation_data/box_pushing/         the task folder to copy
     README.md                                 how to use the MATLAB data (timing, struct, the residual, notation)
     <name>.mat                                struct `run`: meta (incl. task_values), metrics (window, per_phase,
                                                impedance, box), tracking, impedance, raw
-    box_pushing_metrics.mat                   metrics_mean (the table) / metrics_runs / metrics_phase / metrics_impedance / phases / window_s / L_arm_m
-    configs/                                  both configs as flown
-    reference_outputs/                        the Python scorer's table (.csv, .tex) and four figures, to check MATLAB output against
+    box_pushing_metrics.mat                   metrics_mean / metrics_std / metrics_best / metrics_runs / metrics_phase /
+                                               metrics_impedance / phases / window_s / L_arm_m
+    configs/                                  the three configs as flown
+    reference_outputs/                        the Python scorer's tables (mean, best; .csv, .tex) and four figures,
+                                               to check MATLAB output against
 ```
 
 ## Valve turning (physical interaction, 2026-10-18, final configuration)
@@ -317,7 +354,7 @@ leaves DIRECT with the claw on the handle. The flight nodes' own watchdog stays 
 Start: the coordinated rig's transition takes 35.9 s, the whole-body rig's 23.9 s).
 
 ```bash
-setsid nohup bash results/simulation_results/valve_turning/valve_campaigns.sh &   # both rigs, back to back
+setsid nohup bash results/simulation_results/Isaac_simulation_data/valve_turning/valve_campaigns.sh &   # both rigs, back to back
 # or one rig: [METHOD=coordinated_admittance] TAG_PREFIX=final_wb results/utils/run_valve_turning_campaign.sh 3
 PYTHONNOUSERSITE=1 /usr/bin/python3 results/utils/build_valve_turning.py [--paper <main.tex>]
 ```
@@ -364,7 +401,7 @@ four landed upright after tilting 7-69 deg (the whole-body rig never reached the
 
 ```
 simulation_results/
-  valve_turning/                                the raw campaign record (as box_pushing/)
+  Isaac_simulation_data/valve_turning/          the raw campaign record (as box_pushing/)
     <method>_turn_run<k>.npz / .yaml / .args    the driver's npz, the config as flown, the flight's settings
     logs/<name>/, failed/<name>_attempt<a>/, campaign.jsonl, campaign.out, campaign_cadm.out, figures/
     valve_campaigns.sh                          the wrapper that flew both campaigns back to back

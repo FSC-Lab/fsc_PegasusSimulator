@@ -1,0 +1,5 @@
+00:24:05 start vs_safety3 wb_arm_hold_stream=false wb_gate_arm_rad=0.35
+  wb_arm_hold_stream : true -> false
+  wb_gate_arm_rad : 0.05 -> 0.35
+[vs_safety3] ABORTED: left DIRECT while push complete
+00:27:12 RERUN DONE

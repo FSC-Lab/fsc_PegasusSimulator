@@ -44,11 +44,12 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.abspath(os.path.join(HERE, ".."))                  # results/
-ROOT = os.path.join(RESULTS, "simulation_results")
+SIM = os.path.join(RESULTS, "simulation_results")
+ROOT = os.path.join(SIM, "Isaac_simulation_data")                    # the task folders (raw runs)
 REPO = os.path.abspath(os.path.join(RESULTS, ".."))
 FF = os.path.join(ROOT, "free_flight_tracking")
 TABLES = os.path.join(HERE, "tables")                                  # results/utils/tables
-MAT_DIR = os.path.join(ROOT, "matlab_simulation_data")
+MAT_DIR = os.path.join(SIM, "matlab_simulation_data")
 # one self-contained folder per task inside MAT_DIR (2026-10-09, user request): copy the task folder
 FF_MAT = os.path.join(MAT_DIR, "free_flight_tracking")
 

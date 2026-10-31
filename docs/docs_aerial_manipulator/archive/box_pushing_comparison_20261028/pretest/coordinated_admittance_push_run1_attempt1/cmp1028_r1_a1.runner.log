@@ -1,0 +1,144 @@
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+[13:38:18] waiting for the planner's push-and-pull block
+[13:38:24] planner up, EE offset array('d', [0.0, 0.0, 0.183])
+[13:38:24] waiting for the box (Isaac)
+[13:39:00] box up; letting PX4 / the arm stack settle
+[13:39:45] flying
+[   0.03s] planner: IDLE
+[   0.03s] push_pull: NOT IN DIRECT
+[   0.48s] box at rest [0.675, 0.28, 0.85]
+[   0.53s] reset: success=True push-and-pull progress and plan cleared (the box capture and the typed points kept)
+[   0.58s] adjust: success=True start, Land Start and land moved to where the vehicle is (by [0.500, -0.070] m; the table is placed from the box); press Plan
+[   1.63s] capture_box: success=True captured the box at [0.675, 0.280, 0.850] m, yaw -0.0 deg from /obj_0/mocap (60 samples, spread 1.8 mm); the EE offset is applied in this box frame -- press Plan
+[   2.68s] offboard: success=True Offboard mode request sent
+[   5.73s] arm: success=True Arm command sent
+[   7.74s] climbing to 1.3 m
+[  19.52s] planner: HOLD
+[  19.52s] push_pull: NOT PLANNED: press Plan
+[  19.57s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  19.57s] MARK direct
+[  34.59s] push_pull: PLANNING
+[  34.61s] push_pull: READY next=go_to_start
+[  34.64s] plan: success=True planning the six steps from the current hold -- the status reads READY when done
+[  34.64s] planned step durations [27.3, 4.3, 20.5, 6.0, 33.8, 11.1] s
+[  34.64s] MARK go_to_start:start
+[  34.64s] planner: CALCULATING
+[  34.64s] push_pull: FLYING go_to_start
+[  34.64s] planner: EXECUTING T=27.3s
+[  34.64s] push_pull: FLYING go_to_start T=27.3s
+[  34.69s] go_to_start: success=True go_to_start: planning from the current hold; it executes as soon as it is planned
+[  34.69s] go_to_start: executing, T = 27.3 s
+[  62.00s] planner: HOLD
+[  62.00s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 48 mm from the point above the handle (tolerance 50 mm)
+[  62.01s] MARK go_to_start:end
+[  62.01s] timetable: ready in 2.63 s
+[  62.06s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 46 mm from the point above the handle (tolerance 50 mm)
+[  62.16s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 45 mm from the point above the handle (tolerance 50 mm)
+[  62.26s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 46 mm from the point above the handle (tolerance 50 mm)
+[  62.56s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 48 mm from the point above the handle (tolerance 50 mm)
+[  62.66s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 49 mm from the point above the handle (tolerance 50 mm)
+[  62.86s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 50 mm from the point above the handle (tolerance 50 mm)
+[  62.96s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 49 mm from the point above the handle (tolerance 50 mm)
+[  63.06s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 47 mm from the point above the handle (tolerance 50 mm)
+[  63.16s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 44 mm from the point above the handle (tolerance 50 mm)
+[  63.26s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 41 mm from the point above the handle (tolerance 50 mm)
+[  63.36s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 35 mm from the point above the handle (tolerance 50 mm)
+[  63.46s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 31 mm from the point above the handle (tolerance 50 mm)
+[  63.56s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 29 mm from the point above the handle (tolerance 50 mm)
+[  63.66s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 26 mm from the point above the handle (tolerance 50 mm)
+[  63.76s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 23 mm from the point above the handle (tolerance 50 mm)
+[  63.86s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 21 mm from the point above the handle (tolerance 50 mm)
+[  64.16s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 23 mm from the point above the handle (tolerance 50 mm)
+[  64.36s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 25 mm from the point above the handle (tolerance 50 mm)
+[  64.56s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 24 mm from the point above the handle (tolerance 50 mm)
+[  64.65s] MARK ready:start
+[  64.65s] MARK gripper_open:start
+[  64.65s] gripper open: at -0.0 deg
+[  64.65s] MARK gripper_open:end
+[  64.65s] timetable: ready descent in 2.50 s
+[  64.76s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 22 mm from the point above the handle (tolerance 50 mm)
+[  64.86s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 21 mm from the point above the handle (tolerance 50 mm)
+[  64.96s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 20 mm from the point above the handle (tolerance 50 mm)
+[  65.06s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 19 mm from the point above the handle (tolerance 50 mm)
+[  65.16s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 16 mm from the point above the handle (tolerance 50 mm)
+[  65.26s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 15 mm from the point above the handle (tolerance 50 mm)
+[  65.36s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 14 mm from the point above the handle (tolerance 50 mm)
+[  65.46s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 12 mm from the point above the handle (tolerance 50 mm)
+[  65.56s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 9 mm from the point above the handle (tolerance 50 mm)
+[  65.66s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  65.86s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  65.96s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 8 mm from the point above the handle (tolerance 50 mm)
+[  66.06s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  66.36s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 9 mm from the point above the handle (tolerance 50 mm)
+[  66.46s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 12 mm from the point above the handle (tolerance 50 mm)
+[  66.56s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 14 mm from the point above the handle (tolerance 50 mm)
+[  66.76s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 13 mm from the point above the handle (tolerance 50 mm)
+[  66.86s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 12 mm from the point above the handle (tolerance 50 mm)
+[  66.96s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 9 mm from the point above the handle (tolerance 50 mm)
+[  67.06s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 7 mm from the point above the handle (tolerance 50 mm)
+[  67.16s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  67.20s] ready: success=False ready: the claw is still moving (25 mm/s; slower than 30 mm/s for 0.5 of 0.5 s) -- wait for it to settle
+[  67.36s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 3 mm from the point above the handle (tolerance 50 mm)
+[  67.46s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  67.56s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 6 mm from the point above the handle (tolerance 50 mm)
+[  67.76s] ready: success=False ready: the claw is still moving (14 mm/s; slower than 30 mm/s for 0.3 of 0.5 s) -- wait for it to settle
+[  67.76s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 3 mm from the point above the handle (tolerance 50 mm)
+[  67.86s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 2 mm from the point above the handle (tolerance 50 mm)
+[  68.06s] push_pull: DONE go_to_start next=ready (the gripper opens first) -- claw 4 mm from the point above the handle (tolerance 50 mm)
+[  68.26s] planner: CALCULATING
+[  68.26s] push_pull: FLYING ready
+[  68.26s] planner: EXECUTING T=4.3s
+[  68.26s] push_pull: FLYING ready T=4.3s
+[  68.31s] ready: success=True ready: planning from the current hold; it executes as soon as it is planned (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[  68.31s] ready: executing, T = 4.3 s
+[  72.60s] planner: HOLD
+[  72.60s] push_pull: DONE ready next=push (settling: the claw 30 mm from the grasp point, 65 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  72.62s] MARK ready:end
+[  72.62s] TIMETABLE LATE: close 0.97 s behind its slot
+[  72.62s] MARK close:start
+[  72.66s] push_pull: DONE ready next=push (settling: the claw 30 mm from the grasp point, 41 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  72.76s] push_pull: DONE ready next=push (settling: the claw 26 mm from the grasp point, 9 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  72.86s] push_pull: DONE ready next=push (settling: the claw 23 mm from the grasp point, 28 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  72.92s] close: claw 9.3 mm from the grasp point, -0.4 mm across the fin after 0.3 s
+[  72.92s] MARK gripper_close:start
+[  72.96s] push_pull: DONE ready next=push (settling: the claw 18 mm from the grasp point, 48 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  73.06s] push_pull: DONE ready next=push (settling: the claw 16 mm from the grasp point, 49 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  73.16s] push_pull: DONE ready next=push (settling: the claw 17 mm from the grasp point, 51 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  73.27s] push_pull: DONE ready next=push (settling: the claw 17 mm from the grasp point, 42 mm/s; held by the room once within 25 mm and slower than 30 mm/s)
+[  73.33s] gripper close (action): stalled=True reached=False position 0.0171 m, at -3.2 deg
+[  73.33s] MARK gripper_close:end
+[  73.33s] MARK push:start
+[  73.34s] planner: CALCULATING
+[  73.34s] push_pull: FLYING push (CONTACT)
+[  73.34s] planner: EXECUTING T=20.5s
+[  73.34s] push_pull: FLYING push (CONTACT) T=20.5s
+[  73.38s] push: success=True push: planning from the current hold; it executes as soon as it is planned -- CONTACT phase on, the push holds 1.5 s, then slides 0.40 m in 19.0 s (mean 21.0 mm/s)
+[  73.38s] push: executing, T = 20.5 s
+[  83.65s] planner: CALCULATING
+[  83.65s] push_pull: ABORTING (SAFETY GUARD: the box is 41 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[  83.65s] gripper OPEN (the planner is aborting)
+[  83.65s] planner: EXECUTING T=9.4s
+[  83.65s] ABORT: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 41 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[  93.08s] planner: HOLD
+[  93.08s] push_pull: ABORTED (SAFETY GUARD: the box is 41 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- holding higher, arm home, contact off; go_to_land_start to leave the table, or Get the box and press Plan
+[  93.12s] planner abort finished: ABORTED (SAFETY GUARD: the box is 41 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- holding higher, arm home, contact off; go_to_land_start to leave the table, or Get the box and press Plan
+[  95.13s] planner: CALCULATING
+[  95.13s] push_pull: FLYING go_to_land_start
+[  95.13s] planner: EXECUTING T=36.7s
+[  95.13s] push_pull: FLYING go_to_land_start T=36.7s
+[  95.18s] go_to_land_start: success=True go_to_land_start: planning from the current hold; it executes as soon as it is planned
+[  95.18s] after the abort: Go To Land Start (off the table)
+[ 131.83s] planner: HOLD
+[ 131.83s] push_pull: DONE go_to_land_start next=land (off the table after the abort)
+[ 131.85s] after the abort: DONE go_to_land_start next=land (off the table after the abort)
+[ 133.85s] planner: IDLE
+[ 133.85s] push_pull: NOT IN DIRECT
+[ 133.90s] set_direct_mode(false): success=True Switched to SAFETY mode
+[ 139.91s] landing by reference
+[ 171.88s] timeout (15 s): disarm response  [mode=SAFETY plan=IDLE push_pull=NOT IN DIRECT]
+saved /home/shiqi/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/push_pull_coordinated_admittance_20261010/tools/../runs/cmp1028_r1_a1.npz
+ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the box is 41 mm BEHIND its plan (> 40 mm: jammed or too heavy)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[13:42:38] done
+[13:42:38] closing the simulation (PL_KEEP_SIM=1 to keep it)
+[13:42:43] simulation closed

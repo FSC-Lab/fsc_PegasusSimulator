@@ -1,0 +1,10 @@
+[11:29:51] mod macfix_pnp_1 (PEGASUS_ARM_SPIN_DRAIN=1)
+[11:33:55] rc=0
+[11:34:04] closed
+[11:34:13] mod macfix_pnp_2 (PEGASUS_ARM_SPIN_DRAIN=1)
+[11:38:16] rc=0
+[11:38:25] closed
+[11:38:35] mod macfix_pnp_3 (PEGASUS_ARM_SPIN_DRAIN=1)
+[11:42:42] rc=0
+[11:42:51] closed
+[11:42:51] chain done

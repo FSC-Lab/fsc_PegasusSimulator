@@ -169,6 +169,14 @@ if [[ -n "${ARM_GS_AUTO_STEPS:-}" ]]; then
   [[ "$ARM_GS_AUTO_STEPS" == "true" || "$ARM_GS_AUTO_STEPS" == "false" ]] || { echo "ERROR: ARM_GS_AUTO_STEPS must be true or false, got '$ARM_GS_AUTO_STEPS'" >&2; exit 1; }
   ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_ready:=$ARM_GS_AUTO_STEPS -p push_pull_auto_push:=$ARM_GS_AUTO_STEPS"
 fi
+# ARM_GS_AUTO_PUSH (2026-10-31): the automatic close + Push / Turn alone, Ready stays
+# automatic -- the hardware hold test (`start_ground_station_inverted.sh uav_0 -p
+# push_pull_auto_push:=false`: Ready, close by hand, hold, Exit). Applied after
+# ARM_GS_AUTO_STEPS, so it wins for the push half.
+if [[ -n "${ARM_GS_AUTO_PUSH:-}" ]]; then
+  [[ "$ARM_GS_AUTO_PUSH" == "true" || "$ARM_GS_AUTO_PUSH" == "false" ]] || { echo "ERROR: ARM_GS_AUTO_PUSH must be true or false, got '$ARM_GS_AUTO_PUSH'" >&2; exit 1; }
+  ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_push:=$ARM_GS_AUTO_PUSH"
+fi
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).
@@ -355,6 +363,15 @@ ARM_DISPLAY="${DISPLAY:-:0}"
 # wrong overlay here fails with a bare "package not found" several seconds
 # after launch, in a detached window nobody is watching.
 JOY_ENV="source '$ARM_ROS2_SETUP'; source '$FSC_AUTOPILOT_WS/install/setup.bash'"
+# Optional arm controller config (AM_ARM_CONTROLLER_CONFIG, default unset = the launch file's
+# torque_controller_isaac_aerial.yaml, i.e. unchanged). Used for one-off checks, e.g. the 2026-10-30
+# arm-RELEASE check, which needs a stiffer local hold when the node's hold stream is off.
+ARM_CONFIG_ARG=""
+if [[ -n "${AM_ARM_CONTROLLER_CONFIG:-}" ]]; then
+  [[ -f "$AM_ARM_CONTROLLER_CONFIG" ]] || { echo "ERROR: AM_ARM_CONTROLLER_CONFIG $AM_ARM_CONTROLLER_CONFIG not found" >&2; exit 1; }
+  ARM_CONFIG_ARG="controller_config:=$AM_ARM_CONTROLLER_CONFIG"
+  echo "Arm controller config: $AM_ARM_CONTROLLER_CONFIG (AM_ARM_CONTROLLER_CONFIG)"
+fi
 
 # The base launcher (exec'd below) recreates the tmux session, so the arm
 # window is added by a detached helper once the new session exists. The stack
@@ -375,7 +392,7 @@ until timeout 5 ros2 topic echo --once $ARM_STATE_TOPIC >/dev/null 2>&1; do
   sleep 2
 done
 echo 'Isaac arm is reporting; launching the TORQUE-mode ros2_control stack.'
-ros2 launch open_manipulator_x_isaac_bridge torque_control_isaac.launch.py namespace:=$ARM_NS passthrough_corrections:=$ARM_PT_CORR
+ros2 launch open_manipulator_x_isaac_bridge torque_control_isaac.launch.py namespace:=$ARM_NS passthrough_corrections:=$ARM_PT_CORR $ARM_CONFIG_ARG
 echo 'Arm ros2_control stack exited.'
 exec bash
 "

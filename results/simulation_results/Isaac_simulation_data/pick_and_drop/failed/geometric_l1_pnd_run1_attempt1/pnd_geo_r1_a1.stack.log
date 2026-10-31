@@ -1,0 +1,8 @@
+[Config] Using: /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/scripts/config/shiqi_machine.conf
+WB_SIM_PROFILE=pick_and_drop: the pick-and-place controller yaml + the pick-and-DROP planner block
+Controller yaml: params_single_aerial_manipulator_geometric_l1_direct_actuation_t650_sim_pick_and_place.yaml
+Ground-station interpreter: python3 (Python 3.10.12)
+[1;36mEmulated mocap: frequency:=120.0 position_noise_std:=0.0005 velocity_noise_std:=0.022 noise_seed:=0[0m
+Reference-bridge interpreter: python3 (Python 3.10.12)
+Reference bridge base_com = 0.0,-0.017854,0.0 (the planner yaml's wb_base_com_*)
+open terminal failed: not a terminal

@@ -1,0 +1,25 @@
+\begin{table}[H]
+\centering
+\caption{Payload pick-and-drop in simulation: success, platform deviation, tracking RMSE and the drop's accuracy.}
+\label{tab:sim_pick_drop}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\begin{threeparttable}
+\begin{tabular}{l c c c c c c c c c c c c c c c c}
+\toprule
+& & \multicolumn{4}{c}{UAV deviation} & \multicolumn{4}{c}{Platform} & \multicolumn{4}{c}{End-effector} & \multicolumn{3}{c}{Drop} \\
+\cmidrule(lr){3-6} \cmidrule(lr){7-10} \cmidrule(lr){11-14} \cmidrule(lr){15-17}
+Method & Success & $\|\varepsilon_{UAV}\|_{\max}$ & $\rho_{UAV,\max}$ & $\|\varepsilon_{UAV}\|_{\mathrm{rms}}$ & $\rho_{UAV,\mathrm{rms}}$ & $r_{0,x}$ & $r_{0,y}$ & $r_{0,z}$ & $\psi_0$ & $r_{e,x}$ & $r_{e,y}$ & $r_{e,z}$ & $\psi_e$ & $e_{rel}$ & $d_{rest}$ & $\theta_{rest}$ \\
+ & & (mm) & (--) & (mm) & (--) & (mm) & (mm) & (mm) & ($^\circ$) & (mm) & (mm) & (mm) & ($^\circ$) & (mm) & (mm) & ($^\circ$) \\
+\midrule
+Proposed & 3/4 & 132.8$\pm$6.8 & 0.359$\pm$0.018 & 21.9$\pm$1.4 & 0.059$\pm$0.004 & 18.8$\pm$1.5 & 10.6$\pm$0.3 & 3.2$\pm$0.1 & 2.1$\pm$1.0 & 19.5$\pm$1.6 & 12.1$\pm$1.2 & 9.4$\pm$0.3 & 1.7$\pm$0.9 & 7.3$\pm$0.5 & 15.4$\pm$3.7 & 0.0$\pm$0.0 \\
+Geo-$\mathcal{L}_1$~\cite{cai2025experiment} & 3/4 & 331.2$\pm$6.8 & 0.895$\pm$0.018 & 65.3$\pm$1.3 & 0.176$\pm$0.004 & 53.0$\pm$1.6 & 37.6$\pm$2.8 & 6.4$\pm$0.1 & 2.7$\pm$0.5 & 53.6$\pm$2.0 & 38.9$\pm$2.7 & 15.6$\pm$0.6 & 2.8$\pm$0.5 & 40.4$\pm$15.4 & 31.1$\pm$17.0 & 3.9$\pm$6.7 \\
+MAC~\cite{yadav2024modular} & 3/3 & 139.1$\pm$11.4 & 0.376$\pm$0.031 & 93.0$\pm$7.1 & 0.251$\pm$0.019 & 62.9$\pm$9.8 & 22.3$\pm$3.6 & 64.5$\pm$1.0 & 3.4$\pm$0.8 & 66.3$\pm$10.1 & 32.6$\pm$2.2 & 93.2$\pm$0.7 & 3.3$\pm$0.7 & 168.7$\pm$9.6 & 57.6$\pm$26.0 & 9.1$\pm$9.2 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item[] Success: runs that delivered the payload into the tray over the attempts flown. Each other entry is the mean $\pm$ the sample standard deviation over the successful runs. $\|\varepsilon_{UAV}\| = \|\boldsymbol{r}_{UAV}^{ref} - \boldsymbol{r}_{UAV}\|$ is the platform's deviation from its reference position and $\rho_{UAV} = \|\varepsilon_{UAV}\|/L$ its ratio to the arm's reach $L = 0.37$~m (maximum and RMS over the window); the platform and end-effector columns are RMS tracking errors with the symbols of Table~\ref{tab:sim_free_flight_tracking}. $e_{rel}$: the claw's distance from its drop target when the gripper opened; $d_{rest}$, $\theta_{rest}$: the payload's offset from the tray centre and its tilt at rest. The window is the whole mission (104.2~s); every run flies the same timetable.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}

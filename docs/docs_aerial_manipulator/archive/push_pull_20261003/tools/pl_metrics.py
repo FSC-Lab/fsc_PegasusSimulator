@@ -57,14 +57,63 @@ D_EY_HDG = 24 + 3 + 2                    # wb_control_debug e_y[3], recorder col
 SLIDE_DELAY = 1.5                        # the planner's push settle [s]
 
 
+def _claw_task_jacobian(q):
+    """4 x 4 Jacobian of the claw's task coordinates [r_0e (MODEL frame); heading azimuth of
+    its x-axis] w.r.t. the joints, base fixed, central differences on the planner's model."""
+    def y(qq):
+        _, r0e, Re = TP.arm_fk_model(np.asarray(qq, float), P)
+        return np.r_[r0e, np.arctan2(Re[1, 0], Re[0, 0])]
+    J = np.zeros((4, 4))
+    for j in range(4):
+        dq = np.zeros(4); dq[j] = 1e-6
+        a, b = y(q + dq), y(q - dq)
+        d = b - a
+        d[3] = np.arctan2(np.sin(a[3] - b[3]), np.cos(a[3] - b[3]))
+        J[:, j] = np.r_[(a[:3] - b[:3]), d[3]] / 2e-6
+    return J
+
+
+def _claw_angular_jacobian(q):
+    """3 x 4 angular-velocity Jacobian of the claw frame w.r.t. the joints (MODEL frame, base fixed)."""
+    _, _, R = TP.arm_fk_model(np.asarray(q, float), P)
+    J = np.zeros((3, 4))
+    for j in range(4):
+        dq = np.zeros(4); dq[j] = 1e-6
+        _, _, R2 = TP.arm_fk_model(np.asarray(q, float) + dq, P)
+        W = (R2 @ R.T - np.eye(3)) / 1e-6
+        J[:, j] = [W[2, 1], W[0, 2], W[1, 0]]
+    return J
+
+
 def yaml_gains(path):
     """The impedance the rig RENDERS, as [x, y, z, heading]. Whole-body yaml: the
     task impedance wb_my/dy/ky. Coordinated-admittance yaml (2026-10-10): the
     paper's eq-27 admittance_m/d/k (translational only -- the EE heading is held
     kinematically through q1, no heading impedance exists, so that row is 0 and
-    the heading residual is reported as the raw heading moment)."""
+    the heading residual is reported as the raw heading moment).
+    Arbitrary-time yaml (2026-10-24, Chen et al. TIE 2025): the paper's admittance is
+    JOINT-space (atc_adm_h/d/k_j*, returned as "Hq", "Dq", "Kq"); scored, like the other two
+    rigs, in the TASK SPACE (user decision 2026-10-25): the impedance it declares on the claw at
+    the push pose is J^-T X J^-1 for X = H_d, D_d, K_d, J the claw's [position; heading]
+    Jacobian (4 x 4, MODEL frame) -- full matrices "Mt", "Dt", "Kt", rotated into the world by
+    the streamed heading per sample."""
     txt = open(path).read()
     g = {}
+    if re.search(r"^\s*atc_adm_k_j1:", txt, re.M):
+        def vec(key):
+            return np.array([float(re.search(rf"^\s*{key}_j{j}:\s*([-+0-9.eE]+)", txt, re.M).group(1))
+                             for j in (1, 2, 3, 4)])
+        pose = re.search(r"^\s*push_pull_push_pose_deg:\s*\[([^\]]*)\]", txt, re.M)
+        q = np.radians([float(x) for x in pose.group(1).split(",")])
+        Ji = np.linalg.inv(_claw_task_jacobian(q))
+        for k, kq, key in (("Mt", "Hq", "atc_adm_h"), ("Dt", "Dq", "atc_adm_d"), ("Kt", "Kq", "atc_adm_k")):
+            g[kq] = vec(key)
+            g[k] = Ji.T @ np.diag(g[kq]) @ Ji
+        for k, kk in (("my", "Mt"), ("dy", "Dt"), ("ky", "Kt")):
+            g[k] = np.diag(g[kk]).copy()       # the diagonals, for the printouts
+        g["rig"] = "atc"
+        g["pose_deg"] = np.degrees(q)
+        return g
     if re.search(r"^\s*admittance_k:", txt, re.M):
         # the CONTACT gains when the yaml has them (addition (p), 2026-10-10): the rig renders
         # admittance_k_contact / d_contact in the CLAW frame [along its heading, lateral,
@@ -153,7 +202,7 @@ def analyse(path, gains, fc, sign=None):
     r = interp(t, ref, (1, 2, 3))
     rd = interp(t, refd, (1, 2, 3))
     rdd = interp(t, refd, (4, 5, 6))
-    if gains.get("rig") == "cadm":
+    if gains.get("rig") in ("cadm", "atc"):
         # no heading task row in that law's debug: the claw heading from the planner's
         # current_ee (FK of the measured pose + joints, world quaternion wxyz) against the
         # streamed EE heading b1_de (model x-axis; actual yaw = azimuth + 90 deg), as sin()
@@ -182,9 +231,38 @@ def analyse(path, gains, fc, sign=None):
                   + gains["ky"][:3] * (R_.T @ e_y_f[i, :3]))
             rendered[i, :3] = R_ @ tr
             rendered[i, 3] = gains["my"][3] * e_a[i, 3] + gains["dy"][3] * e_v[i, 3] + gains["ky"][3] * e_y_f[i, 3]
+    elif gains.get("rig") == "atc":
+        # 2026-10-25 (user decision): scored in the TASK SPACE like the whole-body and coordinated
+        # rigs -- the claw's world error chains against the impedance the rig declares there, i.e.
+        # the paper's joint admittance mapped to the claw at the push pose (Mt/Dt/Kt = J^-T X J^-1,
+        # full 4 x 4, MODEL frame [x y z heading]); the world chains are rotated into the model
+        # frame by the streamed heading (model x = b1_de), rendered, rotated back
+        az = np.interp(t, ref[:, 0], np.unwrap(np.arctan2(ref[:, 17], ref[:, 16])))
+        Ct = np.linalg.inv(gains["Kt"])
+        rendered = np.zeros_like(e_y_f)
+        delta = np.zeros((len(t), 3))
+        for i in range(len(t)):
+            R_ = Rz(az[i])
+            def m(e):
+                return np.r_[R_.T @ e[:3], e[3]]
+            r_ = gains["Mt"] @ m(e_a[i]) + gains["Dt"] @ m(e_v[i]) + gains["Kt"] @ m(e_y_f[i])
+            rendered[i] = np.r_[R_ @ r_[:3], r_[3]]
+            # the displacement the declared impedance assigns to the residual: its task compliance
+            delta[i] = R_ @ (Ct @ m(Fx_f[i] - rendered[i]))[:3]
     else:
         rendered = gains["my"] * e_a + gains["dy"] * e_v + gains["ky"] * e_y_f
     e_imp = Fx_f - rendered
+    # 2026-10-24: the residual's DISPLACEMENT equivalent (the declared compliance applied to it):
+    # a force residual scales with the stiffness a rig declares (whole-body 120 N/m, coordinated
+    # 150 N/m, the arbitrary-time rig's joint admittance ~2 kN/m along the arm at the push pose),
+    # so "how far the claw is from where its own declared impedance puts it" is reported beside it
+    if gains.get("rig") != "atc":
+        if gains.get("claw_frame"):
+            yaw_c = np.interp(t, ref[:, 0], np.unwrap(np.arctan2(ref[:, 17], ref[:, 16]) + 0.5 * np.pi))
+            delta = np.array([Rz(yaw_c[i]) @ ((Rz(yaw_c[i]).T @ e_imp[i, :3]) / gains["ky"][:3])
+                              for i in range(len(t))])
+        else:
+            delta = e_imp[:, :3] / gains["ky"][:3]
     out["fs"] = fs
     # ---- windows ------------------------------------------------------------
     wins = {"CONTACT": (t_ready, t_end_contact)}
@@ -205,7 +283,8 @@ def analyse(path, gains, fc, sign=None):
             F_xyz=stats(np.linalg.norm(Fx_f[m, :3], axis=1)),
             F_psi=stats(Fx_f[m, 3]),
             ey_mm=stats(np.linalg.norm(e_y_f[m, :3], axis=1) * 1e3),
-            e_comp=np.sqrt(np.mean(e_imp[m, :3] ** 2, axis=0)))
+            e_comp=np.sqrt(np.mean(e_imp[m, :3] ** 2, axis=0)),
+            e_mm=stats(np.linalg.norm(delta[m], axis=1) * 1e3))
     # slide check: F_ext along the push (world -y here) vs the table's friction
     if "SLIDE" in wins:
         a, b = wins["SLIDE"]
@@ -224,6 +303,11 @@ def analyse(path, gains, fc, sign=None):
         cs = z["cadm"]
         ref_t, xb_ref = cs[:, 0], cs[:, 26:29]
         src += "/cadm-command"
+    elif gains.get("rig") == "atc":
+        # the arbitrary-time rig: its own base command p_d (atc_control_debug [62..64] -> recorder
+        # cols 64..66) -- the stream's x_cd - R0 r_0c(q_d) plus the contact re-seat when it is on
+        ref_t, xb_ref = dbg[:, 0], dbg[:, 64:67]
+        src += "/atc-command"
     else:
         ref_t = ref[:, 0]
         xb_ref = np.zeros((len(ref), 3))
@@ -247,7 +331,7 @@ def analyse(path, gains, fc, sign=None):
             continue
         rms, mx = stats(eps[m])
         out["eps"][k] = (mx, rms)
-    out["series"] = dict(t=t, e_imp=e_imp, F=Fx_f, rendered=rendered, e_y=e_y_f, eps_t=tt, eps=eps)
+    out["series"] = dict(t=t, e_imp=e_imp, e_imp_mm=1e3 * delta, F=Fx_f, rendered=rendered, e_y=e_y_f, eps_t=tt, eps=eps)
     return out
 
 
@@ -259,12 +343,12 @@ def report(o):
         print(f"slide check: F_ext on claw [{f[0]:+.2f} {f[1]:+.2f} {f[2]:+.2f}] N | table friction on box "
               f"[{tfric[0]:+.2f} {tfric[1]:+.2f} {tfric[2]:+.2f}] N | table normal {N:.2f} N")
     print(f"{'window':8s} {'T':>5s} | {'e_imp xyz rms/pk N':>19s} {'e_imp psi rms/pk N.m':>21s} | "
-          f"{'F_ext rms/pk N':>15s} {'|e_y| rms/pk mm':>16s} | e_imp x/y/z rms N")
+          f"{'F_ext rms/pk N':>15s} {'|e_y| rms/pk mm':>16s} | e_imp x/y/z rms N | as displacement rms/pk mm")
     for k, v in o["imp"].items():
         print(f"{k:8s} {v['T']:5.1f} | {v['e_xyz'][0]:8.3f} / {v['e_xyz'][1]:6.3f}   "
               f"{v['e_psi'][0]:9.4f} / {v['e_psi'][1]:7.4f}   | {v['F_xyz'][0]:6.2f} / {v['F_xyz'][1]:5.2f}  "
               f"{v['ey_mm'][0]:7.1f} / {v['ey_mm'][1]:6.1f} | "
-              f"{v['e_comp'][0]:.3f} {v['e_comp'][1]:.3f} {v['e_comp'][2]:.3f}")
+              f"{v['e_comp'][0]:.3f} {v['e_comp'][1]:.3f} {v['e_comp'][2]:.3f} | {v['e_mm'][0]:6.2f} / {v['e_mm'][1]:6.2f}")
     print(f"eps_UAV ({o['eps_src']}), L = {L:.3f} m:  " + "   ".join(
         f"{k} max {mx * 1e3:.0f} mm (rho {mx / L:.3f}) rms {rm * 1e3:.0f}" for k, (mx, rm) in o["eps"].items()))
 

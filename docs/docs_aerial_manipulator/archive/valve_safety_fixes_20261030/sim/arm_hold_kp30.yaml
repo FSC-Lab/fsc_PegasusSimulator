@@ -1,0 +1,234 @@
+# (2026-10-30) The Isaac arm config with a STIFFER local hold, for ONE check only (vs_safety: the
+# 10-30 item 3, the arm RELEASE at the SAFETY handover, which needs wb_arm_hold_stream false as on
+# hardware). The default kp 3 sags 0.24 rad under gravity and the node refuses DIRECT (gate 0.05);
+# the Isaac config has no URDF gravity model for hold_feedforward_mode: gravity. kp 30 / kd 1.2 sags
+# ~0.023 rad. Everything else = /home/shiqi/ros2_ws/src/fsc_open_manipulator/open_manipulator_x_isaac_bridge/config/torque_controller_isaac_aerial.yaml.
+# controller_manager configuration — ISAAC SIM, TORQUE MODE, AERIAL
+# (INVERTED) MOUNT — the WHOLE-BODY direct-actuation rig.
+#
+# Fourth backend/mode combination: the arm's torques are computed EXTERNALLY
+# by fsc_autopilot_ros2's whole-body direct-actuation node (the coupled
+# airframe+arm law) and streamed to the ExternalTorqueController, which
+# forwards them through the TorqueControllerBase safety floor to the
+# IsaacTopicEffortSystem — and on to the Pegasus plant
+# (application/robotic_arm/06_px4_t650_aerial_manipulator_free_flight.py).
+#
+# Everything shared with the position aerial config (namespace-agnostic
+# /**/<node>: FLAT wildcard keys — the nested form matches NOTHING —, home,
+# working range, 250 Hz, publish rates) is a copy of
+# position_controller_isaac_aerial.yaml; see that file's header for the
+# rationale of each. What differs is torque-mode-specific:
+#
+#   * external_torque_controller instead of position_controller. The arm
+#     ground station runs with `-p controller:=external_torque_controller`
+#     (and `-p simulation:=true`, Isaac reports N*m) so its target/go_home
+#     interface and the dashed commanded-torque curves work unchanged.
+#   * kp/kd are the FALLBACK PD gains (N*m on this backend), used only while
+#     the external torque stream is stale — 04's flight-validated arm-hold
+#     pair. No gravity model here: the fallback sags ~gravity/kp below the
+#     reference; the Isaac plant's own PD+gravity hold remains the deeper
+#     fallback when the whole stack dies.
+#   * max_effort 3.0 N*m — the same clamp the whole-body law itself applies
+#     (wb_gain_tau_max) and the Isaac plant enforces (TAU_MAX). Three layers,
+#     one number.
+#   * ki stays 0: it is a position-error integral, and the whole-body law's
+#     observer owns that residual.
+#   * friction_ff / friction_load_coeff are the calibration report's values in
+#     N*m (2026-09-14), and passthrough_auxiliary_terms is TRUE, so the
+#     controller pays the gearbox friction on the streamed torque exactly as
+#     the hardware config does -- against a plant that now HAS that friction
+#     (06's sim_arm_friction_scale). The SITL launchers pass
+#     passthrough_corrections:=true|false to torque_control_isaac.launch.py to
+#     keep the two coupled: friction on the plant <=> compensation on here.
+#     dither stays 0: the sim plant has no stiction for it to break.
+#   * current_loop_bandwidth_hz IS NOT SET HERE, AND MUST STAY THAT WAY (0.0 =
+#     off). On hardware the loop is what makes Mode 16 a torque source; in
+#     Isaac the PLANT already models its OUTCOME. Since 2026-09-09 the Pegasus
+#     rig injects the loop's post-correction residual -- a zero-mean current
+#     error of 7 mA rms band-limited at 5 Hz, taken from the bench figure
+#     doc/current_error_all.png -- rather than the back-EMF droop the loop
+#     removes. And this backend DOES export an effort state interface
+#     (IsaacTopicEffortSystem republishes the plant's APPLIED torque), so a
+#     non-zero bandwidth here would close a second loop around a signal that
+#     is already post-loop and cancel the disturbance under test.
+#   * passthrough_gravity_correction / passthrough_integral stay unset
+#     (default false): no URDF gravity model is loaded here
+#     (hold_feedforward_mode is none) -- and in sim the arm models agree, so
+#     the correction would be zero anyway; the gravity MISMATCH under test is
+#     injected on the plant (sim_arm_mass_scale) instead. The integral is a
+#     second integrator against the flight observer -- never on this path.
+
+/**/controller_manager:
+  ros__parameters:
+    use_sim_time: false
+    update_rate: 250  # Hz — matches the whole-body node's inner loop
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    external_torque_controller:
+      type: open_manipulator_x_custom_controller/ExternalTorqueController
+
+
+/**/joint_state_broadcaster:
+  ros__parameters:
+    publish_dynamic_joint_states: false
+
+
+/**/external_torque_controller:
+  ros__parameters:
+
+    joints:
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+
+    state_interfaces: [position, velocity, effort]
+
+    # PURE TRACKING (2026-09-05). This controller GENERATES NOTHING: it tracks
+    # the one arm reference published here, and the min-jerk generator inside
+    # TorqueControllerBase is switched off at the interface, so
+    # ~/target_joint_setpoint, ~/sine_reference_trajectory and ~/go_home are
+    # not advertised by the controller at all. Two nodes publish this topic and
+    # they are mutually exclusive by flight mode:
+    #
+    #   SAFETY  arm_planner (this package's sibling node) — it now
+    #           owns home_position / max_velocity / min_move_duration and the
+    #           ground station's target_joint_setpoint + go_home interface.
+    #   DIRECT  whole_body_planner — the compatible plan's own
+    #           q_d/qdot_d, already smooth.
+    #
+    # Why: with the generator in here it ran IN SERIES with the whole-body planner's
+    # B-spline plan, and the 0902/0903 flights measured the arm replaying the
+    # whole-body planner's move 3-4 s late with the endpoints matching exactly.
+    external_reference_topic: "external_torque_controller/reference_joint_trajectory"
+    external_reference_timeout: 0.2
+
+    # The whole-body law's JOINT VELOCITY (2026-09-26). The flight node's
+    # wb_arm_velocity_topic closes the law's damping on this 12 ms encoder
+    # observer instead of joint_states.velocity (the servos' Present Velocity,
+    # ~50 ms late on hardware, emulated by the plant's sim_arm_vel_lag_s here).
+    # Same numbers as external_torque_controller_hardware_aerial_pwm.yaml, so
+    # sim and hardware hand the law the same signal. velocity_source is NOT
+    # set: this controller's own D term (stale-stream fallback, limit
+    # pull-back) keeps the measured velocity as before -- setting the topic
+    # only makes the observer run and publish.
+    velocity_observer_bandwidth_hz: 20.0
+    velocity_observer_damping: 1.0
+    velocity_observer_topic: "~/velocity_observer"
+    velocity_observer_max_delta: 3.0
+
+    # Home and the move profile MOVED to arm_planner (below in this
+    # file). Kept here only because the ground station reads home_position and
+    # the working range from the controller's parameters; move_to_home_on_activate
+    # is inert in pure-tracking mode (homing is a plan, and this node cannot
+    # plan) and the planner does the homing instead.
+    home_position: [0.0, 0.698132, 0.698132, 0.0]
+    move_to_home_on_activate: true
+
+    max_velocity: [0.2, 0.2, 0.2, 0.2]
+    min_move_duration: 1.5
+
+    # Working range validated on the drone, radians (identical everywhere).
+    # In torque mode this is the ONLY position guard on the command path.
+    # q4 = +-120 deg (2026-08-23): the wrist roll was the binding constraint on
+    # the whole-body EE heading. Asset authors manip_joint4 at +-180. The
+    # ground station adopts these live, so this is also what its joint-limit
+    # row draws. The hardware/gazebo configs still carry +-90 on purpose —
+    # widening the real arm is a cabling call.
+    min_position: [-0.610865, -1.396263, -0.698132, -2.0943951]
+    max_position: [ 0.610865,  0.872665,  0.872665,  2.0943951]
+
+    # FALLBACK PD (N*m) — 04's flight-validated arm hold pair. Only active
+    # while the external stream is stale; also the limit pull-back gains.
+    kp: [30.0, 30.0, 30.0, 30.0]
+    kd: [1.2, 1.2, 1.2, 1.2]
+
+    # One clamp number across the whole chain: law (wb_gain_tau_max) ==
+    # this == the Isaac plant's TAU_MAX.
+    max_effort: [3.0, 3.0, 3.0, 3.0]
+
+    # ── PASS-THROUGH CORRECTIONS on the streamed torque (2026-09-14) ──────
+    # The calibration report's friction feed-forward (S1.5, eq. 6), applied
+    # to the whole-body law's u3 exactly as the hardware config applies it,
+    # in this backend's units (N*m; nm_to_effort is 1.0 here). Values are the
+    # hardware yaml's duty counts through kappa_pwm [169.47, 149.70, 135.25,
+    # 148.51] -- one set of numbers, two unit systems (servo_model.py's
+    # FRICTION_FC_NM is the same conversion). The Isaac plant (06) carries the
+    # same model scaled by sim_arm_friction_scale, so 1.05 there against 1.00
+    # here is the 5 % imperfect compensation under test.
+    #   friction term  [fc + mu*|tau_streamed|] * tanh(qd_d / w),
+    #   reference-driven (the whole-body planner's qdot_d), exactly zero at a
+    #   hold; the load is the streamed torque, as on hardware.
+    passthrough_auxiliary_terms: true     # overridden by the launch's passthrough_corrections:=
+    # 2026-09-26: the in-flight correction (x0.70 j2, x0.65 j3, see the hardware
+    # yaml) and the measured-velocity relay, mirrored here so the sim arm stack
+    # pays what the corrected hardware stack pays. Was [0.017112, 0.031430,
+    # 0.057506, 0.052374] / [0.0, 0.246, 0.161, 0.0].
+    friction_ff: [0.017112, 0.022001, 0.037379, 0.052374]   # N*m
+    friction_velocity_source: measured
+    friction_measured_width: 0.03
+    friction_load_coeff: [0.0, 0.172, 0.105, 0.0]
+    friction_ff_width: 0.015                                # rad/s, the hardware value; the plant uses the same
+    viscous_ff: [0.0, 0.0, 0.0, 0.0]
+    # No dither: tanh friction has no breakaway to defeat in this plant, and a
+    # 100 Hz ripple on a stiction-free joint is just a disturbance.
+    dither_amplitude: [0.0, 0.0, 0.0, 0.0]
+    passthrough_gravity_correction: false   # no URDF model here; the mismatch is on the plant
+    passthrough_integral: false             # the flight observer owns the residual
+
+    # External stream freshness: stale after 0.3 s (the plant uses the same
+    # window), re-arm pass-through only after 3 consecutive valid commands.
+    command_timeout_s: 0.3
+    rearm_fresh_msgs: 3
+
+    # This is also the reference consumed by the 250 Hz whole-body law. Publish
+    # every controller tick; the WBC uses qdot to bridge DDS arrival jitter.
+    state_publish_rate: 250.0
+    # The commanded torque lands in .effort here — the arm ground station's
+    # dashed command curves.
+    desired_states_topic: "~/smoothed_reference_joint_trajectory"
+    measured_states_topic: ""
+
+# ── THE ARM'S PLANNER, SAFETY ONLY (2026-09-05) ─────────────────────────────
+# One planner owns the arm reference at a time. This node has the SAFETY half:
+# it takes the ground station's joint targets and go_home at the controller's
+# own names (so the station needs no change), runs the same min-jerk profile
+# the controller used to, and streams the result on the single reference topic
+# above at 100 Hz. In whole-body DIRECT it goes silent and the whole-body
+# whole-body planner publishes the same message on the same topic instead.
+#
+# The move profile numbers are the controller's former ones, unchanged, so the
+# motion the bench and the station were tuned against is preserved exactly.
+/**/arm_planner:
+  ros__parameters:
+    joints: [joint1, joint2, joint3, joint4]
+    controller_name: "external_torque_controller"
+    reference_topic: "external_torque_controller/reference_joint_trajectory"
+    joint_states_topic: "joint_states"
+    # The flight node is a FLIGHT-STACK node at the vehicle namespace, while
+    # this one lives under the arm package's namespace, so this is absolute.
+    mode_topic: "/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/mode"
+    direct_mode_token: "DIRECT"
+
+    home_position: [0.0, 0.698132, 0.698132, 0.0]
+    max_velocity: [0.2, 0.2, 0.2, 0.2]
+    min_move_duration: 1.5
+    min_position: [-0.610865, -1.396263, -0.698132, -2.0943951]
+    max_position: [ 0.610865,  0.872665,  0.872665,  2.0943951]
+
+    publish_rate: 100.0
+    # The controller holds the pose it activated at until this node publishes,
+    # so homing on the first joint state reproduces the old
+    # move_to_home_on_activate behaviour -- now done by the planner, which is
+    # the node that owns motion.
+    home_on_first_state: true
+    # SAFETY GUARD (2026-09-11): on EVERY whole-body DIRECT -> SAFETY revert
+    # (tilt/rate watchdog, feedback-loss failsafe, the drone GS's "Return to
+    # baseline", the manual set_direct_mode abort) the flight node hovers at
+    # the pose of that instant and this node folds the arm home, after the
+    # delay below so PX4 has regained attitude before the arm moves. The fold
+    # runs on the profile above (<= 0.2 rad/s per joint, >= 1.5 s).
+    home_on_safety_revert: true
+    home_on_revert_delay_s: 1.0

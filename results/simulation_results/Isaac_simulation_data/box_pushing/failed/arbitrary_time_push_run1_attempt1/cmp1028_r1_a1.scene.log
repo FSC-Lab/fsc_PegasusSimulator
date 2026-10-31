@@ -1,0 +1,26 @@
+[1;33m  scene knob PEGASUS_PUSH_BOX_MASS=0.280[0m
+[1;33m  scene knob PEGASUS_PUSH_FRICTION_STATIC=0.25[0m
+[1;33m  scene knob PEGASUS_PUSH_FRICTION_DYNAMIC=0.25[0m
+[1;33m  scene knob PEGASUS_PUSH_BOX_XY=0.675,0.28[0m
+[1;33m  scene knob PEGASUS_PUSH_LAYOUT=nominal[0m
+[1;32mplanner + controller: the box-pushing block is loaded (they match cmp1028_r1_a1.yaml)[0m
+[1;35mBOX-PUSHING SCENE on the ARBITRARY-TIME rig (AM-T650-ATC-PUSH, raw mocap feedback): the same table, box (0.280 kg, cad handle) and mission as the whole-body rig.[0m
+[Config] Using: /home/shiqi/fsc_PegasusSimulator/scripts/config/shiqi_machine.conf
+[1;36mPLANT CONFIG: cmp1028_r1_a1.yaml (WB_SIM_PROFILE=box_pushing)[0m
+Arm servo model taken from cmp1028_r1_a1.yaml
+[1;31mMODEL-UNCERTAINTY INJECTION ACTIVE: mass x1.0, inertia x1.0, CoM shift (-0.017854,0.0,0.0) m[0m
+[1;31mTHRUST-LOSS INJECTION ACTIVE (PLANT SIDE, both modes): k_f x1.037[0m
+[1;33mThe PLANT is perturbed; the controller believes the nominal model.[0m
+Arm count<->torque path off: continuous torque, perfect calibration.
+[1;31mGEARBOX FRICTION ACTIVE on the plant: x1.0,0.70,0.65,1.5 the report's fc/mu (tanh width 0.015 rad/s); arm-side friction compensation true (passthrough_auxiliary_terms).[0m
+[1;35mSIM-TO-REAL MIRROR TERMS (as written, plant time): km x0.2333; lambda 10.0265 1/s; kf sag 0.036/min; force bias (0.55,-0.50,0.0) N; torque bias (0.0,0.0,-0.095) N.m; arm vel lag 0.048 s; arm vel quantum 0.024 rad/s;[0m
+Wall-clock compensation: RTF 1.0 -- nothing to rescale.
+[1;36mPlant knobs read from cmp1028_r1_a1.yaml; arm command mode: effort (joint torques)[0m
+[1;36mArm-side friction feed-forward OFF for this rig (the ACTNDO estimates the friction; ATC_ARM_FRICTION_FF=true to turn it on).[0m
+Pegasus PX4 lockstep: pushed to the tmux server environment
+Starting AM-T650 ARBITRARY-TIME (Chen et al. IEEE TIE 2025) SITL with the ROS2 torque-mode arm stack.
+Plant: 07_px4_t650_aerial_manipulator_box_pushing.py, arm in effort-command mode; profile box_pushing
+Arm workspace: /home/shiqi/ros2_ws; arm config torque_controller_isaac_aerial_atc.yaml (arm-side friction compensation false)
+[Config] Using: /home/shiqi/fsc_PegasusSimulator/scripts/config/shiqi_machine.conf
+Isaac pinned to CPUs 0-15 (PEGASUS_ISAAC_CPUS / ISAAC_CPUS).
+open terminal failed: not a terminal

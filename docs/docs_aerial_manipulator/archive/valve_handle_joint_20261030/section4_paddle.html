@@ -1,0 +1,100 @@
+
+  <h2 id="handle">4. A handle the claw can roll on</h2>
+  <p>With the jaws clamped on the fin, the arm's four joints are used up. Three hold the claw's position and the wrist turns the claw about its own axis. The claw's two other rotations are then set by how the drone moves, so the pads, the fin and the printed shaft take them and push back on the drone through the arm. On 10-29 that coupling grew a 0.45 Hz sway until the arm buckled, 6.9 s after the grasp. A pin on the handle that lets the clamped claw roll removes the coupling.</p>
+  <p class="note">The pin frees the claw; it does not add damping. Once the claw can roll, the drone gets its free-flight damping back (the 10-28 reduced model returns the sideways mode to its free-flight decay). A damper at the pin would put the coupling back: at the sway's 0.5 rad/s it has to pass under 5 mN·m, so below 0.01 N·m·s/rad.</p>
+
+  <div class="switch">
+    <span class="swlabel">Handle</span>
+    <div class="seg" role="group" aria-label="Handle">
+      <button type="button" id="hFixed" aria-pressed="false">Fixed fin (today)</button>
+      <button type="button" id="hHinged" aria-pressed="true">Hinged paddle</button>
+    </div>
+  </div>
+  <div class="slider">
+    <label for="hAng">Roll the clamped claw about the pin</label>
+    <input type="range" id="hAng" min="-20" max="20" step="1" value="0">
+    <output id="hAngOut" for="hAng">0°</output>
+  </div>
+  <div class="plan-note" id="hNote"></div>
+  <div class="legend">
+    <span><i class="sq" style="background:var(--paddle)"></i>paddle (swings with the claw)</span>
+    <span><i class="sq" style="background:var(--post)"></i>post and bearing housing (fixed)</span>
+    <span><i class="sq" style="background:var(--steel)"></i>pin, steel weight</span>
+    <span><i class="sq" style="background:var(--claw)"></i>gripper, simplified</span>
+    <span><i class="sq" style="background:var(--thread)"></i>pin axis</span>
+  </div>
+  <figure>
+    <div class="viewbar">
+      <button type="button" data-hview="iso">3D</button>
+      <button type="button" data-hview="face">Face-on</button>
+      <button type="button" data-hview="claw">Along the claw</button>
+      <button type="button" data-hview="top">Top</button>
+    </div>
+    <div id="h3d" role="img" aria-label="Rotatable 3D model of the handle end of the beam, with the fixed fin or the hinged paddle and the clamped claw"></div>
+    <figcaption><b>Fig. 7.</b> The handle end of the beam from <span class="mono">Valve_Assembly_v2.stl</span> (markers C, D and E, their mounts), to scale, with the claw clamped at the grip point as at the flown pose [0, 5, 25, 0]°. With the hinged paddle, the slider rolls the claw and the paddle together about the pin: the post does not move. With the fixed fin there is no such motion, and that roll is what the pads and the shaft resist today.</figcaption>
+  </figure>
+
+  <h3>Which way the pin points</h3>
+  <p>Roll and sideways sway both turn the clamped claw about one axis. It lies in the fin's plane, square to the claw's axis: 30° above horizontal, rising toward the turn direction (+y). A pin along it frees both. A horizontal pin, along the fin's width, frees only the part along the tangent, about half the angle. Pitch, fore-aft and vertical motion turn the claw about the jaws' closing axis instead. The pin leaves those alone, but they matter less: the drone holds its height to about ±5 mm, and the valve itself turns to follow the fore-aft motion.</p>
+  <div class="tscroll"><table id="hFreeTable"></table></div>
+  <p class="why">Grip rotation forced by each drone motion at the flown pose, with the valve held by its friction (<span class="mono">wb_valve_turning_flight_20261029/tools/handle_joint_mobility.py</span>). The flights agree: 0.10–0.15° of claw roll per mm of sideways sway, and 4.5° rms of claw-against-fin rotation about the tangent on 10-29. The axis stays within 5° of 30° over the arm poses the turn visits.</p>
+
+  <h3>Where the pin goes</h3>
+  <p>Through the grip point G, the point the planner aims the claw at: mid-width on the fin, 25 mm below its top (x 160, y 0.6, z 179 mm). If the pin misses G by a distance d, the claw has to move d·θ to roll by θ, and the law's task spring (120 N/m) resists that like a torsion spring of 120·d². Within 10 mm this is negligible. A hinge at the fin's base, 105 mm below G, would be stiffer than the grip it is meant to free.</p>
+  <div class="tscroll"><table id="hOffsetTable"></table></div>
+
+  <h3>The layout</h3>
+  <p>The fin comes off. A <strong>paddle</strong> with the same grip area hangs from a 4 mm steel pin through G. The pin is fixed in a boss on the paddle's −y edge and turns in two miniature ball bearings in a <strong>post</strong> on the claw's side of the root. The pin line falls toward −y, so the post stays low: its top is 11 mm below G, under the gripper, which rises toward the wrist on that side. The fingertips point +y and down, away from it.</p>
+  <figure>
+    <div class="scroll"><svg id="hFace" role="img" aria-label="Face-on drawing of the hinged handle, seen from the beam's outer end"></svg></div>
+    <figcaption><b>Fig. 8.</b> Face-on, seen from the beam's outer end looking toward the hub (+y is to the right), in millimetres from the valve's axis on the table. Marker E's ball is in front of this plane (x 192.5) and is drawn as an outline.</figcaption>
+  </figure>
+
+  <h3>What the joint needs</h3>
+  <div class="tscroll"><table id="hSpecTable"></table></div>
+
+  <div class="two" style="margin-top:18px">
+    <div class="card">
+      <h3>Parts</h3>
+      <ul>
+        <li><strong>Paddle</strong>, printed: 40 × 80 × 6 mm in the old fin's top 80 mm (y −19.4 to 20.6, z 124 to 204), a Ø12 boss along the pin on its −y edge, a pocket for the steel weight at the bottom, two stop bumps and a Ø3 lock hole on the boss's flange.</li>
+        <li><strong>Post</strong>, printed with a new rotor (the root widened to y −47) or screwed to the root with two M3: a 12 × 12 mm column at y −47 to −35 up to z 156, carrying a Ø16 housing along the pin.</li>
+        <li>Pin: Ø4 × 50 mm stainless dowel, or an M4 shoulder screw with a 4 mm shank. Glued or set-screwed into the boss.</li>
+        <li>2 × MR84ZZ bearings (4 × 8 × 3 mm), a 4 mm shim washer between the boss and the near bearing, a 4 mm E-clip behind the far one.</li>
+        <li>About 10 g of steel in the paddle's bottom (an M6 nut and washer).</li>
+        <li>A Ø3 dowel that locks the paddle to the post, for the locked/free comparison.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Clearances</h3>
+      <div class="tscroll"><table id="hClearTable"></table></div>
+      <p class="why">The OM-X fingers are taken as 20 mm wide, reaching 40 mm back toward the wrist and 20 mm past G. Check them on the real gripper. The 20 mm case is the Valve Turning tab's close gate.</p>
+    </div>
+  </div>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card">
+      <h3>What it fixes</h3>
+      <ul>
+        <li>The roll coupling behind the 10-28 and 10-29 contact sway, for roll and sideways motion: about 99 % of the forced rotation at the flown pose.</li>
+        <li>The turn itself is unchanged. The push passes through the pin's axis, so it turns the valve as the fin did, and the grip point, the planner's offsets and obj_0 stay where they are.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What it does not</h3>
+      <ul>
+        <li>The wrist kick when the jaws open (24–41° on 10-28/29): open them earlier.</li>
+        <li>The valve following the drone's fore-aft wander: that is the free-axis anchor's share, by design.</li>
+        <li>The airframe's yaw imbalance (0.2 N·m standing trim): re-true the frame.</li>
+        <li>Isaac does not reproduce the contact sway, so only a flight can show the gain. Isaac can check the grasp and the turn once the asset has the joint.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Testing it</h3>
+  <ol>
+    <li>On the bench: with the claw clamped by hand, the paddle turns ±20° with no felt resistance and hangs back within a few degrees when let go. With the lock dowel in, it does not move.</li>
+    <li>In flight, on one battery: a 10 s clamped hold with no turn, locked, then free. Compare the CoM error rate (the planner's new sway guard aborts above 0.15 m/s) and the claw's roll from the arm's joints.</li>
+    <li>Then the 90° turn, free.</li>
+  </ol>
+  <p class="note">For a −90° turn, mirror the whole handle: the post on +y, the pin rising toward −y.</p>

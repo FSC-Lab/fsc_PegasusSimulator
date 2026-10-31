@@ -8,13 +8,13 @@
 # (the scene's conservative bearing: 0.048 N m Coulomb, no viscous term, the printed rotor's 204 g).
 #
 #   setsid nohup results/utils/run_valve_turning_campaign.sh [N] \
-#       > results/simulation_results/valve_turning/campaign.out 2>&1 < /dev/null &
+#       > results/simulation_results/Isaac_simulation_data/valve_turning/campaign.out 2>&1 < /dev/null &
 #   METHOD=coordinated_admittance ...   the comparison rig (Liu et al. CEP 2024) -- when its valve profile exists.
 #
 # Every attempt is one flight after a clean slate (in this script's own process -- never from an
 # interactive shell, kill_stale_sim_processes.sh kills its invoking shell). A completed run (driver
 # "completed", the beam turned >= 350 deg during the push, no TIMETABLE LATE) is copied to
-#   results/simulation_results/valve_turning/<method>_turn_run<k>.npz (+ .yaml, the config as flown,
+#   results/simulation_results/Isaac_simulation_data/valve_turning/<method>_turn_run<k>.npz (+ .yaml, the config as flown,
 #   .args, the flight's settings, + logs/<name>/)
 # a failed one to failed/<name>_attempt<a>/. Resumes: runs already on disk are skipped.
 # campaign.jsonl gets one line per attempt. Score with build_valve_turning.py.
@@ -22,7 +22,7 @@ set -o pipefail
 N="${1:-3}"
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PEG="$(cd -- "$HERE/../.." && pwd)"
-OUT="$PEG/results/simulation_results/valve_turning"
+OUT="$PEG/results/simulation_results/Isaac_simulation_data/valve_turning"
 m="${METHOD:-whole_body_l1}"
 # the timetable: the box campaign's slots except the two this task's steps need -- the Push step is
 # 1.5 s settle + the 36 s turn (+ 1.5 s hold on the fin) -> release at 39 s; Go To Land Start is one 24.0 s

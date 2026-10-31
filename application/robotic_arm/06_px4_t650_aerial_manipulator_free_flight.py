@@ -111,6 +111,17 @@ RENDER_MAX_GAP_S = float(os.environ.get("PEGASUS_RENDER_MAX_GAP_S", "") or 1.0)
 #                                reports the longest step, whether it drew a frame, and the GC's
 #                                collections, so the stall is attributable). 0 = leave the GC alone.
 GC_FREEZE = (os.environ.get("PEGASUS_GC_FREEZE", "") or "1").strip() != "0"
+#   PEGASUS_ARM_SPIN_DRAIN=0     (2026-10-26, default 0) 1 = service EVERY ready callback of the arm
+#                                bridge node each physics step (until a wait finds nothing), not ONE.
+#                                The effort stream arrives at 250 Hz and one spin_once per 4 ms step
+#                                services exactly 250 callbacks/s, so any other traffic on this node
+#                                (07's planner-info subscription, a driver's 50 Hz gripper stream)
+#                                backs the effort queue up to its depth 10: the applied torque then
+#                                lags the command by ~40 ms (measured on the 10-08 modular
+#                                pick-and-place attempts). Hardware ros2_control applies the newest
+#                                command every cycle. 0 = the old single spin_once.
+ARM_SPIN_DRAIN = (os.environ.get("PEGASUS_ARM_SPIN_DRAIN", "") or "0").strip() == "1"
+ARM_SPIN_DRAIN_MAX = 96   # calls, not messages: each wait costs one extra call
 PROFILE_START = float(os.environ.get("PEGASUS_PROFILE_START", "0") or 0.0)
 PROFILE_STEPS = int(os.environ.get("PEGASUS_PROFILE_STEPS", "1500") or 1500)
 PROFILE_OUT = (os.environ.get("PEGASUS_PROFILE_OUT", "") or
@@ -1504,6 +1515,42 @@ class AmT650WholeBodyArmSim:
         print(f"[AM-T650-WB] arm armature (joint-diagonal, {src}) = "
               f"[{', '.join(f'{v:.4f}' for v in ARM_ARMATURE_J)}] kg·m²", flush=True)
 
+    def _drain_arm_node(self):
+        """Run every callback that is ready on the arm node (PEGASUS_ARM_SPIN_DRAIN=1).
+
+        A dedicated executor. With a zero timeout, rclpy's wait_for_ready_callbacks
+        hands out ONE message per ready subscription per wait and then raises
+        TimeoutException -- so the loop waits again after every wait that yielded
+        work and stops only at a wait that found nothing ready. (Stopping at the
+        first TimeoutException, as the first version of 2026-10-26 did, took one
+        effort message per step: a backlog never emptied, because the arm stack
+        publishes at exactly the physics rate, and the applied torque sat ~36-40 ms
+        behind the command -- measured, arm_lag_probe.py.) The effort subscription's
+        queued messages all run in order, so the newest command is the one applied."""
+        from rclpy.executors import (ShutdownException, SingleThreadedExecutor,
+                                     TimeoutException)
+        if getattr(self, "_arm_exec", None) is None:
+            self._arm_exec = SingleThreadedExecutor(context=self._arm_node.context)
+            self._arm_exec.add_node(self._arm_node)
+            print(f"[AM-T650-WB] ARM SPIN DRAIN on: every ready arm-bridge callback runs each "
+                  f"physics step (at most {ARM_SPIN_DRAIN_MAX}), so the newest effort command "
+                  f"is the one applied", flush=True)
+        got = False
+        for _ in range(ARM_SPIN_DRAIN_MAX):
+            try:
+                handler, _entity, _node = self._arm_exec.wait_for_ready_callbacks(timeout_sec=0.0)
+            except TimeoutException:
+                if not got:
+                    return            # a wait with nothing ready: drained
+                got = False           # that wait's messages are done -- wait again
+                continue
+            except ShutdownException:
+                return
+            got = True
+            handler()
+            if handler.exception() is not None:
+                raise handler.exception()
+
     # ── control step: servo emulation tracking the ROS 2 reference ──────────
 
     def _control_step(self, step_size):
@@ -1520,7 +1567,10 @@ class AmT650WholeBodyArmSim:
         self._t += dt
 
         # Pump the arm bridge callbacks (non-blocking).
-        self._rclpy.spin_once(self._arm_node, timeout_sec=0.0)
+        if ARM_SPIN_DRAIN:
+            self._drain_arm_node()
+        else:
+            self._rclpy.spin_once(self._arm_node, timeout_sec=0.0)
 
         pose = self._dc.get_rigid_body_pose(self._body)
         p0 = np.array([pose.p.x, pose.p.y, pose.p.z])
