@@ -1,10 +1,12 @@
 # The 2026-10-31 valve flights: the wrist roll swung, the jaws never closed
 
 User report: in the static-hold flights and in the turn, joint 4 kept oscillating, so the handle could not be
-grasped. Data: `docs/experimental_data_ros2_bag/1030 - T650-AM Mail-Box & Valve-Turning-*/` — three valve bags
-(`..._hold_20261031_174943`, `..._hold_20261031_175725`, `..._30deg_20261031_180423`). The four mail-delivery bags
-in the same folder were not analysed. Whole-body 4-D L1, RAW mocap, flown at fsc_autopilot_ros2 `fa8fc9f` /
-fsc_open_manipulator `d4d062f` (the 10-30 safety fixes).
+grasped. Data: `docs/experimental_data_ros2_bag/1031 - T650-AM Mail-Box & Valve-Turning-*/` — the afternoon's three
+valve bags (`..._hold_20261031_174943`, `..._hold_20261031_175725`, `..._30deg_20261031_180423`, sections 1–6) and the
+evening's one (`..._30deg_20261031_211808`, flown on the fixes of sections 3 and 5: sections 7–8). The four
+mail-delivery bags in the same folder were not analysed. Whole-body 4-D L1, RAW mocap; the afternoon at
+fsc_autopilot_ros2 `fa8fc9f` / fsc_open_manipulator `d4d062f` (the 10-30 safety fixes), the evening at `2787578` /
+`dd28bce`.
 
 ## 1. What happened
 
@@ -177,12 +179,169 @@ swing).
   - Then the node's `GRIP: jaws CLOSED ... -> INTERACTION set` when the jaws close.
   - Watch q4 through the Ready descent before closing.
 
+## 7. The evening round (211808, 21:18): the fixes held the wrist — and the base ran away
+
+The 30° turn again, the valve re-placed at (0.442, −0.106) (afternoon (0.507, 0.173)); the planner's hold geometry is
+the same in all four flights to the millimetre (body → axis +0.16 / −0.33 m, the FL rotor over the table strip 0.53 m
+above its top; `room_hold_compare.py`). It failed faster and harder than any flight before it.
+
+**The fixes did what they were built to do** (`timeline.txt`, `trace2.py`):
+- the arm GS logged `j1..j4 error damping [0.20 0.00 0.00 0.20] for the mission (was [0.00 0.00 0.00 0.05])` at Go To
+  Start and the restore after the revert; `/parameter_events` carries both sets. The damping duty tracks q̇1 / q̇4 at
+  0.22 / 0.26 N·m·s/rad on the flight data (law[28]/[31]) — the trim no longer eats it;
+- the grip schedule: jaws closed at DIRECT entry (−0.0086 m, closed since the landing) → interaction set; Go To Start
+  opened them at 7.5 s → the free-flight set 2.5 / 0.93 by 8.7 s; heading companion off (offset 0.0 through the hold,
+  against 9–15° this afternoon);
+- **the wrist did not swing.** q4 followed q1 — q1 + q4 tracked the base's yaw drift, e_ψ ≤ 2.6° — until the arm
+  buckled.
+
+**What happened** (receive time; the planner's and the law's topics agree, `/rosout` is ~6 s late early in this bag):
+
+| t [s] | |
+|---|---|
+| 22.17 | DONE go_to_start, claw 17 mm off. EE anchor → WORLD (1 s blend), free-axis anchor latched (0 → 0.75 by 22.9). |
+| 22.5–23.4 | the base rolls right ~1° against a left command and drifts right / back: lateral 54 mm p-p in the 1.2 s hold, \|e_R\| to 162 mrad; q1 −0.4 → −7.4°, q4 0 → +11° (the afternoon holds: 8–24 mm, 44–71 mrad). |
+| 23.41 | Ready, automatic (1.0 s): a 3 s **base** descent, the streamed arm reference constant at [0, 5, 25, 0]. |
+| 23.5–23.9 | the base keeps running: CoM error −126 / +85 mm by 23.9 (the mocap base 13 cm to the right and 8 cm behind the hold); the arm absorbs it — q1 → −20°, q4 → +26°, q2 7 → 45°, **q3 27 → 0 (23.65) → −33°**: the straight-elbow singularity, then the elbow branch. |
+| 23.84 | `1 joint(s) at tau_max` (j3 at 3.0 N·m): joints at the clamp on 41 % of the Ready ticks (debug [51]). 23.91: the allocator trades 2.2 N of thrust, once (0.4 % of the Ready ticks), after q3 had crossed 0. |
+| 24.37 | **ABORT — the operator's** (no guard reason in the status), 0.96 s into Ready; "already aborting" ×4. |
+| 24.4–26.0 | j2 / j3 swing between ±3 N·m clamps, q1 on its −35° stop from 24.8; the base at 0.06 m (22 cm right of the hold) at 25.1, tilt growing. |
+| 26.00 | watchdog 15.1° → emergency abort (the planner's already runs); 26.42 release, claw → CoM anchor. |
+| 27.24 | 25.3° → SAFETY; the base at (1.52, −0.36), 1.3 m from the hold in 5 s; the RELEASE reaches the arm 10 ms later; arm home at 29.3; STAB 47 s, landed. |
+
+**No planner guard fired, by design:** `plQ3RateGuard` and the static q3 / sway guards are engaged only with
+`pl_at_handle_ || pushing` (node line 1950) — FLYING ready is neither, and the fold ran 23.5–23.9 **during the
+descent**. The planner's 10° tilt guard is armed while a step flies, but the tilt passed 10° only at ~26 s, after the
+operator's abort.
+
+**Why the base ran — what is measured, and what is not** (`trace3.py`, `residuals.py`, `room_hold_compare.py`,
+`window_ab.py`). A first version of this section blamed the arm's error damping and a saturated yaw channel; the
+numbers below rule both out as the start of it.
+
+1. **No external force.** F_res = m a − R e₃ u₁ + m g e₃ from the mocap kinematics is flat through the onset (±0.1 N on
+   a −1.5 N world-y standing bias that did not change). The sideways acceleration came from the law's own thrust
+   direction. PX4-vs-mocap attitude is steady at the onset (roll −0.7°, pitch +4.5° body-fixed, 1.5° more than this
+   afternoon's +3.0°, a trim the observer absorbs). Same hold geometry as the afternoon.
+2. **The roll loop was already worse before the room hold** (`window_ab.py`). Roll attitude-error std over the last
+   3 s of Go To Start: **39 mrad** this evening, 6–15 mrad in the three afternoon flights (whole Go To Start: 38 vs
+   13–30; 17:49 reached 30). In the evening's own hover before Go To Start (jaws closed, soft heading) it was 12,
+   like the afternoon. The evening differs from Go To Start on, the phase in which both new things were active (the
+   stiff pre-grasp heading from 8.7 s, the j1/j4 damping raise from 9.95 s) — and in which the room position also
+   differed (valve axis (0.44, −0.11) vs (0.51, 0.17)).
+3. **The onset came with the arm still.** From the room hold (22.17 s) to 22.9 s the joints moved < 0.2°, so the
+   arm's error damping was zero (law[28]/[31] ≈ 0) — yet the base drifted 54 mm sideways in the 1.2 s hold (afternoon
+   8–24 mm). The rotational observer's roll estimate rose **0.125 N·m** in that hold (−0.079 → +0.046; afternoon
+   changes ≤ 0.05), and the law's attitude error grew to 162 mrad by Ready: a roll torque the law did not model,
+   learned slowly (ω_c,r 0.74 rad/s) while the attitude loop held the vehicle ~1° the wrong way. At 23.4 s the law
+   wanted −6° of roll and the vehicle sat at +1°.
+4. **The room hold turned the run into arm motion until the reach ran out.** With the claw and its heading held in
+   the room, sideways → q1, yaw → q4, along-nose (25 %, the free axis absorbs the rest) → q2/q3. At β = 30° the margin
+   to the straight elbow is 2–3 cm; an 11 cm sideways run adds √(0.224² + 0.11²) − 0.224 = 2.6 cm of reach, the 8 cm
+   back ~2 cm more → q3 through 0 at 23.64 s, as measured. The afternoon's 180423 came within 9.8° of the same fold
+   (113 mm p-p, oscillatory about the hold). The afternoon's undamped ±40° wrist swing, ugly as it was, kept the base
+   decoupled from the arm (q3 ≥ 9.8°).
+5. **Ruled out:**
+   - *the yaw channel* — the yaw demand averaged 0.37 of the 0.654 N·m free budget in the hold (afternoon 0.28–0.30;
+     peaks 0.79 vs 0.54–0.59) and 0.29 in Ready, the same as the afternoon. The allocator traded thrust once, after
+     the fold. The 41 % in the law's log is joints at the torque clamp — a consequence.
+   - *the error damping as the onset* — zero while the arm was still. It and the stiff heading's larger joint-1
+     torque (u3_1 rms 0.142 vs 0.067–0.100 N·m in the hold; max 0.57 vs ≤ 0.28 in Ready) may have fed the growth
+     once the arm moved; that is not shown.
+6. **Not identified: the source of the roll torque.** One flight, two changes at once (stiff pre-grasp heading,
+   damping 0.2) plus a different room position. Candidates: the new heading gains acting through the law's arm-
+   reaction pre-compensation while the joints are held by static friction (the law cancels a reaction the stuck arm
+   does not deliver — its size is not obviously 0.13 N·m on roll), flight-to-flight variation (17:49's Go To Start
+   roll std reached 30 mrad), or the room position.
+
+The afternoon's fixes were checked without an airframe in the loop (arm loopback, GS harness). Whatever started the
+roll torque, the failure itself is structural: a room-held claw at a near-straight arm with a 2–3 cm reach margin,
+during an unguarded step.
+
+**Over the day:** 10-28 — tilt-guard false trips, the sway underneath; 10-29 — the sway reached the arm's limits;
+10-31 afternoon — the wrist swung undamped; 10-31 evening — the wrist held and the base ran. Every valve contact or
+room hold on hardware has now ended in the arm leaving its range within 2–8 s, by a different route each time.
+
+## 8. What to change
+
+**Applied the same night, Isaac-checked: the base gate, the leash, the descent guard and the guards before the
+handle** (`archive/valve_room_hold_guards_20261031/README.md`). The rest below is still open.
+
+Robust to whatever started the roll torque:
+- **Gate Ready on the base, not only the claw.** The room hold keeps the claw still while the base runs, so a
+  claw-stillness check passes. Ready started with the CoM 67 mm off its reference and moving ~0.14 m/s (afternoon:
+  ≤ 24 mm lateral p-p in the hold). A CoM-error / base-speed gate before Ready, or an abort of the room hold above
+  ~40 mm, is the earliest signal in this flight.
+- **Arm the q3 guards (static + rate) and the sway guard from the start of Ready, not at the handle**
+  (`tools/guard_replay.py`, the flown values): the rate guard would have fired at 23.56 s with q3 already at +4.8°
+  and falling 58°/s, 0.82 s before the operator; the static and sway guards 0.2 s later, at q3 −16 … −19°. No trip
+  in the three afternoon Ready phases. That catches the fold at the singularity, not before it.
+- **Reconsider the room hold before the grasp at this pose.** CoM anchor through the descent with a sideways re-aim at
+  the live handle (10-27 Isaac: the CoM-anchored descent met the fin 11–16 mm off), or the room hold only from the
+  grasp.
+
+To find the roll torque — the next flight changes one thing:
+- the evening build with the pre-grasp heading back to soft (`wb_ky_psi_before_grip` / `wb_dy_psi_before_grip`
+  0.2484 / 0.2903, i.e. the schedule's heading change off) and the damping raise kept; compare the roll error std at
+  the end of Go To Start (39 mrad today, 6–15 in the afternoon) and the observer's roll estimate in the hold. Then the
+  reverse if needed.
+
+Lower priority:
+- the law does not model the arm's error damping (a correctness gap with j1/j4 at d 0.2; not shown to matter here);
+- the standing yaw torque of the loose front-left arm (0.18–0.24 N·m, 28–37 % of the free budget, both rounds).
+
+## 9. Where the roll torque comes from (2026-11-01, after the user's notes on the films and the arm)
+
+The user added two facts: white films went up on a side wall between the afternoon and the evening flights, at least
+2 m from the table; and a cracking sound was heard from the arm in a ground test on 10-30, before all of 10-31's
+flights. Five checks, all on data already recorded:
+
+1. **The rotors delivered the commanded roll torque normally** (`tools/authority_id.py`). Fit of the gyro's angular
+   acceleration on the torque the motor commands produce, 0.5–4 Hz, Go To Start + hold: roll gain 5.5 (lag 76 ms,
+   r 0.82) in the evening, 5.9–8.1 on the other six valve flights; roll/pitch ratio 1.3 vs 1.1–1.4. Not a prop or
+   motor.
+2. **It acts on the airframe, not the arm** (`tools/roll_source.py`). The law's raw per-tick residual (`[62..71]`)
+   carries the slow roll part in the base row only; the joint rows show no matching signature.
+3. **It is neither a spring nor a damper in roll** (`tools/roll_regress.py`): no fit to roll angle or roll rate. Its
+   slow part moves with the sideways CoM error (`tools/roll_phase.py`: −0.76 in the evening, −0.68 on 17:49, with a
+   ~0.12–0.13 Hz peak on both).
+4. **It is not abnormal** (`tools/roll_baseline.py`, all 20 whole-body flights with an extracted npz since 10-21,
+   valve and box pushing). Slow roll residual during Go To Start (0.5 s averages, sd): **0.020–0.097 N·m**, the evening
+   **0.064** — fifth of 20. Above it: the 10-24 evening box pushes (0.097, 0.076), 10-31 17:49 (0.070) and 10-24
+   151634 (0.065). Every flight shows the same link to the sideways CoM error (−0.23 … −0.80). Section 7's "3x the
+   afternoon" is true of those three flights only: 10-28 18:18 had the same roll attitude error over the last 3 s
+   of Go To Start (43 vs 39 mrad) and still reached a grasp.
+5. **So neither the films nor the crack is needed to explain it**, and both are a poor fit: the same size is there on
+   10-21 … 10-29, before either. The data cannot rule out that the crack has since worsened, so the arm inspection
+   still stands as a safety item.
+
+What it is: a slowly varying roll couple on the airframe, 0.02–0.10 N·m = a left/right thrust difference of
+0.1–0.4 N, 0.3–1 % of the 37 N hover thrust. That is the ordinary level of unsteady aerodynamics for a multirotor
+flying through its own recirculated downwash in a room; its exact source cannot be traced from these bags. The
+rotational observer (ω_c,r 0.74 rad/s, 1.35 s) follows its slow part with a lag, and the base sways 7–28 mm sd
+sideways with it on every flight.
+
+Why it hurt only in the evening: the push was at the large end of the usual range, and its swing reversed just as
+the room hold began. The raw roll residual went from about −0.11 to +0.09 N·m in the hold's first 0.5 s while the
+arm was still (q1 0.4°, q4 0.0°, unchanged arm commands); the filtered estimate the law uses was still −0.07. For
+about a second the compensation pushed the wrong way, the base drifted, and the room-held arm took it up until the
+2–3 cm reach margin was gone. A phase with no margin met an ordinary disturbance at an unlucky moment. That is what
+section 8's guards address; chasing the roll torque itself is not a fix. The one-change heading test in section 8
+is now low priority: a flight with soft pre-grasp heading would not separate a change from this scatter.
+
 ## Files
 
-`tools/run_extract.sh` (bags → `npz/`, with the 10-29 extractor) · `vt_common.py` · `timeline.py` (→
-`timeline.txt`) · `q4_phases.py` (q4 per phase) · `trace.py` (sampled wrist channel) · `coupled_mode.py`
-(amplitude/phase at the swing frequency) · `j4_energy.py` (torque fits vs q, q̇) · `j4_trim.py` / `trim_vs_damping.py`
-(trim reconstruction) · `current_check.py` (inconclusive: j4's Present Current is too biased at these levels) ·
-`j4_ke.py` (back-EMF constant) · `j4_fix_model.py` (the 10-16 single-joint model with today's numbers: it does NOT
-reproduce the swing, since it lacks the airframe coupling; kept, not used to rank) · `gs_valve_damping_check.sh` +
-`gs_valve_damping_harness/`.
+`tools/run_extract.sh` (bags → `npz/`, with the 10-29 extractor; the bag folder is `1031 - …`) · `vt_common.py` (four
+bags) · `timeline.py` (→ `timeline.txt`, all four) · `q4_phases.py` (q4 per phase) · `trace.py` (sampled wrist channel)
+· `trace2.py` (base pose, joints, law u3, task error, anchors, grip state, arm damping duty) · `trace3.py` (base loop:
+attitude error, body torques, observer, allocator, motors) · `residuals.py` (un-commanded force / torque on the base
+from the mocap kinematics; the arm's applied − commanded torque projected on the base) · `room_hold_compare.py` (the
+four flights over the room-held phase) · `guard_replay.py` (the q3 / sway guards replayed from Ready's start) · `window_ab.py` (attitude error
+and arm torques per phase, the four flights) ·
+`report_data.py` + `report_template.html` + `build_report.py` (the report page) · `coupled_mode.py` (amplitude/phase at the swing frequency) · `j4_energy.py`
+(torque fits vs q, q̇) · `j4_trim.py` / `trim_vs_damping.py` (trim reconstruction) · `current_check.py` (inconclusive:
+j4's Present Current is too biased at these levels) · `j4_ke.py` (back-EMF constant) · `j4_fix_model.py` (the 10-16
+single-joint model with today's numbers: it does NOT reproduce the swing, since it lacks the airframe coupling; kept,
+not used to rank) · `gs_valve_damping_check.sh` + `gs_valve_damping_harness/` · `cmd_compare.py` (thrust / torque commands per phase, seven valve flights) · `roll_source.py` (base vs joint
+rows of the raw residual) · `roll_regress.py` (spring / damper / lateral fit) · `roll_phase.py` (cross-correlation with the base
+motion) · `roll_baseline.py` (slow roll residual on all 20 whole-body flights) · `authority_id.py` (roll / pitch authority from
+motor commands and gyro).

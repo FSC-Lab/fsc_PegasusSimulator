@@ -1,0 +1,427 @@
+<title>1031 Valve-Turning Flights</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: one full-width column (max 1040 px), numbered sections, data in panels.
+   Dark only, by the user's standing request: black page, near-black panels. */
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #141413;
+  --rule: #2a2a27;
+  --fg: #f0efec;
+  --fg2: #c3c2b7;
+  --muted: #8f8e86;
+  --accent: #d9a35c;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --ctx: #6f6e68;
+  --bad: #e66767;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-head: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: grid; gap: 6px; padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-head); font-size: 34px; line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--fg2); margin: 0; }
+h2 { font-family: var(--font-head); font-size: 24px; margin: 40px 0 10px; text-wrap: balance; scroll-margin-top: 16px; }
+h2 .n { color: var(--accent); margin-right: 10px; font-family: var(--font-mono); font-size: 20px; }
+h3 { font-size: 17px; margin: 26px 0 6px; text-wrap: balance; scroll-margin-top: 16px; }
+p { margin: 8px 0; }
+ul, ol { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+code { font-family: var(--font-mono); font-size: 13px; color: var(--fg2); overflow-wrap: anywhere; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.verdict { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 18px; margin: 18px 0 6px; }
+.verdict p { margin: 6px 0; }
+.verdict strong { color: var(--accent); font-weight: 600; }
+nav.toc { margin: 20px 0 4px; font-size: 14px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+nav.toc a { color: var(--fg2); text-decoration: none; border-bottom: 1px solid var(--rule); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--fg); border-bottom-color: var(--accent); outline: none; }
+.tscroll { overflow-x: auto; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td:first-child { white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+th.n { text-align: right; }
+tr.hi td { color: var(--fg); background: rgba(217, 163, 92, 0.08); }
+.bad { color: var(--bad); }
+.good { color: var(--s3); }
+.warn { color: var(--s4); }
+figure { margin: 18px 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 14px 10px; }
+figcaption { color: var(--fg2); font-size: 14px; margin-top: 8px; }
+figcaption b { color: var(--fg); font-weight: 500; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.chart text.ev { fill: var(--fg2); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--fg2); margin: 0 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 18px; height: 2px; display: inline-block; border-radius: 1px; }
+.legend .grp { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+.tip { position: absolute; pointer-events: none; background: #1f1f1d; border: 1px solid var(--rule); border-radius: 4px;
+  padding: 6px 9px; font-family: var(--font-mono); font-size: 12px; color: var(--fg); white-space: nowrap; z-index: 2; }
+.tip .k { color: var(--muted); }
+.tip i { display: inline-block; width: 10px; height: 2px; margin-right: 6px; vertical-align: middle; }
+footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+@media (max-width: 560px) { h1 { font-size: 27px; } h2 { font-size: 21px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">T650 aerial manipulator · whole-body 4-D L1 · raw mocap · 2026-10-31 · updated 2026-11-01</div>
+  <h1>1031 Valve-Turning Flights</h1>
+  <p class="sub">Three flights in the afternoon, one in the evening after the fixes. None grasped the handle. Section 6 records every problem and what has been fixed since.</p>
+</header>
+
+<div class="verdict">
+  <p><strong>Afternoon:</strong> the wrist roll (joint 4) swung ±40° from the start of Ready, so the jaws never closed. Joint 4 had no damping left in the arm controller. Two defects, both fixed before the evening.</p>
+  <p><strong>Evening:</strong> the fixes worked and the wrist held. The failure moved to the base. With the claw held in the room, the base drifted 22 cm sideways in 1.5 s and the arm took all of it, until the elbow straightened and folded through q3 = 0. No guard was armed during the Ready descent; the operator aborted, and the vehicle reverted to SAFETY at 25° of tilt and landed.</p>
+  <p><strong>Why the base ran:</strong> not an external force. The roll loop was already three times worse than in the afternoon by the end of Go To Start, and in the room hold, with the arm still, a roll torque the law does not model appeared (0.125 N·m in the observer). Its source is not identified: the evening flew two changes at once. The fold itself is structural: a claw held in the room at a near-straight arm has 2–3 cm of reach to spare.</p>
+  <p><strong>Fixed since (1 Nov):</strong> before the grasp the planner now watches the base, not only the claw. Ready waits for the base to settle. A 40 mm drift in the room hold hands the claw back to the vehicle. A 60 mm drift on the descent aborts. The arm and sway guards are armed from the room hold. In Isaac every run with the shipped limits completed without a false trip, and each protection acted cleanly when forced. Replayed on the evening data, they act 0.3 s before the elbow straightens. But the flight node takes 1.0 s to hand the claw back, so that hand-back must get faster before the next flight. Not flown, not committed.</p>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <div class="eyebrow">Contents</div>
+  <ol>
+    <li><a href="#s1">1 The four flights</a></li>
+    <li><a href="#s2">2 Afternoon: the wrist had no damping</a></li>
+    <li><a href="#s3">3 Evening: the wrist held, the base ran</a></li>
+    <li><a href="#s4">4 Why the base ran</a></li>
+    <li><a href="#s5">5 One problem, four routes</a></li>
+    <li><a href="#s6">6 Problems and fixes</a></li>
+  </ol>
+</nav>
+
+<h2 id="s1"><span class="n">1</span>The four flights</h2>
+<p>All four flew the same task geometry: the room hold at the point above the handle with the arm at [0, 5, 25, 0]°, the base 0.16 m in front of and 0.33 m beside the valve axis. Only the build changed between the rounds.</p>
+<div class="tscroll"><table>
+<tr><th>Flight</th><th>Build</th><th>Task</th><th>What happened</th><th>Ended by</th></tr>
+<tr><td class="num">17:49</td><td><code>fa8fc9f</code> / <code>d4d062f</code></td><td>static hold</td><td>q4 swung −40 … +57° from Ready; the jaws never closed</td><td>operator Abort</td></tr>
+<tr><td class="num">17:57</td><td><code>fa8fc9f</code> / <code>d4d062f</code></td><td>static hold</td><td>q4 ±41°; jaws closed by hand at 33.1 s, on nothing</td><td>operator Abort</td></tr>
+<tr><td class="num">18:04</td><td><code>fa8fc9f</code> / <code>d4d062f</code></td><td>30° turn</td><td>q4 −25 … +47°; the jaws never closed</td><td>operator Abort</td></tr>
+<tr class="hi"><td class="num">21:18</td><td><code>2787578</code> / <code>dd28bce</code></td><td>30° turn</td><td>wrist held; base ran 22 cm sideways; q3 through 0 in the Ready descent</td><td>operator Abort, watchdog, SAFETY at 25°</td></tr>
+</table></div>
+<p>Builds are fsc_autopilot_ros2 / fsc_open_manipulator. The evening build carries the afternoon's fixes (section 2).</p>
+
+<h2 id="s2"><span class="n">2</span>Afternoon: the wrist had no damping</h2>
+<p>In the pass-through the arm controller cancels the motor's own back-EMF damping (1.28 N·m·s/rad on joint 4) on purpose. Two things are meant to remain: the controller's error damping (d = 0.05, i.e. 0.064 N·m·s/rad) and the law's soft EE-heading task. Two defects removed the first.</p>
+<ul>
+  <li><b>The current trim integrated the error damping away.</b> The damping is delivered as a deliberate current. Joint 4's 0.2 Hz current trim read it as an error and cancelled it: 80–95 % on the flight data, 93 % on the mock-hardware loopback of the real controller.</li>
+  <li><b>The mission's damping raise went to the wrong controller.</b> The Valve tab raises joints 1 and 4 to d = 0.2, but it sent the raise to the station's <code>controller</code> parameter, which the hardware station declares as <code>position_controller</code>. All three flights logged "not reachable".</li>
+</ul>
+<p>What tipped it: joint 4 breaks free at about 0.045 N·m and the law's hover noise already reaches 0.03–0.04. The room hold's start moved the heading target 5–10° within 0.5 s, and once sliding nothing damped the wrist.</p>
+<p>The evening build fixed both (the trim's target now includes the damping current; the raise goes to <code>push_pull_valve_arm_controller</code>) and added a <b>grip schedule</b>: stiff heading (K<sub>ψ</sub>/D<sub>ψ</sub> 2.5/0.93 plus the joint-4 stuck hold) while the jaws are open, the valve's soft 0.2484/0.2903 once they close, with the heading-radius term counted from the grasp. These were checked on the arm loopback and the ground-station harness. Neither has an airframe in it.</p>
+
+<h2 id="s3"><span class="n">3</span>Evening: the wrist held, the base ran</h2>
+<p>Every fix did what it was built to do:</p>
+<ul>
+  <li>The arm logged the raise, <code>j1..j4 error damping [0.20 0.00 0.00 0.20]</code>, and the damping duty tracks the joint speed at 0.22 / 0.26 N·m·s/rad on joints 1 / 4. The trim no longer removes it.</li>
+  <li>The grip schedule ran: interaction set at DIRECT entry (the jaws were closed from the landing), free-flight set once Go To Start opened them, heading-radius term off before the grasp.</li>
+  <li>The wrist did not swing. q4 followed q1, and the heading error stayed within 2.6° until the arm buckled.</li>
+</ul>
+
+<figure>
+  <div class="chart" id="fig1"></div>
+  <figcaption><b>Figure 1. The evening flight, 21:18.</b> Top: the base's offset from where it stood when the room hold engaged, in the nose frame of that moment. Middle: the four arm joints. Bottom: the law's attitude error in roll and pitch. Hover for values. After the watchdog (26.0 s) the emergency abort flew the vehicle 1.3 m away before SAFETY; that part is cut off here.</figcaption>
+</figure>
+
+<div class="tscroll"><table>
+<tr><th class="n">t [s]</th><th>Event</th></tr>
+<tr><td class="n">22.17</td><td>Go To Start done, claw 17 mm off. The claw is now held in the room (1 s blend); the free-axis anchor latches.</td></tr>
+<tr><td class="n">22.5–23.4</td><td>The base drifts right and back: 54 mm sideways in the 1.2 s hold (afternoon 8–24 mm). The arm has not moved yet (joints within 0.2° until 22.9). Attitude error to 162 mrad. Then q1 −0.4 → −7.4°, q4 0 → +11°.</td></tr>
+<tr><td class="n">23.41</td><td>Ready starts automatically: a 3 s base descent, the arm reference fixed at [0, 5, 25, 0]°. The CoM is already 68 mm off its reference and moving at 116 mm/s.</td></tr>
+<tr class="hi"><td class="n">23.5–23.9</td><td>The base keeps going, 13 cm right and 8 cm back. The arm takes it: q1 → −20°, q4 → +26°, q2 7 → 45°, q3 27 → 0 at 23.64 → −33°. That is the straight elbow, then the elbow-singular branch.</td></tr>
+<tr><td class="n">23.84</td><td>Joint 3 at the 3 N·m clamp; joints are at the clamp for 41 % of the Ready ticks. 23.91: the rotor allocator trades 2.2 N of thrust, once.</td></tr>
+<tr><td class="n">24.37</td><td>Abort by the operator, 0.96 s into Ready. No guard had fired.</td></tr>
+<tr><td class="n">24.4–26.0</td><td>Joints 2 and 3 swing between their ±3 N·m clamps, q1 on its −35° stop. Tilt grows.</td></tr>
+<tr><td class="n">26.00</td><td>Watchdog at 15.1°: emergency abort (the planner's abort is already running). 26.42: jaws released, claw back on the CoM anchor.</td></tr>
+<tr><td class="n">27.24</td><td>25.3° past the hard limit: SAFETY, 1.3 m from the hold. The arm is released to its own hold 10 ms later and folds home. Landed in STAB.</td></tr>
+</table></div>
+
+<h3>Why no guard fired</h3>
+<p>The planner's q3 guards (static and rate) and its sway guard engage only when the claw is at the handle or the turn is flying. Ready, the descent onto the handle, is neither. Its 10° tilt guard is armed, but the tilt passed 10° only after the operator's abort.</p>
+<p>Replayed with the flown values from the start of Ready, the q3 rate guard would have fired at 23.56 s, 0.82 s before the operator, but with q3 already at +4.8° and falling at 58°/s. The static and sway guards would have fired 0.2 s later, at q3 −16 to −19°. None of the three would have tripped in the afternoon Ready phases. So the guards would catch this fold at the singularity, not before it.</p>
+<p>Changed after this flight: the guards are now armed from the room hold, and the base itself is checked before and during Ready (section 6).</p>
+
+<h2 id="s4"><span class="n">4</span>Why the base ran</h2>
+
+<h3>Not an external force</h3>
+<p>The force on the base that the law did not command, computed from the mocap motion (mass times acceleration minus the commanded thrust and gravity), is flat through the onset: within ±0.1 N of the −1.5 N sideways bias it carried all flight. PX4's attitude estimate against the mocap is steady at the onset. The hold geometry is the same as the afternoon's to the millimetre. The sideways acceleration came from the law's own thrust direction: the vehicle sat about 1° rolled the wrong way for 1.5 s.</p>
+
+<h3>The roll loop was already worse before the room hold</h3>
+<p>Roll attitude error, standard deviation over the last 3 s of Go To Start: <span class="num">39 mrad</span> this evening against 6–15 mrad in the three afternoon flights. In the evening's own hover before Go To Start (jaws closed, soft heading) it was 12 mrad, like the afternoon. So the evening differs from Go To Start on. That is the phase in which both new things were active: the stiff pre-grasp heading from 8.7 s and the damping raise from 9.95 s. The valve also stood in another part of the room.</p>
+
+<h3>A roll torque appeared with the arm still</h3>
+<p>From the room hold (22.17 s) to 22.9 s the joints moved less than 0.2°. The arm's error damping acts only on joint speed, so it was zero. Yet the base drifted 54 mm sideways in that 1.2 s hold. Over the same time the observer's estimate of the roll disturbance rose 0.125 N·m (afternoon: at most 0.05) and the attitude error reached 162 mrad. A roll torque the law does not model appeared, and the observer learns it slowly. At 23.4 s the law wanted −6° of roll and the vehicle sat at +1°.</p>
+
+<h3>The room hold turned the run into arm motion</h3>
+<p>With the claw and its heading held in the room, every base motion becomes arm motion: sideways into q1, yaw into q4, and the quarter of the along-nose motion the free axis does not absorb into q2 and q3. At the turn pose the elbow is 2–3 cm from straight. An 11 cm sideways run adds √(0.224² + 0.11²) − 0.224 = 2.6 cm of reach, and the 8 cm backward run about 2 cm more. That puts q3 through 0 at 23.64 s, as measured.</p>
+
+<figure>
+  <div class="chart" id="fig2"></div>
+  <figcaption><b>Figure 2. The four flights from the moment the room hold engaged.</b> Top: the base's sideways offset. Bottom: q3, the elbow; at 0 the arm is straight. The three afternoon flights swung about the hold point and kept q3 above 9.8°. The evening flight ran one way and crossed 0 after 1.5 s. Ready started at +1.24 to +1.33 s in all four.</figcaption>
+</figure>
+
+<p>In the afternoon the undamped wrist swung ±40° instead. It looked worse, but it kept the base decoupled from the arm.</p>
+
+<div class="tscroll"><table>
+<tr><th>Flight</th><th class="n">Roll error std, end of Go To Start</th><th class="n">Sideways p-p, hold</th><th class="n">Sideways p-p, hold + Ready</th><th class="n">Attitude error max</th><th class="n">Joint 1 torque max</th><th class="n">q3 min</th></tr>
+<tr><td class="num">17:49</td><td class="n">15 mrad</td><td class="n">13 mm</td><td class="n">67 mm</td><td class="n">71 mrad</td><td class="n">0.24 N·m</td><td class="n">18.5°</td></tr>
+<tr><td class="num">17:57</td><td class="n">6 mrad</td><td class="n">8 mm</td><td class="n">88 mm</td><td class="n">86 mrad</td><td class="n">0.27 N·m</td><td class="n">13.3°</td></tr>
+<tr><td class="num">18:04</td><td class="n">11 mrad</td><td class="n">24 mm</td><td class="n">114 mm</td><td class="n">103 mrad</td><td class="n">0.28 N·m</td><td class="n">9.8°</td></tr>
+<tr class="hi"><td class="num">21:18</td><td class="n">39 mrad</td><td class="n">54 mm</td><td class="n">170 mm</td><td class="n">349 mrad</td><td class="n">0.57 N·m</td><td class="n bad">−38.1°</td></tr>
+</table></div>
+<p>End of Go To Start = its last 3 s. Hold = from the room hold to Ready (1.2–1.3 s). Hold + Ready runs to the end of Ready (afternoon, 4.3–4.4 s) or the abort (evening, 2.2 s). The evening reached the larger numbers in half the time.</p>
+
+<h3>Ruled out</h3>
+<ul>
+  <li><b>The yaw channel.</b> The law's yaw torque averaged 0.29 of the free budget in Ready, the same as the afternoon (0.28–0.30). The rotor allocator traded thrust once, at 23.91 s, after q3 had crossed 0.</li>
+  <li><b>The arm's error damping as the trigger.</b> It is zero while the arm is still, and the drift began with the arm still. It, and the stiff heading's larger joint-1 torque (0.57 against at most 0.28 N·m), may have fed the growth once the arm moved. The data does not show that.</li>
+</ul>
+
+<h3>Not identified</h3>
+<p>The source of the roll torque. The evening flew the stiff pre-grasp heading and the raised damping at once, in another part of the room, and once. Candidates: the new heading gains acting through the law's arm-reaction compensation while static friction holds the joints (the law cancels a reaction the stuck arm never delivers), flight-to-flight variation (the 17:49 flight's Go To Start reached 30 mrad over its whole length), or the room position.</p>
+
+<h2 id="s5"><span class="n">5</span>One problem, four routes</h2>
+<p>Every hardware valve contact or room hold this week ended with the arm out of its range within 2–8 s, each time by a different route:</p>
+<ul>
+  <li><b>10-28:</b> false tilt-guard trips cut both turns; a growing 0.56–0.6 Hz sideways sway sat underneath.</li>
+  <li><b>10-29:</b> that sway reached the arm's limits and the abort turned it into a crash.</li>
+  <li><b>10-31 afternoon:</b> the undamped wrist swung ±40°, and the jaws never closed.</li>
+  <li><b>10-31 evening:</b> the damped wrist held, and the base ran away.</li>
+</ul>
+<p>The common cause: a claw held in the room at a near-straight arm pose has 2–3 cm of reach to spare, against a hardware base wander of 7–8 cm peak to peak. Fixing one channel moved the failure to the next. The afternoon's fixes were checked without an airframe in the loop.</p>
+
+<h2 id="s6"><span class="n">6</span>Problems and fixes</h2>
+<p>Updated 1 November. The afternoon's problems were fixed before the evening flight, and that flight showed the fixes working. The evening's problems got planner fixes the same night. Those are checked in Isaac, not flown, and not yet committed.</p>
+
+<h3>Every problem and its status</h3>
+<div class="tscroll"><table>
+<tr><th>#</th><th>Problem</th><th>Cause</th><th>Fix</th><th>Checked by</th><th>Status</th></tr>
+<tr><td class="num">1</td><td>The wrist roll (q4) swung ±40° from the start of Ready; the jaws never closed (afternoon)</td><td>Joint 4's 0.2 Hz current trim cancelled the arm controller's error damping (80–95 % in flight, 93 % on the loopback)</td><td>The trim's target now includes the damping current</td><td>Arm loopback; evening flight: the damping duty tracks joint speed</td><td class="good">Fixed, flown</td></tr>
+<tr><td class="num">2</td><td>The Valve tab's damping raise (d = 0.2 on joints 1 and 4) never reached the arm (afternoon)</td><td>Sent to the station's <code>controller</code> parameter, which on hardware names the position controller</td><td>Own parameter <code>push_pull_valve_arm_controller</code></td><td>Ground-station harness; evening flight: the arm logged <code>[0.20 0.00 0.00 0.20]</code></td><td class="good">Fixed, flown</td></tr>
+<tr><td class="num">3</td><td>The heading target moved 5–10° in 0.5 s as the room hold began, with the jaws still open (afternoon)</td><td>The heading-radius term and the valve's soft heading acted before the grasp</td><td>Grip schedule: stiff heading (2.5 / 0.93) and the joint-4 stuck hold while the jaws are open; the soft set and the heading-radius term from the grasp</td><td>Law tests; evening flight: heading error ≤ 2.6°</td><td class="good">Fixed, flown. Also a suspect for row 8</td></tr>
+<tr><td class="num">4</td><td>Ready started with the base 68 mm off its reference and still moving (evening)</td><td>Ready's checks look at the claw, which the room hold keeps still while the base runs</td><td><b>Ready gate on the base:</b> the CoM error ≤ 30 mm and its rate ≤ 60 mm/s for 0.3 s, else "wait for it to settle" (the arm GS retries)</td><td>Planner loopback; Isaac: no false trip, held Ready twice for a 32–34 mm base</td><td class="warn">Fixed, Isaac only</td></tr>
+<tr><td class="num">5</td><td>The base drifted 54 mm in the 1.2 s room hold and the arm took all of it (evening)</td><td>The room hold turns every base motion into arm motion; the turn pose has 2–3 cm of reach to spare</td><td><b>Leash:</b> a CoM error over 40 mm for 0.1 s hands the claw back to the vehicle (no abort); the room hold re-engages once the base settles</td><td>Planner loopback; Isaac, forced at 15 mm: released, re-engaged, mission completed</td><td class="warn">Fixed, Isaac only</td></tr>
+<tr><td class="num">6</td><td>No guard was armed on the Ready descent; the operator aborted 0.96 s in (evening)</td><td>The q3 and sway guards were armed only with the claw at the handle or in the turn</td><td><b>Guards from the room hold:</b> q3 static and rate guards and the sway guard; a new <b>descent guard</b> aborts above 60 mm</td><td>Planner loopback; Isaac, forced: the descent and q3 guards aborted cleanly</td><td class="warn">Fixed, Isaac only</td></tr>
+<tr><td class="num">7</td><td>Handing the claw back to the vehicle takes 1 s</td><td>The flight node ramps every anchor change linearly over <code>wb_ee_anchor_blend_s</code> = 1.0 s</td><td>A short hand-back (0.2–0.3 s) for the leash and the guards: not built</td><td>Replay: 30 % done when q3 reached 0 (figure 3)</td><td class="bad">Open, before the next flight</td></tr>
+<tr><td class="num">8</td><td>A roll torque the law does not model started the run (evening)</td><td>Not identified: the stiff pre-grasp heading and the damping raise flew together, in another part of the room</td><td>One hardware flight with the pre-grasp heading back to soft</td><td>Isaac A/B, stiff vs soft: no difference, but Isaac does not show the hardware signature</td><td class="bad">Open</td></tr>
+<tr><td class="num">9</td><td>The room hold leaves 2–3 cm of reach before the grasp</td><td>Structural, at the turn pose [0, 5, 25, 0]°</td><td>A CoM-anchored descent with a re-aim at the live handle, or the room hold only from the grasp: not changed</td><td>–</td><td class="bad">Open</td></tr>
+<tr><td class="num">10</td><td>Lower priority: the law does not model the arm's error damping; the loose front-left arm holds a 0.18–0.24 N·m standing yaw torque (28–37 % of the free budget)</td><td>–</td><td>Not changed</td><td>–</td><td class="bad">Open</td></tr>
+</table></div>
+<p>Rows 1–3: fsc_open_manipulator <code>dd28bce</code> and fsc_autopilot_ros2 <code>2787578</code>, pushed 31 October. Rows 4–6: fsc_trajectory_planner, every new parameter off by default and on only in the two valve yamls (simulation and hardware), so box pushing and pick-and-place are unchanged.</p>
+
+<h3>The new protections, replayed on the evening flight</h3>
+<figure>
+  <div class="chart" id="fig3"></div>
+  <figcaption><b>Figure 3. The 21:18 data through the new checks, with the valve yamls' values.</b> Top: the law's horizontal CoM error and its rate, with each check's limit. Third: q3. Bottom: how much of the claw the flight node has handed back to the vehicle after the leash acts. The replay is of the flown data: after the first check acts, the real flight would have gone differently. Hover for values.</figcaption>
+</figure>
+<ul>
+  <li><b>23.15 s:</b> the base leaves the gate's 30 mm. From here Ready is refused.</li>
+  <li><b>23.33 s:</b> the leash acts (the CoM error 56 mm), 1.16 s into the hold, with q3 at 14.2°. The claw starts back to the vehicle.</li>
+  <li><b>23.41 s:</b> the flown Ready. The gate refuses it twice over: the room hold is released, and the base is 68 mm off and moving at 116 mm/s. The descent never starts, so the descent guard does not come into play.</li>
+  <li><b>23.56 s:</b> the q3 rate guard, now armed from the room hold, aborts at q3 +4.8°. Nothing trips it earlier.</li>
+  <li><b>23.63 s:</b> q3 reaches 0 in the flown run.</li>
+</ul>
+<p>The weak point is the hand-back. The node ramps the claw's anchor over 1.0 s, so when q3 reached 0 the ramp was 30 % done and most of the drift still went into the arm. A 0.25 s ramp would have finished just before q3 reached 0. That is the next change (row 7). A faster ramp moves the EE reference by up to the drift within it, so it needs its own Isaac test before it flies.</p>
+
+<h3>The Isaac check</h3>
+<p>15 headless runs on the shipped valve setup: the v2 valve at 0.072 N·m, raw mocap, and the arm GS flying Ready, Turn and Exit by itself as on hardware. "Drift" is Isaac's hardware-like force-noise model (0.32 N at 0.12 Hz, seeds 2–4). Isaac does not reproduce a 22 cm one-way run. So these runs show that the protections stay out of the way and that each acts cleanly when forced, not that they are fast enough for the 21:18 run.</p>
+<div class="tscroll"><table>
+<tr><th>Run</th><th>Drift</th><th>Pre-grasp heading</th><th>Outcome</th><th class="n">Ready after the hold [s]</th><th class="n">CoM error at Ready [mm]</th><th class="n">Roll error, end of Go To Start [mrad]</th><th class="n">q3 min, before grasp / turn [°]</th><th class="n">Turn [°]</th><th class="n">Max tilt [°]</th></tr>
+<tr><td>rh_nom1</td><td>none</td><td>stiff</td><td>complete</td><td class="n">1.05</td><td class="n">11</td><td class="n">12</td><td class="n">22.1 / 16.4</td><td class="n">86</td><td class="n">4.5</td></tr>
+<tr><td>rh_nom2</td><td>none</td><td>stiff</td><td>complete</td><td class="n">1.10</td><td class="n">4</td><td class="n">12</td><td class="n">23.3 / 17.4</td><td class="n">87</td><td class="n">4.4</td></tr>
+<tr><td>rh_s2</td><td>seed&nbsp;2</td><td>stiff</td><td>complete</td><td class="n">1.05</td><td class="n">2</td><td class="n">16</td><td class="n">19.2 / 12.4</td><td class="n">91</td><td class="n">4.0</td></tr>
+<tr><td>rh_s3</td><td>seed&nbsp;3</td><td>stiff</td><td>complete</td><td class="n">1.05</td><td class="n">3</td><td class="n">13</td><td class="n">20.7 / 13.7</td><td class="n">93</td><td class="n">4.3</td></tr>
+<tr><td>rh_s4</td><td>seed&nbsp;4</td><td>stiff</td><td>complete</td><td class="n">1.05</td><td class="n">13</td><td class="n">38</td><td class="n">22.0 / 3.0</td><td class="n">90</td><td class="n">5.9</td></tr>
+<tr class="hi"><td>rh_s4b</td><td>seed&nbsp;4</td><td>stiff</td><td>complete</td><td class="n">1.55</td><td class="n">25</td><td class="n">15</td><td class="n">19.7 / 14.7</td><td class="n">85</td><td class="n">4.8</td></tr>
+<tr><td>rh_s4c</td><td>seed&nbsp;4</td><td>stiff</td><td>complete</td><td class="n">1.05</td><td class="n">18</td><td class="n">19</td><td class="n">22.0 / 16.7</td><td class="n">88</td><td class="n">4.5</td></tr>
+<tr><td>rh_soft_s2</td><td>seed&nbsp;2</td><td>soft</td><td>complete</td><td class="n">1.05</td><td class="n">1</td><td class="n">16</td><td class="n">19.2 / 10.5</td><td class="n">85</td><td class="n">3.8</td></tr>
+<tr><td>rh_soft_s3</td><td>seed&nbsp;3</td><td>soft</td><td>complete</td><td class="n">1.05</td><td class="n">13</td><td class="n">16</td><td class="n">21.0 / 15.1</td><td class="n">83</td><td class="n">4.6</td></tr>
+<tr><td>rh_soft_s4</td><td>seed&nbsp;4</td><td>soft</td><td>complete</td><td class="n">1.05</td><td class="n">18</td><td class="n">16</td><td class="n">21.9 / 7.0</td><td class="n">90</td><td class="n">4.5</td></tr>
+<tr class="hi"><td>rh_soft_s4b</td><td>seed&nbsp;4</td><td>soft</td><td>complete</td><td class="n">1.55</td><td class="n">7</td><td class="n">17</td><td class="n">20.8 / 11.8</td><td class="n">90</td><td class="n">3.0</td></tr>
+</table></div>
+<ul>
+  <li><b>All 11 completed, no false trip.</b> Ready came 1.05–1.10 s after the room hold as before, except in the two highlighted runs. There the gate held it until the base was back under 30 mm (1.55 s). Seed 4, which aborted on the q3 rate guard in the 30 October baseline, completed all 5 runs.</li>
+  <li><b>The turn's q3 margin is still thin.</b> rh_s4 reached 3.0° in the turn, at the static guard's floor, without tripping. That margin comes from the turn pose, not from these changes.</li>
+  <li><b>Stiff or soft pre-grasp heading makes no difference to the roll in Isaac:</b> 13–19 mrad stiff, 16–17 soft. The one exception, rh_s4's 38 mrad, was Isaac's own 1.33 Hz attitude mode, and two repeats did not show it. The 21:18 flight's 39 mrad was a slow 0.33 Hz wander, a different thing. So Isaac cannot answer row 8; the hardware flight still has to.</li>
+</ul>
+<div class="tscroll"><table>
+<tr><th>Run</th><th>Forced limit</th><th>What happened</th></tr>
+<tr><td>rh_leash</td><td>leash 15 mm, Ready gate 10 mm, seed 2</td><td>The base was 31 mm off at the end of Go To Start, so the room hold released at once. It re-engaged 2.3 s later when the base settled, and Ready followed 1.25 s after that (the blend, then the gate). Completed: turn 82°, max tilt 5.1°.</td></tr>
+<tr><td>rh_dguard</td><td>descent guard 10 mm, no drift</td><td>Armed, did not trip: the descent stayed above 10 mm for at most 0.08 s, and the guard needs 0.2 s. Completed.</td></tr>
+<tr><td>rh_dguard5</td><td>descent guard 5 mm, no drift</td><td>Aborted 0.19 s into the descent. The room hold was dropped, the vehicle climbed 0.3 m, the valve was untouched, max tilt 2.2°.</td></tr>
+<tr><td>rh_q3</td><td>q3 floor 26°, no drift (the turn pose has 25°)</td><td>Tripped in the room hold 0.22 s after it engaged, at q3 24.9°. The vehicle climbed, the arm folded home and the plan was kept. Max tilt 2.0°.</td></tr>
+</table></div>
+
+<h3>Before the next flight</h3>
+<ol>
+  <li><b>Build and test the fast hand-back</b> (row 7) in the flight node, then check it in Isaac.</li>
+  <li><b>Commit and push the planner, the valve yamls and the hardware stack script.</b> Then on the Orin, rebuild <code>fsc_trajectory_planner</code> and pull <code>fsc_autopilot_ros2</code>. The raw-mocap hardware stack refuses a planner built without the new parameters.</li>
+  <li><b>Fly the evening build with one change</b> (row 8): <code>wb_ky_psi_before_grip</code> / <code>wb_dy_psi_before_grip</code> = 0.2484 / 0.2903, the damping raise kept. Compare the roll error at the end of Go To Start (39 mrad at 21:18, 6–15 in the afternoon) and the observer's roll estimate in the hold.</li>
+</ol>
+
+<footer>
+  <p>Bags: <code>docs/experimental_data_ros2_bag/1031 - T650-AM Mail-Box &amp; Valve-Turning-*/flight_wb_l1_4d_valve_turning_{hold_20261031_174943, hold_20261031_175725, 30deg_20261031_180423, 30deg_20261031_211808}</code>. Times are seconds from the start of each bag (receive time).</p>
+  <p>Analysis and tools: <code>docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261031/</code> (README sections 1–8; <code>trace2.py</code>, <code>trace3.py</code>, <code>residuals.py</code>, <code>room_hold_compare.py</code>, <code>window_ab.py</code>, <code>guard_replay.py</code>). This page is built by <code>tools/build_report.py</code> from <code>tools/report_template.html</code> and <code>report_data.json</code>; figure 3's replay is in <code>tools/report_data.py</code>.</p>
+  <p>Fixes after the evening flight and the Isaac runs: <code>docs/docs_aerial_manipulator/archive/valve_room_hold_guards_20261031/</code> (README; <code>tools/score_runs.py</code> gives the run table).</p>
+</footer>
+</div>
+
+<script>
+const D = /*DATA*/null;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function niceTicks(lo, hi, n) {
+  const raw = (hi - lo) / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw);
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+function extent(arrs, refs) {
+  let lo = Infinity, hi = -Infinity;
+  for (const a of arrs) for (const v of a) if (v !== null) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  for (const r of refs || []) { lo = Math.min(lo, r.y); hi = Math.max(hi, r.y); }
+  const pad = (hi - lo) * 0.06 || 1; return [lo - pad, hi + pad];
+}
+
+/* spec: { t:[...], panels:[{h, unit, series:[{name,color,w,data}], refs:[{y,label}], legend}], events:[{t,label}], xlab } */
+function drawChart(el, spec) {
+  const W = 1000, ML = 62, MR = 18, MT = 36, GAP = 40, MB = 38;
+  const H = MT + spec.panels.reduce((s, p) => s + p.h, 0) + GAP * (spec.panels.length - 1) + MB;
+  const t = spec.t, t0 = t[0], t1 = t[t.length - 1];
+  const X = v => ML + (v - t0) / (t1 - t0) * (W - ML - MR);
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">`;
+  let y0 = MT; const geo = [];
+  spec.panels.forEach((p, i) => {
+    const [lo, hi] = p.range || extent(p.series.map(q => q.data), p.refs);
+    const Y = v => y0 + p.h - (v - lo) / (hi - lo) * p.h;
+    geo.push({ y0, h: p.h, Y });
+    for (const v of niceTicks(lo, hi, 4)) {
+      s += `<line x1="${ML}" x2="${W - MR}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css('--rule')}" stroke-width="1"/>`;
+      s += `<text x="${ML - 8}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`;
+    }
+    s += `<text x="${ML}" y="${y0 - 8}" style="fill:${css('--fg2')}">${p.unit}</text>`;
+    for (const r of p.refs || []) {
+      s += `<line x1="${ML}" x2="${W - MR}" y1="${Y(r.y)}" y2="${Y(r.y)}" stroke="${css('--fg2')}" stroke-width="1" stroke-dasharray="5 4"/>`;
+      const lx = r.pos === "left" ? ML + 4 : W - MR - 4, ly = r.pos === "below" ? Y(r.y) + 13 : Y(r.y) - 5;
+      s += `<text x="${lx}" y="${ly}" text-anchor="${r.pos === "left" ? "start" : "end"}" style="fill:${css('--fg2')}">${r.label}</text>`;
+    }
+    for (const q of p.series) {
+      let d = "", pen = false;
+      q.data.forEach((v, k) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${X(t[k]).toFixed(1)},${Y(v).toFixed(1)}`; pen = true; });
+      s += `<path d="${d}" fill="none" stroke="${q.color}" stroke-width="${q.w || 2}" stroke-linejoin="round" stroke-linecap="round"${q.dash ? ` stroke-dasharray="${q.dash}"` : ""}/>`;
+    }
+    y0 += p.h + GAP;
+  });
+  const yb = y0 - GAP;
+  (spec.events || []).forEach((e, i) => {
+    const x = X(e.t), row = i % 2;
+    s += `<line x1="${x}" x2="${x}" y1="${MT - 4}" y2="${yb}" stroke="${css('--muted')}" stroke-width="1" stroke-dasharray="2 3"/>`;
+    s += `<text class="ev" x="${x + 3}" y="${12 + row * 13}">${e.label}</text>`;
+  });
+  for (const v of niceTicks(t0, t1, 8)) s += `<text x="${X(v)}" y="${yb + 18}" text-anchor="middle">${v}</text>`;
+  s += `<text x="${W - MR}" y="${yb + 34}" text-anchor="end">${spec.xlab}</text>`;
+  s += `<line id="xh" x1="0" x2="0" y1="${MT - 4}" y2="${yb}" stroke="${css('--fg2')}" stroke-width="1" visibility="hidden"/>`;
+  s += `<rect id="hit" x="${ML}" y="${MT - 4}" width="${W - ML - MR}" height="${yb - MT + 4}" fill="transparent"/>`;
+  s += `</svg>`;
+
+  let leg = "";
+  spec.panels.forEach(p => {
+    if ((p.legend || p.series).length === 0) return;
+    leg += `<div class="legend"><span class="grp">${p.legendTitle}</span>` +
+      (p.legend || p.series).map(q => `<span><i style="background:${q.dash ? `repeating-linear-gradient(90deg,${q.color} 0 5px,transparent 5px 8px)` : q.color}${q.w && q.w < 1.6 ? ';height:1px' : ''}"></i>${q.name}</span>`).join("") + `</div>`;
+  });
+  el.innerHTML = leg + s + `<div class="tip" hidden></div>`;
+  const svg = el.querySelector("svg"), xh = svg.querySelector("#xh"), tip = el.querySelector(".tip");
+  function move(ev) {
+    const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
+    const tv = t0 + (sx - ML) / (W - ML - MR) * (t1 - t0);
+    if (tv < t0 || tv > t1) return hide();
+    const k = Math.max(0, Math.min(t.length - 1, Math.round((tv - t0) / (t1 - t0) * (t.length - 1))));
+    xh.setAttribute("x1", X(t[k])); xh.setAttribute("x2", X(t[k])); xh.setAttribute("visibility", "visible");
+    let h = `<div><span class="k">${spec.tlab}</span> ${t[k].toFixed(2)}</div>`;
+    spec.panels.forEach(p => p.series.forEach(q => {
+      if (q.tip === false) return;
+      const v = q.data[k]; h += `<div><i style="background:${q.color}"></i>${q.name} <span class="k">${v === null ? "–" : v + " " + p.u}</span></div>`;
+    }));
+    tip.innerHTML = h; tip.hidden = false;
+    const er = el.getBoundingClientRect(), px = ev.clientX - er.left, py = ev.clientY - er.top;
+    const tw = tip.offsetWidth;
+    tip.style.left = (px + 14 + tw > er.width ? px - tw - 14 : px + 14) + "px";
+    tip.style.top = Math.max(0, py - tip.offsetHeight / 2) + "px";
+  }
+  function hide() { tip.hidden = true; xh.setAttribute("visibility", "hidden"); }
+  svg.addEventListener("pointermove", move);
+  svg.addEventListener("pointerleave", hide);
+}
+
+if (D) {
+  const f = D.fig1, e = f.events, cut = f.t.findIndex(v => v > 26.4);
+  const T = a => a.slice(0, cut);
+  drawChart(document.getElementById("fig1"), {
+    t: T(f.t), xlab: "time in the bag [s]", tlab: "t [s]",
+    events: [{ t: e.hold, label: "room hold" }, { t: e.ready, label: "Ready" }, { t: e.q3zero, label: "q3 = 0" },
+             { t: e.abort, label: "Abort" }, { t: e.watchdog, label: "watchdog" }],
+    panels: [
+      { h: 170, unit: "base offset [mm]", u: "mm", legendTitle: "base",
+        series: [{ name: "sideways (left +)", color: css('--s1'), data: T(f.lat) },
+                 { name: "along the nose (forward +)", color: css('--s2'), data: T(f.along) }], refs: [] },
+      { h: 200, unit: "joint angle [deg]", u: "°", legendTitle: "arm",
+        series: [{ name: "q1", color: css('--s1'), data: T(f.q1) }, { name: "q2", color: css('--s2'), data: T(f.q2) },
+                 { name: "q3 (elbow)", color: css('--s3'), w: 2.6, data: T(f.q3) }, { name: "q4 (wrist roll)", color: css('--s4'), data: T(f.q4) }],
+        refs: [{ y: 0, label: "q3 = 0: straight elbow" }] },
+      { h: 140, unit: "law attitude error [deg]", u: "°", legendTitle: "law",
+        series: [{ name: "roll", color: css('--s1'), data: T(f.eRr) }, { name: "pitch", color: css('--s2'), data: T(f.eRp) }],
+        refs: [{ y: 0, label: "" }] },
+    ],
+  });
+
+  const g = D.fig2, ev = g.flights.find(x => x.evening), aft = g.flights.filter(x => !x.evening);
+  const ctx = css('--ctx'), hot = css('--s2');
+  const ser = key => g.flights.map(x => ({ name: x.label, color: x.evening ? hot : ctx, w: x.evening ? 2.4 : 1.3, data: x[key] }));
+  const leg = [{ name: "afternoon, 3 flights", color: ctx, w: 1.3 }, { name: "evening, 21:18", color: hot }];
+  drawChart(document.getElementById("fig2"), {
+    t: g.t, xlab: "time from the room hold [s]", tlab: "from hold [s]",
+    events: [{ t: ev.ready, label: "Ready" }, { t: ev.abort, label: "evening Abort" }],
+    panels: [
+      { h: 170, unit: "base sideways offset [mm, left +]", u: "mm", legendTitle: "flights", series: ser("lat"), legend: leg, refs: [] },
+      { h: 170, unit: "q3, elbow [deg]", u: "°", legendTitle: "", series: ser("q3"), legend: [],
+        refs: [{ y: 0, label: "straight elbow" }] },
+    ],
+  });
+
+  const h = D.fig3, he = h.events;
+  drawChart(document.getElementById("fig3"), {
+    t: h.t, xlab: "time in the bag [s]", tlab: "t [s]",
+    events: [{ t: he.hold, label: "room hold" }, { t: he.gate, label: "gate shut" }, { t: he.leash, label: "leash" },
+             { t: he.ready, label: "flown Ready" }, { t: he.rate, label: "q3 guard" }, { t: he.q3zero, label: "q3 = 0" }],
+    panels: [
+      { h: 180, unit: "CoM error [mm]", u: "mm", legendTitle: "base",
+        series: [{ name: "CoM error", color: css('--s1'), data: h.e }],
+        legend: [{ name: "CoM error", color: css('--s1') }, { name: "its rate", color: css('--s2') }],
+        refs: [{ y: 30, label: "Ready gate 30", pos: "below" }, { y: 40, label: "leash 40" }, { y: 60, label: "descent guard 60", pos: "left" }] },
+      { h: 130, unit: "its rate [mm/s]", u: "mm/s", legendTitle: "",
+        series: [{ name: "rate", color: css('--s2'), data: h.v }], legend: [],
+        refs: [{ y: 60, label: "Ready gate 60" }, { y: 150, label: "sway guard 150" }] },
+      { h: 130, unit: "q3, elbow [deg]", u: "°", legendTitle: "arm",
+        series: [{ name: "q3", color: css('--s3'), w: 2.4, data: h.q3 }], refs: [{ y: 0, label: "straight elbow" }] },
+      { h: 120, unit: "claw handed back to the vehicle [%]", u: "%", legendTitle: "hand-back", range: [-6, 106],
+        series: [{ name: "1.0 s ramp (flight node now)", color: css('--s4'), data: h.hb10 },
+                 { name: "0.25 s ramp (proposed, not built)", color: css('--fg2'), w: 1.6, dash: "6 4", data: h.hb025 }],
+        refs: [] },
+    ],
+  });
+}
+</script>

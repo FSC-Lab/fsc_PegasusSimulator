@@ -898,7 +898,7 @@ def main():
                          "fsc_autopilot_ros2/coordinated_admittance_direct_actuation for the Liu et al. rig")
     ap.add_argument("--dbg-topic", default="wb_control_debug",
                     help="the debug array under --da (coordinated_control_debug on the Liu et al. rig)")
-    ap.add_argument("--dbg-len", type=int, default=120)
+    ap.add_argument("--dbg-len", type=int, default=131)   # 2026-11-01: [126..130] the two sets + the fast hand-back
     ap.add_argument("--ref-topic", default=REF_TOPIC,
                     help="the planner's WholeBodyReference stream, relative to the namespace (2026-10-24: the arbitrary-time rig streams it on its own namespace)")
     ap.add_argument("--rate", type=float, default=50.0)

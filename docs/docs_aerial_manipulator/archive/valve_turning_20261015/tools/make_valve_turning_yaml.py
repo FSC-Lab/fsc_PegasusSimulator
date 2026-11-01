@@ -351,6 +351,26 @@ PLANNER_BLOCK = f"""
     push_pull_guard_sway_speed: 0.15
     push_pull_guard_sway_filter_s: 0.25
     push_pull_guard_sway_persist_s: 0.20
+    # THE PRE-GRASP ROOM HOLD (2026-10-31, archive/valve_room_hold_guards_20261031 after the 10-31
+    # evening hardware flight): with the claw room-held above the handle the base drifted 54 mm in
+    # the 1.2 s hold, Ready started 67 mm off at 116 mm/s, and the arm absorbed it until q3 went
+    # through 0 on the descent -- no guard was armed before the claw reached the handle.
+    #   ready gate: Ready waits until the law's horizontal CoM error < 30 mm and its rate < 60 mm/s
+    #     for 0.3 s (at Ready: 197 Isaac runs <= 25 mm / 51 mm/s, hardware 14-35 mm / 6-59 mm/s).
+    #   leash: in the hold, a CoM error > 40 mm hands the claw back to the CoM anchor (no abort);
+    #     the room hold re-engages once the base settles, Ready then waits 1.0 s for the blend
+    #     (holds: Isaac <= 31 mm, hardware 20-48 mm).
+    #   descent guard: a CoM error > 60 mm on the room-held Ready descent aborts, letting go of the
+    #     room hold (descents: Isaac <= 37 mm, hardware 28-74 mm, the 10-31 evening 189 mm).
+    #   the q3 guards and the sway guard armed from the room hold on (replayed: the 10-31 evening
+    #     trips 0.8 s before the operator; no earlier pre-grasp phase trips).
+    push_pull_ready_max_com_err: 0.030
+    push_pull_ready_max_com_speed: 0.060
+    push_pull_ready_com_settle_s: 0.3
+    push_pull_room_hold_leash: 0.040
+    push_pull_room_hold_reengage_s: 1.0
+    push_pull_guard_ready_com_err: 0.060
+    push_pull_guard_arm_before_handle: true
     # THE ROTOR SAMPLE GATE (the box push's, 2026-10-21): an obj_0 sample farther than 20 mm /
     # 10 deg from the last good one (the allowance growing with the gap) is dropped before Get
     # and the guards read it; Get refuses a window with any dropped sample. The turn's own yaw
@@ -435,7 +455,8 @@ OVERRIDES = {
 FREE_FLIGHT = {}
 with open(pp.SRC) as _f:
     _mirror = _f.read()
-for _k in ("wb_ky_psi", "wb_dy_psi", "wb_l1_stuck_hold_j4"):
+for _k in ("wb_ky_psi", "wb_dy_psi", "wb_l1_stuck_hold_j4", "wb_ky_x", "wb_ky_y", "wb_ky_z",
+           "wb_dy_x", "wb_dy_y", "wb_dy_z", "wb_l1_omega_c_t"):
     _m = re.findall(rf"^    {_k}: ([^\s#]+)", _mirror, flags=re.M)
     if len(_m) != 1:
         raise SystemExit(f"{_k}: found {len(_m)} times in the mirror (need exactly 1)")
@@ -492,6 +513,31 @@ ADDITIONS = {
     "wb_ky_psi_before_grip": ("wb_grip_blend_s", FREE_FLIGHT["wb_ky_psi"]),
     "wb_dy_psi_before_grip": ("wb_ky_psi_before_grip", FREE_FLIGHT["wb_dy_psi"]),
     "wb_stuck_hold_j4_before_grip": ("wb_dy_psi_before_grip", FREE_FLIGHT["wb_l1_stuck_hold_j4"]),
+    # TWO PARAMETER SETS (2026-11-01, user: "two sets of parameters for the free-flight and the
+    # interaction phases"; Pegasus archive/two_param_sets_20261101): the same jaw event also
+    # switches the EE impedance (the mirror's 211.9 / 26.82 in free flight -> the valve's
+    # 120 / 20.2 OVERRIDES above in contact) and the translational observer bandwidth (the
+    # mirror's 2.927 -> the valve's 2.0). The free-flight values are READ from the mirror, so
+    # the two cannot drift. The interaction set stays in force after the jaws open while the
+    # claw is still room-held on the fin (the exit's 0.06 m climb), so the open jaws around
+    # the fin never get a gain step.
+    "wb_ky_x_before_grip": ("wb_stuck_hold_j4_before_grip", FREE_FLIGHT["wb_ky_x"]),
+    "wb_ky_y_before_grip": ("wb_ky_x_before_grip", FREE_FLIGHT["wb_ky_y"]),
+    "wb_ky_z_before_grip": ("wb_ky_y_before_grip", FREE_FLIGHT["wb_ky_z"]),
+    "wb_dy_x_before_grip": ("wb_ky_z_before_grip", FREE_FLIGHT["wb_dy_x"]),
+    "wb_dy_y_before_grip": ("wb_dy_x_before_grip", FREE_FLIGHT["wb_dy_y"]),
+    "wb_dy_z_before_grip": ("wb_dy_y_before_grip", FREE_FLIGHT["wb_dy_z"]),
+    "wb_grip_hold_set_while_free_axis": ("wb_dy_z_before_grip", "true"),
+    # ... and at least 3 s past the OPEN edge (the exit's world-held 0.06 m climb ends ~1-2 s after
+    # the open; the Isaac box run tsB_s5 tipped its box with the set blending back during the climb)
+    "wb_grip_release_delay_s": ("wb_grip_hold_set_while_free_axis", "3.0"),
+    "wb_l1_omega_c_t_before_grip": ("wb_l1_omega_c_t", FREE_FLIGHT["wb_l1_omega_c_t"]),
+    # THE FAST ANCHOR HAND-BACK (2026-11-01, archive/valve_room_hold_guards_20261031 section 6):
+    # the planner's leash and guard aborts hand the claw to the vehicle through the node's
+    # set_ee_anchor_com_fast, blended over this instead of wb_ee_anchor_blend_s (1.0 s --
+    # a third of the 10-31 evening's run would still have reached the arm). The EE
+    # reference moves by at most the base's drift in 0.25 s.
+    "wb_ee_anchor_fast_blend_s": ("wb_ee_anchor_blend_s", "0.25"),
     "wb_l1_contact_hold_translation": ("wb_l1_collision_threshold_n", "false"),
     "wb_attitude_from_odometry": ("wb_dls_lambda", "false"),
     "wb_attitude_odometry_correction_rad_s": ("wb_attitude_from_odometry", "0.0"),

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Extract the three 2026-10-31 valve-turning bags into ../npz (numpy-1 readable), with the 10-29 extractor.
+# Extract the 2026-10-31 valve-turning bags (afternoon: hold_174943 hold_175725 30deg_180423; evening: 30deg_211808) into ../npz (numpy-1 readable), with the 10-29 extractor.
 set +u
 HERE="$(cd "$(dirname "$0")" && pwd)"
-BAGS="$HERE/../../../../experimental_data_ros2_bag/1030 - T650-AM Mail-Box & Valve-Turning-20261031T222846Z-1-001/1030 - T650-AM Mail-Box & Valve-Turning"
+BAGS="$HERE/../../../../experimental_data_ros2_bag/1031 - T650-AM Mail-Box & Valve-Turning-20261031T222846Z-1-001"
 source /opt/ros/humble/setup.bash; source ~/ros2_ws/install/setup.bash
 X="$HERE/../../wb_valve_turning_flight_20261029/tools/extract.py"
 C="$HERE/../../wb_pick_place_flight_20261009/tools/np1_compat.py"

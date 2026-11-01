@@ -1,0 +1,45 @@
+11:59:46 waiting for the sim-yaml loopback
+12:01:06 sim-yaml loopback: EXIT 0
+-- stack dry run valve_turning
+exit 0
+119
+  OK   all 96 tuned values present -- this IS the validated tune (the valve-turning tune (10-18) + the box push's guards and free-axis anchor (10-22) + the 10-27 room-held descent, valve-placed keep-outs and hardware margins).
+-- stack dry run box_pushing
+exit 0
+105
+  OK   all 82 tuned values present -- this IS the validated tune (the box-pushing tune (10-09 push tune + 10-16 pose and guards + 10-19 hardware margins + 10-21 free-axis anchor + 10-22 free axis from the room hold)).
+12:01:09 loopback on the HARDWARE box yaml
+12:08:45 hw-yaml loopback: EXIT 0
+12:08:45 VALVE CHAIN
+12:08:55 start ts_nom1 noise=none 
+[ts_nom1] completed
+12:12:28 start ts_s2 noise=0.32,0.12,2 
+[ts_s2] completed
+12:15:55 start ts_s3 noise=0.32,0.12,3 
+[ts_s3] completed
+12:19:27 start ts_s4 noise=0.32,0.12,4 
+[ts_s4] completed
+12:22:55 start ts_leash noise=0.32,0.12,2 push_pull_room_hold_leash=0.015 push_pull_ready_max_com_err=0.010
+  push_pull_room_hold_leash -> 0.015
+  push_pull_ready_max_com_err -> 0.010
+[ts_leash] ABORTED: timeout (25 s): the GS's automatic Ready To Push  [mode=DIRECT plan=HOLD push_pull=DONE go_to_start next=ready (the gripper opens first) -- c
+12:26:29 start ts_q3 noise=none push_pull_guard_q3_min_deg=26.0
+  push_pull_guard_q3_min_deg -> 26.0
+[ts_q3] ABORTED: push-and-pull ABORTED while the GS's automatic Ready To Push: ABORTING (SAFETY GUARD: q3 25.7 deg < 26.0 deg (the arm buckling toward its elb
+12:29:33 start ts_nom2 noise=none 
+[ts_nom2] completed
+12:33:04 start ts_s4b noise=0.32,0.12,4 
+[ts_s4b] completed
+12:36:31 start ts_one_s2 noise=0.32,0.12,2 wb_ky_x_before_grip=0.0 wb_ky_y_before_grip=0.0 wb_ky_z_before_grip=0.0 wb_dy_x_before_grip=0.0 wb_dy_y_before_grip=0.0 wb_dy_z_before_grip=0.0 wb_l1_omega_c_t_before_grip=0.0 wb_grip_hold_set_while_free_axis=false
+  wb_ky_x_before_grip : 211.9 -> 0.0
+  wb_ky_y_before_grip : 211.9 -> 0.0
+  wb_ky_z_before_grip : 211.9 -> 0.0
+  wb_dy_x_before_grip : 26.82 -> 0.0
+  wb_dy_y_before_grip : 26.82 -> 0.0
+  wb_dy_z_before_grip : 26.82 -> 0.0
+  wb_l1_omega_c_t_before_grip : 2.927 -> 0.0
+  wb_grip_hold_set_while_free_axis : true -> false
+[ts_one_s2] completed
+12:40:01 CHAIN DONE
+12:40:01 BOX QUEUE
+13:16:39 ALL DONE

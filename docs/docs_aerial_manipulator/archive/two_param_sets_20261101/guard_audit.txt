@@ -1,0 +1,254 @@
+
+### valve_turning_flight_20261028 / 180652  [valve]  -- turn cut by a FALSE 2 deg rotor-tilt trip (+7.7 s)
+  phases (s from the room hold): gts -14.44 s, hold +0.00 s, ready +1.75 s, ready_end +4.77 s, push +5.51 s, abort +14.68 s, safety +44.84 s
+  recorded abort: +14.68 s  ABORTING (SAFETY GUARD: box tilted 2.7 deg > 2.0 deg (tipping, not sliding)) -- gripper open, contact off, cli
+  at the Ready press: CoM err 20 mm (gate 30), rate 6 mm/s (gate 60) -> accepted
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 3 deg / 0.20 s (from the room hold)
+            -     q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+  FIRES +11.68 s  sway: CoM-error rate > 0.15 m/s / 0.20 s
+            -     leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+            -     descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     rotor tilt > 4 deg / 0.20 s vs the grasp
+  -> first replayed trip +11.68 s (sway: CoM-error rate > 0.15 m/s / 0.20 s); recorded abort +14.68 s: the guard is 3.00 s EARLIER
+
+### valve_turning_flight_20261028 / 181833  [valve]  -- turn cut by a FALSE 2 deg rotor-tilt trip (+2.1 s)
+  phases (s from the room hold): gts -14.71 s, hold +0.00 s, ready +1.65 s, ready_end +4.68 s, push +5.40 s, abort +9.02 s, safety +40.48 s
+  recorded abort: +9.02 s  ABORTING (SAFETY GUARD: box tilted 2.5 deg > 2.0 deg (tipping, not sliding)) -- gripper open, contact off, cli
+  at the Ready press: CoM err 23 mm (gate 30), rate 59 mm/s (gate 60) -> accepted
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 3 deg / 0.20 s (from the room hold)
+            -     q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+            -     sway: CoM-error rate > 0.15 m/s / 0.20 s
+   FIRES +0.30 s  leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+            -     descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+   FIRES +7.10 s  rotor tilt > 4 deg / 0.20 s vs the grasp
+  -> first replayed trip +0.30 s (leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)); recorded abort +9.02 s: the guard is 8.72 s EARLIER
+
+### valve_turning_flight_20261029 / 145526  [valve]  -- contact sway -> arm limits -> q3 rate guard -> watchdog, crash
+  phases (s from the room hold): gts -15.06 s, hold +0.00 s, ready +1.64 s, ready_end +4.67 s, push +6.55 s, abort +13.41 s, safety +14.01 s
+  recorded abort: +13.41 s  ABORTING (SAFETY GUARD: q3 6.2 deg falling at 93.1 deg/s -> -3.1 deg in 0.10 s (q2 19.5 deg) < 3.0 deg (the ar
+  at the Ready press: CoM err 26 mm (gate 30), rate 39 mm/s (gate 60) -> accepted
+            -     planner tilt 10 deg / 0.1 s
+  FIRES +14.01 s  node soft tilt 15 deg (-> emergency abort)
+  FIRES +14.09 s  node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 3 deg / 0.20 s (from the room hold)
+  FIRES +13.40 s  q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+  FIRES +10.41 s  sway: CoM-error rate > 0.15 m/s / 0.20 s
+            -     leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+            -     descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     rotor tilt > 4 deg / 0.20 s vs the grasp
+  -> first replayed trip +10.41 s (sway: CoM-error rate > 0.15 m/s / 0.20 s); recorded abort +13.41 s: the guard is 3.00 s EARLIER
+
+### valve_turning_flight_20261031 / 174943  [valve]  -- static hold attempt, wrist swing, no grasp
+  phases (s from the room hold): gts -15.50 s, hold +0.00 s, ready +1.33 s, ready_end +4.36 s, abort +24.29 s, safety +68.66 s
+  recorded abort: +24.29 s  ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  at the Ready press: CoM err 17 mm (gate 30), rate 37 mm/s (gate 60) -> accepted
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 3 deg / 0.20 s (from the room hold)
+            -     q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+            -     sway: CoM-error rate > 0.15 m/s / 0.20 s
+            -     leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+            -     descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     rotor tilt > 4 deg / 0.20 s vs the grasp
+  -> no replayed guard fires
+
+### valve_turning_flight_20261031 / 175725  [valve]  -- static hold attempt, wrist swing, no grasp
+  phases (s from the room hold): gts -15.86 s, hold +0.00 s, ready +1.29 s, ready_end +4.32 s, abort +13.28 s, safety +49.17 s
+  recorded abort: +13.28 s  ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  at the Ready press: CoM err 14 mm (gate 30), rate 55 mm/s (gate 60) -> accepted
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 3 deg / 0.20 s (from the room hold)
+            -     q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+            -     sway: CoM-error rate > 0.15 m/s / 0.20 s
+            -     leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+            -     descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     rotor tilt > 4 deg / 0.20 s vs the grasp
+  -> no replayed guard fires
+
+### valve_turning_flight_20261031 / 180423  [valve]  -- 30 deg turn attempt, wrist swing, no grasp
+  phases (s from the room hold): gts -15.46 s, hold +0.00 s, ready +1.31 s, ready_end +4.33 s, abort +6.93 s, safety +40.82 s
+  recorded abort: +6.93 s  ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  at the Ready press: CoM err 35 mm (gate 30), rate 50 mm/s (gate 60) -> REFUSED
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 3 deg / 0.20 s (from the room hold)
+            -     q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+            -     sway: CoM-error rate > 0.15 m/s / 0.20 s
+            -     leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+   FIRES +3.95 s  descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     rotor tilt > 4 deg / 0.20 s vs the grasp
+  -> first replayed trip +3.95 s (descent guard: CoM err > 60 mm / 0.20 s on the Ready descent); recorded abort +6.93 s: the guard is 2.98 s EARLIER
+
+### valve_turning_flight_20261031 / 211808  [valve]  -- base ran away in the room hold, q3 through 0, operator abort, SAFETY
+  phases (s from the room hold): gts -14.86 s, hold +0.00 s, ready +1.24 s, abort +2.20 s, safety +5.07 s
+  recorded abort: +2.20 s  ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+  at the Ready press: CoM err 68 mm (gate 30), rate 116 mm/s (gate 60) -> REFUSED
+   FIRES +3.80 s  planner tilt 10 deg / 0.1 s
+   FIRES +3.83 s  node soft tilt 15 deg (-> emergency abort)
+   FIRES +5.07 s  node hard tilt 25 deg (-> SAFETY)
+   FIRES +1.62 s  q3 static < 3 deg / 0.20 s (from the room hold)
+   FIRES +1.39 s  q3 rate: pred(0.1 s) < 3 deg, falling > 30 deg/s, q2 wall 45
+   FIRES +1.60 s  sway: CoM-error rate > 0.15 m/s / 0.20 s
+   FIRES +1.16 s  leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)
+   FIRES +1.44 s  descent guard: CoM err > 60 mm / 0.20 s on the Ready descent
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+  -> first replayed trip +1.16 s (leash: CoM err > 40 mm / 0.1 s in the hold (claw back to the vehicle, no abort)); recorded abort +2.20 s: the guard is 1.04 s EARLIER
+
+### box_pushing_flight_20261021 / 170123  [box]  -- pushed 0.10 m; q3 rate guard in the release
+  phases (s from the room hold): gts -14.45 s, hold +0.00 s, ready +1.99 s, ready_end +5.18 s, push +8.23 s, push_end +14.52 s, abort +15.30 s, safety +62.28 s
+  recorded abort: +15.30 s  ABORTING (SAFETY GUARD: q3 5.0 deg < 10.0 deg (the arm buckling toward its elbow-singular branch)) -- gripper 
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+  FIRES +15.20 s  q3 static < 10 deg / 0.20 s (on the handle)
+   FIRES +6.80 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +6.80 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +15.30 s: the guard is 8.50 s EARLIER
+
+### box_pushing_flight_20261023 / 172853  [box]  -- q3 rate guard at the grasp (a stretch onto q2's wall)
+  phases (s from the room hold): gts -24.86 s, hold +0.00 s, ready +1.67 s, ready_end +4.86 s, abort +8.70 s, safety +71.34 s
+  recorded abort: +8.70 s  ABORTING (SAFETY GUARD: q3 18.0 deg falling at 67.0 deg/s -> 4.6 deg in 0.20 s < 10.0 deg (the arm folding tow
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+            -     q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> no replayed guard fires
+
+### box_pushing_flight_20261024 / 150423  [box]  -- #1 pushed ~70 mm, box-tilt guard abort
+  phases (s from the room hold): gts -25.06 s, hold +0.00 s, ready +1.74 s, ready_end +4.93 s, push +7.06 s, abort +9.82 s, safety +61.47 s
+  recorded abort: +9.82 s  ABORTING (SAFETY GUARD: box tilted 6.3 deg > 2.0 deg (tipping, not sliding)) -- gripper open, contact off, cli
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+            -     q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+   FIRES +9.81 s  box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +9.81 s (box tilt > 2 deg / 0.20 s vs the grasp); recorded abort +9.82 s: the guard is 0.01 s EARLIER
+
+### box_pushing_flight_20261024 / 151159  [box]  -- #2 missed the fin, q3 rate guard
+  phases (s from the room hold): gts -24.48 s, hold +0.00 s, ready +2.77 s, ready_end +5.96 s, abort +7.20 s, safety +62.97 s
+  recorded abort: +7.20 s  ABORTING (SAFETY GUARD: q3 15.3 deg falling at 47.0 deg/s -> 6.0 deg in 0.20 s (0.1 deg of the fall stopped by
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+   FIRES +7.18 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+   FIRES +6.26 s  box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +6.26 s (box tilt > 2 deg / 0.20 s vs the grasp); recorded abort +7.20 s: the guard is 0.94 s EARLIER
+
+### box_pushing_flight_20261024 / 151634  [box]  -- #3 box blown off the table in Go To Start
+  phases (s from the room hold): gts -24.61 s, hold +0.00 s, ready +1.64 s, abort +3.20 s
+  recorded abort: +3.20 s  ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+            -     q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+  -> no replayed guard fires
+
+### box_pushing_flight_20261024 / 162850  [box]  -- A: pushed, q3 rate guard in the release
+  phases (s from the room hold): gts -24.99 s, hold +0.00 s, ready +2.23 s, ready_end +5.43 s, push +7.20 s, push_end +15.87 s, abort +16.58 s, safety +67.45 s
+  recorded abort: +16.58 s  ABORTING (SAFETY GUARD: q3 17.0 deg falling at 66.7 deg/s -> 5.4 deg in 0.20 s (1.8 deg of the fall stopped by
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+  FIRES +16.58 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +16.58 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +16.58 s: the guard is 0.01 s EARLIER
+
+### box_pushing_flight_20261024 / 163413  [box]  -- B: q3 rate guard at the grasp
+  phases (s from the room hold): gts -25.47 s, hold +0.00 s, ready +1.63 s, ready_end +4.82 s, abort +5.92 s, safety +65.18 s
+  recorded abort: +5.92 s  ABORTING (SAFETY GUARD: q3 18.3 deg falling at 60.8 deg/s -> 7.3 deg in 0.20 s (1.2 deg of the fall stopped by
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+   FIRES +5.91 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +5.91 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +5.92 s: the guard is 0.00 s EARLIER
+
+### box_pushing_flight_20261024 / 164419  [box]  -- C: q3 rate guard at the grasp
+  phases (s from the room hold): gts -25.56 s, hold +0.00 s, ready +1.63 s, ready_end +4.82 s, abort +5.39 s, safety +58.16 s
+  recorded abort: +5.39 s  ABORTING (SAFETY GUARD: q3 16.9 deg falling at 38.7 deg/s -> 9.1 deg in 0.20 s (q2 37.5 deg) < 10.0 deg (the a
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+   FIRES +5.38 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +5.38 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +5.39 s: the guard is 0.01 s EARLIER
+
+### box_pushing_flight_20261024_evening / 194310  [box]  -- 280 g: box reached its plan, box-tilt guard 4 s before the end
+  phases (s from the room hold): gts -25.13 s, hold +0.00 s, ready +1.67 s, ready_end +4.86 s, push +5.93 s, abort +27.25 s, safety +75.17 s
+  recorded abort: +27.25 s  ABORTING (SAFETY GUARD: box tilted 2.9 deg > 2.0 deg (tipping, not sliding)) -- gripper open, contact off, cli
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+            -     q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+  FIRES +27.24 s  box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +27.24 s (box tilt > 2 deg / 0.20 s vs the grasp); recorded abort +27.25 s: the guard is 0.01 s EARLIER
+
+### box_pushing_flight_20261024_evening / 195657  [box]  -- 510 g: q3 rate guard at the grasp, q3 < 0, watchdog, SAFETY
+  phases (s from the room hold): gts -24.87 s, hold +0.00 s, ready +3.94 s, ready_end +7.14 s, abort +10.43 s, safety +11.81 s
+  recorded abort: +10.43 s  ABORTING (SAFETY GUARD: q3 16.2 deg falling at 45.0 deg/s -> 8.4 deg in 0.20 s (1.3 deg of the fall stopped by
+  FIRES +11.66 s  planner tilt 10 deg / 0.1 s
+  FIRES +11.80 s  node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+  FIRES +10.42 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +10.42 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +10.43 s: the guard is 0.01 s EARLIER
+
+### box_pushing_flight_20261027 / 171114  [box]  -- A: push complete, q3 rate guard after the release (jaws open)
+  phases (s from the room hold): gts -25.64 s, hold +0.00 s, ready +1.69 s, ready_end +4.89 s, push +5.94 s, push_end +26.52 s, abort +30.26 s, safety +74.84 s
+  recorded abort: +30.26 s  ABORTING (SAFETY GUARD: q3 13.0 deg falling at 100.9 deg/s -> 6.3 deg in 0.20 s (13.5 deg of the fall stopped 
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+  FIRES +30.25 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +30.25 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +30.26 s: the guard is 0.00 s EARLIER
+
+### box_pushing_flight_20261027 / 172227  [box]  -- B: q3 static guard 1.5 s before the push end
+  phases (s from the room hold): gts -25.09 s, hold +0.00 s, ready +1.68 s, ready_end +4.87 s, push +5.98 s, abort +24.99 s, safety +70.09 s
+  recorded abort: +24.99 s  ABORTING (SAFETY GUARD: q3 10.5 deg falling at 21.2 deg/s -> 6.3 deg in 0.20 s (q2 44.8 deg) < 10.0 deg (the a
+            -     planner tilt 10 deg / 0.1 s
+            -     node soft tilt 15 deg (-> emergency abort)
+            -     node hard tilt 25 deg (-> SAFETY)
+            -     q3 static < 10 deg / 0.20 s (on the handle)
+  FIRES +24.98 s  q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45
+            -     force: |F_hat| LP3 > 5 N / 0.3 s on the handle
+            -     box tilt > 2 deg / 0.20 s vs the grasp
+  -> first replayed trip +24.98 s (q3 rate: pred(0.2 s) < 10 deg, falling > 5 deg/s, q2 wall 45); recorded abort +24.99 s: the guard is 0.01 s EARLIER

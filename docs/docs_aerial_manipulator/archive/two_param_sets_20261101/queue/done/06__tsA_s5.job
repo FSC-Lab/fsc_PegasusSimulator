@@ -1,0 +1,2 @@
+ENV="MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto"
+ARGS="push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5 wb_ky_x_before_grip=0.0 wb_ky_y_before_grip=0.0 wb_ky_z_before_grip=0.0 wb_dy_x_before_grip=0.0 wb_dy_y_before_grip=0.0 wb_dy_z_before_grip=0.0 wb_l1_omega_c_t_before_grip=0.0 wb_ky_psi_before_grip=0.0 wb_dy_psi_before_grip=0.0 wb_stuck_hold_j4_before_grip=false wb_grip_hold_set_while_free_axis=false"

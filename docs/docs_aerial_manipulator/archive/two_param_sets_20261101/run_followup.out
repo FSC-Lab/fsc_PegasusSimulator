@@ -1,0 +1,28 @@
+13:00:54 waiting for run_all.sh
+13:17:05 BUILD
+build exit 0
+
+Summary: 2 packages finished [37.0s]
+[  PASSED  ] 18 tests.
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_valve_turning.yaml
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_box_pushing.yaml
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_box_pushing.yaml
+/home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml:1
+/home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_valve_turning.yaml:1
+/home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_box_pushing.yaml:1
+/home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_box_pushing.yaml:1
+13:17:42 node key check (hardware box yaml)
+wb_grip_closed_below                 Double value is: 0.0
+793557063.815305887] [uav_test.fsc_autopilot_ros2]: TWO SETS: FREE FLIGHT K_y 211.9/347.5/211.9 D_y 26.82/43.98/26.82 omega_c_t 2.927 -> INTERACTION K_y 120/196.8/120 D_y 20.2/33.13/20.2 omega_c_t 1; 
+13:18:36 BOX follow-up
+tsB2_nom 
+tsB2_s5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5
+tsB2_s2 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+13:33:06 VALVE follow-up
+13:33:15 start ts2_s2 noise=0.32,0.12,2 
+[ts2_s2] completed
+13:36:48 start ts2_nom noise=none 
+[ts2_nom] completed
+13:40:18 CHAIN2 DONE
+13:40:18 FOLLOW-UP DONE

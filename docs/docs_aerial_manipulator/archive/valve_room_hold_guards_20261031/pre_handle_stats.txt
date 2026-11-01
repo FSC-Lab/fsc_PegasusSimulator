@@ -1,0 +1,288 @@
+run                                                        |            HOLD             |                READY                | at Ready  
+                                                           |  dur  e mm v mm/s q3min |  dur  e mm v mm/s q3min  pred   end |  e mm    v
+isaac valve_bench_friction_20261023/vb_hw_2                |  1.1    34     46    25 |  3.0    30     49    25   -    done |    23   24
+isaac valve_bench_friction_20261023/vb_hw_3                |  1.1    12     38    25 |  3.0    18     47    25   -    done |    10   17
+isaac valve_bench_friction_20261023/vb_hw_4                |  1.1    18     37    25 |  3.0    36     64    25   -    done |    17   30
+isaac valve_bench_friction_20261023/vb_low_hw_3            |  1.1    12     36    25 |  3.0    21     51    25   -    done |    12   20
+isaac valve_bench_friction_20261023/vb_low_nom_1           |  1.1    16     27    25 |  3.0    13     20    25   -    done |    12    6
+isaac valve_bench_friction_20261023/vb_nom_1               |  1.1    15     34    26 |  3.1    18     29    25   -    done |    15   29
+isaac valve_bench_friction_20261023/vb_nom_2               |  1.1    14     14    25 |  3.0     8     14    25   -    done |     7    9
+isaac valve_bench_friction_20261023/vb_nom_3               |  1.1    10     25    25 |  3.0    11     28    25   -    done |     3   12
+isaac valve_roll_fin_sim_20261031/rf_nom_1                 |  1.1    11     27    25 |  3.0    10     28    23   -    done |     3    6
+isaac valve_roll_fin_sim_20261031/rf_nom_2                 |  1.1    16     35    25 |  3.0    13     35    21    21  done |     7   27
+isaac valve_roll_fin_sim_20261031/rf_nom_3                 |  1.1     8     23    25 |  3.0     8     26    22   -    done |     1   10
+isaac valve_roll_fin_sim_20261031/rf_s2                    |  1.1    18     28    26 |  3.0    28     61    20    18  done |     6   21
+isaac valve_roll_fin_sim_20261031/rf_s3                    |  1.1    20     38    25 |  3.0    23     49    21   -    done |     6   36
+isaac valve_roll_fin_sim_20261031/rf_s4                    |  1.1    24     41    25 |  3.0    31     45    20   -    done |    16   24
+isaac valve_roll_fin_sim_20261031/rf_s5                    |  1.1    21     43    24 |  3.0    24     52    22   -    done |    18   23
+isaac valve_roll_fin_sim_20261031/rf_s6                    |  1.1    19     50    21 |  3.0    28     50    21   -    done |    13   13
+isaac valve_roll_fin_sim_20261031/rf_s7                    |  1.1    25     48    21 |  3.0    26     47    21    22  done |    22   19
+isaac valve_roll_fin_sim_20261031/rf_s8                    |  1.1    29     40    21 |  3.0    28     56    20   -    done |    20   17
+isaac valve_roll_fin_sim_20261031/rf_smoke                 |  1.1    14     24    24 |  3.0     8     31    23   -    done |     2   26
+isaac valve_roll_fin_sim_20261031/rl_nom_1                 |  1.1    10     34    25 |  3.0    14     29    23   -    done |     2   12
+isaac valve_roll_fin_sim_20261031/rl_nom_2                 |  1.1    14     24    21 |  3.0    10     27    21   -    done |    10    4
+isaac valve_roll_fin_sim_20261031/rl_nom_3                 |  1.1    13     18    22 |  3.0    10     28    22   -    done |     8   16
+isaac valve_roll_fin_sim_20261031/rl_s2                    |  1.1    30     55    23 |  3.0    24     33    20    18  done |    23   24
+isaac valve_roll_fin_sim_20261031/rl_s3                    |  1.1    17     51    25 |  3.0    19     40    20   -    done |    10   14
+isaac valve_roll_fin_sim_20261031/rl_s4                    |  1.1    30     49    25 |  3.1    32     57    21    21  done |    17   16
+isaac valve_roll_fin_sim_20261031/rl_s5                    |  1.1    23     42    23 |  3.0    30     46    18    18  done |    23   33
+isaac valve_roll_fin_sim_20261031/rl_s6                    |  1.1    17     59    22 |  3.0    31     41    22   -    done |     8   18
+isaac valve_roll_fin_sim_20261031/rl_s7                    |  1.1    24     46    21 |  3.0    29     51    21    21  done |    10   27
+isaac valve_roll_fin_sim_20261031/rl_s8                    |  1.1    31     61    26 |  3.0    34     65    19    18  done |    12   38
+isaac valve_roll_fin_sim_20261031/v2_s2                    |  1.1    19     35    25 |  3.1    26     53    19    18  done |     3   15
+isaac valve_roll_fin_sim_20261031/v2_s3                    |  1.1    14     46    25 |  3.0    23     43    20    21  done |     8   15
+isaac valve_roll_fin_sim_20261031/v2_s5                    |  1.1    18     40    23 |  3.0    22     48    22   -    done |    14   20
+isaac valve_roll_fin_sim_20261031/v2_s6                    |  1.1    30     51    22 |  3.0    18     55    22   -    done |    18   48
+isaac valve_roll_fin_sim_20261031/v2_s7                    |  1.1    26     56    19 |  3.0    25     54    21    20  done |    17   51
+isaac valve_roll_fin_sim_20261031/v2_s8                    |  1.1    22     65    22 |  3.0    32     70    19    16  done |    22   62
+isaac valve_turning_20261015/a_abort20                     |                         |  5.0    15     20    25   -    done |    13    5
+isaac valve_turning_20261015/a_abort20_f0                  |                         |  5.1    13     32    25   -    done |    11   18
+isaac valve_turning_20261015/a_abort33                     |                         |  5.0    14     28    25   -    done |    12   12
+isaac valve_turning_20261015/b_f005_1                      |                         |  5.1    13     18    25   -    done |    12    1
+isaac valve_turning_20261015/b_f005_2                      |                         |  5.0    11     18    25   -    done |     9    8
+isaac valve_turning_20261015/b_f010_1                      |                         |  5.1    13     28    25   -    done |    12    8
+isaac valve_turning_20261015/base_n1                       |                         |  5.1    12     27    19   -    done |    10    7
+isaac valve_turning_20261015/base_stuck                    |                         |  5.1    13     15    20   -    done |    12    7
+isaac valve_turning_20261015/base_visc                     |                         |  5.0    14     35    20   -    done |    12   23
+isaac valve_turning_20261015/c5_abort20                    |                         |  5.1    14     25    25   -    done |    12    3
+isaac valve_turning_20261015/c5_abort33                    |                         |  5.1    16     26    25   -    done |    15   13
+isaac valve_turning_20261015/c5_ship_1                     |                         |  5.1    15     32    25   -    done |    12    4
+isaac valve_turning_20261015/c5_ship_2                     |                         |  5.0    11     26    25   -    done |    11   10
+isaac valve_turning_20261015/c5_ship_f0                    |                         |  5.1    17     32    25   -    done |    12   16
+isaac valve_turning_20261015/c_free                        |                         |  5.0    22     24    20   -    done |    21    5
+isaac valve_turning_20261015/c_hold                        |                         |  5.0    23     33    20   -    done |    20   21
+isaac valve_turning_20261015/c_oct05                       |                         |  5.1    30     21    20   -    done |    29   19
+isaac valve_turning_20261015/c_t48                         |                         |  5.1    18     27    20   -    done |    18   14
+isaac valve_turning_20261015/ca_v1                         |                         | 19.0   485   1129    17   -    done |   237  435
+isaac valve_turning_20261015/ca_v1_r2                      |                         | 19.0   441   1108    19   -    done |   205  582
+isaac valve_turning_20261015/ca_v2                         |                         | 19.0   507   1349    19   -    done |   310  312
+isaac valve_turning_20261015/ca_v2_r2                      |                         | 19.0   507   1366    18   -    done |   239  137
+isaac valve_turning_20261015/d_kv20                        |                         |  3.0    69    146     2    -5 abort |     4  132
+isaac valve_turning_20261015/d_kv20_r2                     |                         |  5.1    26     25    20   -    done |    25   14
+isaac valve_turning_20261015/d_t24                         |                         |  5.1    20     33    20   -    done |    19   14
+isaac valve_turning_20261015/e_oct2                        |                         |  5.1    15     20    20   -    done |    14   10
+isaac valve_turning_20261015/e_oct29                       |                         |  5.0    17     35    20   -    done |    10   13
+isaac valve_turning_20261015/e_oct2_p15                    |                         |  5.1    15     21    25   -    done |    14    5
+isaac valve_turning_20261015/e_oct2_r2                     |                         |  5.1    15     27    20   -    done |    15    3
+isaac valve_turning_20261015/f000                          |                         |  5.1    19     35    20   -    done |    12   13
+isaac valve_turning_20261015/f016                          |                         |  5.0    22     31    20   -    done |    21   10
+isaac valve_turning_20261015/f032                          |                         |  5.0    22     30    20   -    done |    21   10
+isaac valve_turning_20261015/f048_r2                       |                         |  5.1    21     18    20   -    done |    20    6
+isaac valve_turning_20261015/fa_f005_1                     |                         |  5.1    17     24    25   -    done |    16    8
+isaac valve_turning_20261015/fa_f0_1                       |                         |  5.1    13     15    25   -    done |    11   11
+isaac valve_turning_20261015/fa_f0_2                       |                         |  5.1    15     31    25   -    done |    10   17
+isaac valve_turning_20261015/fa_w05_1                      |                         |  5.1    12     19    25   -    done |    11    7
+isaac valve_turning_20261015/fa_w1_1                       |                         |  5.0    13     18    25   -    done |    12   11
+isaac valve_turning_20261015/fa_w1_2                       |                         |  5.1    17     26    25   -    done |    10   18
+isaac valve_turning_20261015/fa_w1_3                       |                         |  5.0    15     29    25   -    done |    14   14
+isaac valve_turning_20261015/fa_w1_oct29_1                 |                         |  5.1    12     15    25   -    done |    10   10
+isaac valve_turning_20261015/fa_w1_oct29_2                 |                         |  5.0    12     18    25   -    done |     9   11
+isaac valve_turning_20261015/final_ca_r1_a1                | 17.9   482   1278    24 |  6.5   431   1345    24   -    done |   177  526
+isaac valve_turning_20261015/final_ca_r1_a2                | 17.9   481   1386    24 |  6.5   507   1301    24   -    done |   209  229
+isaac valve_turning_20261015/final_ca_r1_a3                | 17.9   440   1188    24 |  6.5   518   1321    23   -    done |   248   65
+isaac valve_turning_20261015/final_ca_r2_a1                | 17.9   479   1209    24 |  6.5   502   1171    23   -    done |   175  222
+isaac valve_turning_20261015/final_ca_r2_a2                | 17.9   571   1506    24 |  6.5   485   1192    24   -    done |   182  405
+isaac valve_turning_20261015/final_ca_r2_a3                | 17.9   444   1256    24 |  6.5   507   1279    24   -    done |   221  327
+isaac valve_turning_20261015/final_ca_r3_a1                | 17.9   438   1283    24 |  6.5   449   1129    24   -    done |   277   76
+isaac valve_turning_20261015/final_ca_r3_a2                | 17.9   455   1326    24 |  6.5   501   1451    23   -    done |   241  169
+isaac valve_turning_20261015/final_ca_r3_a3                | 17.9   473   1099    24 |  6.5   500   1288    24   -    done |   329  453
+isaac valve_turning_20261015/final_wb_r1_a1                |  2.9    12     19    25 |  5.6     7     17    25   -    done |     2    5
+isaac valve_turning_20261015/final_wb_r2_a1                |  2.9    15     33    25 |  5.6    12     29    25   -    done |     6    3
+isaac valve_turning_20261015/final_wb_r3_a1                |  3.0    15     31    25 |  5.6    12     25    25   -    done |    12    6
+isaac valve_turning_20261015/g_oct29_h                     |                         |  5.0    13     22    20   -    done |    12   11
+isaac valve_turning_20261015/g_oct29_h_r2                  |                         |  5.1    17     38    20   -    done |    10    4
+isaac valve_turning_20261015/g_oct29_h_r3                  |                         |  5.1    10     15    20   -    done |     9    4
+isaac valve_turning_20261015/g_oct2_h                      |                         |  5.1    15     42    20   -    done |     9   11
+isaac valve_turning_20261015/h_oct29_r2                    |                         |  5.1     8     16    20   -    done |     5    6
+isaac valve_turning_20261015/h_oct29_sh                    |                         |  5.0    15     24    20   -    done |    13   15
+isaac valve_turning_20261015/h_oct29_sh_r2                 |                         |  5.1    17     35    20   -    done |    11   20
+isaac valve_turning_20261015/h_oct2_r3                     |                         |  5.1    10     15    20   -    done |     9    3
+isaac valve_turning_20261015/i_old_b1                      |  2.9    13     18    20 |  5.6     7     17    20   -    done |     6    4
+isaac valve_turning_20261015/i_old_b3                      |  2.9    16     34    20 |  5.5    14     31    20   -    done |     2   22
+isaac valve_turning_20261015/i_old_b3_r2                   |  2.9    13     22    20 |  5.6    11     23    20   -    done |     1   10
+isaac valve_turning_20261015/i_rel_b3                      |  3.0    12     22    20 |  5.6     7     18    20   -    done |     3    7
+isaac valve_turning_20261015/l6_abort20                    |                         |  5.1    13     15    25   -    done |    12    9
+isaac valve_turning_20261015/l6_abort33_1                  |                         |  5.1    15     33    25   -    done |     9   14
+isaac valve_turning_20261015/l6_abort33_2                  |                         |  5.0    13     19    25   -    done |    11   17
+isaac valve_turning_20261015/l6_ship_1                     |                         |  5.0    12     27    25   -    done |    11    7
+isaac valve_turning_20261015/l6_ship_2                     |                         |  5.0    15     27    25   -    done |    15   15
+isaac valve_turning_20261015/l6_ship_f0                    |                         |  5.0    15     18    25   -    done |    14    9
+isaac valve_turning_20261015/ld_base1                      |                         |  5.0    18     32    25   -    done |     9    8
+isaac valve_turning_20261015/ld_base1_relfirst             |                         |  5.1    13     30    24   -    done |     6   13
+isaac valve_turning_20261015/ld_d050                       |                         |  5.1    12     28    25   -    done |    11   12
+isaac valve_turning_20261015/ld_w010r                      |                         |  5.1    17     29    25   -    done |    16    4
+isaac valve_turning_20261015/ld_w020                       |                         |  5.0    13     22    25   -    done |    12    5
+isaac valve_turning_20261015/ld_w020r                      |                         |  5.1    13     33    25   -    done |    12    7
+isaac valve_turning_20261015/ld_w020r_relfirst             |                         |  5.1    11     15    25   -    done |    11    6
+isaac valve_turning_20261015/ld_w040r                      |                         |  5.1     9     20    25   -    done |     9   10
+isaac valve_turning_20261015/p_base_1                      |                         |  5.1    14     18    25   -    done |    10   10
+isaac valve_turning_20261015/p_base_2                      |                         |  5.1    15     30    25   -    done |    10   26
+isaac valve_turning_20261015/p_f000_1                      |                         |  5.1    14     22    25   -    done |    13   14
+isaac valve_turning_20261015/p_f016_1                      |                         |  5.1    16     31    25   -    done |    12   14
+isaac valve_turning_20261015/p_fused_1                     |                         |  5.1    19     41    25   -    done |    14   14
+isaac valve_turning_20261015/p_fused_2                     |                         |  5.0    19     51    24   -    done |    15   11
+isaac valve_turning_20261015/p_fused_3                     |                         |  5.1    19     35    25   -    done |    16   34
+isaac valve_turning_20261015/p_oct29_1                     |                         |  5.0    14     19    25   -    done |     9    4
+isaac valve_turning_20261015/p_oct29_2                     |                         |  5.1    10     17    25   -    done |     3    6
+isaac valve_turning_20261015/p_oct29_3                     |                         |  5.1    18     41    25   -    done |    12    3
+isaac valve_turning_20261015/p_t48_1                       |                         |  5.1    17     31    25   -    done |    14   13
+isaac valve_turning_20261015/p_t48_2                       |                         |  5.1    12     18    25   -    done |     8   11
+isaac valve_turning_20261015/p_t48_3                       |                         |  5.0    17     35    25   -    done |     8   27
+isaac valve_turning_20261015/pf_n1                         |                         |  5.1    14     16    20   -    done |    13    5
+isaac valve_turning_20261015/pf_n2                         |                         |  5.0    13     14    20   -    done |    13    6
+isaac valve_turning_20261015/pf_n3                         |                         |  5.1     9     14    20   -    done |     8    6
+isaac valve_turning_20261015/pf_n4                         |                         |  5.1    14     28    20   -    done |    13    5
+isaac valve_turning_20261015/pf_stuck                      |                         |  5.0    14     27    20   -    done |    14   10
+isaac valve_turning_20261015/pf_visc                       |                         |  5.0    13     16    20   -    done |    12    7
+isaac valve_turning_20261015/pf_win1                       |                         |  5.1    27     40    20   -    done |    27   17
+isaac valve_turning_20261015/pf_win2                       |                         |  5.1    20     33    21   -    done |    13   19
+isaac valve_turning_20261015/pose525_1                     |                         |  5.0    13     20    25   -    done |    10    8
+isaac valve_turning_20261015/pose525_2                     |                         |  5.1    15     17    25   -    done |    14    7
+isaac valve_turning_20261015/pose525_3                     |                         |  5.0    12     14    25   -    done |    11    9
+isaac valve_turning_20261015/results_r1_a1                 | 17.9   479   1316    19 |  6.5   461   1462    18   -    done |   372  516
+isaac valve_turning_20261015/results_r1_a2                 |  2.9    13     33    20 |  5.6    16     31    20   -    done |     6   20
+isaac valve_turning_20261015/results_r1_a3                 |  2.9    10     26    21 |  5.6    14     38    20   -    done |     2   13
+isaac valve_turning_20261015/results_r2_a1                 | 17.9   490   1327    19 |  6.5   450   1154    20   -    done |   191  204
+isaac valve_turning_20261015/results_r2_a2                 | 17.9   506   1361    20 |  6.5   478   1315    18   -    done |   298  197
+isaac valve_turning_20261015/results_r2_a3                 | 17.9   444   1330    19 |  6.5   466   1115    18   -    done |   186  306
+isaac valve_turning_20261015/results_r3_a1                 | 18.0   496   1188    19 |  6.5   465   1261    19   -    done |   300  331
+isaac valve_turning_20261015/results_r3_a2                 | 17.9   498   1292    19 |  6.5   447    978    17   -    done |   174  312
+isaac valve_turning_20261015/results_r3_a3                 | 17.9   485   1305    19 |  6.5   432   1098    18   -    done |   293  193
+isaac valve_turning_20261015/s2_abort20                    |                         |  5.1    12     19    25   -    done |     8   13
+isaac valve_turning_20261015/s2_abort20_f0                 |                         |  5.0    14     21    25   -    done |    12    7
+isaac valve_turning_20261015/s2_abort33                    |                         |  5.1    12     24    25   -    done |    10    9
+isaac valve_turning_20261015/s2_abort8                     |                         |  5.0    15     20    25   -    done |    14    9
+isaac valve_turning_20261015/s_abort20                     |                         |  5.1    10     19    25   -    done |     6    9
+isaac valve_turning_20261015/s_abort33                     |                         |  5.1    16     43    25   -    done |    13    5
+isaac valve_turning_20261015/v1                            |                         |  5.0    19     29    30   -    done |    19    1
+isaac valve_turning_20261015/v2                            |                         |  5.1    17     19    30   -    done |    17    7
+isaac valve_turning_20261015/v3                            |                         |  5.1    18     18    20   -    done |    18   10
+isaac valve_turning_20261015/v4                            |                         |  5.0    25     27    20   -    done |    24   18
+isaac valve_turning_20261015/v5                            |                         |  5.0    20     18    20   -    done |    17    4
+isaac valve_turning_20261015/v6                            |                         |  5.1    19     28    20   -    done |    14   11
+isaac valve_turning_20261015/v7_gs_check                   |                         |  5.0    25     38    20   -    done |    18   10
+isaac valve_turning_20261015/win_adapt2                    |                         |  5.1    16     32    24   -    done |    16    8
+isaac valve_turning_20261015/win_gc1                       |                         |  5.0    17     35    25   -    done |    12   13
+isaac valve_turning_20261015/win_prof1                     |                         |  5.1    16     30    25   -    done |    14   10
+isaac valve_turning_20261015/yw_fa0_k2_f048                |  2.9    15     30    25 |  5.6     9     18    25   -    done |     6   10
+isaac valve_turning_20261015/yw_fa0_k2_f200                |  2.9    13     26    25 |  5.6    15     37    25   -    done |     3    9
+isaac valve_turning_20261015/yw_fa0_k2_f250                |  2.9    14     17    25 |  5.6    11     24    25   -    done |     2    6
+isaac valve_turning_20261015/yw_fa0_k3_f048                |  2.9    13     18    25 |  5.5     8     22    25   -    done |     2    7
+isaac valve_turning_20261015/yw_fa0_k3_f100                |  2.9    14     30    25 |  5.6    14     34    25   -    done |     4   26
+isaac valve_turning_20261015/yw_fa0_k3_f150                |  2.9    19     25    25 |  5.6     8     21    25   -    done |     1   14
+isaac valve_turning_20261015/yw_fa0_k3_f200                |  2.9    14     23    25 |  5.6    12     30    25   -    done |     8    7
+isaac valve_turning_20261015/yw_fa0_k3_f250                |  2.9    14     32    25 |  5.6    12     28    25   -    done |    12    8
+isaac valve_turning_20261015/yw_fa0_ref_f048               |  3.0    18     26    25 |  5.6    13     32    25   -    done |     5    8
+isaac valve_turning_20261015/yw_k10_f048                   |  2.9    13     22    25 |  5.6     8     22    25   -    done |     0   10
+isaac valve_turning_20261015/yw_k10_f048_2                 |  3.0    18     28    25 |  5.6    12     17    25   -    done |    11   13
+isaac valve_turning_20261015/yw_k1_f048                    |  2.9    15     26    25 |  5.6    12     23    25   -    done |     3   18
+isaac valve_turning_20261015/yw_k1_f050                    |  3.0    15     18    25 |  5.6     7     19    25   -    done |     1    3
+isaac valve_turning_20261015/yw_k1_f100                    |  2.9    15     27    25 |  5.5     9     20    25   -    done |     7   14
+isaac valve_turning_20261015/yw_k1_f150                    |  2.9    14     38    25 |  5.6    11     24    25   -    done |     8   11
+isaac valve_turning_20261015/yw_k1_f200                    |  2.9    16     30    25 |  5.6    13     19    25   -    done |    11   13
+isaac valve_turning_20261015/yw_k1_f250                    |  2.9    12     28    25 |  5.6    10     21    25   -    done |     0    7
+isaac valve_turning_20261015/yw_k2_f048                    |  2.9    15     31    25 |  5.6    13     29    25   -    done |     3   14
+isaac valve_turning_20261015/yw_k3_f048                    |  2.9    13     20    25 |  5.6    10     23    25   -    done |     2   10
+isaac valve_turning_20261015/yw_k3_f048_2                  |  2.9    11     29    25 |  5.6    13     27    25   -    done |     8    9
+isaac valve_turning_20261015/yw_k6_f048                    |  2.9    17     24    25 |  5.6    13     21    25   -    done |     6   14
+isaac valve_turning_20261015/yw_k6_f048_2                  |  3.0    15     26    25 |  5.6    11     22    25   -    done |    10   13
+isaac valve_turning_20261015/yw_ref_f048                   |  2.9    12     22    25 |  5.5    13     25    25   -    done |     2   18
+isaac valve_turning_20261015/yw_ref_f048_2                 |  2.9    15     33    25 |  5.6    12     28    25   -    done |     9   14
+isaac valve_turning_safety_20261022/s22_fa0_hw_1           |  1.1    25     48    25 |  3.0    21     45    24   -    done |    20   42
+isaac valve_turning_safety_20261022/s22_fa0_hw_2           |  1.1    31     47    25 |  3.0    23     48    25   -    done |    14   43
+isaac valve_turning_safety_20261022/s22_fa0_hw_3           |  1.1    12     35    25 |  3.0    18     35    24   -    done |    10   21
+isaac valve_turning_safety_20261022/s22_fa0_nom_1          |  1.1    14     30    26 |  3.0    12     21    25   -    done |    11   13
+isaac valve_turning_safety_20261022/s22_fa_hw_1            |  1.1    25     48    25 |  3.0    24     45    25   -    done |    24   29
+isaac valve_turning_safety_20261022/s22_fa_hw_2            |  1.1    26     43    25 |  3.0    24     47    24   -    done |    13   40
+isaac valve_turning_safety_20261022/s22_fa_hw_3            |  1.1    16     35    25 |  3.0    21     47    25   -    done |    11   22
+isaac valve_turning_safety_20261022/s22_final_gov_hv       |  1.1    15     26    25 |  3.1    11     27    25   -    done |     9   22
+isaac valve_turning_safety_20261022/s22_final_hw_2         |  1.1    31     52    25 |  3.0    27     53    24    22  done |    24   46
+isaac valve_turning_safety_20261022/s22_final_hw_3         |  1.1    18     44    24 |  3.1    20     48    25   -    done |    13   23
+isaac valve_turning_safety_20261022/s22_final_hw_4         |  1.1    17     35    25 |  3.1    34     50    25   -    done |    10   31
+isaac valve_turning_safety_20261022/s22_final_mfd          |  1.1    13     17    25 |  3.0     8     26    25   -    done |     7   11
+isaac valve_turning_safety_20261022/s22_final_mfd_2        |  1.1    13     15    25 |  3.0     8     18    25   -    done |     6   11
+isaac valve_turning_safety_20261022/s22_final_mfd_late     |  1.1    17     24    25 |  3.0     7     20    25   -    done |     6    5
+isaac valve_turning_safety_20261022/s22_final_nom_1        |  1.1    15     28    25 |  3.0    13     21    25   -    done |    12   11
+isaac valve_turning_safety_20261022/s22_final_nom_2        |  1.1    16     27    25 |  3.0    10     22    25   -    done |     6    8
+isaac valve_turning_safety_20261022/s22_heavy              |  1.1    13     27    25 |  3.0    10     26    25   -    done |     5   15
+isaac valve_turning_safety_20261022/s22_hw_1               |  1.1    24     47    24 |  3.0    18     46    24   -    done |    16   15
+isaac valve_turning_safety_20261022/s22_hw_2               |  1.1    19     43    26 |  3.0    37     64    24   -    done |    19   37
+isaac valve_turning_safety_20261022/s22_hw_3               |  1.1    17     36    25 |  3.0    34     55    24    23  done |     9   12
+isaac valve_turning_safety_20261022/s22_jump_rotor         |  1.1    12     22    25 |  3.0    13     20    25   -    done |    12   13
+isaac valve_turning_safety_20261022/s22_mf_drone           |  1.1    16     28    25 |  3.0     9     27    25   -    done |     3    9
+isaac valve_turning_safety_20261022/s22_mf_rotor           |  1.1    15     28    25 |  3.0    12     27    25   -    done |    10    9
+isaac valve_turning_safety_20261022/s22_mfd_fix_1          |  1.1    15     17    25 |  3.0     9     22    25   -    done |     7   12
+isaac valve_turning_safety_20261022/s22_nom_1              |  1.1    12     18    25 |  3.0    10     15    25   -    done |     9   11
+isaac valve_turning_safety_20261022/s22_nom_2              |  1.1    20     31    25 |  3.0    12     33    25   -    done |     4   15
+isaac valve_turning_safety_20261022/s22_nom_3              |  1.1    15     19    25 |  3.0     8     21    25   -    done |     7   11
+isaac valve_turning_safety_20261022/s22_um_ab20            |  1.1    13     25    25 |  3.0    15     22    25   -    done |    13    7
+isaac valve_turning_safety_20261022/s22_um_ab33            |  1.1    12     21    26 |  3.0    16     36    25   -    done |    11   14
+isaac valve_turning_safety_20261022/s22_um_hv_1            |  1.1     8     15    25 |  3.0    13     19    25   -    done |     7    9
+isaac valve_turning_safety_20261022/s22_um_hv_2            |  1.1    17     25    25 |  3.0     8     25    25   -    done |     5   11
+isaac valve_turning_safety_20261022/s22_um_mfd             |  1.1    15     15    25 |  3.0     7     13    25   -    done |     5   11
+isaac valve_turning_v2_20261027/hwp_full_1                 |  1.1    13     26    22 |  3.1     7     23    21    20  done |     4   17
+isaac valve_turning_v2_20261027/hwp_full_2                 |  1.1    13     19    26 |  3.0    11     25    22   -    done |     7   10
+isaac valve_turning_v2_20261027/hwp_hw_2                   |  1.1    23     48    25 |  3.0    23     47    21    19  done |    17   42
+isaac valve_turning_v2_20261027/hwp_hw_3                   |  1.1    16     24    25 |  3.0    20     46    20    20  done |     0   23
+isaac valve_turning_v2_20261027/hwp_hw_4                   |  1.1    24     32    25 |  3.1    30     56    19   -    done |     9   25
+isaac valve_turning_v2_20261027/mk_full_1                  |  1.1    10     19    24 |  3.0    13     29    23   -    done |     1    8
+isaac valve_turning_v2_20261027/mk_full_2                  |  1.1    13     28    25 |  3.0    12     31    23   -    done |     1   26
+isaac valve_turning_v2_20261027/t18_hw_2                   |  1.1    20     46    23 |  3.0    30     62    22    20  done |    19   29
+isaac valve_turning_v2_20261027/t18_hw_3                   |  1.1    21     39    23 |  3.0    20     38    20   -    done |    12   20
+isaac valve_turning_v2_20261027/t18_hw_4                   |  1.1    19     44    24 |  3.0    30     50    17    15  done |    17   39
+isaac valve_turning_v2_20261027/t18_hw_5                   |  1.1    28     46    21 |  3.0    26     45    21   -    done |    25   12
+isaac valve_turning_v2_20261027/t90A_hw_2                  |  1.1    29     47    25 |  3.0    23     49    25    24  done |    16   42
+isaac valve_turning_v2_20261027/t90A_hw_3                  |  1.1    14     39    25 |  3.0    15     38    24   -    done |    11   21
+isaac valve_turning_v2_20261027/t90A_hw_4                  |  1.1    19     30    26 |  3.0    29     65    24   -    done |    15    7
+isaac valve_turning_v2_20261027/t90A_nom_1                 |  1.1    18     27    25 |  3.0    11     19    25   -    done |     1   17
+isaac valve_turning_v2_20261027/t90A_nom_2                 |  1.1    15     30    25 |  3.0     6     17    25   -    done |     6    9
+isaac valve_turning_v2_20261027/t90B_hw_3                  |  7.2    29     51    25 |  3.0    31     62    25   -    done |    20   12
+isaac valve_turning_v2_20261027/t90B_hw_4                  |  8.7    30     55    25 |  3.0    22     44    25   -    done |     7   10
+isaac valve_turning_v2_20261027/t90B_nom_1                 |  1.1    13     19    25 |  3.0     8     14    25   -    done |     7    9
+isaac valve_turning_v2_20261027/t90B_nom_2                 |  1.1    18     22    25 |  3.0     9     19    25   -    done |     5   16
+isaac valve_turning_v2_20261027/t90W_hw_2                  |  1.1    19     56    21 |  3.0    28     50    20   -    done |    17   47
+isaac valve_turning_v2_20261027/t90W_hw_3                  |  1.1    13     28    22 |  3.0    20     38    21    21  done |    10   18
+isaac valve_turning_v2_20261027/t90W_hw_4                  |  1.1    26     48    21 |  3.0    26     47    23   -    done |    11   42
+isaac valve_turning_v2_20261027/t90W_nom_1                 |  1.1    12     22    25 |  3.0    11     30    24   -    done |    11   12
+isaac wb_valve_turning_flight_20261028/sim/base_s2         |  1.1    15     39    25 |  3.0    26     58    20    19  done |     9   23
+isaac wb_valve_turning_flight_20261028/sim/base_s3         |  1.1    16     45    25 |  3.0    20     51    21    20  done |    13   43
+isaac wb_valve_turning_flight_20261028/sim/base_s4         |  1.1    20     34    22 |  3.0    24     60    21   -    done |     8   16
+isaac wb_valve_turning_flight_20261028/sim/ex_s2a          |  1.1    20     46    25 |  3.0    27     54    19   -    done |    18   18
+isaac wb_valve_turning_flight_20261028/sim/ex_s2b          |  1.1    17     35    26 |  3.0    23     55    20    18  done |     4   22
+isaac wb_valve_turning_flight_20261028/sim/ex_s3           |  1.1    21     44    23 |  3.0    28     47    20   -    done |    12   43
+isaac wb_valve_turning_flight_20261028/sim/ex_s4           |  1.1    17     56    25 |  3.0    21     56    22    20  done |    13    3
+isaac wb_valve_turning_flight_20261028/sim/fa05_s2         |  1.1    20     41    23 |  3.0    27     52    16    15  done |    11   39
+isaac wb_valve_turning_flight_20261028/sim/fa05_s3         |  1.1    17     38    25 |  3.0    21     41    20   -    done |    12   33
+isaac wb_valve_turning_flight_20261028/sim/fa05_s4         |  1.1    20     30    25 |  3.0    24     45    16    13  done |    10    9
+isaac wb_valve_turning_flight_20261028/sim/fa10_s2         |  1.0    11     27    25 |  3.0    26     44    22   -    done |     4   22
+isaac wb_valve_turning_flight_20261028/sim/fa10_s3         |  1.1    19     29    21 |  3.0    30     50    21    20  done |    13   25
+isaac wb_valve_turning_flight_20261028/sim/fa10_s4         |  1.1    30     48    26 |  3.0    36     60    22   -    done |    12   30
+isaac wb_valve_turning_flight_20261028/sim/kv15_s2         |  1.1    18     44    25 |  3.0    23     55    20    18  done |     4   11
+isaac wb_valve_turning_flight_20261028/sim/kv15_s3         |  1.1    19     44    25 |  3.0    21     46    22   -    done |    11   40
+isaac wb_valve_turning_flight_20261028/sim/kv15_s4         |  1.1    21     30    26 |  3.0    24     48    21   -    done |    20   16
+isaac wb_valve_turning_flight_20261028/sim/nm_nom          |  1.1    10     21    25 |  3.0    13     31    23   -    done |     5    9
+isaac wb_valve_turning_flight_20261028/sim/nm_s2           |  1.1    29     41    23 |  3.0    21     37    20   -    done |    10   37
+isaac wb_valve_turning_flight_20261028/sim/nz_s2b          |  1.1    28     53    25 |  3.0    25     61    14    13  done |     9   13
+isaac wb_valve_turning_flight_20261028/sim/nz_s3           |  1.1    23     62    24 |  3.0    23     66    21    21  done |    13   51
+isaac wb_valve_turning_flight_20261028/sim/oc29_s2         |  1.1    18     35    26 |  3.0    26     58    20   -    done |     3   23
+isaac wb_valve_turning_flight_20261028/sim/oc29_s3         |  1.1    21     44    22 |  3.0    27     42    21    19  done |    22   42
+isaac wb_valve_turning_flight_20261028/sim/oc29_s4         |  1.1    11     21    25 |  3.0    30     50    20   -    done |     5   10
+isaac wb_valve_turning_flight_20261028/sim/qg_s2           |  1.1    28     39    25 |  3.0    19     50    21   -    done |    13   36
+isaac wb_valve_turning_flight_20261028/sim/qg_s3           |  1.1    17     37    25 |  3.0    26     46    20   -    done |     8   12
+isaac wb_valve_turning_flight_20261028/sim/qg_s4           |  1.1    21     55    24 |  3.0    21     54    21    20  done |    15   35
+isaac wb_valve_turning_flight_20261028/sim/qg_s5           |  1.1    21     36    22 |  3.0    28     43    18   -    done |    20   29
+isaac wb_valve_turning_flight_20261028/sim/sw_ky160_s2     |  1.1    30     39    24 |  3.0    15     52    22    20  done |     1   38
+isaac wb_valve_turning_flight_20261028/sim/sw_ky160_s3     |  1.1    16     38    25 |  3.0    20     38    23   -    done |    10   10
+isaac wb_valve_turning_flight_20261028/sim/sw_ky80_s2      |  1.1    26     47    24 |  3.0    18     49    20   -    done |    13   44
+isaac wb_valve_turning_flight_20261028/sim/sw_ky80_s3      |  1.1    24     50    26 |  3.0    21     44    23   -    done |     8   26
+isaac wb_valve_turning_flight_20261028/sim/sw_psi1_s2      |  1.1    15     21    23 |  3.0    17     40    22   -    done |    15   18
+isaac wb_valve_turning_flight_20261028/sim/sw_psi1_s3      |  1.1    19     36    25 |  3.0    25     49    19    18  done |     6   35
+isaac wb_valve_turning_flight_20261028/sim/sw_t15_s2       |  1.1    12     30    24 |  3.0    25     39    21    20  done |     7   17
+isaac wb_valve_turning_flight_20261028/sim/sw_t15_s3       |  1.1    23     53    26 |  3.0    21     44    22   -    done |     9   19
+HW 20261028 180652                                         |  1.7    20     24    17 |  3.0    28     63    13    12  done |    20    6
+HW 20261028 181833                                         |  1.7    48     60    16 |  3.0    45     77    10     7  done |    23   59
+HW 20261029 145526                                         |  1.6    26     40    28 |  3.0    61    101    11     7  done |    26   39
+HW 20261031 174943                                         |  1.3    21     42    27 |  3.0    44     72    19    16  done |    17   37
+HW 20261031 175725                                         |  1.3    26     55    28 |  3.0    59     81    13    10  done |    14   55
+HW 20261031 180423                                         |  1.3    35     58    20 |  3.0    74    110    10     5  done |    35   50
+HW 20261031 211808                                         |  1.2    68    118    12 |  1.0   189    169   -38   -50 abort |    68  116

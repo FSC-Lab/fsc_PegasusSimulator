@@ -1,0 +1,30 @@
+[13:18:41] start tsB2_nom | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+[tsB2_nom] completed
+[13:23:14] start tsB2_s5 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=5
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 5
+[tsB2_s5] completed
+[13:27:56] start tsB2_s2 | MASS=0.280 DIST=0.40 SPEED=0.021 ARM_GS_AUTO_STEPS=true ARM_GS_AUTO_EXIT_DELAY=0.2 PL_DRIVER_ARGS=--gs-auto | push_pull_guard_tilt_deg=10.0 push_pull_abort_release_wait_s=1.5 sim_plant_force_noise_n=0.32 sim_plant_force_noise_bw_hz=0.12 sim_plant_force_noise_seed=2
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+  push_pull_guard_tilt_deg -> 10.0
+  push_pull_abort_release_wait_s -> 1.5
+  sim_plant_force_noise_n -> 0.32
+  sim_plant_force_noise_bw_hz -> 0.12
+  sim_plant_force_noise_seed -> 2
+[tsB2_s2] completed
+[13:32:31] queue empty -- simulation closed
+[13:33:01] STOP
+[13:33:06] RUNNER DONE

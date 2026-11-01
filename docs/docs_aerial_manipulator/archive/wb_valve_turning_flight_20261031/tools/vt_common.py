@@ -1,4 +1,4 @@
-"""Shared helpers for the 2026-10-31 valve-turning flights (174943, 175725 = static holds, 180423 = 30 deg
+"""Shared helpers for the 2026-10-31 valve-turning flights (174943, 175725 = static holds, 180423 = 30 deg turn; 211808 = the evening 30 deg
 turn): the 10-21 box-pushing Bag helper pointed at this folder's npz."""
 import os, importlib.util
 import numpy as np
@@ -11,4 +11,4 @@ _c.NPZ = os.environ.get("VT_NPZ", os.path.join(HERE, "..", "npz"))
 NAV, GUARD = _c.NAV, _c.GUARD
 tilt_deg, yaw_deg, window = _c.tilt_deg, _c.yaw_deg, _c.window
 Bag = _c.Bag
-BAGS = ["174943", "175725", "180423"]
+BAGS = ["174943", "175725", "180423", "211808"]

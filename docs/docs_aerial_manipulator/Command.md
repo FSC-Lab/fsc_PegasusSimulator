@@ -1413,6 +1413,17 @@ is it held in the room (planner `push_pull_handle_settle_*`). The status reads `
 automatic Exit waits for the drone to be slower than 40 mm/s for 0.3 s (at most 3 s). Orin: rebuild
 `fsc_trajectory_planner`, pull `fsc_autopilot_ros2`; laptop: rebuild `utils_custom_ground_station`.
 
+**TWO PARAMETER SETS (2026-11-01, `archive/two_param_sets_20261101`)**: the box yaml now carries the valve's grip
+schedule -- the jaws closed on the fin switch the EE impedance (free flight: the mirror's 211.9 / 26.82, the push
+axis x `wb_my_y`), the translational observer (2.927 -> 1.0) and the EE heading (the 10-16 wrist fix -> the soft
+push set) to the push's contact set over 1 s; the contact set stays through the exit (`wb_grip_release_delay_s`
+6.0). Guard aborts hand the claw back over 0.25 s (`set_ee_anchor_com_fast`). Isaac, hardware-like drift: Go To
+Start CoM rms 8-15 mm vs 14-24 one-set, contact the same, 6 of 7 B runs complete (the one abort was the exit's
+open-claw drag before the release delay; 3 of 3 after). The node prints `TWO SETS: FREE FLIGHT ... -> INTERACTION
+...` at startup and `GRIP: parameters -> the INTERACTION / FREE-FLIGHT set` at each switch. Orin: rebuild
+`fsc_autopilot_ros2` + `fsc_trajectory_planner` (an older node ignores the keys and flies the contact set
+throughout -- the raw stack refuses it).
+
 ### 17.x Comparison rig: coordinated admittance framework (Liu et al., CEP 146 (2024) 105898)
 
 The paper's method as an INDEPENDENT fork, same scene, same box, same driver timetable (2026-10-10;
@@ -1670,6 +1681,40 @@ works whether you close them by hand (static hold) or the tab does:
 - **Jaws closed:** it blends over 1 s to the valve's soft 0.2484/0.2903, and the heading-radius term starts,
   counted from the grasp (nothing before it; held at the handle's angle after the release).
 - **Check:** the node logs `GRIP: jaws CLOSED ... -> INTERACTION set`. The stack refuses a node built before it.
+
+**THE EVENING FLIGHT ON THOSE FIXES (211808, README sections 7-8): the wrist held, the base ran away.** The damping
+reached the arm and the grip schedule ran. The base drifted 54 mm in the 1.2 s room hold and 0.5 s into the
+automatic Ready the room-held arm folded through q3 = 0 taking it up. The operator aborted -- the q3 and sway guards
+engage only with the claw at the handle, never in the descent -- and the watchdog went 15 -> 25 deg -> SAFETY,
+landed. Not an external force; the roll loop was already 3x worse at the end of Go To Start and an unmodelled roll
+torque (0.125 N.m in the observer) appeared with the arm still. Its source is not identified (two changes flown at
+once). Nothing changed; next: gate Ready on the base, the q3 / sway guards from Ready's start, and one flight with
+the pre-grasp heading soft again.
+
+**STEP 1 APPLIED THE SAME NIGHT (`archive/valve_room_hold_guards_20261031/README.md`): the pre-grasp room hold is
+guarded.** In the valve yamls (planner keys, default off elsewhere):
+- Ready waits for the BASE: CoM error < 30 mm and < 60 mm/s for 0.3 s (`push_pull_ready_max_com_*`); the arm GS's
+  automatic Ready retries "wait for it to settle".
+- The leash: a 40 mm drift in the hold above the handle hands the claw back to the vehicle (no abort; the status
+  says "ROOM HOLD RELEASED"), re-engaged once it settles (`push_pull_room_hold_leash`).
+- A 60 mm drift on the Ready descent aborts (`push_pull_guard_ready_com_err`); the q3 and sway guards are armed from
+  the room hold on (`push_pull_guard_arm_before_handle`).
+Isaac, 15 runs: 12 of 12 unforced runs completed with no false trip and Ready at the same +1.05 s (twice it waited
+0.5 s for the base); each guard fired once when forced, all clean. **Known limit:** the node blends every anchor
+change over `wb_ee_anchor_blend_s` 1.0 s, too slow for the 10-31 evening's run (the leash would have released the
+room hold 0.31 s before q3 reached 0) -- a faster hand-back is the next step. Orin: rebuild `fsc_trajectory_planner`,
+pull `fsc_autopilot_ros2`; the raw stack refuses an older planner.
+
+**TWO PARAMETER SETS + THE FAST HAND-BACK (2026-11-01, `archive/two_param_sets_20261101`)**: the grip schedule
+now also switches the EE impedance (211.9 / 26.82 -> 120 / 20.2) and the translational observer (2.927 -> 2.0) at
+the grasp, and holds the contact set until the exit is clear of the fin (`wb_grip_hold_set_while_free_axis`,
+`wb_grip_release_delay_s` 3.0); the leash and the guard aborts hand the claw back to the vehicle over 0.25 s
+(`set_ee_anchor_com_fast`, `wb_ee_anchor_fast_blend_s`) instead of 1.0 s. Isaac, same harness as the 10-31 night
+guards: 6 of 6 unforced runs complete, Go To Start CoM rms -15 % (nominal 10.2-10.6 vs 12.5-12.7 mm), the turn's
+q3 margin unchanged; the forced leash / q3 trips measured the hand-back at 0.24 s. The guard audit on all 19
+hardware contact flights (`tools/guard_audit.py`): every valve failure is caught 1-14 s before it was, the box
+guards replay to 0.01 s. Isolation tests T1-T7 for the next session: README section 5; deployment prompts:
+`deploy_orin_prompt.md` / `deploy_laptop_prompt.md`. Orin: rebuild `fsc_autopilot_ros2` + `fsc_trajectory_planner`.
 
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 

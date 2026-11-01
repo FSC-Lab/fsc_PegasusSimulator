@@ -1,0 +1,31 @@
+23:37:40 start rh_nom1 noise=none 
+[rh_nom1] completed
+23:41:09 start rh_s2 noise=0.32,0.12,2 
+[rh_s2] completed
+23:44:36 start rh_s3 noise=0.32,0.12,3 
+[rh_s3] completed
+23:48:06 start rh_s4 noise=0.32,0.12,4 
+[rh_s4] completed
+23:51:33 start rh_soft_s2 noise=0.32,0.12,2 wb_ky_psi_before_grip=0.2484 wb_dy_psi_before_grip=0.2903 wb_stuck_hold_j4_before_grip=false
+  wb_ky_psi_before_grip : 2.5 -> 0.2484
+  wb_dy_psi_before_grip : 0.93 -> 0.2903
+  wb_stuck_hold_j4_before_grip : true -> false
+[rh_soft_s2] completed
+23:55:00 start rh_soft_s3 noise=0.32,0.12,3 wb_ky_psi_before_grip=0.2484 wb_dy_psi_before_grip=0.2903 wb_stuck_hold_j4_before_grip=false
+  wb_ky_psi_before_grip : 2.5 -> 0.2484
+  wb_dy_psi_before_grip : 0.93 -> 0.2903
+  wb_stuck_hold_j4_before_grip : true -> false
+[rh_soft_s3] completed
+23:58:32 start rh_nom2 noise=none 
+[rh_nom2] completed
+00:01:59 start rh_leash noise=0.32,0.12,2 push_pull_room_hold_leash=0.015 push_pull_ready_max_com_err=0.010
+  push_pull_room_hold_leash -> 0.015
+  push_pull_ready_max_com_err -> 0.010
+[rh_leash] completed
+00:05:31 start rh_dguard noise=none push_pull_guard_ready_com_err=0.010
+  push_pull_guard_ready_com_err -> 0.010
+[rh_dguard] completed
+00:09:00 start rh_q3 noise=none push_pull_guard_q3_min_deg=26.0
+  push_pull_guard_q3_min_deg -> 26.0
+[rh_q3] ABORTED: push-and-pull ABORTED while the GS's automatic Ready To Push: ABORTING (SAFETY GUARD: q3 24.9 deg < 26.0 deg (the arm buckling toward its elb
+00:12:10 CHAIN DONE

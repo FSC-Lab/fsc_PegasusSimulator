@@ -1,0 +1,18 @@
+00:12:28 start rh_dguard5 noise=none push_pull_guard_ready_com_err=0.005
+  push_pull_guard_ready_com_err -> 0.005
+[rh_dguard5] ABORTED: push-and-pull ABORTED while Ready To Push complete: ABORTING (SAFETY GUARD: the base is 5 mm off its CoM reference on the room-held descent (
+00:15:35 start rh_soft_s4 noise=0.32,0.12,4 wb_ky_psi_before_grip=0.2484 wb_dy_psi_before_grip=0.2903 wb_stuck_hold_j4_before_grip=false
+  wb_ky_psi_before_grip : 2.5 -> 0.2484
+  wb_dy_psi_before_grip : 0.93 -> 0.2903
+  wb_stuck_hold_j4_before_grip : true -> false
+[rh_soft_s4] completed
+00:19:03 start rh_s4b noise=0.32,0.12,4 
+[rh_s4b] completed
+00:22:33 start rh_soft_s4b noise=0.32,0.12,4 wb_ky_psi_before_grip=0.2484 wb_dy_psi_before_grip=0.2903 wb_stuck_hold_j4_before_grip=false
+  wb_ky_psi_before_grip : 2.5 -> 0.2484
+  wb_dy_psi_before_grip : 0.93 -> 0.2903
+  wb_stuck_hold_j4_before_grip : true -> false
+[rh_soft_s4b] completed
+00:26:03 start rh_s4c noise=0.32,0.12,4 
+[rh_s4c] completed
+00:29:34 CHAIN DONE

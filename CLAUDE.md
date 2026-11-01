@@ -7520,3 +7520,131 @@ ARM-SIDE DEFECTS FIXED (2026-10-31, user request: why does joint 4 oscillate; re
   `fsc_autopilot_ros2`, `fsc_trajectory_planner`; laptop: `utils_custom_ground_station`. PUSHED 2026-10-31:
   fsc_open_manipulator `omx-torque-control` dd28bce, fsc_autopilot_ros2 `dev_robotic_arm` 2787578, Pegasus (this
   record); fsc_trajectory_planner has no new commit -- rebuild it only (it links the law library).
+
+**10-31 EVENING VALVE FLIGHT (211808): THE FIXES HELD THE WRIST -- AND THE BASE RAN AWAY (2026-10-31 night, user
+request: analyse; `archive/wb_valve_turning_flight_20261031/README.md` sections 7-8, report artifact "1031
+Valve-Turning Flights", Command.md section 18).** The 30 deg turn on `2787578` / `dd28bce`. The damping raise
+reached the arm ([0.2 0 0 0.2]; the duty tracks q_dot at 0.22 / 0.26 N.m.s/rad), the grip schedule ran (heading
+2.5 / 0.93 before the grasp, companion off) and the wrist held -- q4 followed q1, e_psi <= 2.6 deg. Then the base,
+already 54 mm right in the 1.2 s room hold (afternoon 8-24 mm), ran to 13 cm right / 8 cm back 0.5 s into the
+automatic Ready; the room-held arm absorbed it until the beta = 30 deg pose's 2-3 cm reach margin was gone: q3
+27 -> 0 (23.64 s) -> -33 deg, joints on the 3 N.m clamp. The OPERATOR aborted at +0.96 s (no planner guard: the q3
+and sway guards engage only `pl_at_handle_ || pushing`, never in FLYING ready); watchdog 15 -> 25 deg -> SAFETY at
+27.2 s, 1.3 m from the hold, landed.
+- **Measured:** no external force (F_res from the mocap kinematics flat through the onset; same hold geometry in all
+  four flights). **The roll loop was already 3x worse at the end of Go To Start** (roll e_R std 39 mrad vs 6-15 in
+  the afternoon; 12 in the evening's own hover before Go To Start). **The onset came with the arm still** (joints
+  < 0.2 deg until 22.9 s, so the error damping was zero) while the observer's roll estimate rose 0.125 N.m in the hold
+  and the attitude error reached 162 mrad: an unmodelled roll torque, learned slowly, the vehicle held ~1 deg the
+  wrong way.
+- **Corrected the same night -- do not repeat:** my first write-up blamed the arm's error damping and a saturated
+  yaw channel. Wrong on the evidence: the damping is zero with the arm still; the yaw demand in Ready (0.29 of the
+  free budget) equalled the afternoon's; the allocator traded thrust ONCE (0.4 % of Ready ticks), after the fold.
+  The law's "41 %" is `wb_control_debug[51]` = JOINTS at tau_max, not the allocator -- read [52..55] for allocator
+  saturation. And summing j1 + j4 damping as base yaw was not justified (j4's reaction reaches the base only through
+  j1). Also: armed from Ready's start, the q3 rate guard fires at q3 +4.8 deg (58 deg/s), 0.8 s before the operator
+  -- at the singularity, not "at 15 deg" (`tools/guard_replay.py`).
+- **THE ROLL TORQUE IS NOT ABNORMAL (2026-11-01, README section 9; the user: films >= 2 m from the table, arm crack
+  heard 10-30).** Rotor roll authority normal (gain 5.5 vs 5.9-8.1, lag 76 ms); the slow roll residual sits in the
+  BASE row only; over all 20 whole-body flights since 10-21 its Go To Start sd is 0.020-0.097 N.m and the evening's
+  0.064 is fifth, with the same link to the sideways CoM error on every flight; 10-28 18:18 had the same attitude
+  error (43 vs 39 mrad) and still grasped. "3x worse" held against the afternoon only. ~0.3-1 % of hover thrust =
+  ordinary indoor aerodynamics; neither the films nor the crack is needed. The evening's failure = that push
+  reversing (raw -0.11 -> +0.09 N.m) in the hold's first 0.5 s while the filtered estimate still said -0.07, inside
+  a phase with a 2-3 cm margin. Fix = the guards / the hold design, not the source.
+- **Recommended, NOT applied:** gate Ready on the base (CoM 67 mm off, ~0.14 m/s at Ready while the room-held claw
+  sat still -- the earliest signal); q3 / sway guards from Ready's start; reconsider the room hold before the grasp.
+  Lower: model the arm's error damping in the law; the loose-arm yaw torque (0.18-0.24 N.m standing, 28-37 % of the
+  free budget). Tools: `trace2/trace3/residuals/room_hold_compare/window_ab/guard_replay.py`, report builder
+  `report_data.py` + `report_template.html` + `build_report.py`. Nothing changed in any code repo.
+
+**THE PRE-GRASP ROOM-HOLD GUARDS -- STEP 1 OF THE 10-31 FIX PLAN, BUILT AND CHECKED IN ISAAC (2026-11-01 night, user:
+"go ahead all the fixes and check them in the Isaac simulations"; record
+`docs/docs_aerial_manipulator/archive/valve_room_hold_guards_20261031/README.md`, Command.md section 18).**
+fsc_trajectory_planner, default off, ON in both valve yamls (generator `make_valve_turning_yaml.py`):
+`push_pull_ready_max_com_err` 0.030 / `_max_com_speed` 0.060 / `_com_settle_s` 0.3 (Ready waits for the BASE --
+the law's horizontal CoM error and its rate -- refused "wait for it to settle", the arm GS retries);
+`push_pull_room_hold_leash` 0.040 / `_room_hold_reengage_s` 1.0 (in the hold above the handle a 40 mm drift hands the
+claw back to the CoM anchor, NO abort, re-engaged once settled, status "ROOM HOLD RELEASED");
+`push_pull_guard_ready_com_err` 0.060 (aborts the room-held Ready descent, anchor dropped);
+`push_pull_guard_arm_before_handle` true (the q3 static/rate and sway guards armed in the pre-grasp room hold and the
+descent; box-feed guards stay on-handle). Thresholds from 197 Isaac + 7 hardware valve runs
+(`tools/pre_handle_stats.py`): an abort-on-drift tight enough to act early would have aborted most earlier hardware
+Ready phases (28-74 mm), hence a leash in the hold and only a 60 mm abort on the descent. Loopback [9p] ALL PASS on
+the box sim + hardware yamls; raw hardware stack expects the 7 values (87/87) and refuses an older planner.
+- **Isaac, 15 runs (the v2 control harness, GS-flown steps):** 12 of 12 unforced runs completed (nominal x2, drift
+  seeds 2/3/4 + repeats), no false trip, Ready still at +1.05 s (twice the gate held it 0.5 s for a 32-34 mm base);
+  seed 4, a q3 abort in the 10-30 baseline, completed 5 of 5. Forced: the leash released and re-engaged and the
+  mission completed; the descent guard (5 mm) and the q3 guard (26 deg floor) aborted cleanly (tilt <= 1.9 deg,
+  valve untouched). A 10 mm descent guard never stayed above its limit the 0.2 s it needs -- correct, not a miss.
+- **Step 2 in Isaac (stiff vs soft pre-grasp heading): no effect.** Roll error at the end of Go To Start 13-19 mrad
+  stiff (6 runs) and 16-17 soft (4), except one stiff seed-4 run at 38 mrad -- a 1.33 Hz roll/q1 oscillation (Isaac's
+  known 1.3-1.7 Hz mode) that two repeats did not reproduce. The hardware evening's 39 mrad was a slow 0.33 Hz
+  wander, a different thing. The hardware diagnostic flight still decides it.
+- **KNOWN LIMIT, measured on the 10-31 evening replay:** the gate refuses that Ready and the leash releases at 23.33 s
+  (q3 14.2 deg), 0.31 s before q3 reached 0 -- but the flight node blends EVERY anchor change over
+  `wb_ee_anchor_blend_s` 1.0 s (the leash and every guard abort's anchor drop), so about a third of the hand-back
+  would have happened by then. Next step: a short release blend for guard/leash hand-backs in the node (needs its
+  own Isaac test). Uncommitted; NOT flown on hardware. Orin: rebuild fsc_trajectory_planner, pull fsc_autopilot_ros2.
+
+**TWO PARAMETER SETS (FREE FLIGHT / INTERACTION), THE FAST ANCHOR HAND-BACK, THE GUARD AUDIT AND
+THE ISOLATION TESTS (2026-11-01, user: "two sets of parameters for the free-flight and the interaction
+phases ... make sure they work in the simulation; tests to isolate the problems; double check the
+safety guards; two deployment prompts"; record `docs/docs_aerial_manipulator/archive/two_param_sets_20261101/`
+README, Command.md sections 17 / 18).** Uncommitted in fsc_autopilot_ros2, fsc_trajectory_planner and this
+repo; NOT flown on hardware.
+- **The two sets.** The 10-31 grip schedule (one event: the jaws closed on the handle, read from the
+  gripper's own joint state) now also switches the EE impedance (`wb_ky/dy_{x,y,z}_before_grip`: the
+  mirror's 211.9 / 26.82 in free flight -- the box's push axis x `wb_my_y` 1.64 = 347.5 / 43.98 -- vs
+  the task's contact tune) and the translational observer (`wb_l1_omega_c_t_before_grip` 2.927 vs
+  valve 2.0 / box 1.0), blended over `wb_grip_blend_s` 1 s; the box push carries the whole schedule
+  now (incl. the mirror's stiff heading + j4 stuck hold before the grasp). NOT switched, on purpose:
+  k_x/k_v, k_R/k_w, M_r_d, the rotational / arm observer bandwidths. **The contact set must outlive
+  the OPEN edge**: `wb_grip_hold_set_while_free_axis` (until the free-axis anchor is gone) AND
+  `wb_grip_release_delay_s` (box 6.0 = the exit climb, valve 3.0) -- the first Isaac box campaign lost
+  1 of 4 to the exit's open-claw drag with the set blending back to the stiff task as the open jaws
+  climbed past the fin (the box's release-first exit restores the CoM anchor BEFORE the climb, so the
+  free-axis rule alone released the set); 3 of 3 with the delay. The box SIM threshold is
+  `wb_grip_closed_below` -0.05 (Isaac's jaws creep on the shim: -0.091 at the close, -0.1 only 1.5 s
+  later, so the set first switched 1.7 s INTO the push); hardware 0.0 m unchanged. Debug append-only
+  [126..130] (set in force, K_y x, omega_c_t, CoM-anchor weight, blend in force); the node prints
+  `TWO SETS: FREE FLIGHT ... -> INTERACTION ...` at startup and `GRIP: parameters -> the ... set` at
+  every switch; the free-flight values are READ from the mirror by both generators.
+- **Isaac (same harnesses as the 10-31 night guards / the 10-25 box condition, hardware-like
+  drift):** valve 6 of 6 unforced B runs complete (A 7 of 7), Go To Start CoM rms -15 % (10.2-10.6 vs
+  12.5-12.7 mm nominal, 14.8-16.9 vs 17.8-19.3 under drift), the turn's q3 margin unchanged (seed 4
+  still the worst), no gain step visible at either switch; a one-set control on today's build
+  reproduced the baseline (19.2 / 38.2 mm), so the gain is the sets, not the planner changes. Box:
+  free-flight CoM rms 8-15 vs 14-24 mm (-38..-43 %), contact equal, the one-set seed-2 run never met
+  the settle gate while the two-set one completed; follow-up 3 of 3.
+- **The fast anchor hand-back**: new node service `set_ee_anchor_com_fast` (`wb_ee_anchor_fast_blend_s`
+  0.25 s; the free axis fades at the same rate), used by the planner's leash and the arm / sway /
+  descent-guard aborts (`requestAnchor(com, fast)`; older node -> the normal one, warned). Measured in
+  the forced leash / q3 runs: the CoM-anchor weight rises 0.05 -> 0.95 in 0.24 s (0.86 s before).
+  **The forced 15 mm leash CYCLED 8 times in 25 s** under seed 2 (the hold wanders 8-31 mm) and the
+  driver's Ready wait ran out -- an artifact of the forced limit; with the shipped 40 mm no unforced
+  run released, but on hardware the holds reach 20-48 mm (10-28 #2 would have released once), each
+  release costs >= 1.3 s of Ready wait, and the arm GS retries Ready for 10 s.
+- **The guard audit (`tools/guard_audit.py` -> `guard_audit.txt`)**: the shipped values replayed on
+  all 19 hardware contact flights from the planner's own signals. Faithful: the box guards that flew
+  reproduce the recorded trips to 0.00-0.01 s (9 of 9). Every valve failure is caught before it was
+  (10-31 evening: leash +1.16 s into the hold, q3 rate +1.39, descent guard +1.44, sway +1.60 vs the
+  operator's +2.20 and the tilt trips +3.8; 10-29: sway +10.4 s, 3 s before the q3 trip; 10-31 18:04:
+  descent guard 3 s before the operator); the Ready gate refuses the evening's Ready (68 mm /
+  116 mm/s) and 18:04's (35 mm); the 4 deg rotor-tilt limit removes the 10-28 false trips; nothing
+  fires on the two wrist-swing static holds (correct: arm-side). Not replayable: box lag / cross,
+  frozen feeds, the emergency-abort escalation.
+- **Isolation tests T1-T7 (README section 5)**: hover above the handle CoM-anchored (the base's wander
+  alone) -> the room hold (the arm's absorption) -> free axis 0 -> the open-jaw descent + hold ->
+  the hand close (the set switch) -> the 30 deg turn -> 90 deg; one change per flight, scored by the
+  CoM error and the (q2, q3) excursion.
+- **Deployment prompts** `deploy_orin_prompt.md` / `deploy_laptop_prompt.md` (Orin: pull + rebuild
+  fsc_autopilot_ros2 then fsc_trajectory_planner, dry-run both contact profiles, read the TWO SETS
+  banner and the grip events on the bench; laptop: GS versions, the recorder's topic list, the session
+  order). The raw hardware stack expects every new key on both profiles and REFUSES a node without
+  `TWO SETS` / `set_ee_anchor_com_fast` or a planner without the fast hand-back.
+- **Traps hit:** `pkill -f` from a heredoc whose text names the target (twice; exit 144 / 1) -- write
+  scripts with the Write tool and call them by path; python stdout to a file is block-buffered (a
+  running loopback looks dead); the pl_mission driver's `--dbg-len` default (120) truncated the new
+  debug entries until raised to 131; a forced-trip run that looks like a failure may be the forced
+  limit cycling, not the guard.
