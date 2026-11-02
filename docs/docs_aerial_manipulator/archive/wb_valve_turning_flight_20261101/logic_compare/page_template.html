@@ -192,10 +192,10 @@ not flown.</p>
  <td>Same keys and values.</td></tr>
 <tr><td><b>Push / Turn</b> (the close)</td><td>station, automatic, on the close gate; then the Push / Turn on the grasp result</td><td>after the hand-over: the claw within 25 mm (box) / 20 mm (valve), 8 mm across, slower than 30 mm/s over 0.3 s; the valve also needs its heading error ≤ 15°; 2.5 s limit → ABORT</td>
  <td><span class="tm">+5.30</span> gate met at once (8 mm, 7 mm/s) → CLOSE; <span class="tm">+5.75</span> jaws closed; <span class="tm">+5.94</span> Push: <b>CONTACT on</b> (planner), 1.5 s settle, then the 0.40 m slide.</td>
- <td>Same path, but a <b>half close</b> (<code>push_pull_valve_cup_position</code>, 0.0 m on hardware, 0.012 in Isaac): the jaws stop a few mm short of the fin, so the U pushes it and never clamps it. Turn: CONTACT on, 1.5 s settle, then 90° in 18 s. Static hold (the planned first flight): the station reports the grasp to the planner (<code>push_pull/grasp</code>), CONTACT on, holds, reports the release. The node does not read the jaws.</td></tr>
-<tr><td><b>Exit To Push / Turn</b></td><td>station, automatic 0.2 s after the push / turn, once the base is slower than 40 mm/s (at most 3 s); after a static hold, when the hold ends</td><td>the claw on the handle</td>
+ <td>Same path, but a <b>half close</b> (<code>push_pull_valve_cup_position</code>, 0.0 m on hardware, 0.012 in Isaac): the jaws stop a few mm short of the fin, so the U pushes it and never clamps it. Turn: CONTACT on, 1.5 s settle, then 90° in 18 s. The node does not read the jaws. (The static hold, a grasp without the turn, was removed on 11-02: dangerous.)</td></tr>
+<tr><td><b>Exit To Push / Turn</b></td><td>station, automatic 0.2 s after the push / turn, once the base is slower than 40 mm/s (at most 3 s)</td><td>the claw on the handle</td>
  <td><span class="tm">+26.5</span> push done. <b>Release first</b> (claw follows the vehicle, contact off), then open, climb on the open report. In flight A the release swung into the q3 guard at <span class="tm">+30.3</span>: a clean abort, box untouched.</td>
- <td>The same start: 0.2 s after the turn or the static hold, the same calm wait plus the base's CoM error under 20 mm. Then the valve's order: <b>open with the claw still held in the room</b>, climb on the open report, held in the room until the claw has climbed 60 mm (the fingers clear of the fin), then the claw follows the vehicle. The jaws close again once the Exit is done. (<code>push_pull_valve_box_exit: true</code> = the box's order.)</td></tr>
+ <td>The same start: 0.2 s after the turn, the same calm wait plus the base's CoM error under 20 mm. Then the valve's order: <b>open with the claw still held in the room</b>, climb on the open report, held in the room until the claw has climbed 60 mm (the fingers clear of the fin), then the claw follows the vehicle. The jaws close again once the Exit is done. (<code>push_pull_valve_box_exit: true</code> = the box's order.)</td></tr>
 <tr><td><b>ABORT</b></td><td>any planner guard, the node's watchdog, or the button</td><td>none</td>
  <td>Hold where the vehicle is, contact off, the claw follows the vehicle, 1.5 s for the jaws, straight up 0.30 m, unbuckle q2/q3, arm home.</td>
  <td>Hold where the vehicle is, contact off, <b>the jaws open at once</b> (the button, or the station on ABORTING), <b>the claw follows the vehicle</b> from the first tick (0.25 s blend), never held in the room. The planner climbs <b>the moment the gripper reads open</b> (its joint state on the Orin; the station's report also counts), at most 1 s without either, the first 60 mm in 0.8 s, then up to 0.30 m and the arm home.</td></tr>
@@ -287,17 +287,17 @@ const LANES = [
      [5.75, 'jaws', 'Jaws closed on the fin.'],
      [5.94, 'auto', 'Grasp reported. Push starts by itself: CONTACT on, 1.5 s settle, then the 0.40 m slide.'],
      [7.47, 'plan', 'The slide starts (21 mm/s).']] },
- { key: 'latest', title: 'Valve turn, latest workflow', sub: 'designed, not flown · branch valve-isolation-20261102 · static hold of 5 s, the planned first flight', pill: ['warn', 'not flown'], kind: 'valve', designed: true, host: 'lanes',
+ { key: 'latest', title: 'Valve turn, latest workflow', sub: 'designed, not flown · branch valve-isolation-20261102 · the 90° turn with the half close', pill: ['warn', 'not flown'], kind: 'valve', designed: true, host: 'lanes',
    phases: [[-3, 0, 'Go To Start', ''], [0, 1.6, 'hover above', ''], [1.6, 4.6, 'Ready: descent', ''], [4.6, 5.0, 'settle', ''],
-            [5.0, 5.65, 'close', ''], [5.65, 10.65, 'static hold 5 s', 'contact'], [10.65, 10.95, 'calm', ''], [10.95, 11.6, 'open', ''], [11.6, 13, 'Exit: climb', '']],
-   anchor: [[-3, 5.0, 'follow'], [5.0, 6.0, 'toRoom'], [6.0, 12.9, 'room'], [12.9, 13, 'toFollow']],
-   jaws: [[-3, 1.0, 'closed'], [1.0, 1.6, 'moving'], [1.6, 5.0, 'open'], [5.0, 5.45, 'moving'], [5.45, 10.95, 'half closed'], [10.95, 11.6, 'moving'], [11.6, 13, 'open']],
-   contact: [[5.65, 10.95, 'CONTACT on (grasp event)']],
+            [5.0, 5.45, 'close', ''], [5.45, 6.95, 'Turn: settle 1.5 s', 'contact'], [6.95, 13, 'Turn: 90° in 18 s (to +24.95 s)', 'contact']],
+   anchor: [[-3, 5.0, 'follow'], [5.0, 6.0, 'toRoom'], [6.0, 13, 'room']],
+   jaws: [[-3, 1.0, 'closed'], [1.0, 1.6, 'moving'], [1.6, 5.0, 'open'], [5.0, 5.45, 'moving'], [5.45, 13, 'half closed']],
+   contact: [[5.45, 13, 'CONTACT on (the Turn)']],
    buttons: [
      { name: 'Go To Start', who: 'operator', a: -15, b: 0, note: 'jaws closed in free flight' },
      { name: 'Ready To Turn', who: 'automatic', a: 1.0, b: 4.6, note: '+1.0 s, opens the jaws' },
-     { name: 'Turn / Static hold', who: 'automatic', a: 5.0, b: 10.65, note: 'close gate after the settle' },
-     { name: 'Exit To Turn', who: 'automatic', a: 10.65, b: 14, note: 'calm → open (held) → climb' },
+     { name: 'Turn', who: 'automatic', a: 5.0, b: 24.95, note: 'close gate → half close → turn' },
+     { name: 'Exit To Turn', who: 'automatic', a: 25.15, b: 32, note: 'calm → open (held) → climb' },
      { name: 'ABORT', who: 'guard', a: 99, b: 100, note: 'jaws open → climb when they read open', guard: true }],
    events: [
      [0.00, 'plan', 'Go To Start done. Nothing changes: the claw keeps following the vehicle (as the box).'],
@@ -307,11 +307,9 @@ const LANES = [
      [5.00, 'plan', 'Settled. The claw is now held in the room (1 s blend).'],
      [5.01, 'auto', 'Station close gate met (20 mm, 8 mm across, 30 mm/s, heading within 15°). Gripper HALF CLOSE (0.0 m on hardware).'],
      [5.45, 'jaws', 'Jaws half-closed around the fin, a few mm clear on each side: the U can push the fin, never clamp it.'],
-     [5.65, 'auto', 'Grasp reported to the planner (push_pull/grasp): CONTACT on. The hold starts. A Turn would start here instead.'],
-     [10.65, 'auto', 'Hold done. The calm wait: the base slower than 40 mm/s and within 20 mm of its reference for 0.3 s (at most 3 s).'],
-     [10.95, 'auto', 'Calm. Grasp off reported (contact free); gripper OPEN with the claw still held in the room.'],
-     [11.60, 'jaws', 'Open report. Exit: climb 0.20 m; the claw stays held in the room until it has climbed 60 mm.'],
-     [12.90, 'plan', 'The claw is 60 mm up, clear of the fin: it follows the vehicle again (1 s blend). The arm folds home; the jaws close once the Exit is done.']] },
+     [5.47, 'auto', 'The grasp starts the Turn: CONTACT on (planner), 1.5 s settle, then 90° in 18 s about the valve axis.'],
+     [6.95, 'plan', 'The turn starts moving. In Isaac the U met the fin only after the claw had run ~30 mm ahead of it, then pushed it at ~0.5 N.'],
+     [13.0, 'plan', 'Beyond this window: the turn ends at +24.95 s; 0.2 s later the calm wait, then OPEN with the claw held in the room and the climb (Exit).']] },
  { key: 'valve', title: 'Valve turn, static-hold test', sub: '11-01 17:59 · build 9e4b03e / 17fd566 · frozen after SAFETY', pill: ['bad', 'crashed'], kind: 'valve', host: 'archive-lanes',
    phases: [[-3, 0, 'Go To Start', ''], [0, 1.22, 'hover above', ''], [1.22, 4.28, 'Ready: descent', ''], [4.28, 6.17, 'waiting', ''],
             [6.17, 7.47, 'closed', ''], [7.47, 9.50, 'ABORT: 2 s wait', 'abort'], [9.50, 10.61, 'ABORT: climb', 'abort'], [10.61, 13, 'SAFETY', 'safety']],

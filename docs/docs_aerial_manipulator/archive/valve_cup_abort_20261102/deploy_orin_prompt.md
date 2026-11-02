@@ -16,7 +16,8 @@ What changed (so you know what to look for):
 1. THE BOX PROFILE IS THE 2026-10-27 BOX PUSH. Its yamls are byte-identical to the ones flown on 10-27; the branch
    `box-pushing-20261027` (tag `box-pushing-20261027-flown`) is that configuration in every repo.
 2. THE VALVE: one gain set, the box's approach (CoM-anchored descent, the settle hand-over, the room hold), the jaws
-   CLOSED in free flight, phases only on planner events (the arm GS's grasp event `push_pull/grasp` in a static hold).
+   CLOSED in free flight, phases only on planner events. The STATIC HOLD (a grasp with no turn) was REMOVED the same
+   day as dangerous: `push_pull_grasp_event` and the `push_pull/grasp` service are gone; the grasp always turns.
 3. TODAY, THE VALVE'S ABORT (planner keys in the valve yamls; the box yamls do not set them):
    - `push_pull_abort_climb_on_open: true` -- the abort holds where the vehicle is only until the jaws are open, then
      climbs at that instant; no fixed release window. "Open" = the gripper's OWN joint state, read by the planner here
@@ -36,8 +37,8 @@ What changed (so you know what to look for):
 
 Steps:
 1. Pull `valve-isolation-20261102` in fsc_autopilot_ros2, fsc_trajectory_planner, fsc_drone_state_estimator_ros2 and
-   (arm workspace) fsc_open_manipulator; report each HEAD commit. Expected (or later): fsc_autopilot_ros2 `3afedfc`,
-   fsc_trajectory_planner `c8e2005`, fsc_drone_state_estimator_ros2 `7c780bb`, fsc_open_manipulator `a685640` (its
+   (arm workspace) fsc_open_manipulator; report each HEAD commit. Expected (or later): fsc_autopilot_ros2 `e3cf268`,
+   fsc_trajectory_planner `6b24f84`, fsc_drone_state_estimator_ros2 `7c780bb`, fsc_open_manipulator `c9e9cb8` (its
    origin is Gao907/fsc_open_manipulator). The estimator's origin may be an https URL: pull works, push would need
    `git@github.com:FSC-Lab/fsc_drone_state_estimator_ros2.git`.
 2. REBUILD, in this order, and show the last lines of each build: `fsc_autopilot_ros2`, then `fsc_trajectory_planner`
@@ -47,7 +48,7 @@ Steps:
 3. Run the raw whole-body hardware stack's pre-launch part on both contact profiles WITHOUT launching (cut the script
    before its first `tmux has-session -t "$SESSION"` line; check the cut line number is > 1000 and the cut part has no
    `tmux new-session` / `send-keys` / `ros2 launch`) and confirm:
-   - `AM_HW_PROFILE=valve_turning`: "all 96 tuned values present" (it lists the abort keys of point 3), and NO
+   - `AM_HW_PROFILE=valve_turning`: "all 95 tuned values present" (it lists the abort keys of point 3), and NO
      "predates" line -- in particular not "planner predates the 2026-11-02 climb-on-open abort" or "... abort details";
    - `AM_HW_PROFILE=box_pushing`: "all 62 tuned values present ... the box-pushing tune AS FLOWN 2026-10-27".
    The FUSED stack must REFUSE both contact profiles.
@@ -75,5 +76,5 @@ Steps:
 THE WAY BACK to the 10-27 box push: check out `box-pushing-20261027` in the four code repos, rebuild in the order of
 step 2, and launch the raw stack with `AM_HW_PROFILE=box_pushing`.
 
-First valve flight after this deployment (the user's plan, not yours to start): the STATIC HOLD with the half close,
-never the turn first.
+First valve flight after this deployment (the user's plan, not yours to start): the 90° TURN with the half close.
+There is no static hold any more.

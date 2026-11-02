@@ -29,16 +29,15 @@
 //   V2  Valve: the automatic Ready OPENS the jaws and descends on the report; the close waits for the
 //       planner's hand-over (info [87] settling) and then closes; the grasp TURNS (Push), and no
 //       grasp event is sent in the turn mode
-//   V3  Valve static hold (push_pull_valve_hold_s 1.0): the grasp -> grasp(true), 1 s, the calm wait,
-//       grasp(false), OPEN with no release call (the claw stays held in the room), Exit after the
-//       OPEN report; no Push
 //   V7  Valve turn, the automatic exit: DONE push -> waits while the base moves, then OPEN (no
 //       release), Exit after the report
 //   V8  Valve, push_pull_valve_box_exit true: the box's order (release, OPEN, Exit)
 //   V9  Valve turn, the base-error wait (planner arrival_error [32]): 45 mm holds the exit, 10 mm
 //       lets it go (calm_max 10 s, so only the error can release it)
-//   V4  Valve static hold, ABORTING during the hold: no grasp(false), no Exit; ABORTED closes the jaws
-//   V5  Valve static hold, a planner without push_pull/grasp: nothing moves (no Push, no open)
+//   (V3-V5, the static hold, were deleted with it the same day; the fake planner still serves
+//   push_pull/grasp so a station that called it would show up as "grasp_true" -- none may)
+//   S1  Valve, an old launch that still passes push_pull_valve_hold_s 10.0: after Ready nothing
+//       closes and nothing turns; a Turn press is refused
 //   V6  Box tab = 10-27: no gripper command at Go To Start or after the Exit; NOT IN DIRECT with only
 //       the station's own grip state (the planner off the handle) opens nothing
 //
@@ -136,12 +135,14 @@ struct Rig
   Rig(const std::string & gov, bool valve, double hold_s, bool grasp_srv, bool box_exit = false,
       double calm_max_s = 2.0)
   {
-    node = std::make_shared<rclcpp::Node>("gs_valve_phase_harness", gov + "/fsc_open_manipulator");
+    // hold_s > 0: an OLD launch that still asks for the removed static hold (a parameter override)
+    rclcpp::NodeOptions opts;
+    if (hold_s > 0.0) {opts.parameter_overrides({rclcpp::Parameter("push_pull_valve_hold_s", hold_s)});}
+    node = std::make_shared<rclcpp::Node>("gs_valve_phase_harness", gov + "/fsc_open_manipulator", opts);
     node->declare_parameter<bool>("simulation", false);
     node->declare_parameter<double>("push_pull_release_timeout_s", 3.0);
     node->declare_parameter<double>("push_pull_grip_timeout_s", 1.0);
     node->declare_parameter<double>("push_pull_valve_grip_wait_max_s", 1.5);
-    node->declare_parameter<double>("push_pull_valve_hold_s", hold_s);
     node->declare_parameter<double>("push_pull_auto_exit_calm_max_s", calm_max_s);
     node->declare_parameter<double>("push_pull_valve_exit_wait_s", 0.5);
     if (box_exit) {node->declare_parameter<bool>("push_pull_valve_box_exit", true);}
@@ -311,19 +312,7 @@ int main(int argc, char * argv[])
     {1200, [&](Rig & r) {
       check(r.count("close") == 1 && r.count("cup") == 1, "V2_half_closed_after_the_hand_over", &r);
       check(r.count("push") == 1, "V2_the_grasp_turns", &r);
-      check(r.count("grasp_true") == 0, "V2_no_grasp_event_in_the_turn_mode", &r);
-    }}}});
-  cases.push_back({"V3_static_hold", true, 1.0, true, {
-    {0, [](Rig & r) {r.publish("FLYING ready T=3.0s", true, 1);}},
-    {300, [](Rig & r) {r.publish(DONE_READY, true, 1);}},
-    {800, [&](Rig & r) {   // the close (0 s), its stall (0.4 s), grasp(true)
-      check(r.count("grasp_true") == 1 && r.count("push") == 0, "V3_grasp_event_not_a_turn", &r);
-      check(r.count("grasp_false") == 0 && r.count("open") == 0, "V3_holding", &r);
-    }},
-    {3000, [&](Rig & r) {   // 1 s hold, calm (no base pose), grasp(false), open (0.4 s), exit 0.5 s after
-      const int gf = r.at("grasp_false"), op = r.at("open"), ex = r.at("exit");
-      check(gf >= 0 && op > gf && ex > op, "V3_grasp_off_open_exit", &r);
-      check(r.count("release") == 0 && r.count("push") == 0, "V3_no_release_call_no_turn", &r);
+      check(r.count("grasp_true") == 0 && r.count("grasp_false") == 0, "V2_no_grasp_event_ever", &r);
     }}}});
   cases.push_back({"V7_turn_auto_exit_box_way", true, 0.0, true, {
     {0, [](Rig & r) {r.base_speed = 0.10; r.publish("FLYING push (CONTACT) T=19.5s", true, 1);}},   // base at 100 mm/s
@@ -354,25 +343,21 @@ int main(int argc, char * argv[])
       const int op = r.at("open"), ex = r.at("exit");
       check(op >= 0 && ex > op && r.count("release") == 0, "V9_exits_once_the_base_is_back", &r);
     }}}, false, 10.0});
-  cases.push_back({"V4_abort_during_the_hold", true, 3.0, true, {
+  // ---- THE STATIC HOLD WAS REMOVED (2026-11-02): an old launch asking for one turns nothing ----
+  cases.push_back({"S1_stale_hold_parameter_turns_nothing", true, 10.0, true, {
     {0, [](Rig & r) {r.publish("FLYING ready T=3.0s", true, 1);}},
     {300, [](Rig & r) {r.publish(DONE_READY, true, 1);}},
-    {900, [&](Rig & r) {
-      check(r.count("grasp_true") == 1, "V4_grasped", &r);
-      r.publish("ABORTING (SAFETY GUARD: the vehicle sways 160 mm/s) -- gripper open", true, 1);
+    {1500, [&](Rig & r) {
+      check(r.count("cup") == 0 && r.count("close") == 0, "S1_no_close_after_ready", &r);
+      check(r.count("push") == 0 && r.count("grasp_true") == 0, "S1_no_turn_no_grasp_event", &r);
+      bool clicked = false;
+      for (auto * b : r.panel->findChildren<QPushButton *>()) {
+        if (b->text().startsWith("3  Turn") && b->isEnabled()) {b->click(); clicked = true; break;}
+      }
+      check(clicked, "S1_turn_button_pressed", &r);
     }},
-    {800, [](Rig & r) {r.publish("ABORTED (SAFETY GUARD: the vehicle sways 160 mm/s) -- holding higher", false, 1);}},
-    {3500, [&](Rig & r) {
-      check(r.count("grasp_false") == 0 && r.count("exit") == 0, "V4_the_hold_was_retired", &r);
-      const int ab = r.at("open");
-      check(ab >= 0 && r.at("close", ab) > ab, "V4_aborting_opened_aborted_closed", &r);
-    }}}});
-  cases.push_back({"V5_no_grasp_service_nothing_moves", true, 1.0, false, {
-    {0, [](Rig & r) {r.publish("FLYING ready T=3.0s", true, 1);}},
-    {300, [](Rig & r) {r.publish(DONE_READY, true, 1);}},
-    {2500, [&](Rig & r) {
-      check(r.count("cup") == 1, "V5_half_closed_on_the_fin", &r);
-      check(r.count("push") == 0 && r.count("open") == 0 && r.count("exit") == 0, "V5_nothing_moved", &r);
+    {1500, [&](Rig & r) {
+      check(r.count("cup") == 0 && r.count("push") == 0, "S1_turn_press_refused", &r);
     }}}});
   // ---- THE HALF CLOSE (2026-11-02) ----
   cases.push_back({"C1_cup_reached_turns", true, 0.0, true, {
@@ -380,6 +365,7 @@ int main(int argc, char * argv[])
     {300, [](Rig & r) {r.publish(DONE_READY, true, 1);}},
     {1200, [&](Rig & r) {
       check(r.count("cup") == 1 && r.count("close") == 0, "C1_half_close_not_a_full_close", &r);
+      check(r.count("grasp_true") == 0, "C1_no_grasp_event", &r);
       check(std::abs(r.cup_requested - 0.0) < 1e-9, "C1_half_close_to_0.0_on_hardware", &r);
       check(r.count("push") == 1, "C1_the_cup_turns", &r);
     }}}});

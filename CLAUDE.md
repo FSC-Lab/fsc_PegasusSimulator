@@ -7772,3 +7772,11 @@ couples less when it works (tilt 2.5-4.9 vs 4.5-5.8, vertical force rms 0.2 vs 0
 pushes only after ~30 mm of slack (the U's base), and one turn buckled (a pad pressing from the close + a +44 mm surge
 + the heading companion turning the claw against an unclamped fin). Tests: GS harness 44/44
 (`tools/gs_valve_cup_check.sh`), planner loopback [9s]/[9s-b]/[9s-c]. Committed + pushed on `valve-isolation-20261102`.
+**Then the STATIC HOLD was REMOVED (same day, user: "it is dangerous"; the user flies the TURN with the half close
+first):** the Valve tab's "Static hold [s]" / `push_pull_valve_hold_s`, the planner's `push_pull_grasp_event` and
+`push_pull/grasp` (they existed only for the hold) and the yaml key are deleted -- the contact phase comes on only with
+the Turn. Guards so nobody turns a valve they meant to hold: a station started with `push_pull_valve_hold_s` > 0 logs
+an error and refuses to turn; the 4-D launcher refuses `ARM_GS_VALVE_HOLD_S` other than 0; the hardware stack refuses
+a yaml that still enables the grasp event. Harness 40/40 (hold cases V3-V5 deleted, S1 added), loopback [9q] checks
+the service is gone. The isolation record and its `--gs-hold` driver are left as records. Record: valve_cup_abort
+README section 5.

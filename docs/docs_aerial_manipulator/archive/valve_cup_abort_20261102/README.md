@@ -87,14 +87,15 @@ the handle) and on the planner's ABORTING status (a guard). When that open goal 
 ### 2.1 Without Isaac
 
 - Arm GS harness (`tools/gs_valve_cup_check.sh`, the real Valve / Box tabs offscreen against a fake planner): **44 of 44
-  checks pass** -- the isolation's V1-V9 (V2/V5 now expect the half close) and C1-C3, A1-A4.
+  checks passed** -- the isolation's V1-V9 (V2/V5 now expect the half close) and C1-C3, A1-A4; after the static hold's
+  removal (section 5) **40 of 40** -- V1, V2, V6-V9, C1-C3, A1-A4 and S1.
 - Planner loopback `test_push_pull_loopback.py` on the sim and the hardware box yamls (the keys live-set): **ALL PASS on both**. [9s]: the abort's
   reference stays put 2.0 s with no report, climbs 0.15 s after `abort_jaws_open` and is 55 mm up 0.60 s after it, the
   claw goes to the vehicle through the FAST hand-back at once; [9s-c]: the gripper's own reading alone starts the
   climb 0.15-0.20 s after it reads open, and the late report is told what started it; [9s-b]: with neither, the 1.0 s
   timeout climbs 1.11-1.16 s after the abort starts executing. (0.15 s is the rig's sampling of the reference.)
 - Raw hardware stack, pre-launch part only (no launch): `AM_HW_PROFILE=valve_turning` "all 96 tuned values
-  present" (the new abort keys included) with no older-build refusal; `AM_HW_PROFILE=box_pushing` "all 62 tuned values
+  present" (the new abort keys included; 95 after the static hold's removal, section 5) with no older-build refusal; `AM_HW_PROFILE=box_pushing` "all 62 tuned values
   present ... AS FLOWN 2026-10-27", unchanged.
 
 ### 2.2 Isaac
@@ -111,7 +112,8 @@ Headless, RTF 1, raw mocap at 120 Hz, the v2 valve at 0.072 N·m (drive model), 
 
 Plus: the half close under the drift model (seed 2) completed (83.7°, p95 1.05 N); seeds 2 (with the sway guard) and 3
 never grasped -- under drift the isolation's "Ready only when the claw is still" gate refused Ready for 10 s, and the
-close gate never met (the isolation's configuration, not today's). The static hold with the half close: complete,
+close gate never met (the isolation's configuration, not today's). The static hold with the half close (a mode removed
+later the same day, section 5): complete,
 contact p95 0.53 N (the isolation's full-close hold: 2.03 N).
 
 What the numbers say:
@@ -155,8 +157,8 @@ difference between the two configurations: 56 mm up 1 s after ABORTING instead o
 - **Bench-check the half close before flying it** (Orin prompt step 5): 0.0 m should leave ~5-6 mm on each side of the
   5 mm fin; the pads met the fin at about -0.006 in the 10-27/10-28 closes. The Isaac clearance (20 mm shim, 0.012)
   is roughly the same.
-- First flight: the STATIC HOLD with the half close. The turn with the half close has 4 of 5 in Isaac; if the user
-  prefers the full close for the turn, start the station with `-p push_pull_valve_cup:=false`.
+- First flight: the 90° turn with the half close (your call, the same day; no static hold -- section 5). The
+  half-close turn has 4 of 5 in Isaac; `-p push_pull_valve_cup:=false` on the station gives the full close (3 of 3).
 
 ## 4. Not done (options)
 
@@ -165,3 +167,25 @@ difference between the two configurations: 56 mm up 1 s after ABORTING instead o
 - Make the free-axis anchor and the heading companion one-sided with the half close (they assume the claw carries the
   handle both ways; the half close only pushes it forward).
 - A faster jaw opening on hardware (the gripper's profile), which now sets the abort's start.
+
+## 5. The static hold removed (same day; user: "it is dangerous")
+
+The valve's static hold -- grasp the fin, hold it in contact with no turn, release, exit; the 10-31 plan's step before
+the turn, and the mode the 11-01 crash flew -- is gone. The grasp is always followed by the turn.
+
+- **Arm GS** (fsc_open_manipulator): the Valve tab's "Static hold [s]" box, `push_pull_valve_hold_s`, the hold timer,
+  the grasp/release reports to the planner and the hold's lamp are deleted. An old launch line or prompt that still
+  passes `push_pull_valve_hold_s` > 0 expected a hold: the tab then logs an error and refuses to turn, automatically
+  or on a press, until the station is restarted without it -- so it can never turn a valve that someone meant to hold.
+- **Planner** (fsc_trajectory_planner): `push_pull_grasp_event` and the `push_pull/grasp` service (they existed only
+  for the hold) are deleted; the contact phase comes on only with the Turn, as the box's with the Push.
+- **Valve yamls** (generated): `push_pull_grasp_event` removed. The raw hardware stack refuses a yaml that still
+  enables it, and no longer expects it.
+- **Pegasus 4-D launcher**: `ARM_GS_VALVE_HOLD_S` other than 0 stops the launch with an error (0, what the old campaign
+  scripts pass for a turn, is accepted and ignored).
+- **Tests**: the harness's hold cases (V3-V5) deleted, S1 added (a station started with `push_pull_valve_hold_s 10.0`
+  closes nothing after Ready and refuses a Turn press): 40 of 40. Loopback [9q] checks `push_pull/grasp` is gone; ALL
+  PASS on the sim and hardware box yamls. Raw hardware stack: valve profile 95 tuned values present, box 62.
+  Commits: fsc_trajectory_planner `6b24f84`, fsc_open_manipulator `c9e9cb8`, fsc_autopilot_ros2 `e3cf268`.
+- The isolation record (`../valve_box_isolation_20261102/`) and its Isaac driver (`--gs-hold`) describe the removed
+  mode; they are records and were not changed.

@@ -177,14 +177,12 @@ if [[ -n "${ARM_GS_AUTO_PUSH:-}" ]]; then
   [[ "$ARM_GS_AUTO_PUSH" == "true" || "$ARM_GS_AUTO_PUSH" == "false" ]] || { echo "ERROR: ARM_GS_AUTO_PUSH must be true or false, got '$ARM_GS_AUTO_PUSH'" >&2; exit 1; }
   ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_push:=$ARM_GS_AUTO_PUSH"
 fi
-# ARM_GS_VALVE_HOLD_S (2026-11-02, Pegasus archive/valve_box_isolation_20261102): the Valve tab's
-# STATIC HOLD -- after the grasp the station reports it to the planner (push_pull/grasp: contact on),
-# holds this many seconds, reports the release and exits. 0 = the turn follows the grasp. Unset =
-# the station's default (0; the tab's spin box sets it live).
+# ARM_GS_VALVE_HOLD_S: the Valve tab's STATIC HOLD (2026-11-02 morning) was REMOVED the same day (user:
+# "it is dangerous"; Pegasus archive/valve_cup_abort_20261102) -- the grasp is always followed by the
+# turn. 0 (what the old campaign scripts pass for a turn) is accepted and ignored; anything else stops
+# here, so a script that meant a hold never flies a turn instead.
 if [[ -n "${ARM_GS_VALVE_HOLD_S:-}" ]]; then
-  [[ "$ARM_GS_VALVE_HOLD_S" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "ERROR: ARM_GS_VALVE_HOLD_S must be a number of seconds, got '$ARM_GS_VALVE_HOLD_S'" >&2; exit 1; }
-  [[ "$ARM_GS_VALVE_HOLD_S" == *.* ]] || ARM_GS_VALVE_HOLD_S="$ARM_GS_VALVE_HOLD_S.0"   # a double parameter
-  ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_valve_hold_s:=$ARM_GS_VALVE_HOLD_S"
+  [[ "$ARM_GS_VALVE_HOLD_S" =~ ^0+(\.0*)?$ ]] || { echo "ERROR: ARM_GS_VALVE_HOLD_S=$ARM_GS_VALVE_HOLD_S asks for the valve's static hold, which was removed on 2026-11-02 -- unset it (the grasp is always followed by the turn)" >&2; exit 1; }
 fi
 # ARM_GS_EXTRA_ARGS (2026-11-02): further `-p name:=value` arguments for the arm GS, appended as given
 # (the isolation campaign's A/B flies the 11-01 build with its Go To Start behaviour:

@@ -23,12 +23,15 @@ is the 2026-10-27 one):
    state itself on the Orin, and the tab also reports the OPEN goal's success on the new
    `whole_body_planner/push_pull/abort_jaws_open` (whichever comes first; at most 1 s without either). The first
    60 mm of the climb take 0.8 s; the claw follows the vehicle from the first tick of the abort.
-3. Earlier today: the automatic exit after the turn / static hold waits for a calm base AND the law's CoM error under
+3. THE STATIC HOLD IS GONE (removed as dangerous): the "Static hold [s]" box and `push_pull_valve_hold_s` no longer
+   exist; the grasp is always followed by the turn. A station started with `-p push_pull_valve_hold_s:=...` > 0 (the
+   old isolation prompt said so) logs an ERROR and refuses to turn -- restart it without that argument.
+4. Earlier today: the automatic exit after the turn waits for a calm base AND the law's CoM error under
    20 mm (`push_pull_valve_exit_max_base_err`), then OPENS with the claw still held in the room and starts the exit on
    the OPEN report (`push_pull_valve_exit_wait_s` 0.0).
 
 Steps:
-1. Pull fsc_open_manipulator on `valve-isolation-20261102` (expected HEAD `a685640` or later; origin
+1. Pull fsc_open_manipulator on `valve-isolation-20261102` (expected HEAD `c9e9cb8` or later; origin
    Gao907/fsc_open_manipulator), report its HEAD, and REBUILD `utils_custom_ground_station`
    (`colcon build --packages-select utils_custom_ground_station`). An older station full-closes on the fin, opens on
    an abort only near the handle, and never reports the open (the planner's own gripper reading still climbs).
@@ -43,14 +46,14 @@ Steps:
    waiting for the jaws` (the planner itself refuses the abort outside DIRECT; the report path is what this checks).
    Isaac reference (2026-11-02): in every abort from a sound arm the jaws read open ~0.4 s after ABORTING, the climb
    started then, the claw was 56 mm up 1 s after ABORTING, DIRECT kept. The half-close turn completed 4 of 5 (the full
-   close 3 of 3); the static hold with the half close was clean -- the record's section 2.2.
+   close 3 of 3) -- the record's section 2.2.
 4. Recorder: keep the 2026-11-01 topic list (explicit topics). Add nothing for today; the planner logs the abort's
    timeline on `/rosout` ("the jaws are open X s into the abort -- climbing now").
-5. Session plan (the user decides; never the turn first): STATIC HOLD with the half close -- Go To Start (jaws close) ->
-   Ready (automatic: jaws open, descend) -> the planner settles the claw and holds it in the room -> the gate sends the
-   HALF CLOSE -> the status strip reads "Static hold: the jaws hold the handle ..." -> calm wait, open, Exit
-   (automatic) -> the jaws close. Watch that the fin stays FREE between the pads (it must slide out, not be pinched).
-   Then, if the hold is clean, the turn.
+5. Session plan (the user decides): the 90° TURN with the half close -- Go To Start (jaws close) -> Ready (automatic:
+   jaws open, descend) -> the planner settles the claw and holds it in the room -> the gate sends the HALF CLOSE -> the
+   Turn starts by itself (contact on, 1.5 s settle, 90° in 18 s; the U pushes the fin once the claw is ahead of it) ->
+   calm wait, open with the claw held in the room, Exit (automatic) -> the jaws close. Watch that the fin stays FREE
+   between the pads (it must slide out, not be pinched).
 6. THE WAY BACK to the 10-27 box push: check out `box-pushing-20261027` in fsc_open_manipulator, rebuild
    `utils_custom_ground_station`, and fly the Box Pushing tab -- the Orin checks out the same branch in its repos.
 

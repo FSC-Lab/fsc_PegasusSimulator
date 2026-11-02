@@ -425,11 +425,9 @@ PLANNER_BLOCK = f"""
     # VALVE-ONLY PLANNER OPTIONS (2026-11-02, default off -- the box push never sets them):
     #   fast_hand_back: the q3 / sway guard aborts hand the claw to the vehicle through the
     #     node's set_ee_anchor_com_fast (wb_ee_anchor_fast_blend_s 0.25 s; 2026-11-01)
-    #   grasp_event: push_pull/grasp is served -- the arm GS reports the jaws closed on the fin
-    #     (the contact phase on) and about to open (off) in a STATIC HOLD, which has no Turn
-    #     press; the contact flag is never inferred from the gripper's position
+    #   (the STATIC HOLD and its grasp event, push_pull_grasp_event, were REMOVED on 2026-11-02,
+    #   user: "it is dangerous" -- the contact phase comes on only with the Turn)
     push_pull_fast_hand_back: true
-    push_pull_grasp_event: true
     # THE ROTOR SAMPLE GATE (the box push's, 2026-10-21): an obj_0 sample farther than 20 mm /
     # 10 deg from the last good one (the allowance growing with the gap) is dropped before Get
     # and the guards read it; Get refuses a window with any dropped sample. The turn's own yaw

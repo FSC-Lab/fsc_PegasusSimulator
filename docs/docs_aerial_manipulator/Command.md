@@ -1720,7 +1720,7 @@ guards replay to 0.01 s. Isolation tests T1-T7 for the next session: README sect
 `archive/wb_valve_turning_flight_20261101`):** the two parameter sets and the grip schedule above are deleted (the node
 no longer reads the jaws). The claw follows the vehicle through Go To Start and the descent and is held in the room only
 after the box's hand-over settle; the station's gate closes the jaws; contact comes on at the Turn press, or on the
-station's `push_pull/grasp` event in a static hold (`push_pull_valve_hold_s`). **Exit To Turn starts like the box's**
+station's `push_pull/grasp` event in a static hold (`push_pull_valve_hold_s`; removed the same day, below). **Exit To Turn starts like the box's**
 (0.2 s after the turn or hold, calm base, plus CoM error < 20 mm) **but keeps the valve's order**: open with the claw held
 in the room, climb, held until 60 mm up, then the claw follows the vehicle (`push_pull_valve_box_exit` false; the
 box's release-first order did worse on the valve in Isaac). An abort after the turn or in the exit climb keeps the claw
@@ -1738,6 +1738,12 @@ first 60 mm in 0.8 s, the claw following the vehicle (`push_pull_abort_climb_on_
 ~0.4 s after ABORTING and 56 mm up 1 s after it; the half-close turn completed 4 of 5 against the full close's 3 of 3
 (the U pushes the fin only after ~30 mm of slack, and one turn buckled the arm). `-p push_pull_valve_cup:=false`
 restores the full close. Orin: rebuild `fsc_trajectory_planner`. Laptop: rebuild `utils_custom_ground_station`.
+
+**THE STATIC HOLD IS GONE (2026-11-02, user: "it is dangerous")**: the grasp is always followed by the turn. The Valve
+tab's "Static hold [s]" (`push_pull_valve_hold_s`) and the planner's `push_pull_grasp_event` / `push_pull/grasp` are
+deleted; a station still started with `push_pull_valve_hold_s` > 0 refuses to turn, the 4-D launcher refuses
+`ARM_GS_VALVE_HOLD_S` other than 0, and the hardware stack refuses a yaml that still enables the grasp event. First
+valve flight: the turn with the half close.
 
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 
