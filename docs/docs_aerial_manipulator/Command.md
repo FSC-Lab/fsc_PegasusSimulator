@@ -1716,6 +1716,29 @@ hardware contact flights (`tools/guard_audit.py`): every valve failure is caught
 guards replay to 0.01 s. Isolation tests T1-T7 for the next session: README section 5; deployment prompts:
 `deploy_orin_prompt.md` / `deploy_laptop_prompt.md`. Orin: rebuild `fsc_autopilot_ros2` + `fsc_trajectory_planner`.
 
+**THE VALVE RUNS THE BOX'S WORKFLOW (2026-11-02, branch `valve-isolation-20261102`; `archive/valve_box_isolation_20261102`,
+`archive/wb_valve_turning_flight_20261101`):** the two parameter sets and the grip schedule above are deleted (the node
+no longer reads the jaws). The claw follows the vehicle through Go To Start and the descent and is held in the room only
+after the box's hand-over settle; the station's gate closes the jaws; contact comes on at the Turn press, or on the
+station's `push_pull/grasp` event in a static hold (`push_pull_valve_hold_s`). **Exit To Turn starts like the box's**
+(0.2 s after the turn or hold, calm base, plus CoM error < 20 mm) **but keeps the valve's order**: open with the claw held
+in the room, climb, held until 60 mm up, then the claw follows the vehicle (`push_pull_valve_box_exit` false; the
+box's release-first order did worse on the valve in Isaac). An abort after the turn or in the exit climb keeps the claw
+held in the room until it is clear of the fin (`push_pull_abort_exit_hold`; off since the same afternoon, below).
+Comparison page: "Valve-turning vs Box-pushing logic". Orin: rebuild `fsc_trajectory_planner`. Laptop: rebuild
+`utils_custom_ground_station`.
+
+**THE HALF CLOSE + THE ABORT THAT CLIMBS WHEN THE JAWS READ OPEN (2026-11-02 afternoon, `archive/valve_cup_abort_20261102`):**
+the Valve tab closes the jaws only to `push_pull_valve_cup_position` (hardware 0.0 m, about 5-6 mm on each side of the
+fin -- bench-check it; Isaac 0.012), so the claw pushes the fin and never clamps it. Every valve abort opens the jaws at
+once and climbs the moment the gripper reads open (the planner reads `fsc_open_manipulator/joint_states`
+`gripper_left_joint` >= 0.017 itself; the GS's report on `push_pull/abort_jaws_open` also counts; at most 1 s), the
+first 60 mm in 0.8 s, the claw following the vehicle (`push_pull_abort_climb_on_open`, `_gripper_*`, `_fast_climb`,
+`_fast_follow`; `push_pull_abort_exit_hold` now false). Isaac: every abort from a sound arm kept DIRECT, climbing
+~0.4 s after ABORTING and 56 mm up 1 s after it; the half-close turn completed 4 of 5 against the full close's 3 of 3
+(the U pushes the fin only after ~30 mm of slack, and one turn buckled the arm). `-p push_pull_valve_cup:=false`
+restores the full close. Orin: rebuild `fsc_trajectory_planner`. Laptop: rebuild `utils_custom_ground_station`.
+
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 
 **shiqi_machine** (2026-10-23, the final pick-and-place experiment): a red envelope (150 x 90 x 4 mm, 60 g,

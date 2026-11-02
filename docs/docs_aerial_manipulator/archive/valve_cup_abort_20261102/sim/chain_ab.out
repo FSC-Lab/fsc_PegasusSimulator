@@ -1,0 +1,13 @@
+12:05:30 start full_turn_1 gs_extra=-p push_pull_valve_cup:=false 
+[full_turn_1] completed
+12:09:11 start cup_turn_3 gs_extra=none 
+[cup_turn_3] completed
+12:12:44 start full_turn_2 gs_extra=-p push_pull_valve_cup:=false 
+[full_turn_2] completed
+12:16:16 start cup_turn_4 gs_extra=none 
+[cup_turn_4] completed
+12:19:46 start full_turn_3 gs_extra=-p push_pull_valve_cup:=false 
+[full_turn_3] completed
+12:23:16 start cup_turn_5 gs_extra=none 
+[cup_turn_5] completed
+12:26:52 CHAIN DONE

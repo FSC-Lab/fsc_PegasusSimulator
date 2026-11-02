@@ -16,8 +16,14 @@
 //   V2  Valve: the automatic Ready OPENS the jaws and descends on the report; the close waits for the
 //       planner's hand-over (info [87] settling) and then closes; the grasp TURNS (Push), and no
 //       grasp event is sent in the turn mode
-//   V3  Valve static hold (push_pull_valve_hold_s 1.0): the grasp -> grasp(true), 1 s, grasp(false),
-//       OPEN with no release call, Exit after the OPEN report; no Push
+//   V3  Valve static hold (push_pull_valve_hold_s 1.0): the grasp -> grasp(true), 1 s, the calm wait,
+//       grasp(false), OPEN with no release call (the claw stays held in the room), Exit after the
+//       OPEN report; no Push
+//   V7  Valve turn, the automatic exit: DONE push -> waits while the base moves, then OPEN (no
+//       release), Exit after the report
+//   V8  Valve, push_pull_valve_box_exit true: the box's order (release, OPEN, Exit)
+//   V9  Valve turn, the base-error wait (planner arrival_error [32]): 45 mm holds the exit, 10 mm
+//       lets it go (calm_max 10 s, so only the error can release it)
 //   V4  Valve static hold, ABORTING during the hold: no grasp(false), no Exit; ABORTED closes the jaws
 //   V5  Valve static hold, a planner without push_pull/grasp: nothing moves (no Push, no open)
 //   V6  Box tab = 10-27: no gripper command at Go To Start or after the Exit; NOT IN DIRECT with only
@@ -37,6 +43,7 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/set_bool.hpp>
@@ -75,6 +82,9 @@ struct Rig
   bool settling{false};
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pl_status, status;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr info, arrival;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr base_pub;
+  rclcpp::TimerBase::SharedPtr base_tick;
+  double base_speed = -1.0, base_x = 0.0, base_err = 0.005;
   std::vector<rclcpp::ServiceBase::SharedPtr> srvs;
   rclcpp::TimerBase::SharedPtr tick;
   std::string last_status{"READY next=go_to_start"};
@@ -106,7 +116,8 @@ struct Rig
   }
   bool trim() const {return arm->get_parameter("trim_target_includes_error_damping").as_bool();}
 
-  Rig(const std::string & gov, bool valve, double hold_s, bool grasp_srv)
+  Rig(const std::string & gov, bool valve, double hold_s, bool grasp_srv, bool box_exit = false,
+      double calm_max_s = 2.0)
   {
     node = std::make_shared<rclcpp::Node>("gs_valve_phase_harness", gov + "/fsc_open_manipulator");
     node->declare_parameter<bool>("simulation", false);
@@ -114,6 +125,9 @@ struct Rig
     node->declare_parameter<double>("push_pull_grip_timeout_s", 1.0);
     node->declare_parameter<double>("push_pull_valve_grip_wait_max_s", 1.5);
     node->declare_parameter<double>("push_pull_valve_hold_s", hold_s);
+    node->declare_parameter<double>("push_pull_auto_exit_calm_max_s", calm_max_s);
+    node->declare_parameter<double>("push_pull_valve_exit_wait_s", 0.5);
+    if (box_exit) {node->declare_parameter<bool>("push_pull_valve_box_exit", true);}
     arm = std::make_shared<rclcpp::Node>("external_torque_controller", gov + "/fsc_open_manipulator");
     arm->declare_parameter<std::vector<double>>("passthrough_error_damping_joints", kArmDamping);
     arm->declare_parameter<bool>("trim_target_includes_error_damping", false);
@@ -133,6 +147,15 @@ struct Rig
     status = planner->create_publisher<std_msgs::msg::String>(gov + "/whole_body_planner/status", latched);
     info = planner->create_publisher<std_msgs::msg::Float64MultiArray>(base + "/info", latched);
     arrival = planner->create_publisher<std_msgs::msg::Float64MultiArray>(base + "/arrival_error", 10);
+    base_pub = planner->create_publisher<geometry_msgs::msg::PoseStamped>(gov + "/whole_body_planner/current_base", 10);
+    base_tick = planner->create_wall_timer(std::chrono::milliseconds(50), [this]() {
+        if (base_speed < 0.0) {return;}   // < 0: no base pose at all
+        base_x += base_speed * 0.05;
+        geometry_msgs::msg::PoseStamped m;
+        m.pose.position.x = base_x;
+        m.pose.position.z = 1.2;
+        base_pub->publish(m);
+      });
     for (const char * svc : {"go_to_start", "ready", "push", "exit", "release", "abort"}) {
       const std::string name = svc;
       srvs.push_back(planner->create_service<Trigger>(
@@ -154,7 +177,7 @@ struct Rig
     tick = planner->create_wall_timer(std::chrono::milliseconds(100), [this]() {
         if (!on_handle) {return;}
         std_msgs::msg::Float64MultiArray a;   // the claw on the grasp point, centred, still, heading ok
-        a.data.assign(32, 0.0);
+        a.data.assign(34, 0.0);
         a.data[0] = 1.0;
         a.data[1] = 1.0;
         a.data[2] = 0.005;
@@ -164,6 +187,7 @@ struct Rig
         a.data[9] = 0.001;
         a.data[30] = 2.0;
         a.data[31] = 0.16;
+        a.data[32] = base_err;   // the law's CoM error (2026-11-02)
         arrival->publish(a);
       });
     panel = new PushPullPanel(node, valve);
@@ -228,7 +252,8 @@ int main(int argc, char * argv[])
       if (!ok) {fails.push_back(what);}
     };
   using Step = std::pair<int, std::function<void(Rig &)>>;
-  struct Case {std::string name; bool valve; double hold_s; bool grasp_srv; std::vector<Step> steps;};
+  struct Case {std::string name; bool valve; double hold_s; bool grasp_srv; std::vector<Step> steps; bool box_exit = false;
+    double calm_max_s = 2.0;};
   std::vector<Case> cases;
   static const std::string DONE_READY = "DONE ready next=push (CONTACT on: the gripper closes first)";
 
@@ -270,11 +295,40 @@ int main(int argc, char * argv[])
       check(r.count("grasp_true") == 1 && r.count("push") == 0, "V3_grasp_event_not_a_turn", &r);
       check(r.count("grasp_false") == 0 && r.count("open") == 0, "V3_holding", &r);
     }},
-    {3000, [&](Rig & r) {   // 1 s hold, grasp(false), open (0.4 s), exit 1 s after the report
+    {3000, [&](Rig & r) {   // 1 s hold, calm (no base pose), grasp(false), open (0.4 s), exit 0.5 s after
       const int gf = r.at("grasp_false"), op = r.at("open"), ex = r.at("exit");
-      check(gf >= 0 && op > gf && ex > op, "V3_release_reported_then_open_then_exit", &r);
+      check(gf >= 0 && op > gf && ex > op, "V3_grasp_off_open_exit", &r);
       check(r.count("release") == 0 && r.count("push") == 0, "V3_no_release_call_no_turn", &r);
     }}}});
+  cases.push_back({"V7_turn_auto_exit_box_way", true, 0.0, true, {
+    {0, [](Rig & r) {r.base_speed = 0.10; r.publish("FLYING push (CONTACT) T=19.5s", true, 1);}},   // base at 100 mm/s
+    {300, [](Rig & r) {r.publish("DONE push next=exit (the gripper opens first)", true, 2);}},
+    {600, [&](Rig & r) {   // 0.2 s + 0.4 s: the base still moving -> no release yet
+      check(r.count("release") == 0 && r.count("open") == 0, "V7_waits_for_a_calm_base", &r);
+      r.base_speed = 0.0;   // the base calms
+    }},
+    {2000, [&](Rig & r) {
+      const int op = r.at("open"), ex = r.at("exit");
+      check(r.count("release") == 0 && op >= 0 && ex > op, "V7_open_then_exit_no_release", &r);
+    }}}});
+  cases.push_back({"V8_box_exit_switch", true, 0.0, true, {
+    {0, [](Rig & r) {r.publish("FLYING push (CONTACT) T=19.5s", true, 1);}},
+    {300, [](Rig & r) {r.publish("DONE push next=exit (the gripper opens first)", true, 2);}},
+    {1800, [&](Rig & r) {   // 0.2 s, release, open, report 0.4 s, exit on it
+      const int rl = r.at("release"), op = r.at("open"), ex = r.at("exit");
+      check(rl >= 0 && op > rl && ex > op, "V8_release_open_exit", &r);
+    }}}, true});
+  cases.push_back({"V9_base_error_wait", true, 0.0, true, {
+    {0, [](Rig & r) {r.base_speed = 0.0; r.base_err = 0.045; r.publish("FLYING push (CONTACT) T=19.5s", true, 1);}},
+    {300, [](Rig & r) {r.publish("DONE push next=exit (the gripper opens first)", true, 2);}},
+    {1500, [&](Rig & r) {   // still, but 45 mm off: no exit
+      check(r.count("open") == 0 && r.count("release") == 0, "V9_holds_while_the_base_is_off", &r);
+      r.base_err = 0.010;
+    }},
+    {1500, [&](Rig & r) {   // 10 mm: calm 0.3 s, open, report 0.4 s, exit 0.5 s after
+      const int op = r.at("open"), ex = r.at("exit");
+      check(op >= 0 && ex > op && r.count("release") == 0, "V9_exits_once_the_base_is_back", &r);
+    }}}, false, 10.0});
   cases.push_back({"V4_abort_during_the_hold", true, 3.0, true, {
     {0, [](Rig & r) {r.publish("FLYING ready T=3.0s", true, 1);}},
     {300, [](Rig & r) {r.publish(DONE_READY, true, 1);}},
@@ -335,7 +389,7 @@ int main(int argc, char * argv[])
       const std::string gov = "/uav_gsp" + std::to_string(next);
       ++next;
       rig.reset();
-      rig = std::make_unique<Rig>(gov, c.valve, c.hold_s, c.grasp_srv);
+      rig = std::make_unique<Rig>(gov, c.valve, c.hold_s, c.grasp_srv, c.box_exit, c.calm_max_s);
       QTimer::singleShot(2500, &app, [&, c]() {
           rig->events.clear();
           run_step(c, 0);

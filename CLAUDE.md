@@ -7648,3 +7648,127 @@ repo; NOT flown on hardware.
   running loopback looks dead); the pl_mission driver's `--dbg-len` default (120) truncated the new
   debug entries until raised to 131; a forced-trip run that looks like a failure may be the forced
   limit cycling, not the guard.
+
+**THE OBSERVER'S TANGENTIAL READING DURING VALVE SLIPS, ISAAC vs HARDWARE (2026-11-01, user question after a
+bag review; record `docs/docs_aerial_manipulator/archive/valve_observer_sign_20261101/README.md`).**
+- Convention: the force ON THE CLAW along the valve's motion. A resisting valve reads NEGATIVE.
+- Isaac (23 turns) over the whole turn: the raw F_hat (debug [97..99]) matches the PhysX truth to ~0.15 N.
+- Isaac during slips (|valve rate| > 15 deg/s):
+  - truth −0.39..−1.47 N, negative in every run;
+  - raw F_hat −1.12..+0.18 N: pulled toward zero, wrong-signed in 3 of 23, sd 2.0–2.9 N;
+  - the law's filtered F_hat_y (debug [58..60]) right-signed in all 23.
+- The error is not a scaled truth (R² ≤ 0.04). Arm-joint motion (friction shape + joint acceleration) explains
+  R² 0.2–0.5 of it.
+- Reading: with ŵ_q frozen in contact, joint-row disturbances are booked as task force. Inferred, not isolated.
+- Hardware, same definitions: slips read −0.10 / −0.15 / **+1.26 N** raw (10-28 ×2, 10-29), and the filtered
+  reading is near zero or wrong-signed too (+0.45 on 10-29).
+- The review's own sign convention is not in the repo. Under this one, negative "current"/"command" values
+  would be right-signed.
+
+**VALVE TURNING ISOLATED FROM BOX PUSHING; THE VALVE'S PHASES THE 10-27 BOX WAY (2026-11-01/02, user request from
+the Orin session's prompt; record `docs/docs_aerial_manipulator/archive/valve_box_isolation_20261102/README.md`,
+deploy prompts beside it).** Branch `valve-isolation-20261102` in five repos, committed LOCALLY, NOT pushed:
+fsc_autopilot_ros2 8e2945d, fsc_trajectory_planner 52b6cd7 + 98500a3, fsc_open_manipulator bc495eb,
+fsc_drone_state_estimator_ros2 7c780bb, Pegasus (this record). User decisions: D1 ONE valve gain set (the contact
+set throughout), D2 the box EXACTLY 10-27, G the Valve tab closes the jaws itself and tells the planner, P the
+valve takes the box's approach (CoM-anchored descent -> settle hand-over -> room hold).
+- **The way back:** branch `box-pushing-20261027` (tag `box-pushing-20261027-flown` at the same commits) in every repo
+  (fsc_autopilot_ros2 a316625, planner 7d8ede9, estimator 4badef8, arm a0cb8b8, Pegasus 4939d04); the tag set
+  builds (`~/baseline_box_20261027_ws`) and its raw stack's pre-launch check passes (62 tuned values).
+- **Box = 10-27:** both box yamls byte-identical to a316625; every post-10-27 box path keyed off with a default =
+  the 10-27 behaviour -- node `wb_arm_release_on_stop` (the 0.1 s NaN arm release), arm-controller LIVE
+  `trim_target_includes_error_damping`, estimator launch arg `mocap_guard_predict` (box stacks pass false), planner
+  `push_pull_fast_hand_back`; the Box tab's lost-DIRECT rule back to 10-27. Parameter dumps on the box yamls, 10-27
+  build vs new: node 164 / planner 255 common parameters, 0 differ.
+- **The gripper position is no input to the node any more:** the 10-31 grip schedule and the 11-01 two
+  parameter sets are DELETED (an empty closed gripper read like a grasp). The heading companion follows the
+  planner's CONTACT flag (`wb_ee_anchor_free_axis_heading_after_contact`, `wb::ContactHeading`); debug [120] = the
+  contact flag, [121]/[125]/[126] NaN.
+- **Valve phases on planner events:** jaws CLOSED in free flight (the Valve tab closes them at Go To Start and
+  again after the Exit / an abort), Ready opens them, the gate closes them after the planner's hand-over; a STATIC
+  HOLD ("Static hold [s]" on the tab) calls the planner's new `push_pull/grasp` (key `push_pull_grasp_event`, valve
+  yaml only) -> contact on -> hold -> contact off -> open -> Exit. The 10-31 night pre-grasp room-hold guards are
+  OFF for the valve (their room-held descent is gone). The valve generator no longer imports the box generator.
+- **Isaac (the record's section 5):** box 3/3 on both builds, slide residual 1.08 vs 0.88 N on the tag set the same
+  evening -- tracks the SIM grasp (jaws stall around -0.1 or -0.2 rad; the pre-isolation 10-28 runs split the same
+  way, 0.78 vs 1.03-1.08 N), not resolved at 3 a side. Valve: static hold complete and every abort from it clean;
+  the TURN 2 of 3 nominal (1 clean tilt-guard abort, the ~1 Hz q1/q4 mode) and 0 of 1 under drift (an open finger
+  turned the valve before the grasp -- the 10-27 CoM-anchored-descent failure that the room-held descent had
+  fixed), vs 13 of 13 unforced on the 10-31/11-01 builds. **Choice P weakened the turn in Isaac** -- the user's
+  call (more runs, the valve's `push_pull_world_anchor_ready: true` back, or the static hold first as planned).
+  Forced mid-turn aborts (mocap freeze, sway) still flip 1-in-3, on the pre-isolation build too.
+- Harness traps: running the older panel harnesses overwrites their archive snapshots (13 PNGs left modified --
+  restore them with git checkout); three older harnesses fail by design or stale (open-at-Go-To-Start, the
+  pre-10-28 axis offset). Orin: rebuild fsc_autopilot_ros2, then fsc_trajectory_planner, then the estimator and
+  open_manipulator_x_custom_controller; laptop: utils_custom_ground_station.
+
+**1101 VALVE FLIGHTS: FOUR STATIC-HOLD ATTEMPTS, ONE CRASH -- THE PRE-GRASP ROOM HOLD, AND THE VALVE'S
+ABORT / EXIT ALIGNED WITH THE BOX (2026-11-02, user request: check the valve state machine against the
+box push, fix it, analyse the crash; record `docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261101/README.md`,
+report artifact "1101 Valve Turning Review").** The bags flew the 11-01 PUSHED build (fsc_autopilot_ros2
+`9e4b03e` two gain sets + grip schedule, planner `17fd566` leash / Ready CoM gate / descent guard, yaml
+`push_pull_world_anchor_ready: true`), NOT the isolation branch. Three flights aborted in the room-held
+descent (descent guard 89 / 66 mm, q3 rate guard at q3 5.4 deg) and the fourth grasped, tripped the sway
+guard 0.8 s later (249 mm/s) and crashed INSIDE the abort: every abort leg is rest-to-rest, the sway guard
+fired with the base 32-44 mm from the planned hold but moving ~350 mm/s, so it overshot to 149 mm and rang at
+0.5 Hz; the claw (fast hand-back to the CoM anchor) FOLLOWED the base, sweeping the opening jaws +151/-40 mm
+across the fin for 2 s at fin height, then caught the fin as the climb began (claw stopped at +40-55 mm while
+the base ran to +214 mm; rotor lifted 5 mm, 35 N, rotors saturated) -> 25 deg -> SAFETY -> inverted 4.4 m
+away. Root of all four (and of 10-29 / 10-31 pm): the claw ROOM-held from the end of Go To
+Start. The ARRIVAL error is ordinary and the same on both tasks (base CoM 5-43 mm off at the end of Go To
+Start; box 10-27: 18 / 38 mm) -- what differs is what follows: the box stays at 31-45 mm peak and is back to
+18-31 mm at the push, the room-held valve GROWS to 62-110 mm and the arm takes it (q1 -23 deg, q3 to 5).
+2 box vs 4 valve flights: consistent, not proof of causation. The jaws were closed BY HAND (static-hold test,
+automatic Push off) with the base ~100 mm off: the room-held claw looked settled; the station gate (claw-only)
+would not have caught it either. The sway
+guard caught the swing at ~3-4 deg tilt; the crash came from the ABORT, not the swing. The 10-27 box never
+room-holds early (claw CoM-anchored until the hand-over settle, 0.4-1.2 s before the close). The isolation branch already had P (box approach) and the
+grip schedule deleted; TODAY: valve abort = the box's (`push_pull_abort_from_measured true`,
+`push_pull_abort_release_wait_s` 1.0 sim / 1.5 hw, `push_pull_abort_release_world_held false`; unbuckle
+off) in both valve generators + yamls + the raw stack's expectations -- NOT a fix for this crash (removes only
+the 32-44 mm; the claw still follows a swinging base across the fin), reverses the 10-18 Isaac result against
+from_measured on the valve, UNTESTED -- revert or Isaac-test before flight; and the Valve tab's
+`push_pull_valve_exit_wait_s` default 1.0 -> 0.0 (exit on the OPEN report). Tab harness 25/25, pre-launch
+valve 87 / box 62 OK. NOT fixed: the in-contact sway (10-28/29). NOT deployed, NOT committed, nothing flown.
+Comparison page "Valve-turning vs Box-pushing logic" (`wb_valve_turning_flight_20261101/logic_compare.html`,
+built by `logic_compare/build_trace.py` + `build_page.py`): the 10-27 box A held the claw in the room 0.46 s before
+the jaws closed (settle 0.40 s after Ready, gate met at once, base 16 mm off); the 11-01 valve 6.62 s (from Go To
+Start done; hand close; base 106 mm off, q1 -21.5 deg).
+The crash ABORT itself (README section 8, page section "The abort that crashed" with a 3-D view of the abort
+plan from `viz_path`): the sway guard handed the claw reference to the base (0.25 s), so the open claw swept with a
+base that overshot the planned rest hold by 153 mm; it knocked the fin 8 -> 19 deg on the swing back, then hooked it
+at the climb's start and dragged it back to -3 deg while its reference ran 138 mm away; SAFETY with the climb 28 mm up.
+The jaws NEVER held the fin: the hand close (42.58 s) shut on nothing beside the fin's end -- closed reading -9.88 mm /
+effort 36 against -9.55..-9.69 / 99-150 for the 10-28/10-29 fin grasps and -9.91 / 26 for the 10-31 close on nothing
+(a quick grasp check for any bag); the abort opened them 0.03 s after the trip.
+Same day, the valve's EXIT: the box's start conditions, the VALVE's order (user chose the safer one after the
+concern). Station: automatic exit 0.2 s after the turn / static hold, then the calm wait (base < 40 mm/s for 0.3 s,
+max 3 s) plus the law's CoM error < `push_pull_valve_exit_max_base_err` 0.020 (planner `push_pull/arrival_error` [32],
+new; [33] its rate); then OPEN with the claw still held in the room, climb on the open report, held until 60 mm up
+(`push_pull_exit_world_held_dz`), then CoM. `push_pull_valve_box_exit` default false (true = box's release-first,
+which did worse in Isaac: 2/7 vs 3/3 on 10-18). Planner: new `push_pull_abort_exit_hold` (valve yaml true): an
+abort after the turn / a static hold's release / in the exit climb keeps the claw room-held until it has climbed
+clear, whatever guard fired (mocap aborts still hand back at once). Harness 30/30, loopback [9r] added, pre-launch
+valve 88 / box 62. Comparison page: box lane, latest valve workflow (designed), 11-01 flight in an Archive section.
+All on `valve-isolation-20261102`, uncommitted.
+
+**VALVE HALF CLOSE + THE ABORT THAT CLIMBS WHEN THE JAWS READ OPEN (2026-11-02 afternoon, user design; record
+`docs/docs_aerial_manipulator/archive/valve_cup_abort_20261102/README.md`, deploy prompts beside it, Command.md §18).**
+Item 1 (the free axis) was already in the valve yamls (0.75 on_world). Item 2 (arm GS Valve tab only): the close on the
+fin is a HALF close to `push_pull_valve_cup_position` (hw 0.0 m ~5-6 mm a side of the 5 mm fin, BENCH-CHECK; Isaac 0.012
+= hub -12 deg vs the 20 mm shim's -24 deg stall) via `ControlPanel::requestGripperTo`; reached = the cup, a stall no
+wider than `_cup_max_open` (cup + 0.004) = still a cup; `push_pull_valve_cup:=false` = the full close. Item 3 (planner
+keys, valve yamls only, box untouched): `push_pull_abort_climb_on_open` (the abort's rest ends -- exec_t0_ jumps past
+the pause, continuous -- when the gripper's OWN joint state reads open, `push_pull_abort_gripper_topic/_joint/_open_at`
+= hw fsc_open_manipulator/joint_states gripper_left_joint 0.017 / Isaac isaacsim_manipulator/gripper_state gripper_joint
+-0.03, or on the GS's report `push_pull/abort_jaws_open`; whichever first; `_open_timeout_s` 1.0), `push_pull_abort_fast_climb`
+0.06 m in `_s` 0.8 (own leg, timedOptions), `push_pull_abort_fast_follow` (every abort -> the node's fast CoM blend),
+`push_pull_abort_exit_hold` FALSE (the morning's room-held exit-window abort contradicts it). The GS opens on every
+valve-mission abort (also far from the handle) and reports the OPEN. The user's details (gripper READS open, ~1 s, fast
+60 mm) came from the morning session (my memory), not this request's text. Isaac (headless, v2 valve 0.072 drive):
+every abort from a sound arm kept DIRECT, jaws read open 0.38-0.40 s, climb at once, +56 mm at 1 s (+2 mm before the
+fast leg), claw following by 0.3 s. A/B nominal turn: full close 3/3, half close 4/5 (+1/1 drift); the half close
+couples less when it works (tilt 2.5-4.9 vs 4.5-5.8, vertical force rms 0.2 vs 0.6 N) but keeps the radial coupling,
+pushes only after ~30 mm of slack (the U's base), and one turn buckled (a pad pressing from the close + a +44 mm surge
++ the heading companion turning the claw against an unclamped fin). Tests: GS harness 44/44
+(`tools/gs_valve_cup_check.sh`), planner loopback [9s]/[9s-b]/[9s-c]. Committed + pushed on `valve-isolation-20261102`.

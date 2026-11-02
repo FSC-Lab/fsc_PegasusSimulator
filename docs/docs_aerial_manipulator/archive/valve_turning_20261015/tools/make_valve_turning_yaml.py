@@ -180,6 +180,9 @@ PLANNER_BLOCK = f"""
     # below the claw point -- then the CoM anchor. Handing it to the CoM at the exit's start gave
     # the open jaws the vehicle's accumulated drift while still around the fin: a finger pressed
     # into it at 4 -> 11 N and the vehicle left DIRECT in 2 of 6 Isaac exits.
+    # (2026-11-02) the VALVE'S EXIT ORDER is kept on purpose (the arm GS's push_pull_valve_box_exit
+    # false, the default): open with the claw held in the room, then this room-held climb. The
+    # box's release-first order was tried on the valve in Isaac (10-18: 2 of 7 vs 3 of 3).
     push_pull_exit_world_held_dz: 0.06
     # WHEN the law's contact phase switches -- the GRIPPER is the signal (the
     # box push's rule): on at the Push press (the jaws' stall), free when the
@@ -294,14 +297,52 @@ PLANNER_BLOCK = f"""
     #    <= 1.9 deg) -- a vertical climb drags the fin along the axis the bearing holds.
     # An abort from an arm already on its stops or oscillating is not recoverable by
     # any of these (README 15.2): the guard is what keeps it from getting there.
-    push_pull_abort_from_measured: false
+    #
+    # 2026-11-02 (archive/wb_valve_turning_flight_20261101, the 175932 crash): THE ABORT
+    # RECIPE IS THE BOX PUSH'S (10-27, flown): hold where the vehicle IS (from_measured),
+    # the claw on the CoM anchor through the release (world_held false -- the sway and arm
+    # guards already drop the room hold, so the key did not act on 11-01), 1.0 s for the
+    # jaws (sim; the hardware generator writes the box's 1.5 s), straight up.
+    # push_pull_abort_unbuckle stays off (below): the one box abort key not carried.
+    # NOT A FIX FOR THE 11-01 CRASH: there the sway guard fired with the base 32-44 mm from
+    # the planned hold but moving at ~350 mm/s; every abort leg is rest-to-rest, so the base
+    # overshot to 149 mm and rang at 0.5 Hz, and the claw (CoM anchor) swept the opening
+    # jaws across the fin for 2 s and caught it in the climb. Holding the measured pose
+    # removes only the 32-44 mm. It also reverses the 10-18 result above (from_measured
+    # with the world-held release). UNTESTED in this combination.
+    push_pull_abort_from_measured: true
     push_pull_abort_back: 0.0
-    push_pull_abort_release_wait_s: 2.0
-    push_pull_abort_release_world_held: true
-    # ... except on a MOCAP-GUARD abort (2026-10-22, archive/valve_turning_safety_20261022): the
-    # world is then EKF2 dead-reckoning -- the planner hands the claw to the CoM at once, and the
-    # wait at fin height is cut to 0.7 s (the jaws clear the 5 mm fin; hardware opens in
-    # 0.65-0.70 s) so the drifting vehicle does not sweep the open claw into the fin
+    push_pull_abort_release_wait_s: 1.0
+    push_pull_abort_release_world_held: false
+    # THE ABORT, 2026-11-02 (user design, archive/valve_cup_abort_20261102), replacing that release
+    # wait: the arm GS opens the jaws at once (the button or a guard's ABORTING); the planner holds
+    # where the vehicle IS only until the GS reports them FULLY OPEN (push_pull/abort_jaws_open, on
+    # the open goal's result) and climbs at that instant -- no fixed window, so
+    # push_pull_abort_release_wait_s is unused. No report within push_pull_abort_open_timeout_s (the
+    # station down, the WiFi lost, an open that failed): it climbs anyway. The claw FOLLOWS THE
+    # VEHICLE from the first tick (the node's fast blend), never held in the room. With the GS's
+    # half close (push_pull_valve_cup) the claw is never clamped to the bolted-down valve, so a
+    # claw that follows the vehicle slides along / off the fin instead of loading the arm.
+    push_pull_abort_climb_on_open: true
+    # ... the user's details (2026-11-02, the morning's design): "open" is the gripper READING open --
+    # its own joint state, read by the planner (on hardware the Orin, no WiFi in between; the arm
+    # GS's report on the open goal's result also counts, whichever comes first) -- at most ~1 s
+    # without either, and the first ~60 mm of the climb FAST (its own leg, 0.8 s)
+    push_pull_abort_open_timeout_s: 1.0
+    push_pull_abort_gripper_topic: "isaacsim_manipulator/gripper_state"
+    push_pull_abort_gripper_joint: "gripper_joint"
+    push_pull_abort_gripper_open_at: -0.03
+    push_pull_abort_fast_climb: 0.06
+    push_pull_abort_fast_climb_s: 0.8
+    push_pull_abort_fast_follow: true
+    # THE EXIT-WINDOW ABORT (earlier on 2026-11-02: the claw HELD IN THE ROOM until it had climbed
+    # clear of the fin) is OFF: it contradicts the claw following the vehicle.
+    push_pull_abort_exit_hold: false
+    # ... the wait is capped on a MOCAP-GUARD abort (2026-10-22, archive/valve_turning_safety_20261022):
+    # the world is then EKF2 dead-reckoning -- the claw follows the vehicle anyway, and the wait at
+    # fin height is at most 0.7 s (the jaws clear the 5 mm fin; hardware opens in 0.65-0.70 s) so the
+    # drifting vehicle does not sweep the open claw into the fin: the climb starts at the OPEN
+    # report or at 0.7 s, whichever comes first
     push_pull_abort_mocap_release_wait_s: 0.7
     # push_pull_abort_unbuckle (the box push's 2026-10-21 fix) acts only on an abort held on the
     # MEASURED arm, and stays OFF with the planned hold: flown 2026-10-22 as measured hold +

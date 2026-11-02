@@ -1,0 +1,434 @@
+<!-- spliced before </main> by build_page.py; data from ../tools/abort3d_data.py -->
+<style>
+:root{--meas:#1baf7a;--planref:#1a1d23}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--meas:#199e70;--planref:#e9eaee}}
+:root[data-theme="dark"]{--meas:#199e70;--planref:#e9eaee}
+.ab-fig{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin:14px 0;min-width:0}
+.ab-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 8px}
+.ab-bar .grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ab-bar .lbl{font-family:var(--fm);font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.ab-bar button{font-family:var(--fm);font-size:.78rem;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:4px 9px;cursor:pointer}
+.ab-bar button[aria-pressed="true"]{border-color:var(--fg);background:var(--soft)}
+.ab-bar label{font-size:.82rem;color:var(--fg2);display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.ab-bar button:focus-visible,.ab-bar input:focus-visible,#ab3d:focus-visible,.ab-ev button:focus-visible{outline:2px solid var(--follow);outline-offset:2px}
+.ab-time{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 4px}
+.ab-time input[type=range]{flex:1 1 260px;min-width:0;accent-color:var(--fg2)}
+.ab-time .tnow{font-family:var(--fm);font-size:.86rem;font-variant-numeric:tabular-nums;min-width:22ch}
+.ab-time button{font-family:var(--fm);font-size:.8rem;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+#ab3d{width:100%;height:auto;display:block;background:var(--bg);border:1px solid var(--line);border-radius:4px;cursor:grab;touch-action:none}
+#ab3d.drag{cursor:grabbing}
+.ab-key{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.8rem;color:var(--fg2);margin:4px 0 8px}
+.ab-key span{display:inline-flex;align-items:center;gap:6px}
+.ab-read{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:4px 18px;margin:8px 0 2px;font-size:.84rem;font-variant-numeric:tabular-nums}
+.ab-read div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted var(--line);padding:2px 0;min-width:0}
+.ab-read dt{color:var(--muted)}
+.ab-read dd{margin:0;font-family:var(--fm);text-align:right}
+.ab-now{margin:8px 0 4px;font-size:.9rem;color:var(--fg2);min-height:2.9em;max-width:none}
+.ab-now b{font-family:var(--fm);color:var(--fg)}
+.ab-ev{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}
+.ab-ev button{font-family:var(--fm);font-size:.72rem;border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:var(--bg);color:var(--fg2);cursor:pointer}
+.ab-ev button.cur{border-color:var(--fg);color:var(--fg);background:var(--soft)}
+.ab-ev button.bad{color:var(--bad)}
+.ab-hint{font-size:.78rem;color:var(--muted);margin:4px 0 0}
+.a3-table{fill:var(--soft);stroke:var(--line);stroke-width:1}
+.a3-beam{fill:var(--line);stroke:var(--muted);stroke-width:.8}
+.a3-fin{fill:var(--muted);fill-opacity:.45;stroke:var(--fg2);stroke-width:.9}
+.a3-axis{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:3 3}
+.a3-plan{fill:none;stroke:var(--planref);stroke-width:2;stroke-linejoin:round}
+.a3-ref{fill:none;stroke-width:2.2;stroke-dasharray:6 4;stroke-linecap:round}
+.a3-ref.room{stroke:var(--room)}.a3-ref.follow{stroke:var(--follow)}
+.a3-meas{fill:none;stroke:var(--meas);stroke-width:2.2;stroke-linejoin:round}
+.a3-faint{opacity:.28}
+.a3-arm{fill:none;stroke:var(--fg);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.a3-frame{fill:none;stroke:var(--muted);stroke-width:1.3}
+.a3-rotor{fill:var(--muted);fill-opacity:.05;stroke:var(--muted);stroke-opacity:.55;stroke-width:1}
+.a3-nose{stroke:var(--fg);stroke-width:2;stroke-linecap:round}
+.a3-dot{stroke:var(--panel);stroke-width:1.5}
+.a3-dot.meas{fill:var(--meas)}.a3-dot.plan{fill:var(--planref)}
+.a3-ring{fill:var(--panel);stroke-width:2}
+.a3-ring.room{stroke:var(--room)}.a3-ring.follow{stroke:var(--follow)}
+.a3-pm{fill:var(--panel);stroke:var(--planref);stroke-width:1.6}
+.a3-end{fill:none;stroke:var(--bad);stroke-width:2}
+.a3-tri{stroke:var(--muted);stroke-width:1.2}
+.a3-pad{stroke:var(--fg);stroke-width:.9;stroke-linejoin:round}
+.a3-pad.closed{fill:var(--fg)}.a3-pad.moving{fill:var(--contact)}.a3-pad.open{fill:var(--panel)}
+.a3-claw{fill:none;stroke:var(--fg);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.a3-txt{fill:var(--fg2);font-family:var(--fm);font-size:11.5px;paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round}
+.a3-txt.m{fill:var(--muted);font-size:10.5px}
+.a3-txt.bad{fill:var(--bad)}
+</style>
+
+<h2>Archive · The abort that crashed, 11-01</h2>
+<p>The sway guard aborted the 11-01 static-hold test 0.82 s after the jaws were closed by hand. The abort's plan was the usual one:
+hold the Ready pose 2.0 s while the jaws open, climb 0.30 m straight up in 3.95 s, fold the arm home in 3.82 s. Two settings made it
+a crash. The claw's reference was handed to the base: within 0.25 s it was the planned claw point plus the base's own CoM error, so
+the claw went wherever the base swung, at fin height. And the hold was a rest point that the base, already moving at about 0.4 m/s,
+overshot by 153 mm and swung back through at about 0.5 Hz. On the swing back the open claw came back at the fin's end and knocked the valve
+from 8° to 19°. At the start of the climb it caught the fin and dragged it while the base swung away; 1.1 s into the 3.95 s climb, with
+the reference only 28 mm up, the tilt reached 25.6° and the node handed the vehicle to SAFETY.</p>
+
+<h3>The abort's reference in 3-D</h3>
+<p>Frame: the planned grasp point is the origin, the vehicle's nose and left are horizontal, z is up (the same frame as the replay
+above). The <b>black</b> lines are the plan the planner streamed (published at 43.91 s, 120 samples). The <b>dashed</b> line is the claw
+reference the law actually tracked: the plan plus the base's CoM error once the claw follows the vehicle. The <b>green</b> lines are
+measured. Drag to rotate; the slider and the events scrub time.</p>
+<div class="ab-fig" id="abfig">
+ <div class="ab-bar">
+  <div class="grp" role="group" aria-label="View"><span class="lbl">View</span>
+   <button type="button" data-view="iso" aria-pressed="true">3/4</button>
+   <button type="button" data-view="behind" aria-pressed="false">From behind</button>
+   <button type="button" data-view="side" aria-pressed="false">From the right</button>
+   <button type="button" data-view="top" aria-pressed="false">From above</button>
+   <button type="button" id="abclose" aria-pressed="false">Gripper close-up</button>
+   <button type="button" id="abzin" aria-label="Zoom in">+</button>
+   <button type="button" id="abzout" aria-label="Zoom out">−</button>
+  </div>
+  <div class="grp" role="group" aria-label="Layers"><span class="lbl">Show</span>
+   <label><input type="checkbox" id="abl-plan" checked> plan</label>
+   <label><input type="checkbox" id="abl-ref" checked> claw reference flown</label>
+   <label><input type="checkbox" id="abl-meas" checked> measured</label>
+   <label><input type="checkbox" id="abl-veh" checked> vehicle and gripper</label>
+  </div>
+ </div>
+ <div class="ab-key">
+  <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" class="a3-plan"/></svg>plan: CoM and claw reference</span>
+  <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" class="a3-ref room"/></svg>claw reference flown, held in the room</span>
+  <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" class="a3-ref follow"/></svg>claw reference flown, follows the base</span>
+  <span><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" class="a3-meas"/></svg>measured: CoM (mocap + arm) and claw (arm kinematics)</span>
+  <span><svg width="14" height="14" aria-hidden="true"><rect x="5" y="1" width="4" height="12" class="a3-fin"/></svg>fin, turned with the valve</span>
+  <span><svg width="40" height="14" aria-hidden="true"><rect x="1" y="2" width="4" height="10" class="a3-pad closed"/><rect x="8" y="2" width="4" height="10" class="a3-pad closed"/><rect x="18" y="2" width="4" height="10" class="a3-pad moving"/><rect x="31" y="2" width="4" height="10" class="a3-pad open"/></svg>gripper pads: closed, moving, open</span>
+ </div>
+ <svg id="ab3d" viewBox="0 0 1000 600" tabindex="0" role="img" aria-label="3-D view of the abort reference and the measured CoM and claw paths, 43.4 to 47.0 s"></svg>
+ <div class="ab-time">
+  <button type="button" id="abplay">Play</button>
+  <input type="range" id="abscrub" min="0" max="185" step="1" value="0" aria-label="Time">
+  <span class="tnow" id="abtnow"></span>
+ </div>
+ <div class="ab-ev" id="abev"></div>
+ <p class="ab-now" id="abnow"></p>
+ <dl class="ab-read" id="abread"></dl>
+ <p class="ab-hint">Drag the view to rotate; arrow keys rotate it too. Measured paths stop at 47.04 s, just after SAFETY; the vehicle then
+ fell and came to rest inverted 4.4 m away. Claw positions are the arm's forward kinematics on the encoders, placed with the mocap
+ position and PX4's attitude, good to about ±10 mm. The gripper is drawn from the planner's claw frame (15 Hz) with the real claw's
+ geometry; the pad gap is the joint reading scaled between this flight's closed (−9.9 mm) and open (+19.0 mm) readings onto the
+ claws' 0–46 mm stroke. Closed on the fin, the reading stops near −9.6 mm with a high squeeze current; closed on nothing it reaches
+ −9.9 mm (table under Step by step).</p>
+</div>
+
+<h3>Step by step</h3>
+<p>Times are bag seconds, and seconds from the sway guard's trip. Radial means toward or away from the valve axis, which is to the
+vehicle's left.</p>
+<div class="tscroll"><table>
+<tr><th>Time</th><th>From the trip</th><th>What the system did</th><th>What happened</th></tr>
+<tr><td><span class="tm">42.58–43.05</span></td><td><span class="tm">−1.29…−0.82</span></td><td>A gripper close goal at 42.58 s. With automatic Push off for the static-hold test, nothing but the Gripper box button closes the jaws there. The node read the jaw position and blended in the interaction gains.</td>
+ <td class="bad">The jaws closed <b>on nothing</b>, beside the fin's end: the claw was 19 mm along the 40 mm fin and 12 mm outward of it, and the closed reading and squeeze current match a close on nothing (table below). The base was 107 mm off at 43.0 s and swinging back through its reference; the closed claw pushed the fin and turned the valve 8.7°.</td></tr>
+<tr><td><span class="tm">43.87</span></td><td><span class="tm">0.00</span></td><td><b>Sway guard</b>, 249 mm/s against a 150 mm/s limit. ABORT: contact off; the base reference becomes the <b>planned Ready hold</b>, a rest point; the claw reference is handed to the base over 0.25 s.</td>
+ <td>The base was 32 mm from the hold and moving at about 400 mm/s toward the valve axis. The closed claw had slid past the fin's end (21 → 30 mm along it) and was 23–52 mm inward of it; the valve had stopped turning.</td></tr>
+<tr><td><span class="tm">43.91</span></td><td><span class="tm">+0.04</span></td><td>The abort plan: settle 2.0 s, climb 0.30 m in 3.95 s, arm home in 3.82 s (9.8 s).</td><td></td></tr>
+<tr><td><span class="tm">43.95–44.50</span></td><td><span class="tm">+0.08…+0.63</span></td><td>The station opened the jaws on ABORTING. The CoM-anchor weight reached 1.0 at about 44.13 s.</td>
+ <td>The jaws were fully open at 44.5 s.</td></tr>
+<tr><td><span class="tm">44.45</span></td><td><span class="tm">+0.58</span></td><td>The base reference did not move.</td>
+ <td class="bad">The base went on to <b>153 mm</b> from the hold. The claw reference went with it, and the claw followed, to 143 mm inward of the fin, almost over the hub, at fin height. The valve did not turn.</td></tr>
+<tr><td><span class="tm">45.30–45.70</span></td><td><span class="tm">+1.43…+1.83</span></td><td>Still the release wait.</td>
+ <td class="bad">The base swung back (CoM error 49 mm at 45.35 s); the claw went 50 mm outward of the fin, then came back at the fin's end, 13–17 mm below its top: the valve was knocked from 8° to <b>19°</b>.</td></tr>
+<tr><td><span class="tm">45.91</span></td><td><span class="tm">+2.04</span></td><td>The climb starts. The claw reference rises with a min-snap profile: 28 mm in the first 1.1 s.</td>
+ <td>The claw is back at the fin: 19 mm inward, 16 mm along it, 9 mm above the grasp point.</td></tr>
+<tr><td><span class="tm">45.9–46.9</span></td><td><span class="tm">+2.0…+3.0</span></td><td>The claw reference follows the base as it swings toward the axis again.</td>
+ <td class="bad">The claw stays at the fin and drags it: the valve turns back from 19° to −3°, the rotor rises 3.4 mm, and the claw falls <b>138 mm</b> behind its reference. From 46.40 s two motors sit at 0 and one at 1; the tilt grows from 6° to 15°.</td></tr>
+<tr><td><span class="tm">46.90</span></td><td><span class="tm">+3.03</span></td><td>Watchdog 15.1°: asks for the emergency abort, which is already running.</td><td></td></tr>
+<tr><td><span class="tm">47.02</span></td><td><span class="tm">+3.15</span></td><td><b>25.6° past the 25° hard limit: SAFETY</b>. Arm released, jaws commanded open.</td>
+ <td class="bad">The climb's reference was 28 mm up; the 60 mm the exit uses to clear the fin was due at 47.31 s. The vehicle then tilted to 112° in 1.3 s and came to rest inverted 4.4 m away.</td></tr>
+</table></div>
+
+<h3>Did the jaws hold the fin?</h3>
+<p>No. On the real claw the foam pads stop on the 5 mm fin before the joint reaches its closed end, and the servo keeps
+squeezing. The 11-01 close went further and squeezed little, like the 10-31 close that the record shows was on nothing.</p>
+<div class="tscroll"><table>
+<tr><th>Flight</th><th>What the jaws closed on</th><th>Closed reading</th><th>Squeeze current (joint effort, counts)</th></tr>
+<tr><td>10-28 18:06</td><td>the fin (grasped, turned)</td><td><span class="tm">−9.55 mm</span></td><td><span class="tm">150</span></td></tr>
+<tr><td>10-28 18:18</td><td>the fin (grasped, turned)</td><td><span class="tm">−9.55 mm</span></td><td><span class="tm">143</span></td></tr>
+<tr><td>10-29 14:55</td><td>the fin (grasped)</td><td><span class="tm">−9.69 mm</span></td><td><span class="tm">99</span></td></tr>
+<tr><td>10-31 17:57</td><td>nothing (closed by hand during the wrist swing)</td><td><span class="tm">−9.91 mm</span></td><td><span class="tm">26</span></td></tr>
+<tr><td><b>11-01 17:59</b></td><td><b>this flight</b></td><td><span class="tm">−9.88 mm</span></td><td><span class="tm">36</span></td></tr>
+</table></div>
+
+<h3>Which setting decided each step</h3>
+<div class="tscroll"><table>
+<tr><th>Step</th><th>Flown on 11-01 (<code>17fd566</code> + the valve yaml of <code>9e4b03e</code>)</th><th>Effect in this flight</th></tr>
+<tr><td>Trigger</td><td>Sway guard: the CoM error's rate, low-passed, over 150 mm/s for 0.2 s</td><td>Fired at 249 mm/s, 32 mm from the hold: correct, but the base was moving fast when the abort began.</td></tr>
+<tr><td>Base reference</td><td><code>push_pull_abort_from_measured: false</code>: the planned Ready hold; every abort leg starts and ends at rest</td><td>A still target for a base at 0.4 m/s: 153 mm overshoot, then a swing at about 0.5 Hz that the climb inherited.</td></tr>
+<tr><td>Claw reference</td><td>The sway guard drops the room hold: CoM anchor in 0.25 s (the fast hand-back)</td><td>The claw reference became the planned claw point plus the base's CoM error, so the claw swept 143 mm in and 50 mm out at fin height.</td></tr>
+<tr><td>Jaws</td><td>Opened on ABORTING, at once</td><td>Open fingers around the fin while the claw swept across it.</td></tr>
+<tr><td>Release wait</td><td>2.0 s at fin height</td><td>Long enough for one full swing out and back across the fin.</td></tr>
+<tr><td>Climb</td><td>0.30 m, min-snap, 3.95 s, straight up</td><td>28 mm in its first 1.1 s; the fingers were still around the fin when the base swung away again.</td></tr>
+<tr><td>Watchdog</td><td>15°: ask for the emergency abort; 25°: SAFETY</td><td>The abort was already running, so 15° did nothing; SAFETY took a vehicle tilted 25.6° and pulling on the fin.</td></tr>
+</table></div>
+<div class="note">On the 11-01 build every sway or arm guard handed the claw to the base this way. On this page's section 2, the valve's
+abort keeps the claw held in the room after the turn, after a static hold's release and in the exit's climb; a guard that fires while
+the jaws are still closed on the handle still hands the claw back in 0.25 s.</div>
+
+<script>
+(function () {
+const AB = __ABORT3D__;
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('ab3d');
+const W = 1000, H = 600;
+const FL = AB.flown, PL = AB.plan, TP = AB.t_plan, VA = AB.valve;
+const T_TRIP = 43.87, T_SAFE = 47.02;
+const VIEWS = { iso: [38, 24], behind: [0, 10], side: [90, 8], top: [0, 89] };
+let az = 38, el = 24, zoom = 1.35, k = 0, playing = false, last = null, closeup = false;
+const show = { plan: true, ref: true, meas: true, veh: true };
+const EVENTS = [
+  [43.87, 'sway guard: ABORT', 'Sway guard at 249 mm/s. The base reference becomes the planned hold; the claw reference starts following the base.', true],
+  [44.13, 'claw follows the base', 'The CoM-anchor weight reaches 1.0: the claw reference is now the plan plus the base’s CoM error.'],
+  [44.45, 'overshoot 153 mm', 'The base is 153 mm past its hold; the claw has followed its reference to 143 mm inward of the fin.'],
+  [45.60, 'claw hits the fin', 'The base swings back; the open claw comes back at the fin’s end and knocks the valve from 8° to 19°.'],
+  [45.91, 'climb starts', 'The plan’s climb starts: 0.30 m in 3.95 s. The claw is back at the fin.'],
+  [46.40, 'motors saturated', 'The claw stays on the fin and drags it while its reference moves away with the base. Two motors at 0, one at 1.'],
+  [46.90, 'watchdog 15°', 'The node’s watchdog asks for the emergency abort; it is already running.', true],
+  [47.02, 'SAFETY 25.6°', 'Past the 25° hard limit: SAFETY. The climb’s reference is 28 mm up.', true]];
+
+function mk(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const a in attrs) e.setAttribute(a, attrs[a]);
+  (parent || svg).appendChild(e); return e;
+}
+const fmtS = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
+
+// fit: a bounding sphere of the plan, the flown paths, the fin and the vehicle's reach
+const pts = [];
+PL.forEach(p => { pts.push(p.com, p.claw); });
+FL.forEach(r => { pts.push(r.claw, r.base); if (r.com) pts.push(r.com); });
+let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+pts.forEach(p => { for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], p[i]); hi[i] = Math.max(hi[i], p[i]); } });
+lo[2] = Math.min(lo[2], VA.fin.bottom - 0.03);
+const C_ALL = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+const R_ALL = 0.5 * Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) + 0.04;
+let CEN = C_ALL, RAD = R_ALL;
+// the real claw (open_manipulator_x_custom.urdf.xacro): rails +/-37.1 mm off the wrist axis, 49.3 mm up the bracket;
+// fingertips 16 mm past the grasp point; true stroke -9.7 mm (pads together) .. +13.2 mm (46 mm between the pads).
+// The flight's joint reads -9.9 closed / +19.0 open, so the gap is scaled between those two readings.
+const GR_C = -9.9, GR_O = 19.0, GAP_MAX = 0.0458;
+const padGap = g => Math.max(0, Math.min(1, (g - GR_C) / (GR_O - GR_C))) * GAP_MAX;
+
+function P(p) {
+  const a = az * Math.PI / 180, e = el * Math.PI / 180;
+  const x = p[0] - CEN[0], y = p[1] - CEN[1], z = p[2] - CEN[2];
+  const u = Math.sin(a) * x - Math.cos(a) * y;
+  const w = Math.cos(a) * x + Math.sin(a) * y;
+  const v = z * Math.cos(e) + w * Math.sin(e);
+  const s = (H / 2 - 18) / RAD * zoom;
+  return [W / 2 + s * u, H / 2 - s * v];
+}
+const path = arr => arr.map((p, i) => (i ? 'L' : 'M') + P(p).map(n => n.toFixed(1)).join(' ')).join('');
+const poly = arr => path(arr) + 'Z';
+function interpPlan(tp) {
+  if (tp <= 0) return PL[0];
+  const T = PL[PL.length - 1].t; if (tp >= T) return PL[PL.length - 1];
+  const f = tp / T * (PL.length - 1), i = Math.floor(f), g = f - i, a = PL[i], b = PL[i + 1];
+  const mix = (u, v) => u.map((x, j) => x + g * (v[j] - x));
+  return { com: mix(a.com, b.com), claw: mix(a.claw, b.claw) };
+}
+function rot(v, deg) { const r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [c * v[0] - s * v[1], s * v[0] + c * v[1]]; }
+const RAD0 = [-VA.axis[0] / VA.radius, -VA.axis[1] / VA.radius];   // axis -> planned grasp point, unit
+function box(c, ex, ey, z0, z1) {  // c = base point, ex/ey = half-extent vectors (2-D)
+  const q = [[c[0] - ex[0] - ey[0], c[1] - ex[1] - ey[1]], [c[0] + ex[0] - ey[0], c[1] + ex[1] - ey[1]],
+             [c[0] + ex[0] + ey[0], c[1] + ex[1] + ey[1]], [c[0] - ex[0] + ey[0], c[1] - ex[1] + ey[1]]];
+  const b = q.map(p => [p[0], p[1], z0]), t = q.map(p => [p[0], p[1], z1]);
+  const faces = [b, t];
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; faces.push([b[i], b[j], t[j], t[i]]); }
+  return faces;
+}
+function obox(c, A, h) {  // c centre, A = [ax, ay, az] unit vectors, h = half extents
+  const pt = (i, j, l) => [0, 1, 2].map(n => c[n] + i * h[0] * A[0][n] + j * h[1] * A[1][n] + l * h[2] * A[2][n]);
+  const v = [pt(-1, -1, -1), pt(1, -1, -1), pt(1, 1, -1), pt(-1, 1, -1), pt(-1, -1, 1), pt(1, -1, 1), pt(1, 1, 1), pt(-1, 1, 1)];
+  return [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]].map(f => f.map(i => v[i]));
+}
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const add = (...vs) => [0, 1, 2].map(n => vs.reduce((s, v) => s + v[n], 0));
+const sc = (v, a) => v.map(x => x * a);
+function gripper(r) {
+  const g = r.claw, x = r.ex, y = r.ey, z = cross(x, y), gap = padGap(r.grip), half = gap / 2, q = half - 0.0097;
+  const cls = r.grip < -4 ? 'closed' : r.grip > 14 ? 'open' : 'moving';
+  const faces = [], lines = [];
+  for (const s of [1, -1]) {
+    obox(add(g, sc(x, -0.001), sc(y, s * (half + 0.0015))), [x, y, z], [0.017, 0.0015, 0.008]).forEach(f => faces.push([f, 'a3-pad ' + cls]));
+    lines.push([add(g, sc(x, -0.059), sc(y, s * (0.0371 + q))), add(g, sc(x, -0.018), sc(y, s * (half + 0.003)))]);
+  }
+  lines.push([add(g, sc(x, -0.059), sc(y, 0.0371 + q)), add(g, sc(x, -0.059), sc(y, -0.0371 - q))]);
+  lines.push([add(g, sc(x, -0.108)), add(g, sc(x, -0.059))]);
+  return { faces, lines, gap, cls, tip: add(g, sc(x, 0.016)) };
+}
+function depth(p) { const a = az * Math.PI / 180, e = el * Math.PI / 180;
+  const w = Math.cos(a) * (p[0] - CEN[0]) + Math.sin(a) * (p[1] - CEN[1]); return w * Math.cos(e) - (p[2] - CEN[2]) * Math.sin(e); }
+function drawBox(faces, cls, g) {
+  faces.map(f => [f, f.reduce((s, p) => s + depth(p), 0) / f.length]).sort((A, B) => B[1] - A[1])
+    .forEach(([f]) => mk('path', { d: poly(f), class: cls }, g));
+}
+function fin(deg) {
+  const r = rot(RAD0, deg), tg = [-r[1], r[0]];
+  const c = [VA.axis[0] + r[0] * VA.radius, VA.axis[1] + r[1] * VA.radius];
+  const F = VA.fin;
+  return { r, c, faces: box(c, [r[0] * F.thick / 2, r[1] * F.thick / 2], [tg[0] * F.width / 2, tg[1] * F.width / 2], F.bottom, F.top) };
+}
+function beam(deg) {
+  const r = rot(RAD0, deg), tg = [-r[1], r[0]], B = VA.beam, m = (B.r0 + B.r1) / 2, h = (B.r1 - B.r0) / 2;
+  const c = [VA.axis[0] + r[0] * m, VA.axis[1] + r[1] * m];
+  return box(c, [r[0] * h, r[1] * h], [tg[0] * B.half, tg[1] * B.half], B.z0, B.z1);
+}
+function label(p, text, dx, dy, cls, anchor) {
+  const q = P(p); const t = mk('text', { x: (q[0] + dx).toFixed(1), y: (q[1] + dy).toFixed(1), class: 'a3-txt' + (cls ? ' ' + cls : ''), 'text-anchor': anchor || 'start' });
+  t.textContent = text; return t;
+}
+function circle3(c, ex, ey, r, n) { const out = []; for (let i = 0; i <= n; i++) { const a = 2 * Math.PI * i / n;
+  out.push([c[0] + r * (Math.cos(a) * ex[0] + Math.sin(a) * ey[0]), c[1] + r * (Math.cos(a) * ex[1] + Math.sin(a) * ey[1]), c[2] + r * (Math.cos(a) * ex[2] + Math.sin(a) * ey[2])]); } return out; }
+
+function render() {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const r = FL[k], t = r.t;
+  if (closeup) { CEN = r.claw; RAD = 0.10; } else { CEN = C_ALL; RAD = R_ALL; }
+  // table top and the valve
+  mk('path', { d: poly(AB.table.corners), class: 'a3-table' });
+  mk('path', { d: path([[VA.axis[0], VA.axis[1], AB.table.corners[0][2]], [VA.axis[0], VA.axis[1], VA.beam.z1 + 0.02]]), class: 'a3-axis' });
+  drawBox(beam(r.valve), 'a3-beam');
+  // tripod at the planned grasp point, 0.1 m
+  [[[0.1, 0, 0], 'nose'], [[0, 0.1, 0], 'left'], [[0, 0, 0.1], 'up']].forEach(([v, n]) => {
+    mk('path', { d: path([[0, 0, 0], v]), class: 'a3-tri' }); label(v, n, 4, -3, 'm'); });
+  label([0, 0, 0], 'grasp point (axes 10 cm)', -10, 4, 'm', 'end');
+  const fz = fin(r.valve);
+  const solids = fz.faces.map(f => [f, 'a3-fin']);
+  const gp = gripper(r);
+  if (show.veh || closeup) gp.faces.forEach(f => solids.push(f));
+  solids.map(([f, c]) => [f, c, f.reduce((s, p) => s + depth(p), 0) / f.length]).sort((A, B) => B[2] - A[2])
+    .forEach(([f, c]) => mk('path', { d: poly(f), class: c }));
+  label([fz.c[0], fz.c[1], VA.fin.bottom], 'fin ' + (r.valve >= 0 ? '+' : '−') + Math.abs(r.valve).toFixed(1) + '°', 8, -6);
+  // the plan
+  if (show.plan) {
+    mk('path', { d: path(PL.map(p => p.com)), class: 'a3-plan' });
+    mk('path', { d: path(PL.map(p => p.claw)), class: 'a3-plan' });
+    const Tend = PL[PL.length - 1].t;
+    [[AB.phases[0], ''], [AB.phases[0] + AB.phases[1], 'climb done'], [Tend, '']].forEach(([tp, n]) => {
+      const q = interpPlan(tp); mk('circle', { cx: P(q.claw)[0], cy: P(q.claw)[1], r: 3.5, class: 'a3-pm' });
+      mk('circle', { cx: P(q.com)[0], cy: P(q.com)[1], r: 3.5, class: 'a3-pm' });
+      if (n) label(q.claw, n, 8, 4, 'm'); });
+    const qs = interpPlan(T_SAFE - TP);
+    mk('circle', { cx: P(qs.claw)[0], cy: P(qs.claw)[1], r: 6, class: 'a3-end' });
+    label(qs.claw, 'SAFETY: climb 28 mm up', 10, -4, 'bad');
+    const top = PL[Math.round(PL.length * 0.6)];
+    label(top.com, 'CoM reference (plan)', 8, -6); label(PL[PL.length - 1].claw, 'claw reference (plan), arm home', 8, -8);
+  }
+  // the claw reference the law flew, coloured by the anchor
+  const seg = (lo, hi, faint) => {
+    let cur = null, run = [];
+    const flush = () => { if (run.length > 1) mk('path', { d: path(run), class: 'a3-ref ' + cur + (faint ? ' a3-faint' : '') }); };
+    for (let i = lo; i <= hi; i++) { const q = FL[i]; if (!q.ref) continue;
+      const c = q.anchor >= 0.5 ? 'follow' : 'room';
+      if (c !== cur) { if (cur) { run.push(q.ref); flush(); } cur = c; run = [q.ref]; } else run.push(q.ref); }
+    flush();
+  };
+  if (show.ref) { seg(0, FL.length - 1, true); seg(0, k, false);
+    const pk = FL.find(q => q.t >= 44.44); label(pk.ref, 'claw reference flown', 8, -8); }
+  // measured
+  if (show.meas) {
+    const coms = FL.filter(q => q.com).map(q => q.com), claws = FL.map(q => q.claw);
+    mk('path', { d: path(coms), class: 'a3-meas a3-faint' }); mk('path', { d: path(claws), class: 'a3-meas a3-faint' });
+    mk('path', { d: path(FL.slice(0, k + 1).filter(q => q.com).map(q => q.com)), class: 'a3-meas' });
+    mk('path', { d: path(claws.slice(0, k + 1)), class: 'a3-meas' });
+  }
+  // the vehicle at time t
+  if (show.veh || closeup) {
+    mk('path', { d: path(r.sk.slice(0, 4)), class: 'a3-arm' });
+    gp.lines.forEach(l => mk('path', { d: path(l), class: 'a3-claw' }));
+    if (closeup) label(gp.tip, `jaws ${gp.cls}, ${Math.round(gp.gap * 1000)} mm`, 10, 4);
+  }
+  if (show.veh && !closeup) {
+    const b = r.base, bx = r.bx, by = r.by;
+    const a = 0.2299;
+    const rot4 = [[a, a], [-a, -a], [a, -a], [-a, a]].map(([i, j]) => [b[0] + i * bx[0] + j * by[0], b[1] + i * bx[1] + j * by[1], b[2] + i * bx[2] + j * by[2]]);
+    rot4.forEach(c => mk('path', { d: poly(circle3(c, bx, by, 0.19, 28)), class: 'a3-rotor' }));
+    mk('path', { d: path([rot4[0], rot4[1]]) + path([rot4[2], rot4[3]]), class: 'a3-frame' });
+    mk('path', { d: path([b, [b[0] + 0.12 * bx[0], b[1] + 0.12 * bx[1], b[2] + 0.12 * bx[2]]]), class: 'a3-nose' });
+  }
+  // markers at time t
+  const tp = t - TP, pq = interpPlan(Math.max(0, tp));
+  if (show.plan) { mk('circle', { cx: P(pq.com)[0], cy: P(pq.com)[1], r: 5, class: 'a3-dot plan' });
+                   mk('circle', { cx: P(pq.claw)[0], cy: P(pq.claw)[1], r: 5, class: 'a3-dot plan' }); }
+  if (show.ref && r.ref) mk('circle', { cx: P(r.ref)[0], cy: P(r.ref)[1], r: 6, class: 'a3-ring ' + (r.anchor >= 0.5 ? 'follow' : 'room') });
+  if (show.meas) { if (r.com) mk('circle', { cx: P(r.com)[0], cy: P(r.com)[1], r: 5, class: 'a3-dot meas' });
+                   mk('circle', { cx: P(r.claw)[0], cy: P(r.claw)[1], r: 5, class: 'a3-dot meas' }); }
+  readout(r, pq, fz);
+}
+
+function readout(r, pq, fz) {
+  const t = r.t;
+  document.getElementById('abtnow').textContent = `t = ${t.toFixed(2)} s · trip ${fmtS(t - T_TRIP)} s`;
+  let phase = t < T_TRIP ? 'before the abort (static-hold test)' : t < TP + AB.phases[0] ? '[1] release wait at the hold' :
+    t < T_SAFE ? '[2] climb' : 'SAFETY';
+  const jaw = r.grip < -4 ? 'closed' : r.grip > 14 ? 'open' : 'opening';
+  const anc = r.anchor == null ? '—' : r.anchor >= 0.99 ? 'follows the base' : r.anchor <= 0.01 ? 'held in the room' : `handing to the base (${Math.round(r.anchor * 100)} %)`;
+  const mm = (a, b) => a && b ? Math.round(1000 * Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])) + ' mm' : '—';
+  // claw relative to the live fin: radial (+ = away from the axis), along the fin, height above the grasp point
+  const d = [r.claw[0] - fz.c[0], r.claw[1] - fz.c[1]];
+  const rad = Math.round(1000 * (d[0] * fz.r[0] + d[1] * fz.r[1])), along = Math.round(1000 * (-d[0] * fz.r[1] + d[1] * fz.r[0]));
+  const rows = [
+    ['Abort phase', phase], ['Claw reference', anc], ['Jaws', `${jaw}, pads ${Math.round(padGap(r.grip) * 1000)} mm apart (joint ${r.grip.toFixed(1)} mm)`],
+    ['CoM from its reference', r.com ? mm(r.com, pq.com) : '—'],
+    ['Claw reference from the plan', r.ref ? mm(r.ref, pq.claw) : '—'],
+    ['Claw from its reference', r.ref ? mm(r.claw, r.ref) : '—'],
+    ['Claw from the fin, radial', (rad >= 0 ? '+' : '−') + Math.abs(rad) + ' mm' + (rad < 0 ? ' (inward)' : ' (outward)')],
+    ['Claw along the fin / height', `${along} / ${Math.round(r.claw[2] * 1000)} mm`],
+    ['Valve turned', (r.valve >= 0 ? '+' : '−') + Math.abs(r.valve).toFixed(1) + '°'],
+    ['Tilt', r.tilt.toFixed(1) + '°']];
+  const dl = document.getElementById('abread'); dl.textContent = '';
+  rows.forEach(([a, b]) => { const div = document.createElement('div'); const dt = document.createElement('dt'); dt.textContent = a;
+    const dd = document.createElement('dd'); dd.textContent = b; div.append(dt, dd); dl.appendChild(div); });
+  let ev = null; EVENTS.forEach(e => { if (t >= e[0] - 0.011) ev = e; });
+  const now = document.getElementById('abnow');
+  now.innerHTML = '';
+  if (ev) { const b = document.createElement('b'); b.textContent = ev[0].toFixed(2) + ' s · ' + ev[1] + '. '; now.append(b, document.createTextNode(ev[2])); }
+  else now.textContent = 'Before the trip: the jaws are closed by hand and the claw is held in the room while the base swings.';
+  document.querySelectorAll('#abev button').forEach((btn, i) => btn.classList.toggle('cur', ev === EVENTS[i]));
+  document.getElementById('abscrub').value = k;
+}
+
+// controls
+const evBox = document.getElementById('abev');
+EVENTS.forEach(e => { const b = document.createElement('button'); b.type = 'button'; b.textContent = e[0].toFixed(2) + ' ' + e[1];
+  if (e[3]) b.classList.add('bad');
+  b.addEventListener('click', () => { setPlay(false); k = idx(e[0]); render(); }); evBox.appendChild(b); });
+function idx(t) { let i = 0; while (i < FL.length - 1 && FL[i].t < t - 1e-6) i++; return i; }
+document.querySelectorAll('#abfig [data-view]').forEach(b => b.addEventListener('click', () => {
+  [az, el] = VIEWS[b.dataset.view];
+  document.querySelectorAll('#abfig [data-view]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); render(); }));
+const closeBtn = document.getElementById('abclose');
+closeBtn.addEventListener('click', () => { closeup = !closeup; closeBtn.setAttribute('aria-pressed', closeup ? 'true' : 'false'); render(); });
+document.getElementById('abzin').addEventListener('click', () => { zoom = Math.min(3, zoom * 1.25); render(); });
+document.getElementById('abzout').addEventListener('click', () => { zoom = Math.max(0.5, zoom / 1.25); render(); });
+['plan', 'ref', 'meas', 'veh'].forEach(n => document.getElementById('abl-' + n).addEventListener('change', e => { show[n] = e.target.checked; render(); }));
+const scrub = document.getElementById('abscrub');
+scrub.max = FL.length - 1;
+scrub.addEventListener('input', () => { setPlay(false); k = +scrub.value; render(); });
+const playBtn = document.getElementById('abplay');
+function setPlay(p) { playing = p; playBtn.textContent = p ? 'Pause' : 'Play'; last = null; }
+playBtn.addEventListener('click', () => { if (!playing && k >= FL.length - 1) k = 0; setPlay(!playing); if (playing) requestAnimationFrame(tick); });
+function tick(ts) {
+  if (!playing) return;
+  if (last != null) { const adv = (ts - last) / 1000 / 0.02 * 0.5; k = Math.min(FL.length - 1, k + adv); }
+  last = ts; const kk = k; k = Math.floor(kk); render(); k = kk;
+  if (k >= FL.length - 1) { k = FL.length - 1; setPlay(false); render(); return; }
+  requestAnimationFrame(tick);
+}
+let drag = null;
+svg.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY, az, el]; svg.setPointerCapture(e.pointerId); svg.classList.add('drag'); });
+svg.addEventListener('pointermove', e => { if (!drag) return;
+  az = drag[2] - (e.clientX - drag[0]) * 0.4; el = Math.max(-10, Math.min(89, drag[3] + (e.clientY - drag[1]) * 0.3));
+  document.querySelectorAll('#abfig [data-view]').forEach(x => x.setAttribute('aria-pressed', 'false')); render(); });
+const end = () => { drag = null; svg.classList.remove('drag'); };
+svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+svg.addEventListener('keydown', e => {
+  const m = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, 4], ArrowDown: [0, -4] }[e.key];
+  if (!m) return; e.preventDefault(); az += m[0]; el = Math.max(-10, Math.min(89, el + m[1])); render(); });
+k = idx(46.90);
+render();
+})();
+</script>

@@ -1,0 +1,196 @@
+===== 175932   duration 350.6 s
+    0.02  GUARD                        MOCAP
+    0.05  MODE                         SAFETY
+    0.06  CTRL                         Baseline (Safety)
+    0.16  PP                           NOT IN DIRECT
+    0.27  PL                           IDLE
+    0.27  PX4                          STAB arm=2
+    4.79  PX4                          OFFBOARD arm=2
+   16.45  LOG uav_0.fsc_autopilot_ro   CoM anchor captured: [-0.004 -0.006 -0.031] m (measured CoM minus GS reference).
+   16.45  MODE                         DIRECT
+   16.45  CTRL                         Whole-Body Direct Actuation
+   16.45  LOG uav_0.fsc_autopilot_ro   [1;31mENTERING WHOLE-BODY DIRECT ACTUATION: this node now owns position, attitude, rate, mixing AND the arm torques; PX4 runs no control. Do NOT step a reference at this instant (sequencing rule).[0m
+   16.45  LOG uav_0.fsc_autopilot_ro   activate 'Whole-Body Direct Actuation' -> OK (switched to Whole-Body Direct Actuation)
+   16.45  LOG uav_0.fsc_open_manipul   Whole-body DIRECT: going SILENT, the whole-body planner owns the arm.
+   16.45  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   16.45  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-0.000 +0.000 +0.000 N, +0.0000 N.m] (|F|=0.000 N)  w_hat_q=[+0.0000 +0.0000 +0.0000 +0.0000] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   16.45  PL                           HOLD
+   16.45  PP                           NOT PLANNED: press Plan
+   16.45  LOG uav_0.fsc_autopilot_ro   [1;32mStreamed whole-body reference ACTIVE -- the law tracks the whole-body planner's compatible trajectory.[0m
+   17.45  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   17.45  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-7.529 +1.084 +2.672 N, +0.0074 N.m] (|F|=8.062 N)  w_hat_q=[-0.0187 -0.0144 +0.0076 +0.0018] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   18.45  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   18.45  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-2.735 -5.127 +2.644 N, +0.0328 N.m] (|F|=6.384 N)  w_hat_q=[-0.0284 +0.0082 +0.0099 +0.0032] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   19.45  LOG uav_0.whole_body_traje   DIRECT engaged: hold captured -- base [-1.649 -0.236 0.983] m, q [0.0, 40.0, 40.0, -0.8] deg, EE (inertial) [-1.396 -0.247 0.923] m az -92.4 deg
+   19.45  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   19.45  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-2.000 +0.978 -2.959 N, +0.0023 N.m] (|F|=3.703 N)  w_hat_q=[-0.0259 +0.0121 +0.0087 +0.0038] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   19.52  PP                           PLANNING
+   19.60  LOG uav_0.whole_body_traje   push-and-pull go_to_start: T = 15.43 s (v_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.6/482.4, solve 10.8 ms
+   19.60  LOG uav_0.whole_body_traje   push-and-pull ready: T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.12 m/s, tau_j 0.60 N.m, rotor 472.6/480.6, solve 10.1 ms
+   19.60  LOG uav_0.whole_body_traje   push-and-pull push: [1] settle 1.5 s | [2] turn 30 deg about the axis in 18.0 s (claw radius 0.160 m, CoM radius 0.264 m, peak yaw rate 4.1 deg/s, peak CoM speed 0.019 m/s)
+   19.60  LOG uav_0.whole_body_traje   push-and-pull exit: [1] T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.15 m/s, tau_j 0.61 N.m, rotor 470.7/482.9, solve 10.8 ms | [2] T = 3.82 s (w_max, 0 dilations), defect 5.9e-17 m, sigma_nd 0.716, peak |v| 0.01 m/s, tau_j 0.71 N.m, rotor 471.5/481.7, solve 8.8 ms
+   19.60  LOG uav_0.whole_body_traje   push-and-pull go_to_land_start: T = 14.35 s (v_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.887, peak |v| 0.30 m/s, tau_j 0.70 N.m, rotor 471.3/482.2, solve 8.3 ms
+   19.60  LOG uav_0.whole_body_traje   push-and-pull land: T = 7.43 s (v_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.887, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 468.4/485.2, solve 9.0 ms
+   19.60  LOG uav_0.whole_body_traje   push-and-pull planned: 66.5 s of flight in six steps; the push TURNS the handle 30 deg about the captured axis [0.526, -0.139] in 18.0 s, the nose along yaw -89.3 deg at the handle.
+   19.60  LOG uav_0.whole_body_traje   push-and-pull: the keep-outs placed from the valve -- axis (0.526, -0.139, 0.780) = obj_0 + axis offset [-0.0935, -0.0014, -0.0899]; the table 1.00 x 0.15 m centred on it, its near edge (0.472, -0.641)..(0.430, 0.358), top 0.780 m; the beam's swept square +-0.200 m, top 0.834 m
+   19.60  PP                           READY next=go_to_start
+   20.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   20.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-1.443 +0.965 -1.211 N, +0.2514 N.m] (|F|=2.117 N)  w_hat_q=[-0.0115 -0.0021 +0.0127 +0.0030] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   20.94  PL                           CALCULATING
+   20.94  PP                           FLYING go_to_start
+   20.94  LOG uav_0.whole_body_traje   push-and-pull: go_to_start: planning from the current hold; it executes as soon as it is planned
+   20.96  LOG uav_0.whole_body_traje   push-and-pull go_to_start: executing -- T = 15.43 s (v_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.30 m/s, tau_j 0.71 N.m, rotor 471.6/482.4, solve 12.9 ms
+   20.96  PL                           EXECUTING T=15.4s
+   20.96  PP                           FLYING go_to_start T=15.4s
+   21.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   21.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+0.566 +1.985 +0.749 N, -0.2815 N.m] (|F|=2.196 N)  w_hat_q=[+0.0037 -0.0106 +0.0161 +0.0024] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   22.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   22.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+0.547 +1.174 +0.725 N, +0.0072 N.m] (|F|=1.484 N)  w_hat_q=[+0.0209 -0.0118 +0.0203 +0.0020] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   22.54  LOG uav_0.fsc_open_manipul   Plan: planning the six steps from the current hold -- the status reads READY when done
+   22.54  LOG uav_0.fsc_open_manipul   Valve Turning: Go To Start -- the gripper opens NOW, far from the valve, so the wrist's kick settles before the descent
+   22.54  LOG uav_0.fsc_open_manipul   Go To Start: go_to_start: planning from the current hold; it executes as soon as it is planned
+   22.54  LOG uav_0.fsc_open_manipul   Valve Turning: j1..j4 error damping [0.20 0.00 0.00 0.20] for the mission (was [0.00 0.00 0.00 0.05])
+   23.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   23.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+3.107 +1.577 +0.213 N, -0.0100 N.m] (|F|=3.491 N)  w_hat_q=[+0.0338 -0.0026 +0.0280 +0.0018] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   24.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   24.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-23.721 +1.516 -5.175 N, -0.2383 N.m] (|F|=24.326 N)  w_hat_q=[+0.0427 +0.0228 +0.0379 +0.0002] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   25.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   25.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+0.930 +1.014 +1.019 N, -0.0098 N.m] (|F|=1.712 N)  w_hat_q=[+0.0510 +0.0440 +0.0446 -0.0025] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   26.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   26.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+1.767 -4.585 +2.054 N, -0.0063 N.m] (|F|=5.326 N)  w_hat_q=[+0.0480 +0.0623 +0.0449 -0.0033] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   27.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   27.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+0.586 -7.118 +0.955 N, +0.2774 N.m] (|F|=7.206 N)  w_hat_q=[+0.0425 +0.0608 +0.0489 -0.0007] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   28.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   28.46  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+1.663 -2.515 +1.264 N, +0.2603 N.m] (|F|=3.269 N)  w_hat_q=[+0.0382 +0.0760 +0.0444 +0.0012] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   29.46  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   29.47  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-5.173 -3.410 -0.318 N, +0.2804 N.m] (|F|=6.204 N)  w_hat_q=[+0.0290 +0.0882 +0.0570 +0.0052] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   30.47  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   30.47  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+0.628 -2.601 -1.991 N, -0.2183 N.m] (|F|=3.335 N)  w_hat_q=[+0.0210 +0.0931 +0.0683 +0.0061] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   31.47  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   31.47  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-2.191 +0.718 -0.726 N, -0.0266 N.m] (|F|=2.418 N)  w_hat_q=[+0.0118 +0.0922 +0.0553 +0.0046] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   32.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   32.48  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+8.479 +2.786 +0.026 N, +0.0653 N.m] (|F|=8.925 N)  w_hat_q=[-0.0044 +0.0761 +0.0593 +0.0103] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   33.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   33.48  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+0.554 -2.672 +0.079 N, +0.0319 N.m] (|F|=2.730 N)  w_hat_q=[-0.0160 +0.0773 +0.0634 +0.0136] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   34.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   34.48  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+1.279 +4.123 +0.590 N, -0.0591 N.m] (|F|=4.357 N)  w_hat_q=[-0.0128 +0.0657 +0.0741 +0.0098] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   35.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   35.48  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-2.828 +5.510 +0.931 N, +0.0465 N.m] (|F|=6.263 N)  w_hat_q=[-0.0130 +0.0660 +0.0798 +0.0092] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   36.40  LOG uav_0.fsc_autopilot_ro   [1;36mEE reference anchor -> WORLD (blend 1.000000 s)[0m
+   36.40  LOG uav_0.whole_body_traje   pick-and-place: EE anchor -> WORLD
+   36.40  LOG uav_0.fsc_autopilot_ro   free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+   36.41  LOG uav_0.whole_body_traje   push-and-pull: go_to_start complete.
+   36.41  LOG uav_0.whole_body_traje   transition complete: hold captured -- base [0.363 0.193 1.315] m, q [0.0, 5.0, 25.0, 0.0] deg, EE (inertial) [0.365 -0.021 1.059] m az -179.3 deg
+   36.41  PL                           HOLD
+   36.41  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 30 mm from the point above the handle (tolerance 50 mm)
+   36.46  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 28 mm from the point above the handle (tolerance 50 mm)
+   36.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   36.48  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+4.888 +11.624 +2.378 N, -0.2689 N.m] (|F|=12.832 N)  w_hat_q=[-0.0155 +0.0299 +0.0899 +0.0103] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   36.56  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 25 mm from the point above the handle (tolerance 50 mm)
+   36.66  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 21 mm from the point above the handle (tolerance 50 mm)
+   36.86  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 20 mm from the point above the handle (tolerance 50 mm)
+   36.96  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 19 mm from the point above the handle (tolerance 50 mm)
+   37.06  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 16 mm from the point above the handle (tolerance 50 mm)
+   37.16  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 14 mm from the point above the handle (tolerance 50 mm)
+   37.26  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 13 mm from the point above the handle (tolerance 50 mm)
+   37.30  LOG uav_0.fsc_autopilot_ro   Wrench allocator saturated: unallocated [-0.000 -0.000 -0.000] N.m, -0.44 N thrust
+   37.36  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 12 mm from the point above the handle (tolerance 50 mm)
+   37.46  LOG uav_0.fsc_open_manipul   Ready To Turn: Go To Start is done -- the descent starts by itself (push_pull_auto_ready_delay_s 1.0 s)
+   37.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   37.48  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-1.321 -1.172 +0.520 N, +0.0274 N.m] (|F|=1.841 N)  w_hat_q=[-0.0146 +0.0283 +0.0786 +0.0075] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   37.56  PP                           DONE go_to_start next=ready (the gripper opens first) -- claw 13 mm from the point above the handle (tolerance 50 mm)
+   37.63  LOG uav_0.fsc_open_manipul   Ready To Turn: gripper open -- descending
+   37.63  PL                           CALCULATING
+   37.63  PP                           FLYING ready
+   37.63  LOG uav_0.whole_body_traje   push-and-pull: ready: planning from the current hold; it executes as soon as it is planned (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   37.68  LOG uav_0.whole_body_traje   push-and-pull ready: executing -- T = 3.00 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.12 m/s, tau_j 0.60 N.m, rotor 472.6/480.6, solve 23.3 ms
+   37.69  PL                           EXECUTING T=3.0s
+   37.69  PP                           FLYING ready T=3.0s
+   37.69  LOG uav_0.fsc_open_manipul   Ready To Turn (automatic): ready: planning from the current hold; it executes as soon as it is planned (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+   38.48  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   38.49  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+1.344 -1.148 -0.357 N, +0.0034 N.m] (|F|=1.803 N)  w_hat_q=[-0.0332 +0.0256 +0.0667 +0.0225] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   38.84  LOG uav_0.fsc_autopilot_ro   Wrench allocator saturated: unallocated [-0.000 -0.000 -0.000] N.m, -2.48 N thrust
+   39.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   39.49  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-1.745 -3.240 -1.037 N, -0.0702 N.m] (|F|=3.823 N)  w_hat_q=[-0.0335 +0.0373 +0.0563 +0.0266] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   40.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   40.49  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-1.228 +5.062 +1.939 N, -0.0214 N.m] (|F|=5.558 N)  w_hat_q=[-0.0182 +0.0282 +0.0522 +0.0195] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   40.69  LOG uav_0.whole_body_traje   push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+   40.69  LOG uav_0.whole_body_traje   push-and-pull: ready complete.
+   40.70  LOG uav_0.whole_body_traje   transition complete: hold captured -- base [0.365 0.073 1.215] m, q [0.0, 5.0, 25.0, 0.0] deg, EE (inertial) [0.366 -0.141 0.959] m az -179.3 deg
+   40.70  PL                           HOLD
+   40.70  PP                           DONE ready next=push (CONTACT on: the gripper closes first)
+   41.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   41.49  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-3.496 +0.383 -1.459 N, -0.0031 N.m] (|F|=3.808 N)  w_hat_q=[+0.0060 +0.0328 +0.0445 +0.0034] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   42.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   42.49  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-2.956 -0.404 +1.578 N, +0.2699 N.m] (|F|=3.375 N)  w_hat_q=[-0.0178 +0.0263 +0.0390 +0.0243] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   43.05  LOG uav_0.fsc_autopilot_ro   [1;36mGRIP: jaws CLOSED (gripper_left_joint -0.0055)[0m
+   43.05  LOG uav_0.fsc_autopilot_ro   [1;36mGRIP: parameters -> the INTERACTION set over 1.0 s[0m
+   43.05  LOG uav_0.fsc_autopilot_ro   GRIP: the EE heading target follows the handle from here
+   43.38  LOG uav_0.fsc_autopilot_ro   Wrench allocator saturated: unallocated [0.000 0.000 0.000] N.m, -4.14 N thrust
+   43.46  LOG uav_0.whole_body_traje   push-and-pull: the handle has turned 3.2 deg since Get -- Ready's close gate follows the live handle (the claw is 19 mm from its grasp point); if the jaws do not close, Exit, Get and Plan again
+   43.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   43.50  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+1.561 -4.138 -0.475 N, +0.0254 N.m] (|F|=4.448 N)  w_hat_q=[-0.0535 +0.0030 +0.0309 +0.0608] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   43.87  LOG uav_0.fsc_autopilot_ro   [1;33mEE reference anchor -> CoM (FAST hand-back, blend 0.250000 s)[0m
+   43.88  LOG uav_0.whole_body_traje   pick-and-place: EE anchor -> CoM (FAST hand-back)
+   43.88  LOG uav_0.fsc_autopilot_ro   free-axis anchor released (the EE anchor back to the CoM)
+   43.88  PL                           CALCULATING
+   43.88  PP                           ABORTING (SAFETY GUARD: the vehicle sways 249 mm/s against its CoM reference (> 150 mm/s; CoM error 32 mm): the clamped contact is going unstable) -- gripper open, contact off, climbing 0.30 m, then the arm home
+   43.88  LOG uav_0.whole_body_traje   push-and-pull: ABORT: contact off, release (the claw follows the vehicle at once) then up 0.30 m and the arm home, from the hold
+   43.88  LOG uav_0.whole_body_traje   push-and-pull SAFETY GUARD: the vehicle sways 249 mm/s against its CoM reference (> 150 mm/s; CoM error 32 mm): the clamped contact is going unstable -- ABORT: contact off, release (the claw follows the vehicle at once) then up 0.30 m and the arm home, from the hold
+   43.88  LOG uav_0.whole_body_traje   push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+   43.91  LOG uav_0.whole_body_traje   push-and-pull ABORT: [1] settle 2.0 s | [2] T = 3.95 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 471.3/482.3, solve 12.3 ms | [3] T = 3.82 s (w_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.01 m/s, tau_j 0.71 N.m, rotor 471.5/4
+   43.91  PL                           EXECUTING T=9.8s
+   44.13  LOG uav_0.fsc_open_manipul   ABORT: already aborting
+   44.20  LOG uav_0.fsc_autopilot_ro   [1;36mGRIP: jaws OPEN (gripper_left_joint 0.0053) -- the interaction set stays (the claw still room-held on the handle)[0m
+   44.23  LOG uav_0.fsc_open_manipul   Gripper OPEN did not complete (canceled).
+   44.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   44.50  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-3.683 +0.465 +0.931 N, +0.0398 N.m] (|F|=3.827 N)  w_hat_q=[-0.0032 -0.0001 +0.0335 +0.0228] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   45.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   45.50  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[+4.924 +0.170 -0.284 N, -0.0809 N.m] (|F|=4.936 N)  w_hat_q=[-0.0162 -0.0001 +0.0493 +0.0236] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   46.16  LOG uav_0.fsc_autopilot_ro   Wrench allocator saturated: unallocated [-0.000 -0.000 0.000] N.m, -1.70 N thrust
+   46.49  LOG uav_0.fsc_autopilot_ro   [0;32mposture PID: u3_posture = [0 0 0 0] N.m (max|.| = 0) -- kp/kd/ki/i_max = 0/0/0/0[0m
+   46.50  LOG uav_0.fsc_autopilot_ro   [0;35m4D attribution: chi=free  F_hat raw=[-3.320 -1.016 -2.230 N, +0.1316 N.m] (|F|=4.126 N)  w_hat_q=[-0.0504 +0.0048 +0.0615 +0.0231] N.m  F_hat_y consumed=[+0.000 +0.000 +0.000 +0.0000][0m
+   46.57  LOG uav_0.fsc_open_manipul   ABORT: already aborting
+   46.90  LOG uav_0.fsc_autopilot_ro   [1;31mDIRECT WATCHDOG TRIPPED: excess tilt (15.1/15.0 deg) with the claw at the handle (planner: 'ABORTING (SAFETY GUARD: the vehicle sway') -- an EMERGENCY ABORT (the planner's own abort already runs), not SAFETY: the task's release, climb, arm home, the law flying it.[0m
+   47.02  LOG uav_0.fsc_autopilot_ro   [1;31mDIRECT WATCHDOG: the emergency abort (excess tilt (15.1/15.0 deg)) cannot hold it -- tilt 25.6 deg past the hard limit 25.0. Reverting to SAFETY.[0m
+   47.02  LOG uav_0.fsc_autopilot_ro   Reference re-seeded to current pose: [0.60 0.03 1.22] m, yaw -114.6 deg
+   47.02  LOG uav_0.fsc_autopilot_ro   [1;33mReturned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.[0m
+   47.02  LOG uav_0.fsc_autopilot_ro   [1;33mSAFETY guard: folding the arm HOME in 2.0 s via 'fsc_open_manipulator/external_torque_controller/go_home'.[0m
+   47.02  MODE                         SAFETY
+   47.02  CTRL                         Baseline (Safety)
+   47.02  LOG uav_0.fsc_autopilot_ro   The coupled law stopped commanding the arm -- sending the arm controller the RELEASE (all-NaN torque): its own hold owns the arm now, not after its command timeout.
+   47.02  LOG uav_0.fsc_open_manipul   SAFETY: this node owns the arm reference again, resuming from the measured pose.
+   47.02  LOG uav_0.whole_body_traje   SAFETY -- planner silent, targets dropped.
+   47.02  PL                           IDLE
+   47.03  PP                           NOT IN DIRECT
+   47.04  LOG uav_0.fsc_open_manipul   Valve Turning: the node left DIRECT with the claw on the handle -- gripper OPEN
+   47.08  LOG uav_0.fsc_open_manipul   Valve Turning: NOT IN -- the arm's error damping back to [0.00 0.00 0.00 0.05]
+   48.04  GUARD                        BRIDGING
+   48.04  LOG uav_0.fsc_autopilot_ro   [1;33mMOCAP GUARD: MOCAP -> BRIDGING (jump, last good 0.01 s ago). The mocap is no longer forwarded to PX4: EKF2 not fusing vision does not trip the feedback-loss failsafe while this lasts (the odometry going silent still does). DIRECT entry refused until MOCAP.[0m
+   48.18  GUARD                        CONFIRMED
+   48.18  LOG uav_0.fsc_autopilot_ro   [1;31mMOCAP GUARD: BRIDGING -> CONFIRMED (jump, last good 0.15 s ago). The mocap fault is confirmed; EKF2 not fusing vision still does not trip the feedback-loss failsafe. DIRECT entry refused until MOCAP.[0m
+   48.24  PX4                          STAB arm=2
+   48.29  LOG uav_0.fsc_open_manipul   MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.17 s ago)
+   48.95  PX4                          MANUAL arm=2
+   49.02  LOG uav_0.fsc_autopilot_ro   [1;33mSAFETY guard: arm folding HOME (Homing over 6.100690 s.)[0m
+   49.04  GUARD                        LOST
+   49.04  LOG uav_0.fsc_autopilot_ro   [1;31mMOCAP GUARD: CONFIRMED -> LOST (jump, last good 1.01 s ago). No measured position for over a second -- LAND WITH THE RC. DIRECT entry refused until MOCAP.[0m
+   49.13  LOG uav_0.fsc_open_manipul   MOCAP GUARD: LOST -- the vehicle holds: land it with the RC (jump, last good sample 1.01 s ago)
+   50.10  PX4                          OFFBOARD arm=2
+   50.23  PX4                          STAB arm=2
+   50.30  PX4                          MANUAL arm=2
+   51.25  PX4                          MANUAL arm=1
+   58.58  LOG uav_0.fsc_autopilot_ro   [1;32mMOCAP GUARD: LOST -> MOCAP. The mocap is good again and forwarded to PX4; EKF2 has a fresh system_fb_timeout_s to fuse it before the feedback-loss failsafe counts a vision loss.[0m
+   58.58  GUARD                        MOCAP
+   58.67  LOG uav_0.fsc_open_manipul   MOCAP GUARD: the mocap is good again
+   58.68  GUARD                        BRIDGING
+   58.68  LOG uav_0.fsc_autopilot_ro   [1;33mMOCAP GUARD: MOCAP -> BRIDGING (jump, last good 0.03 s ago). The mocap is no longer forwarded to PX4: EKF2 not fusing vision does not trip the feedback-loss failsafe while this lasts (the odometry going silent still does). DIRECT entry refused until MOCAP.[0m
+   58.82  GUARD                        CONFIRMED
+   58.82  LOG uav_0.fsc_autopilot_ro   [1;31mMOCAP GUARD: BRIDGING -> CONFIRMED (jump, last good 0.17 s ago). The mocap fault is confirmed; EKF2 not fusing vision still does not trip the feedback-loss failsafe. DIRECT entry refused until MOCAP.[0m
+   58.93  LOG uav_0.fsc_open_manipul   MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.19 s ago)
+   60.30  LOG uav_0.fsc_autopilot_ro   [1;31mMOCAP GUARD: CONFIRMED -> LOST (jump, last good 1.00 s ago). No measured position for over a second -- LAND WITH THE RC. DIRECT entry refused until MOCAP.[0m
+   60.30  GUARD                        LOST
+   60.40  LOG uav_0.fsc_open_manipul   MOCAP GUARD: LOST -- the vehicle holds: land it with the RC (jump, last good sample 1.00 s ago)
+   64.08  GUARD                        MOCAP
+   64.08  LOG uav_0.fsc_autopilot_ro   [1;32mMOCAP GUARD: LOST -> MOCAP. The mocap is good again and forwarded to PX4; EKF2 has a fresh system_fb_timeout_s to fuse it before the feedback-loss failsafe counts a vision loss.[0m
+   64.19  LOG uav_0.fsc_open_manipul   MOCAP GUARD: the mocap is good again

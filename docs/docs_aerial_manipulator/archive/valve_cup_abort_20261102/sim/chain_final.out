@@ -1,0 +1,8 @@
+12:27:08 start fin_abort_hold hold=10.0  --inject abort@3
+[fin_abort_hold] ABORTED: push-and-pull ABORTED while release: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+12:30:24 start fin_abort_turn hold=0  --inject abort@10
+[fin_abort_turn] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+12:33:54 start fin_q3trip hold=0 push_pull_guard_q3_min_deg=22.0 
+  push_pull_guard_q3_min_deg -> 22.0
+[fin_q3trip] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 21.2 deg < 22.0 deg (the arm buckling toward its elbow-singular branch)
+12:37:16 CHAIN DONE

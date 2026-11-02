@@ -1,0 +1,264 @@
+<title>1101 Valve Turning Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* layout: one reading column, tables scroll in their own box, two stacked small-multiple charts */
+:root{--bg:#f7f6f2;--fg:#1d1f23;--fg2:#4f545c;--muted:#7a8088;--line:#d9d6ce;--panel:#ffffff;--accent:#2a5fa8;
+ --bad:#b4262a;--ok:#1b7a4a;--warn:#9a6a00;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#6250d6;
+ --fd:"IBM Plex Sans",system-ui,sans-serif;--fm:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17191c;--fg:#ecebe6;--fg2:#b8bcc2;--muted:#8b9097;--line:#34383e;--panel:#1f2226;--accent:#7fb0ef;--bad:#f07b7b;--ok:#5fcf8f;--warn:#e2b14a;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#9085e9;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17191c;--fg:#ecebe6;--fg2:#b8bcc2;--muted:#8b9097;--line:#34383e;--panel:#1f2226;--accent:#7fb0ef;--bad:#f07b7b;--ok:#5fcf8f;--warn:#e2b14a;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#9085e9;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--fd);font-size:15px;line-height:1.5;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:980px;margin:0 auto;min-width:0}
+h1{font-size:1.9rem;font-weight:600;line-height:1.15;margin:0 0 6px;text-wrap:balance}
+h2{font-size:1.25rem;font-weight:600;margin:40px 0 10px;padding-top:14px;border-top:1px solid var(--line);text-wrap:balance}
+h3{font-size:1.02rem;font-weight:600;margin:24px 0 6px}
+p{max-width:72ch;margin:8px 0}
+.lede{color:var(--fg2);max-width:78ch;font-size:1.02rem}
+.eyebrow{font-family:var(--fm);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.verdict{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:22px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+.card .k{font-family:var(--fm);font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.card .v{font-size:1.05rem;font-weight:600;margin-top:4px}
+.card .d{color:var(--fg2);font-size:.92rem;margin-top:4px}
+.tscroll{overflow-x:auto;margin:10px 0 16px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:560px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{font-family:var(--fm);font-size:.74rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:500;background:color-mix(in srgb,var(--panel) 85%,var(--line))}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--fm);font-size:.86rem}
+code{font-family:var(--fm);font-size:.86em;background:color-mix(in srgb,var(--panel) 70%,var(--line));padding:1px 5px;border-radius:3px}
+.pill{display:inline-block;font-family:var(--fm);font-size:.72rem;letter-spacing:.03em;padding:1px 7px;border-radius:999px;border:1px solid currentColor;line-height:1.5;white-space:nowrap}
+.pill.ok{color:var(--ok)}.pill.bad{color:var(--bad)}.pill.warn{color:var(--warn)}.pill.same{color:var(--accent)}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 12px 6px;margin:14px 0}
+.fig .cap{font-size:.88rem;color:var(--fg2);margin:4px 2px 8px;max-width:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--fg2);margin:2px 2px 6px}
+.legend span i{display:inline-block;width:18px;height:0;border-top:2px solid;margin-right:6px;vertical-align:middle}
+svg{width:100%;height:auto;display:block;max-width:100%}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-family:var(--fm);font-size:.76rem;color:var(--fg);white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.12);display:none;z-index:5}
+.figwrap{position:relative}
+ul{padding-left:1.2em;max-width:76ch}li{margin:4px 0}
+.note{border-left:3px solid var(--accent);padding:6px 12px;background:color-mix(in srgb,var(--panel) 80%,var(--bg));margin:12px 0;max-width:76ch}
+@media (max-width:520px){h1{font-size:1.5rem}body{font-size:14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<main>
+<div class="eyebrow">AM-T650 whole-body 4-D L1 · valve turning · flights of 2026-11-01 · written 2026-11-02</div>
+<h1>1101 Valve Turning Review</h1>
+<p class="lede">Four static-hold attempts, none reached the hold, the last one crashed. The crash and the three
+recent ones share one sequencing choice the box push never made: the claw was held in the room before the
+grasp, and the base error grew while it was. The operator then closed the jaws by hand (the static-hold test had
+automatic Push off) with the base about 100 mm off: the room-held claw looked settled. The valve's phase logic now mirrors the 10-27 box push; two abort and
+exit timings were aligned today. The in-contact sway of a free handle is a separate, unsolved problem.</p>
+
+<div class="verdict">
+ <div class="card"><div class="k">Crash cause (175932)</div><div class="v">Sequencing, not a gain</div>
+  <div class="d">Pre-grasp room hold → base swing grew → jaws closed mid-swing → sway-guard abort from a static reference while the base moved at ~350 mm/s → the open claw followed the swinging base across the fin for 2 s and caught it in the climb → 25° → SAFETY.</div></div>
+ <div class="card"><div class="k">Fixed?</div><div class="v">Partly</div>
+  <div class="d">The early room hold and the gripper-joint switch: yes, in the unpushed branch. An abort from a swinging base: not fixed; today's abort change does not address it. Not deployed: the Orin flew the 11-01 pushed build.</div></div>
+ <div class="card"><div class="k">Still open</div><div class="v">In-contact lateral sway</div>
+  <div class="d">10-28/29: the 0.5–0.6 Hz q1/q4 mode grows once the fin is clamped. A control / handle problem; the static hold measures it without the approach in the way.</div></div>
+</div>
+
+<h2>1 · What caused the crash, and the recent crashes</h2>
+
+<h3>1.1 What actually flew</h3>
+<p>The bags carry the 11-01 pushed build, not the isolation branch (written during the flights, still unpushed):
+flight node <code>9e4b03e</code> (grip schedule + two parameter sets: the debug array is 131 wide and the node logs
+<code>GRIP: jaws CLOSED … INTERACTION set</code>), planner <code>17fd566</code> (leash, Ready CoM gate, descent guard,
+fast hand-back), and a valve yaml with <code>push_pull_world_anchor_ready: true</code>: the claw was held in the room
+from the end of Go To Start. The station opened the jaws at Go To Start.</p>
+
+<div class="tscroll"><table>
+<tr><th>flight</th><th>turn planned</th><th>pre-grasp room hold</th><th>Ready descent</th><th>outcome</th></tr>
+<tr><td>173835</td><td class="num">90°</td><td>4.1 s; leash let go at 49 mm, base peaked 78 mm, re-engaged</td><td>room-held, 3.0 s in</td><td><span class="pill bad">abort</span> descent guard: base 89 mm off, 138 mm/s; clean</td></tr>
+<tr><td>174531</td><td class="num">30°</td><td>6.3 s; leash 44 → 62 mm</td><td>room-held, 2.8 s in</td><td><span class="pill bad">abort</span> descent guard: 66 mm, 77 mm/s; clean</td></tr>
+<tr><td>175259</td><td class="num">30°</td><td>6.9 s; leash twice (45, 49 mm)</td><td>room-held, 0.6 s in</td><td><span class="pill bad">abort</span> q3 rate guard: q3 5.4° falling 57°/s, q1 −13°; clean</td></tr>
+<tr><td>175932</td><td class="num">30°</td><td>1.2 s</td><td>room-held, completed</td><td><span class="pill bad">crash</span> jaws closed; sway guard 0.8 s later; abort tilted to 25° → SAFETY → inverted 4.4 m away</td></tr>
+</table></div>
+
+<p>The arrival error itself was not unusual. What differed is what the base did after it, with the claw
+held in the room instead of following the vehicle. Horizontal CoM tracking error (mm), the same law and
+the same phase on both tasks:</p>
+<div class="tscroll"><table>
+<tr><th>flight</th><th>claw before the grasp</th><th class="num">end of Go To Start</th><th class="num">hover peak</th><th class="num">descent peak</th><th class="num">on the handle, peak</th></tr>
+<tr><td>box 10-27 171114</td><td>follows the vehicle</td><td class="num">18</td><td class="num">41</td><td class="num">45</td><td class="num">18</td></tr>
+<tr><td>box 10-27 172227</td><td>follows the vehicle</td><td class="num">38</td><td class="num">42</td><td class="num">31</td><td class="num">31</td></tr>
+<tr><td>valve 11-01 173835</td><td>held in the room</td><td class="num">16</td><td class="num">78</td><td class="num">89</td><td class="num">—</td></tr>
+<tr><td>valve 11-01 174531</td><td>held in the room</td><td class="num">5</td><td class="num">62</td><td class="num">67</td><td class="num">—</td></tr>
+<tr><td>valve 11-01 175259</td><td>held in the room</td><td class="num">43</td><td class="num">49</td><td class="num">84</td><td class="num">—</td></tr>
+<tr><td>valve 11-01 175932</td><td>held in the room</td><td class="num">25</td><td class="num">26</td><td class="num">33</td><td class="num">110</td></tr>
+</table></div>
+<p>Both tasks arrive 5–43 mm off. The box stays near 30–45 mm and is back to 18–31 mm when the push starts.
+The valve grows to 62–110 mm while the claw is room-held, and the arm takes that motion: q1 −7…+19° (−23° in
+175932), q3 down to 5–12° (home 25°), the leash releasing and re-engaging two or three times per flight. Two
+box flights against four valve flights do not prove the room hold causes the growth, but the pattern holds in
+all six and in the 10-31 evening flight. The box push never holds the claw in the room before the claw is
+within 25 mm of the grasp point and slower than 30 mm/s.</p>
+
+<h3>1.2 The crash, second by second (175932)</h3>
+<div class="fig figwrap" id="figA">
+ <div class="cap">Base CoM tracking error, world x / y (mm). t = seconds after DIRECT entry. Vertical markers: planner events.</div>
+ <div class="legend"><span><i style="border-color:var(--s1)"></i>e<sub>x</sub></span><span><i style="border-color:var(--s2)"></i>e<sub>y</sub></span><span style="color:var(--muted)">shaded = claw held in the room</span></div>
+ <svg id="svgA" viewBox="0 0 960 300" role="img" aria-label="CoM error x and y versus time"></svg>
+ <div class="tip" id="tipA"></div>
+</div>
+<div class="fig figwrap" id="figB">
+ <div class="cap">Arm and attitude (deg): arm yaw q1, elbow q3, vehicle tilt, valve rotation since Get.</div>
+ <div class="legend"><span><i style="border-color:var(--s3)"></i>q1</span><span><i style="border-color:var(--s4)"></i>q3</span><span><i style="border-color:var(--s5)"></i>tilt</span><span><i style="border-color:var(--fg2)"></i>valve Δyaw</span></div>
+ <svg id="svgB" viewBox="0 0 960 300" role="img" aria-label="joint angles, tilt and valve rotation versus time"></svg>
+ <div class="tip" id="tipB"></div>
+</div>
+
+<div class="tscroll"><table>
+<tr><th class="num">t [s]</th><th>event</th></tr>
+<tr><td class="num">19.96</td><td>Go To Start done. Claw → WORLD (room hold from the hover, <code>world_anchor_ready</code>), free axis latched. Base 25 mm off.</td></tr>
+<tr><td class="num">21.18</td><td>Automatic Ready (1.0 s). Gripper already open. Descent T 3 s, room-held.</td></tr>
+<tr><td class="num">24.25</td><td>Ready done: "the contact phase waits for the jaws". Base begins a 0.5 Hz swing along world x.</td></tr>
+<tr><td class="num">24.3–26.6</td><td>CoM error −5 → −107 mm; q1 −4.7 → −23.5° (the arm absorbing the base). The operator closes the gripper by hand from the Control tab at 26.13 (automatic Push was off for the static-hold test); fingers closed by 26.57.</td></tr>
+<tr><td class="num">26.60</td><td>Node reads the gripper joint closed → blends the INTERACTION gain set in over 1 s (K<sub>y</sub> 212→120, ω<sub>c,t</sub> 2.93→2.0, heading 2.5→0.25). A gain switch triggered by the jaw position, mid-swing.</td></tr>
+<tr><td class="num">26.6–27.4</td><td>Base swings back −107 → +44 mm in 0.8 s; the clamped claw turns the valve 8°.</td></tr>
+<tr><td class="num">27.43</td><td><b>Sway guard</b> (249 mm/s): ABORT. Contact off, claw back to the CoM anchor (fast). The hold is the <i>planned</i> pose (<code>abort_from_measured false</code>), a rest with zero velocity; the base is 32–44 mm from it and moving at ~350 mm/s.</td></tr>
+<tr><td class="num">27.4–29.4</td><td>2.0 s release wait at fin height. Jaws open by 27.75. The base's own momentum carries it on to +149 mm, then the position loop swings it back to −49 mm (0.5 Hz). The claw follows the base (CoM anchor), so the opening jaws sweep +151 / −40 mm sideways and ±50 mm along the nose at fin height and knock the fin: valve −171 → −161 → +178°, |F̂| spikes 12–16 N.</td></tr>
+<tr><td class="num">29.45</td><td>The abort's climb starts (0.30 m in 3.95 s), base still swinging.</td></tr>
+<tr><td class="num">29.9–30.4</td><td>The base swings +x again, from +54 to +214 mm, while the claw stops at +38…+55 mm: it is caught on the fin. obj_0 z rises 5 mm, q2 12 → −19°, F̂<sub>x</sub> −21…−35 N, d̂<sub>r,y</sub> −0.1 → −0.9 N·m. Motors m1 = m2 = 0, m3 = 1 (allocator saturated). Roll −14°, pitch −15°.</td></tr>
+<tr><td class="num">30.45</td><td>Node watchdog 15.1° → emergency abort (already running).</td></tr>
+<tr><td class="num">30.57</td><td>25.6° past the hard limit → SAFETY, arm released to its hold, fold scheduled.</td></tr>
+<tr><td class="num">30.6–32.0</td><td>Tilt 45 → 110°; the vehicle flew from (0.59, 0.03) to (4.7, 0.8) m and came to rest inverted. Mocap jump gate, pilot STAB / MANUAL.</td></tr>
+</table></div>
+
+<p>Three sequencing decisions made the crash, none of them a gain: the room hold before the grasp (during
+which the base error grew to 110 mm and the arm reached q1 −23°), the gain/contact switch read off the gripper
+joint instead of a planner event, and an abort recipe that starts from a still reference while the base moves at ~350 mm/s. The claw, following the base, swept
+the opening jaws across the fin for 2 s and caught it in the climb. The sway guard did what it was built for;
+the abort it started has no answer for a base that is already moving fast.</p>
+
+<h3>1.3 The recent crashes have the same shape</h3>
+<div class="tscroll"><table>
+<tr><th>date</th><th>phase</th><th>mechanism</th><th>what the sequencing contributed</th></tr>
+<tr><td>10-29</td><td>90° turn, 7 s after the grasp</td><td>lateral contact sway (0.45 Hz) grew to the arm's range; base 0.13 m back / 0.30 m sideways; q3 to −32°; rotors saturated; q3 rate guard</td><td>abort held the claw in the room while the base ran away; arm torques latched 0.3 s at the handover; mocap jump gate went LOST → SAFETY on dead-reckoning</td></tr>
+<tr><td>10-31 pm</td><td>Ready descent (room-held)</td><td>base ran 13 cm sideways / 8 cm back into the room-held arm; q3 27 → 0 → −33°; operator abort; watchdog → SAFETY 1.3 m from the hold</td><td>room hold from Go To Start; no arm guard armed in Ready</td></tr>
+<tr><td>11-01</td><td>grasp + abort</td><td>above</td><td>room hold from Go To Start; gripper-joint gain switch; planned-hold abort, 2 s at fin height</td></tr>
+</table></div>
+<p>All three start in the pre-grasp room hold or in an abort from it. The 10-28 flights, which the user
+remembers as the stable ones, grasped on the same room-hold design but on a quieter base and a build without the
+leash and the gain sets; their turns were then cut by a false rotor-tilt trip and showed the in-contact sway, a
+different problem that none of today's fixes address.</p>
+
+<h3>1.4 Are those problems fixed?</h3>
+<div class="tscroll"><table>
+<tr><th>problem</th><th>fix</th><th>status</th></tr>
+<tr><td>Room hold before the grasp (<code>world_anchor_ready</code>)</td><td>Off. The claw follows the vehicle through Go To Start, the descent and the arrival; the room hold starts after the box's hand-over settle (25 mm / 15 mm across / 30 mm/s / 0.3 s).</td><td><span class="pill ok">fixed</span> isolation branch (11-02, decision P)</td></tr>
+<tr><td>Gain and contact switch read off the gripper joint</td><td>Grip schedule and the two parameter sets deleted from the node; one gain set; contact on at the Turn press or the station's <code>push_pull/grasp</code> event (static hold).</td><td><span class="pill ok">fixed</span> isolation branch</td></tr>
+<tr><td>Jaws open from Go To Start</td><td>Closed in free flight, opened by Ready, closed by the gate after the hand-over, closed again after the Exit.</td><td><span class="pill ok">fixed</span> isolation branch, Valve tab</td></tr>
+<tr><td>Leash / Ready CoM gate / descent guard cycling the anchor</td><td>Off for the valve (nothing left to guard).</td><td><span class="pill ok">fixed</span> isolation branch</td></tr>
+<tr><td>Abort from a swinging base: the open claw follows the base across the fin</td><td>Today: hold where the vehicle is, release wait 1.0 s sim / 1.5 s hardware, <code>abort_release_world_held false</code> (the box's recipe). This removes only the 32–44 mm offset at the abort; the base still overshoots and the claw still sweeps. It also reverses a 10-18 Isaac result against <code>abort_from_measured</code> on the valve. Untested.</td><td><span class="pill warn">not fixed</span> config changed, untested</td></tr>
+<tr><td>Exit: 1 s extra at fin height after OPEN</td><td><code>push_pull_valve_exit_wait_s</code> 1.0 → 0.0: the exit starts on the OPEN report, as the Box tab.</td><td><span class="pill ok">fixed today</span> station, rebuilt</td></tr>
+<tr><td>In-contact lateral sway (10-28, 10-29)</td><td>Not a sequencing item. Candidates: the roll-fin handle (10-30/31 design), damping on j1/j4, a different clamp pose.</td><td><span class="pill warn">open</span></td></tr>
+<tr><td>Deployment</td><td>The Orin runs <code>9e4b03e</code> / <code>17fd566</code>. Push the isolation branch of the five repos with today's edits and rebuild per <code>deploy_orin_prompt.md</code>.</td><td><span class="pill warn">not deployed</span></td></tr>
+</table></div>
+<p>Checks run today: the real Valve and Box tabs offscreen against a fake planner (25/25), and the raw hardware
+stack's pre-launch part on both profiles (valve 87 tuned values incl. the new abort values, box 62 unchanged).
+No planner or flight-node code changed today, so the isolation record's loopbacks stand. Nothing was flown.</p>
+<div class="note">Isaac caveat: with the box's approach the simulated 90° turn did 2 of 3 nominal and 0 of 1 under
+drift (an open finger met the fin during the CoM-anchored descent), against 13 of 13 with the room-held
+approach on the 10-31/11-01 builds. Isaac has never reproduced the hardware's pre-grasp sway, so it cannot weigh
+the two; on hardware the room-held approach failed at or before the grasp on three days. Fly the static hold
+first.</div>
+
+<h2>2 · The state machine, phase by phase, against the box push</h2>
+<p>One planner mode (push-and-pull) serves both tasks; the valve differs only by keys and by the Valve tab's
+gripper automation. Entry conditions are the planner's refusals; "same" means identical code and values.</p>
+
+<div class="tscroll"><table>
+<tr><th>phase</th><th>entry condition</th><th>box push (10-27, flown)</th><th>valve (isolation branch + today)</th><th></th></tr>
+<tr><td>Take-off, DIRECT</td><td>SAFETY take-off; DIRECT entry gated on position / velocity / arm error and fresh feedback</td><td>jaws closed by the operator; claw on the CoM anchor; contact free</td><td>same; the Valve tab also closes the jaws at Go To Start</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Get, Plan</td><td>obj_0 fresh, not frozen, yaw spread &lt; 10°; the vehicle inside the start range</td><td>table placed from the box; Plan refuses a start off the middle line</td><td>keep-outs placed from the valve's axis (obj_0 + axis offset); start 0.6–3 m, fin toward the vehicle</td><td><span class="pill same">same logic</span></td></tr>
+<tr><td>Go To Start</td><td>DIRECT, planned, HOLD, odometry fresh, body within 0.15 m of its hold, claw off the handle</td><td>round the table, 23.9 s; claw CoM-anchored; jaws closed</td><td>straight in, 15–16 s; claw CoM-anchored (was room-held on arrival); jaws closed (were opened here)</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Ready (descent)</td><td>automatic 1.0 s after DONE go_to_start; claw within 50 mm of the point above the handle and slower than 30 mm/s for 0.5 s (retried up to 10 s)</td><td>gripper opens, descent on the OPEN report, T 3 s, CoM-anchored; 0.15 m above</td><td>same; 0.10 m above (fin height vs skids)</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Hand-over settle</td><td>after DONE ready: claw within 25 mm (15 across), slower than 30 mm/s for 0.3 s; 6 s limit → ABORT with the jaws open</td><td>then WORLD-held; free axis along the push latched</td><td>same keys and values; free axis along the tangent; heading companion follows the handle once in contact</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Close</td><td>station gate: within 25 mm (box) / 20 mm (valve), 8 mm across, slower than 30 mm/s over 0.3 s, valve heading error ≤ 15°; 2.5 s limit → ABORT</td><td>hardware: a full close or a stall no wider than 5 mm = the grasp</td><td>same rule (20 mm: the fin is 40 mm wide)</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Contact ON</td><td>planner event only</td><td>Push press on the grasp result → <code>set_contact(true)</code>; settle 1.5 s; push 0.40 m at 21 mm/s</td><td>Turn press on the grasp result (same path) → settle 1.5 s, 90° in 18 s; static hold: <code>push_pull/grasp(true)</code> → hold → <code>grasp(false)</code></td><td><span class="pill same">same</span></td></tr>
+<tr><td>Contact OFF</td><td>end of the push / turn, or the release event</td><td><code>contact_off_at_push_end</code></td><td>same</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Exit</td><td>automatic 0.2 s after DONE push (box: once the base is calmer than 40 mm/s, max 3 s)</td><td>release (claw → CoM anchor) → open → climb 0.25 m on the OPEN report, arm home, T 3 s</td><td>open with the claw room-held → climb on the OPEN report (was +1 s) → room-held until 6 cm up, then CoM → 0.20 m, arm home; jaws closed again at DONE exit</td><td><span class="pill warn">anchor order differs</span></td></tr>
+<tr><td>Go To Land Start, Land</td><td>claw off the handle; Land only from Land Start</td><td>round the table, 1.3 m hover, land 0.30 m</td><td>straight, same heights</td><td><span class="pill same">same</span></td></tr>
+<tr><td>Abort (any guard, the button)</td><td>—</td><td>contact off; claw → CoM; hold where the vehicle IS; 1.5 s for the jaws; straight up 0.30 m; unbuckle q2/q3; arm home</td><td>same recipe today (fast 0.25 s hand-back on arm / sway guards; no unbuckle); untested on the valve, and it does not handle a base that is already swinging</td><td><span class="pill warn">same, untested</span></td></tr>
+</table></div>
+
+<h3>2.1 Guards and watchdogs</h3>
+<div class="tscroll"><table>
+<tr><th>guard</th><th>box push</th><th>valve</th></tr>
+<tr><td>vehicle tilt (planner)</td><td>10° for 0.1 s</td><td>10° for 0.1 s</td></tr>
+<tr><td>node watchdog</td><td>15° → SAFETY</td><td>15° → the planner's abort first (emergency abort), 25° → SAFETY</td></tr>
+<tr><td>claw force</td><td>5 N</td><td>5 N</td></tr>
+<tr><td>q3 (elbow)</td><td>static 10°; rate: 0.2 s look-ahead, 5°/s, q2 wall 45°</td><td>static 3° (completed turns dip to 10°); rate: 0.1 s, 30°/s, wall 45°</td></tr>
+<tr><td>handle feed</td><td>box lag 40 mm (vs the law's target), tilt 2°, stale 0.5 s</td><td>rotor tilt 4°, stale 0.5 s (no lag guard: the rotor's origin never moves)</td></tr>
+<tr><td>sway</td><td>—</td><td>0.15 m/s of CoM error rate, clamped only</td></tr>
+<tr><td>mocap</td><td>raw-mocap guard, abort on CONFIRMED</td><td>same</td></tr>
+<tr><td>pre-grasp leash / CoM gate / descent guard</td><td>off</td><td>off (since the isolation branch)</td></tr>
+</table></div>
+
+<h3>2.2 What still differs, and why</h3>
+<ul>
+<li><b>Exit anchor order.</b> The box releases to the CoM anchor before the jaws open; the valve opens with the claw room-held and stays room-held for the first 6 cm of the climb. Chosen on Isaac evidence for a free handle (10-18: 3/3 vs 2/7; 10-28: 3/3 vs 2/6). Never flown on hardware either way for the valve. The 1 s extra wait was removed today.</li>
+<li><b>Gains.</b> Both K<sub>y</sub> 120 / D<sub>y</sub> 20.2, K<sub>ψ</sub> 0.25, k<sub>R</sub>/k<sub>ω</sub> 1.6/1.2. Box: the push axis at natural inertia (M<sub>y</sub> 1.64, K<sub>y,y</sub> 196.8) and ω<sub>c,t</sub> 1.0; valve ω<sub>c,t</sub> 2.0 (10-17: 1.0 let the base wander 40–64 mm in the turn). The valve adds the heading companion (the EE heading target turns with the free-axis offset, radius 0.16 m) and the arm release at a SAFETY handover.</li>
+<li><b>Geometry.</b> Approach height 0.10 vs 0.15 m, exit climb 0.20 vs 0.25 m, the push pose [0, 5, 25, 0] vs [0, 28, 32, 0] (the skids over the beam).</li>
+<li><b>Static hold.</b> Valve only: the station reports the grasp and the release to the planner as events; the box has no equivalent because its Push press is the event.</li>
+</ul>
+
+<h3>2.3 What the 11-01 build did instead (for the record)</h3>
+<p>Room hold from the end of Go To Start; leash 40 mm releasing and re-engaging the hold; Ready CoM gate 30 mm /
+60 mm/s; descent room-held with a 60 mm guard; gripper joint read by the node to switch gains and the heading
+companion; jaws opened at Go To Start; abort at the planned hold, 2 s, world-held release key; exit +1 s after
+OPEN. None of these exist in the box push, and none survive in the isolation branch.</p>
+
+<p style="color:var(--muted);font-size:.85rem;margin-top:36px">Data: <code>docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261101/</code> (README, npz, timelines, the chart's trace). Config edits: valve generators, both valve yamls, the raw stack's expected values, the Valve tab's exit wait.</p>
+</main>
+<script>
+const TR = {"t0_direct_s": 16.45, "cols": ["t", "ex_mm", "ey_mm", "q1_deg", "q3_deg", "tilt_deg", "valve_dyaw_deg", "room_hold_w"], "rows": [[17.55, 17, -12, -0.4, 26.1, 2.1, 0.0, 0.0], [17.6, 19, -12, -0.3, 26.1, 2.1, 0.0, 0.0], [17.65, 21, -13, -0.3, 26.0, 2.0, 0.0, 0.0], [17.7, 23, -14, -0.4, 25.9, 1.8, 0.0, 0.0], [17.75, 26, -16, -0.3, 25.9, 1.5, 0.0, 0.0], [17.8, 29, -17, -0.3, 25.9, 1.6, 0.0, 0.0], [17.85, 32, -19, -0.3, 25.9, 1.7, 0.0, 0.0], [17.9, 33, -21, -0.3, 25.8, 1.7, 0.0, 0.0], [17.95, 36, -24, -0.3, 25.8, 1.8, 0.0, 0.0], [18.0, 38, -26, -0.4, 25.8, 2.0, 0.0, 0.0], [18.05, 40, -28, -0.3, 25.8, 2.1, 0.0, 0.0], [18.1, 42, -31, -0.3, 25.9, 2.1, 0.0, 0.0], [18.15, 43, -32, -0.3, 25.8, 1.8, 0.0, 0.0], [18.2, 43, -35, -0.3, 25.8, 2.8, 0.0, 0.0], [18.25, 45, -37, -0.3, 25.8, 2.5, 0.1, 0.0], [18.3, 42, -39, -0.3, 25.8, 2.3, 0.0, 0.0], [18.35, 43, -40, -0.4, 25.8, 1.7, 0.0, 0.0], [18.4, 41, -42, -0.4, 25.8, 2.0, 0.2, 0.0], [18.45, 39, -43, -0.3, 25.8, 1.5, 0.2, 0.0], [18.5, 36, -43, -0.3, 25.8, 1.1, 0.2, 0.0], [18.55, 34, -43, -0.4, 25.8, 0.9, 0.2, 0.0], [18.6, 28, -43, -0.3, 25.8, 0.9, 0.2, 0.0], [18.65, 25, -42, -0.3, 25.8, 1.3, 0.1, 0.0], [18.7, 22, -42, -0.4, 25.8, 1.4, 0.2, 0.0], [18.75, 18, -39, -0.4, 25.8, 0.7, 0.2, 0.0], [18.8, 14, -37, -0.4, 25.8, 1.2, 0.2, 0.0], [18.85, 11, -35, -0.3, 25.8, 1.0, 0.2, 0.0], [18.9, 6, -33, -0.3, 25.8, 0.7, 0.2, 0.0], [18.95, 2, -31, -0.4, 25.8, 0.6, 0.2, 0.0], [19.0, -2, -28, -0.4, 25.8, 0.5, 0.2, 0.0], [19.05, -6, -26, -0.4, 25.8, 0.7, 0.0, 0.0], [19.1, -8, -22, -0.4, 25.8, 0.7, 0.0, 0.0], [19.15, -13, -19, -0.4, 25.8, 0.8, 0.0, 0.0], [19.2, -16, -17, -0.4, 25.8, 1.2, 0.0, 0.0], [19.25, -18, -14, -0.4, 25.8, 1.0, 0.0, 0.0], [19.3, -19, -11, -0.4, 25.8, 1.2, -0.3, 0.0], [19.35, -21, -7, -0.3, 25.8, 1.4, 0.0, 0.0], [19.4, -22, -5, -0.3, 25.8, 1.2, -0.3, 0.0], [19.45, -25, -3, -0.4, 25.8, 1.2, -0.3, 0.0], [19.5, -24, 0, -0.3, 25.8, 1.2, -0.5, 0.0], [19.55, -26, 2, -0.4, 25.8, 1.1, 0.0, 0.0], [19.6, -27, 5, -0.3, 25.8, 1.3, -0.5, 0.0], [19.65, -26, 7, -0.3, 25.8, 1.5, -0.3, 0.0], [19.7, -24, 10, -0.4, 25.8, 1.5, -0.3, 0.0], [19.75, -27, 15, -0.4, 25.8, 2.1, -0.3, 0.0], [19.8, -23, 14, -0.3, 25.8, 1.9, -0.3, 0.0], [19.85, -21, 15, -0.3, 25.8, 1.8, -0.3, 0.0], [19.9, -20, 17, -0.4, 25.8, 1.8, -0.3, 0.0], [19.95, -17, 18, -0.4, 25.8, 1.6, -0.3, 0.0], [20.0, -15, 19, -0.4, 25.8, 1.3, 0.0, 0.05], [20.05, -12, 20, -0.3, 25.8, 1.6, -0.5, 0.1], [20.1, -9, 20, -0.3, 25.8, 1.2, -0.4, 0.15], [20.15, -5, 21, -0.3, 25.5, 1.6, -0.4, 0.2], [20.2, -3, 21, -0.4, 24.4, 1.4, -0.4, 0.25], [20.25, -1, 22, -0.4, 22.6, 1.8, -0.4, 0.3], [20.3, 3, 22, -0.3, 20.7, 1.9, -0.4, 0.35], [20.35, 3, 21, -0.3, 19.4, 1.9, -0.4, 0.4], [20.4, 5, 21, -0.3, 19.0, 2.2, -0.4, 0.45], [20.45, 6, 20, -0.3, 19.0, 1.7, -0.4, 0.5], [20.5, 8, 20, -0.3, 19.0, 1.8, -0.4, 0.55], [20.55, 9, 19, -0.3, 19.0, 1.8, -0.4, 0.6], [20.6, 9, 18, -0.3, 19.0, 1.5, -0.3, 0.65], [20.65, 9, 17, -0.3, 19.1, 1.5, -0.5, 0.7], [20.7, 9, 17, -0.3, 19.1, 1.5, -0.4, 0.75], [20.75, 9, 17, -0.3, 19.1, 1.8, -0.5, 0.75], [20.8, 7, 16, -0.3, 19.1, 1.9, -0.3, 0.75], [20.85, 6, 15, -0.3, 19.1, 1.9, -0.4, 0.75], [20.9, 4, 15, -0.4, 19.1, 1.4, -0.5, 0.75], [20.95, 2, 14, -0.4, 19.1, 1.4, -0.5, 0.75], [21.0, 0, 14, -0.5, 19.0, 1.3, -0.5, 0.75], [21.05, -1, 13, -1.0, 18.5, 1.7, -0.4, 0.75], [21.1, -4, 12, -1.3, 18.0, 1.3, -0.4, 0.75], [21.15, -6, 11, -1.8, 16.9, 1.3, -0.5, 0.75], [21.2, -7, 10, -2.2, 15.9, 1.2, -0.4, 0.75], [21.25, -10, 9, -2.5, 15.5, 1.1, -0.4, 0.75], [21.3, -11, 7, -2.8, 15.7, 1.0, -0.5, 0.75], [21.35, -12, 6, -3.1, 16.8, 1.2, -0.4, 0.75], [21.4, -14, 5, -3.2, 18.3, 1.0, -0.4, 0.75], [21.45, -15, 4, -3.5, 20.3, 1.0, -0.4, 0.75], [21.5, -16, 2, -3.6, 22.4, 1.1, -0.5, 0.75], [21.55, -17, 1, -3.8, 24.8, 1.0, -0.5, 0.75], [21.6, -18, 0, -4.0, 26.6, 1.1, -0.4, 0.75], [21.65, -19, -2, -4.3, 28.0, 1.1, -0.4, 0.75], [21.7, -19, -3, -4.6, 28.7, 1.5, -0.4, 0.75], [21.75, -20, -4, -4.8, 29.1, 1.2, -0.4, 0.75], [21.8, -21, -5, -4.9, 29.1, 1.4, -0.4, 0.75], [21.85, -21, -5, -5.0, 29.1, 1.5, -0.3, 0.75], [21.9, -21, -6, -5.2, 29.1, 1.5, -0.5, 0.75], [21.95, -22, -7, -5.4, 29.1, 1.6, -0.2, 0.75], [22.0, -22, -8, -5.4, 29.1, 2.0, -0.3, 0.75], [22.05, -21, -9, -5.4, 29.1, 2.2, -0.4, 0.75], [22.1, -21, -9, -5.4, 29.0, 2.2, -0.4, 0.75], [22.15, -22, -11, -5.5, 28.9, 2.0, -0.3, 0.75], [22.2, -21, -12, -5.5, 28.5, 2.0, -0.5, 0.75], [22.25, -19, -13, -5.6, 27.6, 1.9, -0.5, 0.75], [22.3, -21, -15, -5.7, 26.4, 1.6, -0.4, 0.75], [22.35, -21, -16, -5.6, 25.0, 1.4, -0.4, 0.75], [22.4, -20, -17, -5.6, 24.2, 1.3, -0.4, 0.75], [22.45, -20, -19, -5.7, 23.6, 1.1, -0.3, 0.75], [22.5, -19, -20, -5.8, 23.7, 1.4, -0.5, 0.75], [22.55, -19, -20, -5.8, 23.7, 1.0, -0.3, 0.75], [22.6, -17, -20, -5.8, 23.7, 1.0, -0.4, 0.75], [22.65, -19, -22, -5.9, 23.7, 0.8, -0.4, 0.75], [22.7, -18, -21, -5.9, 23.7, 0.9, -0.4, 0.75], [22.75, -18, -22, -5.9, 23.7, 1.0, -0.3, 0.75], [22.8, -18, -21, -5.9, 23.7, 0.7, -0.3, 0.75], [22.85, -17, -22, -5.9, 23.7, 0.7, -0.3, 0.75], [22.9, -15, -21, -5.9, 23.8, 0.9, -0.3, 0.75], [22.95, -15, -22, -5.9, 24.1, 0.9, -0.3, 0.75], [23.0, -13, -21, -5.9, 24.3, 0.5, -0.3, 0.75], [23.05, -13, -22, -5.9, 25.0, 0.8, -0.3, 0.75], [23.1, -11, -21, -5.7, 25.6, 0.2, -0.5, 0.75], [23.15, -10, -21, -5.7, 26.4, 0.5, -0.5, 0.75], [23.2, -9, -20, -5.7, 27.1, 0.5, -0.3, 0.75], [23.25, -10, -20, -5.5, 27.4, 0.4, -0.3, 0.75], [23.3, -7, -18, -5.5, 27.6, 0.5, -0.3, 0.75], [23.35, -9, -18, -5.5, 27.7, 0.8, -0.3, 0.75], [23.4, -6, -16, -5.3, 27.7, 0.8, -0.5, 0.75], [23.45, -7, -15, -5.2, 27.6, 0.5, -0.2, 0.75], [23.5, -6, -12, -5.2, 27.6, 0.6, -0.6, 0.75], [23.55, -4, -10, -5.2, 27.6, 0.7, -0.7, 0.75], [23.6, -5, -7, -5.0, 27.6, 0.6, -0.7, 0.75], [23.65, -4, -4, -4.9, 27.5, 0.8, -0.6, 0.75], [23.7, -4, -1, -4.8, 27.0, 0.5, -0.6, 0.75], [23.75, -3, 4, -4.7, 25.0, 0.8, -0.6, 0.75], [23.8, -4, 8, -4.7, 22.6, 0.7, -0.6, 0.75], [23.85, -5, 11, -4.7, 19.7, 1.1, -0.0, 0.75], [23.9, -5, 16, -4.6, 17.2, 1.3, -0.6, 0.75], [23.95, -4, 20, -4.7, 15.7, 1.6, -0.6, 0.75], [24.0, -4, 24, -4.7, 15.4, 1.8, -0.4, 0.75], [24.05, -5, 26, -4.7, 16.1, 1.9, -0.4, 0.75], [24.1, -5, 28, -4.6, 17.0, 2.1, -0.4, 0.75], [24.15, -4, 30, -4.6, 17.7, 2.0, -0.5, 0.75], [24.2, -4, 32, -4.5, 18.4, 2.1, -0.5, 0.75], [24.25, -3, 33, -4.4, 18.6, 2.2, -0.6, 0.75], [24.3, -2, 33, -4.3, 18.7, 2.0, -0.6, 0.75], [24.35, 0, 34, -4.0, 18.7, 1.9, -0.7, 0.75], [24.4, 3, 34, -3.8, 18.7, 2.1, -0.0, 0.75], [24.45, 4, 33, -3.4, 18.7, 2.0, -0.7, 0.75], [24.5, 5, 31, -2.9, 18.7, 1.8, -0.7, 0.75], [24.55, 6, 29, -2.5, 18.6, 1.8, 0.1, 0.75], [24.6, 8, 27, -2.2, 18.6, 1.6, -0.5, 0.75], [24.65, 11, 25, -1.8, 18.6, 1.9, 0.0, 0.75], [24.7, 13, 23, -1.1, 18.6, 2.0, 0.1, 0.75], [24.75, 14, 20, -0.4, 18.7, 1.7, 0.1, 0.75], [24.8, 15, 17, -0.2, 18.7, 1.7, 0.1, 0.75], [24.85, 14, 13, 0.4, 18.7, 1.5, 0.1, 0.75], [24.9, 16, 9, 0.9, 18.7, 1.4, 0.1, 0.75], [24.95, 17, 6, 0.9, 18.7, 1.2, 0.1, 0.75], [25.0, 15, 2, 1.1, 18.7, 0.9, -0.4, 0.75], [25.05, 14, -1, 1.1, 18.7, 1.2, -0.5, 0.75], [25.1, 14, -4, 1.1, 18.7, 0.9, -0.5, 0.75], [25.15, 15, -6, 1.1, 18.7, 1.0, -0.4, 0.75], [25.2, 12, -6, 1.1, 19.2, 1.4, -0.5, 0.75], [25.25, 12, -6, 1.1, 20.6, 1.3, -0.5, 0.75], [25.3, 9, -6, 1.2, 22.1, 1.4, -0.5, 0.75], [25.35, 9, -4, 1.2, 23.4, 1.4, -0.8, 0.75], [25.4, 7, -1, 1.2, 24.3, 1.1, -0.3, 0.75], [25.45, 2, 1, 1.1, 24.8, 1.8, -0.1, 0.75], [25.5, -1, 4, 1.1, 24.8, 1.9, -0.5, 0.75], [25.55, -4, 7, 0.8, 24.8, 2.0, -0.3, 0.75], [25.6, -7, 11, 0.2, 24.8, 2.2, 0.0, 0.75], [25.65, -11, 14, -0.6, 24.6, 2.0, -0.0, 0.75], [25.7, -18, 16, -1.2, 24.1, 2.0, -0.5, 0.75], [25.75, -23, 18, -2.3, 22.9, 2.1, 0.1, 0.75], [25.8, -28, 20, -3.3, 21.2, 1.7, 0.0, 0.75], [25.85, -34, 21, -4.4, 19.2, 1.8, 0.0, 0.75], [25.9, -38, 23, -5.3, 17.5, 1.5, -1.5, 0.75], [25.95, -43, 23, -6.5, 15.8, 1.7, -1.4, 0.75], [26.0, -50, 24, -7.6, 14.4, 1.4, 0.1, 0.75], [26.05, -55, 24, -8.9, 12.9, 1.4, -1.2, 0.75], [26.1, -61, 24, -9.9, 11.4, 1.6, -0.8, 0.75], [26.15, -66, 24, -11.1, 10.0, 1.5, 0.1, 0.75], [26.2, -70, 24, -12.4, 8.8, 1.4, 0.1, 0.75], [26.25, -77, 22, -13.6, 7.9, 1.1, 0.2, 0.75], [26.3, -82, 22, -15.1, 7.7, 1.5, -1.1, 0.75], [26.35, -87, 21, -16.4, 7.8, 1.0, 0.0, 0.75], [26.4, -93, 20, -17.8, 7.8, 1.7, 0.0, 0.75], [26.45, -98, 20, -19.2, 7.8, 2.5, 0.0, 0.75], [26.5, -102, 19, -20.2, 7.7, 2.8, -0.4, 0.75], [26.55, -104, 17, -21.4, 7.3, 3.2, -0.4, 0.75], [26.6, -107, 16, -22.3, 6.4, 2.7, 0.1, 0.75], [26.65, -107, 14, -22.9, 5.2, 3.6, -0.4, 0.75], [26.7, -106, 12, -23.1, 4.2, 3.8, -0.3, 0.75], [26.75, -105, 10, -23.5, 3.8, 3.9, 0.3, 0.75], [26.8, -103, 7, -23.5, 4.0, 4.1, 0.9, 0.75], [26.85, -98, 6, -23.5, 4.0, 4.3, 1.6, 0.75], [26.9, -94, 3, -23.4, 4.1, 4.4, 1.6, 0.75], [26.95, -87, 2, -23.2, 4.2, 4.8, 2.5, 0.75], [27.0, -80, 0, -22.9, 4.2, 5.1, 2.9, 0.75], [27.05, -76, -1, -22.3, 4.4, 6.3, 4.2, 0.75], [27.1, -62, -3, -21.4, 4.7, 5.7, 5.5, 0.75], [27.15, -53, -6, -19.9, 6.3, 5.5, 6.0, 0.75], [27.2, -41, -8, -19.1, 8.1, 5.4, 6.8, 0.75], [27.25, -27, -9, -16.6, 10.7, 3.4, 7.9, 0.75], [27.3, -13, -8, -13.7, 13.4, 3.6, 8.1, 0.75], [27.35, 6, -10, -11.1, 16.0, 1.9, 8.3, 0.75], [27.4, 24, -10, -8.5, 18.5, 0.4, 8.1, 0.75], [27.45, 44, -9, -5.8, 21.0, 1.7, 8.1, 0.64], [27.5, 61, -9, -3.2, 23.1, 3.4, 7.5, 0.43], [27.55, 79, -7, -0.5, 24.9, 3.7, 8.4, 0.24], [27.6, 93, -5, 1.5, 25.2, 4.1, 7.9, 0.03], [27.65, 110, -2, 2.4, 25.1, 4.7, 7.8, 0.0], [27.7, 121, 2, 2.4, 24.8, 5.1, 7.7, 0.0], [27.75, 133, 7, 2.4, 24.7, 5.2, 7.8, 0.0], [27.8, 141, 13, 2.4, 25.0, 6.5, 7.6, 0.0], [27.85, 147, 20, 2.4, 25.9, 6.7, 7.3, 0.0], [27.9, 149, 27, 2.1, 26.3, 6.8, 7.8, 0.0], [27.95, 149, 35, 2.1, 26.3, 6.9, 7.5, 0.0], [28.0, 147, 43, 2.0, 26.3, 7.1, 7.5, 0.0], [28.05, 141, 52, 2.0, 26.3, 7.3, 7.6, 0.0], [28.1, 132, 59, 1.9, 26.3, 7.3, 6.9, 0.0], [28.15, 120, 68, 1.7, 26.3, 6.9, 7.5, 0.0], [28.2, 107, 72, 1.5, 26.3, 6.5, 7.8, 0.0], [28.25, 92, 76, 1.1, 26.3, 5.4, 6.8, 0.0], [28.3, 74, 77, 0.7, 26.3, 5.0, 7.2, 0.0], [28.35, 57, 78, 0.3, 26.3, 4.8, 6.7, 0.0], [28.4, 39, 77, -0.1, 26.3, 4.7, 6.7, 0.0], [28.45, 23, 74, -0.4, 26.2, 4.9, 7.4, 0.0], [28.5, 7, 69, -0.7, 26.2, 4.9, 7.2, 0.0], [28.55, -7, 64, -0.9, 26.2, 5.4, 7.1, 0.0], [28.6, -19, 57, -1.1, 26.2, 5.4, 7.1, 0.0], [28.65, -29, 47, -1.1, 26.2, 5.3, 6.9, 0.0], [28.7, -38, 40, -1.1, 26.2, 6.0, 7.4, 0.0], [28.75, -43, 29, -1.1, 26.2, 5.2, 7.0, 0.0], [28.8, -47, 19, -1.1, 26.2, 4.7, 6.6, 0.0], [28.85, -49, 10, -1.1, 26.2, 3.9, 7.0, 0.0], [28.9, -49, 0, -1.1, 26.2, 4.1, 7.2, 0.0], [28.95, -47, -7, -1.1, 26.2, 3.7, 10.0, 0.0], [29.0, -43, -15, -1.1, 26.2, 3.4, 13.1, 0.0], [29.05, -37, -23, -1.1, 26.2, 3.0, 15.0, 0.0], [29.1, -31, -27, -0.9, 26.2, 2.4, 18.1, 0.0], [29.15, -24, -31, -0.8, 26.2, 2.1, 16.7, 0.0], [29.2, -17, -33, -0.5, 26.2, 1.8, 18.3, 0.0], [29.25, -9, -34, -0.4, 26.2, 1.4, 18.3, 0.0], [29.3, 1, -33, -0.1, 26.3, 1.5, 18.2, 0.0], [29.35, 7, -33, 0.2, 26.2, 1.3, 18.3, 0.0], [29.4, 15, -31, 1.7, 26.4, 1.6, 18.3, 0.0], [29.45, 22, -28, 2.5, 26.4, 1.4, 17.4, 0.0], [29.5, 26, -26, 2.5, 26.4, 1.1, 17.0, 0.0], [29.55, 30, -23, 2.5, 26.4, 1.7, 14.6, 0.0], [29.6, 34, -19, 2.5, 26.4, 1.7, 12.7, 0.0], [29.65, 38, -14, 2.5, 26.4, 2.5, 11.6, 0.0], [29.7, 41, -9, 2.5, 26.4, 3.0, 9.5, 0.0], [29.75, 45, -4, 2.5, 26.3, 3.4, 7.4, 0.0], [29.8, 50, 1, 2.5, 26.3, 3.9, 6.5, 0.0], [29.85, 54, 6, 2.5, 26.4, 4.8, 4.1, 0.0], [29.9, 59, 11, 2.5, 26.3, 5.9, 2.2, 0.0], [29.95, 64, 14, 2.5, 26.3, 6.2, -0.1, 0.0], [30.0, 70, 15, 2.5, 26.3, 7.1, -0.6, 0.0], [30.05, 77, 14, 2.5, 26.3, 7.3, -1.4, 0.0], [30.1, 84, 13, 2.5, 26.3, 7.7, -2.7, 0.0], [30.15, 93, 10, 2.5, 26.3, 7.8, -3.0, 0.0], [30.2, 102, 6, 2.5, 26.3, 8.6, -2.9, 0.0], [30.25, 114, 1, 2.5, 26.3, 8.7, -3.4, 0.0], [30.3, 123, -5, 2.5, 26.3, 9.6, -3.4, 0.0], [30.35, 137, -12, 2.5, 26.3, 10.1, -3.4, 0.0], [30.4, 151, -16, 2.5, 26.3, 12.4, -3.2, 0.0], [30.45, 169, -24, 2.5, 26.7, 14.6, -3.4, 0.0], [30.5, 190, -29, 2.5, 28.3, 18.2, -4.5, 0.0], [30.55, 214, -33, 2.5, 31.5, 23.1, -8.2, 0.0]], "events": {"go_to_start_done": 19.96, "ready_start": 21.18, "ready_done": 24.25, "jaws_closed": 26.6, "sway_abort": 27.43, "jaws_open": 27.75, "climb": 29.45, "watchdog": 30.45, "safety": 30.57}};
+const ev = TR.events, rows = TR.rows;
+const EVL = [["go_to_start_done","Go To Start done"],["ready_start","Ready"],["ready_done","on handle"],["jaws_closed","jaws closed"],["sway_abort","sway abort"],["jaws_open","jaws open"],["climb","climb"],["watchdog","15°"],["safety","SAFETY"]];
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function draw(svgId, tipId, series, ylabel, yminmax, shade){
+  const svg=document.getElementById(svgId), tip=document.getElementById(tipId);
+  const W=960,H=300,L=52,R=14,T=26,B=36;
+  const t0=rows[0][0], t1=rows[rows.length-1][0];
+  let [ymin,ymax]=yminmax;
+  const X=t=>L+(t-t0)/(t1-t0)*(W-L-R), Y=v=>T+(ymax-v)/(ymax-ymin)*(H-T-B);
+  let s='';
+  if(shade){ // room-hold weight > 0.3
+    let on=null;
+    rows.forEach((r,i)=>{const w=r[7]>0.3; if(w&&on===null)on=r[0]; if((!w||i===rows.length-1)&&on!==null){s+=`<rect x="${X(on)}" y="${T}" width="${X(r[0])-X(on)}" height="${H-T-B}" fill="${css('--accent')}" opacity="0.08"/>`;on=null;}});
+  }
+  // grid
+  const ticks=[];const step=(ymax-ymin)>100?50:(ymax-ymin)>40?20:10;
+  for(let v=Math.ceil(ymin/step)*step; v<=ymax; v+=step) ticks.push(v);
+  ticks.forEach(v=>{s+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${css('--line')}" stroke-width="1"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" font-size="11" font-family="IBM Plex Mono,monospace" fill="${css('--muted')}">${v}</text>`;});
+  for(let t=Math.ceil(t0); t<=t1; t+=2) s+=`<text x="${X(t)}" y="${H-B+16}" text-anchor="middle" font-size="11" font-family="IBM Plex Mono,monospace" fill="${css('--muted')}">${t}</text>`;
+  s+=`<text x="${(L+W-R)/2}" y="${H-4}" text-anchor="middle" font-size="11" fill="${css('--muted')}">t after DIRECT entry [s]</text>`;
+  s+=`<text x="12" y="${T-10}" font-size="11" fill="${css('--muted')}">${ylabel}</text>`;
+  if(ymin<0&&ymax>0) s+=`<line x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}" stroke="${css('--fg2')}" stroke-width="1" opacity=".5"/>`;
+  // events
+  EVL.forEach(([k,lab],i)=>{const t=ev[k]; if(t<t0||t>t1)return; const x=X(t); const bad=k==='sway_abort'||k==='watchdog'||k==='safety';
+    s+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="${bad?css('--bad'):css('--muted')}" stroke-width="1" stroke-dasharray="3 3"/>`;
+    s+=`<text x="${x+3}" y="${T+10+(i%3)*11}" font-size="10" font-family="IBM Plex Mono,monospace" fill="${bad?css('--bad'):css('--fg2')}">${lab}</text>`;});
+  // series
+  series.forEach(([col,color])=>{let d='';rows.forEach((r,i)=>{const v=Math.max(ymin,Math.min(ymax,r[col]));d+=(i?'L':'M')+X(r[0]).toFixed(1)+' '+Y(v).toFixed(1)+' ';});
+    s+=`<path d="${d}" fill="none" stroke="${css(color)}" stroke-width="2" stroke-linejoin="round"/>`;});
+  s+=`<line id="${svgId}-cx" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="${css('--fg')}" stroke-width="1" opacity="0" />`;
+  s+=`<rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent" id="${svgId}-hit"/>`;
+  svg.innerHTML=s;
+  const cx=document.getElementById(svgId+'-cx'), hit=document.getElementById(svgId+'-hit');
+  const names={1:'e_x',2:'e_y',3:'q1',4:'q3',5:'tilt',6:'valve Δyaw'};
+  hit.addEventListener('mousemove',e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+    const t=t0+(p.x-L)/(W-L-R)*(t1-t0); let k=0; for(let i=0;i<rows.length;i++){if(Math.abs(rows[i][0]-t)<Math.abs(rows[k][0]-t))k=i;}
+    const r=rows[k]; cx.setAttribute('x1',X(r[0]));cx.setAttribute('x2',X(r[0]));cx.setAttribute('opacity','.6');
+    tip.style.display='block'; tip.innerHTML=`t ${r[0].toFixed(2)} s<br>`+series.map(([c])=>`${names[c]} ${r[c]}`).join('<br>')+`<br>room hold ${r[7]}`;
+    const box=svg.parentElement.getBoundingClientRect(); let tx=e.clientX-box.left+14, ty=e.clientY-box.top-10; if(tx+150>box.width)tx-=170; tip.style.left=tx+'px';tip.style.top=ty+'px';});
+  hit.addEventListener('mouseleave',()=>{tip.style.display='none';cx.setAttribute('opacity','0');});
+}
+function all(){draw('svgA','tipA',[[1,'--s1'],[2,'--s2']],'CoM error [mm]',[-150,200],true);
+ draw('svgB','tipB',[[3,'--s3'],[4,'--s4'],[5,'--s5'],[6,'--fg2']],'[deg]',[-30,50],true);}
+all(); if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all);}
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>

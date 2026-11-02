@@ -1,0 +1,93 @@
+fin_abort_hold injected    beam     -0 | lon  -8.2 mm  e_R    6.2 mrad | q2   1.9 q3  23.2..27.7 stop  0.0% | tilt  1.9 | F p95 0.54 | after: tilt   2.4, z min 1.23, moved 0.01 m, DIRECT kept, upright at  3.0 s
+                TRUTH after the abort (10 s): tilt max   2.4, z min 1.23 m, moved 0.01 m, DIRECT kept; tilt at the record's end  1.1 deg
+                CUP   hub -0.211..-0.210 rad on the handle; contact points  66% of the time, |F| p95 0.55 max 2.10 N over  3.0 s
+                ABORT jaws read open 0.39 s after ABORTING; planner: the gripper READS open (gripper_joint -0.0227) 0.39 s into the abort -- climbing now
+                      reference z  +56/ +71 mm at 1/2 s; CoM-anchor weight 1.00 at 0.3 s; to 2 s: |F| max 0.98 N, beam  -0.0 deg, claw truth  +54 mm
+                the GS's automatic steps: Ready flew 2.76 s after Go To Start, the jaws closed 1.65 s after Ready
+                  62.20 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.5 s -> ABO
+                  62.20 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.21 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp a STATIC HOLD of 10.0 s; the close gate also wants the claw's heading within 15 deg 
+                  62.21 GS   I Valve Turning: the grasp is a HALF CLOSE -- the jaws close to 0.0120 m around the fin (push_pull_valve_cup_position); a stall no wider than 0.0160 m is a pad on the fin, 
+                  67.34 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                 147.97 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 147.98 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the hardware PWM 
+                 164.55 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-held
+                 164.55 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 164.55 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 165.41 PLN  I pick-and-place: EE anchor -> WORLD
+                 165.41 PLN  I push-and-pull: the claw settled 7 mm from the grasp point (-3.6 mm across the handle, 8 mm/s) 0.9 s after Ready -- now WORLD-held (push_pull_world_anchor_on_handle): the 
+                 166.11 GS   I Push: claw 4 mm from the grasp point (-2.8 mm across the handle, 10 mm/s, heading 0.8 deg) after 0.69 s -- gripper HALF CLOSE to 0.0120 m
+                 166.54 GS   I Static hold: gripped the handle (closed, fingers at 0.0127 m) -- reporting the grasp to the planner, then holding 10.0 s
+                 166.54 PLN  I push-and-pull grasp on: the jaws hold the handle -- the contact phase is on
+                 166.54 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 166.55 GS   I Static hold (gripped): grasp on: the jaws hold the handle -- the contact phase is on
+                 169.57 PLN  I pick-and-place: EE anchor -> CoM (FAST hand-back)
+                 169.57 PLN  W push-and-pull: ABORT: contact off, hold until the jaws are reported OPEN (at most 1.00 s), the claw follows the vehicle at once, then up 0.30 m (the first 0.06 m in 0.80 
+                 169.57 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 169.57 PLN  W push-and-pull ABORT: [1] settle 1.0 s | [2] T = 0.80 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.715, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 457.5/495.5, solve
+                 169.96 PLN  W push-and-pull ABORT: the gripper READS open (gripper_joint -0.0227) 0.39 s into the abort -- climbing now
+                 170.02 GS   W Valve Turning ABORT: gripper OPEN -- reported to the planner: the climb started already: the gripper READS open (gripper_joint -0.0227)
+                 178.42 PLN  W push-and-pull: ABORT complete -- holding, arm home.
+                 178.42 GS   I Valve Turning: the abort is done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+fin_abort_turn injected    beam    +40 | lon   2.1 mm  e_R   -2.3 mrad | q2  -4.4 q3  22.3..41.1 stop  0.0% | tilt  2.5 | F p95 0.65 | after: tilt   2.1, z min 1.23, moved 0.00 m, DIRECT kept, upright at 10.0 s
+                TRUTH after the abort (10 s): tilt max   2.2, z min 1.23 m, moved 0.00 m, DIRECT kept; tilt at the record's end  1.9 deg
+                CUP   hub -0.211..-0.211 rad on the handle; contact points  89% of the time, |F| p95 0.77 max 2.33 N over 10.0 s
+                ABORT jaws read open 0.38 s after ABORTING; planner: the gripper READS open (gripper_joint -0.0287) 0.38 s into the abort -- climbing now
+                      reference z  +56/ +72 mm at 1/2 s; CoM-anchor weight 1.00 at 0.3 s; to 2 s: |F| max 1.83 N, beam  +3.7 deg, claw truth  +67 mm
+                  62.44 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.5 s -> ABO
+                  62.44 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.45 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and the planne
+                  62.45 GS   I Valve Turning: the grasp is a HALF CLOSE -- the jaws close to 0.0120 m around the fin (push_pull_valve_cup_position); a stall no wider than 0.0160 m is a pad on the fin, 
+                  67.55 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                 153.35 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 153.36 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the hardware PWM 
+                 169.91 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-held
+                 169.91 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 169.92 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 171.71 PLN  I pick-and-place: EE anchor -> WORLD
+                 171.71 PLN  I push-and-pull: the claw settled 9 mm from the grasp point (-2.3 mm across the handle, 16 mm/s) 1.8 s after Ready -- now WORLD-held (push_pull_world_anchor_on_handle): the
+                 171.72 GS   I Push: claw 8 mm from the grasp point (-0.2 mm across the handle, 9 mm/s, heading -0.3 deg) after 0.00 s -- gripper HALF CLOSE to 0.0120 m
+                 172.15 PLN  I pick-and-place: EE anchor -> WORLD
+                 172.15 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 182.21 PLN  I pick-and-place: EE anchor -> CoM (FAST hand-back)
+                 182.21 PLN  W push-and-pull: ABORT: contact off, hold until the jaws are reported OPEN (at most 1.00 s), the claw follows the vehicle at once, then up 0.30 m (the first 0.06 m in 0.80 
+                 182.21 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 182.22 PLN  W push-and-pull ABORT: [1] settle 1.0 s | [2] T = 0.80 s (T_min, 0 dilations), defect 2.3e-16 m, sigma_nd 0.723, peak |v| 0.17 m/s, tau_j 0.58 N.m, rotor 458.0/495.0, solve
+                 182.59 PLN  W push-and-pull ABORT: the gripper READS open (gripper_joint -0.0287) 0.38 s into the abort -- climbing now
+                 182.66 GS   W Valve Turning ABORT: gripper OPEN -- reported to the planner: the climb started already: the gripper READS open (gripper_joint -0.0287)
+                 191.23 PLN  W push-and-pull: ABORT complete -- holding, arm home.
+                 191.24 GS   I Valve Turning: the abort is done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+fin_q3trip     watchdog    beam    +34 | lon   4.5 mm  e_R   -3.5 mrad | q2  -3.4 q3  17.3..41.1 stop  0.0% | tilt  3.0 | F p95 0.86 | after: tilt   3.0, z min 1.23, moved 0.00 m, DIRECT kept, upright at 10.0 s
+                TRUTH after the abort (10 s): tilt max   3.0, z min 1.23 m, moved 0.00 m, DIRECT kept; tilt at the record's end  1.8 deg
+                CUP   hub -0.211..-0.206 rad on the handle; contact points  81% of the time, |F| p95 0.85 max 1.71 N over 10.0 s
+                ABORT jaws read open 0.39 s after ABORTING; planner: the gripper READS open (gripper_joint -0.0287) 0.38 s into the abort -- climbing now
+                      reference z  +57/ +72 mm at 1/2 s; CoM-anchor weight 1.00 at 0.3 s; to 2 s: |F| max 2.89 N, beam  +4.4 deg, claw truth  +74 mm
+                GUARD: q3 21.2 deg < 22.0 deg (the arm buckling toward its elbow-singular branch
+                GUARD: q3 21.2 deg < 22.0 deg (the arm buckling toward its elbow-singular branch
+                  62.24 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.5 s -> ABO
+                  62.24 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.25 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and the planne
+                  62.25 GS   I Valve Turning: the grasp is a HALF CLOSE -- the jaws close to 0.0120 m around the fin (push_pull_valve_cup_position); a stall no wider than 0.0160 m is a pad on the fin, 
+                  67.51 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                 147.47 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 147.48 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the hardware PWM 
+                 165.07 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-held
+                 165.07 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 165.07 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 165.56 PLN  I pick-and-place: EE anchor -> WORLD
+                 165.56 PLN  I push-and-pull: the claw settled 8 mm from the grasp point (0.5 mm across the handle, 21 mm/s) 0.5 s after Ready -- now WORLD-held (push_pull_world_anchor_on_handle): the 
+                 165.58 GS   I Push: claw 10 mm from the grasp point (1.0 mm across the handle, 9 mm/s, heading 0.3 deg) after 0.00 s -- gripper HALF CLOSE to 0.0120 m
+                 166.01 PLN  I pick-and-place: EE anchor -> WORLD
+                 166.01 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 176.06 PLN  I pick-and-place: EE anchor -> CoM (FAST hand-back)
+                 176.06 PLN  W push-and-pull: ABORT: contact off, hold until the jaws are reported OPEN (at most 1.00 s), the claw follows the vehicle at once, then up 0.30 m (the first 0.06 m in 0.80 
+                 176.06 PLN  E push-and-pull SAFETY GUARD: q3 21.2 deg < 22.0 deg (the arm buckling toward its elbow-singular branch) -- ABORT: contact off, hold until the jaws are reported OPEN (at mo
+                 176.06 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 176.07 PLN  W push-and-pull ABORT: [1] settle 1.0 s | [2] T = 0.80 s (T_min, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.68 N.m, rotor 455.4/497.8, solve
+                 176.45 PLN  W push-and-pull ABORT: the gripper READS open (gripper_joint -0.0287) 0.38 s into the abort -- climbing now
+                 176.52 GS   W Valve Turning ABORT: gripper OPEN -- reported to the planner: the climb started already: the gripper READS open (gripper_joint -0.0287)
+                 184.24 PLN  W push-and-pull: ABORT complete -- holding, arm home.
+                 184.25 GS   I Valve Turning: the abort is done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+

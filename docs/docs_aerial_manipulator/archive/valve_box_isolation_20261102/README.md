@@ -240,3 +240,41 @@ The yamls do not need the baseline branch: on the new branches the two box yamls
    Control tab before take-off.
 8. **Nothing is pushed or deployed**, nothing is flown on hardware, and the Orin and the laptop are untouched. The
    prompts for both are beside this file.
+
+## 8. 2026-11-02 follow-up: the 11-01 flights and the abort / exit aligned with the box (Pegasus archive/wb_valve_turning_flight_20261101)
+
+The four 11-01 hardware flights flew the 11-01 PUSHED build (grip schedule + two sets, the room hold from Go To
+Start, the leash / Ready CoM gate / descent guard), not this branch; three aborted in the room-held descent, the
+fourth grasped, tripped the sway guard 0.8 s later and crashed inside the abort (the base moving ~350 mm/s at the
+abort, the claw following it across the fin for 2 s, caught in the climb). On this branch, in addition to sections 3-4: the valve abort is now the
+box's recipe (`push_pull_abort_from_measured true`, `push_pull_abort_release_wait_s` 1.0 sim / 1.5 hardware,
+`push_pull_abort_release_world_held false`; unbuckle stays off), and the Valve tab's exit starts on the OPEN
+report (`push_pull_valve_exit_wait_s` default 1.0 -> 0.0). The abort change does NOT address the 11-01 crash
+mechanism and reverses a 10-18 Isaac result; untested. The raw stack's valve expectations follow; the tab
+harness 25/25 and both pre-launch checks pass. Still uncommitted on the branch.
+
+## 9. 2026-11-02 (later): the valve's exit, aligned to the box's workflow
+
+The user asked for the valve to run the box's workflow (page "Valve-turning vs Box-pushing logic",
+`archive/wb_valve_turning_flight_20261101/logic_compare.html`). Every phase up to the grasp already matched; the exit was
+then made the box's (release first) and, after the concern below, set to the VALVE's order with the box's start conditions:
+- **Start (the box's):** 0.2 s after the turn ends, or after a static hold, the calm wait: base slower than
+  `push_pull_auto_exit_max_speed` 40 mm/s for 0.3 s (at most 3 s), plus (valve only) the law's CoM error under
+  `push_pull_valve_exit_max_base_err` 0.020 m -- the planner now publishes it as `push_pull/arrival_error` [32] ([33] = its
+  rate). A large error holds the exit even without a base pose. The Exit button still goes at once.
+- **Order (the valve's):** a static hold reports grasp(false), then the jaws OPEN with the claw still held in the room, the
+  climb starts on the open report, and the planner keeps the claw held until it has climbed `push_pull_exit_world_held_dz`
+  0.06 m, then the CoM anchor. Station parameter `push_pull_valve_box_exit` (default **false**; true = the box's release-first
+  order).
+- **Why not the box's order:** the handle cannot move sideways. Isaac: release-first 2 of 7 vs open-first 3 of 3 (10-18); the CoM
+  anchor at the exit's start pressed a finger into the fin, 2 of 6 left DIRECT, the 60 mm hold 7 of 8 clean (10-28).
+- **The exit-window abort (planner, new `push_pull_abort_exit_hold`, default false, valve yaml true):** an abort after the turn,
+  after a static hold's release, or in the exit's room-held climb keeps the claw HELD IN THE ROOM -- whatever guard fired --
+  through the release wait (0 in the climb: the jaws are already open) and until the claw has climbed
+  `push_pull_exit_world_held_dz` (at most `push_pull_exit_world_held_max_s` after the wait), then the CoM anchor. A mocap-guard
+  abort still hands back at once. The raw hardware stack expects the key and refuses a planner without it.
+- Checks: station harness `tools/gs_valve_phase_check.sh` **30/30** (V3 static hold: calm, grasp off, open, exit, no release; V7:
+  waits while the base moves, then open, exit, no release; V8: the switch gives the box's order; V9: a 45 mm base error holds
+  the exit, 10 mm lets it go; V6 the Box tab unchanged); planner loopback new [9r] (arrival [32]; a sway-guard abort after the
+  push keeps the room hold through the wait and hands back only after the claw climbed 70 mm); raw stack pre-launch: valve 88
+  values, box 62. Planner + station rebuilt. Not flown, not in Isaac.
