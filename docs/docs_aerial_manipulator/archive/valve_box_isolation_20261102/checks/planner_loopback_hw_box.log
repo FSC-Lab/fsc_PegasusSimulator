@@ -1,0 +1,49 @@
+[1] adjust: go_to_start: not in whole-body DIRECT land [-0.9, -0.07, 0.3, -180.0]
+[2] captured the box at [0.675, 0.250, 0.850] m, yaw 0.0 deg from /pl_rig/obj_0/mocap (25 samples, spread 1.3 mm); the EE offset is applied in this box frame -- press Plan
+[2] planned: READY next=go_to_start; step T [21.2, 3.2, 25.3, 6.0, 25.4, 7.4] s; grasp [0.675, 0.25, 1.033], drone at the box [0.677, 0.51, 1.17] yaw -90.0
+[3] out-of-order steps refused
+[4] go_to_start T=21.2s, anchor calls []; DONE go_to_start next=ready (the gripper opens first) -- claw 0 mm from the point above the handle (tolerance 50 mm)
+[4b] the table placed from the box (box end at 0.675, 0.470); go_to_start from 1.48 m round it: within 0.65 m only at the approach height (closest 0.14 m at the end)
+[4a] release above the handle refused: release: nothing to release -- the claw is not on the handle
+[5r] ready refused while the claw swings: ready: the claw is still moving (58 mm/s; slower than 30 mm/s for 0.0 of 0.5 s) -- wait for it to settle
+[5h] the room hold waited while the claw was 0.19 m off and while it swung; handed over 0.65 s after it went still; DONE ready next=push (CONTACT on: the gripper closes first)
+[5] ready T=3.2s, claw sideways 0.04 mm on the way down; DONE ready next=push (CONTACT on: the gripper closes first)
+[9n] on the handle: arrival_error [30] 12.0 deg (the law's heading error), [31] -0.16 m
+[6] push T=25.3s: push: planning from the current hold; it executes as soon as it is planned -- CONTACT phase on, the push holds 1.5 s, then slides 0.50 m in 23.8 s (mean 21.0 mm/s); arm dev 2.6e-14 rad, heading dev 4.0e-13 deg, claw y 0.250 -> -0.250; contact calls [True, False]; monitor t 25.3/25.3 s, travel box 0.6 / plan 500.0 mm
+[6b] release: release: the claw's reference now follows the vehicle (CoM anchor, blended) and the contact phase is free -- open the gripper; Exit when it reports open; anchor calls [True]
+[7] exit T=6.0s: claw up 0.250 m before the arm moved, then home
+[8b] go_to_land_start round the table: below the exit height only >= 0.72 m from it
+[8] go_to_land_start T=25.4s: turned -90.0 deg (clockwise only), CoM >= 1.41 m near the table (top 0.80); DONE go_to_land_start next=land
+[8] land T=7.4s: straight down (1.29 -> 0.29 m, 0.00 mm sideways); COMPLETE -- touch down with SAFETY -> land
+[9] ABORTING (SAFETY GUARD: push force 5.6 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9] abort held 0.80 s for the release, climbed, arm home; ABORTED (SAFETY GUARD: push force 5.6 N > 5.0 N) -- holding higher, arm home, contact off; go_to_land_start to leave the table, or Get the box and press Plan
+[9b] ABORTING (SAFETY GUARD: push force 5.6 N > 5.0 N) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9c] ABORTING (SAFETY GUARD: the arm's joint states silent for 0.57 s > 0.50 s -- the q3 guard is blind) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9d] ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.20 s ago)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9d] ABORTED (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.20 s ago)) -- HOVERING on EKF2: take over with the RC and land
+[9d] go_to_land_start / plan refused: mocap LOST (frozen, last good sample 3.50 s ago) -- Plan waits for the mocap
+[9d] mocap back: ABORTED (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.20 s ago)) -- holding higher, arm home, contact off; go_to_land_start to leave the table, or Get the box and press Plan
+[9e] guard silent: go_to_land_start: no mocap-guard status from the estimator -- every step waits for the mocap (hover; the pilot lands)
+[9f] bare lag +0.6 mm, with a 30 mm shift +29.1 mm (no trip); ABORTING (SAFETY GUARD: the box is 61 mm BEHIND its plan (> 40 mm: jammed or too heavy) [law free-axis shift 60 mm counted]) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9l] the box dragged 30 mm sideways: no trip; to 60 mm: ABORTING (SAFETY GUARD: the box was dragged 51 mm sideways (> 45 mm: toward the table's edge)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9g] two 0.3 s mis-solve runs while pushing: no trip, monitor travel within 0.9 mm of the plan; then ABORTING (SAFETY GUARD: the box's mocap (/pl_rig/obj_0/mocap) JUMPING for 0.51 s > 0.50 s -- the box guards are blind (25 samples dropped by the box sample gate, the latest 60 mm / 95 deg from the last good one)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9h] ABORTING (SAFETY GUARD: q3 5.0 deg falling at 42.3 deg/s -> 1.7 deg in 0.20 s (5.2 deg of the fall stopped by q2's 45.0 deg wall: q2 44.9 deg rising at 26.5 deg/s) < 10.0 deg (the arm folding toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9h] held the buckled arm 1.50 s (the release), q2/q3 44.9/5.0 -> 28.0/32.0 deg by 5.40 s with the claw +303.7 mm, then the climb and home
+[9i] no trip on a 3 deg/s drift to 14 deg or a 60 deg/s dip to 25 deg; the 150 deg/s fold aborted at q3 18.8 deg: ABORTING (SAFETY GUARD: q3 18.8 deg falling at 140.6 deg/s -> -9.3 deg in 0.20 s (q2 28.0 deg) < 10.0 deg (the arm folding toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9k] stretch q2/q3 28/32 -> 45/15 deg at 65 deg/s: no abort with the wall; the flown rule aborted: ABORTING (SAFETY GUARD: q3 18.8 deg falling at 66.1 deg/s -> 5.6 deg in 0.20 s < 10.0 deg (the arm folding toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9k] q2 pinned at 45 deg, q3 folding at 150 deg/s: aborted at q3 17.3 deg: ABORTING (SAFETY GUARD: q3 17.3 deg falling at 156.2 deg/s -> -13.9 deg in 0.20 s (q2 45.0 deg) < 10.0 deg (the arm folding toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9j] (a) mocap abort with the world-held release on: the CoM anchor 0.00 s after ABORTING (the release wait is 1.5 s)
+[9j] (b) force-guard abort: world-held for 0.4 s, the mocap fault then handed the claw to the CoM at 0.50 s (the scheduled hand-back is at 1.5 s)
+[9m] the sway guard at 150 mm/s (live-set): no trip at 31 mm/s; tripped at 251 mm/s, the CoM anchor 0.00 s after ABORTING: ABORTING (SAFETY GUARD: the vehicle sways 188 mm/s against its CoM reference (> 150 mm/s; CoM error 55 mm): the clamped contact is going unstable) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9o] the emergency abort: room-held for >= 0.5 s after ABORTING (the configured release), a second call answered 'already aborting': ABORTING (SAFETY GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFETY)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9n] the wrong sense refused at Plan: the whole-body node's free-axis heading radius -0.160 m is for a clockwise turn, this turn is counter-clockwise -- its heading target would turn the wrong way; set wb_ee_anchor_free_axis_heading_radius 0.160 in the node's yaml and relaunch it; the right sense passes it (then: Get the box first (mocap /pl_rig/obj_0/mocap))
+[9p] no guard abort used the FAST hand-back (push_pull_fast_hand_back false: the 10-27 box)
+[9p] Ready refused 35 mm off: 'ready: the vehicle is 35 mm off its CoM reference, moving 0 mm/s (the room-held claw cannot show it; Ready needs < 30 mm and 60 mm/s for 0.3 s, held 0.0 s) -- wait for it to settle'
+[9p] leash at 50 mm: room hold released, Ready refused: 'ready: the base drifted 50 mm from its CoM reference with the claw room-held (> push_pull_room_hold_leash 40 mm): the claw follows the vehicle until the base settles, then the room hold re-engages -- wait for it to settle'
+[9p] re-engaged once settled; Ready refused for the blend: 'ready: the room hold above the handle engaged 0.0 s ago (< push_pull_room_hold_reengage_s 1.0 s: the anchor is still blending) -- wait for it to settle'; then flown
+[9p] the descent guard at 80 mm: ABORTING (SAFETY GUARD: the base is 80 mm off its CoM reference on the room-held descent (> 60 mm, push_pull_guard_ready_com_err; moving 143 mm/s): the arm is absorbing it toward a straight elbow) -- gripper open, contact off, climbing 0.30 m, then the arm home; the CoM anchor 0.00 s after ABORTING
+[9p] a 60 deg/s q3 fold above the handle: ignored without push_pull_guard_arm_before_handle, with it: ABORTING (SAFETY GUARD: q3 17.6 deg falling at 60.1 deg/s -> 5.6 deg in 0.20 s (q2 28.0 deg) < 10.0 deg (the arm folding toward its elbow-singular branch)) -- gripper open, contact off, climbing 0.30 m, then the arm home
+[9q] grasp event refusals: grasp on: push_pull_grasp_event is false -- the grasp event belongs to valve turning | grasp on: a straight push -- the box's contact starts at the Push press | grasp off: the claw is not on the handle
+[10] SAFETY: silent
+ALL PASS
+(node log: /tmp/push_pull_node_1mf7acxu.log)

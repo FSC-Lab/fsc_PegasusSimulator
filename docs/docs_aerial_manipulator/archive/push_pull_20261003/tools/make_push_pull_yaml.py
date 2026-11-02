@@ -133,55 +133,7 @@ OVERRIDES = {
 # with the claw WORLD-held through the push (push_pull_world_anchor_push) base
 # drift no longer loads the box, and holding the rows instead let the base sit
 # 25 mm off its plan and stretched the arm to the wrist singularity (pl_4).
-# TWO PARAMETER SETS (2026-11-01, user: "two sets of parameters for the free-flight and the
-# interaction phases"; Pegasus archive/two_param_sets_20261101): the grip schedule (the valve's,
-# 2026-10-31) comes to the box push. One event -- the jaws closed on the fin, read by the node
-# from the gripper's own joint state -- switches (a) the EE impedance from the mirror's free-flight
-# tune (211.9 / 26.82; the push axis y x wb_my_y, the natural inertia the 10-25 note scales K/D by,
-# so free flight is the mirror's along any heading) to the OVERRIDES above, (b) the translational
-# observer bandwidth from the mirror's 2.927 to the push's 1.0 (a box held by static friction
-# reacts with whatever the vehicle applies; the free-flight wander is a slow force the faster
-# observer cancels), (c) the EE heading from the mirror's 2026-10-16 wrist fix (stiff + j4 stuck
-# hold, flown on every free-flight hardware mission since 10-27) to the push's soft set. The
-# free-flight values are READ from the mirror so the two cannot drift. The interaction set stays
-# in force after the jaws open while the claw is still room-held on the fin (the 10-17
-# release-first exit: release, open, exit) so the open jaws never get a gain step.
-FREE_FLIGHT = {}
-with open(SRC) as _f:
-    _mirror = _f.read()
-for _k in ("wb_ky_psi", "wb_dy_psi", "wb_l1_stuck_hold_j4", "wb_ky_x", "wb_ky_y", "wb_ky_z",
-           "wb_dy_x", "wb_dy_y", "wb_dy_z", "wb_l1_omega_c_t"):
-    _m = re.findall(rf"^    {_k}: ([^\s#]+)", _mirror, flags=re.M)
-    if len(_m) != 1:
-        raise SystemExit(f"{_k}: found {len(_m)} times in the mirror (need exactly 1)")
-    FREE_FLIGHT[_k] = _m[0]
-_MY_Y = float(OVERRIDES["wb_my_y"])
 ADDITIONS = {
-    "wb_grip_state_topic": ("wb_ee_anchor_com", '"isaacsim_manipulator/gripper_state"'),
-    "wb_grip_joint_name": ("wb_grip_state_topic", '"gripper_joint"'),
-    # -0.05 (2026-11-01, Isaac tsB_nom): the jaws creep on the box's grip shim, -0.091 rad at the
-    # GS's close and past -0.1 only 1.5 s later -- the set switched 1.7 s INTO the push; open = 0
-    "wb_grip_closed_below": ("wb_grip_joint_name", "-0.05"),
-    "wb_grip_blend_s": ("wb_grip_closed_below", "1.0"),
-    "wb_ky_psi_before_grip": ("wb_grip_blend_s", FREE_FLIGHT["wb_ky_psi"]),
-    "wb_dy_psi_before_grip": ("wb_ky_psi_before_grip", FREE_FLIGHT["wb_dy_psi"]),
-    "wb_stuck_hold_j4_before_grip": ("wb_dy_psi_before_grip", FREE_FLIGHT["wb_l1_stuck_hold_j4"]),
-    "wb_ky_x_before_grip": ("wb_stuck_hold_j4_before_grip", FREE_FLIGHT["wb_ky_x"]),
-    "wb_ky_y_before_grip": ("wb_ky_x_before_grip", f"{float(FREE_FLIGHT['wb_ky_y']) * _MY_Y:.4f}"),
-    "wb_ky_z_before_grip": ("wb_ky_y_before_grip", FREE_FLIGHT["wb_ky_z"]),
-    "wb_dy_x_before_grip": ("wb_ky_z_before_grip", FREE_FLIGHT["wb_dy_x"]),
-    "wb_dy_y_before_grip": ("wb_dy_x_before_grip", f"{float(FREE_FLIGHT['wb_dy_y']) * _MY_Y:.4f}"),
-    "wb_dy_z_before_grip": ("wb_dy_y_before_grip", FREE_FLIGHT["wb_dy_z"]),
-    "wb_grip_hold_set_while_free_axis": ("wb_dy_z_before_grip", "true"),
-    # ... and at least 6 s past the OPEN edge = the whole exit climb (T 6 s): the box's release-first
-    # exit restores the CoM anchor BEFORE the climb, so the free-axis rule alone released the set as
-    # the open claw climbed past the fin -- tsB_s5 tipped its box 7 deg there (the box-tilt guard
-    # caught it; 3 of 4 passed)
-    "wb_grip_release_delay_s": ("wb_grip_hold_set_while_free_axis", "6.0"),
-    "wb_l1_omega_c_t_before_grip": ("wb_l1_omega_c_t", FREE_FLIGHT["wb_l1_omega_c_t"]),
-    # THE FAST ANCHOR HAND-BACK (2026-11-01): the leash is not set for the box (the push's
-    # room hold starts on the handle), but every guard abort's anchor drop uses it too
-    "wb_ee_anchor_fast_blend_s": ("wb_ee_anchor_com", "0.25"),
     "wb_l1_contact_hold_translation": ("wb_l1_collision_threshold_n", "false"),
     # wb_attitude_from_odometry (2026-10-05, a plain node parameter, default false):
     # the law's attitude from the odometry message instead of PX4's
@@ -201,18 +153,6 @@ ADDITIONS = {
     # the guard off the node would refuse DIRECT). The coordinated-admittance and valve
     # generators leave it out.
     "system_mocap_guard_topic": ("system_fb_land_speed", '"state_estimator/mocap_guard"'),
-    # THE EMERGENCY ABORT INSTEAD OF SAFETY (2026-10-31, user: "for an emergency it should abort,
-    # not switch to SAFETY directly"; archive/valve_safety_fixes_20261030): a tilt / drift watchdog
-    # trip with the claw at the handle (Ready, the push / turn, the exit) calls the planner's
-    # emergency abort -- the task's configured release, climb, arm home -- while the law keeps
-    # flying. SAFETY only past the body-rate limit, past system_wd_hard_tilt_deg, or when the
-    # abort is refused / never starts / is not ABORTED within system_wd_abort_timeout_s. A revert
-    # to SAFETY there left the arm to fold in place through the handle (Isaac, a forced revert 5 s
-    # into a valve turn: 60 N on the fin, the valve spun 128 deg, the vehicle thrown 3.3 m).
-    "system_wd_abort_service": ("system_mocap_guard_topic", '"whole_body_planner/push_pull/emergency_abort"'),
-    "system_wd_abort_status_topic": ("system_wd_abort_service", '"whole_body_planner/push_pull/status"'),
-    "system_wd_hard_tilt_deg": ("system_wd_abort_status_topic", "25.0"),
-    "system_wd_abort_timeout_s": ("system_wd_hard_tilt_deg", "15.0"),
     # wb_ee_anchor_free_axis_weight 0.75 (2026-10-21, THE ROOM-HELD ARM SWING; plain node
     # parameter, default 0 = off; archive/box_pushing_gain_tune_20261021): while the contact
     # flag is on (latched until the release) the claw's room-held target also rides this

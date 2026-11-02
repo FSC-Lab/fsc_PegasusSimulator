@@ -1,0 +1,14 @@
+GSVAL VA_events_s open 0.000006 open_report 0.400148 exit 1.406294
+GSVAL VA_no_release_call ok
+GSVAL VA_open_and_exit ok
+GSVAL VA_open_at_once ok
+GSVAL VA_exit_1s_after_the_report ok
+GSVAL VB_opened ok
+GSVAL VB_no_exit_without_the_report ok
+GSVAL VC_open_when_DIRECT_lost_turning ok
+GSVAL VC_no_exit ok
+GSVAL VD_no_open_off_the_handle ok
+GSVAL BA_one_each ok
+GSVAL BA_release_first_unchanged ok
+GSVAL BC_open_when_DIRECT_lost_pushing ok
+GSVAL result PASS

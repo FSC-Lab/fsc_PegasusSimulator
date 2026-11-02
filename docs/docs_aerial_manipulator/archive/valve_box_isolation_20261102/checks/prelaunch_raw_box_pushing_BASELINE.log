@@ -1,0 +1,139 @@
+PROFILE: box_pushing
+[1;33mBOX PUSHING: the table keep-out is PLACED FROM THE BOX (push_pull_table_from_box) --[0m
+[1;33m  put the table where the floor is flat; the box at its LEFT end (seen from the vehicle),[0m
+[1;33m  centred across it, its back face 0.10 m in from the end; the vehicle on the table's middle[0m
+[1;33m  line, facing it, >= 0.75 m in front. Adjust on the ground (start + landing = where it is),[0m
+[1;33m  Get the box, then Plan -- Plan refuses a start > 0.30 m off the middle line. Go To Start[0m
+[1;33m  goes round the table's box end. The planner log prints the placed table's corners.[0m
+[1;33m   push_pull_table_size: [1.0, 0.15]  push_pull_table_box_gap: 0.10  push_pull_box_half_height: 0.05  push_pull_bypass_clearance: 0.70 [0m
+[1;36mRAW-MOCAP GUARD: ON (box_pushing) -- the estimator runs with mocap_guard:=true: a bad mocap sample is bridged on EKF2 (not sent to PX4), a confirmed fault aborts the contact step into a hover, a long loss holds for the PILOT to land.[0m
+WARNING: 'fsc_microxrce_agent' tmux session not found — MicroXRCEAgent may not
+         be running. Start it first: ./scripts/indoor_exp/start_microxrce_agent.sh
+Hardware config check -- /home/shiqi/baseline_box_20261027_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/../../config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_box_pushing.yaml
+  OK   alloc_thrust_coeff: 4.260431e-05
+  OK   vehicle_thrust_scaling: 0.037947
+  OK   vehicle_idle_thrust: 0.252449
+  OK   wb_tau_max: 3.0
+  OK   wb_l1_observer_type: "l1"
+  OK   wb_l1_four_d: true
+  OK   wb_l1_contact: false
+  OK   wb_l1_collision_threshold_n: 0.0
+  OK   wb_l1_omega_x: 2.0
+  OK   wb_l1_omega_q: 0.2
+  OK   wb_u3_internal_ff: true
+  OK   wb_u3_internal_ff_use_w_hat: true
+  OK   wb_u3_estimate_max_j4: 0.06
+  OK   wb_ee_anchor_com: true
+  OK   system_wd_max_tilt_deg: 15.0
+  OK   system_wd_max_drift_m: 0.75
+  [1;33m!! alloc_thrust_coeff 4.260431e-05 is NOT the bench kf (4.540431e-05).[0m
+  [1;33m   Deliberate -6.2% kf understatement; allocator commands ~6.6% more[0m
+  [1;33m   motor per unit thrust. The L1 observer will absorb it as plant[0m
+  [1;33m   error, so this run is NOT evidence about the real kf. !![0m
+  OK   alloc_rotor*_km: 0.018164 (bench)
+  --->  vehicle_name: "AM-T650-WB-L1-4D-HW-PUSH"
+Tuned-law check (2026-09-26 arm channel + 2026-09-27 circle tune H1b) -- /home/shiqi/baseline_box_20261027_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/../../config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_box_pushing.yaml
+  OK   wb_k_x: 50.03
+  OK   wb_k_v: 12.58
+  OK   wb_k_r: 1.6
+  OK   wb_k_w: 1.2
+  OK   wb_mrd_x: 0.139992
+  OK   wb_mrd_y: 0.145617
+  OK   wb_mrd_z: 0.143795
+  OK   wb_ky_x: 120.0
+  OK   wb_ky_y: 196.8
+  OK   wb_ky_z: 120.0
+  OK   wb_ky_psi: 0.2484
+  OK   wb_dy_x: 20.2
+  OK   wb_dy_y: 33.128
+  OK   wb_dy_z: 20.2
+  OK   wb_dy_psi: 0.2903
+  OK   wb_my_y: 1.64
+  OK   wb_l1_stuck_hold_j4: false
+  OK   wb_l1_stuck_speed: 0.02
+  OK   wb_l1_stuck_filter_s: 0.25
+  OK   wb_l1_omega_c_t: 1.0
+  OK   wb_l1_omega_c_r: 0.7428
+  OK   wb_l1_omega_c_q: 0.8479
+  OK   wb_l1_omega_x: 2.0
+  OK   wb_l1_omega_x_t: 0.1
+  OK   wb_l1_omega_x_r: 0.1
+  OK   wb_l1_omega_x_q: 0.1
+  OK   push_pull_guard_tilt_deg: 10.0
+  OK   system_arm_go_home_delay_s: 2.0
+  OK   push_pull_abort_release_wait_s: 1.5
+  OK   push_pull_abort_back: 0.0
+  OK   push_pull_push_pose_deg: [0.0, 28.0, 32.0, 0.0]
+  OK   push_pull_push_mean_speed: 0.021
+  OK   push_pull_push_min_time_s: 3.0
+  OK   push_pull_guard_box_lag: 0.040
+  OK   push_pull_guard_q3_min_deg: 10.0
+  OK   push_pull_guard_q3_lookahead_s: 0.2
+  OK   push_pull_guard_q2_max_deg: 45.0
+  OK   push_pull_handle_settle_tol: 0.025
+  OK   push_pull_handle_settle_axis_tol: 0.015
+  OK   push_pull_handle_settle_max_speed: 0.030
+  OK   push_pull_handle_settle_dwell_s: 0.3
+  OK   push_pull_ready_max_speed: 0.030
+  OK   push_pull_ready_settle_s: 0.5
+  OK   push_pull_mocap_guard_topic: "state_estimator/mocap_guard"
+  OK   system_mocap_guard_topic: "state_estimator/mocap_guard"
+  OK   wb_ee_anchor_free_axis_weight: 0.75
+  OK   push_pull_box_gate_jump_m: 0.020
+  OK   push_pull_box_gate_jump_deg: 10.0
+  OK   push_pull_abort_unbuckle: true
+  OK   wb_ee_anchor_free_axis_on_world: true
+  OK   push_pull_table_from_box: true
+  OK   push_pull_go_to_start_bypass: true
+  OK   push_pull_bypass_clearance: 0.70
+  OK   wb_armature_joint_diag: true
+  OK   wb_armature_j1: 0.010
+  OK   wb_armature_j2: 0.0194
+  OK   wb_armature_j3: 0.0097
+  OK   wb_armature_j4: 0.0097
+  OK   wb_arm_velocity_topic: "fsc_open_manipulator/external_torque_controller/velocity_observer"
+  OK   wb_arm_velocity_timeout_s: 0.05
+  OK   armature_joint_diag: true
+  OK   armature: [0.010, 0.0194, 0.0097, 0.0097]
+  [1;32mOK   all 62 tuned values present -- this IS the validated tune (the box-pushing tune (10-09 push tune + 10-16 pose and guards + 10-19 hardware margins + 10-21 free-axis anchor + 10-22 free axis from the room hold)).[0m
+Build check -- /home/shiqi/baseline_box_20261027_ws/build/fsc_autopilot_ros2/fsc_autopilot_ros2_node/single_aerial_manipulator_whole_body_direct_actuation/autopilot_whole_body_l1_direct_actuation_node
+  OK   raw-mocap guard declared by: planner, control node, estimator (/home/shiqi/baseline_box_20261027_ws/build/fsc_drone_state_estimator_ros2/src/indoor/indoor_mocap_feedback_node)
+  OK   control node declares wb_armature_joint_diag and wb_arm_velocity_topic
+  OK   planner declares armature_joint_diag, the EE-run keys (ee_traj_a/w_max, ee_traj_q2_cycles_per_lap, ee_traj_fig8_axis_deg), the hook grasp (pick_place_pick_approach_back) and the two-step abort (pick_place_abort_release_pose_deg)
+  After launch the CONTROL pane must print, in green:
+    ARMATURE: joint-diagonal [0.0100 0.0194 0.0097 0.0097] kg m^2
+    JOINT VELOCITY: the law closes on 'fsc_open_manipulator/external_torque_controller/velocity_observer'
+  and the PLANNER pane: armature: joint-diagonal [0.0100 0.0194 0.0097 0.0097].
+  OK   wb_base_com = [0.0,-0.017854,0.0] (law) == whole-body planner base_com (reference)
+  --->  vehicle_mass: 3.746170  <-- CONFIRM THIS IS THE WEIGHED AS-FLOWN MASS
+[1;33m  !! vehicle_mass is still 3.746170 -- the SIM PLANT total, carried over and[0m
+[1;33m     NEVER CONFIRMED ON A SCALE. Weigh the AM-T650 as flown (battery, arm,[0m
+[1;33m     mounting hardware, cabling).[0m
+[1;33m     UNIQUE TO THIS NODE: the whole-body MODEL total (3.746174 kg) lives in[0m
+[1;33m     code and is cross-checked against vehicle_mass at startup -- the node[0m
+[1;33m     THROWS past 0.5% (+-18.7 g). Beyond that, t650Defaults' base mass in[0m
+[1;33m     client_lib/src/wb_model.cpp must move with it and the package must be[0m
+[1;33m     rebuilt. Do NOT widen the gate to get past the FATAL. Take the matching[0m
+[1;33m     thrust_scaling/idle_thrust from the table in that file's header. !![0m
+Arm-side config check -- /home/shiqi/baseline_box_20261027_ws/src/fsc_open_manipulator/open_manipulator_x_custom_controller/config/external_torque_controller_hardware_aerial_pwm.yaml
+  OK   nm_to_effort_joints = [162.4, 154.0, 150.5, 153.4] (calibrated 2026-09-11)
+  OK   current_loop_bandwidth_hz_joints = [0.0, 1.5, 1.5, 0.2] (trim on j2/j3; j4 0.2 Hz TEMPORARY 2026-09-14)
+  OK   back_emf_ke = [2.427, 2.559, 2.623, 2.570] (measured per unit)
+  OK   motor_resistance_ohm = [5.26, 4.90, 4.53, 4.88] (measured per unit)
+  OK   friction_ff = [0.0, 3.294, 5.055, 4.455] duty (j2 x0.70, j3 x0.65 2026-09-26; j4 from flight 2026-10-16; j1 relay OFF 2026-10-17, it sustained a 3.8 Hz hold limit cycle)
+  OK   passthrough_error_damping_joints = [0, 0, 0, 0.05] (j4 wrist-roll damping, 2026-10-16; law_debug[28..31])
+  OK   max_effort = [85, 420, 260, 57.6] duty = [0.50, 2.81, 1.92, 0.39] N*m (widened for flight 2026-10-16)
+  OK   friction_load_coeff = [0.0, 0.172, 0.105, 0.0] (same correction)
+  OK   friction_velocity_source = measured (relay on the joint's own velocity)
+  OK   friction_measured_width = 0.03 rad/s (first flight: raise it if the holds chatter)
+  OK   velocity_observer_topic = ~/velocity_observer (the whole-body law's joint rate)
+  OK   state_publish_rate = 250 Hz (the observer topic's rate; the law times out at 50 ms)
+  OK   arm controller build declares friction_velocity_source
+  OK   arm controller build declares passthrough_error_damping_joints
+  OK   arm launch derives the servo PWM Limits from max_effort (expect [212, 587, 414, 189] in its log)
+  OK   passthrough_auxiliary_terms = true -- friction + dither act on the streamed u3
+  OK   passthrough_gravity_correction = true -- (S-1)*g(q) paid at the servo
+  OK   external_reference_topic is set -- arm_planner topology, DIRECT entry can gate
+[1;33m  !! back_emf_velocity_source: observer -- the pass-through compensates the[0m
+[1;33m     OBSERVED velocity, so THIS LAW must supply all arm damping. Never flown.[0m
+[1;33m     Ramp back_emf_ff_scale 0 -> 1 live on the first session. !![0m

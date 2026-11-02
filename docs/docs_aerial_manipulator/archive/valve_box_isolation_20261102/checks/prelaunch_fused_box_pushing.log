@@ -1,0 +1,12 @@
+PROFILE: box_pushing
+[1;33mBOX PUSHING: the table keep-out is PLACED FROM THE BOX (push_pull_table_from_box) --[0m
+[1;33m  put the table where the floor is flat; the box at its LEFT end (seen from the vehicle),[0m
+[1;33m  centred across it, its back face 0.10 m in from the end; the vehicle on the table's middle[0m
+[1;33m  line, facing it, >= 0.75 m in front. Adjust on the ground (start + landing = where it is),[0m
+[1;33m  Get the box, then Plan -- Plan refuses a start > 0.30 m off the middle line. Go To Start[0m
+[1;33m  goes round the table's box end. The planner log prints the placed table's corners.[0m
+[1;33m   push_pull_table_size: [1.0, 0.15]  push_pull_table_box_gap: 0.10  push_pull_box_half_height: 0.05  push_pull_bypass_clearance: 0.70 [0m
+[1;31mREFUSING: AM_HW_PROFILE=box_pushing on the FUSED (EKF2) stack. In Isaac every fused push[0m
+[1;31m  failed (0 of 6, the claw ~1 cm off in contact). Use the RAW-mocap stack:[0m
+[1;31m  AM_HW_PROFILE=box_pushing /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh[0m
+[1;31m  (ALLOW_FUSED_CONTACT=1 overrides, for a deliberate A/B only).[0m

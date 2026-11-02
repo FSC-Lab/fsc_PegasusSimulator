@@ -180,6 +180,13 @@ def _place_start_offset(place_start, place_point):
 
 RIGS["wb_mail"]["overrides"] = {}
 RIGS["wb_mail"]["added"] = dict(RIGS["wb"]["added"])
+# THE ARM RELEASE AT A HANDOVER (2026-11-02, Pegasus archive/valve_box_isolation_20261102): the node's
+# all-NaN release (2026-10-30) became a key whose default (off) is the 10-27 box behaviour; the mail
+# delivery flew it on hardware on 2026-10-31, so it keeps it here (the other pick profiles last flew
+# before it existed and keep the default)
+RIGS["wb_mail"]["added"]["wb_arm_release_on_stop"] = ("wb_arm_hold_stream",
+    "    wb_arm_release_on_stop: true  # MAIL DELIVERY: as flown 2026-10-31 -- 0.1 s of all-NaN arm torque at a "
+    "handover, the arm controller's hold at once")
 RIGS["wb_mail"]["added"]["pick_place_place_insert"] = ("pick_place_place_exit_back",
     "    # THE INSERT PLACE (the mail delivery, 2026-10-23): Ready To Place holds the claw\n"
     "    # pick_place_place_approach_back (the arm GS's Insert Margin) in front of the mouth, level\n"

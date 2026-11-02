@@ -101,11 +101,6 @@ HW_NODE = {
                                "(free flight: the bench-kf 0.036758) -- the revert no longer sinks ~0.2 m"),
     "vehicle_idle_thrust": ("0.252449", "SAFETY map matched to the flown kf 4.260431e-05 "
                             "(free flight: the bench-kf 0.241528)"),
-    # the grip schedule's jaw sensor (2026-11-01, the two parameter sets): the real gripper is in
-    # the arm's own joint_states, in METRES -- open +0.019, closed on the 5 mm fin -0.0097
-    "wb_grip_state_topic": ('"fsc_open_manipulator/joint_states"', "the real gripper's joint state"),
-    "wb_grip_joint_name": ('"gripper_left_joint"', "the real gripper's joint"),
-    "wb_grip_closed_below": ("0.0", "m: open +0.019, closed on the fin -0.0097 (10-16/10-31 bags)"),
 }
 
 HEADER = f"""# =============================================================================

@@ -1,0 +1,51 @@
+M_d [1.   1.64 1.   0.05]  D_d [20.2    33.128  20.2     0.2903]  K_d [120.     196.8    120.       0.2484]  (from cmp1028_r1_a1.yaml)
+
+=== cmp1028_r1_a1  aborted=False 
+contact sign (normal, friction) = (1.0, 1.0)  (calibrated on the table)   fs 62.5 Hz
+slide check: F_ext on claw [-0.02 +0.56 +0.13] N | table friction on box [-0.02 +0.56 +0.00] N | table normal 2.87 N
+window       T |  e_imp xyz rms/pk N  e_imp psi rms/pk N.m |  F_ext rms/pk N  |e_y| rms/pk mm | e_imp x/y/z rms N | as displacement rms/pk mm
+CONTACT   25.7 |    1.028 /  2.479      0.0540 /  0.2052   |   0.54 /  0.98      5.8 /   13.9 | 0.339 0.946 0.220 |   5.87 /  14.10
+HOLD       4.7 |    1.040 /  2.479      0.0567 /  0.1397   |   0.28 /  0.61      5.1 /   11.4 | 0.302 0.902 0.420 |   6.29 /  14.10
+SLIDE     19.1 |    1.050 /  2.273      0.0528 /  0.2052   |   0.60 /  0.98      6.0 /   13.9 | 0.339 0.984 0.140 |   5.86 /  12.19
+RELEASE    1.9 |    0.719 /  1.513      0.0593 /  0.1023   |   0.42 /  0.59      4.9 /    5.6 | 0.416 0.569 0.144 |   4.67 /   8.15
+eps_UAV (truth), L = 0.370 m:  APPROACH max 29 mm (rho 0.078) rms 11   CONTACT max 29 mm (rho 0.077) rms 11   HOLD max 15 mm (rho 0.041) rms 8   SLIDE max 29 mm (rho 0.077) rms 12   RELEASE max 11 mm (rho 0.031) rms 5   EXIT max 20 mm (rho 0.054) rms 12
+
+=== cmp1028_r2_a1  aborted=False 
+contact sign (normal, friction) = (1.0, 1.0)  (calibrated on the table)   fs 62.9 Hz
+slide check: F_ext on claw [+0.05 +0.61 +0.19] N | table friction on box [+0.05 +0.61 -0.00] N | table normal 2.94 N
+window       T |  e_imp xyz rms/pk N  e_imp psi rms/pk N.m |  F_ext rms/pk N  |e_y| rms/pk mm | e_imp x/y/z rms N | as displacement rms/pk mm
+CONTACT   25.8 |    1.037 /  2.766      0.0373 /  0.1266   |   0.56 /  0.90      6.1 /   12.1 | 0.438 0.903 0.259 |   6.25 /  14.53
+HOLD       4.8 |    0.999 /  1.857      0.0469 /  0.1266   |   0.24 /  0.62      5.3 /    9.5 | 0.213 0.930 0.294 |   5.61 /  10.73
+SLIDE     19.1 |    1.075 /  2.766      0.0319 /  0.1186   |   0.64 /  0.90      6.3 /   12.1 | 0.482 0.926 0.259 |   6.55 /  14.53
+RELEASE    1.9 |    0.685 /  0.901      0.0555 /  0.1104   |   0.24 /  0.37      6.1 /    7.6 | 0.403 0.539 0.127 |   4.46 /   5.80
+eps_UAV (truth), L = 0.370 m:  APPROACH max 22 mm (rho 0.061) rms 9   CONTACT max 22 mm (rho 0.059) rms 9   HOLD max 10 mm (rho 0.027) rms 6   SLIDE max 22 mm (rho 0.059) rms 10   RELEASE max 9 mm (rho 0.024) rms 7   EXIT max 16 mm (rho 0.044) rms 11
+
+=== cmp1028_r3_a1  aborted=False 
+contact sign (normal, friction) = (1.0, 1.0)  (calibrated on the table)   fs 62.7 Hz
+slide check: F_ext on claw [-0.01 +0.61 +0.03] N | table friction on box [-0.01 +0.61 -0.00] N | table normal 2.77 N
+window       T |  e_imp xyz rms/pk N  e_imp psi rms/pk N.m |  F_ext rms/pk N  |e_y| rms/pk mm | e_imp x/y/z rms N | as displacement rms/pk mm
+CONTACT   25.6 |    0.705 /  2.201      0.0398 /  0.1697   |   0.53 /  0.97      4.6 /   10.2 | 0.238 0.647 0.150 |   4.03 /  11.26
+HOLD       4.6 |    0.378 /  0.757      0.0246 /  0.0592   |   0.09 /  0.22      2.0 /    4.3 | 0.191 0.272 0.181 |   2.59 /   5.54
+SLIDE     19.1 |    0.776 /  2.201      0.0407 /  0.1697   |   0.60 /  0.97      5.2 /   10.2 | 0.240 0.726 0.132 |   4.34 /  11.26
+RELEASE    1.9 |    0.557 /  1.532      0.0571 /  0.0875   |   0.31 /  0.50      1.9 /    5.2 | 0.305 0.414 0.214 |   3.75 /   9.13
+eps_UAV (truth), L = 0.370 m:  APPROACH max 27 mm (rho 0.072) rms 10   CONTACT max 16 mm (rho 0.043) rms 8   HOLD max 5 mm (rho 0.014) rms 3   SLIDE max 16 mm (rho 0.043) rms 9   RELEASE max 7 mm (rho 0.019) rms 3   EXIT max 11 mm (rho 0.030) rms 9
+
+=== cmp1028_r4_a1  aborted=False 
+contact sign (normal, friction) = (1.0, 1.0)  (calibrated on the table)   fs 62.7 Hz
+slide check: F_ext on claw [-0.01 +0.56 +0.05] N | table friction on box [-0.01 +0.56 +0.00] N | table normal 2.79 N
+window       T |  e_imp xyz rms/pk N  e_imp psi rms/pk N.m |  F_ext rms/pk N  |e_y| rms/pk mm | e_imp x/y/z rms N | as displacement rms/pk mm
+CONTACT   25.8 |    0.979 /  2.546      0.0430 /  0.1926   |   0.52 /  0.81      5.6 /   13.1 | 0.330 0.910 0.150 |   5.52 /  13.06
+HOLD       4.8 |    0.828 /  2.161      0.0258 /  0.1136   |   0.27 /  0.68      3.4 /    7.2 | 0.156 0.803 0.129 |   4.41 /  11.05
+SLIDE     19.1 |    1.035 /  2.546      0.0467 /  0.1926   |   0.57 /  0.81      6.2 /   13.1 | 0.357 0.964 0.126 |   5.82 /  13.06
+RELEASE    1.9 |    0.719 /  1.686      0.0388 /  0.0960   |   0.42 /  0.64      4.3 /    8.1 | 0.379 0.521 0.319 |   4.90 /  10.67
+eps_UAV (truth), L = 0.370 m:  APPROACH max 23 mm (rho 0.062) rms 9   CONTACT max 21 mm (rho 0.057) rms 8   HOLD max 16 mm (rho 0.043) rms 5   SLIDE max 21 mm (rho 0.057) rms 9   RELEASE max 6 mm (rho 0.017) rms 4   EXIT max 13 mm (rho 0.036) rms 8
+
+=== cmp1028_r5_a1  aborted=False 
+contact sign (normal, friction) = (1.0, 1.0)  (calibrated on the table)   fs 62.2 Hz
+slide check: F_ext on claw [-0.02 +0.63 +0.23] N | table friction on box [-0.02 +0.63 +0.00] N | table normal 2.98 N
+window       T |  e_imp xyz rms/pk N  e_imp psi rms/pk N.m |  F_ext rms/pk N  |e_y| rms/pk mm | e_imp x/y/z rms N | as displacement rms/pk mm
+CONTACT   25.7 |    0.968 /  2.345      0.0449 /  0.1660   |   0.60 /  1.08      6.2 /   14.8 | 0.313 0.904 0.151 |   5.43 /  11.92
+HOLD       4.7 |    0.819 /  1.560      0.0347 /  0.1293   |   0.26 /  0.66      3.4 /    6.3 | 0.226 0.769 0.168 |   4.56 /   8.08
+SLIDE     19.1 |    1.031 /  2.345      0.0476 /  0.1660   |   0.67 /  1.08      6.9 /   14.8 | 0.330 0.966 0.147 |   5.76 /  11.92
+RELEASE    1.9 |    0.582 /  0.982      0.0394 /  0.0692   |   0.41 /  0.64      3.7 /    4.5 | 0.327 0.461 0.139 |   3.77 /   5.74
+eps_UAV (truth), L = 0.370 m:  APPROACH max 21 mm (rho 0.058) rms 9   CONTACT max 23 mm (rho 0.063) rms 10   HOLD max 13 mm (rho 0.034) rms 6   SLIDE max 23 mm (rho 0.063) rms 11   RELEASE max 8 mm (rho 0.023) rms 8   EXIT max 22 mm (rho 0.060) rms 12

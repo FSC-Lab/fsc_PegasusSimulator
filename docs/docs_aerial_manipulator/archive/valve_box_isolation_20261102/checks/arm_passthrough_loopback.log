@@ -1,0 +1,57 @@
+launch log: /tmp/passthrough_test.AjvEji.log
+controller active; the configure banner said:
+  [ros2_control_node-1] [WARN] [1793573325.443472522] [uav_t.fsc_open_manipulator.external_torque_controller]: COMMAND MODE = PWM (Operating Mode 16). Goal PWM is a VOLTAGE command and NOTHING regulates current: stall current is duty*V/R, bounded only by max_effort here and by the servo's PWM Limit. supply 12.0 V, full scale 885, back_emf_ff_scale 1.00, pass-through compensates the OBSERVER (v_hat -- faithful torque source) velocity.
+  [ros2_control_node-1] [WARN] [1793573325.463120889] [uav_t.fsc_open_manipulator.external_torque_controller]: PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- friction/viscous/dither ON, gravity-scale correction (S-1)*g ON, integral off. Every term is reference-driven and exactly zero while the arm reference holds; nothing here touches the flight law or its observer.
+config: /home/shiqi/ros2_ws/install/open_manipulator_x_custom_controller/share/open_manipulator_x_custom_controller/config/external_torque_controller_hardware_aerial_pwm.yaml
+friction velocity source: measured (mock velocity 0 -> relay off)
+kappa_pwm counts/N*m: [169.47, 149.7, 135.25, 148.51]
+  PASS  law_debug streams   125 rows / 0.5 s
+  PASS  EXTERNAL law owns the arm (pass-through)   law 1 fresh 1 age 0.001
+  PASS  aux terms DISABLED with passthrough_* false   [3] = 0
+  PASS  streamed torque received   [+0.05, +0.40, +0.30, +0.05]
+  PASS  1. pure pass-through: duty == kappa * tau   [+8.47, +59.88, +40.58, +7.43] vs [+8.47, +59.88, +40.58, +7.43]
+  PASS  1. nothing added ([18..25] == 0)
+  PASS  1. error-damping term [28..31] == 0 at back_emf_ff_scale 0   law_debug width 32
+  URDF g(q=0) read back: [+0.00, +0.52, +0.42, -0.00] N*m -> (S-1)g = [+0.00, -0.05, -0.01, -0.00] N*m
+  PASS  2. gravity correction (S-1)*g*kappa in [22..25]   [+0.00, -8.05, -1.75, +0.00] vs [+0.00, -8.05, -1.75, -0.00]
+  PASS  2. duty == kappa * (tau + (S-1)g)   [+8.47, +51.83, +38.83, +7.43] vs [+8.47, +51.83, +38.83, +7.43]
+  PASS  2. flags [26]=1 [27]=0
+  PASS  3. aux terms ENABLED on the pass-through   [3] = 1
+  PASS  3. reference at rest -> aux term exactly zero   [+0.00, +0.00, +0.00, +0.00]
+  PASS  3. duty unchanged at rest
+  PASS  4. friction fc + mu*|tau|*kappa, reference +   mean [+0.00, -0.00, -0.00, -0.00] vs [+0.00, +0.00, +0.00, +0.00]
+  PASS  4. dither present, rms = A/sqrt(2) (j1: none)   std [+0.00, +33.95, +13.58, +10.18] vs [+0.00, +33.95, +13.58, +10.18]
+  PASS  4. duty mean == kappa*(tau+corr) + friction   [+8.47, +51.83, +38.83, +7.42] vs [+8.47, +51.83, +38.83, +7.43]
+  PASS  4. friction fc + mu*|tau|*kappa, reference -   mean [+0.00, -0.00, -0.00, -0.00] vs [+0.00, +0.00, +0.00, +0.00]
+  PASS  4. dither present, rms = A/sqrt(2) (j1: none)   std [+0.00, +33.95, +13.58, +10.18] vs [+0.00, +33.95, +13.58, +10.18]
+  PASS  4. duty mean == kappa*(tau+corr) + friction   [+8.47, +51.83, +38.83, +7.42] vs [+8.47, +51.83, +38.83, +7.43]
+  PASS  5. reference at rest again -> aux term back to exactly zero   [+0.00, +0.00, +0.00, +0.00]
+  PASS  6. passthrough_integral false: 0.3 rad error adds nothing   [+0.00, +0.00, +0.00, +0.00]
+  PASS  6. passthrough_integral true: winds to i_clamp on j2, [27]=1   +57.61 vs +57.61
+  PASS  6. back to false: the integral no longer reaches the command
+  PASS  8. yaml's error damping: [28..31] == s*ke*d*qd_ref   [+0.00, +0.00, +0.00, +0.95] vs [+0.00, +0.00, +0.00, +0.95]
+  PASS  8. duty == kappa*(tau+corr) + s*ke*d*qd_ref   [+8.47, +51.83, +38.83, +8.37] vs [+8.47, +51.83, +38.83, +8.37]
+  PASS  8. LIVE [0, 0, 0, 0.2]: only j4 carries it   [+0.00, +0.00, +0.00, +3.79] vs [+0.00, +0.00, +0.00, +3.79]
+  PASS  8. out-of-range d (1.5) is refused
+  PASS  8. reference at rest -> term exactly zero
+  PASS  8b. j4 error damping present   ed +3.79 counts
+  PASS  8b. default (key false): j4 trim converges to (g-1)*tau - ed, the 10-27 build's target   trim -3.54 counts (old target -3.55, fix +0.37)
+  PASS  8b. key true: j4 trim converges to (g-1)*(tau+ed), NOT to -ed: the damping is not integrated away   trim +0.36 counts (fix +0.37, old target -3.55)
+  PASS  9. torque above every cap -> duty == max_effort (the yaml's caps are live)   [+85.00, +420.00, +260.00, +57.61] vs [+85.00, +420.00, +260.00, +57.61]
+  PASS  9. and symmetric: -max_effort   [-85.00, -420.00, -260.00, -57.61]
+  PASS  10. law streaming before the release
+  PASS  10. all-NaN RELEASE -> LOCAL hold owns the arm within 0.1 s   after 0.004 s (timeout 0.3 s)
+  PASS  10. a fresh stream takes the arm back after the release   law 1
+  PASS  10. one NaN joint is rejected whole -> stream stale -> hold   law 0 age 1.00
+  PASS  7. stream stale -> LOCAL hold owns the arm   law 0 aux 1 age 1.00
+
+ALL PASS
+controller log tail:
+  [ros2_control_node-1] [INFO] [1793573345.230796024] [uav_t.fsc_open_manipulator.external_torque_controller]: LIVE passthrough_error_damping_joints -> [0.000000, 0.000000, 0.000000, 0.050000]
+  [ros2_control_node-1] [INFO] [1793573345.894882316] [uav_t.fsc_open_manipulator.external_torque_controller]: LIVE passthrough_error_damping_joints -> [0.000000, 0.000000, 0.000000, 0.200000]
+  [ros2_control_node-1] [INFO] [1793573358.034616120] [uav_t.fsc_open_manipulator.external_torque_controller]: LIVE passthrough_error_damping_joints -> [0.000000, 0.000000, 0.000000, 0.050000]
+  [ros2_control_node-1] [WARN] [1793573360.683524235] [uav_t.fsc_open_manipulator.external_torque_controller]: The external law RELEASED the arm (all-NaN command) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM.
+  [ros2_control_node-1] [INFO] [1793573360.699487821] [uav_t.fsc_open_manipulator.external_torque_controller]: External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+  [ros2_control_node-1] [WARN] [1793573361.487503625] [uav_t.fsc_open_manipulator.external_torque_controller]: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.
+  [ros2_control_node-1] [INFO] [1793573362.199513857] [uav_t.fsc_open_manipulator.external_torque_controller]: External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+  [ros2_control_node-1] [WARN] [1793573362.991510308] [uav_t.fsc_open_manipulator.external_torque_controller]: External torque stream stale (> 0.30 s) -- THE LOCAL PD+ HOLD NOW OWNS THE ARM. Expected when the whole-body law leaves DIRECT; otherwise the flight node is down or in the wrong namespace.

@@ -1,0 +1,32 @@
+[INFO] [1793573161.966971880] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Box Pushing: the gripper closes within 25 mm of the grasp point, 8 mm across the handle (hardware), the claw slower than 30 mm/s over 0.3 s; not met within 2.5 s -> ABORT; that wait starts when the planner holds the settled claw in the room (no hand-over within 6.0 s -> ABORT)
+[INFO] [1793573161.967074693] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Box Pushing: Ready To Push starts by itself after Go To Start (+1000 ms), Push after Ready (on the grasp gate), Exit To Push after the push (+200 ms), once the vehicle is slower than 40 mm/s for 0.3 s (at most 3.0 s)
+[INFO] [1793573161.967088573] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Box Pushing / Valve Turning: the grasp is a close that reaches its goal, or stalls no wider than -0.005000 m (HARDWARE rule)
+This plugin does not support propagateSizeHints()
+[INFO] [1793573161.979194625] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Valve Turning: the gripper closes within 20 mm of the grasp point (the LIVE handle), 8 mm across the fin (hardware), the claw slower than 30 mm/s over 0.3 s; not met within 2.5 s of Ready -> ABORT
+[INFO] [1793573161.979773540] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and the planner's hand-over, at most 6.0 s); j1..j4 error damping [0.20, 0.00, 0.00, 0.20] on external_torque_controller for the mission
+[INFO] [1793573161.979785538] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Valve Turning: Ready To Turn starts by itself after Go To Start (+1000 ms), Turn after Ready (on the grasp gate), Exit To Turn after the turn (+200 ms)
+This plugin does not support propagateSizeHints()
+GSVAL box_enabled_before_get 0
+GSVAL box_text_before_get —
+GSVAL margins [0.150, 0.120]
+GSVAL vertical_box 0.150000
+GSVAL side_box 0.120000
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+[INFO] [1793573166.785950749] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Get Box (obj_0): captured the box at [1.275, 0.281, 0.850] m, yaw 1.7 deg from /gsbox_rig/obj_0/mocap (45 samples, spread 1.0 mm); the EE offset is applied in this box frame -- press Plan
+GSVAL param_after_get [1.274742, 0.281173, 0.850375, 1.700000]
+GSVAL box_text_after_get 1.27 0.28 0.85 1.70
+GSVAL box_enabled_after_get 1
+GSVAL param_after_edit [1.300000, 0.281173, 0.850375, 1.700000]
+GSVAL box_turn_visible 0
+GSVAL valve_turn_visible 1
+GSVAL valve_distance_visible 0
+GSVAL valve_lamp_turn0 The planner is set to box pushing (Turn 0, the Box Pushing tab). Type the Turn angle and press Plan here to switch it to valve turning.
+[INFO] [1793573172.599654932] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Valve Turning: the planner switched to turn 90 deg -- planning
+[INFO] [1793573172.606869329] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Plan: not in whole-body DIRECT (the first step is planned from the hold)
+GSVAL turn_after_valve_plan 90.000000
+GSVAL box_lamp_turn90 The planner is set to valve turning (Turn 90°, the Valve Turning tab). Press Plan here to switch it to box pushing.
+[INFO] [1793573174.646317981] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Box Pushing: the planner switched to turn 0 deg -- planning
+[INFO] [1793573174.651902650] [uav_gsbox.fsc_open_manipulator.gs_box_harness]: Plan: not in whole-body DIRECT (the first step is planned from the hold)
+GSVAL turn_after_box_plan 0.000000
+GSVAL result PASS

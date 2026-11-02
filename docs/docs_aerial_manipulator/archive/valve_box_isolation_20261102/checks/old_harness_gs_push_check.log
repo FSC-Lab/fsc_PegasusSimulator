@@ -1,0 +1,73 @@
+[INFO] [1793573204.196233795] [uav_gspush.fsc_open_manipulator.gs_push_harness]: Box Pushing: the gripper closes within 25 mm of the grasp point, 8 mm across the handle (hardware), the claw slower than 30 mm/s over 0.3 s; not met within 2.5 s -> ABORT; that wait starts when the planner holds the settled claw in the room (no hand-over within 6.0 s -> ABORT)
+[INFO] [1793573204.196420416] [uav_gspush.fsc_open_manipulator.gs_push_harness]: Box Pushing: Ready To Push starts by itself after Go To Start (+1000 ms), Push after Ready (on the grasp gate), Exit To Push after the push (+200 ms), once the vehicle is slower than 40 mm/s for 0.3 s (at most 3.0 s)
+[INFO] [1793573204.196442441] [uav_gspush.fsc_open_manipulator.gs_push_harness]: Box Pushing / Valve Turning: the grasp is a close that reaches its goal, or stalls no wider than -0.005000 m (HARDWARE rule)
+This plugin does not support propagateSizeHints()
+GSVAL planner speed 0.021000 floor 3.000000 settle 1.500000 distance 0.500000
+GSVAL loaded_push_time — / 23.8
+GSVAL loaded_contact_time — / 25.3
+GSVAL loaded_mean_speed — / 21.0
+GSVAL loaded_box_travel — / 500
+GSVAL loaded_box_speed — / —
+GSVAL loaded_colours green green green green plain
+GSVAL loaded_note 
+GSVAL set 1b_short 0.050000
+GSVAL 1b_short_push_time — / 3.0
+GSVAL 1b_short_contact_time — / 4.5
+GSVAL 1b_short_mean_speed — / 16.7
+GSVAL 1b_short_box_travel — / 50
+GSVAL 1b_short_box_speed — / —
+GSVAL 1b_short_colours red red green red plain
+GSVAL 1b_short_note 0.05 m is outside the tested 0.10-0.50 m -- retype the Push Distance
+GSVAL set 1c_pull -0.100000
+GSVAL 1c_pull_push_time — / 4.8
+GSVAL 1c_pull_contact_time — / 6.3
+GSVAL 1c_pull_mean_speed — / 21.0
+GSVAL 1c_pull_box_travel — / 100
+GSVAL 1c_pull_box_speed — / —
+GSVAL 1c_pull_colours red red green red plain
+GSVAL 1c_pull_note a negative Push Distance PULLS the box (only pushes are tested) -- retype the Push Distance
+GSVAL set 1d_long 0.600000
+GSVAL 1d_long_push_time — / 28.6
+GSVAL 1d_long_contact_time — / 30.1
+GSVAL 1d_long_mean_speed — / 21.0
+GSVAL 1d_long_box_travel — / 600
+GSVAL 1d_long_box_speed — / —
+GSVAL 1d_long_colours red red green red plain
+GSVAL 1d_long_note 0.60 m is outside the tested 0.10-0.50 m -- retype the Push Distance
+GSVAL preview_box_value 0.100000 enabled
+GSVAL preview_push_time — / 4.8
+GSVAL preview_contact_time — / 6.3
+GSVAL preview_mean_speed — / 21.0
+GSVAL preview_box_travel — / 100
+GSVAL preview_box_speed — / —
+GSVAL preview_colours green green green green plain
+GSVAL preview_note preview of the typed Push Distance -- press Push Distance to send it
+[INFO] [1793573215.536709552] [uav_gspush.fsc_open_manipulator.gs_push_harness]: Push Distance set -- press Plan
+GSVAL planner_distance_after_send 0.100000
+GSVAL sent_push_time — / 4.8
+GSVAL sent_contact_time — / 6.3
+GSVAL sent_mean_speed — / 21.0
+GSVAL sent_box_travel — / 100
+GSVAL sent_box_speed — / —
+GSVAL sent_colours green green green green plain
+GSVAL sent_note 
+GSVAL pushing_push_time 3.5 / 4.8
+GSVAL pushing_contact_time 5.0 / 6.3
+GSVAL pushing_mean_speed 14.6 / 21.0
+GSVAL pushing_box_travel 51 / 55
+GSVAL pushing_box_speed 17.6 / 20.1
+GSVAL pushing_colours plain plain plain plain plain
+GSVAL pushing_note pushing
+GSVAL summary_push_time 4.8 / 4.8
+GSVAL summary_contact_time 6.3 / 6.3
+GSVAL summary_mean_speed 19.7 / 21.0
+GSVAL summary_box_travel 94 / 100
+GSVAL summary_box_speed — / —
+GSVAL order Start@75 Push Time [s]@200 Contact Time [s]@226 Mean Speed [mm/s]@252 Box Speed [mm/s]@278 Box Travelled [mm]@304 Table Offset [m]@330 
+GSVAL label_width Table Offset [m] 121 of 96
+GSVAL label_width Push Time [s] 121 of 81
+GSVAL label_width Contact Time [s] 121 of 99
+GSVAL label_width Mean Speed [mm/s] 121 of 121
+GSVAL label_width Box Travelled [mm] 121 of 117
+GSVAL label_width Box Speed [mm/s] 121 of 110
+GSVAL result PASS

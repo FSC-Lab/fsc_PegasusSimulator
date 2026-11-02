@@ -1,0 +1,21 @@
+19:35:19 start iso_base_1 (box on the 10-27 tag set)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_base_1] completed
+19:40:28 start iso_base_2 (box on the 10-27 tag set)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_base_2] completed
+19:45:36 start iso_base_3 (box on the 10-27 tag set)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_base_3] completed
+19:50:44 start iso_mfreeze_head (the 11-01 build) noise=none  --mocap-fault freeze@push+4:2.5
+[iso_mfreeze_head] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.21 s ago)) -- gripper open, co
+19:54:01 start iso_swaytrip_head (the 11-01 build) noise=0.32,0.12,2 push_pull_guard_sway_speed=0.05 
+  push_pull_guard_sway_speed -> 0.05
+[iso_swaytrip_head] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the vehicle sways 53 mm/s against its CoM reference (> 50 mm/s; CoM error 
+19:57:23 CHAIN DONE

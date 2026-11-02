@@ -24,18 +24,22 @@ Regenerate after any edit to the mirror or to the push generator; never
 hand-edit the output. --check verifies the file on disk.
 """
 import argparse
-import importlib.util
 import os
 import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PUSH_GEN = os.path.join(HERE, "..", "..", "push_pull_20261003", "tools", "make_push_pull_yaml.py")
-_spec = importlib.util.spec_from_file_location("make_push_pull_yaml", PUSH_GEN)
-pp = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(pp)
+# ISOLATED FROM THE BOX PUSH (2026-11-02, user: "the valve-turning changes and management isolated
+# from the box-pushing"; Pegasus archive/valve_box_isolation_20261102). Until then this file imported
+# the box generator (make_push_pull_yaml.py) for its config path, its source (the mirror) and its
+# MUST_KEEP list, so a box edit moved the valve yaml and a valve need pulled on the box file. Its own
+# copies now; the box generator is back at its 10-27 tag (box-pushing-20261027) and nothing here
+# reads it.
+CFG = os.path.expanduser("~/ros2_ws/src/fsc_autopilot_ros2/config")
+SRC = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim.yaml")
+MUST_KEEP = {"wb_l1_contact": "false", "wb_l1_collision_threshold_n": "0.0", "wb_l1_four_d": "true"}
 
-DST = os.path.join(pp.CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml")
+DST = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml")
 VEHICLE_NAME = "AM-T650-WB-L1-4D-VALVE"
 
 # THE SCENE (07_px4_t650_aerial_manipulator_valve_turning.py): the valve's
@@ -204,22 +208,27 @@ PLANNER_BLOCK = f"""
     # offset stayed <= 6.2 mm and the fin moved <= 0.2 deg (3 of 3 + 1 of 1 nominal).
     # The handle settle below is then inert (it only runs when the room hold starts
     # at the handle).
+    # 2026-11-02 (user: the valve's approach the 10-27 box way; Pegasus archive/
+    # valve_box_isolation_20261102): BACK TO THE BOX'S -- the descent CoM-anchored, the claw
+    # handed to the room hold only once settled on the handle (the settle below), contact on
+    # the planner's events. The 10-27 room-held descent above, its leash, Ready gate and
+    # descent guard are off: the 10-31 evening failure began in that pre-grasp room hold.
+    # (Isaac 10-27 under drift: room-held 3 of 3, the box's settle 1 of 3 -- the user's call.)
     push_pull_world_anchor_push: true
-    push_pull_world_anchor_ready: true
+    push_pull_world_anchor_ready: false
     push_pull_world_anchor_on_handle: true
     # THE HAND-OVER SETTLE (the box push's 2026-10-24 hardware lesson, archive/
     # wb_box_pushing_flight_20261024 section 8): the room hold waits until the claw is
     # within settle_tol of the grasp point, axis_tol across the fin and slower than
     # max_speed for dwell_s (a base 30 mm off when the hold engaged made the arm reach);
     # Ready is refused until the claw has been still ready_settle_s at Go To Start.
-    # 0 = off (the 10-22 final config); the 2026-10-27 v2-valve A/B decides
-    # (archive/valve_turning_v2_20261027).
-    push_pull_handle_settle_tol: 0.0
-    push_pull_handle_settle_axis_tol: 0.0
-    push_pull_handle_settle_max_speed: 0.0
-    push_pull_handle_settle_dwell_s: 0.0
-    push_pull_ready_max_speed: 0.0
-    push_pull_ready_settle_s: 0.0
+    # 2026-11-02: the box push's own values (its 10-27 flights), with the box's approach above.
+    push_pull_handle_settle_tol: 0.025
+    push_pull_handle_settle_axis_tol: 0.015
+    push_pull_handle_settle_max_speed: 0.030
+    push_pull_handle_settle_dwell_s: 0.3
+    push_pull_ready_max_speed: 0.030
+    push_pull_ready_settle_s: 0.5
     push_pull_descent_trim: false
     # THE WAY HOME (2026-10-27, the box push's 10-21 landing): Go To Land Start flies
     # back over the start mark at 1.3 m, Land straight down to 0.30 m (skids ~5 cm off
@@ -364,13 +373,22 @@ PLANNER_BLOCK = f"""
     #     room hold (descents: Isaac <= 37 mm, hardware 28-74 mm, the 10-31 evening 189 mm).
     #   the q3 guards and the sway guard armed from the room hold on (replayed: the 10-31 evening
     #     trips 0.8 s before the operator; no earlier pre-grasp phase trips).
-    push_pull_ready_max_com_err: 0.030
-    push_pull_ready_max_com_speed: 0.060
+    # 2026-11-02: OFF with the room-held descent they guarded (the box's approach above):
+    push_pull_ready_max_com_err: 0.0
+    push_pull_ready_max_com_speed: 0.0
     push_pull_ready_com_settle_s: 0.3
-    push_pull_room_hold_leash: 0.040
+    push_pull_room_hold_leash: 0.0
     push_pull_room_hold_reengage_s: 1.0
-    push_pull_guard_ready_com_err: 0.060
-    push_pull_guard_arm_before_handle: true
+    push_pull_guard_ready_com_err: 0.0
+    push_pull_guard_arm_before_handle: false
+    # VALVE-ONLY PLANNER OPTIONS (2026-11-02, default off -- the box push never sets them):
+    #   fast_hand_back: the q3 / sway guard aborts hand the claw to the vehicle through the
+    #     node's set_ee_anchor_com_fast (wb_ee_anchor_fast_blend_s 0.25 s; 2026-11-01)
+    #   grasp_event: push_pull/grasp is served -- the arm GS reports the jaws closed on the fin
+    #     (the contact phase on) and about to open (off) in a STATIC HOLD, which has no Turn
+    #     press; the contact flag is never inferred from the gripper's position
+    push_pull_fast_hand_back: true
+    push_pull_grasp_event: true
     # THE ROTOR SAMPLE GATE (the box push's, 2026-10-21): an obj_0 sample farther than 20 mm /
     # 10 deg from the last good one (the allowance growing with the gap) is dropped before Get
     # and the guards read it; Get refuses a window with any dropped sample. The turn's own yaw
@@ -450,17 +468,6 @@ OVERRIDES = {
     "wb_dy_psi": "0.2903",
     "wb_l1_stuck_hold_j4": "false",
 }
-# the FREE-FLIGHT heading set the grip schedule flies with the jaws open: the mirror's own values
-# (the 2026-10-16 wrist fix), read here so the two cannot drift
-FREE_FLIGHT = {}
-with open(pp.SRC) as _f:
-    _mirror = _f.read()
-for _k in ("wb_ky_psi", "wb_dy_psi", "wb_l1_stuck_hold_j4", "wb_ky_x", "wb_ky_y", "wb_ky_z",
-           "wb_dy_x", "wb_dy_y", "wb_dy_z", "wb_l1_omega_c_t"):
-    _m = re.findall(rf"^    {_k}: ([^\s#]+)", _mirror, flags=re.M)
-    if len(_m) != 1:
-        raise SystemExit(f"{_k}: found {len(_m)} times in the mirror (need exactly 1)")
-    FREE_FLIGHT[_k] = _m[0]
 # the turn's sense, from the planner block below: it signs the free-axis heading radius
 TURN_DEG = float(re.search(r"^    push_pull_turn_deg: ([-0-9.]+)", PLANNER_BLOCK, re.M).group(1))
 HEADING_RADIUS = FIN_RADIUS if TURN_DEG > 0 else -FIN_RADIUS
@@ -494,50 +501,24 @@ ADDITIONS = {
     # (push_pull_turn_deg > 0, the axis to the left of the nose); the planner refuses a turn
     # whose sense or radius disagrees with it.
     "wb_ee_anchor_free_axis_heading_radius": ("wb_ee_anchor_free_axis_on_world", f"{HEADING_RADIUS:.4f}"),
-    # THE GRIP SCHEDULE (2026-10-31, user: "the heading target should change only after hold", and
-    # "two sets of control gains or parameters, free-flight and interaction"; archive/
-    # wb_valve_turning_flight_20261031). On all three 10-31 flights the empty wrist swung +-40 deg
-    # from the start of Ready: the soft heading below holds q4 at ~0.1 N.m/rad against ~0.045 N.m of
-    # static friction (parks +-25 deg off the fin) and the companion above moved the target 5-10 deg
-    # with the base's wander before any grasp. One event -- the jaws closed, read by the node from
-    # the gripper's own joint state -- now switches (a) the heading gains from the FREE-FLIGHT set
-    # (the mirror's own 2026-10-16 wrist fix: stiff heading + j4 stuck hold, flown on hardware
-    # 10-27/28) to the soft INTERACTION set above, over 1 s, and (b) starts the companion, counted
-    # from the grasp and held at the release. Isaac's gripper bus: rad, open 0, stalled on the
-    # grip shim -0.2..-0.3 (hardware: make_hw_valve_turning_yaml.py HW_NODE).
-    "wb_ee_anchor_free_axis_heading_after_grip": ("wb_ee_anchor_free_axis_heading_radius", "true"),
-    "wb_grip_state_topic": ("wb_ee_anchor_free_axis_heading_after_grip", '"isaacsim_manipulator/gripper_state"'),
-    "wb_grip_joint_name": ("wb_grip_state_topic", '"gripper_joint"'),
-    "wb_grip_closed_below": ("wb_grip_joint_name", "-0.1"),
-    "wb_grip_blend_s": ("wb_grip_closed_below", "1.0"),
-    "wb_ky_psi_before_grip": ("wb_grip_blend_s", FREE_FLIGHT["wb_ky_psi"]),
-    "wb_dy_psi_before_grip": ("wb_ky_psi_before_grip", FREE_FLIGHT["wb_dy_psi"]),
-    "wb_stuck_hold_j4_before_grip": ("wb_dy_psi_before_grip", FREE_FLIGHT["wb_l1_stuck_hold_j4"]),
-    # TWO PARAMETER SETS (2026-11-01, user: "two sets of parameters for the free-flight and the
-    # interaction phases"; Pegasus archive/two_param_sets_20261101): the same jaw event also
-    # switches the EE impedance (the mirror's 211.9 / 26.82 in free flight -> the valve's
-    # 120 / 20.2 OVERRIDES above in contact) and the translational observer bandwidth (the
-    # mirror's 2.927 -> the valve's 2.0). The free-flight values are READ from the mirror, so
-    # the two cannot drift. The interaction set stays in force after the jaws open while the
-    # claw is still room-held on the fin (the exit's 0.06 m climb), so the open jaws around
-    # the fin never get a gain step.
-    "wb_ky_x_before_grip": ("wb_stuck_hold_j4_before_grip", FREE_FLIGHT["wb_ky_x"]),
-    "wb_ky_y_before_grip": ("wb_ky_x_before_grip", FREE_FLIGHT["wb_ky_y"]),
-    "wb_ky_z_before_grip": ("wb_ky_y_before_grip", FREE_FLIGHT["wb_ky_z"]),
-    "wb_dy_x_before_grip": ("wb_ky_z_before_grip", FREE_FLIGHT["wb_dy_x"]),
-    "wb_dy_y_before_grip": ("wb_dy_x_before_grip", FREE_FLIGHT["wb_dy_y"]),
-    "wb_dy_z_before_grip": ("wb_dy_y_before_grip", FREE_FLIGHT["wb_dy_z"]),
-    "wb_grip_hold_set_while_free_axis": ("wb_dy_z_before_grip", "true"),
-    # ... and at least 3 s past the OPEN edge (the exit's world-held 0.06 m climb ends ~1-2 s after
-    # the open; the Isaac box run tsB_s5 tipped its box with the set blending back during the climb)
-    "wb_grip_release_delay_s": ("wb_grip_hold_set_while_free_axis", "3.0"),
-    "wb_l1_omega_c_t_before_grip": ("wb_l1_omega_c_t", FREE_FLIGHT["wb_l1_omega_c_t"]),
+    # THE HEADING COMPANION ON THE PLANNER'S CONTACT FLAG (2026-11-02; replaces the 2026-10-31
+    # grip schedule and the 2026-11-01 two parameter sets, both driven by the gripper's own joint
+    # position -- a closed EMPTY gripper read like a grasp and switched them in free flight). ONE
+    # gain set for the whole flight (the OVERRIDES above, user's decision), and the companion
+    # follows the handle only while the planner's contact flag is on (the grasp event / the turn),
+    # holding the handle's angle after it.
+    "wb_ee_anchor_free_axis_heading_after_contact": ("wb_ee_anchor_free_axis_heading_radius", "true"),
     # THE FAST ANCHOR HAND-BACK (2026-11-01, archive/valve_room_hold_guards_20261031 section 6):
     # the planner's leash and guard aborts hand the claw to the vehicle through the node's
     # set_ee_anchor_com_fast, blended over this instead of wb_ee_anchor_blend_s (1.0 s --
     # a third of the 10-31 evening's run would still have reached the arm). The EE
     # reference moves by at most the base's drift in 0.25 s.
     "wb_ee_anchor_fast_blend_s": ("wb_ee_anchor_blend_s", "0.25"),
+    # THE ARM RELEASE AT A HANDOVER (2026-10-30, the 10-29 crash; a key since 2026-11-02, default
+    # off = the 10-27 box behaviour): 0.1 s of all-NaN torque when the law stops commanding the arm
+    # with wb_arm_hold_stream false (hardware) -- the arm controller's hold at once, not after its
+    # 0.3 s timeout. Inert in Isaac (wb_arm_hold_stream true there).
+    "wb_arm_release_on_stop": ("wb_arm_hold_stream", "true"),
     "wb_l1_contact_hold_translation": ("wb_l1_collision_threshold_n", "false"),
     "wb_attitude_from_odometry": ("wb_dls_lambda", "false"),
     "wb_attitude_odometry_correction_rad_s": ("wb_attitude_from_odometry", "0.0"),
@@ -561,7 +542,7 @@ MARK = "VALVE-TURNING"
 
 
 def build():
-    with open(pp.SRC) as f:
+    with open(SRC) as f:
         text = f.read()
     if "push_pull_" in text:
         raise SystemExit("the mirror already carries push_pull_* keys -- nothing to generate onto")
@@ -583,7 +564,7 @@ def build():
         if len(pat.findall(out)) != 1:
             raise SystemExit(f"{anchor}: the insertion anchor must exist exactly once")
         out = pat.sub(lambda m: m.group(1) + f"    {key}: {val}  # {MARK} ADDITION -- make_valve_turning_yaml.py\n", out)
-    for key, val in pp.MUST_KEEP.items():
+    for key, val in MUST_KEEP.items():
         m = re.search(rf"^    {re.escape(key)}: ([^\s#]+)", out, flags=re.M)
         if m is None or m.group(1) != val:
             raise SystemExit(f"{key} must be {val} in the mirror (got {m.group(1) if m else 'nothing'})")

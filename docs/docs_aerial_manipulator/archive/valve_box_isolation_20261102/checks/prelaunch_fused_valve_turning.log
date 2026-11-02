@@ -1,0 +1,5 @@
+PROFILE: valve_turning
+[1;31mREFUSING: AM_HW_PROFILE=valve_turning on the FUSED (EKF2) stack. In Isaac this feedback[0m
+[1;31m  lost the valve 2 of 2 (claw ~1 cm off in contact). Use the RAW-mocap stack:[0m
+[1;31m  AM_HW_PROFILE=valve_turning /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator.sh[0m
+[1;31m  (ALLOW_FUSED_CONTACT=1 overrides, for a deliberate A/B only).[0m

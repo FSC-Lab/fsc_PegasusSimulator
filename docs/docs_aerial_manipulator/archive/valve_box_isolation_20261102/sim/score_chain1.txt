@@ -1,0 +1,391 @@
+iso_vturn_1    ok          beam    +87 | lon  16.2 mm  e_R  -17.3 mrad | q2  -4.1 q3  21.1..34.0 stop  0.0% | tilt  5.8 | F p95 2.08
+                the GS's automatic steps: Ready flew 2.66 s after Go To Start, the jaws closed 0.40 s after Ready
+                the GS's automatic exit: the jaws start opening 0.24 s after the push ended, the exit flies 2.04 s after
+                   0.00 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.00 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.00 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.00 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.00 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.01 NODE W EMERGENCY ABORT on: a tilt (> 15.0 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the 
+                   0.01 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                   0.02 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.08 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.09 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                  62.33 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.33 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.35 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.33 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.33 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.47 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.16 s ago)
+                  67.49 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.17 s ago)
+                  68.32 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.60 EST  W MOCAP GUARD: mocap back after 1.28 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  68.98 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  68.98 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  68.98 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  68.98 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  68.99 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 149.88 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 149.89 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 166.32 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 166.32 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 166.33 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 166.69 PLN  I pick-and-place: EE anchor -> WORLD
+                 166.69 NODE I EE reference anchor -> WORLD (blend 1.000000 s)
+                 166.69 PLN  I push-and-pull: the claw settled 5 mm from the grasp point (2.8 mm across the handle, 11 mm/s) 0.4 s after Ready -- now WORLD-held (push_pull_world_anchor_on_han
+                 166.69 NODE I free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+                 166.70 GS   I Push: claw 5 mm from the grasp point (2.8 mm across the handle, 10 mm/s, heading 1.0 deg) after 0.00 s -- gripper CLOSE
+                 167.63 PLN  I pick-and-place: EE anchor -> WORLD
+                 167.63 NODE W contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 167.63 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 167.63 NODE I CONTACT: the EE heading target follows the handle from here
+                 187.14 PLN  I push-and-pull: push complete -- contact phase free before the jaws open (push_pull_contact_off_at_push_end)
+                 187.14 NODE W contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 187.14 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 187.14 NODE I CONTACT off: the EE heading target holds the handle's angle
+                 189.19 PLN  I push-and-pull exit: the claw stays room-held until it has climbed 60 mm (the open jaws clear of the handle), then the CoM anchor
+                 189.19 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 190.49 PLN  I pick-and-place: EE anchor -> CoM
+                 190.49 NODE I EE reference anchor -> CoM (blend 1.000000 s)
+                 190.49 PLN  I push-and-pull exit: the claw climbed 74 mm room-held in 1.3 s -- clear of the handle: the CoM anchor
+                 190.49 NODE I free-axis anchor released (the EE anchor back to the CoM)
+                 196.03 GS   I Valve Turning: Exit done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+iso_vturn_2    ok          beam    +87 | lon  17.4 mm  e_R  -21.5 mrad | q2  -5.5 q3  21.9..37.6 stop  0.0% | tilt  4.1 | F p95 2.21
+                the GS's automatic steps: Ready flew 1.05 s after Go To Start, the jaws closed 0.65 s after Ready
+                the GS's automatic exit: the jaws start opening 0.25 s after the push ended, the exit flies 2.16 s after
+                   0.00 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.00 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.00 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.00 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.00 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.01 NODE W EMERGENCY ABORT on: a tilt (> 15.0 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the 
+                   0.01 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                   0.03 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.03 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.06 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                  62.19 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.19 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.21 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.25 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.25 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.40 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.15 s ago)
+                  67.41 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                  68.24 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.53 EST  W MOCAP GUARD: mocap back after 1.28 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  68.87 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  68.87 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  68.87 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  68.88 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  68.89 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 152.94 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 152.95 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 167.90 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 167.90 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 167.91 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 168.47 PLN  I pick-and-place: EE anchor -> WORLD
+                 168.47 PLN  I push-and-pull: the claw settled 3 mm from the grasp point (-0.5 mm across the handle, 10 mm/s) 0.6 s after Ready -- now WORLD-held (push_pull_world_anchor_on_ha
+                 168.47 NODE I EE reference anchor -> WORLD (blend 1.000000 s)
+                 168.47 GS   I Push: claw 3 mm from the grasp point (0.7 mm across the handle, 18 mm/s, heading 0.6 deg) after 0.00 s -- gripper CLOSE
+                 168.47 NODE I free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+                 169.65 PLN  I pick-and-place: EE anchor -> WORLD
+                 169.65 NODE W contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 169.65 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 169.65 NODE I CONTACT: the EE heading target follows the handle from here
+                 189.15 PLN  I push-and-pull: push complete -- contact phase free before the jaws open (push_pull_contact_off_at_push_end)
+                 189.15 NODE W contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 189.15 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 189.16 NODE I CONTACT off: the EE heading target holds the handle's angle
+                 191.29 PLN  I push-and-pull exit: the claw stays room-held until it has climbed 60 mm (the open jaws clear of the handle), then the CoM anchor
+                 191.29 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 192.57 PLN  I pick-and-place: EE anchor -> CoM
+                 192.57 PLN  I push-and-pull exit: the claw climbed 65 mm room-held in 1.3 s -- clear of the handle: the CoM anchor
+                 192.57 NODE I EE reference anchor -> CoM (blend 1.000000 s)
+                 192.57 NODE I free-axis anchor released (the EE anchor back to the CoM)
+                 198.13 GS   I Valve Turning: Exit done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+iso_vturn_s2   (no turn)
+                TRUTH after the abort (10 s): tilt max   2.9, z min 1.23 m, moved 0.02 m, DIRECT kept; tilt at the record's end  1.1 deg
+                   0.00 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.04 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.04 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.04 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.04 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.04 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.04 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.04 NODE W EMERGENCY ABORT on: a tilt (> 15.0 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the 
+                   0.05 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                   0.06 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                  62.00 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.00 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.01 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.10 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.10 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.24 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.15 s ago)
+                  67.25 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.15 s ago)
+                  68.09 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.37 EST  W MOCAP GUARD: mocap back after 1.28 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  69.49 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  69.49 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  69.49 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  69.49 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  69.51 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 145.92 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 145.94 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 160.46 PLN  W push-and-pull: the handle has turned 3.0 deg since Get -- Ready's close gate follows the live handle (the claw is 42 mm from its grasp point); if the jaws do no
+                 161.18 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 161.18 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 161.19 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 162.46 PLN  W push-and-pull: the handle has turned 18.3 deg since Get -- Ready's close gate follows the live handle (the claw is 49 mm from its grasp point); if the jaws do n
+                 164.46 PLN  W push-and-pull: the handle has turned 18.3 deg since Get -- Ready's close gate follows the live handle (the claw is 59 mm from its grasp point); if the jaws do n
+                 166.46 PLN  W push-and-pull: the handle has turned 18.3 deg since Get -- Ready's close gate follows the live handle (the claw is 34 mm from its grasp point); if the jaws do n
+                 166.89 GS   W Turn: the claw did not settle above the handle within 6.0 s (last: 35 mm from the grasp point, 15.3 mm across the handle) -- ABORT: the jaws are still open, not
+                 166.89 PLN  W push-and-pull: ABORT: contact off, release then up 0.30 m and the arm home, from the hold
+                 166.89 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 166.89 PLN  W push-and-pull ABORT: [1] settle 2.0 s | [2] T = 3.95 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 471.3/48
+                 176.67 PLN  W push-and-pull: ABORT complete -- holding, arm home.
+                 176.68 GS   I Valve Turning: the abort is done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+iso_q3trip     watchdog    beam     -3 | lon   0.1 mm  e_R   -0.9 mrad | q2   1.3 q3  21.3..41.0 stop  0.0% | tilt  1.8 | F p95 0.63 | after: tilt   1.8, z min 1.23, moved 0.02 m, DIRECT kept, upright at  1.4 s
+                TRUTH after the abort (10 s): tilt max   1.8, z min 1.23 m, moved 0.01 m, DIRECT kept; tilt at the record's end  1.2 deg
+                GUARD: q3 22.8 deg < 25.0 deg (the arm buckling toward its elbow-singular branch
+                GUARD: q3 22.8 deg < 25.0 deg (the arm buckling toward its elbow-singular branch
+                   0.00 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.03 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.04 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.04 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.04 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.04 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.04 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.05 NODE W EMERGENCY ABORT on: a tilt (> 15.0 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the 
+                   0.06 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                   0.06 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                  62.15 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.15 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.16 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.13 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.13 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.27 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.15 s ago)
+                  67.29 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                  68.12 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.40 EST  W MOCAP GUARD: mocap back after 1.27 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  69.62 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  69.62 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  69.62 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  69.63 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  69.64 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 149.59 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 149.61 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 164.51 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 164.51 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 164.52 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 164.86 PLN  I pick-and-place: EE anchor -> WORLD
+                 164.86 PLN  I push-and-pull: the claw settled 1 mm from the grasp point (-0.5 mm across the handle, 23 mm/s) 0.4 s after Ready -- now WORLD-held (push_pull_world_anchor_on_ha
+                 164.86 NODE I EE reference anchor -> WORLD (blend 1.000000 s)
+                 164.86 NODE I free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+                 164.88 GS   I Push: claw 3 mm from the grasp point (0.7 mm across the handle, 16 mm/s, heading -0.6 deg) after 0.00 s -- gripper CLOSE
+                 165.75 PLN  I pick-and-place: EE anchor -> WORLD
+                 165.75 NODE W contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 165.75 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 165.75 NODE I CONTACT: the EE heading target follows the handle from here
+                 167.16 PLN  I pick-and-place: EE anchor -> CoM (FAST hand-back)
+                 167.16 NODE W contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 167.16 PLN  W push-and-pull: ABORT: contact off, release (the claw follows the vehicle at once) then up 0.30 m and the arm home, from the point the step was cut at
+                 167.16 PLN  E push-and-pull SAFETY GUARD: q3 22.8 deg < 25.0 deg (the arm buckling toward its elbow-singular branch) -- ABORT: contact off, release (the claw follows the vehi
+                 167.16 NODE W EE reference anchor -> CoM (FAST hand-back, blend 0.250000 s)
+                 167.16 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 167.16 NODE I free-axis anchor released (the EE anchor back to the CoM)
+                 167.16 NODE I CONTACT off: the EE heading target holds the handle's angle
+                 167.17 PLN  W push-and-pull ABORT: [1] settle 2.0 s | [2] T = 3.95 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 471.3/48
+                 176.95 PLN  W push-and-pull: ABORT complete -- holding, arm home.
+                 176.95 GS   I Valve Turning: the abort is done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+iso_swaytrip   watchdog    beam    +16 | lon -29.9 mm  e_R   43.3 mrad | q2 -19.1 q3   9.4..28.8 stop  0.0% | tilt 24.0 | F p95 4.66 | after: tilt 178.6, z min -16.90, moved 4.80 m, DIRECT lost, NOT UPRIGHT at  5.7 s
+                TRUTH after the abort (10 s): tilt max 178.9, z min 0.13 m, moved 2.13 m, DIRECT LOST; tilt at the record's end 164.2 deg
+                GUARD: the vehicle sways 60 mm/s against its CoM reference (> 50 mm/s; CoM error 30 mm
+                GUARD: the vehicle sways 60 mm/s against its CoM reference (> 50 mm/s; CoM error 30 mm
+                mocap guard: BRIDGING (cause jump, last good sample 0.02 s ago)
+                mocap guard: CONFIRMED (cause jump, last good sample 0.16 s ago)
+                mocap guard: LOST (cause jump, last good sample 1.00 s ago)
+                   0.00 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.00 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.01 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                   0.02 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.02 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.02 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.02 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.02 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.03 NODE W EMERGENCY ABORT on: a tilt (> 15.0 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the 
+                   0.03 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                  62.13 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.13 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.14 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.15 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.15 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.29 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.15 s ago)
+                  67.31 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                  68.14 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.42 EST  W MOCAP GUARD: mocap back after 1.28 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  69.55 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  69.55 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  69.56 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  69.56 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  69.58 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 157.99 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 157.99 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 174.63 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 174.63 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 174.64 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 175.11 PLN  W push-and-pull: the handle has turned -4.4 deg since Get -- Ready's close gate follows the live handle (the claw is 15 mm from its grasp point); if the jaws do n
+                 175.61 PLN  I pick-and-place: EE anchor -> WORLD
+                 175.61 NODE I EE reference anchor -> WORLD (blend 1.000000 s)
+                 175.61 PLN  I push-and-pull: the claw settled 13 mm from the grasp point (7.3 mm across the handle, 3 mm/s) 1.0 s after Ready -- now WORLD-held (push_pull_world_anchor_on_han
+                 175.61 NODE I free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+                 177.72 GS   I Push: claw 13 mm from the grasp point (1.8 mm across the handle, 30 mm/s, heading 0.9 deg) after 2.10 s -- gripper CLOSE
+                 178.41 PLN  W push-and-pull: the handle has turned -3.3 deg since Get -- Ready's close gate follows the live handle (the claw is 9 mm from its grasp point); if the jaws do no
+                 178.45 PLN  I pick-and-place: EE anchor -> WORLD
+                 178.45 NODE W contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 178.45 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 178.45 NODE I CONTACT: the EE heading target follows the handle from here
+                 184.19 NODE W contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 184.19 PLN  I pick-and-place: EE anchor -> CoM (FAST hand-back)
+                 184.19 NODE W EE reference anchor -> CoM (FAST hand-back, blend 0.250000 s)
+                 184.19 PLN  W push-and-pull: ABORT: contact off, release (the claw follows the vehicle at once) then up 0.30 m and the arm home, from the point the step was cut at
+                 184.19 PLN  E push-and-pull SAFETY GUARD: the vehicle sways 60 mm/s against its CoM reference (> 50 mm/s; CoM error 30 mm): the clamped contact is going unstable -- ABORT: co
+                 184.19 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 184.20 NODE I free-axis anchor released (the EE anchor back to the CoM)
+                 184.20 NODE I CONTACT off: the EE heading target holds the handle's angle
+                 184.20 PLN  W push-and-pull ABORT: [1] settle 2.0 s | [2] T = 3.95 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 471.3/48
+                 185.64 NODE E DIRECT WATCHDOG TRIPPED: excess tilt (15.1/15.0 deg) with the claw at the handle (planner: 'ABORTING (SAFETY GUARD: the vehicle sway') -- an EMERGENCY ABORT (th
+                 185.76 NODE E DIRECT WATCHDOG: the emergency abort (excess tilt (15.1/15.0 deg)) cannot hold it -- tilt 25.0 deg past the hard limit 25.0. Reverting to SAFETY.
+                 185.76 NODE W Returned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.
+                 187.25 EST  W MOCAP GUARD: BRIDGING (jump, last good sample 8 ms ago) -- the odometry is now EKF2 + [-147.0 4.4 980.4] mm
+                 187.39 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.15 s ago)
+                 187.41 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                 187.95 EST  W mocap guard: 240 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                 188.24 EST  E MOCAP GUARD: LOST (jump, last good sample 1.00 s ago)
+                 188.95 EST  W mocap guard: 360 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                 189.40 EST  W MOCAP GUARD: mocap back after 2.16 s (jump) -- blending the odometry back over 172.7 s from 17271.4 mm away
+
+iso_emerg      watchdog    beam    +12 | lon  -5.2 mm  e_R    7.4 mrad | q2  -2.3 q3  19.1..40.8 stop  0.0% | tilt  4.7 | F p95 2.00 | after: tilt   4.7, z min 1.23, moved 0.02 m, DIRECT kept, upright at  6.7 s
+                TRUTH after the abort (10 s): tilt max   4.7, z min 1.23 m, moved 0.01 m, DIRECT kept; tilt at the record's end  1.1 deg
+                GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFETY
+                GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFETY
+                   0.00 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.00 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.01 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.01 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.01 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.02 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.02 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.02 NODE W EMERGENCY ABORT on: a tilt (> 3.5 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the p
+                   0.03 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                   0.03 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                  62.42 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.42 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.42 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.43 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.43 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.57 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.15 s ago)
+                  67.59 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.16 s ago)
+                  68.42 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.70 EST  W MOCAP GUARD: mocap back after 1.28 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  69.07 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  69.07 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  69.08 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  69.08 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  69.09 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 149.05 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 149.06 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 163.91 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 163.92 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 163.92 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 164.23 PLN  I pick-and-place: EE anchor -> WORLD
+                 164.23 NODE I EE reference anchor -> WORLD (blend 1.000000 s)
+                 164.23 PLN  I push-and-pull: the claw settled 6 mm from the grasp point (-6.0 mm across the handle, 4 mm/s) 0.3 s after Ready -- now WORLD-held (push_pull_world_anchor_on_han
+                 164.23 NODE I free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+                 164.53 GS   I Push: claw 9 mm from the grasp point (-2.9 mm across the handle, 23 mm/s, heading 1.1 deg) after 0.29 s -- gripper CLOSE
+                 165.80 PLN  I pick-and-place: EE anchor -> WORLD
+                 165.80 NODE W contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 165.80 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 165.80 NODE I CONTACT: the EE heading target follows the handle from here
+                 172.51 NODE E DIRECT WATCHDOG TRIPPED: excess tilt (3.5/3.5 deg) with the claw at the handle (planner: 'FLYING push (CONTACT) T=19.5s') -- an EMERGENCY ABORT requested from t
+                 172.51 NODE W contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 172.51 PLN  W push-and-pull: ABORT: contact off, release (claw world-held) then up 0.30 m and the arm home, from the point the step was cut at
+                 172.51 PLN  E push-and-pull SAFETY GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFETY) -- ABORT: contact off, release (claw world-held) then u
+                 172.51 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 172.52 NODE I CONTACT off: the EE heading target holds the handle's angle
+                 172.52 PLN  W push-and-pull ABORT: [1] settle 2.0 s | [2] T = 3.95 s (a_max, 0 dilations), defect 2.3e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 471.3/48
+                 174.53 PLN  I pick-and-place: EE anchor -> CoM
+                 174.53 PLN  I push-and-pull ABORT: released -- the claw back to the CoM anchor
+                 174.53 NODE I EE reference anchor -> CoM (blend 1.000000 s)
+                 174.53 NODE I free-axis anchor released (the EE anchor back to the CoM)
+                 182.29 PLN  W push-and-pull: ABORT complete -- holding, arm home.
+                 182.30 NODE W EMERGENCY ABORT done in 9.8 s (excess tilt (3.5/3.5 deg)): holding, arm home, the watchdog armed again -- a second tilt / drift trip in this engagement reverts 
+                 182.30 GS   I Valve Turning: the abort is done -- the claw is clear of the handle, the gripper CLOSES for the free flight
+
+iso_mfreeze    watchdog    beam    +10 | lon -15.6 mm  e_R   23.6 mrad | q2 -20.0 q3  15.7..28.7 stop  0.3% | tilt 24.7 | F p95 6.82 | after: tilt 179.8, z min -10.67, moved 5.73 m, DIRECT lost, NOT UPRIGHT at  4.3 s
+                TRUTH after the abort (10 s): tilt max 180.0, z min 0.13 m, moved 2.37 m, DIRECT LOST; tilt at the record's end 164.2 deg
+                mocap guard: BRIDGING (cause frozen, last good sample 0.02 s ago)
+                mocap guard: CONFIRMED (cause frozen, last good sample 0.16 s ago)
+                GUARD: mocap CONFIRMED (frozen, last good sample 0.22 s ago
+                GUARD: mocap CONFIRMED (frozen, last good sample 0.22 s ago
+                mocap guard: LOST (cause frozen, last good sample 1.00 s ago)
+                   0.00 EST  W MOCAP GUARD ON: bridge > 50 ms, confirm > 150 ms, LOST > 1.00 s, frozen > 50 ms, jump > 20 mm / 10 deg (centre also predicted by EKF2's velocity above the speed
+                   0.01 NODE W FREE-AXIS HEADING on: the EE heading target turns with the handle the free axis moves -- offset / 0.160 m (counter-clockwise turn).
+                   0.01 NODE W FREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along
+                   0.01 NODE W LAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed 
+                   0.01 NODE W HEADING COMPANION from the CONTACT FLAG: the EE heading target follows the handle while the planner's contact flag is on and holds its angle once it goes off. T
+                   0.01 NODE I ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+                   0.02 NODE W EMERGENCY ABORT on: a tilt (> 15.0 deg) or drift (> 0.75 m) watchdog trip with the claw at the handle ('/uav_0/whole_body_planner/push_pull/status': Ready, the 
+                   0.03 NODE I Control mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- e
+                   0.03 PLN  I pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home
+                   0.04 PLN  I push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap
+                  62.16 GS   I Box Pushing: the gripper closes within 25 mm of the grasp point, 3 mm across the handle (simulation), the claw slower than 30 mm/s over 0.3 s; not met within 2.
+                  62.16 GS   I Box Pushing / Valve Turning: the grasp is a STALL; a full close = nothing in the jaws (SIMULATION rule)
+                  62.18 GS   I Valve Turning: the jaws stay CLOSED in free flight and open at Ready; after the grasp the TURN; the close gate also wants the claw's heading within 15 deg (and 
+                  67.46 EST  E MOCAP GUARD: BRIDGING (jump) and NO fresh EKF2 odometry to bridge with -- the odometry stops (the flight node's feedback timeout follows)
+                  67.46 EST  W mocap guard: 1 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  67.61 EST  E MOCAP GUARD: CONFIRMED (jump, last good sample 0.16 s ago)
+                  67.62 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (jump, last good sample 0.17 s ago)
+                  68.45 EST  W mocap guard: 120 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                  68.74 EST  W MOCAP GUARD: mocap back after 1.28 s (jump) -- blending the odometry back over 0.0 s from 0.0 mm away
+                  74.43 ARM  I Local hold is a plain PD (hold_feedforward_mode: none) -- no gravity model, so it sags by about g/kp below the reference. Set 'gravity' for the calibrated PD+ h
+                  74.43 ARM  W PASS-THROUGH CORRECTIONS: the streamed torque is treated as a NOMINAL LAW and gets the PD+ calibration's command-level pipeline on top of the mapping -- frictio
+                  74.43 ARM  I External torque pass-through on '~/joint_torque_command' (N*m in; timeout 0.30 s, re-arm after 3 fresh commands; nothing streaming => the local PD hold; command
+                  74.43 ARM  I Activated in torque mode, PURE TRACKING; holding the pose found at activation until 'external_torque_controller/reference_joint_trajectory' publishes.
+                  74.45 ARM  I External torque stream live -- THE EXTERNAL LAW NOW OWNS THE ARM: torques passed through, this controller's own hold and every auxiliary term stand down.
+                 150.04 GS   I Valve Turning: Go To Start -- the gripper stays CLOSED in free flight (Ready opens it above the handle)
+                 150.04 GS   W Valve Turning: external_torque_controller leaves passthrough_error_damping_joints empty (this arm config does not use it, e.g. Isaac's current-mode arm; the har
+                 164.92 PLN  I push-and-pull: on the handle -- the claw keeps following the vehicle until it settles within 25 mm of the grasp point (push_pull_handle_settle_tol), then WORLD-
+                 164.92 PLN  I push-and-pull: on the handle -- the contact phase waits for the jaws (push_pull_contact_at_ready false: CONTACT at the Push press)
+                 164.93 GS   I Turn: Ready To Turn is done -- the gripper closes by itself once the claw is centred, and the turn follows the grasp (push_pull_auto_push)
+                 165.25 PLN  I pick-and-place: EE anchor -> WORLD
+                 165.25 PLN  I push-and-pull: the claw settled 4 mm from the grasp point (-3.7 mm across the handle, 30 mm/s) 0.3 s after Ready -- now WORLD-held (push_pull_world_anchor_on_ha
+                 165.25 NODE I EE reference anchor -> WORLD (blend 1.000000 s)
+                 165.25 NODE I free-axis anchor LATCHED (the world hold, wb_ee_anchor_free_axis_on_world)
+                 165.25 GS   I Push: claw 3 mm from the grasp point (-1.6 mm across the handle, 11 mm/s, heading -0.3 deg) after 0.00 s -- gripper CLOSE
+                 166.44 PLN  I pick-and-place: EE anchor -> WORLD
+                 166.44 NODE W contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 166.44 PLN  I push-and-pull: contact phase flag -> CONTACT (chi = 0: trim frozen, F_hat_y rendered on the EE impedance)
+                 166.45 NODE I CONTACT: the EE heading target follows the handle from here
+                 170.67 EST  E MOCAP GUARD: CONFIRMED (frozen, last good sample 0.15 s ago)
+                 170.68 GS   W MOCAP GUARD: fault CONFIRMED -- flying on the EKF2 bridge (frozen, last good sample 0.16 s ago)
+                 170.75 PLN  I pick-and-place: EE anchor -> CoM
+                 170.75 NODE I EE reference anchor -> CoM (blend 1.000000 s)
+                 170.75 NODE W contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 170.75 PLN  W push-and-pull: ABORT: contact off, release then up 0.30 m and the arm home, from the point the step was cut at
+                 170.75 PLN  E push-and-pull SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.22 s ago) -- ABORT: contact off, release then up 0.30 m and the arm home, from the point
+                 170.75 NODE I free-axis anchor released (the EE anchor back to the CoM)
+                 170.75 NODE I CONTACT off: the EE heading target holds the handle's angle
+                 170.75 PLN  I push-and-pull: contact phase flag -> free (chi = 1: F_hat_y = 0)
+                 170.75 PLN  W push-and-pull ABORT: [1] settle 0.7 s | [2] T = 3.95 s (a_max, 0 dilations), defect 2.2e-16 m, sigma_nd 0.716, peak |v| 0.17 m/s, tau_j 0.61 N.m, rotor 471.3/48
+                 171.24 EST  W mocap guard: 240 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                 171.52 EST  E MOCAP GUARD: LOST (frozen, last good sample 1.00 s ago)
+                 172.15 NODE E DIRECT WATCHDOG TRIPPED: excess tilt (15.1/15.0 deg) with the claw at the handle (planner: 'ABORTING (SAFETY GUARD: mocap CONFIRMED ') -- an EMERGENCY ABORT (th
+                 172.24 EST  W mocap guard: 360 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                 172.29 NODE E DIRECT WATCHDOG: the emergency abort (excess tilt (15.1/15.0 deg)) cannot hold it -- tilt 25.5 deg past the hard limit 25.0. Reverting to SAFETY.
+                 172.29 NODE W Returned to SAFETY mode: PX4 attitude control restored; arm on the PD+gravity hold.
+                 173.24 EST  W mocap guard: 480 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+                 174.24 EST  W mocap guard: 600 sample(s) NOT forwarded to PX4 -- rejected, or a fault episode not yet recovered (EKF2 coasts on the IMU)
+

@@ -1,0 +1,32 @@
+18:51:15 pid 210210 gone -- starting the chain
+18:51:24 start iso_base_1 (box on the 10-27 tag set)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_base_1] 
+18:57:14 start iso_base_2 (box on the 10-27 tag set)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_base_2] 
+19:03:04 start iso_base_3 (box on the 10-27 tag set)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_base_3] 
+19:08:55 start iso_mfreeze_2 hold=0 noise=none  --mocap-fault freeze@push+4:2.5
+[iso_mfreeze_2] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.21 s ago)) -- gripper open, co
+19:12:12 start iso_swaytrip_2 hold=0 noise=0.32,0.12,2 push_pull_guard_sway_speed=0.05 
+  push_pull_guard_sway_speed -> 0.05
+[iso_swaytrip_2] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING (SAFETY GUARD: the vehicle sways 67 mm/s against its CoM reference (> 50 mm/
+19:15:42 start iso_mfreeze_head (the 11-01 build) noise=none  --mocap-fault freeze@push+4:2.5
+[iso_mfreeze_head] 
+19:21:33 start iso_swaytrip_head (the 11-01 build) noise=0.32,0.12,2 push_pull_guard_sway_speed=0.05 
+  push_pull_guard_sway_speed -> 0.05
+[iso_swaytrip_head] 
+19:27:24 start iso_mfreeze_3 hold=0 noise=none  --mocap-fault freeze@push+4:2.5
+[iso_mfreeze_3] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.21 s ago)) -- gripper open, co
+19:30:49 start iso_swaytrip_3 hold=0 noise=0.32,0.12,2 push_pull_guard_sway_speed=0.05 
+  push_pull_guard_sway_speed -> 0.05
+[iso_swaytrip_3] ABORTED: timeout (25 s): the GS's automatic Ready To Push  [mode=DIRECT plan=HOLD push_pull=DONE go_to_start next=ready (the gripper opens first) -- c
+19:34:17 CHAIN DONE

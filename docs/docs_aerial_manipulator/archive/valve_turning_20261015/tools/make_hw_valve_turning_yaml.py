@@ -58,7 +58,7 @@ _spec = importlib.util.spec_from_file_location("make_valve_turning_yaml",
 SIM = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(SIM)   # OVERRIDES, ADDITIONS, PLANNER_BLOCK, pp (MUST_KEEP, CFG)
 
-CFG = SIM.pp.CFG
+CFG = SIM.CFG
 SRC = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650.yaml")
 DST = os.path.join(CFG, "params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_valve_turning.yaml")
 VEHICLE_NAME = "AM-T650-WB-L1-4D-HW-VALVE"
@@ -81,11 +81,7 @@ HW_NODE = {
                                "(free flight: the bench-kf 0.036758) -- a revert no longer sinks ~0.2 m"),
     "vehicle_idle_thrust": ("0.252449", "SAFETY map matched to the flown kf 4.260431e-05 "
                             "(free flight: the bench-kf 0.241528)"),
-    # the grip schedule's jaw sensor (2026-10-31): the real gripper is in the arm's own joint_states,
-    # in METRES -- open +0.019, closed on the 5 mm fin -0.0097 (sim: Isaac's gripper bus, rad)
-    "wb_grip_state_topic": ('"fsc_open_manipulator/joint_states"', "the real gripper's joint state"),
-    "wb_grip_joint_name": ('"gripper_left_joint"', "the real gripper's joint"),
-    "wb_grip_closed_below": ("0.0", "m: open +0.019, closed on the fin -0.0097 (10-16/10-31 bags)"),
+    # (2026-11-02: the grip schedule's jaw sensor removed -- the gripper position is no node input)
 }
 
 HEADER = f"""# =============================================================================
@@ -127,7 +123,7 @@ def build():
         if len(pat.findall(out)) != 1:
             raise SystemExit(f"{key}: not exactly once in the hardware file's node section")
         out = pat.sub(lambda m: f"{m.group(1)} {val}  # HARDWARE VALVE TURNING: {why}", out)
-    for key, val in SIM.pp.MUST_KEEP.items():
+    for key, val in SIM.MUST_KEEP.items():
         m = re.search(rf"^    {re.escape(key)}: ([^\s#]+)", out, flags=re.M)
         if m is None or m.group(1) != val:
             raise SystemExit(f"{key} must be {val} in the hardware file (got {m.group(1) if m else 'nothing'})")

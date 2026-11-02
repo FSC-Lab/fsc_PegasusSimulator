@@ -1,0 +1,4 @@
+iso_mfreeze_head watchdog    beam    +11 | lon  10.0 mm  e_R  -11.2 mrad | q2  -9.4 q3  19.3..44.0 stop  0.0% | tilt 12.9 | F p95 0.94 | after: tilt  12.9, z min 1.23, moved 0.04 m, DIRECT kept, upright at  4.3 s
+                TRUTH after the abort (10 s): tilt max  12.9, z min 1.23 m, moved 0.02 m, DIRECT kept; tilt at the record's end  1.5 deg
+iso_swaytrip_head watchdog    beam    +15 | lon  21.3 mm  e_R  -30.4 mrad | q2 -20.0 q3  18.7..40.8 stop  0.4% | tilt 26.0 | F p95 4.09 | after: tilt 178.1, z min -14.80, moved 5.40 m, DIRECT lost, NOT UPRIGHT at 11.7 s
+                TRUTH after the abort (10 s): tilt max 180.0, z min 0.13 m, moved 2.37 m, DIRECT LOST; tilt at the record's end 164.2 deg

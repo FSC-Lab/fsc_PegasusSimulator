@@ -1,0 +1,15 @@
+GSVG G1_jaws_opened_at_go_to_start FAILED
+GSVG G1_damping_raised_for_the_mission ok
+GSVG G1_damping_back_after_the_exit ok
+GSVG G1_two_sets_raise_and_restore ok
+GSVG G2_planning_keeps_the_damping ok
+GSVG G2_aborted_restores_it ok
+GSVG G3_no_close_at_25_deg ok
+GSVG G3_closed_at_5_deg ok
+GSVG G4_never_closed ok
+GSVG G4_aborted_at_the_wait_limit ok
+GSVG G5_closed_without_a_heading ok
+GSVG G6_jaws_still_opened FAILED
+GSVG G6_damping_unchanged ok
+GSVG G6_nothing_to_restore ok
+GSVG result FAIL 2

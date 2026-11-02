@@ -1,0 +1,12 @@
+GSVAL A_events_s release 0.007335 open 0.009824 open_report 0.410795 exit 0.415041
+GSVAL A_one_each ok
+GSVAL A_order_release_open_report_exit ok
+GSVAL A_exit_on_the_report ok
+GSVAL B_release_asked ok
+GSVAL B_no_open_no_exit ok
+GSVAL C_released_and_opened ok
+GSVAL C_no_exit_without_the_report ok
+GSVAL C_exit_button_usable_again ok
+GSVAL D_no_open_no_exit ok
+GSVAL D_exit_button_usable_again ok
+GSVAL result PASS

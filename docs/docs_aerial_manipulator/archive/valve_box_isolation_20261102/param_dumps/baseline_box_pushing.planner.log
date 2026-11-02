@@ -1,0 +1,12 @@
+[INFO] [launch]: All log files can be found below /home/shiqi/.ros/log/2026-11-01-17-42-42-675194-shiqi-desktop-157078
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [whole_body_trajectory_planner-1]: process started with pid [157083]
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.707364022] [uav_pd.whole_body_trajectory_planner]: pick-and-place ABORT: arm to the release pose [0, 0, 30, 0] deg while climbing, hold 2.0 s, then home[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.707829122] [uav_pd.whole_body_trajectory_planner]: vehicle: t650_aerial_manipulator (whole-body model total 3.746174 kg, base_com [+0.00000 -0.01785 +0.00000] m model frame -- must match the node's wb_base_com_*)[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.707838391] [uav_pd.whole_body_trajectory_planner]: armature: joint-diagonal [0.0100 0.0194 0.0097 0.0097] kg m^2 -- must match the node's wb_armature_j1..j4[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.707846047] [uav_pd.whole_body_trajectory_planner]: transition planner: bspline (flat B-spline outputs, constraints ENFORCED (rest, joint box, speed/accel, rotor + joint-torque bounds))[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.712746053] [uav_pd.whole_body_trajectory_planner]: push-and-pull: the raw-mocap guard on state_estimator/mocap_guard -- a confirmed fault aborts into a hover, every step waits for the mocap[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.717680533] [uav_pd.whole_body_trajectory_planner]: usable workspace published: 192x192 grid, r [0.069, 0.298] m, z [-0.331, 0.003] m, 24% filled (fold beta >= 5 deg); pick-and-place envelope down to fold 5 deg (sigma_nd >= 0.10): z >= -0.331 m[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572962.717697669] [uav_pd.whole_body_trajectory_planner]: whole-body trajectory planner up: silent in SAFETY, streams the compatible reference in DIRECT (HOLD -> plan -> Send -> EXECUTING).[0m
+[whole_body_trajectory_planner-1] [0m[INFO] [1793572968.244527533] [rclcpp]: signal_handler(SIGINT/SIGTERM)[0m
+[INFO] [whole_body_trajectory_planner-1]: process has finished cleanly [pid 157083]

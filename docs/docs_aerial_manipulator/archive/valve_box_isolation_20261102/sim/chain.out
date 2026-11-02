@@ -1,0 +1,38 @@
+17:52:43 pid 158531 gone -- starting the chain
+17:52:52 start iso_box_1 (box regression)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_box_1] completed
+17:57:57 start iso_box_2 (box regression)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_box_2] completed
+18:03:05 start iso_box_3 (box regression)
+  push_pull_push_distance -> 0.40
+  push_pull_push_mean_speed -> 0.021
+  push_pull_push_min_time_s -> 0.0
+[iso_box_3] completed
+18:08:10 start iso_vhold_1 hold=10.0 noise=none  
+[iso_vhold_1] ABORTED: timeout (15 s): the GS's grasp event (the planner's contact flag on)  [mode=DIRECT plan=EXECUTING T=6.8s push_pull=FLYING exit T=6.8s]
+18:11:37 start iso_vturn_1 hold=0 noise=none  
+[iso_vturn_1] completed
+18:15:09 start iso_vturn_2 hold=0 noise=none  
+[iso_vturn_2] completed
+18:18:43 start iso_vturn_s2 hold=0 noise=0.32,0.12,2  
+[iso_vturn_s2] ABORTED: push-and-pull ABORTED while the GS closing the gripper: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+18:21:57 start iso_q3trip hold=0 noise=none push_pull_guard_q3_min_deg=25.0 
+  push_pull_guard_q3_min_deg -> 25.0
+[iso_q3trip] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 22.8 deg < 25.0 deg (the arm buckling toward its elbow-singular branch)
+18:25:12 start iso_swaytrip hold=0 noise=0.32,0.12,2 push_pull_guard_sway_speed=0.05 
+  push_pull_guard_sway_speed -> 0.05
+[iso_swaytrip] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the vehicle sways 60 mm/s against its CoM reference (> 50 mm/s; CoM error 
+18:28:35 start iso_emerg hold=0 noise=none system_wd_max_tilt_deg=3.5 
+  system_wd_max_tilt_deg -> 3.5
+[iso_emerg] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the flight node's DIRECT watchdog (an emergency: an abort instead of SAFET
+18:31:55 start iso_mfreeze hold=0 noise=none  --mocap-fault freeze@push+4:2.5
+[iso_mfreeze] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: mocap CONFIRMED (frozen, last good sample 0.22 s ago)) -- gripper open, co
+18:35:05 start iso_holdfreeze hold=10.0 noise=none  --mocap-fault freeze@push+3:2.5
+[iso_holdfreeze] ABORTED: timeout (15 s): the GS's grasp event (the planner's contact flag on)  [mode=DIRECT plan=EXECUTING T=6.8s push_pull=FLYING exit T=6.8s]
+18:38:40 CHAIN DONE

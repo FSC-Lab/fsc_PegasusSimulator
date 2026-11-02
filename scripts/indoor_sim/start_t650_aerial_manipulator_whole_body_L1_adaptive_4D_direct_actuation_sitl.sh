@@ -177,6 +177,19 @@ if [[ -n "${ARM_GS_AUTO_PUSH:-}" ]]; then
   [[ "$ARM_GS_AUTO_PUSH" == "true" || "$ARM_GS_AUTO_PUSH" == "false" ]] || { echo "ERROR: ARM_GS_AUTO_PUSH must be true or false, got '$ARM_GS_AUTO_PUSH'" >&2; exit 1; }
   ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_auto_push:=$ARM_GS_AUTO_PUSH"
 fi
+# ARM_GS_VALVE_HOLD_S (2026-11-02, Pegasus archive/valve_box_isolation_20261102): the Valve tab's
+# STATIC HOLD -- after the grasp the station reports it to the planner (push_pull/grasp: contact on),
+# holds this many seconds, reports the release and exits. 0 = the turn follows the grasp. Unset =
+# the station's default (0; the tab's spin box sets it live).
+if [[ -n "${ARM_GS_VALVE_HOLD_S:-}" ]]; then
+  [[ "$ARM_GS_VALVE_HOLD_S" =~ ^[0-9]+(\.[0-9]+)?$ ]] || { echo "ERROR: ARM_GS_VALVE_HOLD_S must be a number of seconds, got '$ARM_GS_VALVE_HOLD_S'" >&2; exit 1; }
+  [[ "$ARM_GS_VALVE_HOLD_S" == *.* ]] || ARM_GS_VALVE_HOLD_S="$ARM_GS_VALVE_HOLD_S.0"   # a double parameter
+  ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG -p push_pull_valve_hold_s:=$ARM_GS_VALVE_HOLD_S"
+fi
+# ARM_GS_EXTRA_ARGS (2026-11-02): further `-p name:=value` arguments for the arm GS, appended as given
+# (the isolation campaign's A/B flies the 11-01 build with its Go To Start behaviour:
+# "-p push_pull_valve_open_at_go_to_start:=true -p push_pull_valve_close_in_free_flight:=false")
+[[ -n "${ARM_GS_EXTRA_ARGS:-}" ]] && ARM_GS_TAB_ARG="$ARM_GS_TAB_ARG $ARM_GS_EXTRA_ARGS"
 
 # Variant hooks consumed by the base launcher (same mechanism as the sibling
 # L1 launcher; the Isaac entrypoint and label differ — TORQUE-mode plant).

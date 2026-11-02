@@ -1,0 +1,114 @@
+[INFO] [launch]: All log files can be found below /home/shiqi/.ros/log/2026-11-01-17-43-11-487101-shiqi-desktop-157724
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [autopilot_whole_body_l1_direct_actuation_node-1]: process started with pid [157728]
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.519729983] [realtime]: [1;32mMemory locked (mlockall): page faults eliminated as a jitter source[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530618496] [uav_pd.fsc_autopilot_ros2]: Starting initialization...
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530713115] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530725951] [uav_pd.fsc_autopilot_ros2]: Configured Whole-Body Direct-Actuation Autopilot With Whole-Body Direct Actuation Client Parameters:
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_posctl_type: robust_controller
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_ude_type: velocity_based
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_posctl_rate: 100
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_attctl_rate: 250
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_max_tilt_deg: 15
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_max_rate_dps: 360
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_max_drift_m: 0.75
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_fb_timeout_s: 1
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_fb_land_speed: 0.2
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_mocap_guard_topic: state_estimator/mocap_guard
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_arm_go_home_service: 
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_arm_go_home_delay_s: 1
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_abort_service: 
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_abort_status_topic: 
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_hard_tilt_deg: 30
+[autopilot_whole_body_l1_direct_actuation_node-1]  - system_wd_abort_timeout_s: 15
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530750031] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530754310] [uav_pd.fsc_autopilot_ros2]: Vehicle Model: Vehicle Model Parameters:
+[autopilot_whole_body_l1_direct_actuation_node-1]  - vehicle_name: AM-T650-WB-L1-4D-PUSH
+[autopilot_whole_body_l1_direct_actuation_node-1]  - vehicle_num_rotors: 4
+[autopilot_whole_body_l1_direct_actuation_node-1]  - vehicle_idle_thrust: 0.241528
+[autopilot_whole_body_l1_direct_actuation_node-1]  - vehicle_thrust_scaling: 0.036758
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530757297] [uav_pd.fsc_autopilot_ros2]: Creating `robust_controller` PositionController
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530818935] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530825189] [uav_pd.fsc_autopilot_ros2]: Created position controller "robust_controller" with Robust Controller Parameters:
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_pid_form: nested
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_apply_pos_err_saturation: true
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_apply_vel_err_saturation: true
+[autopilot_whole_body_l1_direct_actuation_node-1]  - vehicle_mass: 3.74617
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_k_pos_x: 0.45
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_k_pos_y: 0.45
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_k_pos_z: 1
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_k_vel_x: 7
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_k_vel_y: 7
+[autopilot_whole_body_l1_direct_actuation_node-1]  - posctl_k_vel_z: 7
+[autopilot_whole_body_l1_direct_actuation_node-1]  - safety_min_thrust_setpoint: 0
+[autopilot_whole_body_l1_direct_actuation_node-1]  - safety_max_thrust_setpoint: 150
+[autopilot_whole_body_l1_direct_actuation_node-1]  - safety_max_tilt_angle: 45
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530855874] [uav_pd.fsc_autopilot_ros2]: Creating `velocity_based` UDE
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530900977] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.530906390] [uav_pd.fsc_autopilot_ros2]: Created UDE "velocity_based": UDE Parameters:
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_gain: 0.45
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_height_threshold: 0.4
+[autopilot_whole_body_l1_direct_actuation_node-1]  - vehicle_mass: 3.74617
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_disturbance_lbx: -10
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_disturbance_ubx: 10
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_disturbance_lby: -10
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_disturbance_uby: 10
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_disturbance_lbz: -10
+[autopilot_whole_body_l1_direct_actuation_node-1]  - ude_disturbance_ubz: 10
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531273759] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531488013] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531490939] [uav_pd.fsc_autopilot_ros2]: arm boundary sign map [+1 +1 +1 +1] (identity = Isaac convention; URDF hardware = [-1 +1 +1 -1]).
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531494924] [uav_pd.fsc_autopilot_ros2]: [1;36mFREE-AXIS ANCHOR on: while in CONTACT the EE reference rides the CoM error along the model axis [0.000 1.000 0.000] by 0.75 (blend 1.0 s) -- a handle free along it turns instead of folding the arm.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531499005] [uav_pd.fsc_autopilot_ros2]: [1;36mLAW CHECK: observer-driven share of u3 is CAPPED per joint at [0.000 0.000 0.000 0.060] N.m (0 = uncapped) -- wb_u3_estimate_max_j*; bounds the estimate/feedforward pair against a joint held by stiction. wb_control_debug[89..92] raw vs [93..96] applied.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531502501] [uav_pd.fsc_autopilot_ros2]: [1;36mLAW CHECK: u3 coupling feedforward carries the observer estimate (wb_u3_internal_ff true, source 4D INTERNAL d_int^f = C_x T^-T w_hat_int) -- the arm pre-compensates u + d_hat, not u alone.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531504735] [uav_pd.fsc_autopilot_ros2]: [1;36mLAW CHECK: EE reference anchored to the CoM (wb_ee_anchor_com true) -- the impedance closes on the RELATIVE error e_y - [e_x; 0]; the world-fixed streamed r_ed is not what is held.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531507042] [uav_pd.fsc_autopilot_ros2]: [1;32mARMATURE: joint-diagonal [0.0100 0.0194 0.0097 0.0097] kg m^2 (bench calibration); the link h h^T term is removed.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531520657] [uav_pd.fsc_autopilot_ros2]: Whole-body law up: model total 3.746174 kg (hover 36.75 N), k_x=50.0 k_v=12.6 k_R=1.6 k_w=1.20 K_y=[120 197 120 0] D_y=[20 33 20 0] GMO=on(K_o 0.50/0.10/0.10) impedance=shaped dls=0.30 posture=0.00/0.00/0.000 i_max=0.00 ramp=0.0s tau_max=3.0 gmo_achieved=false
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531529788] [uav_pd.fsc_autopilot_ros2]: [1;35mDISTURBANCE OBSERVER: L1 ADAPTIVE (not the GMO). A_s=-[2.00 2.00 2.00] Ts=0.0000s omega_c=[1.00 0.74 0.85] omega_i=2.00 omega_x=2.0 L_c var=[100 0.25 0.0025] attribution=ON (attributed F_y) bounds=[20.0 N, 2.00 N.m, 1.50 N.m | 15.0 N, 3.00 N.m][0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531535945] [uav_pd.fsc_autopilot_ros2]: [1;35mATTRIBUTION: FOUR-DIMENSIONAL, on the joint rows (the note's Sept 2026 revision). omega_q=0.200 rad/s, task phase flag=free, collision threshold=0.00 N (off). F_hat_y is ZERO in free flight by construction; u3's feedforward is C_x T^-T w_hat_int with per-block omega_x = [0.10 0.10 0.10] rad/s (F_hat^f at the scalar 2.0) when wb_u3_internal_ff_use_w_hat is true (it is true). wb_l1_decompose / omega_i / lc_var_* are NOT used. In contact the translational rows of d_hat keep adapting (the note's Layer 1, contact force included). wb_control_debug[97..100] = F_hat raw, [101..104] = w_hat_q, [105] = chi.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [WARN] [1793572991.531540215] [uav_pd.fsc_autopilot_ros2]: [1;32mLAW CHECK: joint-posture PID is OFF (all gains 0) -- u3 carries no term outside the published law.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531561516] [uav_pd.fsc_autopilot_ros2]: [1;36mBase-link CoM set from config: [+0.00000 -0.01785 +0.00000] m (MODEL frame) -- the bare airframe's CoM relative to the rotor centre. Home-pose system CoM r_0c_0 is now [+0.00009 +0.00468 -0.01449] m, i.e. +4.7 mm along the arm axis (0.17 N.m of thrust moment at hover). This must match the whole-body planner's base_com_x/y/z or the law and the reference disagree about where the CoM is.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531676055] [uav_pd.fsc_autopilot_ros2]: Parameter loaded successfully
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.531689116] [uav_pd.fsc_autopilot_ros2]: Wrench Allocator: Wrench Allocator Parameters:
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor0_px: 0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor0_py: 0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor0_km: 0.018164
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor1_px: -0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor1_py: -0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor1_km: 0.018164
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor2_px: 0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor2_py: -0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor2_km: -0.018164
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor3_px: -0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor3_py: 0.229907
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_rotor3_km: -0.018164
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_thrust_coeff: 4.26043e-05
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_omega_idle: 64.0603
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_omega_max: 730.051
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_motor_idle: 0
+[autopilot_whole_body_l1_direct_actuation_node-1]  - alloc_motor_max: 1
+[autopilot_whole_body_l1_direct_actuation_node-1]   f_idle: 0.174836 N, f_max: 22.707 N, max collective: 90.828 N, torque scales [N.m]:  10.3606  10.3606 0.818548
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.532305736] [uav_pd.fsc_autopilot_ros2]: pos_feedback_sub_ subscribe to  state_estimator/local_position/odom.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.532596957] [uav_pd.fsc_autopilot_ros2]: arm_joint_state_sub_ subscribe to  fsc_open_manipulator/joint_states.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.532640399] [uav_pd.fsc_autopilot_ros2]: [1;32mJOINT VELOCITY: the law closes on 'fsc_open_manipulator/external_torque_controller/velocity_observer' (falls back to joint_states velocity after 50 ms stale).[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.532644838] [uav_pd.fsc_autopilot_ros2]: ARM RELEASE at a handover: n/a (wb_arm_hold_stream true: this node holds the arm itself)
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.532903925] [uav_pd.fsc_autopilot_ros2]: arm_reference_sub_ subscribe to  fsc_open_manipulator/external_torque_controller/reference_joint_trajectory  (the planner that owns the arm reference -- NOT the controller's echo).
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.533148306] [uav_pd.fsc_autopilot_ros2]: wb_streamed_ref_sub_ subscribe to  fsc_autopilot_ros2/whole_body_direct_actuation/reference.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.534209282] [uav_pd.fsc_autopilot_ros2]: [1;32mMOCAP GUARD: watching '/uav_pd/state_estimator/mocap_guard' (the estimator's raw-mocap guard). While its message is fresh (< 0.5 s old) and not MOCAP, EKF2 not fusing vision is the guard's doing and does NOT trip the feedback-loss failsafe (the odometry going silent still does); DIRECT entry is refused unless it is fresh and MOCAP.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.534291242] [uav_pd.fsc_autopilot_ros2]: pos_com_sub_ subscribe to  fsc_autopilot_ros2/position_controller/reference.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535168166] [uav_pd.fsc_autopilot_ros2]: arm_torque_pub_ publish to  fsc_open_manipulator/external_torque_controller/joint_torque_command.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535325371] [uav_pd.fsc_autopilot_ros2]: motors_pub_ publish to  fmu/in/actuator_motors.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535469732] [uav_pd.fsc_autopilot_ros2]: mode service available at  fsc_autopilot_ros2/whole_body_direct_actuation/set_direct_mode.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535539906] [uav_pd.fsc_autopilot_ros2]: EE-anchor service available at  fsc_autopilot_ros2/whole_body_direct_actuation/set_ee_anchor_com.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535630322] [uav_pd.fsc_autopilot_ros2]: EE-anchor FAST hand-back service at fsc_autopilot_ros2/whole_body_direct_actuation/set_ee_anchor_com_fast (blend 0.00 s; 0 = the normal 1.00 s).
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535693835] [uav_pd.fsc_autopilot_ros2]: contact-flag service available at  fsc_autopilot_ros2/whole_body_direct_actuation/set_contact.
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535832260] [uav_pd.fsc_autopilot_ros2]: controller discovery at fsc_autopilot_ros2/list_controllers, activation at fsc_autopilot_ros2/activate_controller (2 mode(s))
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535846594] [uav_pd.fsc_autopilot_ros2]: Outer loop setup complete: position controller at 100.000000 hz
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535851574] [uav_pd.fsc_autopilot_ros2]: Inner loop setup complete: whole-body law + arm torques at 250.000000 hz (both modes)
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535867234] [uav_pd.fsc_autopilot_ros2]: [1;32m
+[autopilot_whole_body_l1_direct_actuation_node-1] ################################################################################
+[autopilot_whole_body_l1_direct_actuation_node-1]     Starting whole-body direct-actuation autopilot for vehicle: AM-T650-WB-L1-4D-PUSH   
+[autopilot_whole_body_l1_direct_actuation_node-1] ################################################################################[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572991.535870552] [uav_pd.fsc_autopilot_ros2]: [1;33mControl mode: SAFETY (PX4 runs attitude+rate+mixer; the arm is held by THIS NODE's streamed hold torques). Call the mode service to enter WHOLE-BODY DIRECT -- entry is GATED on a settled hover, and on the arm sitting within wb_gate_arm_rad of its own smoothed reference.[0m
+[autopilot_whole_body_l1_direct_actuation_node-1] [INFO] [1793572997.231008865] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [autopilot_whole_body_l1_direct_actuation_node-1]: process has finished cleanly [pid 157728]
