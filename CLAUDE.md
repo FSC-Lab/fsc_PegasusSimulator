@@ -2254,6 +2254,34 @@ Verification" section.
   options, not an arbitrary shortcut — but if the paper's verification actually wants the real
   physical attachment point instead, this needs revisiting.
 
+## JGCD paper controller test: X650 + winch, direct rotor/winch commands, no PX4 (2026-10-23)
+
+Isaac plant for the JGCD paper's controller (CCM-B + flatness + rotor observer + UDE/L1 + CBF +
+acados length NMPC), which runs as a ROS 2 node in `~/source/JGCD2025-sim/ros/` (see its README and
+`doc/findings.md` Sec. 16 for results). Treat these as one unit:
+- `application/slungload/jgcd_x650_winch_direct.py` -- X650 (MN4014, lag 10.51 /s) + 0.28 kg winch
+  on the body (drone side 3.8 kg incl. rod_a), 0.58 kg brick + 0.02 kg rod_b; cable = two 0.2 m rods
+  + prismatic joint, l = 0.4 + e, e in [0, 1.6] (the older scenarios' lower_limit=0 at the initial
+  length cannot retract). `_LeanMultirotor` replaces Vehicle.update_state (USD transform query +
+  np.array on carb.Float3 cost ~0.7 ms/step) and skips the propeller animation when headless.
+  The X650 body origin is 3.3 cm below the asset root: the spawn position is corrected from the
+  asset so the cable joint does not snap. Real-time pacing + per-second RTF log + summary;
+  `JGCD_LOCKSTEP=1` waits for each reply. Ends the run if the controller leaves.
+- `extensions/.../utils/jgcd_bridge_backend_utils.py` -- `JGCDBridgeBackend`: vehicle backends[0]
+  (rotor speed references; the stock ROS2Backend's per-rotor subscriptions all write rotor 3 --
+  late-binding lambda in its loop), AK40-10 drum model behind an elastic cable, one
+  Float64MultiArray state per step (`jgcd/state`), `jgcd/cmd`, `jgcd/dist`, `/clock`. Its ROS node
+  spins on its own executor thread: never `rclpy.spin_once` it elsewhere (that moves it to the
+  global executor and the thread stops receiving -- seen as cmds=0).
+- `scripts/isaacsim/run_jgcd_case.sh` -- one case (Isaac + controller). Kills stale instances,
+  random ROS_DOMAIN_ID per case, kills Isaac's process group (`$!` is only the python_r_fsc.sh
+  wrapper: killing it leaves Isaac running, and a leftover instance once published into later cases).
+
+Measured: RTF 0.997-1.000 per case (worst 1 s window >= 0.94), step 3.5 ms of 4 ms at 250 Hz,
+command age 4 ms. Isaac adds a body torque the paper's model lacks (cable at the body origin, not
+the CoM): the controller needs its body-torque UDE (`--torque-obs 10`), otherwise CCM-B parks the
+payload 0.2 m (hover) to 2.9 m (wind) off target. Pegasus' default LinearDrag stays on.
+
 ## Work in progress: variable-length slung-load cable + AK40-10 Isaac Sim emulator
 
 Design doc: `docs/design_requirements/design_requirements.txt`. Full implementation plan (context,
