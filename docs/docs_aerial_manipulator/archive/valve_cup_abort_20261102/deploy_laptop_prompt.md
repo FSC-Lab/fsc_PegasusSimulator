@@ -28,7 +28,8 @@ is the 2026-10-27 one):
    the OPEN report (`push_pull_valve_exit_wait_s` 0.0).
 
 Steps:
-1. Pull fsc_open_manipulator on `valve-isolation-20261102`, report its HEAD, and REBUILD `utils_custom_ground_station`
+1. Pull fsc_open_manipulator on `valve-isolation-20261102` (expected HEAD `a685640` or later; origin
+   Gao907/fsc_open_manipulator), report its HEAD, and REBUILD `utils_custom_ground_station`
    (`colcon build --packages-select utils_custom_ground_station`). An older station full-closes on the fin, opens on
    an abort only near the handle, and never reports the open (the planner's own gripper reading still climbs).
 2. Start the arm GS (hardware) and confirm the Valve Turning tab logs

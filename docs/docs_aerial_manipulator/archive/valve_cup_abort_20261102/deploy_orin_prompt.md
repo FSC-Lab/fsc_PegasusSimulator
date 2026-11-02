@@ -36,7 +36,10 @@ What changed (so you know what to look for):
 
 Steps:
 1. Pull `valve-isolation-20261102` in fsc_autopilot_ros2, fsc_trajectory_planner, fsc_drone_state_estimator_ros2 and
-   (arm workspace) fsc_open_manipulator; report each HEAD commit.
+   (arm workspace) fsc_open_manipulator; report each HEAD commit. Expected (or later): fsc_autopilot_ros2 `3afedfc`,
+   fsc_trajectory_planner `c8e2005`, fsc_drone_state_estimator_ros2 `7c780bb`, fsc_open_manipulator `a685640` (its
+   origin is Gao907/fsc_open_manipulator). The estimator's origin may be an https URL: pull works, push would need
+   `git@github.com:FSC-Lab/fsc_drone_state_estimator_ros2.git`.
 2. REBUILD, in this order, and show the last lines of each build: `fsc_autopilot_ros2`, then `fsc_trajectory_planner`
    (it links the law library, so AFTER fsc_autopilot_ros2), then `fsc_drone_state_estimator_ros2`, then (in the arm
    workspace) `open_manipulator_x_custom_controller`. rclcpp silently ignores yaml keys a node does not declare -- an
