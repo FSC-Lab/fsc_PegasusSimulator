@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # (2026-11-02, Pegasus archive/valve_box_isolation_20261102) A COPY of push_pull_20261003/tools/run_pl.sh that starts the
-# isaacsim stack from the 10-27 BASELINE worktree (~/baseline_box_20261027_ws, tag box-pushing-20261027): its
+# isaacsim stack from the 10-27 BASELINE worktree (~/baseline_box_20261027_ws, branch box-pushing-20261027): its
 # stack sources that workspace, so the node, planner and estimator are the 10-27 builds. The per-flight yaml
 # is the one fly.sh edits (WB_SIM_YAML); the scene, the arm stack and the driver are today's.
 # One AUTONOMOUS push-and-pull flight in Isaac, headless, whole-body 4-D L1:

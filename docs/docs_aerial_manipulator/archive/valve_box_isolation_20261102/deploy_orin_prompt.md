@@ -12,7 +12,7 @@ sections 1, 2 and 6 first).
 
 What changed (so you know what to look for):
 1. THE BOX PROFILE IS THE 2026-10-27 BOX PUSH AGAIN. Its two yamls are byte-identical to the ones flown on 10-27
-   (fsc_autopilot_ros2 tag `box-pushing-20261027` = a316625); every post-10-27 behaviour that reached the box without a
+   (fsc_autopilot_ros2 branch `box-pushing-20261027` = a316625); every post-10-27 behaviour that reached the box without a
    yaml key now sits behind a key that defaults to the 10-27 behaviour (the node's arm RELEASE, the arm controller's j4
    trim target, the estimator's predicted jump gate -- the box stack passes `mocap_guard_predict:=false`).
 2. THE GRIPPER POSITION IS NO INPUT TO THE NODE ANY MORE. The 10-31 grip schedule and the 11-01 two parameter sets are
@@ -30,7 +30,8 @@ Steps:
    - fsc_trajectory_planner (the planner)
    - fsc_drone_state_estimator_ros2 (only the launch file: the `mocap_guard_predict` argument)
    - fsc_open_manipulator (the arm controller's `trim_target_includes_error_damping`; the arm GS is the laptop's)
-   Also fetch the tags: `git fetch --tags` in each, and confirm `box-pushing-20261027` exists in all four.
+   Also confirm the branch `box-pushing-20261027` exists on origin in all four (`git fetch && git branch -r | grep
+   box-pushing-20261027`); the tag `box-pushing-20261027-flown` marks the same commit.
 2. REBUILD, in this order, and show the last lines of each build: `fsc_autopilot_ros2`, then `fsc_trajectory_planner`
    (it links the law library, so AFTER fsc_autopilot_ros2), then `fsc_drone_state_estimator_ros2`, then (in the arm
    workspace) `open_manipulator_x_custom_controller`. rclcpp silently ignores yaml keys a node does not declare.
@@ -51,7 +52,7 @@ Steps:
    The node's phase lines (anchor, contact, free axis) print only in DIRECT, which the bench cannot enter -- do NOT try.
 5. With the arm stack up on the bench: open and close the gripper from the arm GS's Control tab while the whole-body
    node runs (SAFETY). Nothing may appear in the node pane (the gripper position is no input to the node any more).
-6. Report: the four HEAD commits and the tag check, the build tails, the two "tuned values present" lines, the guard
+6. Report: the four HEAD commits and the branch check, the build tails, the two "tuned values present" lines, the guard
    banner, the bench lines of step 4, and anything that differed. NEVER enter whole-body DIRECT on the ground with props
    on (the law commands ~57 % on all motors the instant it is entered).
 

@@ -24,7 +24,7 @@ What changed on the ground side (the arm GS, `utils_custom_ground_station`):
   the tab's own grip state) is Valve-only again.
 
 Steps:
-1. Pull fsc_open_manipulator on the branch the user names (`git fetch --tags` too; `box-pushing-20261027` must exist),
+1. Pull fsc_open_manipulator on the branch the user names (the branch `box-pushing-20261027` must exist on origin too),
    report its HEAD, and REBUILD `utils_custom_ground_station` (`colcon build --packages-select
    utils_custom_ground_station`). An older station would OPEN the jaws at Go To Start and never call `push_pull/grasp`.
 2. Start the arm GS (hardware) and confirm the Valve Turning tab logs `Valve Turning: the jaws stay CLOSED in free flight
@@ -41,6 +41,6 @@ Steps:
    open, Exit (automatic) -> the jaws close. A planner guard trip reads `ABORTING (SAFETY GUARD: ...)`; the tab opens the
    jaws, and closes them once the abort is done.
 6. THE WAY BACK to the 10-27 box push: check out `box-pushing-20261027` in fsc_open_manipulator, rebuild
-   `utils_custom_ground_station`, and fly the Box Pushing tab -- the Orin checks out the same tag in its three repos.
+   `utils_custom_ground_station`, and fly the Box Pushing tab -- the Orin checks out the same branch in its three repos.
 
 Report: the HEAD commit, the rebuild tail, the Valve tab's startup line, and the session plan.

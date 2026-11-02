@@ -18,10 +18,11 @@ Everything is on branch `valve-isolation-20261102` in the five repos, committed 
 
 ## 1. The baseline (the user's way back)
 
-Tag `box-pushing-20261027` (annotated) + branch `baseline/box-pushing-20261027` in every repo. The branch is not
-named like the tag: a tag and a branch of one name make `git push origin box-pushing-20261027` fail as ambiguous.
+Branch `box-pushing-20261027` in every repo, at the commits below, plus the annotated tag `box-pushing-20261027-flown` at
+the same commits (the tag is not named like the branch: a tag and a branch of one name make `git push origin
+box-pushing-20261027` fail as ambiguous).
 
-| repo | tag at | what flew 10-27 17:07 / 17:21 EDT | why the tag is exact |
+| repo | branch at | what flew 10-27 17:07 / 17:21 EDT | why it is exact |
 |---|---|---|---|
 | fsc_autopilot_ros2 | a316625 | yamls + stack scripts a316625, C++ built at 53877d3 | `git diff 53877d3..a316625` touches no C++/CMake/xml |
 | fsc_trajectory_planner | 7d8ede9 | C++ built at ceaab3b | `ceaab3b..7d8ede9` touches only test/ |
@@ -30,7 +31,7 @@ named like the tag: a tag and a branch of one name make `git push origin box-pus
 | fsc_PegasusSimulator | 4939d04 | the yaml generators | its make_push_pull_yaml.py + make_hw_box_pushing_yaml.py, run against a316625's config, `--check` UP TO DATE |
 
 Checked on this desktop (2026-11-01 evening):
-- The tag set builds: worktree workspace `~/baseline_box_20261027_ws` (`build.sh`: the five packages,
+- The baseline builds: worktree workspace `~/baseline_box_20261027_ws` (`build.sh`: the five packages,
   `-DFSC_BUILD_COORDINATED_ADMITTANCE=OFF` as on the Orin), 99 s, rc 0.
 - The baseline raw hardware stack's pre-launch part (cut before line 1275, its first `tmux` session action; no
   launch or send-keys in the cut), `AM_HW_PROFILE=box_pushing`, run against that workspace: all 62 tuned values
@@ -92,7 +93,7 @@ the damping raise. Box tab: the lost-DIRECT rule back to 10-27.
 
 **fsc_drone_state_estimator_ros2**: launch arg `mocap_guard_predict` (default true).
 
-**fsc_PegasusSimulator**: box generators restored to the tag (`make_push_pull_yaml.py`, `make_hw_box_pushing_yaml.py`);
+**fsc_PegasusSimulator**: box generators restored to the baseline (`make_push_pull_yaml.py`, `make_hw_box_pushing_yaml.py`);
 `make_valve_turning_yaml.py` self-contained (no import of the box generator) and moved to D1/P; the hardware valve
 generator without the jaw sensor; the mail generator + the release key; `push_pull_planner_check.sh` compares the two
 valve planner keys; the 4-D launcher's `ARM_GS_VALVE_HOLD_S` and `ARM_GS_EXTRA_ARGS` knobs. Tools here: `tools/param_dump.sh` +
@@ -102,7 +103,7 @@ valve planner keys; the 4-D launcher's `ARM_GS_VALVE_HOLD_S` and `ARM_GS_EXTRA_A
 ## 4. The coupling after the isolation
 
 What the two tasks still share, and why a valve change can no longer move the box:
-- **Yamls / generators**: the valve generator no longer imports the box generator; the box generators are the tagged
+- **Yamls / generators**: the valve generator no longer imports the box generator; the box generators are the baseline
   ones. A valve regeneration writes only the two valve yamls.
 - **Node**: one law and one client. Every valve behaviour is a key the box yamls do not set, and each key's default is
   the 10-27 behaviour (parameter dump: section 5).
@@ -126,7 +127,7 @@ output `sim/score_*.txt`).
 | planner loopback on the SIM and the HARDWARE box yaml | ALL PASS both; [9p] "no guard abort used the FAST hand-back (the 10-27 box)"; [9q] the grasp event refused with the key off, on a straight push, off the handle |
 | arm loopback (`run_passthrough_corrections_test.sh`, mock hardware) | ALL PASS; 8b: key false → j4 trim −3.54 counts = the 10-27 target (−3.55), key true → +0.36 = the fix (+0.37) |
 | **parameter dumps, box yamls (hardware + sim), the 10-27 build vs the new** | node: **164 common parameters, 0 differ**, 8 new ones all unset (code default = off); planner: **255 common, 0 differ**, 37 new ones at inert defaults (`tools/param_dump.sh`, `param_dump_compare.py`) |
-| raw hardware stack pre-launch, `box_pushing` | "all **62** tuned values present -- the box-pushing tune AS FLOWN 2026-10-27" (the tag's own check: 62); the guard banner `mocap_guard:=true mocap_guard_predict:=false` |
+| raw hardware stack pre-launch, `box_pushing` | "all **62** tuned values present -- the box-pushing tune AS FLOWN 2026-10-27" (the baseline's own check: 62); the guard banner `mocap_guard:=true mocap_guard_predict:=false` |
 | raw hardware stack pre-launch, `valve_turning` | all 87 tuned values present, no "predates" line, the arm build declares the trim switch |
 | fused stack, both contact profiles | refused, as before |
 | new panel harness `tools/gs_valve_phase_check.sh` (real Valve + Box tabs, fake planner/arm) | **25/25**: V1 jaws CLOSED at Go To Start + damping/trim raised and restored + closed again after the Exit; V2 Ready opens, no close while the planner settles, close after the hand-over, the turn, no grasp event; V3 static hold grasp(true) → 1 s → grasp(false) → open (no release call) → Exit; V4 abort in the hold retires it, ABORTED closes the jaws; V5 no grasp service → nothing moves; V6 the Box tab: no gripper command at Go To Start or after the Exit, a lost DIRECT reads the planner only |
@@ -136,14 +137,14 @@ output `sim/score_*.txt`).
 metrics from `pl_metrics.py` in `checks/box_metrics_*.txt`).
 
 *Box regression.* The 10-28 comparison campaign's whole-body flight (280 g, 0.40 m at 21 mm/s, its slots, the
-release-first exit), flown three times on the NEW build (`iso_box_*`, 17:53-18:08) and three times on the 10-27 TAG SET
+release-first exit), flown three times on the NEW build (`iso_box_*`, 17:53-18:08) and three times on the 10-27 BASELINE
 (`iso_base_*`, 19:35-19:50: node, planner and estimator from `~/baseline_box_20261027_ws`; the same scene, arm stack and
 driver). All six complete.
 
 | set | slide e_imp rms [N] | release e_imp [N] | eps slide max [mm] | slide claw deflection [mm] | jaw stall [rad] |
 |---|---|---|---|---|---|
 | new build, 3 runs | 1.08 ± 0.04 | 1.20 ± 0.38 | 23.0 ± 5.1 | 6.44 ± 0.41 | −0.215 / −0.241 / −0.227 |
-| 10-27 tag set, same evening, 3 runs | 0.88 ± 0.02 | 0.75 ± 0.24 | 19.7 ± 2.5 | 4.80 ± 0.07 | −0.085 / −0.109 / −0.128 |
+| 10-27 baseline, same evening, 3 runs | 0.88 ± 0.02 | 0.75 ± 0.24 | 19.7 ± 2.5 | 4.80 ± 0.07 | −0.085 / −0.109 / −0.128 |
 | 10-28 campaign (pre-isolation code), 5 runs | 0.99 ± 0.11 (0.78–1.08) | 0.65 ± 0.07 | 22.2 ± 4.2 | 5.67 ± 0.72 | −0.126 … −0.212 |
 
 The new build reads ~0.2 N higher in the slide, consistently over its three runs. **This tracks how the simulated
@@ -153,7 +154,7 @@ jaws closed on the fin's grip shim, not the build.** The stall splits into two g
 - deep: 1.03–1.12 N.
 
 The pre-isolation code shows the same split: on 10-28 one shallow run read 0.78 N and four deep ones 1.03–1.08 N. That
-evening the tag set happened to close shallow 3 of 3 and the new build deep 3 of 3.
+evening the baseline happened to close shallow 3 of 3 and the new build deep 3 of 3.
 
 What the runs share:
 - The planner's grasp reference at the close agrees to 0.3 mm.
@@ -202,8 +203,8 @@ Verdict:
 ## 6. The way back (rollback to the 10-27 box push)
 
 On the Orin (the three flight repos) and the laptop (the arm GS):
-1. In each repo: `git fetch --tags && git checkout box-pushing-20261027` (detached; or the branch
-   `baseline/box-pushing-20261027`).
+1. In each repo: `git fetch && git checkout box-pushing-20261027` (the branch; the tag `box-pushing-20261027-flown`
+   marks the same commit).
    - fsc_autopilot_ros2 → a316625, fsc_trajectory_planner → 7d8ede9, fsc_drone_state_estimator_ros2 → 4badef8,
      fsc_open_manipulator → a0cb8b8 (laptop: the arm GS; Orin: the controller, identical to its 10-27 build 98f44e2).
 2. Rebuild in order: `fsc_autopilot_ros2`, then `fsc_trajectory_planner` (links the law), then
@@ -214,7 +215,7 @@ On the Orin (the three flight repos) and the laptop (the arm GS):
    — its pre-launch check must print "all 62 tuned values present".
 4. To return: check out the working branch again and rebuild in the same order.
 
-The yamls do not need the tag: on the new branches the two box yamls are byte-identical to a316625's.
+The yamls do not need the baseline branch: on the new branches the two box yamls are byte-identical to a316625's.
 
 ## 7. Not done / known gaps
 
