@@ -1,0 +1,7 @@
+10:41:50 start h1_back3 fault=force,30,1.0,-3,0,0 friction=0.072 noise=none gs= 
+[h1_back3] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the vehicle sways 178 mm/s against its CoM reference (> 150 mm/s; CoM erro
+10:45:08 start h2_side3 fault=force,30,1.0,0,3,0 friction=0.072 noise=none gs= 
+[h2_side3] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the vehicle sways 191 mm/s against its CoM reference (> 150 mm/s; CoM erro
+10:48:28 start h3_lift5 fault=force,30,1.0,0,0,5 friction=0.072 noise=none gs= 
+[h3_lift5] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 6.8 deg falling at 160.2 deg/s -> -9.2 deg in 0.10 s (q2 3.6 deg) < 3.0
+10:51:48 CHAIN DONE

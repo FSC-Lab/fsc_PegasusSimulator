@@ -60,7 +60,20 @@ START = (-1.0, 0.0)
 MOCAP_PIVOT = (0.0935, 0.0014, 0.0899)
 TABLE_TOP = 0.800
 FIN_RADIUS, FIN_BEARING_Y, FIN_TOP, BEAM_TOP, BEAM_REACH = 0.1600, 0.0006, 0.2040, 0.0540, 0.2001
-GRASP_BELOW_TOP = 0.025
+# THE U PUSH (2026-11-02, Pegasus archive/valve_upush_20261102): the jaws stay OPEN on the fin and the BRACKET
+# between the claws (the gripper's hub crank and rods) pushes the fin's back edge -- an edge-on-edge contact ~54 mm
+# above and ~8 mm behind the claw point in the turn pose, horizontal along the turn. So the claw point goes DEEP and
+# BEHIND: 80 mm under the fin top puts that contact 20-28 mm under it, 25 mm behind the fin's centre keeps the
+# bracket 13 mm clear of the fin on the Ready slide-in -- the slack the turn then closes (~5 deg). The clamp's grasp
+# (25 mm under the top, at the centre) left the bracket 9 mm ABOVE the fin: Isaac on the bare fin turned 19 of 90 deg.
+# THE VALVE'S MOCAP MARKER BALLS (rotor frame, Valve_Assembly_v2.usda fsc:mocap_markers_m, the 10-28 night
+# layout) and the fin's height / half sizes -- the planner's clearance guard and fin-in-the-U monitor (2026-11-03)
+VALVE_MARKERS = ((0.00494, 0.01504, 0.09249), (0.04006, -0.01983, 0.12549), (0.10483, 0.04341, 0.07049),
+                 (0.12515, -0.04252, 0.06849), (0.19245, 0.01072, 0.09249))
+FIN_HEIGHT, FIN_HALF_LEN, FIN_HALF_THICK = 0.130, 0.020, 0.0025
+GRASP_BELOW_TOP = 0.080          # was 0.025 (the clamp)
+GRASP_BEHIND_CENTRE = 0.025      # along the turn, against its direction; was 0 (the clamp)
+TURN_DEG_PLAN = 93.0             # for a 90 deg valve turn: the slack and the push's lag (Isaac 88.4-95.1 deg)
 
 PLANNER_BLOCK = f"""
     # --- push-and-pull mode in its TURN form: VALVE TURNING, 2026-10-15 ------
@@ -87,10 +100,16 @@ PLANNER_BLOCK = f"""
     push_pull_valve_axis_offset: [{-MOCAP_PIVOT[0]:.4f}, {-MOCAP_PIVOT[1]:.4f}, {-MOCAP_PIVOT[2]:.4f}]
     #
     # The grasp point: the AXIS POINT + this offset in the ROTOR's frame -- the fin's
-    # radius and bearing, the claw point 25 mm under the fin top ({FIN_TOP * 1e3:.0f} mm
-    # above the plate bottom). The jaws close across the fin's 5 mm (radial);
-    # the push is TANGENTIAL, through the pads' friction on the fin's 40 mm faces.
-    push_pull_ee_offset: [{FIN_RADIUS:.4f}, {FIN_BEARING_Y:.4f}, {FIN_TOP - GRASP_BELOW_TOP:.4f}]
+    # radius, the claw point {GRASP_BEHIND_CENTRE * 1e3:.0f} mm BEHIND the fin's centre along the turn and
+    # {GRASP_BELOW_TOP * 1e3:.0f} mm under its top ({FIN_TOP * 1e3:.0f} mm above the plate bottom).
+    # 2026-11-02, THE U PUSH (Pegasus archive/valve_upush_20261102): the jaws stay OPEN (the arm
+    # GS's push_pull_valve_cup_position = the open position) and the bracket between the claws
+    # pushes the fin's back edge, 20-28 mm under its top, horizontally along the turn. Isaac,
+    # bare fin, this grasp + the turn below + the governor: 5 of 5 complete, the valve at
+    # 85.5-95.1 deg, tilt <= 3.4 deg, q3 >= 16.5 deg (two nominal, three under the drift).
+    # Was [0.160, 0.0006, 0.179] (25 mm under the top, the pads' friction pushing a CLAMPED fin):
+    # with the jaws open that grasp leaves the bracket 9 mm above the fin -- the valve turned 19 deg.
+    push_pull_ee_offset: [{FIN_RADIUS:.4f}, {FIN_BEARING_Y - (GRASP_BEHIND_CENTRE if TURN_DEG_PLAN > 0 else -GRASP_BEHIND_CENTRE):.4f}, {FIN_TOP - GRASP_BELOW_TOP:.4f}]
     # The drone's yaw at the fin = the beam's yaw + this: +90 puts the nose
     # along the turn's tangent for a COUNTER-CLOCKWISE turn (the planner refuses
     # a nose off the tangent). With the beam at 180 deg the nose is -y (-90),
@@ -111,7 +130,9 @@ PLANNER_BLOCK = f"""
     # turn's start, which the free-axis anchor carries onto the clamped fin, compressed the
     # arm into the q3 guard 3 of 6 (all safe aborts); 18 s completed 4 of 4.
     # The 360 deg history below stays.
-    push_pull_turn_deg: 90.0
+    # 2026-11-02 (THE U PUSH): planned {TURN_DEG_PLAN:.0f} deg for a 90 deg VALVE turn -- the bracket
+    # meets the fin after ~13 mm (~5 deg) and pushes it, never pulls; Isaac 88.4-95.1 deg.
+    push_pull_turn_deg: {TURN_DEG_PLAN:.1f}
     push_pull_push_distance: 0.50
     # 36 s for the full turn: mean 10 deg/s, peak 25 deg/s of yaw, peak CoM
     # speed ~0.11 m/s. THE TURN'S SPEED IS A TRADE (v3 / v5, 2026-10-15): the
@@ -135,15 +156,22 @@ PLANNER_BLOCK = f"""
     # Every channel low-passed over filter_s first: the contact phase rings at
     # ~1 Hz (the lead jitters +-4 deg with it) and the governor must answer
     # trends, not the ring (pf_n1).
-    push_pull_follow: false
+    # 2026-11-02 (THE U PUSH): ON. A U that loses the fin leaves it behind the vehicle, and the
+    # vehicle then flies into it -- Isaac, bare fin: the landing gear hit the fin's top once it was
+    # ~70 deg behind. The lead channel holds the turn while the valve lags [10, 20] deg (above the
+    # U's ~5 deg slack and the push's 9-10 deg peaks) and ABORTS after hold_timeout_s: the grasp
+    # that could not push (k8) aborted at a 34 deg lag, nothing touched; nominal it never acts.
+    push_pull_follow: true
     push_pull_follow_filter_s: 1.0
-    push_pull_follow_lead_deg: [6.0, 12.0]
+    push_pull_follow_lead_deg: [10.0, 20.0]
     push_pull_follow_tilt_deg: [7.0, 10.0]
     push_pull_follow_wrist_deg: [15.0, 25.0]
     push_pull_follow_stale_s: 0.3
     push_pull_follow_bandwidth: 4.0
     push_pull_follow_recover_s: 5.0
-    push_pull_follow_hold_timeout_s: 6.0
+    # 2026-11-03 (the fin-loss safety pass): a lag that HOLDS the turn aborts after 2 s (was 6): the
+    # vehicle hovers next to the fin meanwhile, and a fin actually out of the U aborts at once (below)
+    push_pull_follow_hold_timeout_s: 2.0
     push_pull_exit_time_s: 3.0
     # THE ARM IN THE TURN: [0, 5, 25, 0] deg since 2026-10-18 (README 12; was
     # [0, 10, 20, 0]): the same 30 deg fold, so the claw's pitch and the grasp
@@ -183,7 +211,9 @@ PLANNER_BLOCK = f"""
     # (2026-11-02) the VALVE'S EXIT ORDER is kept on purpose (the arm GS's push_pull_valve_box_exit
     # false, the default): open with the claw held in the room, then this room-held climb. The
     # box's release-first order was tried on the valve in Isaac (10-18: 2 of 7 vs 3 of 3).
-    push_pull_exit_world_held_dz: 0.06
+    # 2026-11-02 (THE U PUSH): 0.12 -- the claw point is now 80 mm under the fin top and the claws
+    # reach ~95 mm down it; 0.12 m clears the top by ~25 mm before the claw follows the vehicle.
+    push_pull_exit_world_held_dz: 0.12
     # WHEN the law's contact phase switches -- the GRIPPER is the signal (the
     # box push's rule): on at the Push press (the jaws' stall), free when the
     # turn completes, before the jaws open.
@@ -327,13 +357,23 @@ PLANNER_BLOCK = f"""
     # ... the user's details (2026-11-02, the morning's design): "open" is the gripper READING open --
     # its own joint state, read by the planner (on hardware the Orin, no WiFi in between; the arm
     # GS's report on the open goal's result also counts, whichever comes first) -- at most ~1 s
-    # without either, and the first ~60 mm of the climb FAST (its own leg, 0.8 s)
+    # without either; the climb (2026-11-03) is ONE leg, below
     push_pull_abort_open_timeout_s: 1.0
     push_pull_abort_gripper_topic: "isaacsim_manipulator/gripper_state"
     push_pull_abort_gripper_joint: "gripper_joint"
     push_pull_abort_gripper_open_at: -0.03
-    push_pull_abort_fast_climb: 0.06
-    push_pull_abort_fast_climb_s: 0.8
+    # ONE CLIMB (2026-11-03, user: the abort climbed twice -- a short stop, then higher): the fast
+    # leg now IS the whole climb. Two rest-to-rest legs (60 mm in 0.8 s, then the rest of the
+    # 0.30 m) stopped the U push's claw ~20 mm under the fin top, beside the fin, with the claw
+    # following the vehicle; and with the jaws already open the fast start had no purpose left.
+    # One min-snap leg, 0.30 m in 1.5 s (user, same day: "executed immediately without any waiting
+    # time / hesitation" -- 2.5 s started too gently, 10 mm only after 0.5 s): it STARTS like the old
+    # 60 mm / 0.8 s leg (10 mm at 0.30 s, it was 0.28) and never stops; the claw clears the fin top
+    # (80 mm) ~0.6 s in; peak 0.44 m/s / 1.0 m/s^2 (the old leg: 0.70 m/s^2). Then the arm folds home
+    # (the planner: a fast leg that covers the whole climb is the climb, the fold starts from it).
+    push_pull_abort_climb: 0.30
+    push_pull_abort_fast_climb: 0.30
+    push_pull_abort_fast_climb_s: 1.5
     push_pull_abort_fast_follow: true
     # THE EXIT-WINDOW ABORT (earlier on 2026-11-02: the claw HELD IN THE ROOM until it had climbed
     # clear of the fin) is OFF: it contradicts the claw following the vehicle.
@@ -380,7 +420,9 @@ PLANNER_BLOCK = f"""
     #     The persistence stays 0.2 s: the static q3 guard shares it.
     push_pull_guard_box_tilt_deg: 4.0
     push_pull_guard_box_persist_s: 0.20
-    push_pull_guard_box_stale_s: 0.50
+    # 0.20 s (2026-11-03; was 0.50): the valve's mocap AND the arm's joint states -- the fin-in-the-U
+    # monitor and the clearance guard both need them; a silent, frozen or jumping feed aborts
+    push_pull_guard_box_stale_s: 0.20
     push_pull_guard_q3_min_deg: 3.0
     # the q3 RATE rule ON since 2026-10-28 night (0.0 = off, the 10-22 setting):
     push_pull_guard_q3_lookahead_s: 0.1
@@ -401,6 +443,40 @@ PLANNER_BLOCK = f"""
     push_pull_guard_sway_speed: 0.15
     push_pull_guard_sway_filter_s: 0.25
     push_pull_guard_sway_persist_s: 0.20
+    # THE FIN IN THE U (2026-11-03, user: "what if the fin goes out of the U during the turn?"; Pegasus
+    # archive/valve_upush_20261102 section 9): losing the fin is harmless -- the turn carrying on while
+    # the valve stays put is not (Isaac f0: the landing gear flew into the fin). On every valve mocap
+    # sample from Ready's end through the turn, the fin's place relative to the claw (the fin from the
+    # mocap, the claw from the joints + odometry + attitude) aborts AT ONCE (0.02 s) when it is out of
+    # the U. Limits just outside every completed Isaac turn (tools/fin_monitor_replay.py, 24 runs):
+    # the claw's depth under the fin top >= 71 mm in them (the shallow grasps that could not push:
+    # <= 27); the fin across the claw <= 22.6 mm; the fin behind the bracket <= 6 mm (f0, lost: 173);
+    # ahead of it <= 47 mm (the slack at the turn's start, a drifting vehicle catching up; k3: 69).
+    push_pull_guard_fin_depth_min: 0.050
+    push_pull_guard_fin_across_max: 0.025
+    push_pull_guard_fin_behind_max: 0.015
+    push_pull_guard_fin_ahead_max: 0.060
+    push_pull_guard_fin_bracket_back: 0.008
+    push_pull_guard_fin_persist_s: 0.02
+    # ... and the arm folding onto its upper stop on the fin (the forced JAM: the fin stays in the U, the
+    # vehicle presses on it, q3 32 -> 50 deg in 1.2 s; completed turns q3 <= 34.7)
+    push_pull_guard_fin_q3_max_deg: 40.0
+    push_pull_valve_fin: [{FIN_RADIUS:.4f}, {FIN_BEARING_Y:.4f}, {FIN_TOP:.4f}, {FIN_HEIGHT:.4f}, {FIN_HALF_LEN:.4f}, {FIN_HALF_THICK:.4f}]
+    # THE CLEARANCE GUARD (2026-11-03): whatever the cause, the skids, struts, rotor discs and arm links
+    # (not the gripper) against the fin, beam and hub (15 mm) and the marker balls (5 mm), 0.02 s.
+    # Completed Isaac turns (tools/clearance_replay.py): boxes >= 25 mm (the forearm by the fin); balls
+    # 10-22 mm -- the LEFT SKID's front end passes over the tallest ball (#2, by the hub, its top 140 mm
+    # above the plate) mid-turn, as the vehicle runs ahead of its circle; two drift runs BRUSHED it
+    # (m3_final_drift3, k3: Isaac's contact report). The real T650's gear sits 5.5 mm deeper: lower that
+    # ball (the others top out <= 107 mm) to give this guard room.
+    push_pull_guard_clearance: 0.015
+    push_pull_guard_clearance_marker: 0.005
+    push_pull_guard_clearance_persist_s: 0.02
+    push_pull_guard_clearance_range: 0.8
+    push_pull_valve_beam: [-0.0250, {BEAM_REACH:.4f}, 0.0250, {BEAM_TOP:.4f}, 0.0140]
+    push_pull_valve_hub: [0.0250, {BEAM_TOP:.4f}]
+    push_pull_valve_markers: [{", ".join(f"{v:.5f}" for m in VALVE_MARKERS for v in m)}]
+    push_pull_valve_marker_radius: 0.015
     # THE PRE-GRASP ROOM HOLD (2026-10-31, archive/valve_room_hold_guards_20261031 after the 10-31
     # evening hardware flight): with the claw room-held above the handle the base drifted 54 mm in
     # the 1.2 s hold, Ready started 67 mm off at 116 mm/s, and the arm absorbed it until q3 went

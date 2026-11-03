@@ -1,0 +1,57 @@
+21:52:04 start k1_open80 noise=none gs= extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+[k1_open80] completed
+21:55:34 start k2_open80_drift2 noise=0.32,0.12,2 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[k2_open80_drift2] completed
+21:59:13 start k3_open80_drift3 noise=0.32,0.12,3 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[k3_open80_drift3] completed
+22:02:44 start k4_open80_drift4 noise=0.32,0.12,4 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[k4_open80_drift4] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING -- gripper open, contact off, climbi
+22:06:11 start k5_open80_abort noise=none gs= extra=--inject abort@10 push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+[k5_open80_abort] ABORTED: push-and-pull ABORTED while push complete: ABORTING -- gripper open, contact off, climbing 0.30 m, then the arm home
+22:09:39 start k6_open80_q3trip noise=none gs= extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0 push_pull_guard_q3_min_deg=22.0
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+  push_pull_guard_q3_min_deg -> 22.0
+[k6_open80_q3trip] ABORTED: push-and-pull ABORTED while exit complete: ABORTING (SAFETY GUARD: q3 20.1 deg < 22.0 deg (the arm buckling toward its elbow-singular branch)
+22:13:10 start k7_open80_gov noise=none gs= extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0]
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+[k7_open80_gov] completed
+22:16:38 start k8_shallow_gov noise=none gs= extra= push_pull_exit_world_held_dz=0.12 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+[k8_shallow_gov] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: the turn held 6.0 s on lead (lead 33.9, tilt 1.1, wrist 1.4 deg) -- releas
+22:20:07 start k9_open70 noise=none gs= extra= push_pull_ee_offset=[0.1600, -0.0194, 0.1340] push_pull_exit_world_held_dz=0.12
+  push_pull_ee_offset -> [0.1600, -0.0194, 0.1340]
+  push_pull_exit_world_held_dz -> 0.12
+[k9_open70] completed
+22:23:37 CHAIN DONE

@@ -1,0 +1,20 @@
+10:51:54 building fsc_trajectory_planner
+
+Summary: 1 package finished [32.1s]
+[  PASSED  ] 32 tests.
+wrote /home/shiqi/ros2_ws/src/fsc_autopilot_ros2/config/params_single_aerial_manipulator_whole_body_l1_4d_direct_actuation_t650_sim_valve_turning.yaml
+10:52:36 start j1_nominal fault=none friction=0.072 noise=none gs= 
+[j1_nominal] completed
+10:56:07 start j2_jam fault=jam,30 friction=0.072 noise=none gs= 
+[j2_jam] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: FIN OUT OF THE U: q3 41.2 deg > 40.0 deg: the arm folding onto its stop (t
+10:59:22 start j3_drift4 fault=none friction=0.072 noise=0.32,0.12,4 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[j3_drift4] completed
+11:02:51 start j4_drift2 fault=none friction=0.072 noise=0.32,0.12,2 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[j4_drift2] completed
+11:06:23 CHAIN DONE

@@ -1,0 +1,17 @@
+21:25:43 start f2_deep80_cup gs_extra=none push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+[f2_deep80_cup] completed
+21:29:11 start f3_deep80_open gs_extra=-p push_pull_valve_cup_position:=0.019 push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+[f3_deep80_open] ABORTED: timeout (20 s): the GS closing the gripper  [mode=DIRECT plan=EXECUTING T=19.5s push_pull=FLYING push (CONTACT) T=19.5s]
+21:32:44 start f4_deep80_closed gs_extra=-p push_pull_valve_cup_position:=-0.010 push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+[f4_deep80_closed] ABORTED: push-and-pull ABORTED while the GS's automatic Push: ABORTING (SAFETY GUARD: tilt 10.8 deg > 10.0 deg) -- gripper open, contact off, climbing
+21:36:02 start f5_deep70_cup gs_extra=none push_pull_ee_offset=[0.1600, -0.0194, 0.1340] push_pull_exit_world_held_dz=0.12
+  push_pull_ee_offset -> [0.1600, -0.0194, 0.1340]
+  push_pull_exit_world_held_dz -> 0.12
+[f5_deep70_cup] completed
+21:39:33 CHAIN DONE

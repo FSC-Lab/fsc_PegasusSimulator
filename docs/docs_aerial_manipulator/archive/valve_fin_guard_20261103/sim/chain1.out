@@ -1,0 +1,32 @@
+10:04:14 start g1_nominal fault=none friction=0.072 noise=none gs= 
+[g1_nominal] completed
+10:07:43 start g2_lift fault=force,30,1.5,0,0,15 friction=0.072 noise=none gs= 
+[g2_lift] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 5.8 deg falling at 259.9 deg/s -> -20.2 deg in 0.10 s (q2 3.3 deg) < 3.
+10:11:04 start g3_back fault=force,30,1.5,-10,0,0 friction=0.072 noise=none gs= 
+[g3_back] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: FIN OUT OF THE U: the fin 72 mm ahead of the bracket (> 60 mm): the U has 
+10:14:19 start g4_side fault=force,30,1.5,0,10,0 friction=0.072 noise=none gs= 
+[g4_side] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: q3 2.7 deg falling at 352.0 deg/s -> -15.8 deg in 0.10 s (16.7 deg of the 
+10:17:33 start g5_jam fault=jam,30 friction=0.072 noise=none gs= 
+[g5_jam] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: tilt 12.0 deg > 10.0 deg) -- gripper open, contact off, climbing 0.30 m, t
+10:20:52 start g6_drop fault=drop,30,1.0 friction=0.072 noise=none gs= 
+[g6_drop] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: FIN OUT OF THE U: the fin 16 mm BEHIND the bracket (> 15 mm): the U has pa
+10:24:11 start g7_freeze fault=freeze,30,1.0 friction=0.072 noise=none gs= 
+[g7_freeze] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: CLEARANCE: arm joint3-joint4 / fin 14 mm (< 15 mm)) -- gripper open, conta
+10:27:31 start g8_frictionless fault=none friction=0.0 noise=none gs= 
+[g8_frictionless] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: FIN OUT OF THE U: the fin 62 mm ahead of the bracket (> 60 mm): the U has 
+10:30:58 start g9_drift2 fault=none friction=0.072 noise=0.32,0.12,2 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[g9_drift2] completed
+10:34:39 start g10_drift3 fault=none friction=0.072 noise=0.32,0.12,3 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[g10_drift3] completed
+10:38:17 start g11_drift4 fault=none friction=0.072 noise=0.32,0.12,4 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[g11_drift4] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING (SAFETY GUARD: FIN OUT OF THE U: the
+10:41:26 CHAIN DONE

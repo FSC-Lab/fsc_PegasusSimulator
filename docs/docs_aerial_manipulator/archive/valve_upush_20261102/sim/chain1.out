@@ -1,0 +1,6 @@
+21:15:10 start f0_bare_cup gs_extra=none 
+[f0_bare_cup] completed
+21:18:38 start f1_deep20_cup gs_extra=none push_pull_ee_offset=[0.1600, 0.0006, 0.1590]
+  push_pull_ee_offset -> [0.1600, 0.0006, 0.1590]
+[f1_deep20_cup] completed
+21:22:05 CHAIN DONE

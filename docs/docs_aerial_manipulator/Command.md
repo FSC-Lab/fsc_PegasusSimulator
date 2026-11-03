@@ -1745,6 +1745,35 @@ deleted; a station still started with `push_pull_valve_hold_s` > 0 refuses to tu
 `ARM_GS_VALVE_HOLD_S` other than 0, and the hardware stack refuses a yaml that still enables the grasp event. First
 valve flight: the turn with the half close.
 
+**THE U PUSH (2026-11-02 evening, `archive/valve_upush_20261102`; supersedes the half close above):** with the jaws off
+the fin, only the bracket between the claws (the gripper's hub and rods) can push it along the turn, and at the old
+grasp (25 mm under the fin top) it sits 9 mm above the fin -- Isaac on the bare fin turned the valve 19 of 90 deg. Now
+the claw point is 80 mm under the fin top and 25 mm behind its centre (`push_pull_ee_offset [0.160, -0.0244, 0.124]`),
+the jaws stay OPEN (the Valve tab's default `push_pull_valve_cup_position` = the open position; an abort finds them
+open and climbs at once), the turn is planned 93 deg for a 90 deg valve turn, the exit climbs 0.12 m room-held, and the
+path-following governor is on (lead [10, 20] deg: it holds, then aborts, a turn whose valve lags -- a U that loses the
+fin otherwise flies into it). **An abort climbs ONCE and at once** (2026-11-03, user): 0.30 m in 1.5 s, then the arm folds home
+(`push_pull_abort_fast_climb` 0.30 / `_fast_climb_s` 1.5; it was 60 mm in 0.8 s, a stop with the claw still beside the
+fin, then the rest). It starts as quickly as the old fast leg (10 mm at 0.31 s) and the claw clears the fin top ~0.6 s
+in; nothing in the chain waits (the button opens the jaws and calls the abort together, the plan is ready in < 10 ms,
+the jaws are already open). Orin: pull only. Isaac, bare fin: 5 of 5 plus the end-to-end check, the valve at 85.5-95.1 deg, tilt
+<= 3.4 deg. Bench-check the real claw at that grasp before flying (the README's section 6). The afternoon's half-close
+deploy prompts are superseded. Orin: pull (yaml + stack script only). Laptop: rebuild `utils_custom_ground_station`.
+
+**THE FIN-IN-THE-U MONITOR + THE CLEARANCE GUARD (2026-11-03, `archive/valve_fin_guard_20261103`):** on every valve
+mocap sample the planner places the fin (obj_0 + the valve CAD) and the claw (joints + odometry + attitude) and aborts
+at once (0.02 s) when the fin is out of the U -- the claw < 50 mm under the fin top, the fin > 25 mm across the claw,
+> 15 mm behind the bracket, or (during the turn) > 60 mm ahead of it -- or the elbow folds past 40 deg
+(`push_pull_guard_fin_*`); and when any vehicle part other than the gripper comes within 15 mm of the fin / beam /
+hub or 5 mm of a marker ball (`push_pull_guard_clearance*`). The valve's mocap and the arm's joints go stale at 0.2 s,
+a held turn aborts after 2 s. Isaac: no false trip in 2 nominal + 4 drift turns; the fin's mocap dropped / frozen and
+the valve coasting out are caught and survived; 3-5 N pushes are caught (by the sway / q3 guards) and survived. NOT
+safe: a valve that seizes mid-turn (the fin stays in the U, the arm folds onto its stop before anything trips; the
+abort crashed) and pushes >= 10 N. **Lower the tallest marker ball** on the real valve (#2, by the hub, its top 140 mm
+above the plate): the left skid passes 10-22 mm over it mid-turn and brushed it in two Isaac drift runs; the real gear
+is 5.5 mm deeper. Isaac fault injection: `PEGASUS_VALVE_FAULT` (force / jam / drop / freeze at a turn angle). Orin:
+rebuild `fsc_trajectory_planner` (the raw stack refuses an older one), pull `fsc_autopilot_ros2`.
+
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 
 **shiqi_machine** (2026-10-23, the final pick-and-place experiment): a red envelope (150 x 90 x 4 mm, 60 g,

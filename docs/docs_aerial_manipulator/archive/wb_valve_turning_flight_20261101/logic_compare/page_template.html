@@ -134,22 +134,25 @@ ul{padding-left:1.2em;max-width:80ch}li{margin:4px 0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <main>
-<div class="eyebrow">AM-T650 whole-body 4-D L1 · arm ground station Box Pushing / Valve Turning tabs · 2026-11-02</div>
+<div class="eyebrow">AM-T650 whole-body 4-D L1 · arm ground station Box Pushing / Valve Turning tabs · 2026-11-03</div>
 <h1>Valve-turning vs Box-pushing logic</h1>
 <p class="lede">The box push that worked on 10-27 (tag <code>box-pushing-20261027-flown</code>) lets the claw follow the vehicle
 all the way down, holds it in the room only after the planner sees it settled on the handle, and closes the jaws at once:
 0.46 s of room hold before the grasp. The valve-turning task now runs the same workflow, button for button, on the branch
 <code>valve-isolation-20261102</code>, except the inside of the exit: the valve opens the jaws with the claw still held in
-the room, because its handle cannot move sideways. Two valve-only changes followed the same day: the jaws close only
-part way around the fin (a U that pushes it, never a clamp on a handle bolted to the table), and an ABORT opens the jaws
-at once and climbs the moment they read open, the claw following the vehicle. The 11-01 valve flight, which held the claw in the room from the end of Go To Start, is in
-the Archive at the end.</p>
+the room, because its handle cannot move sideways. The valve now <b>never closes the jaws on the fin</b>: the open
+gripper is a U, and the bracket between its claws pushes the fin's back edge around the turn. For that the claw holds
+80 mm under the fin top and 25 mm behind its centre, the turn is planned 93° for a 90° valve turn, and the planner's
+path-following governor holds or aborts a turn whose valve lags. An ABORT climbs at once, since the jaws are already
+open, with the claw following the vehicle. Flown end to end in Isaac, not yet on hardware. The 11-01 valve flight,
+which held the claw in the room from the end of Go To Start, is in the Archive at the end.</p>
 
 <h2>1 · The approach, replayed</h2>
 <p>Time zero is the moment the planner reports Go To Start done. Both views are in the handle's frame: the origin is the planned
 grasp point, the horizontal axis is the vehicle's nose, the top view's vertical axis is the vehicle's left, the side view's is up.
-The second lane is the latest valve workflow as designed: it has not flown, so it shows the phases, buttons and timings only,
-with the box's flown jaw and settle times filled in.
+The second lane is the latest valve workflow, the U push, flown end to end in Isaac on the bare 5 mm fin, with the
+station starting every step after Go To Start by itself. It has not flown on hardware. Isaac's gripper takes 1.7 s to open
+(about 0.6 s on hardware), so its descent starts later than the box's.
 The <span style="color:var(--follow)">blue ring</span> is the claw reference while it follows the vehicle; it turns
 <span style="color:var(--room)">orange</span> when the claw is held in the room. The dashed drone is where the law wants the base.
 Drag on any timeline to scrub.</p>
@@ -174,31 +177,31 @@ Drag on any timeline to scrub.</p>
 <div id="lanes"></div>
 
 <h2>2 · Button by button</h2>
-<p>Times are seconds after Go To Start done. The valve column is the latest workflow on <code>valve-isolation-20261102</code>, which has
-not flown.</p>
+<p>Times are seconds after Go To Start done. The valve column is the latest workflow on <code>valve-isolation-20261102</code>, the U
+push, timed from its Isaac end-to-end check (not flown on hardware).</p>
 <div class="tscroll"><table>
-<tr><th>Button</th><th>Who starts it</th><th>Planner's entry condition</th><th>Box push, 10-27 (flown)</th><th>Valve turn, latest (designed)</th></tr>
+<tr><th>Button</th><th>Who starts it</th><th>Planner's entry condition</th><th>Box push, 10-27 (flown)</th><th>Valve turn, latest: the U push (Isaac)</th></tr>
 <tr><td><b>Go To Start</b></td><td>operator</td><td>whole-body DIRECT, a plan, the planner holding, the body within 0.15 m of its hold, the claw off the handle</td>
  <td><span class="tm">−25.6 s</span>. Jaws closed. The claw follows the vehicle the whole flight.</td>
- <td>Same. The station also closes the jaws if they are open, and raises the arm's j1/j4 error damping for the mission.</td></tr>
+ <td><span class="tm">−10.9 s</span>. Same. The station also closes the jaws if they are open, and raises the arm's j1/j4 error damping for the mission (hardware only: Isaac's arm has no such setting).</td></tr>
 <tr><td><i>Go To Start done</i></td><td>planner</td><td>the leg ends</td>
  <td><span class="tm">0.00</span>. Nothing changes: the claw keeps following the vehicle.</td>
  <td>Same.</td></tr>
 <tr><td><b>Ready To Push / Turn</b></td><td>station, automatic 1.0 s after Go To Start done (retried for 10 s)</td><td>the claw within 50 mm of the point above the handle and slower than 30 mm/s for 0.5 s</td>
  <td><span class="tm">+1.07</span> gripper OPEN; <span class="tm">+1.69</span> open report, descent starts (3.2 s), the claw following the vehicle.</td>
- <td>Same. Descent 3.0 s, 0.10 m (box 0.15 m).</td></tr>
+ <td><span class="tm">+1.06</span> gripper OPEN; <span class="tm">+2.79</span> open report (Isaac's gripper is slower), descent starts (3.0 s, 0.10 m; box 0.15 m), the claw following the vehicle. At the bottom the claw ran 15 mm past the grasp point and brushed the fin for 0.36 s; the valve did not move.</td></tr>
 <tr><td><i>Ready done → hand-over settle</i></td><td>planner</td><td>the claw within 25 mm of the grasp point (15 mm across the handle) and slower than 30 mm/s, for 0.3 s; the station aborts after 6 s</td>
  <td><span class="tm">+4.89</span> Ready done; <span class="tm">+5.29</span> settled (8 mm, 6 mm/s, after 0.40 s) → <b>the claw is held in the room</b>, 1 s blend.</td>
- <td>Same keys and values.</td></tr>
+ <td>Same keys and values. <span class="tm">+5.80</span> Ready done; <span class="tm">+6.25</span> settled (14 mm, 9 mm/s, after 0.45 s) → <b>the claw is held in the room</b>, 1 s blend.</td></tr>
 <tr><td><b>Push / Turn</b> (the close)</td><td>station, automatic, on the close gate; then the Push / Turn on the grasp result</td><td>after the hand-over: the claw within 25 mm (box) / 20 mm (valve), 8 mm across, slower than 30 mm/s over 0.3 s; the valve also needs its heading error ≤ 15°; 2.5 s limit → ABORT</td>
  <td><span class="tm">+5.30</span> gate met at once (8 mm, 7 mm/s) → CLOSE; <span class="tm">+5.75</span> jaws closed; <span class="tm">+5.94</span> Push: <b>CONTACT on</b> (planner), 1.5 s settle, then the 0.40 m slide.</td>
- <td>Same path, but a <b>half close</b> (<code>push_pull_valve_cup_position</code>, 0.0 m on hardware, 0.012 in Isaac): the jaws stop a few mm short of the fin, so the U pushes it and never clamps it. Turn: CONTACT on, 1.5 s settle, then 90° in 18 s. The node does not read the jaws. (The static hold, a grasp without the turn, was removed on 11-02: dangerous.)</td></tr>
+ <td>Same gate, but <b>no close</b>: <code>push_pull_valve_cup_position</code> defaults to the open position, so the "close" moves nothing and the open gripper stays a U around the fin. <span class="tm">+6.80</span> gate met → Turn: <b>CONTACT on</b>, 1.5 s settle, then <b>93° in 18 s</b> for a 90° valve turn (the bracket meets the fin after ~13 mm of slack, about 5°). The bracket between the claws pushes the fin's back edge from <span class="tm">+12.7</span> to <span class="tm">+24.2</span>, 25 mm under the fin top; the valve ends at 88.8°. The <b>governor</b> slows the turn from 10° of valve lag, holds it at 20°, and aborts after 6 s of hold. The node does not read the jaws. (The static hold was removed on 11-02: dangerous.)</td></tr>
 <tr><td><b>Exit To Push / Turn</b></td><td>station, automatic 0.2 s after the push / turn, once the base is slower than 40 mm/s (at most 3 s)</td><td>the claw on the handle</td>
  <td><span class="tm">+26.5</span> push done. <b>Release first</b> (claw follows the vehicle, contact off), then open, climb on the open report. In flight A the release swung into the q3 guard at <span class="tm">+30.3</span>: a clean abort, box untouched.</td>
- <td>The same start: 0.2 s after the turn, the same calm wait plus the base's CoM error under 20 mm. Then the valve's order: <b>open with the claw still held in the room</b>, climb on the open report, held in the room until the claw has climbed 60 mm (the fingers clear of the fin), then the claw follows the vehicle. The jaws close again once the Exit is done. (<code>push_pull_valve_box_exit: true</code> = the box's order.)</td></tr>
+ <td><span class="tm">+26.30</span> turn done. The same start: 0.2 s after the turn, the same calm wait plus the base's CoM error under 20 mm. Then the valve's order: open with the claw still held in the room (the jaws are already open, so the open report comes at once), <span class="tm">+26.86</span> climb, <b>held in the room until the claw has climbed 0.12 m</b> (the open claw reaches 80 mm down the fin), until <span class="tm">+28.55</span>,, then the claw follows the vehicle, 0.20 m in all. <span class="tm">+33.69</span> Exit done; the jaws close again. (<code>push_pull_valve_box_exit: true</code> = the box's order.)</td></tr>
 <tr><td><b>ABORT</b></td><td>any planner guard, the node's watchdog, or the button</td><td>none</td>
  <td>Hold where the vehicle is, contact off, the claw follows the vehicle, 1.5 s for the jaws, straight up 0.30 m, unbuckle q2/q3, arm home.</td>
- <td>Hold where the vehicle is, contact off, <b>the jaws open at once</b> (the button, or the station on ABORTING), <b>the claw follows the vehicle</b> from the first tick (0.25 s blend), never held in the room. The planner climbs <b>the moment the gripper reads open</b> (its joint state on the Orin; the station's report also counts), at most 1 s without either, the first 60 mm in 0.8 s, then up to 0.30 m and the arm home.</td></tr>
+ <td>Hold where the vehicle is, contact off, <b>the jaws open at once</b> (the button, or the station on ABORTING), <b>the claw follows the vehicle</b> from the first tick (0.25 s blend), never held in the room. The planner climbs <b>the moment the gripper reads open</b> (its joint state on the Orin; the station's report also counts), at most 1 s without either, in <b>one climb</b> of 0.30 m in 1.5 s, starting at once (the claw past the fin top about 0.6 s in), then the arm folds home. With the U push the jaws are already open, so the climb starts at once. A turn whose valve lags is held, then aborted, by the governor.</td></tr>
 </table></div>
 
 <h2>3 · How the 10-27 box code does it</h2>
@@ -220,17 +223,27 @@ Exit starts 0.2 s after the push, once the base is calm (40 mm/s, at most 3 s): 
 <ul>
 <li><b>The inside of the exit.</b> The box releases the claw to the vehicle before opening, because the box slides and a world-held
 open claw made the arm absorb the base's drift (10-17). The valve opens with the claw held in the room and keeps it held for the first
-60 mm of the climb, because its handle cannot move sideways: a claw that follows the vehicle presses an open finger into the fin
-(Isaac 10-18: 2 of 7 release-first against 3 of 3; 10-28: 2 of 6 lost DIRECT without the 60 mm hold, 7 of 8 clean with it). The
+0.12 m of the climb, because its handle cannot move sideways: a claw that follows the vehicle presses an open finger into the fin
+(Isaac 10-18: 2 of 7 release-first against 3 of 3; 10-28: 2 of 6 lost DIRECT without the room-held climb, 7 of 8 clean with it). The
+U push's claw reaches 80 mm down the fin, so the room hold now lasts 0.12 m (was 60 mm). The
 free-axis anchor still lets 75 % of the base's motion along the nose pass to the claw, so the arm only takes the sideways part. The
 start conditions are the box's, plus the base-error wait.</li>
-<li><b>The half close.</b> The box clamps its fin, because a box is pushed by friction and must not be dropped. The valve's handle
-is bolted to the table: a clamped claw is fixed to the world, and every error of the base then loads the arm. The valve closes
-the jaws only part way, so the claw pushes the fin and slides off it if the vehicle backs away or climbs.</li>
-<li><b>The abort.</b> The jaws open at once; the vehicle climbs the moment they read open, not after a fixed window, the first
-60 mm fast; the claw follows the vehicle. The box keeps its 10-27 abort (1.5 s release, then the climb).</li>
-<li><b>Task numbers, not workflow.</b> Approach height 0.10 m (box 0.15), exit climb 0.20 m (0.25), the grasp pose, the close gate's
-20 mm and heading check, the translational observer bandwidth 2.0 (box 1.0), the heading target that turns with the handle, the
+<li><b>The U push.</b> The box clamps its fin, because a box is pushed by friction and must not be dropped. The valve's handle
+is bolted to the table: a clamped claw is fixed to the world, and every error of the base then loads the arm. The valve never
+closes the jaws: the bracket between the claws pushes the fin, and the claw slides off it if the vehicle backs away or climbs.
+That only works with a deeper grasp, <b>80 mm under the fin top and 25 mm behind its centre</b>: at the old 25 mm the bracket sits
+above the fin and the valve turned 19° of 90 in Isaac. Closing even part way at the deep grasp puts a claw on the fin (half close:
+a wedge; full close: a 10–12 N clamp and a tilt-guard abort). Isaac on the bare fin: 5 of 5 plus the end-to-end check, the valve
+at 85.5–95.1° for a 90° target, tilt ≤ 3.4°.</li>
+<li><b>The abort.</b> The jaws open at once; the vehicle climbs the moment they read open, not after a fixed window, in one
+0.30 m climb (1.5 s), then folds the arm home; the claw follows the vehicle. With the U push they are already open, so the
+climb starts at once. The box keeps its 10-27 abort (1.5 s release, then the climb).</li>
+<li><b>The governor.</b> A U only pushes: if the vehicle falls behind it leaves the fin, and if it loses the fin it can fly into it
+(Isaac, the old grasp: the landing gear hit the fin at ~70° of lag). The planner's path-following governor slows the turn from
+10° of valve lag, holds it at 20° and aborts after 6 s of hold; it never acted in the nominal runs and aborted a turn that could
+not push with nothing touched. The box push has no governor.</li>
+<li><b>Task numbers, not workflow.</b> Approach height 0.10 m (box 0.15), exit climb 0.20 m (0.25), the grasp pose and depth, the
+93° turn for 90°, the close gate's 20 mm and heading check, the translational observer bandwidth 2.0 (box 1.0), the heading target that turns with the handle, the
 guard thresholds (q3 3° vs 10°, a sway guard, a rotor-tilt guard).</li>
 <li><b>Valve-only safety additions.</b> The node's watchdog asks the planner for an abort before reverting to SAFETY (your 10-31 design),
 the arm is released at a SAFETY handover, and the jaws are closed again after the Exit or an abort.</li>
@@ -287,29 +300,29 @@ const LANES = [
      [5.75, 'jaws', 'Jaws closed on the fin.'],
      [5.94, 'auto', 'Grasp reported. Push starts by itself: CONTACT on, 1.5 s settle, then the 0.40 m slide.'],
      [7.47, 'plan', 'The slide starts (21 mm/s).']] },
- { key: 'latest', title: 'Valve turn, latest workflow', sub: 'designed, not flown · branch valve-isolation-20261102 · the 90° turn with the half close', pill: ['warn', 'not flown'], kind: 'valve', designed: true, host: 'lanes',
-   phases: [[-3, 0, 'Go To Start', ''], [0, 1.6, 'hover above', ''], [1.6, 4.6, 'Ready: descent', ''], [4.6, 5.0, 'settle', ''],
-            [5.0, 5.45, 'close', ''], [5.45, 6.95, 'Turn: settle 1.5 s', 'contact'], [6.95, 13, 'Turn: 90° in 18 s (to +24.95 s)', 'contact']],
-   anchor: [[-3, 5.0, 'follow'], [5.0, 6.0, 'toRoom'], [6.0, 13, 'room']],
-   jaws: [[-3, 1.0, 'closed'], [1.0, 1.6, 'moving'], [1.6, 5.0, 'open'], [5.0, 5.45, 'moving'], [5.45, 13, 'half closed']],
-   contact: [[5.45, 13, 'CONTACT on (the Turn)']],
+ { key: 'latest', title: 'Valve turn, latest workflow: the U push', sub: 'Isaac end-to-end check n1 · branch valve-isolation-20261102 · bare 5 mm fin', pill: ['warn', 'Isaac only'], kind: 'valve', host: 'lanes',
+   geom: { df: 0.025, dz: 0.055 },   // the grasp: 80 mm under the fin top (was 25), 25 mm behind its centre
+   phases: [[-3, 0, 'Go To Start', ''], [0, 2.79, 'hover above', ''], [2.79, 5.80, 'Ready: descent', ''], [5.80, 6.25, 'settle', ''],
+            [6.25, 6.80, 'gate', ''], [6.80, 8.30, 'Turn: settle 1.5 s', 'contact'], [8.30, 13, 'Turn: 93° in 18 s (to +26.30 s)', 'contact']],
+   anchor: [[-3, 6.25, 'follow'], [6.25, 7.25, 'toRoom'], [7.25, 13, 'room']],   // replaced by the data's
+   contact: [[6.80, 13, 'CONTACT on (the Turn)']],
    buttons: [
-     { name: 'Go To Start', who: 'operator', a: -15, b: 0, note: 'jaws closed in free flight' },
-     { name: 'Ready To Turn', who: 'automatic', a: 1.0, b: 4.6, note: '+1.0 s, opens the jaws' },
-     { name: 'Turn', who: 'automatic', a: 5.0, b: 24.95, note: 'close gate → half close → turn' },
-     { name: 'Exit To Turn', who: 'automatic', a: 25.15, b: 32, note: 'calm → open (held) → climb' },
-     { name: 'ABORT', who: 'guard', a: 99, b: 100, note: 'jaws open → climb when they read open', guard: true }],
+     { name: 'Go To Start', who: 'operator', a: -10.9, b: 0, note: 'jaws closed in free flight' },
+     { name: 'Ready To Turn', who: 'automatic', a: 1.06, b: 5.80, note: '+1.06 s, opens the jaws' },
+     { name: 'Turn', who: 'automatic', a: 6.80, b: 26.30, note: 'gate → no close → turn' },
+     { name: 'Exit To Turn', who: 'automatic', a: 26.86, b: 33.69, note: '+26.86 s, after this replay' },
+     { name: 'ABORT', who: 'guard', a: 99, b: 100, note: 'not needed · would climb at once' }],
    events: [
-     [0.00, 'plan', 'Go To Start done. Nothing changes: the claw keeps following the vehicle (as the box).'],
-     [1.00, 'auto', 'Ready To Turn starts by itself (1.0 s after Go To Start). Gripper OPEN.'],
-     [1.60, 'jaws', 'Jaws report open. The descent starts (3.0 s), the claw following the vehicle.'],
-     [4.60, 'plan', 'Ready done. Hand-over settle: wait for the claw within 25 mm (15 mm across) and slower than 30 mm/s for 0.3 s.'],
-     [5.00, 'plan', 'Settled. The claw is now held in the room (1 s blend).'],
-     [5.01, 'auto', 'Station close gate met (20 mm, 8 mm across, 30 mm/s, heading within 15°). Gripper HALF CLOSE (0.0 m on hardware).'],
-     [5.45, 'jaws', 'Jaws half-closed around the fin, a few mm clear on each side: the U can push the fin, never clamp it.'],
-     [5.47, 'auto', 'The grasp starts the Turn: CONTACT on (planner), 1.5 s settle, then 90° in 18 s about the valve axis.'],
-     [6.95, 'plan', 'The turn starts moving. In Isaac the U met the fin only after the claw had run ~30 mm ahead of it, then pushed it at ~0.5 N.'],
-     [13.0, 'plan', 'Beyond this window: the turn ends at +24.95 s; 0.2 s later the calm wait, then OPEN with the claw held in the room and the climb (Exit).']] },
+     [0.00, 'plan', 'Go To Start done. Nothing changes: the claw keeps following the vehicle, the jaws stay closed.'],
+     [1.06, 'auto', 'Ready To Turn starts by itself (1.0 s after Go To Start). Gripper OPEN.'],
+     [2.79, 'jaws', 'Jaws report open (Isaac’s gripper: 1.7 s). The descent starts (3.0 s, 0.10 m), the claw following the vehicle.'],
+     [5.80, 'plan', 'Ready done. Hand-over settle: wait for the claw within 25 mm (15 mm across) and slower than 30 mm/s for 0.3 s.'],
+     [5.82, 'jaws', 'The claw runs 15 mm past the grasp point at the bottom of the descent: a claw and the bracket brush the fin for 0.36 s. The valve does not move.'],
+     [6.25, 'plan', 'Settled (claw 14 mm, 9 mm/s). The claw is now held in the room (1 s blend).'],
+     [6.80, 'auto', 'Station gate met (20 mm, 3 mm across in Isaac / 8 mm on hardware, 30 mm/s, heading within 15°). The “close” goes to the open position, so the jaws do not move, and the grasp result starts the Turn: CONTACT on.'],
+     [8.30, 'plan', 'After the 1.5 s settle the turn starts: 93° in 18 s about the valve axis. The governor would hold it if the valve lagged 10–20°.'],
+     [12.72, 'plan', 'The bracket meets the fin’s back edge, about 13 mm of slack after the start, and pushes it along the turn, 25 mm under the fin top.'],
+     [13.0, 'plan', 'Beyond this window: the bracket pushes until +24.2 s; the turn ends at +26.30 s with the valve at 88.8°. Exit 0.55 s later: the jaws are already open, the claw climbs held in the room for 0.12 m (to +28.55 s), then follows the vehicle; the jaws close after the Exit.']] },
  { key: 'valve', title: 'Valve turn, static-hold test', sub: '11-01 17:59 · build 9e4b03e / 17fd566 · frozen after SAFETY', pill: ['bad', 'crashed'], kind: 'valve', host: 'archive-lanes',
    phases: [[-3, 0, 'Go To Start', ''], [0, 1.22, 'hover above', ''], [1.22, 4.28, 'Ready: descent', ''], [4.28, 6.17, 'waiting', ''],
             [6.17, 7.47, 'closed', ''], [7.47, 9.50, 'ABORT: 2 s wait', 'abort'], [9.50, 10.61, 'ABORT: climb', 'abort'], [10.61, 13, 'SAFETY', 'safety']],
@@ -404,17 +417,19 @@ function buildView(container, kind, lane) {
       el('path', { d: rectD(m, -0.03, 0.03, -0.158, 0.025), class: 'g-fin' }, scene);
     }
   } else {
+    // the valve in the grasp point's frame; geom shifts it for a grasp deeper / further behind the fin than 25 mm / 0
+    const df = (lane.geom || {}).df || 0, dz = (lane.geom || {}).dz || 0;
     if (kind === 'top') {
-      el('path', { d: rectD(m, -0.5, 0.5, 0.085, 0.235), class: 'g-table' }, scene);
-      el('path', { d: rectD(m, -0.025, 0.025, -0.04, 0.185), class: 'g-obj' }, rotor);
-      el('circle', { cx: m.X(0), cy: m.Y(0.16), r: 0.025 * VS, class: 'g-obj' }, rotor);
-      el('path', { d: rectD(m, -0.02, 0.02, -0.004, 0.004), class: 'g-fin' }, rotor);
-      el('text', { x: m.X(0.03), y: m.Y(0.16) + 4, class: 'g-txt' }, scene).textContent = 'valve axis';
+      el('path', { d: rectD(m, -0.5 + df, 0.5 + df, 0.085, 0.235), class: 'g-table' }, scene);
+      el('path', { d: rectD(m, -0.025 + df, 0.025 + df, -0.04, 0.185), class: 'g-obj' }, rotor);
+      el('circle', { cx: m.X(df), cy: m.Y(0.16), r: 0.025 * VS, class: 'g-obj' }, rotor);
+      el('path', { d: rectD(m, -0.02 + df, 0.02 + df, -0.004, 0.004), class: 'g-fin' }, rotor);
+      el('text', { x: m.X(0.03 + df), y: m.Y(0.16) + 4, class: 'g-txt' }, scene).textContent = 'valve axis';
     } else {
-      el('path', { d: rectD(m, -0.5, 0.5, -0.30, -0.179), class: 'g-table' }, scene);
-      el('path', { d: rectD(m, -0.025, 0.025, -0.179, -0.12), class: 'g-obj' }, scene);
-      el('path', { d: rectD(m, -0.025, 0.025, -0.12, -0.105), class: 'g-obj' }, scene);
-      el('path', { d: rectD(m, -0.02, 0.02, -0.105, 0.025), class: 'g-fin' }, scene);
+      el('path', { d: rectD(m, -0.5 + df, 0.5 + df, -0.30, -0.179 + dz), class: 'g-table' }, scene);
+      el('path', { d: rectD(m, -0.025 + df, 0.025 + df, -0.179 + dz, -0.12 + dz), class: 'g-obj' }, scene);
+      el('path', { d: rectD(m, -0.025 + df, 0.025 + df, -0.12 + dz, -0.105 + dz), class: 'g-obj' }, scene);
+      el('path', { d: rectD(m, -0.02 + df, 0.02 + df, -0.105 + dz, 0.025 + dz), class: 'g-fin' }, scene);
     }
   }
   // grasp point + point above the handle
@@ -468,7 +483,7 @@ function updateView(V, lane, r, st) {
     V.jawB.setAttribute('y1', m.Y(c[1])); V.jawB.setAttribute('y2', m.Y(c[1]));
   }
   if (lane.kind === 'valve' && top) {
-    V.rotor.setAttribute('transform', `rotate(${-r[C.handle_dyaw]} ${m.X(0)} ${m.Y(0.16)})`);
+    V.rotor.setAttribute('transform', `rotate(${-r[C.handle_dyaw]} ${m.X((lane.geom || {}).df || 0)} ${m.Y(0.16)})`);
   }
 }
 
@@ -590,7 +605,7 @@ function buildTimeline(container, lane) {
 
 /* ---------- lanes ---------- */
 LANES.forEach(lane => {
-  if (!lane.designed) {lane.rows = D[lane.key].rows; lane.approach = D[lane.key].approach;}
+  if (!lane.designed) {lane.rows = D[lane.key].rows; lane.approach = D[lane.key].approach; if (D[lane.key].anchor) lane.anchor = D[lane.key].anchor;}
   const sec = document.createElement('section'); sec.className = 'lane'; sec.setAttribute('aria-label', lane.title);
   sec.innerHTML = `<div class="lanehead"><h3>${lane.title}</h3><span class="sub">${lane.sub}</span><span class="pill ${lane.pill[0]}">${lane.pill[1]}</span></div>
    <div class="btns"></div>` + (lane.designed ? '' : `

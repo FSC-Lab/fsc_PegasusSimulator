@@ -168,6 +168,13 @@ Knobs (environment):
   PEGASUS_VALVE_SPAWN_XY         where the vehicle starts, "x,y" [m], default "-0.90,-0.07"
   PEGASUS_VALVE_SPAWN_YAW_DEG    its heading [deg], default 0 (+x)
   PEGASUS_VALVE_WAYPOINTS=0      hide the waypoint markers and labels
+  PEGASUS_VALVE_FAULT            a FAULT once the beam has turned <angle> deg (2026-11-03, the fin-loss
+                                 safety pass), empty = off:
+                                   force,<angle>,<dur_s>,<fx>,<fy>,<fz>  a BODY-frame force [N] on the
+                                     vehicle (x the nose, y left, z up) for dur_s
+                                   jam,<angle>          a hard stop: the beam cannot turn further
+                                   drop,<angle>,<dur_s> obj_0 (the valve's mocap) silent for dur_s
+                                   freeze,<angle>,<dur_s> obj_0 republished frozen for dur_s
   PEGASUS_VALVE_AM_ASSET         airframe asset, default AM_T650.usda (the T650's 7 cm shorter gear)
   PEGASUS_VALVE_GROUND_BODY_Z    resting body height [m], default 0.235 with AM_T650 (0.305 with AM_xfwd)
   PEGASUS_VALVE_Q2_LIMIT_DEG     q2's hard stops "lo,hi" [deg], default "-20,45" (the real arm's
@@ -303,6 +310,17 @@ LOAD_DIR = 1.0 if am06._envf("PEGASUS_VALVE_LOAD_DIR", 1.0) >= 0.0 else -1.0
 LOAD_TAKEUP_DEG = max(0.1, am06._envf("PEGASUS_VALVE_LOAD_TAKEUP_DEG", 3.0))
 RATCHET = am06._envf("PEGASUS_VALVE_RATCHET", 0.0) > 0.5
 RATCHET_W = 0.02                        # [rad/s] forward rate below which the pawl takes the weight
+# THE FAULT INJECTOR (2026-11-03; the knob above)
+_FAULT = [x.strip() for x in (os.environ.get("PEGASUS_VALVE_FAULT", "") or "").split(",") if x.strip()]
+FAULT_KIND = _FAULT[0].lower() if _FAULT else ""
+FAULT_ARGS = [float(x) for x in _FAULT[1:]]
+_FAULT_NARGS = {"": 0, "force": 5, "jam": 1, "drop": 2, "freeze": 2}
+if FAULT_KIND not in _FAULT_NARGS or len(FAULT_ARGS) != _FAULT_NARGS[FAULT_KIND]:
+    raise SystemExit(f"PEGASUS_VALVE_FAULT={os.environ.get('PEGASUS_VALVE_FAULT')!r}: force,<angle>,<dur>,<fx>,<fy>,<fz>"
+                     " | jam,<angle> | drop,<angle>,<dur> | freeze,<angle>,<dur>")
+FAULT_ANGLE = FAULT_ARGS[0] if FAULT_ARGS else 0.0
+FAULT_DUR = FAULT_ARGS[1] if len(FAULT_ARGS) > 1 else 0.0
+JAM_K, JAM_D = 50.0, 0.8                # [N.m/rad], [N.m.s/rad] the stop: 3 mrad under a 0.16 N.m push, stable at 250 Hz
 FIN_GRIP_MM = am06._envf("PEGASUS_VALVE_FIN_GRIP_MM", 20.0)
 GRASP_BELOW_TOP = 0.025                 # [m] the claw point under the fin top (the box push's rule)
 # THE MOCAP PIVOT (2026-10-28): where obj_0's origin is published, in the rotor frame --
@@ -354,6 +372,12 @@ FIXED_PUB_DIV = 4                       # publish every 4th physics step (62.5 H
 #   v3 (the roll fin, whose contacts count as the valve's): [20] the roll fin's angle about N [rad],
 #   [21] its rate [rad/s], [22] the roll joint's separation [m]
 CONTACT_TRUTH_TOPIC = "/push_pull_truth/contact"
+# CONTACT POINT LOG (2026-11-02, archive/valve_upush_20261102): every vehicle-valve contact
+# point with the link that touches, to a CSV file -- which part of the claw pushes the fin, and
+# where (C rows, world frame; the impulse is the one ON THE VALVE over one physics step), with the
+# rotor's pose on the same step (R rows). Off unless PEGASUS_VALVE_CONTACT_LOG names a file.
+CONTACT_LOG = (os.environ.get("PEGASUS_VALVE_CONTACT_LOG", "") or "").strip()
+CONTACT_LOG_EVERY = max(1, int(am06._envf("PEGASUS_VALVE_CONTACT_LOG_EVERY", 5.0)))
 BEAM_LOG_TURN_DEG = 2.0                 # print the beam's angle when it turned this much
 ANGLE_TOPIC = f"/{ROTOR_BODY}/state/angle"   # the beam's angle, unwrapped [rad], + the rate
 
@@ -681,6 +705,8 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         self._rotor_twist = TwistStamped()
         self._rotor_twist.header.frame_id = "map"
         self._rotor_h = None
+        self._fault_t0 = None
+        self._fault_ended = False
         self._angle0 = None
         self._angle_unwrapped = 0.0
         self._angle_prev = None
@@ -700,6 +726,18 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         self._ct_npts = 0
         self._ct_err = None
         self._ct_pairs = set()
+        self._cl_f = None                   # the contact point log (CONTACT_LOG), off by default
+        self._cl_n = 0
+        if CONTACT_LOG:
+            try:
+                self._cl_f = open(CONTACT_LOG, "w", buffering=1)
+                self._cl_f.write("# C,t,link,valve_body,px,py,pz,nx,ny,nz,ix,iy,iz,separation "
+                                 "(world; impulse on the valve over one step) | R,t,px,py,pz,qw,qx,qy,qz (the rotor)\n")
+                print(f"[AM-T650-VALVE] contact point log -> {CONTACT_LOG} (every {CONTACT_LOG_EVERY} physics steps)",
+                      flush=True)
+            except Exception as exc:          # a debug log must never stop the plant
+                self._cl_f = None
+                print(f"[AM-T650-VALVE] contact point log OFF: {exc}", flush=True)
         self._fin_h = None
         self._roll = None                   # [angle rad, rate rad/s, joint separation m] (v3)
         self._roll_prev = None
@@ -758,6 +796,9 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         kept apart, as reported)."""
         try:
             acc = self._ct_acc
+            log = self._cl_f is not None and self._cl_n % CONTACT_LOG_EVERY == 0
+            self._cl_n += 1
+            rotor_logged = False
             for h in headers:
                 a0 = str(PhysicsSchemaTools.intToSdfPath(h.actor0))
                 a1 = str(PhysicsSchemaTools.intToSdfPath(h.actor1))
@@ -785,6 +826,17 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
                     pp = np.array([c.position[0], c.position[1], c.position[2]])
                     acc[12:15] += np.cross(pp, f)
                     self._ct_npts += 1
+                    if log:
+                        if not rotor_logged:
+                            P = self._rotor_pose()
+                            if P is not None:
+                                self._cl_f.write(f"R,{self._t:.4f},{P.p.x:.5f},{P.p.y:.5f},{P.p.z:.5f},"
+                                                 f"{P.r.w:.6f},{P.r.x:.6f},{P.r.y:.6f},{P.r.z:.6f}\n")
+                            rotor_logged = True
+                        nn = sgn * np.array([c.normal[0], c.normal[1], c.normal[2]])
+                        self._cl_f.write(f"C,{self._t:.4f},{other[len(self.drone_path):]},{mine.rsplit('/', 1)[-1]},"
+                                         f"{pp[0]:.5f},{pp[1]:.5f},{pp[2]:.5f},{nn[0]:.4f},{nn[1]:.4f},{nn[2]:.4f},"
+                                         f"{f[0]:.6f},{f[1]:.6f},{f[2]:.6f},{float(c.separation):.5f}\n")
                 o, n = h.friction_anchors_offset, h.num_friction_anchors_data
                 for i in range(o, o + n):
                     c = anchors[i]
@@ -875,23 +927,27 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
         if P is not None:
             self._bearing_friction(dt)
             self._valve_load(P, dt)
+            self._valve_fault(dt)
         if self._fixed_step % FIXED_PUB_DIV == 0:
             stamp = self._arm_node.get_clock().now().to_msg()
             if P is not None:
+                fault = self._fault_state()
                 m = self._rotor_msg
                 m.header.stamp = stamp
-                # obj_0's origin: the rotor's frame (the axis) moved to the mocap pivot
-                # (2026-10-28: the markers' centroid, Motive's default) -- same axes
-                pos = np.array([P.p.x, P.p.y, P.p.z])
-                if MOCAP_PIVOT_MODE == "markers":
-                    pos = pos + am06.C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z) @ MOCAP_PIVOT
-                m.pose.position.x, m.pose.position.y, m.pose.position.z = map(float, pos)
-                o = m.pose.orientation
-                o.x, o.y, o.z, o.w = float(P.r.x), float(P.r.y), float(P.r.z), float(P.r.w)
-                self._rotor_pose_pub.publish(m)
-                self._rotor_twist.header.stamp = stamp
-                for pub in self._rotor_twist_pubs:
-                    pub.publish(self._rotor_twist)
+                if fault != "freeze":         # frozen: the last pose again, freshly stamped
+                    # obj_0's origin: the rotor's frame (the axis) moved to the mocap pivot
+                    # (2026-10-28: the markers' centroid, Motive's default) -- same axes
+                    pos = np.array([P.p.x, P.p.y, P.p.z])
+                    if MOCAP_PIVOT_MODE == "markers":
+                        pos = pos + am06.C.quat_to_rot(P.r.w, P.r.x, P.r.y, P.r.z) @ MOCAP_PIVOT
+                    m.pose.position.x, m.pose.position.y, m.pose.position.z = map(float, pos)
+                    o = m.pose.orientation
+                    o.x, o.y, o.z, o.w = float(P.r.x), float(P.r.y), float(P.r.z), float(P.r.w)
+                if fault != "drop":           # dropped: nothing published
+                    self._rotor_pose_pub.publish(m)
+                    self._rotor_twist.header.stamp = stamp
+                    for pub in self._rotor_twist_pubs:
+                        pub.publish(self._rotor_twist)
                 self._track_angle(P, dt * FIXED_PUB_DIV)
                 if ROLL_FIN:
                     try:
@@ -914,6 +970,39 @@ class AmT650ValveTurning(am06.AmT650WholeBodyArmSim):
             except Exception as exc:          # a view must never stop the plant
                 self._wp_ready = False
                 print(f"[AM-T650-VALVE] waypoint view stopped: {exc}", flush=True)
+
+    def _fault_state(self):
+        """PEGASUS_VALVE_FAULT: its kind while it acts, else ''. It starts once the beam has turned
+        FAULT_ANGLE deg (the turn is positive) and lasts FAULT_DUR s (a jam for good); logs both edges."""
+        if not FAULT_KIND or self._angle_prev is None:
+            return ""
+        if self._fault_t0 is None:
+            if math.degrees(self._angle_unwrapped) < FAULT_ANGLE:
+                return ""
+            self._fault_t0 = self._t
+            print(f"\033[1;31m[AM-T650-VALVE] t={self._t:7.2f}s FAULT {FAULT_KIND} STARTS at the beam's "
+                  f"{math.degrees(self._angle_unwrapped):+.1f} deg ({os.environ.get('PEGASUS_VALVE_FAULT')})\033[0m",
+                  flush=True)
+        if FAULT_KIND == "jam" or self._t - self._fault_t0 <= FAULT_DUR:
+            return FAULT_KIND
+        if not self._fault_ended:
+            self._fault_ended = True
+            print(f"[AM-T650-VALVE] t={self._t:7.2f}s FAULT {FAULT_KIND} ENDS", flush=True)
+        return ""
+
+    def _valve_fault(self, dt):
+        """Every physics step: the force on the vehicle, or the jam's stop on the rotor."""
+        st = self._fault_state()
+        if st == "force":
+            import carb                       # noqa: E402  (after SimulationApp)
+            self._dc.apply_body_force(self._body, carb._carb.Float3(*FAULT_ARGS[2:5]),
+                                      carb._carb.Float3(0.0, 0.0, 0.0), False)
+        elif st == "jam" and self._rotor_h:
+            over = math.radians(math.degrees(self._angle_unwrapped) - FAULT_ANGLE)
+            if over > 0.0:                    # a stiff one-sided wall past the jam angle
+                wz = float(self._dc.get_rigid_body_angular_velocity(self._rotor_h).z)
+                tau = -(JAM_K * over + JAM_D * max(wz, 0.0))
+                self._dc.apply_body_torque(self._rotor_h, [0.0, 0.0, tau], True)
 
     def _track_angle(self, P, dt):
         """The beam's angle, unwrapped from the rotor's yaw, published on

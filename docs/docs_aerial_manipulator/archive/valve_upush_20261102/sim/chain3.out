@@ -1,0 +1,22 @@
+21:40:30 start h1_open80 noise=none extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+[h1_open80] ABORTED: the arm GS never started its automatic exit (jaws still closed 6 s after the push) -- is ARM_GS_AUTO_EXIT_DELAY > 0?
+21:44:08 start h2_open80_drift2 noise=0.32,0.12,2 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+[h2_open80_drift2] ABORTED: timeout (25 s): the GS's automatic Ready To Push  [mode=DIRECT plan=HOLD push_pull=DONE go_to_start next=ready (the gripper opens first) -- c
+21:47:39 start h3_open80_drift3 noise=0.32,0.12,3 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=95.0
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 95.0
+[h3_open80_drift3] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING -- gripper open, contact off, climbi
+STOP file: skipping h4_open80_drift4
+STOP file: skipping h5_open80_abort
+STOP file: skipping h6_open80_q3trip
+STOP file: skipping h7_open80_gov
+STOP file: skipping h8_shallow_gov
+STOP file: skipping h9_open70
+21:50:57 CHAIN DONE

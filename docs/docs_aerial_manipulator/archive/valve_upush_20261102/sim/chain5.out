@@ -1,0 +1,45 @@
+22:24:36 start m1_final noise=none gs= extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=93.0 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0]
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 93.0
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+[m1_final] completed
+22:28:02 start m2_final noise=none gs= extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=93.0 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0]
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 93.0
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+[m2_final] completed
+22:31:30 start m2_final_drift2 noise=0.32,0.12,2 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=93.0 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 93.0
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[m2_final_drift2] completed
+22:35:02 start m3_final_drift3 noise=0.32,0.12,3 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=93.0 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 93.0
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[m3_final_drift3] completed
+22:38:35 start m4_final_drift4 noise=0.32,0.12,4 gs=-p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 extra= push_pull_ee_offset=[0.1600, -0.0244, 0.1240] push_pull_exit_world_held_dz=0.12 push_pull_turn_deg=93.0 push_pull_follow=true push_pull_follow_lead_deg=[10.0, 20.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_ee_offset -> [0.1600, -0.0244, 0.1240]
+  push_pull_exit_world_held_dz -> 0.12
+  push_pull_turn_deg -> 93.0
+  push_pull_follow -> true
+  push_pull_follow_lead_deg -> [10.0, 20.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[m4_final_drift4] completed
+22:42:04 CHAIN DONE

@@ -7780,3 +7780,91 @@ an error and refuses to turn; the 4-D launcher refuses `ARM_GS_VALVE_HOLD_S` oth
 a yaml that still enables the grasp event. Harness 40/40 (hold cases V3-V5 deleted, S1 added), loopback [9q] checks
 the service is gone. The isolation record and its `--gs-hold` driver are left as records. Record: valve_cup_abort
 README section 5.
+
+**THE U PUSH: WHERE TO HOLD IT AND HOW FAR TO CLOSE (2026-11-02 evening, user: "implement the simulation and test
+its performance, also determining which is the good pose for pushing ... how much distance should the gripper
+close"; record `docs/docs_aerial_manipulator/archive/valve_upush_20261102/README.md`, Command.md section 18).**
+Uncommitted on `valve-isolation-20261102`; NOT flown on hardware.
+- **The half close at the old grasp cannot push.** With the pads off the fin's faces, the only claw material that
+  crosses the fin's mid-plane is the bracket between the claws (link5: bracket + the gripper's hub crank and rods);
+  at the turn pose [0, 5, 25, 0] (claw 60 deg below level) and the old grasp (25 mm under the fin top) its lowest
+  point is 9 mm ABOVE the fin top (fsc_open_manipulator's custom CAD meshes). Isaac on the BARE fin
+  (`PEGASUS_VALVE_FIN_GRIP_MM=0` -- a U never clamps, so it needs no 20 mm shim) turned the valve 19 of 90 deg, and
+  the last of it was the LANDING GEAR hitting the fin once it lagged ~70 deg. The morning's half-close turns were
+  pushed through the pads on the tight shim -- a light clamp.
+- **The push surface is the bracket's front corner** (link5 x 20, z 57 mm), ~54 mm above / ~8 mm behind the claw
+  point: an edge-on-edge contact with the fin's back edge whose normal is horizontal along the turn (Isaac's `/hub`
+  pushed 0.93-1.00 along it). So the grasp goes DEEP and BEHIND: **`push_pull_ee_offset` [0.160, -0.0244, 0.124]**
+  (80 mm under the fin top, 25 mm behind its centre) puts the contact 20-28 mm under the top with 13 mm of slack =
+  13 mm of clearance on the Ready slide-in (`tools/grasp_search.py`). The pose stays (a flatter claw has a better
+  bracket too but brings the gear within 1-2 cm of the beam at these depths).
+- **The jaws stay OPEN.** At that depth the fin sits beside the claws' rear rails, the U's narrowest part: the half
+  close wedged a claw on the fin (f2), the full close CLAMPED it at 10-12 N and the tilt guard aborted (f4); open,
+  the bracket alone pushes (f3). The Valve tab's default `push_pull_valve_cup_position` is now the open position
+  (`gripper_open`); an abort finds the jaws open and the planner climbs at once (k5: +60 mm 1 s after ABORTING).
+- **The governor is the U's safety layer**: a U only pushes, so under drift the vehicle can fall behind and leave the
+  fin (k3: 79.6 deg), or lose it and fly into it (f0). `push_pull_follow` true, lead [10, 20] deg: nominal it never
+  acts (k7), on a grasp that cannot push it held and aborted at a 34 deg lag with nothing touched (k8).
+- **Final config** (generator `make_valve_turning_yaml.py`: `GRASP_BELOW_TOP` 0.080, `GRASP_BEHIND_CENTRE` 0.025,
+  `push_pull_turn_deg` 93 (the slack costs ~5 deg), the governor, `push_pull_exit_world_held_dz` 0.12; hw yaml
+  inherits): Isaac 5 of 5 (2 nominal + drift seeds 2/3/4) + the end-to-end run from the generated yaml and the
+  station default, the valve 85.5-95.1 deg, tilt <= 3.4 deg, q3 >= 16.5 deg, contact p95 <= 0.72 N, no gear contact.
+- **Under the Isaac drift model the SHIPPED approach gates abort before contact** (Ready "still" gate, the 6 s settle
+  wait; both safe); the drift runs relaxed them to test the contact phase. The gates were NOT changed.
+- New: the valve scene's contact point log (`PEGASUS_VALVE_CONTACT_LOG` CSV, `_EVERY`; the wrapper forwards both);
+  the raw hardware stack expects 98 valve values (box 62 unchanged); station harness `tools/gs_upush_check.sh` PASS.
+  The campaign's driver copy (`tools/driver/pl_mission.py`) accepts a U that never moves its jaws.
+- Hardware: bench-check the real claw at the new grasp (bracket corner ~13 mm behind the back edge, ~20-28 mm under
+  the top, both rails clear of the faces). This afternoon's half-close deploy prompts are SUPERSEDED.
+- **The abort climbs ONCE (2026-11-03, user: "it climbs twice, one short and another higher"; then "it should be
+  executed immediately without any waiting time / hesitation")**: the valve generator sets `push_pull_abort_climb`
+  0.30 = `push_pull_abort_fast_climb` 0.30 in `_fast_climb_s` **1.5** (was 0.06 in 0.8 s; a first 2.5 s version started
+  too gently, 10 mm only at 0.5 s): one rest-to-rest leg, 10 mm at 0.31 s (the old leg 0.27), the claw past the fin
+  top (80 mm) at 0.59 s, peak 0.44 m/s / 1.0 m/s^2, then the fold home. No wait anywhere (Isaac k5/k6: the reference
+  rose 0.09-0.16 s after the trigger; the plan is ready in < 10 ms; the button opens the jaws and calls the abort
+  together; the planner's hold-for-open-jaws never holds in the U push -- the jaws are open whenever the claw is on
+  the handle). Before the trigger, the guards' own persistence (0.1-0.2 s) and 10 Hz tick remain. The two legs stopped
+  the U push's claw ~20 mm under the fin top, beside it, following the vehicle. Config only (the planner already
+  merges a fast leg as tall as the climb); new gtest `PushPull.AbortWholeFastClimbIsOneClimb` (push-pull 30/30);
+  both valve yamls regenerated, the raw hardware stack expects 99 valve values (box 62 unchanged). Not flown.
+- **Landing gear vs the valve** (`tools/gear_marker_clearance.py`, n1's true poses + AM_T650's gear mesh): the gear
+  is never over the beam (skid tips 17-60 mm short of it horizontally); its lowest point stays 73-87 mm above the
+  beam top's height (real gear 5.5 mm deeper: ~67-81 mm). Closest valve part: the tallest marker ball near the hub,
+  33 mm (hardware ~28 mm). The fin runs between the skids (~0.14 m each side, the X650 asset's spacing -- measure
+  the real T650's).
+
+**THE FIN LOST FROM THE U: A MONITOR, A CLEARANCE GUARD, AND WHAT THEY DO NOT FIX (2026-11-03, user: "what if the fin
+goes out of the U ... we have mocap info for the fin ... a fake abort is fine"; record
+`docs/docs_aerial_manipulator/archive/valve_fin_guard_20261103/README.md`, Command.md section 18).** Uncommitted on
+`valve-isolation-20261102`; NOT flown on hardware.
+- **fsc_trajectory_planner**: `finCapture()` / `valveClearance()` (push_pull.hpp/.cpp, gtest
+  `PushPullValveGuards.*`, push-pull 32/32, box loopback ALL PASS); the node's `plFinGuardCheck` on every gate-accepted
+  valve mocap sample (a TURN only): the fin placed from obj_0 + `push_pull_valve_axis_offset` + `push_pull_valve_fin`,
+  the claw from the joints + odometry + attitude; abort (claw follows the vehicle, the one-climb abort) when
+  depth < `push_pull_guard_fin_depth_min` 0.050, |across| > `_across_max` 0.025, the fin behind the bracket >
+  `_behind_max` 0.015, ahead > `_ahead_max` 0.060 (ONLY while the turn flies -- in the hand-over hold it false-tripped
+  under drift), q3 > `_fin_q3_max_deg` 40, for `_fin_persist_s` 0.02; the CLEARANCE guard (skids, struts, rotor
+  discs, arm links -- not the gripper -- vs the fin / beam / hub boxes 15 mm and the marker balls 5 mm,
+  `push_pull_guard_clearance*`, geometry keys `push_pull_guard_skid/_strut/_rotor/_arm_link_radius`,
+  `push_pull_valve_beam/_hub/_markers/_marker_radius`). Telemetry `push_pull/arrival_error` [34..38]. All default
+  off. Valve yamls (generator) set them + `push_pull_guard_box_stale_s` 0.20 (was 0.50) + `push_pull_follow_hold_
+  timeout_s` 2.0 (was 6.0); the raw hardware stack expects 109 valve values (box 62) and refuses a planner without them.
+- **Thresholds from the recorded runs, not the first guesses** (`valve_upush_20261102/tools/fin_monitor_replay.py`,
+  `clearance_replay.py`; the Python chain matches the planner's claw to 1.8 mm): the strict ones proposed (across 15,
+  ahead 20, clearance 30) would have aborted every turn. "Fin AHEAD of the bracket" is NOT a loss -- the slack at the
+  turn's start and a drifting vehicle catching up reach 47 mm in completed turns; the loss signal is the fin BEHIND
+  the bracket (impossible while it is inside; completed <= 6 mm, f0 173).
+- **The LEFT SKID passes 10-22 mm over the tallest marker ball (#2, by the hub, top 140 mm above the plate) mid-turn**
+  (the vehicle runs ahead of its circle) and BRUSHED it in m3_final_drift3 and k3 (Isaac contact report; the earlier
+  "the gear never touched" was wrong for those two). Real gear 5.5 mm deeper: lower that ball on the real valve.
+- **Isaac (scene knob `PEGASUS_VALVE_FAULT` force/jam/drop/freeze at a turn angle; 18 runs)**: no false trip in 2
+  nominal + 4 drift turns (final build); the fin's mocap dropped / frozen and the valve coasting out caught and
+  survived (DIRECT kept, +0.28 m in 1 s, tilt <= 4); 3-5 N pushes for 1 s caught first by the sway / q3 guards and
+  survived, but a 5 N lift folded the arm through q3 0 (wrist on the valve). **NOT safe: a mid-turn JAM** (the fin
+  stays in the U; caught at 1.09 s by the elbow limit, 1.25 s by tilt; the abort from the stops crashed both times)
+  **and pushes >= 10 N.** Underneath: the claw held in the room through the turn makes the arm absorb every push --
+  the U removed the clamp, not the room hold. Untried: the claw following the vehicle in the turn; a valve-stall
+  detector after the bracket engages.
+- Isaac's mocap emulator republishes a lost body WITH NOISE, so the 0.2 s frozen-feed abort is not exercised in sim
+  (the geometry catches it); hardware republishes bit-identical.
+
