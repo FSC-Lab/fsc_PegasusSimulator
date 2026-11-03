@@ -29,6 +29,9 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
    posting into one box the props pass only 9–13 cm over the OTHER box's top and the
    planner does not check it: nothing on the box tops, no taller boxes, not closer.
 8. Take-off / landing spot (Start / Land in the yaml) off the hat line, floor clear.
+   Put the drone ON the Start mark: Adjust refuses an offset over 2 m ("is the vehicle on
+   the START mark?") and the session stops there. To take off elsewhere, change Start /
+   Land Start / Land in the yaml first.
 
 ## 2. Gets (on the ground)
 9. Frame on hat k → Get Letter k → wait for the row; one at a time. A Get with the frame

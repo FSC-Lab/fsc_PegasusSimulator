@@ -412,7 +412,8 @@ class Driver(Node):
             self.ev(f"envelope {k + 1} at rest {np.round(self.payload0[k][:3], 4).tolist()}")
         # on the ground: Reset, Adjust, the five Gets -- 08 moves the frame onto each in turn
         self.trig("reset", must=False)
-        self.trig("adjust")
+        if not self.a.no_adjust:
+            self.trig("adjust")
         time.sleep(1.0)
         for name in [f"capture_letter_{k + 1}" for k in range(N_LETTERS)] + ["get_box_1", "get_box_2"]:
             self.trig(name)
@@ -616,6 +617,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--namespace", default="/uav_0")
     ap.add_argument("--order", default="1,2,3", help="the letters in flying order (the tab's buttons)")
+    ap.add_argument("--no-adjust", action="store_true",
+                    help="skip Adjust (a take-off off the START mark: Adjust refuses an offset over 2 m)")
     ap.add_argument("--rate", type=float, default=50.0)
     ap.add_argument("--hover-z", type=float, default=1.0)
     ap.add_argument("--land-z", type=float, default=0.30)
