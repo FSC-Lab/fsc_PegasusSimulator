@@ -173,10 +173,29 @@ ARM_COUNTS_TRUE = (os.environ.get("PEGASUS_ARM_COUNTS_TRUE", "") or "").strip()
 # controller's and this file's own hold -- keeps the nominal arm, so 1.05 is a
 # 5 % gravity-compensation error. Forwarded by the launcher from the paired
 # yaml's sim_arm_friction_* / sim_arm_mass_scale keys.
+#   PEGASUS_PHYSX_USD_WRITE=1    (2026-11-01, default 1) 0 = PhysX does not write poses and velocities
+#                                back into the USD stage after every step (/physics/updateToUsd and
+#                                friends). That write-back and the Kit stage listeners it fires are
+#                                part of the ~2.4 ms fetch_results self time per step on fsc_lab_machine
+#                                (measured 7.69 -> 6.09 ms per step with it off). The two runtime USD pose
+#                                reads (x650_vehicle and rigid_body_backend_utils attitude) take the
+#                                dynamic_control pose instead when this is 0; anything else that reads a
+#                                dynamic prim's transform FROM USD reads a stale value (none in the AM
+#                                apps' physics step as of this change; the viewport shows stale poses).
+#                                1 = Kit's default behaviour.
+PHYSX_USD_WRITE = (os.environ.get("PEGASUS_PHYSX_USD_WRITE", "") or "1").strip() != "0"
 ARM_FRICTION_SCALE = (os.environ.get("PEGASUS_ARM_FRICTION_SCALE", "") or "").strip()
 ARM_FRICTION_WIDTH = (os.environ.get("PEGASUS_ARM_FRICTION_WIDTH", "") or "").strip()
 ARM_MASS_SCALE = (os.environ.get("PEGASUS_ARM_MASS_SCALE", "") or "").strip()
 simulation_app = SimulationApp({"headless": HEADLESS})
+if not PHYSX_USD_WRITE:
+    import carb
+    _settings = carb.settings.get_settings()
+    for _key in ("/physics/updateToUsd", "/physics/updateVelocitiesToUsd",
+                 "/physics/updateParticlesToUsd", "/physics/updateResidualsToUsd"):
+        _settings.set_bool(_key, False)
+    print("[AM-T650-WB] PEGASUS_PHYSX_USD_WRITE=0: PhysX -> USD write-back OFF (vehicle and payload "
+          "attitude from the physics pose; the USD stage and any viewport show stale poses)", flush=True)
 
 # ── imports AFTER SimulationApp (numpy import-order rule) ────────────────────
 import numpy as np
@@ -1551,6 +1570,17 @@ class AmT650WholeBodyArmSim:
             if handler.exception() is not None:
                 raise handler.exception()
 
+    def _spin_arm_once(self):
+        """ONE ready arm-bridge callback, exactly rclpy.spin_once(node, timeout_sec=0.0) -- but on a
+        persistent executor (2026-11-01). The module-level spin_once adds the node to the global
+        executor and removes it again on every call; that bookkeeping was the largest Python item of
+        the physics step on fsc_lab_machine (~1 ms per 4 ms step, cProfile)."""
+        if getattr(self, "_arm_exec_once", None) is None:
+            from rclpy.executors import SingleThreadedExecutor
+            self._arm_exec_once = SingleThreadedExecutor(context=self._arm_node.context)
+            self._arm_exec_once.add_node(self._arm_node)
+        self._arm_exec_once.spin_once(timeout_sec=0.0)
+
     # ── control step: servo emulation tracking the ROS 2 reference ──────────
 
     def _control_step(self, step_size):
@@ -1570,7 +1600,7 @@ class AmT650WholeBodyArmSim:
         if ARM_SPIN_DRAIN:
             self._drain_arm_node()
         else:
-            self._rclpy.spin_once(self._arm_node, timeout_sec=0.0)
+            self._spin_arm_once()
 
         pose = self._dc.get_rigid_body_pose(self._body)
         p0 = np.array([pose.p.x, pose.p.y, pose.p.z])

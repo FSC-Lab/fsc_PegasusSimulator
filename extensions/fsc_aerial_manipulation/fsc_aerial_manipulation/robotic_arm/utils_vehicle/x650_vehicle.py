@@ -16,12 +16,19 @@
 |              callbacks, get_dc_interface, ...) is inherited unchanged.
 """
 
+import os
+
 import numpy as np
 from scipy.spatial.transform import Rotation
 
 from pxr import Sdf
 
 from pegasus.simulator.logic.vehicles.vehicle import Vehicle, get_world_transform_xform
+
+# PEGASUS_PHYSX_USD_WRITE=0 (2026-11-01, see 06): PhysX no longer writes poses back into USD, so
+# the attitude must come from the physics pose dynamic_control already returns, not the stale stage.
+# Unset / 1 = the USD read, unchanged.
+_USD_POSES = (os.environ.get("PEGASUS_PHYSX_USD_WRITE", "") or "1").strip() != "0"
 
 
 class VehicleMod(Vehicle):
@@ -116,22 +123,31 @@ class VehicleMod(Vehicle):
             return
 
         # Attitude according to the convention [w, x, y, z]
-        try:
-            rotation_quat = get_world_transform_xform(prim).GetQuaternion()
-        except RuntimeError:
-            return
-        rotation_quat_real = rotation_quat.GetReal()
-        rotation_quat_img = rotation_quat.GetImaginary()
+        if _USD_POSES:
+            try:
+                rotation_quat = get_world_transform_xform(prim).GetQuaternion()
+            except RuntimeError:
+                return
+            rotation_quat_real = rotation_quat.GetReal()
+            rotation_quat_img = rotation_quat.GetImaginary()
+        else:
+            rotation_quat_real = pose.r.w
+            rotation_quat_img = (pose.r.x, pose.r.y, pose.r.z)
 
         # Angular velocity (inertial frame) and linear velocity (inertial frame)
         ang_vel = self.get_dc_interface().get_rigid_body_angular_velocity(body)
         linear_vel = self.get_dc_interface().get_rigid_body_linear_velocity(body)
 
+        # carb.Float3 -> numpy from the components: np.array(<carb.Float3>) walks the
+        # sequence protocol and cost ~60 us per call, 5 per physics step (same values)
+        linear_vel = np.array((linear_vel.x, linear_vel.y, linear_vel.z))
+        ang_vel = np.array((ang_vel.x, ang_vel.y, ang_vel.z))
+
         # Linear acceleration by finite difference (Isaac does not expose it directly)
-        linear_acceleration = (np.array(linear_vel) - self._state.linear_velocity) / dt
+        linear_acceleration = (linear_vel - self._state.linear_velocity) / dt
 
         # X = [x, y, z]
-        self._state.position = np.array(pose.p)
+        self._state.position = np.array((pose.p.x, pose.p.y, pose.p.z))
 
         # Quaternion in the [qx, qy, qz, qw] standard
         self._state.attitude = np.array(
@@ -139,17 +155,14 @@ class VehicleMod(Vehicle):
         )
 
         # Inertial-frame velocity X_dot = [x_dot, y_dot, z_dot]
-        self._state.linear_velocity = np.array(linear_vel)
+        self._state.linear_velocity = linear_vel
 
-        # Body-frame linear velocity V = [u, v, w] (x_dot = Rot * V)
-        self._state.linear_body_velocity = (
-            Rotation.from_quat(self._state.attitude).inv().apply(self._state.linear_velocity)
-        )
+        # Body-frame linear velocity V = [u, v, w] (x_dot = Rot * V); one rotation for both
+        rot_inv = Rotation.from_quat(self._state.attitude).inv()
+        self._state.linear_body_velocity = rot_inv.apply(self._state.linear_velocity)
 
         # omega = [p, q, r] expressed in the body frame
-        self._state.angular_velocity = (
-            Rotation.from_quat(self._state.attitude).inv().apply(np.array(ang_vel))
-        )
+        self._state.angular_velocity = rot_inv.apply(ang_vel)
 
         # Inertial-frame acceleration X_ddot = [x_ddot, y_ddot, z_ddot]
         self._state.linear_acceleration = linear_acceleration

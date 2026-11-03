@@ -1,0 +1,32 @@
+# the topics tools/analysis reads (events.py, extract.py, extract_dbg.py): a lighter recorder than
+# hw_topics.txt (the full hardware list records ~60 topics, several at 250 Hz, ~half a core)
+/rosout
+/parameter_events
+/obj_0/mocap
+/uav_0/mocap
+/uav_0/fmu/in/actuator_motors
+/uav_0/fmu/out/battery_status
+/uav_0/fmu/out/vehicle_attitude
+/uav_0/fmu/out/vehicle_status_v1
+/uav_0/fsc_autopilot_ros2/controller_type
+/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/mode
+/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/reference
+/uav_0/fsc_autopilot_ros2/whole_body_direct_actuation/wb_control_debug
+/uav_0/fsc_open_manipulator/external_torque_controller/active_law
+/uav_0/fsc_open_manipulator/gripper_controller/gripper_cmd/_action/status
+/uav_0/fsc_open_manipulator/joint_states
+/uav_0/state_estimator/local_position/odom
+/uav_0/whole_body_planner/current_base
+/uav_0/whole_body_planner/current_ee
+/uav_0/whole_body_planner/current_ee_body
+/uav_0/whole_body_planner/pending_base
+/uav_0/whole_body_planner/target_joints
+/uav_0/whole_body_planner/status
+/uav_0/whole_body_planner/pick_place/arrival_error
+/uav_0/whole_body_planner/pick_place/info
+/uav_0/whole_body_planner/pick_place/status
+# ground truth for the box-abort diagnosis (2026-11-02): envelope, real claw point, vehicle, Isaac joints incl. gripper
+/payload_0/state/pose
+/claw_0/state/pose
+/uav_0/state/pose
+/uav_0/isaacsim_manipulator/joint_states

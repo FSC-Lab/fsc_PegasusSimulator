@@ -148,6 +148,20 @@ fi
 PROFILE_START="${PEGASUS_PROFILE_START:-0}"
 PROFILE_STEPS="${PEGASUS_PROFILE_STEPS:-1500}"
 PROFILE_OUT="${PEGASUS_PROFILE_OUT:-}"
+# PHYSICS -> USD WRITE-BACK (2026-11-01, 06 only): 0 = PhysX stops writing poses and velocities into
+# the USD stage every step (~1.6 ms of a 4 ms physics step on fsc_lab_machine; see 06's
+# PEGASUS_PHYSX_USD_WRITE). PEGASUS_PHYSX_USD_WRITE > the machine config's PHYSX_USD_WRITE > 06's default.
+# The machine config's value applies to HEADLESS runs only (2026-11-03): with the write-back off the
+# viewport draws stale poses, so a windowed launch on fsc_lab_machine showed a frozen vehicle while
+# the physics ran at 217 Hz. An explicit PEGASUS_PHYSX_USD_WRITE=0 still applies with a window.
+if [[ "${PEGASUS_HEADLESS:-0}" == 1 ]]; then
+  PHYSX_USD_WRITE_ARG="${PEGASUS_PHYSX_USD_WRITE:-${PHYSX_USD_WRITE:-}}"
+else
+  PHYSX_USD_WRITE_ARG="${PEGASUS_PHYSX_USD_WRITE:-}"
+fi
+# GROUND-TRUTH STATE PUBLISH DECIMATION (2026-11-02, Pegasus ROS 2 backends): every Nth physics step.
+# PEGASUS_STATE_PUB_EVERY > the machine config's STATE_PUB_EVERY > 1 (every step).
+STATE_PUB_EVERY_ARG="${PEGASUS_STATE_PUB_EVERY:-${STATE_PUB_EVERY:-}}"
 # REAL-TIME PACER (2026-10-01, 06 only): hold simulated time to the wall clock.
 REALTIME_ARG="${PEGASUS_REALTIME:-${SIM_REALTIME:-0}}"
 # With a window, 06 steps physics one 4 ms step at a time and draws a frame every
@@ -381,7 +395,7 @@ PEGASUS_EE_MARKER_CUBE=$EE_MARKER_CUBE PEGASUS_EE_MARKER_CUBE_MASS=$EE_MARKER_CU
 PEGASUS_PROFILE_START=$PROFILE_START PEGASUS_PROFILE_STEPS=$PROFILE_STEPS PEGASUS_PROFILE_OUT=$PROFILE_OUT \
 PEGASUS_REALTIME=$REALTIME_ARG PEGASUS_RENDER_EVERY=$RENDER_EVERY_ARG \
 PEGASUS_RENDER_ADAPTIVE=$RENDER_ADAPTIVE_ARG PEGASUS_RENDER_MAX_GAP_S=$RENDER_MAX_GAP_ARG \
-PEGASUS_ARM_SPIN_DRAIN=$ARM_SPIN_DRAIN_ARG \
+PEGASUS_ARM_SPIN_DRAIN=$ARM_SPIN_DRAIN_ARG PEGASUS_PHYSX_USD_WRITE=$PHYSX_USD_WRITE_ARG PEGASUS_STATE_PUB_EVERY=$STATE_PUB_EVERY_ARG \
   $ISAAC_TASKSET \"$ISAAC_PY\" \"$PEGASUS_SCRIPT\"
 echo 'Isaac Sim exited.'
 tmux kill-pane -t \"$SESSION:0.0\" 2>/dev/null || true

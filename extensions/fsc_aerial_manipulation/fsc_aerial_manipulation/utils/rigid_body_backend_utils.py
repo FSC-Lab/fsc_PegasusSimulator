@@ -6,6 +6,8 @@
 """
 
 # Numerical computations
+import os
+
 import numpy as np
 from scipy.spatial.transform import Rotation
 
@@ -24,6 +26,15 @@ import rclpy
 from geometry_msgs.msg import PoseStamped, TwistStamped, AccelStamped, Vector3Stamped
 
 from pegasus.simulator.logic.backends.backend import Backend
+
+# PEGASUS_PHYSX_USD_WRITE=0 (2026-11-01, see 06): PhysX no longer writes poses back into USD, so
+# the attitude must come from the physics pose dynamic_control already returns, not the stale stage.
+# Unset / 1 = the USD read, unchanged.
+_USD_POSES = (os.environ.get("PEGASUS_PHYSX_USD_WRITE", "") or "1").strip() != "0"
+# PEGASUS_STATE_PUB_EVERY=N (2026-11-02, default 1): publish the ground-truth state (and TF) every Nth
+# physics step only. At 250 Hz physics its consumer, the mocap emulator, samples at 120 Hz, and these
+# publishes are part of a 4 ms step budget that fsc_lab_machine misses in flight. 1 = every step.
+_STATE_PUB_EVERY = max(1, int(os.environ.get("PEGASUS_STATE_PUB_EVERY", "") or 1))
 from pegasus.simulator.logic.state import State
 
 
@@ -133,6 +144,11 @@ class ROS2RigidBodyBackend(Backend):
         if not self._pub_state:
             return
 
+        # every Nth step only (PEGASUS_STATE_PUB_EVERY, default 1 = every step)
+        self._state_pub_calls = getattr(self, "_state_pub_calls", 0) + 1
+        if self._state_pub_calls % _STATE_PUB_EVERY:
+            return
+
         pose = PoseStamped()
         twist = TwistStamped()
         twist_inertial = TwistStamped()
@@ -194,7 +210,13 @@ class ROS2RigidBodyBackend(Backend):
         # In this case, do nothing as we are sending messages as soon as new data arrives from the sensors and state
         # and updating the reference for the thrusters as soon as receiving from ROS2 topics
         # Just poll for new ROS 2 messages in a non-blocking way
-        rclpy.spin_once(self.node, timeout_sec=0)
+        # one callback, as rclpy.spin_once(self.node, timeout_sec=0), on a persistent executor: the
+        # module-level spin_once adds and removes the node on the global executor every physics step
+        if getattr(self, "_spin_executor", None) is None:
+            from rclpy.executors import SingleThreadedExecutor
+            self._spin_executor = SingleThreadedExecutor(context=self.node.context)
+            self._spin_executor.add_node(self.node)
+        self._spin_executor.spin_once(timeout_sec=0)
 
     def start(self):
         """
@@ -245,10 +267,14 @@ class ROS2RigidBodyBackend(Backend):
         pose = self.get_dc_interface().get_rigid_body_pose(payload)
 
         # Get the attitude according to the convention [w, x, y, z]
-        prim = self._world.stage.GetPrimAtPath(self.payload_path)
-        rotation_quat = self.get_world_transform_xform(prim).GetQuaternion()
-        rotation_quat_real = rotation_quat.GetReal()
-        rotation_quat_img = rotation_quat.GetImaginary()
+        if _USD_POSES:
+            prim = self._world.stage.GetPrimAtPath(self.payload_path)
+            rotation_quat = self.get_world_transform_xform(prim).GetQuaternion()
+            rotation_quat_real = rotation_quat.GetReal()
+            rotation_quat_img = rotation_quat.GetImaginary()
+        else:
+            rotation_quat_real = pose.r.w
+            rotation_quat_img = (pose.r.x, pose.r.y, pose.r.z)
 
         # Get the angular velocity of the vehicle expressed in the body frame of reference
         ang_vel = self.get_dc_interface().get_rigid_body_angular_velocity(payload)
@@ -256,12 +282,17 @@ class ROS2RigidBodyBackend(Backend):
         # The linear velocity [x_dot, y_dot, z_dot] of the vehicle's body frame expressed in the inertial frame of reference
         linear_vel = self.get_dc_interface().get_rigid_body_linear_velocity(payload)
 
+        # carb.Float3 -> numpy from the components: np.array(<carb.Float3>) walks the
+        # sequence protocol and cost ~60 us per call, 5 per physics step (same values)
+        linear_vel = np.array((linear_vel.x, linear_vel.y, linear_vel.z))
+        ang_vel = np.array((ang_vel.x, ang_vel.y, ang_vel.z))
+
         # Get the linear acceleration of the body relative to the inertial frame, expressed in the inertial frame
         # Note: we must do this approximation, since the Isaac sim does not output the acceleration of the rigid body directly
-        linear_acceleration = (np.array(linear_vel) - self._state.linear_velocity) / dt
+        linear_acceleration = (linear_vel - self._state.linear_velocity) / dt
 
         # Update the state variable X = [x,y,z]
-        self._state.position = np.array(pose.p)
+        self._state.position = np.array((pose.p.x, pose.p.y, pose.p.z))
 
         # Get the quaternion according in the [qx,qy,qz,qw] standard
         self._state.attitude = np.array(
@@ -269,16 +300,15 @@ class ROS2RigidBodyBackend(Backend):
         )
 
         # Express the velocity of the vehicle in the inertial frame X_dot = [x_dot, y_dot, z_dot]
-        self._state.linear_velocity = np.array(linear_vel)
+        self._state.linear_velocity = linear_vel
 
         # The linear velocity V =[u,v,w] of the vehicle's body frame expressed in the body frame of reference
-        # Note that: x_dot = Rot * V
-        self._state.linear_body_velocity = (
-            Rotation.from_quat(self._state.attitude).inv().apply(self._state.linear_velocity)
-        )
+        # Note that: x_dot = Rot * V; one rotation for both
+        rot_inv = Rotation.from_quat(self._state.attitude).inv()
+        self._state.linear_body_velocity = rot_inv.apply(self._state.linear_velocity)
 
         # omega = [p,q,r]
-        self._state.angular_velocity = Rotation.from_quat(self._state.attitude).inv().apply(np.array(ang_vel))
+        self._state.angular_velocity = rot_inv.apply(ang_vel)
 
         # The acceleration of the vehicle expressed in the inertial frame X_ddot = [x_ddot, y_ddot, z_ddot]
         self._state.linear_acceleration = linear_acceleration

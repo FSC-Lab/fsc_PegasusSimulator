@@ -329,6 +329,11 @@ class Driver(Node):
             r = self.trig(name, must=False)
             if r.success:
                 return
+            if "motion is in flight" in r.message and (self.pp_status or "").startswith(f"FLYING {name}"):
+                # (2026-11-02) the arm GS already started it: its own OPEN on the auto release
+                # won the race and it starts Exit To Place on that open's SUCCEEDED
+                self.ev(f"{name}: already FLYING -- started by the arm GS")
+                return
             if "wait for it to settle" not in r.message or time.time() - t > self.a.settle_timeout:
                 raise Abort(f"{name} refused: {r.message}")
             time.sleep(0.5)
@@ -504,6 +509,20 @@ class Driver(Node):
         self.ev(f"gripper {what} (action): status {status} (SUCCEEDED = {GoalStatus.STATUS_SUCCEEDED}) "
                 f"stalled={res.stalled} reached={res.reached_goal} after {time.time() - t:.2f} s, "
                 f"at {np.degrees(self.grip or np.nan):.1f} deg")
+        if status == GoalStatus.STATUS_ABORTED:
+            # (2026-11-02) TWO clients answer the planner's AUTO RELEASE: this driver and the
+            # running arm GS (arm_joint_plot_inverted's Insert tab opens on it too). The server
+            # serves the newest goal and aborts the older, so when the GS's goal lands second
+            # this one reads ABORTED while the jaws open normally (5 of ~65 mail opens; events:
+            # two "goal:" lines 10 ms apart, "goal preempted by a newer one", then "reached").
+            # On hardware the GS is the only client; jaws that DO open are the open it would see
+            t2 = time.time()
+            while time.time() - t2 < 3.0 and not (self.grip is not None and self.grip > GRIP_OPEN - 0.0873):
+                time.sleep(0.02)
+            if self.grip is not None and self.grip > GRIP_OPEN - 0.0873:
+                self.ev(f"gripper {what}: goal ABORTED (preempted by the arm GS's own open), but the jaws "
+                        f"reached {np.degrees(self.grip):.1f} deg -- taken as SUCCEEDED")
+                status = GoalStatus.STATUS_SUCCEEDED
         self.mark(f"gripper_{what}:end")
         if status != GoalStatus.STATUS_SUCCEEDED:
             raise Abort("gripper OPEN did not succeed -- the arm GS would not start Exit To Drop")

@@ -11,7 +11,14 @@ from isaacsim.core.utils.extensions import enable_extension
 enable_extension("isaacsim.ros2.bridge")
 
 # ROS2 imports
+import os
+
 import rclpy
+
+# PEGASUS_STATE_PUB_EVERY=N (2026-11-02, default 1): publish the ground-truth state (and TF) every Nth
+# physics step only. At 250 Hz physics its consumer, the mocap emulator, samples at 120 Hz, and these
+# publishes are part of a 4 ms step budget that fsc_lab_machine misses in flight. 1 = every step.
+_STATE_PUB_EVERY = max(1, int(os.environ.get("PEGASUS_STATE_PUB_EVERY", "") or 1))
 from std_msgs.msg import Float64
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import Imu, MagneticField, NavSatFix, NavSatStatus
@@ -211,6 +218,11 @@ class ROS2Backend(Backend):
 
         # Publish the state of the vehicle only if the flag is set to True
         if not self._pub_state:
+            return
+
+        # every Nth step only (PEGASUS_STATE_PUB_EVERY, default 1 = every step)
+        self._state_pub_calls = getattr(self, "_state_pub_calls", 0) + 1
+        if self._state_pub_calls % _STATE_PUB_EVERY:
             return
 
         pose = PoseStamped()
@@ -486,8 +498,20 @@ class ROS2Backend(Backend):
 
         # In this case, do nothing as we are sending messages as soon as new data arrives from the sensors and state
         # and updating the reference for the thrusters as soon as receiving from ROS2 topics
-        # Just poll for new ROS 2 messages in a non-blocking way
-        rclpy.spin_once(self.node, timeout_sec=0)
+        # Just poll for new ROS 2 messages in a non-blocking way -- one callback, as
+        # rclpy.spin_once(self.node, timeout_sec=0), on a persistent executor: the module-level
+        # spin_once adds and removes the node on the global executor every physics step.
+        # Without the control subscriptions (sub_control False) the node has only its parameter
+        # services to serve, so it is polled every 25th step (10 Hz at 250 Hz physics) instead of
+        # rebuilding its wait set every step.
+        if getattr(self, "_spin_executor", None) is None:
+            from rclpy.executors import SingleThreadedExecutor
+            self._spin_executor = SingleThreadedExecutor(context=self.node.context)
+            self._spin_executor.add_node(self.node)
+            self._spin_count = 0
+        self._spin_count += 1
+        if self._sub_control or self._spin_count % 25 == 0:
+            self._spin_executor.spin_once(timeout_sec=0)
 
     def start(self):
         """
