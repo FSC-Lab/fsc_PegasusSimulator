@@ -1,0 +1,905 @@
+[13:11:24] waiting for the planner
+[13:11:25] planner up: data: NOT IN DIRECT
+[13:11:25] waiting for the localization frame (Isaac)
+[13:12:18] Isaac up; letting PX4 / the arm stack settle
+[13:13:06] flying (recording /home/fsc-jupiter/Source/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/mail_route_20261103/runs/route2.bag)
+[   0.96s] planner: IDLE
+[   0.96s] pick_place: NOT IN DIRECT
+[   1.00s] envelope 1 at rest [0.7, -0.0953, 0.78]
+[   1.00s] envelope 2 at rest [0.1, -0.0953, 0.78]
+[   1.00s] envelope 3 at rest [-0.5, -0.0953, 0.78]
+[   1.02s] reset: success=True pick-and-place progress and plan cleared (captures and the Adjust offset kept); the mail route starts again at letter 1
+[   1.04s] adjust: success=True drone points moved by [-0.002, 0.004, 0.000] m, yaw 0.0 deg (written into Start, Land Start, Land; Place, Place Start (it follows Place) and the drop exit not moved); press Plan
+[   2.07s] capture_letter_1: success=True letter 1 at [0.700, -0.095, 0.780] m, yaw 90.0 deg, from the LOCATOR FRAME obj_0 at [0.694, -0.004, 0.819] m, yaw 90.0 deg, + pick_place_pick_locator [-0.0914, -0.0064, -0.0390, 0.0 deg] (/obj_0/mocap, 60 samples, spread 1.5 mm)
+[   3.59s] capture_letter_2: success=True letter 2 at [0.100, -0.095, 0.780] m, yaw 90.0 deg, from the LOCATOR FRAME obj_0 at [0.094, -0.004, 0.819] m, yaw 90.0 deg, + pick_place_pick_locator [-0.0914, -0.0064, -0.0390, 0.0 deg] (/obj_0/mocap, 60 samples, spread 1.6 mm)
+[   5.11s] capture_letter_3: success=True letter 3 at [-0.500, -0.095, 0.780] m, yaw 90.0 deg, from the LOCATOR FRAME obj_0 at [-0.506, -0.004, 0.819] m, yaw 90.0 deg, + pick_place_pick_locator [-0.0914, -0.0064, -0.0390, 0.0 deg] (/obj_0/mocap, 60 samples, spread 1.5 mm)
+[   6.63s] get_box_1: success=True mailbox RED at [1.709, 0.250, 1.024] m, yaw 0.0 deg, from the LOCATOR FRAME obj_0 at [1.759, 0.256, 1.114] m, yaw 0.0 deg, + pick_place_place_locator [-0.0499, -0.0064, -0.0896, 0.0 deg] (/obj_0/mocap, 60 samples, spread 1.8 mm)
+[   8.15s] get_box_2: success=True mailbox BLUE at [1.709, -0.250, 1.024] m, yaw 0.0 deg, from the LOCATOR FRAME obj_0 at [1.759, -0.244, 1.114] m, yaw 0.0 deg, + pick_place_place_locator [-0.0499, -0.0064, -0.0896, 0.0 deg] (/obj_0/mocap, 60 samples, spread 1.8 mm)
+[  10.68s] offboard: success=True Offboard mode request sent
+[  13.70s] arm: success=True Arm command sent
+[  15.70s] climbing to 1.0 m
+[  30.29s] planner: HOLD
+[  30.29s] pick_place: NOT PLANNED: press Plan
+[  30.31s] set_direct_mode(true): success=True Switched to DIRECT mode
+[  30.31s] MARK direct
+[  45.33s] pick_place: PLANNING
+[  45.35s] plan: success=True planning the mail route (3 letters into 2 mailboxes, alternately) from the current hold -- the status reads READY when done
+[  45.50s] pick_place: READY next=go_to_start [letter 1/3 -> mailbox RED]
+[  45.55s] route planned: 196.7 s of flight
+[  45.55s] MARK L1:select:start
+[  45.57s] select_letter_1: success=True letter 1 is already the letter in progress
+[  45.57s] LETTER 1 -> mailbox RED
+[  45.57s] MARK L1:select:end
+[  45.57s] MARK L1:go_to_start:start
+[  45.57s] planner: CALCULATING
+[  45.57s] pick_place: FLYING go_to_start [letter 1/3 -> mailbox RED]
+[  45.58s] planner: EXECUTING T=12.4s
+[  45.58s] pick_place: FLYING go_to_start T=12.4s [letter 1/3 -> mailbox RED]
+[  45.59s] go_to_start: success=True planning go_to_start from the current hold; it executes as soon as it is planned
+[  45.59s] go_to_start: executing, T = 12.4 s
+[  58.01s] planner: HOLD
+[  58.01s] pick_place: DONE go_to_start next=execute_pick [letter 1/3 -> mailbox RED]
+[  58.05s] MARK L1:go_to_start:end
+[  60.06s] MARK L1:ready_pick:start
+[  60.06s] planner: CALCULATING
+[  60.06s] pick_place: FLYING execute_pick (approach) [letter 1/3 -> mailbox RED]
+[  60.06s] planner: EXECUTING T=9.8s
+[  60.06s] pick_place: FLYING execute_pick (approach) T=9.8s [letter 1/3 -> mailbox RED]
+[  60.08s] execute_pick: success=True planning execute_pick from the current hold; it executes as soon as it is planned
+[  60.08s] execute_pick: executing, T = 9.8 s
+[  69.88s] planner: HOLD
+[  69.89s] pick_place: WAITING execute_pick: claw 8 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  69.89s] MARK L1:ready_pick:end
+[  69.89s] MARK L1:pick:start
+[  69.97s] pick_place: WAITING execute_pick: claw 7 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.07s] pick_place: WAITING execute_pick: claw 6 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.17s] pick_place: WAITING execute_pick: claw 5 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.27s] pick_place: WAITING execute_pick: claw 4 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.67s] pick_place: WAITING execute_pick: claw 5 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.77s] pick_place: WAITING execute_pick: claw 7 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.87s] pick_place: WAITING execute_pick: claw 9 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  70.97s] pick_place: WAITING execute_pick: claw 12 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  71.07s] pick_place: WAITING execute_pick: claw 14 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  71.37s] pick_place: WAITING execute_pick: claw 13 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  71.47s] pick_place: WAITING execute_pick: claw 12 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 1/3 -> mailbox RED]
+[  71.89s] planner: CALCULATING
+[  71.89s] pick_place: FLYING execute_pick (descent) [letter 1/3 -> mailbox RED]
+[  71.89s] planner: EXECUTING T=3.0s
+[  71.89s] pick_place: FLYING execute_pick (descent) T=3.0s [letter 1/3 -> mailbox RED]
+[  71.91s] descend_pick: success=True descend_pick: descending onto the target (goal trimmed by [2.2, 11.3, 1.7] mm, the hover error)
+[  74.90s] planner: HOLD
+[  74.90s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw inside tolerance, settling [letter 1/3 -> mailbox RED]
+[  74.97s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw within tolerance: fine correction OK [letter 1/3 -> mailbox RED]
+[  75.23s] pick: EE 2.9 mm from the target, vertical +0.3 mm -- gripper CLOSE
+[  75.23s] MARK L1:gripper_close:start
+[  76.42s] gripper close (action): status 6 stalled=True reached=False after 1.19 s, at -19.6 deg
+[  76.42s] MARK L1:gripper_close:end
+[  76.42s] MARK L1:exit_pick:start
+[  76.42s] planner: CALCULATING
+[  76.42s] pick_place: FLYING exit_pick (up the vertical margin) [letter 1/3 -> mailbox RED]
+[  76.43s] planner: EXECUTING T=3.2s
+[  76.43s] pick_place: FLYING exit_pick (up the vertical margin) T=3.2s [letter 1/3 -> mailbox RED]
+[  76.44s] exit_pick: success=True exit_pick: climbing 20 cm straight up to the clearance point
+[  79.66s] planner: HOLD
+[  79.66s] pick_place: DONE exit_pick next=go_to_place_start [letter 1/3 -> mailbox RED]
+[  79.71s] MARK L1:exit_pick:end
+[  79.71s] MARK L1:go_to_place_start:start
+[  79.71s] planner: CALCULATING
+[  79.71s] pick_place: FLYING go_to_place_start [letter 1/3 -> mailbox RED]
+[  79.72s] planner: EXECUTING T=11.0s
+[  79.72s] pick_place: FLYING go_to_place_start T=11.0s [letter 1/3 -> mailbox RED]
+[  79.73s] go_to_place_start: success=True planning go_to_place_start from the current hold; it executes as soon as it is planned
+[  79.73s] go_to_place_start: executing, T = 11.0 s
+[  90.70s] planner: HOLD
+[  90.70s] pick_place: DONE go_to_place_start next=execute_place [letter 1/3 -> mailbox RED]
+[  90.75s] MARK L1:go_to_place_start:end
+[  92.76s] MARK L1:ready_place:start
+[  92.76s] planner: CALCULATING
+[  92.76s] pick_place: FLYING execute_place (approach) [letter 1/3 -> mailbox RED]
+[  92.78s] planner: EXECUTING T=8.0s
+[  92.78s] pick_place: FLYING execute_place (approach) T=8.0s [letter 1/3 -> mailbox RED]
+[  92.78s] execute_place: success=True planning execute_place from the current hold; it executes as soon as it is planned
+[  92.78s] execute_place: executing, T = 8.0 s
+[ 100.78s] planner: HOLD
+[ 100.78s] pick_place: WAITING execute_place: claw 67 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm [letter 1/3 -> mailbox RED]
+[ 100.83s] MARK L1:ready_place:end
+[ 100.83s] MARK L1:place:start
+[ 100.87s] pick_place: WAITING execute_place: claw 67 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 67 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 100.97s] pick_place: WAITING execute_place: claw 66 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 66 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.07s] pick_place: WAITING execute_place: claw 65 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 65 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.17s] pick_place: WAITING execute_place: claw 64 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 64 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.27s] pick_place: WAITING execute_place: claw 63 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 63 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.37s] pick_place: WAITING execute_place: claw 62 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 62 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.47s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.57s] pick_place: WAITING execute_place: claw 60 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 60 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.67s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 101.77s] pick_place: WAITING execute_place: claw 58 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 58 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 102.07s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 102.37s] pick_place: WAITING execute_place: claw 60 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 60 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 102.47s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 102.67s] pick_place: WAITING execute_place: claw 62 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 62 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 102.87s] pick_place: WAITING execute_place: claw 63 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 63 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 103.27s] pick_place: WAITING execute_place: claw 64 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 64 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 103.37s] pick_place: WAITING execute_place: claw 65 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 65 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 103.47s] pick_place: WAITING execute_place: claw 66 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 66 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 103.57s] pick_place: WAITING execute_place: claw 67 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 67 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 103.67s] pick_place: WAITING execute_place: claw 68 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 68 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 103.87s] pick_place: WAITING execute_place: claw 69 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 69 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.07s] pick_place: WAITING execute_place: claw 70 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 70 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.27s] pick_place: WAITING execute_place: claw 71 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 71 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.37s] pick_place: WAITING execute_place: claw 70 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 70 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.47s] pick_place: WAITING execute_place: claw 69 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 69 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.57s] pick_place: WAITING execute_place: claw 67 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 67 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.67s] pick_place: WAITING execute_place: claw 65 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 65 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.77s] pick_place: WAITING execute_place: claw 64 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 64 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 104.87s] pick_place: WAITING execute_place: claw 63 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 63 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.07s] pick_place: WAITING execute_place: claw 62 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 62 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.17s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.27s] pick_place: WAITING execute_place: claw 60 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 60 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.37s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.47s] pick_place: WAITING execute_place: claw 58 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 58 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.77s] pick_place: WAITING execute_place: claw 57 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 57 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 105.97s] pick_place: WAITING execute_place: claw 56 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 56 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 106.07s] pick_place: WAITING execute_place: claw 54 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 54 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 106.77s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 106.97s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 107.17s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 107.57s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 107.77s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 107.87s] pick_place: WAITING execute_place: claw 54 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 54 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 107.97s] pick_place: WAITING execute_place: claw 55 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 55 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 108.07s] pick_place: WAITING execute_place: claw 56 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 56 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 108.37s] pick_place: WAITING execute_place: claw 57 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 57 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 108.77s] pick_place: WAITING execute_place: claw 56 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 56 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 108.87s] pick_place: WAITING execute_place: claw 54 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 54 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 108.97s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.27s] pick_place: WAITING execute_place: claw 54 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 54 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.37s] pick_place: WAITING execute_place: claw 55 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 55 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.47s] pick_place: WAITING execute_place: claw 56 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 56 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.57s] pick_place: WAITING execute_place: claw 57 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 57 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.67s] pick_place: WAITING execute_place: claw 58 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 58 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.77s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 109.87s] pick_place: WAITING execute_place: claw 60 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 60 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.07s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.27s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.37s] pick_place: WAITING execute_place: claw 57 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 57 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.47s] pick_place: WAITING execute_place: claw 55 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 55 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.57s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.67s] pick_place: WAITING execute_place: claw 50 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 50 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.77s] pick_place: WAITING execute_place: claw 48 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 48 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.87s] pick_place: WAITING execute_place: claw 45 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 45 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 110.97s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.07s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.17s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.27s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.47s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.67s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.77s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 111.87s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 112.17s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 112.27s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 112.67s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 112.77s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 112.87s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 113.37s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 113.67s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 113.77s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 113.97s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.07s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.27s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.37s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.47s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.57s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.77s] pick_place: WAITING execute_place: claw 41 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 41 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.87s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 114.97s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 115.07s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 115.17s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 115.37s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 115.47s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 115.57s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 115.67s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.07s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.27s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.37s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.47s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.57s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.77s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.87s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 116.97s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.07s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.17s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.27s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.37s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.47s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.57s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.87s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 117.97s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.07s] pick_place: WAITING execute_place: claw 24 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 24 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.17s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.27s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.47s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.57s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.67s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.77s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 118.97s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 119.07s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 119.17s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 119.27s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 119.47s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.17s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.37s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.47s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.57s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.67s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.87s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 1/3 -> mailbox RED]
+[ 120.89s] planner: CALCULATING
+[ 120.89s] pick_place: FLYING execute_place (descent) [letter 1/3 -> mailbox RED]
+[ 120.89s] planner: EXECUTING T=3.0s
+[ 120.89s] pick_place: FLYING execute_place (descent) T=3.0s [letter 1/3 -> mailbox RED]
+[ 120.91s] descend_place: success=True descend_place: sliding the claw in through the mouth (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[ 120.91s] place: the slide had not started after 20 s -- Insert pressed: descend_place: sliding the claw in through the mouth (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[ 123.90s] planner: HOLD
+[ 123.90s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling [letter 1/3 -> mailbox RED]
+[ 123.92s] place: inserted, EE 24.8 mm from the release point
+[ 123.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.1 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.2 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.3 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.4 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.5 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.6 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.7 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.8 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.9 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 1.0 of 1.0 s [letter 1/3 -> mailbox RED]
+[ 124.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 26 mm short of the release point along the insertion line (window -15 / +20) [letter 1/3 -> mailbox RED]
+[ 125.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 22 mm short of the release point along the insertion line (window -15 / +20) [letter 1/3 -> mailbox RED]
+[ 125.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 20 mm short of the release point along the insertion line (window -15 / +20) [letter 1/3 -> mailbox RED]
+[ 125.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 17 mm short of the release point along the insertion line (window -15 / +20) [letter 1/3 -> mailbox RED]
+[ 125.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.0 of 0.5 s [letter 1/3 -> mailbox RED]
+[ 125.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.1 of 0.5 s [letter 1/3 -> mailbox RED]
+[ 125.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.2 of 0.5 s [letter 1/3 -> mailbox RED]
+[ 125.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.3 of 0.5 s [letter 1/3 -> mailbox RED]
+[ 125.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.4 of 0.5 s [letter 1/3 -> mailbox RED]
+[ 125.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: RELEASE signalled (claw -7 mm along / 5 mm off the release point, 0.02 m/s, q4 2.6 deg off, 2.0 s after the slide) -- the arm GS opens the gripper [letter 1/3 -> mailbox RED]
+[ 125.88s] place: planner released -- claw -7 mm along / 5 mm off the release point, 0.02 m/s, q4 2.6 deg off, 2.0 s after the slide
+[ 125.88s] MARK L1:gripper_open:start
+[ 126.79s] gripper open (action): status 4 stalled=False reached=True after 0.90 s, at -1.4 deg
+[ 126.79s] MARK L1:gripper_open:end
+[ 127.29s] MARK L1:place:end
+[ 127.29s] MARK L1:exit_place:start
+[ 127.29s] planner: CALCULATING
+[ 127.29s] pick_place: FLYING exit_place (up the vertical margin) [letter 1/3 -> mailbox RED]
+[ 127.30s] planner: EXECUTING T=6.2s
+[ 127.30s] pick_place: FLYING exit_place (up the vertical margin) T=6.2s [letter 1/3 -> mailbox RED]
+[ 127.31s] exit_place: success=True exit_place: from where the vehicle is now (46 mm from the release hold), backing out 10 cm (out of the mailbox mouth), then climbing 20 cm straight up to the clearance point
+[ 133.53s] planner: HOLD
+[ 133.54s] pick_place: DONE exit_place next=go_to_land_start [letter 1 posted into mailbox RED -- select the next letter, or go_to_land_start]
+[ 133.55s] MARK L1:exit_place:end
+[ 133.55s] letter 1: Exit To Insert done -- gripper CLOSE
+[ 135.55s] MARK L2:select:start
+[ 135.55s] pick_place: READY next=go_to_start [letter 2/3 -> mailbox BLUE]
+[ 135.57s] select_letter_2: success=True letter 2 selected (into mailbox BLUE) -- next: go_to_start, to its Pick Start
+[ 135.57s] LETTER 2 -> mailbox BLUE
+[ 135.57s] MARK L2:select:end
+[ 135.57s] MARK L2:go_to_start:start
+[ 135.57s] planner: CALCULATING
+[ 135.57s] pick_place: FLYING go_to_start [letter 2/3 -> mailbox BLUE]
+[ 135.58s] planner: EXECUTING T=10.8s
+[ 135.58s] pick_place: FLYING go_to_start T=10.8s [letter 2/3 -> mailbox BLUE]
+[ 135.59s] go_to_start: success=True planning go_to_start from the current hold; it executes as soon as it is planned
+[ 135.59s] go_to_start: executing, T = 10.8 s
+[ 146.36s] planner: HOLD
+[ 146.36s] pick_place: DONE go_to_start next=execute_pick [letter 2/3 -> mailbox BLUE]
+[ 146.40s] MARK L2:go_to_start:end
+[ 148.40s] MARK L2:ready_pick:start
+[ 148.40s] planner: CALCULATING
+[ 148.40s] pick_place: FLYING execute_pick (approach) [letter 2/3 -> mailbox BLUE]
+[ 148.41s] planner: EXECUTING T=9.8s
+[ 148.41s] pick_place: FLYING execute_pick (approach) T=9.8s [letter 2/3 -> mailbox BLUE]
+[ 148.42s] execute_pick: success=True planning execute_pick from the current hold; it executes as soon as it is planned
+[ 148.42s] execute_pick: executing, T = 9.8 s
+[ 158.23s] planner: HOLD
+[ 158.23s] pick_place: WAITING execute_pick: claw 26 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.27s] pick_place: WAITING execute_pick: claw 25 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.28s] MARK L2:ready_pick:end
+[ 158.28s] MARK L2:pick:start
+[ 158.37s] pick_place: WAITING execute_pick: claw 24 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.57s] pick_place: WAITING execute_pick: claw 25 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.67s] pick_place: WAITING execute_pick: claw 26 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.77s] pick_place: WAITING execute_pick: claw 27 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.87s] pick_place: WAITING execute_pick: claw 28 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 158.97s] pick_place: WAITING execute_pick: claw 29 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.07s] pick_place: WAITING execute_pick: claw 30 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.17s] pick_place: WAITING execute_pick: claw 31 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.27s] pick_place: WAITING execute_pick: claw 32 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.37s] pick_place: WAITING execute_pick: claw 34 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.47s] pick_place: WAITING execute_pick: claw 35 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.87s] pick_place: WAITING execute_pick: claw 34 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 159.97s] pick_place: WAITING execute_pick: claw 33 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 160.07s] pick_place: WAITING execute_pick: claw 31 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 160.17s] pick_place: WAITING execute_pick: claw 30 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 160.27s] pick_place: WAITING execute_pick: claw 28 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 2/3 -> mailbox BLUE]
+[ 160.28s] planner: CALCULATING
+[ 160.28s] pick_place: FLYING execute_pick (descent) [letter 2/3 -> mailbox BLUE]
+[ 160.28s] planner: EXECUTING T=3.0s
+[ 160.28s] pick_place: FLYING execute_pick (descent) T=3.0s [letter 2/3 -> mailbox BLUE]
+[ 160.30s] descend_pick: success=True descend_pick: descending onto the target (goal trimmed by [-1.8, -32.7, 2.2] mm, the hover error)
+[ 163.29s] planner: HOLD
+[ 163.29s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw inside tolerance, settling [letter 2/3 -> mailbox BLUE]
+[ 163.37s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw within tolerance: fine correction OK [letter 2/3 -> mailbox BLUE]
+[ 163.62s] pick: EE 19.5 mm from the target, vertical -6.6 mm -- gripper CLOSE
+[ 163.62s] MARK L2:gripper_close:start
+[ 165.74s] gripper close (action): status 6 stalled=True reached=False after 2.12 s, at -40.7 deg
+[ 165.74s] MARK L2:gripper_close:end
+[ 165.74s] MARK L2:exit_pick:start
+[ 165.75s] planner: CALCULATING
+[ 165.75s] pick_place: FLYING exit_pick (up the vertical margin) [letter 2/3 -> mailbox BLUE]
+[ 165.75s] planner: EXECUTING T=3.2s
+[ 165.75s] pick_place: FLYING exit_pick (up the vertical margin) T=3.2s [letter 2/3 -> mailbox BLUE]
+[ 165.76s] exit_pick: success=True exit_pick: climbing 20 cm straight up to the clearance point
+[ 168.99s] planner: HOLD
+[ 168.99s] pick_place: DONE exit_pick next=go_to_place_start [letter 2/3 -> mailbox BLUE]
+[ 169.03s] MARK L2:exit_pick:end
+[ 169.03s] MARK L2:go_to_place_start:start
+[ 169.03s] planner: CALCULATING
+[ 169.03s] pick_place: FLYING go_to_place_start [letter 2/3 -> mailbox BLUE]
+[ 169.04s] planner: EXECUTING T=11.0s
+[ 169.04s] pick_place: FLYING go_to_place_start T=11.0s [letter 2/3 -> mailbox BLUE]
+[ 169.05s] go_to_place_start: success=True planning go_to_place_start from the current hold; it executes as soon as it is planned
+[ 169.05s] go_to_place_start: executing, T = 11.0 s
+[ 180.03s] planner: HOLD
+[ 180.03s] pick_place: DONE go_to_place_start next=execute_place [letter 2/3 -> mailbox BLUE]
+[ 180.06s] MARK L2:go_to_place_start:end
+[ 182.07s] MARK L2:ready_place:start
+[ 182.07s] planner: CALCULATING
+[ 182.07s] pick_place: FLYING execute_place (approach) [letter 2/3 -> mailbox BLUE]
+[ 182.09s] planner: EXECUTING T=8.0s
+[ 182.09s] pick_place: FLYING execute_place (approach) T=8.0s [letter 2/3 -> mailbox BLUE]
+[ 182.09s] execute_place: success=True planning execute_place from the current hold; it executes as soon as it is planned
+[ 182.09s] execute_place: executing, T = 8.0 s
+[ 190.10s] planner: HOLD
+[ 190.10s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm [letter 2/3 -> mailbox BLUE]
+[ 190.14s] MARK L2:ready_place:end
+[ 190.14s] MARK L2:place:start
+[ 190.17s] pick_place: WAITING execute_place: claw 24 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 24 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 190.27s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 190.37s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 190.67s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 190.77s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 190.97s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.07s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.17s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.27s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.37s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.57s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.67s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.77s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 191.97s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.07s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.17s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.27s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.37s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.47s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.57s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.67s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.77s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 192.87s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.17s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.27s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.37s] pick_place: WAITING execute_place: claw 24 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 24 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.47s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.57s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.67s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.77s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.87s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 193.97s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.07s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.17s] pick_place: WAITING execute_place: claw 41 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 41 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.27s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.37s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.47s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.57s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.67s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.77s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 194.97s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.07s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.17s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.37s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.47s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.67s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.77s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.87s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 195.97s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.07s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.27s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.37s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.47s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.57s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.67s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 196.77s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.07s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.17s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.27s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.37s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.47s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.57s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.67s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.77s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.87s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 197.97s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 198.07s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 198.57s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 198.67s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 198.77s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 198.87s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 198.97s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.07s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.17s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.27s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.37s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.47s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.57s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.77s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.87s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 199.97s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.07s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.17s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.27s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.37s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.47s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.57s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 200.77s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.07s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.27s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.37s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.47s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.57s] pick_place: WAITING execute_place: claw 17 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 17 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.77s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 201.87s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 202.07s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 202.47s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 202.77s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 202.87s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 203.07s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 203.27s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 203.77s] pick_place: WAITING execute_place: claw 24 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 24 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 204.37s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 204.57s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 204.67s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 204.77s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 204.87s] pick_place: WAITING execute_place: claw 16 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 16 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 204.97s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.0 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.07s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.1 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.17s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.2 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.27s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.3 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.37s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.4 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.47s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.5 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.57s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.6 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.67s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.7 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 205.77s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 15 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 205.87s] pick_place: WAITING execute_place: claw 16 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 16 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 205.97s] pick_place: WAITING execute_place: claw 17 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 17 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 206.27s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 206.77s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 206.87s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 206.97s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.07s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.37s] pick_place: WAITING execute_place: claw 21 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 21 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.47s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.57s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.67s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.77s] pick_place: WAITING execute_place: claw 16 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 16 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 207.87s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.0 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 207.97s] pick_place: WAITING execute_place: claw 13 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.1 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.07s] pick_place: WAITING execute_place: claw 12 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.2 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.17s] pick_place: WAITING execute_place: claw 12 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.3 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.27s] pick_place: WAITING execute_place: claw 12 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.4 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.37s] pick_place: WAITING execute_place: claw 13 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.5 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.47s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.6 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.57s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.7 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 208.67s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 15 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 208.77s] pick_place: WAITING execute_place: claw 17 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 17 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 208.87s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 208.97s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.07s] pick_place: WAITING execute_place: claw 24 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 24 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.27s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.37s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.47s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.57s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.67s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.77s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 209.87s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 210.07s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 210.17s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 2/3 -> mailbox BLUE]
+[ 210.21s] planner: CALCULATING
+[ 210.21s] pick_place: FLYING execute_place (descent) [letter 2/3 -> mailbox BLUE]
+[ 210.22s] planner: EXECUTING T=3.0s
+[ 210.22s] pick_place: FLYING execute_place (descent) T=3.0s [letter 2/3 -> mailbox BLUE]
+[ 210.23s] descend_place: success=True descend_place: sliding the claw in through the mouth (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[ 210.23s] place: the slide had not started after 20 s -- Insert pressed: descend_place: sliding the claw in through the mouth (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[ 213.23s] planner: HOLD
+[ 213.23s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling [letter 2/3 -> mailbox BLUE]
+[ 213.25s] place: inserted, EE 19.4 mm from the release point
+[ 213.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.0 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.1 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.2 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.3 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.4 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.5 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.6 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 213.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.7 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 214.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.8 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 214.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.9 of 1.0 s [letter 2/3 -> mailbox BLUE]
+[ 214.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.0 of 0.5 s [letter 2/3 -> mailbox BLUE]
+[ 214.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.1 of 0.5 s [letter 2/3 -> mailbox BLUE]
+[ 214.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.2 of 0.5 s [letter 2/3 -> mailbox BLUE]
+[ 214.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.3 of 0.5 s [letter 2/3 -> mailbox BLUE]
+[ 214.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.4 of 0.5 s [letter 2/3 -> mailbox BLUE]
+[ 214.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: RELEASE signalled (claw 3 mm along / 10 mm off the release point, 0.03 m/s, q4 1.3 deg off, 1.5 s after the slide) -- the arm GS opens the gripper [letter 2/3 -> mailbox BLUE]
+[ 214.81s] place: planner released -- claw 3 mm along / 10 mm off the release point, 0.03 m/s, q4 1.3 deg off, 1.5 s after the slide
+[ 214.81s] MARK L2:gripper_open:start
+[ 216.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw outside tolerance -- auto release: RELEASE signalled (claw 3 mm along / 10 mm off the release point, 0.03 m/s, q4 1.3 deg off, 1.5 s after the slide) -- the arm GS opens the gripper [letter 2/3 -> mailbox BLUE]
+[ 216.85s] gripper open (action): status 4 stalled=False reached=True after 2.04 s, at -1.2 deg
+[ 216.85s] MARK L2:gripper_open:end
+[ 217.35s] MARK L2:place:end
+[ 217.35s] MARK L2:exit_place:start
+[ 217.35s] planner: CALCULATING
+[ 217.36s] pick_place: FLYING exit_place (up the vertical margin) [letter 2/3 -> mailbox BLUE]
+[ 217.37s] planner: EXECUTING T=6.2s
+[ 217.37s] pick_place: FLYING exit_place (up the vertical margin) T=6.2s [letter 2/3 -> mailbox BLUE]
+[ 217.38s] exit_place: success=True exit_place: from where the vehicle is now (57 mm from the release hold), backing out 10 cm (out of the mailbox mouth), then climbing 20 cm straight up to the clearance point
+[ 223.60s] planner: HOLD
+[ 223.60s] pick_place: DONE exit_place next=go_to_land_start [letter 2 posted into mailbox BLUE -- select the next letter, or go_to_land_start]
+[ 223.61s] MARK L2:exit_place:end
+[ 223.61s] letter 2: Exit To Insert done -- gripper CLOSE
+[ 225.61s] MARK L3:select:start
+[ 225.62s] pick_place: READY next=go_to_start [letter 3/3 -> mailbox RED]
+[ 225.64s] select_letter_3: success=True letter 3 selected (into mailbox RED) -- next: go_to_start, to its Pick Start
+[ 225.64s] LETTER 3 -> mailbox RED
+[ 225.64s] MARK L3:select:end
+[ 225.64s] MARK L3:go_to_start:start
+[ 225.64s] planner: CALCULATING
+[ 225.64s] pick_place: FLYING go_to_start [letter 3/3 -> mailbox RED]
+[ 225.64s] planner: EXECUTING T=13.4s
+[ 225.65s] pick_place: FLYING go_to_start T=13.4s [letter 3/3 -> mailbox RED]
+[ 225.66s] go_to_start: success=True planning go_to_start from the current hold; it executes as soon as it is planned
+[ 225.66s] go_to_start: executing, T = 13.4 s
+[ 239.02s] planner: HOLD
+[ 239.02s] pick_place: DONE go_to_start next=execute_pick [letter 3/3 -> mailbox RED]
+[ 239.04s] MARK L3:go_to_start:end
+[ 241.05s] MARK L3:ready_pick:start
+[ 241.05s] planner: CALCULATING
+[ 241.05s] pick_place: FLYING execute_pick (approach) [letter 3/3 -> mailbox RED]
+[ 241.05s] planner: EXECUTING T=9.8s
+[ 241.05s] pick_place: FLYING execute_pick (approach) T=9.8s [letter 3/3 -> mailbox RED]
+[ 241.07s] execute_pick: success=True planning execute_pick from the current hold; it executes as soon as it is planned
+[ 241.07s] execute_pick: executing, T = 9.8 s
+[ 250.88s] planner: HOLD
+[ 250.88s] pick_place: WAITING execute_pick: claw 19 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 250.89s] MARK L3:ready_pick:end
+[ 250.89s] MARK L3:pick:start
+[ 251.17s] pick_place: WAITING execute_pick: claw 18 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 251.47s] pick_place: WAITING execute_pick: claw 19 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 251.67s] pick_place: WAITING execute_pick: claw 18 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 251.77s] pick_place: WAITING execute_pick: claw 17 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 251.87s] pick_place: WAITING execute_pick: claw 16 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.07s] pick_place: WAITING execute_pick: claw 17 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.17s] pick_place: WAITING execute_pick: claw 18 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.27s] pick_place: WAITING execute_pick: claw 19 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.57s] pick_place: WAITING execute_pick: claw 17 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.77s] pick_place: WAITING execute_pick: claw 16 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.87s] pick_place: WAITING execute_pick: claw 14 mm from the point above the target (tolerance 50 mm) -- press Pick to descend [letter 3/3 -> mailbox RED]
+[ 252.89s] planner: CALCULATING
+[ 252.89s] pick_place: FLYING execute_pick (descent) [letter 3/3 -> mailbox RED]
+[ 252.90s] planner: EXECUTING T=3.0s
+[ 252.90s] pick_place: FLYING execute_pick (descent) T=3.0s [letter 3/3 -> mailbox RED]
+[ 252.91s] descend_pick: success=True descend_pick: descending onto the target (goal trimmed by [-10.4, -13.0, 0.3] mm, the hover error)
+[ 255.91s] planner: HOLD
+[ 255.91s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw inside tolerance, settling [letter 3/3 -> mailbox RED]
+[ 255.97s] pick_place: DONE execute_pick next=exit_pick (close the gripper first) -- claw within tolerance: fine correction OK [letter 3/3 -> mailbox RED]
+[ 256.23s] pick: EE 19.7 mm from the target, vertical -4.5 mm -- gripper CLOSE
+[ 256.23s] MARK L3:gripper_close:start
+[ 258.54s] gripper close (action): status 6 stalled=True reached=False after 2.31 s, at -39.3 deg
+[ 258.55s] MARK L3:gripper_close:end
+[ 258.55s] MARK L3:exit_pick:start
+[ 258.55s] planner: CALCULATING
+[ 258.55s] pick_place: FLYING exit_pick (up the vertical margin) [letter 3/3 -> mailbox RED]
+[ 258.55s] planner: EXECUTING T=3.2s
+[ 258.55s] pick_place: FLYING exit_pick (up the vertical margin) T=3.2s [letter 3/3 -> mailbox RED]
+[ 258.57s] exit_pick: success=True exit_pick: climbing 20 cm straight up to the clearance point
+[ 261.79s] planner: HOLD
+[ 261.79s] pick_place: DONE exit_pick next=go_to_place_start [letter 3/3 -> mailbox RED]
+[ 261.83s] MARK L3:exit_pick:end
+[ 261.83s] MARK L3:go_to_place_start:start
+[ 261.84s] planner: CALCULATING
+[ 261.84s] pick_place: FLYING go_to_place_start [letter 3/3 -> mailbox RED]
+[ 261.84s] planner: EXECUTING T=15.3s
+[ 261.84s] pick_place: FLYING go_to_place_start T=15.3s [letter 3/3 -> mailbox RED]
+[ 261.85s] go_to_place_start: success=True planning go_to_place_start from the current hold; it executes as soon as it is planned
+[ 261.85s] go_to_place_start: executing, T = 15.3 s
+[ 277.19s] planner: HOLD
+[ 277.19s] pick_place: DONE go_to_place_start next=execute_place [letter 3/3 -> mailbox RED]
+[ 277.19s] MARK L3:go_to_place_start:end
+[ 279.19s] MARK L3:ready_place:start
+[ 279.19s] planner: CALCULATING
+[ 279.19s] pick_place: FLYING execute_place (approach) [letter 3/3 -> mailbox RED]
+[ 279.21s] planner: EXECUTING T=8.0s
+[ 279.21s] pick_place: FLYING execute_place (approach) T=8.0s [letter 3/3 -> mailbox RED]
+[ 279.21s] execute_place: success=True planning execute_place from the current hold; it executes as soon as it is planned
+[ 279.21s] execute_place: executing, T = 8.0 s
+[ 287.21s] planner: HOLD
+[ 287.21s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm [letter 3/3 -> mailbox RED]
+[ 287.22s] MARK L3:ready_place:end
+[ 287.22s] MARK L3:place:start
+[ 287.27s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 287.37s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 287.47s] pick_place: WAITING execute_place: claw 24 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 24 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 287.57s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 287.67s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 287.77s] pick_place: WAITING execute_place: claw 17 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 17 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 287.87s] pick_place: WAITING execute_place: claw 16 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 16 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 288.07s] pick_place: WAITING execute_place: claw 15 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.0 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 288.17s] pick_place: WAITING execute_place: claw 13 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.1 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 288.27s] pick_place: WAITING execute_place: claw 13 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.2 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 288.37s] pick_place: WAITING execute_place: claw 14 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: aligned and still for 0.3 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 288.47s] pick_place: WAITING execute_place: claw 16 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 16 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 288.57s] pick_place: WAITING execute_place: claw 18 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 18 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 288.67s] pick_place: WAITING execute_place: claw 19 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 19 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 288.77s] pick_place: WAITING execute_place: claw 20 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 20 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 288.87s] pick_place: WAITING execute_place: claw 22 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 22 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 288.97s] pick_place: WAITING execute_place: claw 23 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 23 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.07s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.17s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.27s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.37s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.57s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.67s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.77s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 289.87s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.37s] pick_place: WAITING execute_place: claw 27 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 27 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.47s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.57s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.67s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.77s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.87s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 290.97s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.07s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.17s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.27s] pick_place: WAITING execute_place: claw 45 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 45 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.57s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.67s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.77s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.87s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 291.97s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.07s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.17s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.27s] pick_place: WAITING execute_place: claw 25 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 25 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.47s] pick_place: WAITING execute_place: claw 26 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 26 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.57s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.67s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.77s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.87s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 292.97s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.07s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.17s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.27s] pick_place: WAITING execute_place: claw 41 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 41 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.37s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.47s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.67s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.77s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.87s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 293.97s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.07s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.17s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.27s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.37s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.67s] pick_place: WAITING execute_place: claw 36 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 36 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.87s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 294.97s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.07s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.17s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.27s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.57s] pick_place: WAITING execute_place: claw 45 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 45 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.77s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.87s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 295.97s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.07s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.17s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.27s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.47s] pick_place: WAITING execute_place: claw 39 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 39 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.57s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.67s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.77s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.89s] pick_place: WAITING execute_place: claw 46 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 46 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 296.97s] pick_place: WAITING execute_place: claw 49 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 49 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.07s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.17s] pick_place: WAITING execute_place: claw 55 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 55 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.27s] pick_place: WAITING execute_place: claw 57 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 57 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.37s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.47s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.57s] pick_place: WAITING execute_place: claw 62 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 62 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.67s] pick_place: WAITING execute_place: claw 63 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 63 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.87s] pick_place: WAITING execute_place: claw 62 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 62 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 297.97s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.07s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.17s] pick_place: WAITING execute_place: claw 58 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 58 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.27s] pick_place: WAITING execute_place: claw 57 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 57 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.37s] pick_place: WAITING execute_place: claw 55 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 55 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.47s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.57s] pick_place: WAITING execute_place: claw 50 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 50 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.67s] pick_place: WAITING execute_place: claw 48 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 48 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 298.77s] pick_place: WAITING execute_place: claw 47 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 47 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.07s] pick_place: WAITING execute_place: claw 49 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 49 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.17s] pick_place: WAITING execute_place: claw 51 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 51 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.27s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.37s] pick_place: WAITING execute_place: claw 54 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 54 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.47s] pick_place: WAITING execute_place: claw 56 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 56 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.57s] pick_place: WAITING execute_place: claw 58 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 58 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.67s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.77s] pick_place: WAITING execute_place: claw 64 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 64 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.87s] pick_place: WAITING execute_place: claw 65 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 65 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 299.97s] pick_place: WAITING execute_place: claw 66 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 66 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.17s] pick_place: WAITING execute_place: claw 64 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 64 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.27s] pick_place: WAITING execute_place: claw 63 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 63 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.37s] pick_place: WAITING execute_place: claw 61 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 61 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.47s] pick_place: WAITING execute_place: claw 59 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 59 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.57s] pick_place: WAITING execute_place: claw 56 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 56 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.67s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.77s] pick_place: WAITING execute_place: claw 51 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 51 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.87s] pick_place: WAITING execute_place: claw 48 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 48 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 300.97s] pick_place: WAITING execute_place: claw 46 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 46 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 301.07s] pick_place: WAITING execute_place: claw 45 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 45 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 301.37s] pick_place: WAITING execute_place: claw 46 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 46 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 301.97s] pick_place: WAITING execute_place: claw 48 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 48 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.07s] pick_place: WAITING execute_place: claw 50 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 50 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.17s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.27s] pick_place: WAITING execute_place: claw 54 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 54 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.67s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.77s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.87s] pick_place: WAITING execute_place: claw 51 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 51 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 302.97s] pick_place: WAITING execute_place: claw 50 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 50 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.07s] pick_place: WAITING execute_place: claw 48 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 48 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.17s] pick_place: WAITING execute_place: claw 47 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 47 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.27s] pick_place: WAITING execute_place: claw 45 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 45 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.37s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.47s] pick_place: WAITING execute_place: claw 43 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 43 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.67s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.77s] pick_place: WAITING execute_place: claw 46 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 46 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.87s] pick_place: WAITING execute_place: claw 48 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 48 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 303.97s] pick_place: WAITING execute_place: claw 50 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 50 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.07s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.17s] pick_place: WAITING execute_place: claw 53 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 53 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.37s] pick_place: WAITING execute_place: claw 52 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 52 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.47s] pick_place: WAITING execute_place: claw 51 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 51 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.67s] pick_place: WAITING execute_place: claw 50 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 50 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.77s] pick_place: WAITING execute_place: claw 49 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 49 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.87s] pick_place: WAITING execute_place: claw 47 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 47 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 304.97s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.07s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.17s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.27s] pick_place: WAITING execute_place: claw 37 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 37 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.37s] pick_place: WAITING execute_place: claw 34 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 34 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.47s] pick_place: WAITING execute_place: claw 31 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 31 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.57s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.67s] pick_place: WAITING execute_place: claw 28 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 28 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 305.97s] pick_place: WAITING execute_place: claw 29 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 29 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.07s] pick_place: WAITING execute_place: claw 30 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 30 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.17s] pick_place: WAITING execute_place: claw 32 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 32 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.27s] pick_place: WAITING execute_place: claw 33 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 33 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.37s] pick_place: WAITING execute_place: claw 35 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 35 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.47s] pick_place: WAITING execute_place: claw 38 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 38 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.57s] pick_place: WAITING execute_place: claw 40 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 40 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.67s] pick_place: WAITING execute_place: claw 42 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 42 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.77s] pick_place: WAITING execute_place: claw 44 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 44 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 306.87s] pick_place: WAITING execute_place: claw 46 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 46 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 307.17s] pick_place: WAITING execute_place: claw 45 mm from the point above the target (tolerance 50 mm) -- slides in by itself once the claw is still within 15 mm -- auto insert: claw 45 mm from the point in front of the mouth (gate 15) [letter 3/3 -> mailbox RED]
+[ 307.22s] planner: CALCULATING
+[ 307.22s] pick_place: FLYING execute_place (descent) [letter 3/3 -> mailbox RED]
+[ 307.23s] planner: EXECUTING T=3.0s
+[ 307.23s] pick_place: FLYING execute_place (descent) T=3.0s [letter 3/3 -> mailbox RED]
+[ 307.24s] descend_place: success=True descend_place: sliding the claw in through the mouth (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[ 307.24s] place: the slide had not started after 20 s -- Insert pressed: descend_place: sliding the claw in through the mouth (goal trimmed by [0.0, 0.0, 0.0] mm, the hover error)
+[ 310.24s] planner: HOLD
+[ 310.24s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling [letter 3/3 -> mailbox RED]
+[ 310.26s] place: inserted, EE 21.5 mm from the release point
+[ 310.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.0 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.1 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.2 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: waiting 0.3 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.4 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.5 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.6 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 310.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.7 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 311.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.8 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 311.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: waiting 0.9 of 1.0 s [letter 3/3 -> mailbox RED]
+[ 311.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 32 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 33 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 34 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 35 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 34 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 32 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 30 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 311.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 28 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 27 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 24 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 22 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 20 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 18 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 17 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 16 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 312.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.0 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 312.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.1 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 312.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.2 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 313.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 16 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 17 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 18 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 19 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 20 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 19 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.77s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 18 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.87s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 17 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 313.97s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: claw 15 mm short of the release point along the insertion line (window -15 / +20) [letter 3/3 -> mailbox RED]
+[ 314.07s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.0 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 314.17s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.1 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 314.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.2 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 314.37s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.3 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 314.47s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.4 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 314.57s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: all gates OK for 0.5 of 0.5 s [letter 3/3 -> mailbox RED]
+[ 314.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw within tolerance: fine correction OK -- auto release: RELEASE signalled (claw -0 mm along / 2 mm off the release point, 0.03 m/s, q4 0.5 deg off, 4.4 s after the slide) -- the arm GS opens the gripper [letter 3/3 -> mailbox RED]
+[ 314.69s] place: planner released -- claw -0 mm along / 2 mm off the release point, 0.03 m/s, q4 0.5 deg off, 4.4 s after the slide
+[ 314.69s] MARK L3:gripper_open:start
+[ 316.27s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw outside tolerance -- auto release: RELEASE signalled (claw -0 mm along / 2 mm off the release point, 0.03 m/s, q4 0.5 deg off, 4.4 s after the slide) -- the arm GS opens the gripper [letter 3/3 -> mailbox RED]
+[ 316.61s] gripper open (action): status 4 stalled=False reached=True after 1.92 s, at -1.3 deg
+[ 316.61s] MARK L3:gripper_open:end
+[ 316.67s] pick_place: DONE execute_place next=exit_place (open the gripper first) -- claw inside tolerance, settling -- auto release: RELEASE signalled (claw -0 mm along / 2 mm off the release point, 0.03 m/s, q4 0.5 deg off, 4.4 s after the slide) -- the arm GS opens the gripper [letter 3/3 -> mailbox RED]
+[ 317.11s] MARK L3:place:end
+[ 317.11s] MARK L3:exit_place:start
+[ 317.11s] planner: CALCULATING
+[ 317.11s] pick_place: FLYING exit_place (up the vertical margin) [letter 3/3 -> mailbox RED]
+[ 317.12s] planner: EXECUTING T=6.2s
+[ 317.12s] pick_place: FLYING exit_place (up the vertical margin) T=6.2s [letter 3/3 -> mailbox RED]
+[ 317.13s] exit_place: success=True exit_place: from where the vehicle is now (27 mm from the release hold), backing out 10 cm (out of the mailbox mouth), then climbing 20 cm straight up to the clearance point
+[ 323.36s] planner: HOLD
+[ 323.36s] pick_place: DONE exit_place next=go_to_land_start [letter 3 posted into mailbox RED -- select the next letter, or go_to_land_start]
+[ 323.37s] MARK L3:exit_place:end
+[ 323.37s] letter 3: Exit To Insert done -- gripper CLOSE
+[ 325.37s] MARK go_to_land_start:start
+[ 325.37s] planner: CALCULATING
+[ 325.37s] pick_place: FLYING go_to_land_start [letter 3 posted into mailbox RED -- select the next letter, or go_to_land_start]
+[ 325.38s] planner: EXECUTING T=16.3s
+[ 325.38s] pick_place: FLYING go_to_land_start T=16.3s [letter 3 posted into mailbox RED -- select the next letter, or go_to_land_start]
+[ 325.39s] go_to_land_start: success=True planning go_to_land_start from the current hold; it executes as soon as it is planned
+[ 325.39s] go_to_land_start: executing, T = 16.3 s
+[ 341.73s] planner: HOLD
+[ 341.73s] pick_place: DONE go_to_land_start next=execute_land [letter 3/3 -> mailbox RED]
+[ 341.73s] MARK go_to_land_start:end
+[ 343.73s] MARK execute_land:start
+[ 343.73s] planner: CALCULATING
+[ 343.73s] pick_place: FLYING execute_land [letter 3/3 -> mailbox RED]
+[ 343.74s] planner: EXECUTING T=5.8s
+[ 343.74s] pick_place: FLYING execute_land T=5.8s [letter 3/3 -> mailbox RED]
+[ 343.75s] execute_land: success=True planning execute_land from the current hold; it executes as soon as it is planned
+[ 343.75s] execute_land: executing, T = 5.8 s
+[ 349.57s] planner: HOLD
+[ 349.57s] pick_place: COMPLETE -- touch down with SAFETY -> land [route: 3 of 3 letters posted]
+[ 349.58s] MARK execute_land:end
+[ 354.59s] mission complete
+[ 354.59s] planner: IDLE
+[ 354.59s] pick_place: NOT IN DIRECT
+[ 354.61s] set_direct_mode(false): success=True Switched to SAFETY mode
+[ 360.62s] landing by reference
+[ 372.65s] disarm: success=True Disarm command sent
+Traceback (most recent call last):
+  File "/home/fsc-jupiter/Source/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/mail_route_20261103/tools/mail_route_mission.py", line 676, in <module>
+    raise SystemExit(main())
+  File "/home/fsc-jupiter/Source/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/mail_route_20261103/tools/mail_route_mission.py", line 667, in main
+    d.save(a.out, aborted, reason)
+  File "/home/fsc-jupiter/Source/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/mail_route_20261103/tools/mail_route_mission.py", line 594, in save
+    np.savez_compressed(path, **arr, events=np.array(self.events),
+TypeError: numpy.savez_compressed() got multiple values for keyword argument 'payload0'
+terminate called without an active exception
+./run_mail_route.sh: line 90: 4100870 Aborted                 (core dumped) /usr/bin/python3 "$HERE/mail_route_mission.py" --out "$RUNS/$TAG.npz" ${ROUTE_DRIVER_ARGS:-} 2>&1
+     4100871 Done                    | tee "$RUNS/$TAG.log"
+[13:19:29] done
+rc=0

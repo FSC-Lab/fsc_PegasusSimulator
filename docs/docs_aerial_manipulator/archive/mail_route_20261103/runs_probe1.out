@@ -1,0 +1,16 @@
+[13:00:33] waiting for the planner
+[13:00:34] planner up: data: NOT IN DIRECT
+[13:00:34] waiting for the localization frame (Isaac)
+[13:01:22] Isaac crashed at bring-up (try 1 of 2)
+2026-11-03T18:01:17Z [1,073ms] [Fatal] [carb.crashreporter-breakpad.plugin] 013: libomniclient.so!std::string __gnu_cxx::__to_xstring<std::string, char>(int (*)(char*, unsigned long, char const*, __va
+2026-11-03T18:01:17Z [1,086ms] [Fatal] [carb.crashreporter-breakpad.plugin] 014: libomniclient.so!omniclient::Core::singleTick(std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::dura
+2026-11-03T18:01:17Z [1,099ms] [Fatal] [carb.crashreporter-breakpad.plugin] 015: libomniclient.so!omniclient::Core::TickThread::tickThread()+0x2f0 (??:?)       
+2026-11-03T18:01:17Z [1,111ms] [Fatal] [carb.crashreporter-breakpad.plugin] 016: libstdc++.so.6!std::error_code::default_error_condition() const+0x33 (??:?)    
+2026-11-03T18:01:17Z [1,163ms] [Fatal] [carb.crashreporter-breakpad.plugin] 017: libc.so.6!pthread_condattr_setpshared+0x513 (./nptl/pthread_create.c:442)      
+2026-11-03T18:01:17Z [1,218ms] [Fatal] [carb.crashreporter-breakpad.plugin] 018: libc.so.6!__xmknodat+0x230 (./misc/../sysdeps/unix/sysv/linux/x86_64/clone3.S:83)        
+[13:01:49] waiting for the planner
+[13:01:50] planner up: data: NOT IN DIRECT
+[13:01:50] waiting for the localization frame (Isaac)
+[13:02:44] Isaac up; letting PX4 / the arm stack settle
+[13:03:59] probe only: /home/fsc-jupiter/Source/fsc_PegasusSimulator/docs/docs_aerial_manipulator/archive/mail_route_20261103/runs/probe1.isaac.log
+rc=0
