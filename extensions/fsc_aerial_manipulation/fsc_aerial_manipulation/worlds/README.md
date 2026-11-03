@@ -130,3 +130,73 @@ See `tools/gate_splat/`. Requires the original capture dataset (COLMAP
 
 Then copy `gate_metric.usda` and `gate.usdz` into `assets/` and update the constants
 in `gate_splat.py` from the regenerated `gate_metric.json`.
+
+## Arena splat (foam-mat flight arena, green pillars)
+
+3D Gaussian splat of the flight arena, from a 3-minute 4K iPhone walk-around
+(`IMG_7141.MOV`, 459 frames at 1080p, all 459 posed by COLMAP), trained with
+spirulae-splat. Scene module: `arena_splat.py`; scenario
+`application/px4_base/07_px4_single_drone_t650_arena_splat.py`; launcher
+`scripts/outdoor_sim/start_t650_arena_splat.sh`.
+
+| | |
+|---|---|
+| `assets/arena_metric.usda` | wrapper: only cancels the USDZ exporter's axis swap |
+| `assets/arena.usdz` | payload: the NuRec volume |
+
+Not in git, same rule and same silent-empty-scene trap as the gate:
+`arena_metric.usda` references `@./arena.usdz@` relatively. Override the path with
+`ARENA_SPLAT_USD`.
+
+### Scene frame: placed by AprilTags, not measured afterwards
+
+Three tag36h11 tags on a board on the floor, centres tape-measured into the
+capture's `markers.yaml`. spirulae-splat's `export_ply_3dgs.py --dataset_dir`
+solves scale + rotation + translation onto them, so `splat.ply` is already metric,
+Z up, in this frame:
+
+```
+    +Z  up            tag 0  (0, 0, 0)
+     |                tag 1  (0.315, 0, 0)
+     |                tag 2  (0, 0.8, 0)
+     o------ +Y       z = 0 is the tag plane (TOP of the board);
+    /                 the mat floor is FLOOR_Z, slightly below
+  +X
+```
+
+That is the rigorous path the gate section recommends. Checked before training
+(triangulating the tags from the COLMAP poses, 287-308 detections each): the
+three pairwise distances match the tape to 0.1 mm, the angle at tag 0 is
+89.97 deg (markers.yaml assumes 90), and every capture camera is 0.55-1.73 m
+above the tag plane, i.e. the frame is the right way up. Note this checks the
+triangle's SHAPE; a uniform error in the tape itself would not show.
+
+Verified end-to-end in Isaac (2026-10-28): rendering the INSTALLED
+`arena_metric.usda` from capture-camera poses carried into the tag frame
+reproduces the source photos frame for frame (tag board, pillars, floor seams).
+Measured: floor `z = -0.0125` (the board is ~12 mm), 958,197 gaussians.
+
+**Fly low.** The phone was 0.55-1.73 m up (median 1.21 m), so the splat is sharp
+from those heights. From ~1.5 m a LEVEL camera already looks over the pillars into
+background the capture never covered (blurry, partly black). The launcher's
+takeoff altitude is 1.2 m for that reason; pitch the onboard camera down
+(`PEGASUS_CAM_PITCH`) to fly higher.
+
+**No collision geometry**, as with the gate: the scenario adds an invisible
+ground plane at `FLOOR_Z` and the pillars are fly-through.
+
+### Regenerating
+
+```bash
+D=~/Downloads/IMG_7141           # images/ + transforms.json + markers.yaml
+cd ~/Source/spirulae-splat/scripts
+~/miniconda3/envs/py312/bin/python export_ply_3dgs.py $D/outputs/spirulae/<run> --dataset_dir $D
+~/miniconda3/envs/3dgrut/bin/python ~/Source/3dgrut/threedgrut/export/scripts/ply_to_usd.py \
+    $D/outputs/spirulae/<run>/splat.ply --output_file $D/arena.usdz
+ARENA_DATASET_DIR=$D ~/miniconda3/envs/3dgrut/bin/python tools/arena_splat/make_arena_usd.py
+cp $D/arena_metric.usda $D/arena.usdz extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/worlds/assets/
+```
+
+then update `FLOOR_Z` in `arena_splat.py` from `arena_metric.json`.
+**`--dataset_dir` is what applies the tags** — without it the PLY comes out in
+COLMAP's arbitrary frame and this wrapper places it wrongly with no error.
