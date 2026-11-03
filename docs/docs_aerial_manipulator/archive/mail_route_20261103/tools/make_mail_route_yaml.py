@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Write the MAIL ROUTE's flight yaml (2026-11-03) as a copy of a mail-delivery yaml:
 
-    make_mail_route_yaml.py SRC DST [--start X,Y,Z,YAW] [--land-xy X,Y]
+    make_mail_route_yaml.py SRC DST [--start X,Y,Z,YAW] [--land-z Z] [--vehicle-suffix S]
 
-SRC (the sim one by default) is copied line for line; in its
+SRC (a mail-delivery yaml, e.g. the sim one) is copied line for line; Land is
+Start's x, y, yaw at --land-z. In its
 /**/whole_body_trajectory_planner section the route is switched on and its keys
 added after pick_place_place_start_offset, and Start / Land Start / Land are moved
 to the take-off spot OFF the line of hats (every letter's go_to_start flies to its

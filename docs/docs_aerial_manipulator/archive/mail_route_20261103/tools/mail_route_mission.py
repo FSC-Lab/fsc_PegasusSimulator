@@ -132,6 +132,8 @@ class Driver(Node):
             self.cli[f"select_letter_{k + 1}"] = self.create_client(Trigger, f"{ns}/{PP}/route/select_letter_{k + 1}")
         for b in range(2):
             self.cli[f"get_box_{b + 1}"] = self.create_client(Trigger, f"{ns}/{PP}/route/get_box_{b + 1}")
+        # the route's own Plan, as the Mail Route tab (2026-11-03 audit)
+        self.cli["route_plan"] = self.create_client(Trigger, f"{ns}/{PP}/route/plan")
         self.direct = self.create_client(SetBool, f"{ns}/{DA}/set_direct_mode")
         self.clear = self.create_client(Trigger, f"{ns}/whole_body_planner/clear")
         self.create_timer(1.0 / a.rate, self.tick)
@@ -435,7 +437,7 @@ class Driver(Node):
         if self.status.split(" ")[0].split(":")[0] in ("PENDING", "PLANNED", "CALCULATING"):
             self.call(self.clear, Trigger.Request(), "planner clear", must=False)
         self.wait(lambda: self.status == "HOLD", 15, "planner HOLD")
-        self.trig("plan")
+        self.trig("route_plan")
         self.wait(lambda: self.pp_status.startswith("READY"), 60, "route READY")
         self.ev(f"route planned: {self.info[92 + 2 * N_LETTERS]:.1f} s of flight")
 
