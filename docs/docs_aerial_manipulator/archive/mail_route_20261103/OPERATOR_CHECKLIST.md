@@ -17,7 +17,7 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
    true. In a route the planner refuses a manual Insert and the tab's Insert button stays
    disabled. Check the mail yaml carries `pick_place_place_approach_back: 0.25` (the Insert
    Margin), `pick_place_insert_auto_tol: 0.030`, `pick_place_insert_auto_settle_s: 3.0` and
-   `pick_place_insert_auto_settle_tol: 0.015`.
+   `pick_place_insert_auto_settle_tol: 0.015`, `pick_place_insert_auto_max_wait_s: 10.0`.
 4. Record the 10-31 mail topics (`archive/mail_3cm_tune_20261031/tools/hw_topics.txt`)
    + `/uav_0/whole_body_planner/pick_place/{status,info}`,
    `/uav_0/whole_body_planner/pick_place/route/drop_now`, the raw `/vrpn_mocap/*`.
@@ -62,7 +62,8 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
 21. The vehicle holds 0.25 m back from the mouth and the planner slides the letter in BY
     ITSELF once the drone has settled (its body within 15 mm of its own mean for 3 s) and
     the claw is within 30 mm of the point in front of the mouth and still for 1 s; the
-    status says "waiting for the drone to settle" until then. The gripper opens by itself
+    status says "waiting for the drone to settle" until then -- and after 10 s it inserts
+    ANYWAY (`pick_place_insert_auto_max_wait_s`). The gripper opens by itself
     at the target and Exit To Insert follows by itself. Watch the drone: creeping toward
     the box, or the status stuck on "settle" -- ABORT (it backs out of the mouth first).
     (Why: at the old 0.15 m margin the letter waited ~5 cm from the box face; a letter
