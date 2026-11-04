@@ -1,0 +1,387 @@
+<title>Fin Against the U</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a bench-report sheet. One instrument row (top view | close-up + readout) over a stack of time charts
+   that share one time cursor. Entity colours: valve/fin = blue, contact force = orange, the arm's pull = aqua,
+   airframe and rotors = ink tones. */
+:root {
+  --plane: #eef1f2; --surface: #fcfcfb; --ink: #12181c; --ink-2: #4b5358; --muted: #80878c;
+  --grid: #e1e5e6; --axis: #c3c9cc; --ring: rgba(18,24,28,.10);
+  --valve: #2a78d6; --valve-soft: rgba(42,120,214,.16); --force: #eb6834; --arm: #1baf7a;
+  --shade: rgba(235,104,52,.13);
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --plane: #0e1214; --surface: #161a1d; --ink: #eef0ef; --ink-2: #c0c6c8; --muted: #8a9195;
+  --grid: #262c2f; --axis: #3a4246; --ring: rgba(255,255,255,.10);
+  --valve: #3987e5; --valve-soft: rgba(57,135,229,.20); --force: #e06a37; --arm: #199e70; --shade: rgba(224,106,55,.18);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --plane: #0e1214; --surface: #161a1d; --ink: #eef0ef; --ink-2: #c0c6c8; --muted: #8a9195;
+  --grid: #262c2f; --axis: #3a4246; --ring: rgba(255,255,255,.10);
+  --valve: #3987e5; --valve-soft: rgba(57,135,229,.20); --force: #e06a37; --arm: #199e70; --shade: rgba(224,106,55,.18);
+  color-scheme: dark; }
+body { background: var(--plane); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 21px; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.lead { color: var(--ink-2); max-width: 70ch; }
+.sheet { background: var(--surface); border: 1px solid var(--ring); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 860px) { .row { grid-template-columns: minmax(0, 1fr); } }
+.cap { font-size: 13px; color: var(--ink-2); max-width: 72ch; }
+.cap b { color: var(--ink); font-weight: 600; }
+.figtitle { font-family: var(--f-mono); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+svg text { font-family: var(--f-body); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.controls button { font: 500 13px var(--f-body); color: var(--ink); background: var(--plane); border: 1px solid var(--axis);
+  border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+.controls button:hover { border-color: var(--ink-2); }
+.controls button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--valve); outline-offset: 2px; }
+#tslider { flex: 1 1 260px; accent-color: var(--ink-2); min-width: 0; }
+.tnow { font: 500 15px var(--f-mono); font-variant-numeric: tabular-nums; min-width: 6.5ch; }
+.phase { font-size: 13px; color: var(--ink-2); }
+.readout { display: grid; grid-template-columns: auto auto; gap: 3px 14px; font-size: 13px; align-content: start; }
+.readout dt { color: var(--ink-2); }
+.readout dd { margin: 0; font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.readout .sep { grid-column: 1 / -1; height: 1px; background: var(--grid); margin: 4px 0; }
+.motors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mot { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--ink-2); }
+.mot .bar { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; }
+.mot .bar i { display: block; height: 100%; background: var(--ink-2); border-radius: 4px; }
+.mot span { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.charts { display: flex; flex-direction: column; gap: 4px; }
+.chart { position: relative; }
+.chart h3 { font: 600 13px var(--f-body); margin: 6px 0 0; }
+.chart .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); }
+.chart .legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.chart svg { display: block; width: 100%; touch-action: none; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--ring); border-radius: 4px;
+  padding: 4px 8px; font: 12px var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; box-shadow: 0 2px 8px var(--ring); }
+.notes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 860px) { .notes { grid-template-columns: minmax(0, 1fr); } }
+.notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; max-width: 64ch; }
+details summary { cursor: pointer; font-weight: 500; }
+.tscroll { overflow-x: auto; }
+table { border-collapse: collapse; font: 12px var(--f-mono); font-variant-numeric: tabular-nums; margin-top: 8px; }
+th, td { padding: 3px 9px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { font-family: var(--f-body); font-weight: 600; color: var(--ink-2); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Valve turning · flight 192853 · 2026-11-03 · 32.0 to 34.3 s</div>
+    <h1>Fin Against the U</h1>
+    <p class="lead">How a sideways push from the valve's fin on the claw twisted the vehicle clockwise until the rotors ran out of yaw. Drag the time slider or hover any chart; everything on the page follows one time cursor.</p>
+  </header>
+
+  <section class="sheet" aria-label="Top view and close-up">
+    <div class="controls">
+      <button id="play" type="button">Play</button>
+      <button id="back" type="button" aria-label="Back 0.02 s">−</button>
+      <button id="fwd" type="button" aria-label="Forward 0.02 s">+</button>
+      <input id="tslider" type="range" min="0" max="1" step="1" aria-label="Time">
+      <span class="tnow" id="tnow">33.90 s</span>
+      <span class="phase" id="phase"></span>
+    </div>
+    <div class="row">
+      <div style="min-width:0">
+        <div class="figtitle">Top view, to scale · frame of the vehicle at 32.0 s (nose up)</div>
+        <svg id="top" viewBox="0 0 100 100" role="img" aria-label="Top view of the vehicle, its arm, and the valve"></svg>
+        <p class="cap">Rotor discs are filled by their motor command; the beam outline is approximate. The dotted lines trace the claw and the fin from 32.0 s. The aqua ring is the arm's target for the claw; the orange arrow is the sideways force on the claw, toward the vehicle's right.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="figtitle">Close-up at the claw · claw frame (forward up)</div>
+        <svg id="zoom" viewBox="-48 -62 96 108" role="img" aria-label="Close-up of the fin relative to the claw's U"></svg>
+        <p class="cap">The fin (blue) is drawn where the mocap puts it relative to the planner's model of the claw point (+). The dashed U is the modelled claw at this depth: rear rails 4.8 mm from each face of a centred fin (measured in Isaac); rail length is schematic. <b>Taken literally, the fin sits just outside the right rail. That cannot be right:</b> a fin outside the right rail would push the claw left, and the claw was pushed right. The model's claw point is off sideways by about 10–15 mm here (Isaac measured 8–16 mm at a similar pose).</p>
+        <dl class="readout" id="readout"></dl>
+        <div class="motors" id="motors" aria-label="Motor commands"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet" aria-label="Time charts">
+    <div class="figtitle">Through time · the shared cursor is the slider's time</div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="notes">
+    <div class="sheet">
+      <h2>What the data show</h2>
+      <ul>
+        <li><b>The push along the turn is small.</b> The valve needs about 0.45 N at the fin to turn. Along the nose that makes almost no yaw.</li>
+        <li><b>Something pushed the claw to the right, 1.5 to 3 N by 34.0 s.</b> Two independent estimates agree on the direction: the controller's own force estimate, and the yaw the rotors delivered against the vehicle's clockwise turn (divided by the claw's 0.21 m lead on the centre of mass).</li>
+        <li><b>The claw could not move left.</b> Joint 1 stayed at −0.4° while its torque rose to 0.5–0.6 N·m, and the arm's target ran 70 mm to the claw's left.</li>
+        <li><b>That push twisted the vehicle clockwise.</b> The rotors' counter-clockwise yaw climbed to 0.75 N·m: the CCW pair hit idle at 33.7 s, and the allocator then raised every motor to keep the yaw, until all four were on a limit at 33.9 s and roll and pitch were lost.</li>
+        <li><b>The fin turned relative to the U</b>: the valve turned +34° while the vehicle turned −8°, about 41° between them by 34.2 s.</li>
+      </ul>
+    </div>
+    <div class="sheet">
+      <h2>What the bag cannot show</h2>
+      <ul>
+        <li><b>Which surface of the claw the fin touched.</b> At this depth the U leaves 4.8 mm on each side of a centred 5 mm fin (Isaac). The model's claw point is off by 8–16 mm at a similar pose in Isaac, so the close-up cannot settle it.</li>
+        <li><b>The most likely contact.</b> A rightward force on the claw, with the fin on the claw's right, fits the fin pressing the inside of the U's right rail. A fin turning counter-clockwise inside the U swings its back end to the right, into that rail.</li>
+        <li><b>Correction to my earlier reply.</b> I said the U's rear leaves about 20 mm. Isaac says about 15 mm. A fin turned more than about 13° cannot lie inside it along its full 40 mm length, so the contact was at a corner near the U's base.</li>
+        <li><b>The yaw-balance estimate is a model.</b> It uses the allocator's thrust map and the bench yaw constant; the 09-26 identification put the real yaw response at 0.43–0.78 of bench, so the true force is likely nearer the controller's estimate.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sheet">
+    <details>
+      <summary>Data table, every 0.1 s</summary>
+      <div class="tscroll"><table id="tbl"></table></div>
+    </details>
+    <p class="cap">Source: rosbag <code>…_192853</code>; extraction <code>tools/viz_data_192853.py</code> in <code>docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261103/</code>.</p>
+  </section>
+</div>
+
+<script>
+const D = /*DATA*/null;
+const R = D.rows, T0 = 32.0, T1 = 34.3;
+const KF = 4.260431e-05, KM = D.km, WI = 64.0603, WM = 730.0507, FIDLE = D.f_idle, FMAX = KF * WM * WM;
+const rows = R.filter(r => r.t >= T0 - 1e-6 && r.t <= T1 + 1e-6);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (v, d = 2) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
+const fT = u => KF * Math.pow(WI + Math.min(1, Math.max(0, u)) * (WM - WI), 2);
+rows.forEach(r => { const f = r.m.map(fT); r.tapp = f.reduce((a, b) => a + b, 0);
+  r.ylim = KM * Math.min(r.tapp - 4 * FIDLE, 4 * FMAX - r.tapp); r.yaw_cw = -r.psi; });
+const EV = [[33.10, "bracket meets the fin"], [33.22, "Ready ends"], [33.70, "CCW pair at idle"], [33.90, "all motors on a limit"], [34.28, "abort"]];
+const phaseOf = t => t < 33.10 ? "slide-in (Ready); the claw follows the vehicle" : t < 33.70 ? "the bracket pushes the fin; the valve turns" :
+  t < 33.90 ? "yaw at its limit; the allocator raises all motors" : t < 34.28 ? "all four motors on a limit: no roll or pitch left" : "abort";
+let idx = rows.findIndex(r => r.t >= 33.9 - 1e-6);
+const SVGNS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) { const v = String(attrs[k]);
+    if ((k === "fill" || k === "stroke") && v.includes("var(")) e.style.setProperty(k, v); else e.setAttribute(k, v); }
+  if (parent) parent.appendChild(e); return e; };
+
+/* ---------- top view ---------- */
+const topSvg = document.getElementById("top");
+const VX0 = Math.min(...rows.map(r => r.base[0])) - 440, VX1 = Math.max(...rows.map(r => r.base[0])) + 440;
+const VY0 = -(Math.max(...rows.map(r => Math.max(r.base[1] + 440, r.fin[1] + 80)))), VY1 = -(Math.min(...rows.map(r => r.base[1])) - 440);
+topSvg.setAttribute("viewBox", `${VX0} ${VY0} ${VX1 - VX0} ${VY1 - VY0}`);
+const g0 = el("g", {}, topSvg);
+for (let x = Math.ceil(VX0 / 100) * 100; x <= VX1; x += 100) el("line", { x1: x, y1: VY0, x2: x, y2: VY1, stroke: "var(--grid)", "stroke-width": 1.2 }, g0);
+for (let y = Math.ceil(VY0 / 100) * 100; y <= VY1; y += 100) el("line", { x1: VX0, y1: y, x2: VX1, y2: y, stroke: "var(--grid)", "stroke-width": 1.2 }, g0);
+el("line", { x1: VX0 + 20, y1: VY1 - 20, x2: VX0 + 120, y2: VY1 - 20, stroke: "var(--ink-2)", "stroke-width": 4 }, g0);
+el("text", { x: VX0 + 20, y: VY1 - 32, "font-size": 22, fill: "var(--ink-2)" }, g0).textContent = "100 mm";
+const gTrail = el("g", {}, topSvg), gValve = el("g", {}, topSvg), gVeh = el("g", {}, topSvg), gOver = el("g", {}, topSvg);
+const P = v => [v[0], -v[1]];          // display mm (right, forward) -> svg
+const rot = (psiDeg, r, f) => { const a = psiDeg * Math.PI / 180; return [r * Math.cos(a) - f * Math.sin(a), r * Math.sin(a) + f * Math.cos(a)]; };
+
+function drawTop(k) {
+  const r = rows[k];
+  gTrail.replaceChildren(); gValve.replaceChildren(); gVeh.replaceChildren(); gOver.replaceChildren();
+  const tr = (key, stroke) => el("polyline", { points: rows.slice(0, k + 1).map(q => P(q[key]).join(",")).join(" "),
+    fill: "none", stroke, "stroke-width": 3, "stroke-dasharray": "2 7", "stroke-linecap": "round" }, gTrail);
+  tr("claw", "var(--ink-2)"); tr("fin", "var(--valve)");
+  // valve: hub, beam (radial from the shaft through the fin), fin
+  const ax = P(r.axis), fi = P(r.fin);
+  const rad = [fi[0] - ax[0], fi[1] - ax[1]], L = Math.hypot(...rad), u = [rad[0] / L, rad[1] / L], nrm = [-u[1], u[0]];
+  const b0 = [ax[0] - 40 * u[0], ax[1] - 40 * u[1]], b1 = [ax[0] + 185 * u[0], ax[1] + 185 * u[1]];
+  const quad = (c0, c1, w) => [[c0[0] + w * nrm[0], c0[1] + w * nrm[1]], [c1[0] + w * nrm[0], c1[1] + w * nrm[1]],
+    [c1[0] - w * nrm[0], c1[1] - w * nrm[1]], [c0[0] - w * nrm[0], c0[1] - w * nrm[1]]];
+  el("polygon", { points: quad(b0, b1, 25).map(p => p.join(",")).join(" "), fill: "var(--valve-soft)", stroke: "var(--valve)", "stroke-width": 1.5 }, gValve);
+  el("circle", { cx: ax[0], cy: ax[1], r: 25, fill: "var(--surface)", stroke: "var(--valve)", "stroke-width": 2 }, gValve);
+  el("circle", { cx: ax[0], cy: ax[1], r: 4, fill: "var(--valve)" }, gValve);
+  el("text", { x: ax[0] - 32, y: ax[1] + 52, "font-size": 22, fill: "var(--valve)" }, gValve).textContent = "valve shaft";
+  const fa = r.fin_ang * Math.PI / 180, t = [-Math.sin(fa), -Math.cos(fa)], n = [Math.cos(fa), -Math.sin(fa)];
+  const fc = [[20, 2.5], [20, -2.5], [-20, -2.5], [-20, 2.5]].map(([a, b]) => [fi[0] + a * t[0] + b * n[0], fi[1] + a * t[1] + b * n[1]]);
+  el("polygon", { points: fc.map(p => p.join(",")).join(" "), fill: "var(--valve)", stroke: "var(--valve)", "stroke-width": 2 }, gValve);
+  el("text", { x: fi[0] + 26, y: fi[1] - 40, "font-size": 20, fill: "var(--valve)", "font-weight": 600 }, gValve).textContent = "fin";
+  // vehicle
+  const bs = P(r.base), at = (rr, ff) => { const d = rot(r.psi, rr, ff); return [bs[0] + d[0], bs[1] - d[1]]; };
+  const rotors = [["FR", 230, 230, 0, "CCW"], ["RL", -230, -230, 1, "CCW"], ["FL", -230, 230, 2, "CW"], ["RR", 230, -230, 3, "CW"]];
+  rotors.forEach(([nm, rr, ff, i, dir]) => { const c = at(rr, ff);
+    el("circle", { cx: c[0], cy: c[1], r: 190, fill: "var(--ink-2)", "fill-opacity": (0.04 + 0.32 * r.m[i]).toFixed(3), stroke: "var(--axis)", "stroke-width": 2 }, gVeh);
+    const tx = el("text", { x: c[0], y: c[1] + 8, "font-size": 22, "text-anchor": "middle", fill: "var(--ink-2)" }, gVeh);
+    tx.textContent = `${nm} ${dir} ${r.m[i].toFixed(2)}`; });
+  const arms = [[230, 230], [-230, -230], [-230, 230], [230, -230]];
+  arms.forEach(([rr, ff]) => { const c = at(rr, ff); el("line", { x1: bs[0], y1: bs[1], x2: c[0], y2: c[1], stroke: "var(--ink-2)", "stroke-width": 6 }, gVeh); });
+  const body = [[-70, -70], [70, -70], [70, 70], [-70, 70]].map(([rr, ff]) => at(rr, ff));
+  el("polygon", { points: body.map(p => p.join(",")).join(" "), fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 3 }, gVeh);
+  const nz = at(0, 120), nb1 = at(-22, 70), nb2 = at(22, 70);
+  el("polygon", { points: [nz, nb1, nb2].map(p => p.join(",")).join(" "), fill: "var(--ink)" }, gVeh);
+  // arm, claw, target, force
+  const cl = P(r.claw), tg = P(r.tgt);
+  el("line", { x1: bs[0], y1: bs[1], x2: cl[0], y2: cl[1], stroke: "var(--ink)", "stroke-width": 7, "stroke-linecap": "round" }, gOver);
+  el("line", { x1: cl[0], y1: cl[1], x2: tg[0], y2: tg[1], stroke: "var(--arm)", "stroke-width": 3, "stroke-dasharray": "8 6" }, gOver);
+  el("circle", { cx: tg[0], cy: tg[1], r: 11, fill: "none", stroke: "var(--arm)", "stroke-width": 4 }, gOver);
+  el("circle", { cx: cl[0], cy: cl[1], r: 8, fill: "var(--ink)", stroke: "var(--surface)", "stroke-width": 3 }, gOver);
+  const rt = rot(r.psi, 1, 0), F = Math.max(0, r.f_right), len = 70 * F;
+  if (len > 6) arrow(gOver, cl, [cl[0] + len * rt[0], cl[1] - len * rt[1]], "var(--force)", 7);
+  el("text", { x: cl[0] + 30, y: cl[1] + 34, "font-size": 20, fill: "var(--force)", "font-weight": 600 }, gOver).textContent = `${F.toFixed(2)} N`;
+  el("text", { x: tg[0] - 20, y: tg[1] - 22, "font-size": 20, "text-anchor": "end", fill: "var(--arm)" }, gOver).textContent = "arm's target";
+}
+function arrow(g, a, b, color, w) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, h = Math.min(4 * w, L * 0.6);
+  el("line", { x1: a[0], y1: a[1], x2: b[0] - ux * h * 0.8, y2: b[1] - uy * h * 0.8, stroke: color, "stroke-width": w, "stroke-linecap": "round" }, g);
+  el("polygon", { points: [[b[0], b[1]], [b[0] - ux * h - uy * h * 0.55, b[1] - uy * h + ux * h * 0.55], [b[0] - ux * h + uy * h * 0.55, b[1] - uy * h - ux * h * 0.55]].map(p => p.join(",")).join(" "), fill: color }, g);
+}
+
+/* ---------- close-up in the claw frame (s right, u forward) ---------- */
+const zoom = document.getElementById("zoom");
+const zg = el("g", {}, zoom), zd = el("g", {}, zoom);
+for (let s = -40; s <= 40; s += 10) el("line", { x1: s, y1: -62, x2: s, y2: 46, stroke: "var(--grid)", "stroke-width": 0.25 }, zg);
+for (let u = -40; u <= 60; u += 10) el("line", { x1: -48, y1: -u, x2: 48, y2: -u, stroke: "var(--grid)", "stroke-width": 0.25 }, zg);
+// the modelled U: bracket line, rear rails (inner faces at +-7.3 mm), fingers opening forward (schematic)
+const Ustroke = { fill: "none", stroke: "var(--ink-2)", "stroke-width": 0.7, "stroke-dasharray": "2 1.2", "stroke-linejoin": "round" };
+el("polyline", { points: "-10.3,8 10.3,8", ...Ustroke }, zg);
+[-1, 1].forEach(sg => {
+  el("polyline", { points: `${sg * 7.3},8 ${sg * 7.3},-12 ${sg * 18.5},-38`, ...Ustroke }, zg);
+  el("polyline", { points: `${sg * 10.3},8 ${sg * 10.3},-12 ${sg * 21.5},-38`, ...Ustroke }, zg); });
+el("text", { x: -46, y: 13, "font-size": 3.4, fill: "var(--ink-2)" }, zg).textContent = "bracket (pushes the fin's back edge)";
+el("text", { x: -46, y: 25, "font-size": 3.4, fill: "var(--ink-2)" }, zg).textContent = "rear rails: inner faces 7.3 mm either side of +";
+el("line", { x1: -2.5, y1: 0, x2: 2.5, y2: 0, stroke: "var(--ink)", "stroke-width": 0.7 }, zg);
+el("line", { x1: 0, y1: -2.5, x2: 0, y2: 2.5, stroke: "var(--ink)", "stroke-width": 0.7 }, zg);
+el("text", { x: -46, y: 42, "font-size": 3.4, fill: "var(--muted)" }, zg).textContent = "grid 10 mm · + = model claw point";
+function drawZoom(k) {
+  const r = rows[k]; zd.replaceChildren();
+  const a = r.rel * Math.PI / 180, t = [-Math.sin(a), -Math.cos(a)], n = [Math.cos(a), -Math.sin(a)], c = [r.fin_s, -r.fin_u];
+  const pts = [[20, 2.5], [20, -2.5], [-20, -2.5], [-20, 2.5]].map(([p, q]) => [c[0] + p * t[0] + q * n[0], c[1] + p * t[1] + q * n[1]]);
+  el("polygon", { points: pts.map(p => p.join(",")).join(" "), fill: "var(--valve)", "fill-opacity": .8, stroke: "var(--valve)", "stroke-width": .5 }, zd);
+  const lab = el("text", { x: 46, y: -56, "text-anchor": "end", "font-size": 3.6, fill: "var(--valve)", "font-weight": 600 }, zd);
+  lab.textContent = `fin, ${fmt(r.rel, 0)}° to the U`;
+  const F = Math.max(0, r.f_right);
+  if (F > 0.05) arrow(zd, [0, 0], [Math.min(44, 14 * F), 0], "var(--force)", 1.2);
+  const ts = -r.side_err;                 // the arm's target, mm to the right of the claw
+  if (Math.abs(ts) > 1) {
+    const x = Math.max(-44, ts);
+    el("line", { x1: 0, y1: 3, x2: x, y2: 3, stroke: "var(--arm)", "stroke-width": .8, "stroke-dasharray": "2 1.5" }, zd);
+    if (ts >= -44) el("circle", { cx: x, cy: 3, r: 1.8, fill: "none", stroke: "var(--arm)", "stroke-width": .8 }, zd);
+    else arrow(zd, [-34, 3], [-46, 3], "var(--arm)", .8);
+    el("text", { x: -46, y: 19, "font-size": 3.4, fill: "var(--arm)" }, zd).textContent = `arm's target ${Math.abs(ts).toFixed(0)} mm ${ts < 0 ? "left" : "right"}`;
+  }
+}
+
+/* ---------- readout ---------- */
+const ro = document.getElementById("readout"), mo = document.getElementById("motors");
+function drawReadout(k) {
+  const r = rows[k];
+  const items = [["valve turned", fmt(r.valve, 1) + "°"], ["vehicle yaw", fmt(r.psi, 1) + "°"], ["fin vs the U", fmt(r.rel, 1) + "°"], null,
+    ["sideways force on the claw (controller)", r.f_right.toFixed(2) + " N"], ["… from the rotors' yaw balance", r.f_yaw.toFixed(2) + " N"],
+    ["arm's target, left of the claw", Math.max(0, r.side_err).toFixed(0) + " mm"], ["joint-1 torque", r.tj1.toFixed(2) + " N·m"], null,
+    ["yaw torque asked (CCW)", r.tz.toFixed(2) + " N·m"], ["yaw torque delivered", r.tau_r.toFixed(2) + " N·m"],
+    ["yaw limit at the thrust applied", r.ylim.toFixed(2) + " N·m"], ["thrust asked / applied", `${r.u1.toFixed(1)} / ${r.tapp.toFixed(1)} N`], ["true tilt", r.tilt.toFixed(1) + "°"]];
+  ro.replaceChildren(...items.flatMap(it => {
+    if (!it) { const s = document.createElement("div"); s.className = "sep"; return [s]; }
+    const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = it[0]; dd.textContent = it[1]; return [dt, dd]; }));
+  const lab = ["FR · CCW", "RL · CCW", "FL · CW", "RR · CW"];
+  mo.replaceChildren(...[2, 3, 0, 1].map(i => { const d = document.createElement("div"); d.className = "mot";
+    d.innerHTML = `<div>${lab[i]}</div><div class="bar"><i style="width:${(100 * r.m[i]).toFixed(1)}%"></i></div><span>${r.m[i].toFixed(2)}</span>`; return d; }));
+}
+
+/* ---------- charts ---------- */
+const CH = [
+  { title: "Angles", unit: "°", lo: -10, hi: 45, series: [
+    { f: r => r.valve, label: "valve turned (CCW)", color: "--valve" },
+    { f: r => r.rel, label: "fin vs the U", color: "--valve", dash: "6 4" },
+    { f: r => r.psi, label: "vehicle yaw (CCW)", color: "--ink-2" }] },
+  { title: "Sideways force on the claw, toward the vehicle's right", unit: "N", lo: -0.5, hi: 3.5, series: [
+    { f: r => r.f_right, label: "controller's estimate (0.5 s low-pass)", color: "--force" },
+    { f: r => r.f_yaw, label: "from the rotors' yaw balance", color: "--force", dash: "6 4" }] },
+  { title: "Joint-1 (arm yaw) torque, pushing the claw left", unit: "N·m", lo: -0.1, hi: 0.8, series: [
+    { f: r => r.tj1, label: "joint-1 torque", color: "--arm" }] },
+  { title: "Yaw torque from the rotors (CCW, against the clockwise twist)", unit: "N·m", lo: 0, hi: 1.2, shade: true, series: [
+    { f: r => r.tz, label: "asked by the controller", color: "--ink" },
+    { f: r => r.tau_r, label: "delivered", color: "--ink-2", dash: "6 4" },
+    { f: r => r.ylim, label: "limit at the thrust applied", color: "--muted", dash: "2 4" }], refs: [[0.64, "limit at hover thrust 0.64"]] },
+  { title: "Motor commands (0 = idle, 1 = full)", unit: "", lo: 0, hi: 1, series: [
+    { f: r => r.m[2], label: "FL · CW", color: "--ink" }, { f: r => r.m[3], label: "RR · CW", color: "--ink", dash: "6 4" },
+    { f: r => r.m[0], label: "FR · CCW", color: "--muted" }, { f: r => r.m[1], label: "RL · CCW", color: "--muted", dash: "6 4" }] },
+];
+const host = document.getElementById("charts"), charts = [];
+CH.forEach((c, ci) => {
+  const div = document.createElement("div"); div.className = "chart";
+  div.innerHTML = `<h3>${c.title}${c.unit ? ` [${c.unit}]` : ""}</h3><div class="legend">${c.series.map(s =>
+    `<span><svg width="22" height="8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" style="stroke:var(${s.color})" stroke-width="2" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""}/></svg>${s.label}</span>`).join("")}</div>`;
+  const svg = document.createElementNS(SVGNS, "svg"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", c.title);
+  div.appendChild(svg); const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; div.appendChild(tip);
+  host.appendChild(div); charts.push({ c, svg, tip, events: ci === 0 });
+});
+let W = 800;
+const M = { l: 46, r: 14, t: 8, b: 22 };
+function renderCharts() {
+  W = Math.max(300, host.clientWidth);
+  charts.forEach(ch => {
+    const { c, svg } = ch, H = ch.events ? 190 : 140, top = ch.events ? 44 : M.t;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H); svg.replaceChildren();
+    const x = t => M.l + (t - T0) / (T1 - T0) * (W - M.l - M.r), y = v => top + (1 - (v - c.lo) / (c.hi - c.lo)) * (H - top - M.b);
+    ch.x = x; ch.y = y; ch.H = H; ch.top = top;
+    const ticks = niceTicks(c.lo, c.hi);
+    ticks.forEach(v => { el("line", { x1: M.l, y1: y(v), x2: W - M.r, y2: y(v), stroke: "var(--grid)", "stroke-width": 1 }, svg);
+      el("text", { x: M.l - 6, y: y(v) + 4, "font-size": 11, "text-anchor": "end", fill: "var(--muted)" }, svg).textContent = +v.toFixed(2); });
+    for (let t = 32.0; t <= 34.31; t += 0.5) { el("line", { x1: x(t), y1: H - M.b, x2: x(t), y2: H - M.b + 4, stroke: "var(--axis)" }, svg);
+      el("text", { x: x(t), y: H - 6, "font-size": 11, "text-anchor": "middle", fill: "var(--muted)" }, svg).textContent = t.toFixed(1) + " s"; }
+    el("line", { x1: M.l, y1: H - M.b, x2: W - M.r, y2: H - M.b, stroke: "var(--axis)" }, svg);
+    if (c.lo < 0) el("line", { x1: M.l, y1: y(0), x2: W - M.r, y2: y(0), stroke: "var(--axis)" }, svg);
+    EV.forEach(([t, lab], i) => {
+      el("line", { x1: x(t), y1: top, x2: x(t), y2: H - M.b, stroke: "var(--axis)", "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+      if (ch.events) { const row = i % 3, end = x(t) > W - 180;
+        el("text", { x: end ? x(t) - 3 : x(t) + 3, y: 12 + row * 13, "font-size": 11, "text-anchor": end ? "end" : "start", fill: "var(--ink-2)" }, svg).textContent = `${t.toFixed(2)} ${lab}`;
+        el("line", { x1: x(t), y1: 3 + row * 13, x2: x(t), y2: top, stroke: "var(--axis)", "stroke-width": 1 }, svg); }
+    });
+    (c.refs || []).forEach(([v, lab]) => { el("line", { x1: M.l, y1: y(v), x2: W - M.r, y2: y(v), stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "1 3" }, svg);
+      el("text", { x: M.l + 6, y: y(v) - 5, "font-size": 11, fill: "var(--muted)" }, svg).textContent = lab; });
+    if (c.shade) { // where more was asked than the rotors delivered
+      const pts = rows.map(r => [x(r.t), y(Math.max(r.tz, r.tau_r))]).concat(rows.slice().reverse().map(r => [x(r.t), y(r.tau_r)]));
+      el("polygon", { points: pts.map(p => p.join(",")).join(" "), fill: "var(--shade)" }, svg);
+      el("text", { x: x(34.0) - 6, y: y(1.12), "font-size": 11, "text-anchor": "end", fill: "var(--force)" }, svg).textContent = "asked but not delivered";
+    }
+    c.series.forEach(s => el("polyline", { points: rows.map(r => `${x(r.t).toFixed(1)},${y(clamp(s.f(r), c.lo, c.hi)).toFixed(1)}`).join(" "),
+      fill: "none", stroke: `var(${s.color})`, "stroke-width": 2, "stroke-linejoin": "round", ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, svg));
+    ch.cur = el("line", { y1: top, y2: H - M.b, stroke: "var(--ink)", "stroke-width": 1.2 }, svg);
+    ch.dots = c.series.map(s => el("circle", { r: 4, fill: `var(${s.color})`, stroke: "var(--surface)", "stroke-width": 2 }, svg));
+    svg.onpointermove = e => { const b = svg.getBoundingClientRect(), px = (e.clientX - b.left) * W / b.width;
+      const t = T0 + (px - M.l) / (W - M.l - M.r) * (T1 - T0); setIdx(nearest(t), ch, e.clientX - b.left); };
+    svg.onpointerleave = () => { ch.tip.hidden = true; };
+  });
+  updateCursors();
+}
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+function niceTicks(lo, hi) { const span = hi - lo, st = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20].find(s => span / s <= 6);
+  const out = []; for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st); return out; }
+const nearest = t => { let k = 0, b = 1e9; rows.forEach((r, i) => { const d = Math.abs(r.t - t); if (d < b) { b = d; k = i; } }); return k; };
+function updateCursors(src, px) {
+  const r = rows[idx];
+  charts.forEach(ch => { const X = ch.x(r.t); ch.cur.setAttribute("x1", X); ch.cur.setAttribute("x2", X);
+    ch.c.series.forEach((s, i) => { ch.dots[i].setAttribute("cx", X); ch.dots[i].setAttribute("cy", ch.y(clamp(s.f(r), ch.c.lo, ch.c.hi))); });
+    if (ch === src) { ch.tip.hidden = false; ch.tip.innerHTML = `${r.t.toFixed(2)} s<br>` + ch.c.series.map(s => `${s.label}: ${s.f(r).toFixed(2)}`).join("<br>");
+      const w = ch.tip.offsetWidth; ch.tip.style.left = (px + 14 + w > host.clientWidth ? px - w - 14 : px + 14) + "px"; ch.tip.style.top = "40px"; }
+    else ch.tip.hidden = true; });
+}
+
+/* ---------- time ---------- */
+const sl = document.getElementById("tslider"), tn = document.getElementById("tnow"), ph = document.getElementById("phase");
+sl.max = rows.length - 1;
+function setIdx(k, src, px) { idx = clamp(k, 0, rows.length - 1); sl.value = idx; const r = rows[idx];
+  tn.textContent = r.t.toFixed(2) + " s"; ph.textContent = phaseOf(r.t);
+  drawTop(idx); drawZoom(idx); drawReadout(idx); updateCursors(src, px); }
+sl.oninput = () => setIdx(+sl.value);
+document.getElementById("back").onclick = () => { stop(); setIdx(idx - 1); };
+document.getElementById("fwd").onclick = () => { stop(); setIdx(idx + 1); };
+let timer = null; const pb = document.getElementById("play");
+function stop() { if (timer) { clearInterval(timer); timer = null; pb.textContent = "Play"; } }
+pb.onclick = () => { if (timer) return stop(); if (idx >= rows.length - 1) setIdx(0);
+  pb.textContent = "Pause"; timer = setInterval(() => { if (idx >= rows.length - 1) return stop(); setIdx(idx + 1); }, 80); };
+
+/* ---------- table ---------- */
+const tb = document.getElementById("tbl");
+tb.innerHTML = "<tr><th>t [s]</th><th>valve [°]</th><th>yaw [°]</th><th>fin vs U [°]</th><th>force right, ctrl [N]</th><th>force right, yaw bal. [N]</th><th>target left [mm]</th><th>joint-1 [N·m]</th><th>yaw asked [N·m]</th><th>yaw delivered [N·m]</th><th>yaw limit [N·m]</th><th>FR</th><th>RL</th><th>FL</th><th>RR</th></tr>" +
+  rows.filter((r, i) => i % 5 === 0).map(r => `<tr><td>${r.t.toFixed(1)}</td><td>${r.valve.toFixed(1)}</td><td>${r.psi.toFixed(1)}</td><td>${r.rel.toFixed(1)}</td><td>${r.f_right.toFixed(2)}</td><td>${r.f_yaw.toFixed(2)}</td><td>${Math.max(0, r.side_err).toFixed(0)}</td><td>${r.tj1.toFixed(2)}</td><td>${r.tz.toFixed(2)}</td><td>${r.tau_r.toFixed(2)}</td><td>${r.ylim.toFixed(2)}</td>${r.m.map(v => `<td>${v.toFixed(2)}</td>`).join("")}</tr>`).join("");
+
+renderCharts(); setIdx(idx);
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderCharts, 120); });
+</script>

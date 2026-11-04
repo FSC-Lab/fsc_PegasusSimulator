@@ -22,7 +22,7 @@ sys.path.insert(0, HERE)
 import roll_grip_design as rg   # noqa: E402
 
 REPO = os.path.abspath(os.path.join(HERE, *[".."] * 5))
-MODEL = os.path.join(REPO, "extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/Valve_Assembly_v2.stl")
+MODEL = os.path.join(REPO, "extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/Valve_Assembly_v20.stl")  # renamed from Valve_Assembly_v2.stl 2026-11-04
 CAD_TO_VALVE = -np.array([-1.1, 3.0, -4.5])            # mm: the valve frame's origin in the CAD frame, negated
 
 

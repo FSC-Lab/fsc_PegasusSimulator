@@ -35,7 +35,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
 VALVE_STL = os.path.join(REPO, "extensions/fsc_aerial_manipulation/fsc_aerial_manipulation/rotorcraft/assets/"
-                         "Valve_Assembly_v2.stl")
+                         "Valve_Assembly_v20.stl")  # renamed from Valve_Assembly_v2.stl 2026-11-04
 CONVERTER = os.path.join(REPO, "docs/docs_aerial_manipulator/archive/valve_turning_20261015/tools/stl_to_usda_valve.py")
 # the designs by (tower height, base x, base y) [mm], CAD orientation
 DESIGNS = {"A": (52.0, 20.1, 30.1), "B": (22.0, 30.1, 20.1), "C": (22.0, 15.1, 30.1), "D": (13.5, 20.1, 30.1)}

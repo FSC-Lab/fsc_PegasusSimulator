@@ -1,0 +1,46 @@
+01:53:55 start p11_pose5_25_drift2 usd=v21 noise=0.32,0.12,2 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p11_pose5_25_drift2] completed
+01:57:31 start p12_pose5_25_drift3 usd=v21 noise=0.32,0.12,3 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p12_pose5_25_drift3] completed
+02:01:09 start p13_pose5_25_drift4 usd=v21 noise=0.32,0.12,4 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p13_pose5_25_drift4] completed
+02:04:40 CHAIN DONE

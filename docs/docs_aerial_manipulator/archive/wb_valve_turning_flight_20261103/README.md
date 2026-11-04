@@ -155,6 +155,26 @@ The abort's heading then started from the measured yaw (-9.5 deg).
 2. **The pin.** From 32.9 s, while the valve turned 34 deg, the claw stayed 12-14 mm inside the fin, and q1 did not
    move under up to 0.64 N.m. The fin's face was against the side of the U: at 73 mm depth that puts it ~10 mm from the
    claw's centre, in the U's narrow rear part. This is an inference from the model's claw point.
+   - **The law's own force reading agrees** (raw F_hat [97..99], 0.5 s low-pass, `tools/yaw2_192853.py`): its
+     sideways part grew from 0.1 N (33.0 s) to 0.9 N (33.7) and 2.3 N (34.2), pointing to the vehicle's RIGHT. That is
+     the fin pushing the U's right-hand side outward (the claw sat 13 mm toward the shaft, i.e. left, of the fin's
+     centre). 2.3 N at the ~0.25-0.3 m from joint 1 to the claw is joint 1's 0.64 N.m.
+   - **The fin was also turning relative to the U.** The valve turned +14 / +34 deg while the vehicle yawed -2.4 / -7.7
+     deg, so the fin sat ~16 / ~41 deg to the U's axis at 33.7 / 34.2 s. A fin turning counter-clockwise swings its back
+     end to the right, into the right rail.
+     - CORRECTED 2026-11-03: an earlier version said the U's rear leaves ~20 mm. Isaac measured 4.8 mm from each face
+       of a centred fin at this grasp, i.e. ~15 mm. A 40 mm fin turned more than ~13 deg cannot lie inside that along
+       its length, so the contact was at a corner near the U's base.
+     - The measured positions (mocap fin vs the planner's FK claw point) put the fin just OUTSIDE the right rail. That
+       contradicts the rightward force (a fin outside the right rail pushes the claw left), so the FK claw point is
+       ~10-15 mm off sideways here (Isaac: 8-16 mm at a similar pose). Which claw surface touched is not resolvable.
+   - **A second, independent force estimate: the rotors' yaw balance.** The vehicle turned clockwise while the rotors
+     delivered up to 0.75 N.m counter-clockwise (allocator model, from the four motor commands), against 0.17 in the
+     hover. The difference over the claw's 0.21 m lead on the CoM is 1.8 / 2.9 N at 33.6 / 34.0 s, the same direction
+     as F_hat (1.5 N at 34.0 s); the bench yaw constant overstates the real one (09-26: 0.43-0.78 of bench).
+   - Page: `viz/fin_in_u_192853.html` (artifact "Fin Against the U"; data `tools/viz_data_192853.py`, build
+     `viz/build_page.py`).
+
 3. **The loop.**
    - The claw's target rides on the CoM, which kept moving left. First it was the drift; then the yaw itself, because
      turning about the pinned claw swings the CoM left 5.8 mm per degree.

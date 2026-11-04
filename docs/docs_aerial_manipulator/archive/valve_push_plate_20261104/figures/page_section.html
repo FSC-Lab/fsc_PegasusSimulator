@@ -1,0 +1,71 @@
+  <h2 id="plate">5. A push plate for the closed claw</h2>
+  <p>On 11-03 the open claw straddled the fin. The slide-in carried it about 18 mm past its grasp point, so the claw's bracket turned the valve before the turn began. The fin then turned inside the U and its back corner pressed the U's right rail sideways. That sideways push, 0.21 m ahead of the centre of mass, twisted the drone against all the yaw its rotors have, and the vehicle tipped.</p>
+  <p>This section adds one part and changes how the claw holds it. The claw is <strong>closed</strong> for the whole flight and pushes a flat <strong>plate</strong> on the fin's pushing edge with its <strong>nose</strong>, so the fin is never inside the claw. A nose on a flat face can only push. Sideways it slides, held back only by friction: about 0.1 N at the valve's 0.45 N of push, 0.02 N·m of yaw, where the jammed fin made 0.6 N·m or more.</p>
+
+  <div class="target">
+    <div class="card"><div class="k">Size</div><div class="v">120 × 79 × 5 mm</div><div class="d">Width along the beam × height × thickness along the push. PLA, its face covered with PTFE tape.</div></div>
+    <div class="card"><div class="k">Where</div><div class="v">On the fin's pushing edge</div><div class="d">Square to the push, on the side the drone comes from for the +90° turn, centred on the fin: 100 to 220 mm from the shaft.</div></div>
+    <div class="card"><div class="k">Height</div><div class="v">125 to 204 mm</div><div class="d">Above the table, its top flush with the fin's top. The claw's nose meets it 165 mm up, 39 mm under its top.</div></div>
+  </div>
+
+  <figure>
+    <div class="viewbar">
+      <button type="button" data-pview="iso">3D</button>
+      <button type="button" data-pview="drone">From the drone</button>
+      <button type="button" data-pview="side">Side</button>
+      <button type="button" data-pview="top">Top</button>
+    </div>
+    <div id="p3d" role="img" aria-label="Rotatable 3D model of the handle end of the beam with the push plate and the closed claw at its hold"></div>
+    <figcaption><b>Fig. 10.</b> The handle end of <span class="mono">Valve_Assembly_v21.stl</span>, to scale: the fin with the push plate (violet) and its clip, markers C, D and E, and the CLOSED claw at its hold before the turn, its nose 20 mm behind the plate's face. The claw is drawn from the arm's CAD (each claw and the bracket as its outer hull) at the push pose [0, 5, 25, 0]°. Drag to rotate, scroll to zoom.</figcaption>
+  </figure>
+
+  <h3>Dimensions</h3>
+  <figure>
+    <div class="scroll"><svg id="pFace" role="img" aria-label="Face-on view of the push plate, from the drone's side, dimensioned"></svg></div>
+    <figcaption><b>Fig. 11.</b> Seen from the drone, along the push, to scale. Distances along the beam are from the shaft, heights from the table top. The two dark patches are the closed claw's tips where they meet the plate. The dashed box is where the claw's centre may wander and still push the face with both tips. Behind the plate (dashed): the fin's edge, the clip's cheeks, markers C and E.</figcaption>
+  </figure>
+  <div class="two">
+    <figure>
+      <div class="scroll"><svg id="pSide" role="img" aria-label="Side view of the fin, the push plate and the closed claw at its hold"></svg></div>
+      <figcaption><b>Fig. 12.</b> From the beam's outer end, to scale, the push to the right. The claw points 60° below level; its nose, the tips' upper corners, is 20 mm behind the face at the hold. The turn closes that slack first, then pushes.</figcaption>
+    </figure>
+    <figure>
+      <div class="scroll"><svg id="pTop" role="img" aria-label="Top view of the push plate on the fin with its clip and the nearby markers"></svg></div>
+      <figcaption><b>Fig. 13.</b> From above, to scale, the push upward. The plate stands on the fin's back edge; the clip's two cheeks hug the fin for 15 mm, one M3 bolt through cheeks and fin. Marker D sits just in front of the plate's inner half and below it, its top 41 mm under the plate's bottom edge.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Why this size</h3>
+  <ul id="pWhy"></ul>
+
+  <h3>The arm pose for the push</h3>
+  <p id="pPoseText"></p>
+  <div class="tscroll"><table id="pPoseTable"></table></div>
+
+  <h3>Making it</h3>
+  <div class="two">
+    <div class="card">
+      <h3>Print and fit</h3>
+      <ol>
+        <li>Print the plate and clip as one part (<span class="mono">Valve_Assembly_v21.stl</span>, the part on the fin's back edge), face down, 5 mm thick. Make the slot for the fin 5.3 mm wide.</li>
+        <li>Slide it onto the fin's pushing edge (the side the drone comes from), its top flush with the fin's top. Drill 3.2 mm through the cheeks and the fin at about 165 mm above the table and fit one M3 bolt.</li>
+        <li>Cover the face with PTFE tape. It keeps the sideways friction low, which is what keeps the yaw small.</li>
+        <li>Leave the markers as they are: obj_0 and the axis offset do not change. The rotor gains 54.5 cm³, about 56 g printed like the rotor, and about 60 % more inertia about the shaft, since the plate sits out at the fin. That does not matter: the hub pad's friction does not change, and at the turn's speeds the push is friction, not inertia (under 1 mN·m of 72).</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>What the software needs</h3>
+      <ul>
+        <li><strong>The claw stays closed</strong>: the arm GS starts with <span class="mono">-p push_pull_valve_cup_position:=-0.010</span> (the closed position), so Ready and the grasp gate move nothing.</li>
+        <li><strong>The grasp point</strong> is the claw point that puts the nose 20 mm behind the face, 165 mm up: <span class="mono">push_pull_ee_offset [0.160, -0.0613, 0.1704]</span>.</li>
+        <li><strong>The tangent check at the nose</strong>: <span class="mono">push_pull_turn_tangent_lead 0.0369</span> (new, 2026-11-04, default 0). The claw point sits 61 mm behind the fin's radial line, which the planner otherwise refuses as 21° off the tangent.</li>
+        <li><strong>The fin guard describes the plate</strong>: <span class="mono">push_pull_valve_fin</span> = the plate's box, the push point 16.9 mm ahead of the claw point (<span class="mono">push_pull_guard_fin_bracket_back -0.0169</span>), across limit 35 mm.</li>
+        <li><strong>The planned turn</strong> 97° for a 90° valve turn: the 20 mm slack costs 4–7°, and in Isaac the valve ended at 92.8–99.9°.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>In Isaac</h3>
+  <div id="pSimText"></div>
+  <div class="tscroll"><table id="pSimTable"></table></div>
+  <div class="note" id="pSimNote"></div>

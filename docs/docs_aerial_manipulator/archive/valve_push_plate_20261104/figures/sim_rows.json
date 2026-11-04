@@ -1,0 +1,106 @@
+[
+ {
+  "tag": "q1_edge30",
+  "outcome": "ABORT (valve < 30 deg)",
+  "reason": "FIN OUT OF THE U: the fin 36 mm across the claw (> 35 mm): out between the claws",
+  "valve": 1.3,
+  "tilt": 2.8,
+  "q3min": 27.7,
+  "direct": "kept",
+  "other": "none",
+  "nose_x": [
+   184.4,
+   213.2
+  ],
+  "nose_z": [
+   162.8,
+   165.8
+  ],
+  "push_mean": 0.3,
+  "push_p95": 0.59,
+  "tz_p95": 0.177,
+  "tz_max": 0.208,
+  "unal": 0.0,
+  "mlim": 0.0,
+  "fs_p95": 0.18,
+  "fs_max": 0.26,
+  "fin_contact": false,
+  "no_plate": false
+ },
+ {
+  "tag": "q2_high20",
+  "outcome": "ABORT (valve < 30 deg)",
+  "reason": "FIN OUT OF THE U: the claw only 12 mm under the fin top (< 12 mm): riding over it",
+  "other": "none"
+ },
+ {
+  "tag": "q3_noslack",
+  "outcome": "ABORT (valve < 30 deg)",
+  "reason": "operator / driver",
+  "other": "none"
+ },
+ {
+  "tag": "q4_upush_noslack_lat12",
+  "outcome": "completed",
+  "reason": "turn: depth   75.8..  85.0 | across    6.6..  15.2 | gap    6.7..  23.2 | clear boxes   34.9..  52.4 | balls   15.2..  44.8 mm (195 samples)",
+  "valve": 91.4,
+  "tilt": 2.0,
+  "q3min": 17.9,
+  "direct": "kept",
+  "other": "none",
+  "tz_p95": 0.184,
+  "tz_max": 0.232,
+  "unal": 0.0,
+  "mlim": 0.0,
+  "fs_p95": 0.18,
+  "fs_max": 0.31,
+  "fin_contact": true,
+  "no_plate": true
+ },
+ {
+  "tag": "q5_drift4_com",
+  "outcome": "ABORT (valve < 30 deg)",
+  "reason": "FIN OUT OF THE U: the fin 62 mm ahead of the bracket (> 60 mm): the U has fallen behind it",
+  "valve": 0.0,
+  "tilt": 3.1,
+  "q3min": 28.7,
+  "direct": "kept",
+  "other": "none",
+  "tz_p95": 0.138,
+  "tz_max": 0.143,
+  "unal": 0.0,
+  "mlim": 0.0,
+  "fs_p95": 0.19,
+  "fs_max": 0.22,
+  "fin_contact": false,
+  "no_plate": true
+ },
+ {
+  "tag": "q6_pose_m5_35",
+  "outcome": "ABORT (valve < 30 deg)",
+  "reason": "FIN OUT OF THE U: q3 40.1 deg > 40.0 deg: the arm folding onto its stop (the valve jammed? the",
+  "valve": 13.6,
+  "tilt": 2.6,
+  "q3min": 32.4,
+  "direct": "kept",
+  "other": "none",
+  "nose_x": [
+   152.4,
+   185.5
+  ],
+  "nose_z": [
+   160.1,
+   165.6
+  ],
+  "push_mean": 0.32,
+  "push_p95": 0.43,
+  "tz_p95": 0.186,
+  "tz_max": 0.226,
+  "unal": 0.0,
+  "mlim": 0.0,
+  "fs_p95": 0.15,
+  "fs_max": 0.22,
+  "fin_contact": false,
+  "no_plate": false
+ }
+]

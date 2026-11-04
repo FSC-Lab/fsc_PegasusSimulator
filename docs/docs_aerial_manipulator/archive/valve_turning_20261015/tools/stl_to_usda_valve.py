@@ -2,7 +2,16 @@
 """Valve_Assembly.stl (CAD, metres, +Z up) -> Valve_Assembly.usda (2026-10-15).
 
     /usr/bin/python3 stl_to_usda_valve.py [--stl ...] [--out ...] [--density 1240 | --mass 0.243]
-    /usr/bin/python3 stl_to_usda_valve.py --stl .../Valve_Assembly_v2.stl --out .../Valve_Assembly_v2.usda
+    /usr/bin/python3 stl_to_usda_valve.py --stl .../Valve_Assembly_v20.stl --out .../Valve_Assembly_v2.usda
+    /usr/bin/python3 stl_to_usda_valve.py --stl .../Valve_Assembly_v21.stl --out .../Valve_Assembly_v21.usda
+
+(2026-11-04) Valve_Assembly_v2.stl was RENAMED Valve_Assembly_v20.stl by the user's request (the
+asset it makes keeps its name, Valve_Assembly_v2.usda).
+
+V21 (2026-11-04, archive/valve_push_plate_20261104/tools/make_v21_stl.py): v20 + THE PUSH PLATE, one
+closed shell on the fin's pushing (-y) edge, square to the push, with a clip either side of the fin.
+The CLOSED claw pushes its face with its nose, so the fin can never be inside the claw. It joins the
+rotor's visual and mass, gets a convex collider (the plate proper, not the clip) and fsc:push_plate_*.
 
 V2 (2026-10-27, Valve_Assembly_v2.stl): the same three shells plus TWO STATIC HALF-RINGS
 around the hub (inner radius 27.2 mm against the 25.0 mm hub, 20 mm tall from the plate's
@@ -207,6 +216,9 @@ def main():
         lo, hi = sv.min(0), sv.max(0)
         if i == 0 and hi[2] > 100.0:
             part_of[k] = "rotor"
+        elif lo[2] > 100.0 and hi[0] - lo[0] > 50.0 and lo[0] > 50.0:
+            # v21 (2026-11-04): the push plate -- wide, high above the beam, out at the fin
+            part_of[k] = "push_plate"
         elif hi[0] - lo[0] > 100.0:
             part_of[k] = "plate"
         elif inside(sv, (BEARING_MM,)).all():
@@ -217,7 +229,10 @@ def main():
             part_of[k] = "marker"
         else:
             raise SystemExit(f"a shell at {lo.round(1)}..{hi.round(1)} mm is none of the known parts")
-    core = sorted(v for v in part_of.values() if v != "marker")
+    core = sorted(v for v in part_of.values() if v not in ("marker", "push_plate"))
+    if sum(v == "push_plate" for v in part_of.values()) > 1:
+        raise SystemExit("more than one push-plate shell")
+    push_plate = T_cad[np.array([part_of[k] == "push_plate" for k in lab])]
     if core not in (["bearing", "plate", "rotor"], ["bearing", "plate", "ring", "ring", "rotor"]):
         raise SystemExit(f"could not tell the shells apart: {part_of}")
     n_marker_parts = sum(v == "marker" for v in part_of.values())
@@ -247,6 +262,16 @@ def main():
 
     R = to_asset(rotor.reshape(-1, 3)).reshape(-1, 3, 3)                   # m, asset frame
     B = to_asset(base.reshape(-1, 3)).reshape(-1, 3, 3)
+    PP = to_asset(push_plate.reshape(-1, 3)).reshape(-1, 3, 3) if len(push_plate) else None
+    if PP is not None:
+        # the plate proper: the part of the shell on the push side of the fin's back edge
+        fin_back_y = (ROTOR_MM["fin"][1][0] - AXIS_MM[1]) * 1e-3
+        pv = PP.reshape(-1, 3)
+        pv_plate = pv[pv[:, 1] <= fin_back_y + 1e-6]
+        pp_lo, pp_hi = pv_plate.min(0), pv_plate.max(0)
+        if not (pp_hi[1] <= fin_back_y + 1e-6 and pp_lo[0] < ROTOR_MM["fin"][0][0] * 1e-3 < pp_hi[0]):
+            raise SystemExit(f"the push plate {pp_lo.round(4)}..{pp_hi.round(4)} m is not on the fin's pushing edge")
+        R = np.concatenate([R, PP])                     # the rotor's mass and visual include it
     vol, com, I = solid_mass_props(R)
     if vol <= 0:
         raise SystemExit("negative rotor volume: the STL's winding is inverted")
@@ -322,6 +347,11 @@ def main():
     parts = {}
     for name in COLLIDERS:
         parts[name] = convex_box(f"/Valve_Assembly/rotor/Collision/{name}", ROTOR_MM[name], name in GRIP_PARTS)
+    if PP is not None:
+        # the push plate's collider: its box in CAD mm (convex_box takes CAD mm)
+        blk = tuple((float(pp_lo[i] * 1e3 + (AXIS_MM[i] if i < 2 else PLATE_BOTTOM_MM)),
+                     float(pp_hi[i] * 1e3 + (AXIS_MM[i] if i < 2 else PLATE_BOTTOM_MM))) for i in range(3))
+        parts["push_plate"] = convex_box("/Valve_Assembly/rotor/Collision/push_plate", blk, False)
     UsdPhysics.MassAPI.Apply(rotor_x.GetPrim())
     mapi = UsdPhysics.MassAPI(rotor_x.GetPrim())
     mapi.CreateMassAttr(float(mass))
@@ -368,6 +398,17 @@ def main():
         "fsc:rotor_mass_kg": float(mass),
         "fsc:rotor_inertia_axis_kgm2": float(I_axis),
     }
+    if PP is not None:
+        pl_lo, pl_hi = parts["push_plate"]
+        feats.update({
+            "fsc:push_plate": 1.0,
+            "fsc:push_plate_radius_m": float(0.5 * (pl_lo[0] + pl_hi[0])),     # its centre along the beam
+            "fsc:push_plate_width_m": float(pl_hi[0] - pl_lo[0]),               # radial
+            "fsc:push_plate_face_y_m": float(pl_lo[1]),                         # the pushing face (rotor y)
+            "fsc:push_plate_thickness_m": float(pl_hi[1] - pl_lo[1]),
+            "fsc:push_plate_bottom_z_m": float(pl_lo[2]),
+            "fsc:push_plate_top_z_m": float(pl_hi[2]),
+        })
     # THE MOCAP MARKERS (2026-10-28): the rotor's visual + a sphere collider per ball;
     # the centres and their centroid (Motive's default pivot) for the scene and planner
     balls = []

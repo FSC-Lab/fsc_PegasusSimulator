@@ -1,0 +1,10 @@
+<p><strong>What these flights cannot show.</strong> Isaac never jammed the fin in the U. The U push completed every run here, including the 11-03 situation (no slack and 12 mm off), and Isaac's slide-in does not overshoot the way the hardware's did on 11-03 (18 mm): nominal flights ended Ready within 2 mm of the planned 20 mm gap. So the simulation cannot show that the plate, or coming down from above, prevents the 11-03 failure. The plate prevents it by its shape. No part of the fin is ever inside the claw, and a nose on a flat face can only be pushed sideways as hard as friction allows. Isaac shows the rest: the plate push works, aborts cleanly when it goes wrong, pushes the valve less before the turn, and gives the gear more room.</p>
+<p><strong>Reading the table.</strong></p>
+<ul>
+<li>Peak tilt runs from DIRECT entry and lowest q3 from Ready, both to the end of the run. Highest q3 covers the turn only, the window of the 40° jam limit.</li>
+<li>Yaw command is the law's yaw torque in the turn. Sideways force is the controller's own estimate of the force on the claw across the vehicle, low-passed 0.5 s.</li>
+<li>Nose on the plate is where the claw touched the plate in the turn: out from the shaft and up from the table. The plate spans 100–220 and 125–204 mm.</li>
+<li>Before the turn gives the pushing point's closest approach to the face it pushes, from Ready's end, and how far the valve moved. The slack is 20 mm for the plate and 13 mm for the U push.</li>
+<li>The abort reasons are the planner's guards, renamed here for the plate. The planner's own messages still say "fin" and "bracket".</li>
+</ul>
+<p>With the 97° plan the valve ended 1–11° past 90°. The free-axis anchor lets the valve follow the vehicle's lead along the push. For a nominal end at 90°, plan about 95°.</p>

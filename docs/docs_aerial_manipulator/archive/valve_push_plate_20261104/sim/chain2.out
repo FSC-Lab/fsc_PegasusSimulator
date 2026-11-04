@@ -1,0 +1,133 @@
+00:48:48 start p1_nominal usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0]
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+[p1_nominal] completed
+00:52:20 start p2_nominal_com usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0] push_pull_world_anchor_push=false push_pull_world_anchor_on_handle=false
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+  push_pull_world_anchor_push -> false
+  push_pull_world_anchor_on_handle -> false
+[p2_nominal_com] completed
+00:55:55 start p3_drift2 usd=v21 noise=0.32,0.12,2 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p3_drift2] completed
+00:59:29 start p4_drift3 usd=v21 noise=0.32,0.12,3 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p4_drift3] completed
+01:03:07 start p5_drift4 usd=v21 noise=0.32,0.12,4 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0] push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p5_drift4] completed
+01:06:40 start p6_drift2_com usd=v21 noise=0.32,0.12,2 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0] push_pull_world_anchor_push=false push_pull_world_anchor_on_handle=false push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+  push_pull_world_anchor_push -> false
+  push_pull_world_anchor_on_handle -> false
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p6_drift2_com] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: FIN OUT OF THE U: the fin 61 mm ahead of the bracket (> 60 mm): the U has 
+01:10:10 start p7_drift3_com usd=v21 noise=0.32,0.12,3 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0] push_pull_world_anchor_push=false push_pull_world_anchor_on_handle=false push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+  push_pull_world_anchor_push -> false
+  push_pull_world_anchor_on_handle -> false
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[p7_drift3_com] ABORTED: push-and-pull ABORTED while push complete: ABORTING (SAFETY GUARD: FIN OUT OF THE U: the fin 36 mm across the claw (> 35 mm): out between the
+01:13:47 start p8_lat12 usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1720, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 0.0, 30.0, 0.0]
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1720, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 0.0, 30.0, 0.0]
+[p8_lat12] completed
+01:17:18 start p9_upush_lat12 usd=Valve_Assembly_v2.usda noise=none gs= push_pull_ee_offset=[0.1720, -0.0244, 0.1240]
+  push_pull_ee_offset -> [0.1720, -0.0244, 0.1240]
+[p9_upush_lat12] completed
+01:20:51 start p10_pose5_25 usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0]
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+[p10_pose5_25] completed
+01:24:26 CHAIN DONE

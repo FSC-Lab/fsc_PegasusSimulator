@@ -9,7 +9,7 @@ for name in ("read_stl", "shells", "solid_mass_props"):
     s = code.index(f"def {name}("); e = code.index("\ndef ", s + 5)
     exec(code[s:e], ns)
 A = os.path.join(HERE, *[".."] * 5, "extensions", "fsc_aerial_manipulation", "fsc_aerial_manipulation", "rotorcraft", "assets")
-for f in ("Valve_Assembly_v1.stl", "Valve_Assembly_v2.stl"):
+for f in ("Valve_Assembly_v1.stl", "Valve_Assembly_v20.stl"):
     T = ns["read_stl"](os.path.join(A, f)) * 1e3
     lab = ns["shells"](T); cnt = collections.Counter(lab.tolist())
     print(f"== {f}: {len(T)} triangles, {len(cnt)} shells")
@@ -20,7 +20,7 @@ for f in ("Valve_Assembly_v1.stl", "Valve_Assembly_v2.stl"):
               f"z[{v[:,2].min():6.1f},{v[:,2].max():6.1f}] mm  vol {vol/1e3:8.2f} cm3  com {np.round(com,1)}")
 
 # the two new half-rings (v2 only): radial extent about the bearing axis, and the hub's radius
-T = ns["read_stl"](os.path.join(A, "Valve_Assembly_v2.stl")) * 1e3
+T = ns["read_stl"](os.path.join(A, "Valve_Assembly_v20.stl")) * 1e3
 lab = ns["shells"](T); cnt = collections.Counter(lab.tolist())
 ax = np.array([-1.1, 3.0])
 for k, n in cnt.most_common():

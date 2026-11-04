@@ -7934,3 +7934,66 @@ blocking before contact; that was recorded but not raised before the flight.
   -11 at contact (the drift).
 - The valve's rest poses before/after put the shaft 7.7 mm from the planner's axis along the turn. This contradicts the
   contact timing unless the base shifted; bench re-check with `valve_body_check.py`.
+
+**THE PUSH PLATE: A CLOSED CLAW PUSHES A PLATE ON THE FIN, THE FIN NEVER INSIDE THE CLAW (2026-11-04, user design after
+192853; record `docs/docs_aerial_manipulator/archive/valve_push_plate_20261104/README.md`, design page section 5 of
+https://claude.ai/artifact/BppzF9zYUZoNwrdPymSQoi).** Pushed on `valve-isolation-20261102` (2026-11-04); NOT flown on hardware.
+- **Assets.** `Valve_Assembly_v2.stl` was renamed `Valve_Assembly_v20.stl` (git mv, byte-identical; the three archived
+  tools that read it were updated; `Valve_Assembly_v2.usda` keeps its name). `Valve_Assembly_v21.stl` = v20 + the plate:
+  - 120 mm radial (100-220 mm from the shaft) x 79 mm tall (125-204 mm above the table, top flush with the fin's)
+    x 5 mm thick;
+  - on the fin's pushing edge, face at y -24.4 mm, with a 15 mm clip, 3 mm cheeks and one M3.
+
+  `Valve_Assembly_v21.usda` is generated from it. The 10-15 converter gained the plate shell: visual + mass + a convex
+  `push_plate` collider + `fsc:push_plate_*`. Fly v21 with `PEGASUS_VALVE_FIN_GRIP_MM=0` and
+  `PEGASUS_VALVE_ROTOR_MASS=0.260`. The plate adds +56 g printed like the rotor and +60 % inertia about the shaft;
+  that does not matter, the turn is friction-dominated.
+- **The push.** The claw stays CLOSED (arm GS `-p push_pull_valve_cup_position:=-0.010`). Its nose is the closed tips'
+  upper front corners, 16.9 mm ahead of and 5.4 mm below the claw point at a 60 deg claw. It meets the face 165 mm up.
+  The contact can only push; sideways it is bounded by mu x N. It is flown as KEY=VAL overrides of the generated sim
+  yaml (README section 2):
+  - `push_pull_ee_offset [0.160, -0.0613, 0.1704]` (a 20 mm slack) and `push_pull_turn_tangent_lead 0.0369`;
+  - `push_pull_valve_fin` = the plate's box, `push_pull_guard_fin_bracket_back -0.0169`, `_depth_min 0.012`,
+    `_across_max 0.035`;
+  - `push_pull_turn_deg 97`, `push_pull_exit_world_held_dz 0.08`, `push_pull_follow_lead_deg [14, 24]`.
+- **Planner** (fsc_trajectory_planner): new `push_pull_turn_tangent_lead` [m], default 0. The 15 deg tangent check is
+  now made at the push point, this far ahead of the grasp point along the nose. Without it the plate is refused: the
+  nose's claw point sits 61 mm behind the fin's radial line, 21 deg off the tangent. gtest
+  `PushPull.ThePushPlatesNoseIsCheckedAtThePushPoint`; push-pull 33/33. The valve generator writes 0.0. The hardware
+  valve yaml was NOT regenerated.
+- **Isaac: 22 flights, plus 4 U-push flights from 11-03.**
+  - Every unforced room-held plate flight completed, 9 of 9: two poses, nominal, drift 2/3/4 and a 12 mm aim error.
+    Valve 91-101 deg, tilt <= 3.7 deg. The U push went 6 of 6.
+  - Stress cases abort cleanly. Aimed 30 mm toward the edge: the across guard. Aimed 20 mm high: the depth guard.
+    No slack: the nose pushed the valve 15 deg in the hold, the live-handle target chased the pushed plate, and the
+    station's settle wait timed out.
+  - A CoM-anchored turn went 1 of 4: keep the room hold.
+  - **Pose: keep [0, 5, 25, 0].** The limits that bind are the planner's q3 floor (3 deg) and the fin guard's q3 jam
+    limit (40 deg), not the q3 range. Under drift q3 peaked at 31.8-34.5 deg there, against 37.2-39.2 at [0, 0, 30, 0]
+    (my first choice, 0.8 deg from the limit). [0, -5, 35, 0] tripped the limit. The pose cannot buy yaw: lever
+    214/204/195 mm, yaw command p95 0.19-0.20 N.m at all three.
+  - **Coming down from above** (`push_pull_approach_back 0`) went 2 of 3. p16 aborted in the hold on the across limit
+    (37 > 35 mm) with nothing touching: sideways hover wander at the end of Ready, 6-37 mm over 8 drift flights.
+    Recommended for the hardware: on 11-03 the slide-in overshot 18 mm against the 20 mm slack. Isaac's slide-in does
+    not overshoot, so Isaac cannot show the benefit.
+  - Before the turn the plate is pushed less: the valve moved <= 0.4 deg, against 0.3-5.1 deg for the U push.
+  - The vehicle flies ~46 mm higher, so the gear and arm stay 54-72 mm from the nearest marker ball (U push 10-16).
+  - With the 97 deg plan the valve ended at 91-101 deg; plan ~95 deg for a nominal 90.
+  - What Isaac cannot show: the 11-03 jam. No Isaac U push ever jammed. The plate removes it by construction.
+- **Open for the hardware.**
+  - Bench the real closed claw on the plate: do the pads close fully, the PTFE face, the slot fit.
+  - Add a `plate` option to the valve generators and set the cup position on the hardware station; rebuild the
+    planner on the Orin.
+  - On an 11-03-like hover (25-31 mm rms wander), expect touches in the hold and across aborts. The remedies are a
+    30-35 mm slack, or arming the across guard only from the room hold (a planner change).
+  - The guard messages still say "fin" and "bracket".
+- **Follow-ups the same day.**
+  - The contact's own yaw moment, from Isaac's contact report (`tools/contact_yaw.py`): plate p95 0.004-0.017 N.m,
+    never above 0.05; U push spikes to 0.97 N.m. Yaw budget ~0.65 N.m vs ~8 N.m in pitch.
+  - The aim stays at the plate's MIDDLE (160 mm out, 165 mm up): both closed fingertips touch (a ~40 mm patch), the
+    hold's wander is two-sided (-25..+35 mm) and the turn drifts slightly outward (+2..+4 mm mean). An outward aim
+    loses margin; widen the plate symmetrically instead.
+  - `sim/launch_plate.sh`: the windowed plate session (`WB_SIM_YAML` = a patched copy; `TAKEOFF=1`).
+  - Pushed on `valve-isolation-20261102`: the planner's `push_pull_turn_tangent_lead` (a NaN refused at the set and
+    in the plan) and both valve yamls with the key at 0.0. **The hardware still flies the U push**; its grasp point
+    sits on the plate's face, so do not mount the plate on the real valve until a hardware plate config exists.

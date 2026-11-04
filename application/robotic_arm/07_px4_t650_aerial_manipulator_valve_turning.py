@@ -155,7 +155,12 @@ Knobs (environment):
                                  M4 screw about N (the fin's plane, 30 deg up toward +y) through the
                                  grip point; the grip shim then sits on the roll fin, the contact truth
                                  covers both bodies and carries the roll angle ([20..22]), and the
-                                 rotor mass defaults to the asset's (226 g + the 23 g roll fin)
+                                 rotor mass defaults to the asset's (226 g + the 23 g roll fin).
+                                 Valve_Assembly_v21.usda (2026-11-04) = v2 + THE PUSH PLATE: 120 x 79 x
+                                 5 mm on the fin's pushing edge, 125-204 mm up, which a CLOSED claw
+                                 pushes with its nose (archive/valve_push_plate_20261104); fly it with
+                                 PEGASUS_VALVE_FIN_GRIP_MM=0 and PEGASUS_VALVE_ROTOR_MASS=0.260. Since
+                                 2026-11-04 the v2 asset's source STL is Valve_Assembly_v20.stl
   PEGASUS_VALVE_ROLL_FRICTION    (v3) the roll joint's O-ring friction [N.m], default 0.002 (the design's
                                  2-4 mN.m hold), stick-slip in the joint drive; 0 = frictionless
   PEGASUS_VALVE_ROLL_LOCK=1      (v3) the roll joint LOCKED (a stiff drive: the screw tightened, the

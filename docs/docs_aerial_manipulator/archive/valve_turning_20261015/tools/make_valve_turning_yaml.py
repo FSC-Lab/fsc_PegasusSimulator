@@ -133,6 +133,11 @@ PLANNER_BLOCK = f"""
     # 2026-11-02 (THE U PUSH): planned {TURN_DEG_PLAN:.0f} deg for a 90 deg VALVE turn -- the bracket
     # meets the fin after ~13 mm (~5 deg) and pushes it, never pulls; Isaac 88.4-95.1 deg.
     push_pull_turn_deg: {TURN_DEG_PLAN:.1f}
+    # THE PUSH POINT'S LEAD (2026-11-04, Pegasus archive/valve_push_plate_20261104): where the planner
+    # checks that the nose is along the turn's tangent, this far [m] ahead of the grasp point along the
+    # nose. 0 = at the grasp point (the U push: its push contact is near it). The push plate's closed
+    # claw pushes with its nose, 37 mm ahead of a claw point that sits 61 mm behind the fin's radial line.
+    push_pull_turn_tangent_lead: 0.0
     push_pull_push_distance: 0.50
     # 36 s for the full turn: mean 10 deg/s, peak 25 deg/s of yaw, peak CoM
     # speed ~0.11 m/s. THE TURN'S SPEED IS A TRADE (v3 / v5, 2026-10-15): the

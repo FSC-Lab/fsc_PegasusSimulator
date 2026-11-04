@@ -1773,6 +1773,10 @@ abort crashed) and pushes >= 10 N. **Lower the tallest marker ball** on the real
 above the plate): the left skid passes 10-22 mm over it mid-turn and brushed it in two Isaac drift runs; the real gear
 is 5.5 mm deeper. Isaac fault injection: `PEGASUS_VALVE_FAULT` (force / jam / drop / freeze at a turn angle). Orin:
 rebuild `fsc_trajectory_planner` (the raw stack refuses an older one), pull `fsc_autopilot_ros2`.
+**THE PUSH PLATE (2026-11-04, `archive/valve_push_plate_20261104`, SIMULATION ONLY):** a CLOSED claw pushes a 120 x 79 x 5
+mm plate on the fin's pushing edge with its nose (`Valve_Assembly_v21`). Windowed in Isaac, after step 0:
+`bash archive/valve_push_plate_20261104/sim/launch_plate.sh` (`TAKEOFF=1` also takes off and enters DIRECT), then the
+Valve Turning tab as above. The hardware valve yaml still flies the U push -- do not mount the plate on the real valve.
 
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 
