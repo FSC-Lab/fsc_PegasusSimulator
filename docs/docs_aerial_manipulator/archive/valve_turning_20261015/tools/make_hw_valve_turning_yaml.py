@@ -79,9 +79,14 @@ HW_PLANNER = {
     "push_pull_abort_gripper_joint": ('"gripper_left_joint"', "the real gripper's joint (sim gripper_joint)"),
     "push_pull_abort_gripper_open_at": ("0.017", "metres: open 0.019, the gripper controller's goal tolerance "
                                         "0.002 (sim -0.03 rad: Isaac's hub angle, open 0)"),
-    "push_pull_abort_release_wait_s": ("1.5", "the box push's hardware value (make_hw_box_pushing_yaml.py "
-                                       "HW_PLANNER): the OPEN crosses two WiFi hops before the 0.65-0.70 s "
-                                       "gripper (sim 1.0); unused while push_pull_abort_climb_on_open is true"),
+    # (2026-11-04) THE PUSH PLATE climbs at once on hardware too: its closed claw holds nothing, so no
+    # pause for the jaws (the sim's 0.0); the U push kept the box push's 1.5 s
+    "push_pull_abort_release_wait_s": (("0.0", "the push plate's abort climbs AT ONCE: the closed claw holds "
+                                        "nothing (sim 0.0; the U push 1.5, the box push's hardware value)")
+                                       if SIM.HANDLE == "plate" else
+                                       ("1.5", "the box push's hardware value (make_hw_box_pushing_yaml.py "
+                                        "HW_PLANNER): the OPEN crosses two WiFi hops before the 0.65-0.70 s "
+                                        "gripper (sim 1.0); unused while push_pull_abort_climb_on_open is true")),
 }
 # hardware margins in the NODE section (the hardware free-flight file's own value replaced):
 # key -> (value, why) -- the box push's (make_hw_box_pushing_yaml.py HW_NODE), same numbers

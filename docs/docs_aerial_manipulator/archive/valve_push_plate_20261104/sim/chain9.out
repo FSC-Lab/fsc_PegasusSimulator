@@ -1,0 +1,6 @@
+11:31:14 start d1_defaults (defaults) 
+[d1_defaults] completed
+11:34:47 start d2_defaults_bottom (defaults) push_pull_ee_offset=[0.1600, -0.0613, 0.1455]
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1455]
+[d2_defaults_bottom] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING (SAFETY GUARD: FIN OUT OF THE U: the
+11:37:58 CHAIN DONE

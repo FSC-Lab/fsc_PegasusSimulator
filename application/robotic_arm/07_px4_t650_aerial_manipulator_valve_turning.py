@@ -109,7 +109,8 @@ Knobs (environment):
   PEGASUS_VALVE_YAW_DEG          the beam's initial yaw [deg], default 180 (the fin toward the start)
   PEGASUS_VALVE_RISER            a block under the plate [m], default 0 (a higher valve allows a
                                  more folded arm: the gear is the limit, see GEOMETRY)
-  PEGASUS_VALVE_ROTOR_MASS       the rotor's mass [kg], default 0.204 = the printed rotor (the
+  PEGASUS_VALVE_ROTOR_MASS       the rotor's mass [kg], default 0.204 = the printed rotor (0.260 with
+                                 the push plate, v21: + the ~56 g plate) (the
                                  asset is solid PLA, 0.243; 0 = the asset's). The pick-and-drop
                                  payload, same material and printer, weighs 180 g printed over
                                  172.5 cm^3 of CAD solid = 1044 kg/m^3; the rotor is 195.8 cm^3
@@ -148,8 +149,10 @@ Knobs (environment):
   PEGASUS_VALVE_RATCHET=1        a one-way pawl: rotation against LOAD_DIR is stopped and the
                                  pawl carries the weight (it fades in below 0.02 rad/s of forward
                                  rate), default 0
-  PEGASUS_VALVE_FIN_GRIP_MM      the fin's clamped width in the sim [mm], default 20; 0 = bare
-  PEGASUS_VALVE_USD              the asset, default assets/Valve_Assembly_v2.usda (2026-10-28; was
+  PEGASUS_VALVE_FIN_GRIP_MM      the fin's clamped width in the sim [mm], default 20 (0 with the
+                                 push plate, v21); 0 = bare
+  PEGASUS_VALVE_USD              the asset, default assets/Valve_Assembly_v21.usda since 2026-11-04 (THE
+                                 PUSH PLATE, below); v2 2026-10-28..11-03 (was
                                  Valve_Assembly.usda, v1: no pad, no markers). Valve_Assembly_v3.usda
                                  (2026-10-31) = THE ROLL FIN: the handle a second body turning on an
                                  M4 screw about N (the fin's plane, 30 deg up toward +y) through the
@@ -158,8 +161,9 @@ Knobs (environment):
                                  rotor mass defaults to the asset's (226 g + the 23 g roll fin).
                                  Valve_Assembly_v21.usda (2026-11-04) = v2 + THE PUSH PLATE: 120 x 79 x
                                  5 mm on the fin's pushing edge, 125-204 mm up, which a CLOSED claw
-                                 pushes with its nose (archive/valve_push_plate_20261104); fly it with
-                                 PEGASUS_VALVE_FIN_GRIP_MM=0 and PEGASUS_VALVE_ROTOR_MASS=0.260. Since
+                                 pushes with its nose (archive/valve_push_plate_20261104); with it the
+                                 fin grip defaults to 0 and the rotor mass to 0.260. The U push: set
+                                 PEGASUS_VALVE_USD=<assets>/Valve_Assembly_v2.usda. Since
                                  2026-11-04 the v2 asset's source STL is Valve_Assembly_v20.stl
   PEGASUS_VALVE_ROLL_FRICTION    (v3) the roll joint's O-ring friction [N.m], default 0.002 (the design's
                                  2-4 mN.m hold), stick-slip in the joint drive; 0 = frictionless
@@ -241,7 +245,8 @@ TABLE_SHELF_THICK = 0.015               # [m]
 
 # THE VALVE: the asset's frame is the bearing axis on the plate-bottom plane,
 # +x along the beam toward the fin (stl_to_usda_valve.py).
-VALVE_USD = (os.environ.get("PEGASUS_VALVE_USD", "") or os.path.join(am06.ASSETS_DIR, "Valve_Assembly_v2.usda")).strip()
+# (2026-11-04) the default is the PUSH PLATE (v21), the valve-turning yaml's design since that day
+VALVE_USD = (os.environ.get("PEGASUS_VALVE_USD", "") or os.path.join(am06.ASSETS_DIR, "Valve_Assembly_v21.usda")).strip()
 VALVE_XY  = _xy("PEGASUS_VALVE_XY", "0.675,0.00")
 VALVE_YAW_DEG = am06._envf("PEGASUS_VALVE_YAW_DEG", 180.0)
 VALVE_RISER = am06._envf("PEGASUS_VALVE_RISER", 0.0)
@@ -259,6 +264,7 @@ def _opt(name, default):
     a = _root.GetAttribute(f"fsc:{name}")
     return float(a.Get()) if a and a.HasAuthoredValue() else default
 VALVE_HUB_PAD = _opt("hub_pad_rings", 0.0) > 0.0
+PUSH_PLATE = _opt("push_plate", 0.0) > 0.0       # (2026-11-04) v21: the plate on the fin's pushing edge
 _mk = _root.GetAttribute("fsc:mocap_markers_m")
 MOCAP_MARKERS = np.array([[float(c) for c in m] for m in _mk.Get()]) if _mk and _mk.HasAuthoredValue() else None
 MOCAP_CENTROID = (np.array([_opt("mocap_pivot_x_m", 0.0), _opt("mocap_pivot_y_m", 0.0), _opt("mocap_pivot_z_m", 0.0)])
@@ -278,7 +284,8 @@ GRASP_Z = _opt("grasp_z_m", float("nan"))        # v3: the claw point's height (
 del _root, _valve_stage, _mk
 # [kg] the printed rotor (v1/v2: 0.204); 0 = the asset's -- the default with the roll fin, whose asset
 # carries both bodies' masses from the design's densities (PLA 1040, steel 7850)
-ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.0 if ROLL_FIN else 0.204)
+# (2026-11-04) v21: 0.260 = the printed rotor + the ~56 g plate (the asset's 0.312 is solid PLA)
+ROTOR_MASS = am06._envf("PEGASUS_VALVE_ROTOR_MASS", 0.0 if ROLL_FIN else (0.260 if PUSH_PLATE else 0.204))
 # the roll joint (v3 only): the O-ring's Coulomb friction [N.m] in the joint drive's stick-slip model
 # (the design's 2-4 mN.m hold; ~1 mN.m once the turn's push lifts the fin off the O-ring), or LOCKED
 # (=1: a stiff drive, the screw tightened -- the design's locked/free A/B)
@@ -326,7 +333,8 @@ if FAULT_KIND not in _FAULT_NARGS or len(FAULT_ARGS) != _FAULT_NARGS[FAULT_KIND]
 FAULT_ANGLE = FAULT_ARGS[0] if FAULT_ARGS else 0.0
 FAULT_DUR = FAULT_ARGS[1] if len(FAULT_ARGS) > 1 else 0.0
 JAM_K, JAM_D = 50.0, 0.8                # [N.m/rad], [N.m.s/rad] the stop: 3 mrad under a 0.16 N.m push, stable at 250 Hz
-FIN_GRIP_MM = am06._envf("PEGASUS_VALVE_FIN_GRIP_MM", 20.0)
+# (2026-11-04) 0 with the push plate: the closed claw pushes the plate, nothing clamps the fin
+FIN_GRIP_MM = am06._envf("PEGASUS_VALVE_FIN_GRIP_MM", 0.0 if PUSH_PLATE else 20.0)
 GRASP_BELOW_TOP = 0.025                 # [m] the claw point under the fin top (the box push's rule)
 # THE MOCAP PIVOT (2026-10-28): where obj_0's origin is published, in the rotor frame --
 # Motive's DEFAULT pivot of a rigid body made from the markers (their centroid), or the axis

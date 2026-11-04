@@ -71,9 +71,36 @@ FIN_RADIUS, FIN_BEARING_Y, FIN_TOP, BEAM_TOP, BEAM_REACH = 0.1600, 0.0006, 0.204
 VALVE_MARKERS = ((0.00494, 0.01504, 0.09249), (0.04006, -0.01983, 0.12549), (0.10483, 0.04341, 0.07049),
                  (0.12515, -0.04252, 0.06849), (0.19245, 0.01072, 0.09249))
 FIN_HEIGHT, FIN_HALF_LEN, FIN_HALF_THICK = 0.130, 0.020, 0.0025
-GRASP_BELOW_TOP = 0.080          # was 0.025 (the clamp)
-GRASP_BEHIND_CENTRE = 0.025      # along the turn, against its direction; was 0 (the clamp)
-TURN_DEG_PLAN = 93.0             # for a 90 deg valve turn: the slack and the push's lag (Isaac 88.4-95.1 deg)
+# THE HANDLE DESIGN (2026-11-04, user: the PUSH PLATE replaces the U push, Pegasus archive/
+# valve_push_plate_20261104): "plate" = a 120 x 79 x 5 mm plate on the fin's pushing edge (Valve_Assembly_v21),
+# pushed by the CLOSED claw's nose (the arm GS's push_pull_valve_cup_position = the closed position, its
+# default since 2026-11-04); "upush" = the 2026-11-02 U push (jaws open, the bracket on the fin's back edge).
+HANDLE = "plate"
+if HANDLE == "plate":
+    # the claw point 33.6 mm under the plate top and 61.9 mm behind the fin's centre along the turn: the
+    # nose (16.9 mm ahead of it, 5.4 mm below) 20 mm behind the plate's face, 165 mm above the plate bottom
+    GRASP_BELOW_TOP, GRASP_BEHIND_CENTRE = 0.0336, 0.0619
+    TURN_DEG_PLAN = 97.0         # the 20 mm slack (~6 deg) + the free axis; Isaac 91-101 deg
+    TANGENT_LEAD = 0.0369        # the tangent check at the nose, 16.9 mm ahead + the 20 mm slack
+    FOLLOW_LEAD = (14.0, 24.0)
+    EXIT_HELD_DZ = 0.08
+    # the plate as the "fin" box: radius, bearing y, top, height, half length along the turn, half width
+    PLATE_BOX = (0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600)
+    # ITS FOUR EDGES (2026-11-04): depth_min the top, depth_max the bottom, across_max both sides
+    FIN_DEPTH_MIN, FIN_DEPTH_MAX, FIN_ACROSS_MAX, FIN_BRACKET_BACK = 0.012, 0.060, 0.035, -0.0169
+    # the abort climbs AT ONCE: the closed claw holds nothing, so neither the release pause nor the
+    # wait for the jaws to read open
+    ABORT_RELEASE_WAIT, ABORT_CLIMB_ON_OPEN = 0.0, "false"
+else:
+    GRASP_BELOW_TOP = 0.080          # was 0.025 (the clamp)
+    GRASP_BEHIND_CENTRE = 0.025      # along the turn, against its direction; was 0 (the clamp)
+    TURN_DEG_PLAN = 93.0             # for a 90 deg valve turn: the slack and the push's lag (Isaac 88.4-95.1 deg)
+    TANGENT_LEAD = 0.0
+    FOLLOW_LEAD = (10.0, 20.0)
+    EXIT_HELD_DZ = 0.12
+    PLATE_BOX = None
+    FIN_DEPTH_MIN, FIN_DEPTH_MAX, FIN_ACROSS_MAX, FIN_BRACKET_BACK = 0.050, 0.0, 0.025, 0.008
+    ABORT_RELEASE_WAIT, ABORT_CLIMB_ON_OPEN = 1.0, "true"
 
 PLANNER_BLOCK = f"""
     # --- push-and-pull mode in its TURN form: VALVE TURNING, 2026-10-15 ------
@@ -109,6 +136,10 @@ PLANNER_BLOCK = f"""
     # 85.5-95.1 deg, tilt <= 3.4 deg, q3 >= 16.5 deg (two nominal, three under the drift).
     # Was [0.160, 0.0006, 0.179] (25 mm under the top, the pads' friction pushing a CLAMPED fin):
     # with the jaws open that grasp leaves the bracket 9 mm above the fin -- the valve turned 19 deg.
+    # 2026-11-04, THE PUSH PLATE (HANDLE = "plate", Pegasus archive/valve_push_plate_20261104): the claw
+    # stays CLOSED and its nose (the tips' upper front corners) pushes the plate's face, 20 mm of slack
+    # at the grasp, 165 mm above the plate bottom. Isaac: room-held plate turns 9 of 9, every edge
+    # guard trips at its limit, the abort climbs at once (valve_push_plate_20261104 README 3, 6).
     push_pull_ee_offset: [{FIN_RADIUS:.4f}, {FIN_BEARING_Y - (GRASP_BEHIND_CENTRE if TURN_DEG_PLAN > 0 else -GRASP_BEHIND_CENTRE):.4f}, {FIN_TOP - GRASP_BELOW_TOP:.4f}]
     # The drone's yaw at the fin = the beam's yaw + this: +90 puts the nose
     # along the turn's tangent for a COUNTER-CLOCKWISE turn (the planner refuses
@@ -132,12 +163,13 @@ PLANNER_BLOCK = f"""
     # The 360 deg history below stays.
     # 2026-11-02 (THE U PUSH): planned {TURN_DEG_PLAN:.0f} deg for a 90 deg VALVE turn -- the bracket
     # meets the fin after ~13 mm (~5 deg) and pushes it, never pulls; Isaac 88.4-95.1 deg.
+    # 2026-11-04 (the plate): 97 -- its 20 mm slack costs ~6 deg; Isaac 91-101 deg.
     push_pull_turn_deg: {TURN_DEG_PLAN:.1f}
     # THE PUSH POINT'S LEAD (2026-11-04, Pegasus archive/valve_push_plate_20261104): where the planner
     # checks that the nose is along the turn's tangent, this far [m] ahead of the grasp point along the
     # nose. 0 = at the grasp point (the U push: its push contact is near it). The push plate's closed
     # claw pushes with its nose, 37 mm ahead of a claw point that sits 61 mm behind the fin's radial line.
-    push_pull_turn_tangent_lead: 0.0
+    push_pull_turn_tangent_lead: {TANGENT_LEAD}
     push_pull_push_distance: 0.50
     # 36 s for the full turn: mean 10 deg/s, peak 25 deg/s of yaw, peak CoM
     # speed ~0.11 m/s. THE TURN'S SPEED IS A TRADE (v3 / v5, 2026-10-15): the
@@ -168,7 +200,8 @@ PLANNER_BLOCK = f"""
     # that could not push (k8) aborted at a 34 deg lag, nothing touched; nominal it never acts.
     push_pull_follow: true
     push_pull_follow_filter_s: 1.0
-    push_pull_follow_lead_deg: [10.0, 20.0]
+    # (2026-11-04, the plate) [14, 24]: above the plate's 20 mm slack (~6 deg)
+    push_pull_follow_lead_deg: [{FOLLOW_LEAD[0]}, {FOLLOW_LEAD[1]}]
     push_pull_follow_tilt_deg: [7.0, 10.0]
     push_pull_follow_wrist_deg: [15.0, 25.0]
     push_pull_follow_stale_s: 0.3
@@ -218,7 +251,8 @@ PLANNER_BLOCK = f"""
     # box's release-first order was tried on the valve in Isaac (10-18: 2 of 7 vs 3 of 3).
     # 2026-11-02 (THE U PUSH): 0.12 -- the claw point is now 80 mm under the fin top and the claws
     # reach ~95 mm down it; 0.12 m clears the top by ~25 mm before the claw follows the vehicle.
-    push_pull_exit_world_held_dz: 0.12
+    # (2026-11-04, the plate) 0.08: the claw point 34 mm under the plate top
+    push_pull_exit_world_held_dz: {EXIT_HELD_DZ}
     # WHEN the law's contact phase switches -- the GRIPPER is the signal (the
     # box push's rule): on at the Push press (the jaws' stall), free when the
     # turn completes, before the jaws open.
@@ -347,7 +381,8 @@ PLANNER_BLOCK = f"""
     # with the world-held release). UNTESTED in this combination.
     push_pull_abort_from_measured: true
     push_pull_abort_back: 0.0
-    push_pull_abort_release_wait_s: 1.0
+    # (2026-11-04, the plate) 0.0 with push_pull_abort_climb_on_open false: the abort climbs AT ONCE
+    push_pull_abort_release_wait_s: {ABORT_RELEASE_WAIT}
     push_pull_abort_release_world_held: false
     # THE ABORT, 2026-11-02 (user design, archive/valve_cup_abort_20261102), replacing that release
     # wait: the arm GS opens the jaws at once (the button or a guard's ABORTING); the planner holds
@@ -358,7 +393,8 @@ PLANNER_BLOCK = f"""
     # VEHICLE from the first tick (the node's fast blend), never held in the room. With the GS's
     # half close (push_pull_valve_cup) the claw is never clamped to the bolted-down valve, so a
     # claw that follows the vehicle slides along / off the fin instead of loading the arm.
-    push_pull_abort_climb_on_open: true
+    # (2026-11-04, the plate) false: the closed claw holds nothing -- climb at once (with the release 0)
+    push_pull_abort_climb_on_open: {ABORT_CLIMB_ON_OPEN}
     # ... the user's details (2026-11-02, the morning's design): "open" is the gripper READING open --
     # its own joint state, read by the planner (on hardware the Orin, no WiFi in between; the arm
     # GS's report on the open goal's result also counts, whichever comes first) -- at most ~1 s
@@ -457,16 +493,22 @@ PLANNER_BLOCK = f"""
     # the claw's depth under the fin top >= 71 mm in them (the shallow grasps that could not push:
     # <= 27); the fin across the claw <= 22.6 mm; the fin behind the bracket <= 6 mm (f0, lost: 173);
     # ahead of it <= 47 mm (the slack at the turn's start, a drifting vehicle catching up; k3: 69).
-    push_pull_guard_fin_depth_min: 0.050
-    push_pull_guard_fin_across_max: 0.025
+    # (2026-11-04, the plate) its four edges: depth_min 0.012 the top, depth_max 0.060 the bottom,
+    # across_max 0.035 both sides (the closed claw's ~40 mm patch leaves a side at ~39-41 mm); the
+    # push point 16.9 mm AHEAD of the claw point (bracket_back -0.0169)
+    push_pull_guard_fin_depth_min: {FIN_DEPTH_MIN}
+    # (2026-11-04) the claw MORE than this under the top -- the PUSH PLATE's bottom edge (Pegasus
+    # archive/valve_push_plate_20261104); 0 = off: in the U push a deeper claw is still inside the U.
+    push_pull_guard_fin_depth_max: {FIN_DEPTH_MAX}
+    push_pull_guard_fin_across_max: {FIN_ACROSS_MAX}
     push_pull_guard_fin_behind_max: 0.015
     push_pull_guard_fin_ahead_max: 0.060
-    push_pull_guard_fin_bracket_back: 0.008
+    push_pull_guard_fin_bracket_back: {FIN_BRACKET_BACK}
     push_pull_guard_fin_persist_s: 0.02
     # ... and the arm folding onto its upper stop on the fin (the forced JAM: the fin stays in the U, the
     # vehicle presses on it, q3 32 -> 50 deg in 1.2 s; completed turns q3 <= 34.7)
     push_pull_guard_fin_q3_max_deg: 40.0
-    push_pull_valve_fin: [{FIN_RADIUS:.4f}, {FIN_BEARING_Y:.4f}, {FIN_TOP:.4f}, {FIN_HEIGHT:.4f}, {FIN_HALF_LEN:.4f}, {FIN_HALF_THICK:.4f}]
+    push_pull_valve_fin: [{", ".join(f"{x:.4f}" for x in (PLATE_BOX or (FIN_RADIUS, FIN_BEARING_Y, FIN_TOP, FIN_HEIGHT, FIN_HALF_LEN, FIN_HALF_THICK)))}]
     # THE CLEARANCE GUARD (2026-11-03): whatever the cause, the skids, struts, rotor discs and arm links
     # (not the gripper) against the fin, beam and hub (15 mm) and the marker balls (5 mm), 0.02 s.
     # Completed Isaac turns (tools/clearance_replay.py): boxes >= 25 mm (the forearm by the fin); balls

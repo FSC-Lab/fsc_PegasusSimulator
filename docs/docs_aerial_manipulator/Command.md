@@ -1773,10 +1773,15 @@ abort crashed) and pushes >= 10 N. **Lower the tallest marker ball** on the real
 above the plate): the left skid passes 10-22 mm over it mid-turn and brushed it in two Isaac drift runs; the real gear
 is 5.5 mm deeper. Isaac fault injection: `PEGASUS_VALVE_FAULT` (force / jam / drop / freeze at a turn angle). Orin:
 rebuild `fsc_trajectory_planner` (the raw stack refuses an older one), pull `fsc_autopilot_ros2`.
-**THE PUSH PLATE (2026-11-04, `archive/valve_push_plate_20261104`, SIMULATION ONLY):** a CLOSED claw pushes a 120 x 79 x 5
-mm plate on the fin's pushing edge with its nose (`Valve_Assembly_v21`). Windowed in Isaac, after step 0:
-`bash archive/valve_push_plate_20261104/sim/launch_plate.sh` (`TAKEOFF=1` also takes off and enters DIRECT), then the
-Valve Turning tab as above. The hardware valve yaml still flies the U push -- do not mount the plate on the real valve.
+**THE PUSH PLATE (2026-11-04, `archive/valve_push_plate_20261104`) -- THE VALVE DESIGN SINCE THAT DAY, simulation AND
+hardware:** a CLOSED claw pushes a 120 x 79 x 5 mm plate on the fin's pushing edge with its nose (`Valve_Assembly_v21`, the
+scene's default asset; the arm GS's Valve tab closes the claw by default; the generator's `HANDLE = "plate"`). Its four
+edges are guarded (`push_pull_guard_fin_depth_min` 0.012 top, `_depth_max` 0.060 bottom, `_across_max` 0.035 sides) and an
+abort climbs at once (`push_pull_abort_release_wait_s 0.0`, `push_pull_abort_climb_on_open false`). Steps 1-3 above now
+fly the plate; windowed with takeoff in one go: `TAKEOFF=1 bash archive/valve_push_plate_20261104/sim/launch_plate.sh`.
+Scripted checks: `sim/chain6.sh` / `chain9.sh`, `tools/edge_score.py`. The U push: `HANDLE = "upush"` in
+make_valve_turning_yaml.py, `PEGASUS_VALVE_USD=<assets>/Valve_Assembly_v2.usda`, arm GS
+`-p push_pull_valve_cup_position:=0.019`.
 
 ## 19. Mail-delivery scene (whole-body L1 4-D, the insert place)
 

@@ -1,0 +1,94 @@
+10:41:23 start s1_nominal usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_guard_fin_depth_max=0.060 push_pull_abort_release_wait_s=0.0 push_pull_abort_climb_on_open=false
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_guard_fin_depth_max -> 0.060
+  push_pull_abort_release_wait_s -> 0.0
+  push_pull_abort_climb_on_open -> false
+[s1_nominal] completed
+10:44:57 start s2_drift3 usd=v21 noise=0.32,0.12,3 gs=-p push_pull_valve_cup_position:=-0.010 -p push_pull_valve_grip_axis_tol:=0.008 -p push_pull_valve_settle_wait_max_s:=12.0 -p push_pull_valve_grip_wait_max_s:=5.0 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_guard_fin_depth_max=0.060 push_pull_abort_release_wait_s=0.0 push_pull_abort_climb_on_open=false push_pull_ready_max_speed=0.06 push_pull_handle_settle_tol=0.035 push_pull_handle_settle_max_speed=0.05
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_guard_fin_depth_max -> 0.060
+  push_pull_abort_release_wait_s -> 0.0
+  push_pull_abort_climb_on_open -> false
+  push_pull_ready_max_speed -> 0.06
+  push_pull_handle_settle_tol -> 0.035
+  push_pull_handle_settle_max_speed -> 0.05
+[s2_drift3] completed
+10:48:36 start s3_outer usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1910, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_guard_fin_depth_max=0.060 push_pull_abort_release_wait_s=0.0 push_pull_abort_climb_on_open=false
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1910, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_guard_fin_depth_max -> 0.060
+  push_pull_abort_release_wait_s -> 0.0
+  push_pull_abort_climb_on_open -> false
+[s3_outer] ABORTED: push-and-pull ABORTED while the GS's automatic Push: ABORTING (SAFETY GUARD: FIN OUT OF THE U: the fin 36 mm across the claw (> 35 mm): out b
+10:51:52 start s4_inner usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1260, -0.0613, 0.1704] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_guard_fin_depth_max=0.060 push_pull_abort_release_wait_s=0.0 push_pull_abort_climb_on_open=false
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1260, -0.0613, 0.1704]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_guard_fin_depth_max -> 0.060
+  push_pull_abort_release_wait_s -> 0.0
+  push_pull_abort_climb_on_open -> false
+[s4_inner] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING (SAFETY GUARD: FIN OUT OF THE U: the
+10:55:00 start s5_top usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1905] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_guard_fin_depth_max=0.060 push_pull_abort_release_wait_s=0.0 push_pull_abort_climb_on_open=false
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1905]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_guard_fin_depth_max -> 0.060
+  push_pull_abort_release_wait_s -> 0.0
+  push_pull_abort_climb_on_open -> false
+[s5_top] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING (SAFETY GUARD: FIN OUT OF THE U: the
+10:58:10 start s6_bottom usd=v21 noise=none gs=-p push_pull_valve_cup_position:=-0.010 push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600] push_pull_guard_fin_bracket_back=-0.0169 push_pull_guard_fin_depth_min=0.012 push_pull_guard_fin_across_max=0.035 push_pull_turn_deg=97.0 push_pull_exit_world_held_dz=0.08 push_pull_follow_lead_deg=[14.0, 24.0] push_pull_turn_tangent_lead=0.0369 push_pull_ee_offset=[0.1600, -0.0613, 0.1455] push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0] push_pull_guard_fin_depth_max=0.060 push_pull_abort_release_wait_s=0.0 push_pull_abort_climb_on_open=false
+  push_pull_valve_fin -> [0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]
+  push_pull_guard_fin_bracket_back -> -0.0169
+  push_pull_guard_fin_depth_min -> 0.012
+  push_pull_guard_fin_across_max -> 0.035
+  push_pull_turn_deg -> 97.0
+  push_pull_exit_world_held_dz -> 0.08
+  push_pull_follow_lead_deg -> [14.0, 24.0]
+  push_pull_turn_tangent_lead -> 0.0369
+  push_pull_ee_offset -> [0.1600, -0.0613, 0.1455]
+  push_pull_push_pose_deg -> [0.0, 5.0, 25.0, 0.0]
+  push_pull_guard_fin_depth_max -> 0.060
+  push_pull_abort_release_wait_s -> 0.0
+  push_pull_abort_climb_on_open -> false
+[s6_bottom] ABORTED: push-and-pull ABORTED while the GS closing the gripper (or, the jaws kept open, the GS's Push): ABORTING (SAFETY GUARD: FIN OUT OF THE U: the
+11:01:18 CHAIN DONE

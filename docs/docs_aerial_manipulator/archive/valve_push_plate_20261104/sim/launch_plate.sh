@@ -27,7 +27,7 @@ LOGS="$HERE/interactive/$(date +%Y%m%d_%H%M%S)"; mkdir -p "$LOGS"
 export DISPLAY="${DISPLAY:-:1}"
 export FASTRTPS_DEFAULT_PROFILES_FILE="$A/q2_sine_sim_20260924/tools/fastdds_udp_only.xml"
 
-# 1. the plate's planner block: chain4.sh's p10-p13 overrides (the nominal gates)
+# 1. the plate's planner block: chain6.sh's overrides (chain 4's p10 + the four-edge guards; nominal gates)
 /usr/bin/python3 "$A/valve_turning_20261015/tools/make_valve_turning_yaml.py" --check > /dev/null \
   || { echo "the shipped valve yaml is not the generator's output -- regenerate it first"; exit 1; }
 cp "$SRC" "$Y"
@@ -35,7 +35,10 @@ OVR=("push_pull_valve_fin=[0.1600, -0.0219, 0.2040, 0.0790, 0.0025, 0.0600]"
      "push_pull_guard_fin_bracket_back=-0.0169" "push_pull_guard_fin_depth_min=0.012"
      "push_pull_guard_fin_across_max=0.035" "push_pull_turn_deg=97.0" "push_pull_exit_world_held_dz=0.08"
      "push_pull_follow_lead_deg=[14.0, 24.0]" "push_pull_turn_tangent_lead=0.0369"
-     "push_pull_ee_offset=[0.1600, -0.0613, 0.1704]" "push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0]")
+     "push_pull_ee_offset=[0.1600, -0.0613, 0.1704]" "push_pull_push_pose_deg=[0.0, 5.0, 25.0, 0.0]"
+     # (2026-11-04) the four-edge guards and the abort that climbs at once (chain6.sh): the bottom edge,
+     # no release pause, no wait for the jaws to read open
+     "push_pull_guard_fin_depth_max=0.060" "push_pull_abort_release_wait_s=0.0" "push_pull_abort_climb_on_open=false")
 for kv in "${OVR[@]}"; do k=${kv%%=*}; v=${kv#*=}
   grep -q "^    $k:" "$Y" || { echo "no planner key $k in $(basename "$SRC")"; exit 1; }
   sed -i -E "s|^(    $k:)\s*[^#]*(#.*)?$|\1 $v  \2|" "$Y"

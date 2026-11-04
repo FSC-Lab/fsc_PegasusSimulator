@@ -7944,7 +7944,11 @@ https://claude.ai/artifact/BppzF9zYUZoNwrdPymSQoi).** Pushed on `valve-isolation
     x 5 mm thick;
   - on the fin's pushing edge, face at y -24.4 mm, with a 15 mm clip, 3 mm cheeks and one M3.
 
-  `Valve_Assembly_v21.usda` is generated from it. The 10-15 converter gained the plate shell: visual + mass + a convex
+  `Valve_Assembly_v21.usda` is generated from it. **Since 2026-11-04 (later) `Valve_Assembly_v21.stl` IS THE USER'S
+  ONSHAPE DESIGN** (the same plate + two Ø3.2 M3 holes through cheeks and fin, 7.5 mm from the pushing edge, 15 / 60 mm
+  below the fin top; slot 5.0 mm = zero clearance, print it 5.3): its cheeks touch the fin, so the converter splits the
+  merged shell along manifold edges (`split_merged_plate`); `make_v21_stl.py` refuses to overwrite it. The CAD fin is
+  turned 0.21 deg about z and the plate with it. The 10-15 converter gained the plate shell: visual + mass + a convex
   `push_plate` collider + `fsc:push_plate_*`. Fly v21 with `PEGASUS_VALVE_FIN_GRIP_MM=0` and
   `PEGASUS_VALVE_ROTOR_MASS=0.260`. The plate adds +56 g printed like the rotor and +60 % inertia about the shaft;
   that does not matter, the turn is friction-dominated.
@@ -7997,3 +8001,20 @@ https://claude.ai/artifact/BppzF9zYUZoNwrdPymSQoi).** Pushed on `valve-isolation
   - Pushed on `valve-isolation-20261102`: the planner's `push_pull_turn_tangent_lead` (a NaN refused at the set and
     in the plan) and both valve yamls with the key at 0.0. **The hardware still flies the U push**; its grasp point
     sits on the plate's face, so do not mount the plate on the real valve until a hardware plate config exists.
+- **The four-edge guards and the immediate abort (same day, user request; README section 6).** New planner key
+  `push_pull_guard_fin_depth_max` (default 0; 0.0 in both valve yamls = the U push unchanged): with the fin box set
+  to the plate, `depth_min` 0.012 / `depth_max` 0.060 / `across_max` 0.035 bound the top, bottom and both sides. For
+  the plate the abort climbs at once: `push_pull_abort_release_wait_s 0.0` AND `push_pull_abort_climb_on_open false`
+  (the first alone still waits for the jaws, the second alone waits the 1.0 s release). Stays in whole-body DIRECT.
+  Isaac, 9 flights: all four edges tripped at their limits, the climb +10 mm at 0.36-0.41 s (was 1.39-1.41 s), DIRECT
+  kept, tilt <= 4.4 deg, the valve moved <= 1.4 deg; no false trip in nominal / drift seed 3. Every edge trip came in
+  the hold, the slack phase or right after the turn -- none while the valve turned fast. The guards cannot see an
+  error in the claw model or the axis offset. Uncommitted; the hardware plate config still does not exist.
+- **THE PLATE IS THE VALVE DESIGN EVERYWHERE, the hardware included (same day, user request; README section 7).**
+  `make_valve_turning_yaml.py` `HANDLE = "plate"` ("upush" = the 11-02 U push) writes the plate's grasp, guards and
+  no-pause abort into BOTH valve yamls; the hardware generator's release wait is 0.0 for the plate (was 1.5). The arm
+  GS's Valve tab closes the claw by default (`push_pull_valve_cup_position` = `gripper_closed`; startup line "the claw
+  CLOSES on the handle ... the PUSH PLATE"). The scene's default asset is v21 (fin grip 0, rotor 0.260 kg). The raw
+  hardware stack expects 113 tuned values on `valve_turning` and refuses a planner without
+  `push_pull_guard_fin_depth_max` / `push_pull_turn_tangent_lead` (negative-tested). Laptop: rebuild
+  `utils_custom_ground_station`; Orin: rebuild `fsc_trajectory_planner`.
