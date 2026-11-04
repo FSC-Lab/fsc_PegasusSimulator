@@ -14,6 +14,8 @@
 # ROUTE_SCENE_ENV="K=V ..."         any further scene knob (08's PEGASUS_ROUTE_* / PEGASUS_MAIL_* / PEGASUS_PNP_*)
 # ROUTE_DRIVER_ARGS="..."           extra mail_route_mission.py arguments (e.g. --order 1,3,2)
 # ROUTE_PROBE_ONLY=1                stop after bring-up (Isaac banners -> runs/<tag>.isaac.log)
+# ROUTE_HEADLESS=0                  the Isaac WINDOW (default 1, headless); with it, PEGASUS_RENDER_MAX_GAP_S=0.1
+#                                   keeps >= 10 frames a second while the pacer is behind the wall clock
 # ROUTE_BRINGUP_TRIES=<n>          relaunch after an Isaac crash at bring-up, up to n tries in all (default 2)
 # ROUTE_TOPICS=<file>               the recorded topics (default the mail study's hw_topics.txt + the envelopes)
 # Writes runs/<tag>.{npz,log,stack.log,scene.log,isaac.log,yaml} and runs/<tag>.bag/; leaves the simulation running.
@@ -32,7 +34,7 @@ TIMING=(PEGASUS_REALTIME="${ROUTE_REALTIME:-1}" PEGASUS_SIM_RTF="${ROUTE_SIM_RTF
 
 (env WB_SIM_PROFILE=mail_delivery WB_SIM_YAML="$YAML" "${TIMING[@]}" \
    setsid nohup bash "$STACK" fsc_lab_machine uav_0 > "$RUNS/$TAG.stack.log" 2>&1 &)
-SCENE=(env PEGASUS_HEADLESS=1 PNP_FEEDBACK=fused WB_SIM_PROFILE=mail_delivery WB_SIM_YAML="$YAML" "${TIMING[@]}"
+SCENE=(env PEGASUS_HEADLESS="${ROUTE_HEADLESS:-1}" PNP_FEEDBACK=fused WB_SIM_PROFILE=mail_delivery WB_SIM_YAML="$YAML" "${TIMING[@]}"
        ${ROUTE_SCENE_ENV:-}
        "$PEG/scripts/indoor_sim/start_t650_aerial_manipulator_whole_body_L1_4D_mail_route_sitl.sh"
        --in-terminal fsc_lab_machine)
