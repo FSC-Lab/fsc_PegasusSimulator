@@ -8018,3 +8018,8 @@ https://claude.ai/artifact/BppzF9zYUZoNwrdPymSQoi).** Pushed on `valve-isolation
   hardware stack expects 113 tuned values on `valve_turning` and refuses a planner without
   `push_pull_guard_fin_depth_max` / `push_pull_turn_tangent_lead` (negative-tested). Laptop: rebuild
   `utils_custom_ground_station`; Orin: rebuild `fsc_trajectory_planner`.
+  PUSHED on `valve-isolation-20261102`: planner `8c97551`, fsc_autopilot_ros2 `3d9c2ab`, fsc_open_manipulator `ee4b00b`,
+  Pegasus `ee42291` + deploy prompts (`valve_push_plate_20261104/deploy_{orin,laptop}_prompt.md`). Isaac with the
+  shipped defaults (chain 9): the turn completed (91.8 deg), the bottom edge tripped and climbed at once. Left out of
+  every commit: the other session's Onshape v21 (`Valve_Assembly_v21.stl` + its converter / make_v21_stl changes) and
+  its handle pictures.
