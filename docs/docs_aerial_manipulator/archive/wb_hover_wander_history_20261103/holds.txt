@@ -1,0 +1,107 @@
+PnD 10-20   182234     21.5   2.3s home             (-0.13,-0.25,0.96)                              rms  19.9/ 13.4  v  34/ 49  dh   nan/  nan
+box 10-21   161745     19.3  14.0s home             (-0.80,-0.30,0.96) NOT PLANNED: press Plan      rms  19.6/ 13.5  v  15/ 33  dh  0.01/ 0.04
+box 10-21   164338     21.7   4.5s home             (-1.02,-0.30,0.91) NOT PLANNED: press Plan      rms  13.5/ 14.7  v  17/ 31  dh  0.02/ 0.06
+box 10-21   164338     39.9  17.5s q[1,32,29,-0]    (+0.65,+0.50,1.29) DONE go_to_start next=ready  rms   6.0/ 11.7  v  18/ 33  dh  0.02/ 0.03
+box 10-21   165311     18.8  25.5s home             (-1.02,-0.31,0.96) NOT PLANNED: press Plan      rms  15.5/ 12.8  v  16/ 34  dh  0.02/ 0.04
+box 10-21   170123     14.6   3.4s home             (-1.06,-0.44,0.93) NOT PLANNED: press Plan      rms  18.9/ 13.6  v  25/ 43  dh  0.03/ 0.04
+box 10-21   170123     38.1   3.7s box              (+0.64,+0.35,1.15) DONE ready next=push         rms  27.7/ 11.2  v  66/107  dh  0.27/ 0.16
+box 10-21   170123     59.6   3.0s home             (+0.63,+0.28,1.46) ABORTED                      rms   9.3/ 16.0  v  23/ 34  dh  0.02/ 0.04
+box 10-21   170123     84.8   1.5s home             (-0.99,-0.30,1.29) DONE go_to_land_start next=l rms   7.1/  2.9  v  24/ 38  dh   nan/  nan
+box 10-23   172853     13.4   2.8s home             (-0.77,+0.03,0.96) NOT PLANNED: press Plan      rms  25.0/  5.9  v  24/ 64  dh  0.01/ 0.01
+box 10-23   172853     46.6   2.3s q[-5,33,28,17]   (+1.32,+0.46,1.17) DONE ready next=push         rms  33.5/ 14.0  v  55/115  dh   nan/  nan
+box 10-23   172853     61.3  10.9s home             (+1.22,+0.53,1.46) ABORTED                      rms   4.7/  5.1  v  12/ 23  dh  0.02/ 0.00
+box 10-24   150423     15.1   3.3s home             (-1.57,-0.18,0.96) NOT PLANNED: press Plan      rms  45.7/  6.0  v  35/ 79  dh  0.04/ 0.03
+box 10-24   150423     49.1   3.0s q[-7,35,22,1]    (+0.59,+0.36,1.15) DONE ready next=push         rms  41.0/ 23.8  v  99/151  dh  0.45/ 0.16
+box 10-24   151159      8.7   2.6s home             (-1.54,-0.17,0.93) NOT PLANNED: press Plan      rms  19.6/  9.3  v  31/ 43  dh  0.05/ 0.03
+box 10-24   151159     36.4   1.7s q[0,36,28,-0]    (+0.57,+0.48,1.30) DONE go_to_start next=ready  rms   3.9/ 13.6  v  27/ 42  dh   nan/  nan
+box 10-24   151159     54.5   2.8s home             (+0.52,+0.51,1.46) ABORTED                      rms   5.1/  3.1  v  11/ 20  dh  0.01/ 0.02
+box 10-24   151159     89.6   2.6s home             (-1.41,-0.15,1.29) DONE go_to_land_start next=l rms   8.0/ 14.4  v  31/ 54  dh  0.04/ 0.02
+box 10-24   151634     16.9   4.0s home             (-1.46,-0.18,0.91) NOT PLANNED: press Plan      rms  16.4/  7.7  v  15/ 67  dh  0.05/ 0.03
+box 10-24   162850     13.6   2.1s home             (-1.60,-0.24,0.95) READY next=go_to_start       rms  20.4/  4.9  v  35/ 43  dh   nan/  nan
+box 10-24   162850     46.9   2.7s box              (+0.54,+0.34,1.16) DONE ready next=push         rms   4.8/  4.7  v  11/ 32  dh  0.15/ 0.15
+box 10-24   162850     68.8   1.8s home             (+0.49,+0.28,1.47) ABORTED                      rms   2.6/  3.1  v  11/ 18  dh   nan/  nan
+box 10-24   163413     14.0   2.5s home             (-1.62,-0.20,0.92) READY next=go_to_start       rms  19.5/  4.6  v  25/ 48  dh   nan/  nan
+box 10-24   163413     59.2   8.0s home             (+0.52,+0.44,1.46) ABORTED                      rms  13.7/  8.6  v  19/ 32  dh  0.03/ 0.01
+box 10-24   164419     11.4   3.3s home             (-1.62,-0.22,0.95) NOT PLANNED: press Plan      rms  19.5/  2.8  v  18/ 57  dh  0.05/ 0.01
+box 10-24   164419     57.1   1.9s home             (+0.51,+0.43,1.46) ABORTED                      rms   4.2/  2.7  v  15/ 24  dh   nan/  nan
+box 10-24e  194310     16.2   2.7s home             (-1.62,-0.23,0.94) READY next=go_to_start       rms  17.4/ 12.6  v  35/ 66  dh  0.06/ 0.04
+box 10-24e  194310     49.5   3.7s q[2,33,29,-2]    (+0.52,+0.34,1.16) FLYING push                  rms  24.6/ 42.7  v  84/151  dh  0.18/ 0.30
+box 10-24e  195657     16.0   3.3s home             (-1.54,-0.15,0.93) NOT PLANNED: press Plan      rms  33.8/ 17.2  v  34/106  dh  0.06/ 0.02
+box 10-24e  195657     44.7   2.9s q[0,36,28,-0]    (+0.51,+0.47,1.31) DONE go_to_start next=ready  rms   7.0/  5.8  v  21/ 34  dh  0.01/ 0.01
+box 10-24e  195657     52.0   1.7s q[-1,33,27,3]    (+0.55,+0.35,1.16) DONE ready next=push         rms   6.0/ 14.0  v  36/104  dh   nan/  nan
+box 10-27   171114     14.7   1.9s home             (-1.39,-0.10,0.99) READY next=go_to_start       rms  17.9/  6.3  v  33/ 71  dh   nan/  nan
+box 10-27   171114     47.8   3.2s q[2,35,25,-0]    (+0.75,+0.50,1.15) FLYING push                  rms  14.7/ 28.0  v  54/ 88  dh  0.27/ 0.27
+box 10-27   171114     67.6   4.0s box              (+0.77,+0.08,1.15) FLYING push                  rms  18.3/ 29.7  v  60/150  dh  0.12/ 0.27
+box 10-27   172227     20.3   2.2s home             (-1.33,-0.13,1.02) READY next=go_to_start       rms  25.2/  6.2  v  30/ 82  dh   nan/  nan
+box 10-27   172227     53.1   3.3s q[1,33,27,0]     (+0.77,+0.49,1.15) FLYING push                  rms  17.1/ 27.0  v  47/105  dh  0.19/ 0.25
+trk 10-27   175015     15.7  10.2s home             (-0.14,-0.17,0.97)                              rms  11.4/  8.8  v  18/ 40  dh  0.03/ 0.04
+trk 10-27   175015     52.6   7.5s box              (+0.08,-0.55,1.06)                              rms  17.5/ 21.8  v  21/ 54  dh  0.03/ 0.05
+trk 10-27   175015     80.4  12.2s box              (+0.07,-0.55,1.06)                              rms   5.7/ 17.2  v  16/ 39  dh  0.03/ 0.04
+trk 10-27   175849     10.6   8.2s home             (-0.23,-0.17,0.98)                              rms  11.1/ 10.5  v  19/ 47  dh  0.02/ 0.05
+trk 10-27   175849     50.5   4.4s box              (-0.17,-0.36,1.07)                              rms   5.8/  7.5  v  12/ 24  dh  0.02/ 0.02
+trk 10-27   175849     80.9  10.4s box              (-0.16,-0.36,1.07)                              rms  10.6/ 11.4  v  15/ 25  dh  0.02/ 0.03
+trk 10-27   180659     11.6   7.4s home             (-0.27,-0.17,0.96)                              rms  14.9/  7.5  v  16/ 51  dh  0.03/ 0.04
+trk 10-27   180659     60.5   4.9s box              (-0.29,-0.46,1.05)                              rms  10.7/ 11.8  v  15/ 26  dh  0.01/ 0.02
+trk 10-27   180659    101.0  12.5s box              (-0.28,-0.47,1.05)                              rms  12.4/ 14.8  v  21/ 39  dh  0.03/ 0.05
+trk 10-28   144602     13.9   4.4s home             (-0.26,-0.22,0.95)                              rms  24.5/  7.9  v  20/ 80  dh  0.03/ 0.04
+trk 10-28   144602     53.0   5.0s box              (-0.31,-0.48,1.04)                              rms   7.1/  3.0  v  12/ 23  dh  0.02/ 0.03
+trk 10-28   144602     86.5  12.8s box              (-0.30,-0.47,1.04)                              rms  23.0/  7.9  v  24/ 53  dh  0.04/ 0.04
+trk 10-28   150821      6.3   3.1s home             (-0.22,-0.18,0.95)                              rms  25.3/  8.8  v  28/ 81  dh  0.03/ 0.05
+trk 10-28   150821     43.3   4.5s box              (-0.15,-0.55,1.04)                              rms  12.1/  7.2  v  22/ 45  dh  0.03/ 0.02
+trk 10-28   150821     76.4  10.8s box              (-0.14,-0.54,1.04)                              rms  13.5/ 13.5  v  22/ 42  dh  0.02/ 0.03
+trk 10-28   152202     13.2   8.9s home             (-0.20,-0.19,0.95)                              rms  17.9/  5.9  v  17/ 38  dh  0.03/ 0.04
+trk 10-28   152202     65.7   3.6s box              (-0.09,-0.02,1.04)                              rms  33.7/ 16.4  v  58/110  dh  0.06/ 0.05
+trk 10-28   152202    106.7   6.2s box              (-0.10,-0.03,1.04)                              rms  29.9/ 13.1  v  33/ 86  dh  0.06/ 0.03
+PnD 10-28   161640     13.8   2.0s home             (-0.04,-0.08,0.93)                              rms  31.3/ 14.7  v  46/ 84  dh   nan/  nan
+PnD 10-28   161640     54.4   2.6s home             (+0.81,-1.08,1.19)                              rms  52.2/ 10.4  v  69/101  dh  0.06/ 0.03
+PnD 10-28   161640     68.2   2.5s home             (-0.58,-1.01,1.33)                              rms  21.9/  9.4  v  28/177  dh   nan/  nan
+PnD 10-28   162711     34.0   2.1s box              (+0.87,+0.91,1.28)                              rms  37.8/ 25.5  v  79/ 90  dh   nan/  nan
+PnD 10-28   162711     51.7   3.2s home             (+0.76,-1.07,1.19)                              rms  37.4/ 31.3  v  58/133  dh  0.06/ 0.12
+PnD 10-28   162711     65.7   1.5s q[0,35,39,-1]    (-0.57,-0.98,1.30)                              rms  23.7/ 26.1  v  83/286  dh   nan/  nan
+PnD 10-28   164816     14.1   4.5s home             (-0.02,-0.08,0.93)                              rms  24.8/ 21.2  v  43/ 72  dh  0.07/ 0.10
+PnD 10-28   164816     22.6   4.1s home             (+0.02,-0.05,0.99)                              rms   2.8/  5.5  v  10/ 20  dh  0.02/ 0.03
+valve 10-28 180652     16.2   3.4s home             (-1.06,-0.06,1.00) NOT PLANNED: press Plan      rms  13.2/  9.4  v  24/ 47  dh  0.01/ 0.02
+valve 10-28 180652     39.4   3.1s valve            (+0.82,+0.21,1.17) FLYING push                  rms  19.9/ 15.4  v  61/111  dh  0.23/ 0.28
+valve 10-28 181833     19.6   1.9s home             (-1.10,-0.11,1.00) NOT PLANNED: press Plan      rms  11.3/  6.9  v  24/ 55  dh   nan/  nan
+valve 10-28 181833     41.3   5.2s q[1,11,19,-1]    (+0.82,+0.22,1.17) FLYING push                  rms  18.9/ 34.1  v  59/127  dh  0.18/ 0.31
+valve 10-29 145128     16.8  21.7s home             (-1.22,-0.04,0.95) NOT PLANNED: press Plan      rms  16.0/  9.5  v  17/ 37  dh  0.01/ 0.03
+valve 10-29 145526     14.7   3.7s home             (-1.29,-0.05,0.93) NOT PLANNED: press Plan      rms  27.1/  8.1  v  28/ 42  dh  0.02/ 0.02
+valve 10-29 145526     38.6   4.3s valve            (+0.67,+0.20,1.16) DONE ready next=push         rms  21.7/ 35.9  v  74/154  dh  0.31/ 0.36
+trk 10-29   150625     14.7   5.6s home             (+0.13,-0.10,0.95)                              rms  11.6/  4.0  v  12/ 47  dh  0.03/ 0.04
+trk 10-29   150625     73.1   5.4s box              (+0.19,+0.06,1.04)                              rms  15.2/ 13.2  v  18/ 31  dh  0.04/ 0.03
+trk 10-29   150625    125.6   7.6s box              (+0.19,+0.05,1.04)                              rms  12.6/  9.7  v  18/ 34  dh  0.04/ 0.03
+mail 10-31  153032 W   29.8   1.8s home             (-1.54,-0.07,0.98)                              rms  17.5/ 10.2  v  25/ 62  dh   nan/  nan
+mail 10-31  153032 W   61.6   3.5s home             (-0.20,+0.09,1.24)                              rms  10.9/  6.9  v  20/ 37  dh  0.02/ 0.02
+mail 10-31  161915 W   45.9   2.1s home             (-0.08,+0.26,1.22)                              rms   9.1/ 13.9  v  30/ 39  dh   nan/  nan
+mail 10-31  163410 W   44.4   2.4s home             (-0.08,+0.27,1.23)                              rms  15.0/ 20.4  v  36/ 51  dh   nan/  nan
+mail 10-31  170629 W   48.7   2.9s home             (-0.11,+0.30,1.25)                              rms   8.5/  8.5  v  16/ 29  dh  0.03/ 0.02
+mail 10-31  170629 W   64.5   3.7s q[-0,22,45,87]   (+0.37,+0.29,1.18)                              rms  18.0/ 17.3  v  42/ 71  dh  0.26/ 0.32
+valve 10-31 174943 W   24.5   3.9s home             (-1.62,-0.16,0.94) NOT PLANNED: press Plan      rms  34.7/ 16.4  v  37/ 65  dh  0.02/ 0.04
+valve 10-31 174943 W   48.7  20.8s q[0,10,21,-11]   (+0.35,+0.39,1.19) DONE ready next=push         rms  33.4/ 17.8  v  65/104  dh  0.09/ 0.04
+valve 10-31 174943 W   77.9   9.8s home             (+0.34,+0.37,1.51) ABORTED -- holding higher, a rms  13.2/ 24.0  v  32/ 53  dh  0.04/ 0.02
+valve 10-31 175725 W   10.4   2.2s home             (-1.65,-0.28,0.98) NOT PLANNED: press Plan      rms  37.8/  9.0  v  49/111  dh   nan/  nan
+valve 10-31 175725 W   33.2   9.8s q[1,9,20,-13]    (+0.34,+0.38,1.19) DONE ready next=push         rms  40.7/ 29.8  v  95/135  dh  0.18/ 0.10
+valve 10-31 175725 W   51.3   2.3s home             (+0.36,+0.36,1.51) ABORTED -- holding higher, a rms  16.0/ 23.3  v  52/ 74  dh   nan/  nan
+valve 10-31 175725 W   68.1   2.1s home             (-1.52,-0.21,1.29) DONE go_to_land_start next=l rms  14.0/ 12.9  v  25/ 40  dh   nan/  nan
+valve 10-31 180423 W   13.3   2.3s home             (-1.57,-0.27,1.03) READY next=go_to_start       rms  14.1/  2.9  v  20/ 51  dh   nan/  nan
+valve 10-31 180423 W   35.9   3.4s valve            (+0.34,+0.39,1.19) DONE ready next=push         rms  13.5/ 19.2  v  46/ 96  dh  0.04/ 0.02
+valve 10-31 180423 W   47.7   2.2s home             (+0.35,+0.39,1.51) ABORTED -- holding higher, a rms  12.9/  9.4  v  27/ 67  dh   nan/  nan
+valve 10-31 211808 W    5.9   2.5s home             (-1.65,-0.18,0.99) READY next=go_to_start       rms  24.7/ 12.2  v  24/ 80  dh  0.02/ 0.04
+valve 11-01 173835 W   13.2   3.8s home             (-1.63,-0.12,1.00) NOT PLANNED: press Plan      rms  16.4/  6.3  v  26/ 57  dh  0.01/ 0.02
+valve 11-01 173835 W   32.0   3.7s valve            (+0.36,+0.21,1.29) DONE go_to_start next=ready  rms  25.3/ 25.8  v  41/ 62  dh  0.03/ 0.02
+valve 11-01 173835 W   49.1   6.8s home             (+0.35,+0.06,1.50) ABORTED -- holding higher, a rms  39.0/ 31.4  v  49/ 81  dh  0.04/ 0.03
+valve 11-01 174531 W   21.6   4.5s home             (-1.68,-0.28,0.97) NOT PLANNED: press Plan      rms  19.3/ 12.6  v  30/ 76  dh  0.02/ 0.04
+valve 11-01 174531 W   41.3   5.9s valve            (+0.37,+0.20,1.29) DONE go_to_start next=ready  rms  29.5/ 20.1  v  41/ 92  dh  0.05/ 0.08
+valve 11-01 175259 W   12.7   2.0s home             (-1.74,-0.25,0.99) NOT PLANNED: press Plan      rms  20.1/  2.8  v  37/ 50  dh   nan/  nan
+valve 11-01 175259 W   30.3   6.5s valve            (+0.36,+0.20,1.29) DONE go_to_start next=ready  rms  17.3/ 24.3  v  45/ 91  dh  0.09/ 0.03
+valve 11-01 175932 W   18.4   3.7s home             (-1.67,-0.24,0.97) NOT PLANNED: press Plan      rms   8.3/  5.5  v  18/ 31  dh  0.07/ 0.04
+valve 11-01 175932 W   42.3   4.1s q[6,11,19,-1]    (+0.36,+0.08,1.19) DONE ready next=push         rms  76.4/ 29.9  v 134/282  dh  0.33/ 0.13
+valve 11-03 164233 W    9.0   2.5s home             (-1.73,-0.30,0.99) READY next=go_to_start       rms  14.7/  8.7  v  25/ 56  dh  0.05/ 0.03
+valve 11-03 164233 W   27.1   4.0s valve            (+0.37,+0.18,1.23) DONE go_to_start next=ready  rms  16.7/ 10.1  v  24/ 61  dh  0.06/ 0.07
+valve 11-03 164722 W    9.3   2.1s home             (-1.73,-0.30,0.95) READY next=go_to_start       rms  17.8/  8.0  v  32/ 70  dh   nan/  nan
+valve 11-03 164722 W   27.1   5.9s valve            (+0.37,+0.18,1.23) DONE go_to_start next=ready  rms  16.0/ 23.4  v  34/ 51  dh  0.05/ 0.06
+valve 11-03 164722 W   41.9   1.9s home             (+0.41,+0.07,1.45) ABORTED -- holding higher, a rms   9.2/ 19.7  v  44/ 90  dh   nan/  nan
+valve 11-03 165100 W   12.7   2.5s home             (-1.80,-0.30,0.93) READY next=go_to_start       rms   8.1/  7.9  v  22/ 54  dh   nan/  nan
+valve 11-03 165100 W   31.2  42.5s valve            (+0.35,+0.18,1.23) DONE go_to_start next=ready  rms  30.7/ 26.0  v  41/ 85  dh  0.06/ 0.07
+valve 11-03 165100 W   79.9   1.9s home             (+0.43,+0.14,1.55) ABORTED -- holding higher, a rms   8.4/ 16.9  v  43/103  dh   nan/  nan
+valve 11-03 165700 W   11.2   4.8s home             (-1.86,-0.40,0.99) NOT PLANNED: press Plan      rms  37.1/  3.7  v  22/ 65  dh  0.04/ 0.08

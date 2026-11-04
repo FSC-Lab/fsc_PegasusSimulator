@@ -1,0 +1,7 @@
+mid-field     before n 42 | e_R roll/pitch rms median  17.0 mrad [ 6.2-41.7] | rotational disturbance estimate x/y rms median    11 mN.m [  4- 42]
+mid-field     after  n 18 | e_R roll/pitch rms median  15.8 mrad [ 7.6-52.5] | rotational disturbance estimate x/y rms median     7 mN.m [  5- 16]
+above handle  before n  3 | e_R roll/pitch rms median  21.3 mrad [19.5-35.1] | rotational disturbance estimate x/y rms median     6 mN.m [  6- 18]
+above handle  after  n  6 | e_R roll/pitch rms median  49.9 mrad [18.7-59.6] | rotational disturbance estimate x/y rms median    27 mN.m [ 11- 66]
+after abort   before n  6 | e_R roll/pitch rms median  19.1 mrad [ 7.0-45.8] | rotational disturbance estimate x/y rms median     6 mN.m [  5- 14]
+after abort   after  n  6 | e_R roll/pitch rms median  25.7 mrad [14.0-51.7] | rotational disturbance estimate x/y rms median     9 mN.m [  9- 51]
+mailbox       after  n  1 | e_R roll/pitch rms median  30.8 mrad [30.8-30.8] | rotational disturbance estimate x/y rms median    37 mN.m [ 37- 37]

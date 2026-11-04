@@ -7868,3 +7868,69 @@ goes out of the U ... we have mocap info for the fin ... a fake abort is fine"; 
 - Isaac's mocap emulator republishes a lost body WITH NOISE, so the 0.2 s frozen-feed abort is not exercised in sim
   (the geometry catches it); hardware republishes bit-identical.
 
+
+**11-03 HARDWARE VALVE TURNS NEVER REACHED THE TURN -- THE HOVER WANDER AGAINST THE APPROACH GATES (2026-11-03,
+user request: analyse; record `docs/docs_aerial_manipulator/archive/wb_valve_turning_flight_20261103/README.md`).**
+Bags `1103 - T650-AM Valve-Turning-*/`: one abort test, three 30 deg turns on the 11-03 U-push build. Nothing hung.
+- 165100: Ready refused for 43 s.
+- 164722 and 165700: Ready ran, then the fin-in-the-U across guard (25 mm, armed from Ready's end) aborted during the
+  hand-over settle, 0.11 s and 1.0 s after Ready.
+
+Cause: since the 11-02 isolation the claw follows the vehicle (CoM anchor) until it settles. At the valve pose the
+vehicle wanders 25-31 mm rms per axis at 0.14-0.3 Hz, with no standing offset. The claw's 0.3 s speed above the handle
+is p90 66-109 mm/s, and 85-90 % of it is the base (box 10-27: 14-16 mm/s), against gates of 50/25 mm and 30 mm/s. In
+165100's 42 s hold the Ready gate could pass only once, for 0.8 s; the GS's automatic retry had already stopped at its
+10 s limit. FOLLOW-UP (same day, `archive/wb_hover_wander_history_20261103/`, 46 flights). TIMELINE (user, final): the front wall went up on 10-31
+after the mail flights and before the valve flights; the four 2-3 cm box supports on 10-31 or 11-01; the table had
+moved ~0.4 m to its new spot (x ~0.35) before the mail test.
+- Every valve flight at the new spot had the wall, so the wall and the spot are inseparable.
+- The only no-wall data there (mail, 3 holds) is mixed.
+- The supports show nothing measurable.
+- The extra wander is AT THE TABLE SITE only.
+- Decisive test: a hover at the valve point with the wall removed.
+- Holds above the handle: box 13 mm vs valve-after 33 mm.
+- Same home pose after an abort: 6.5 vs 25 mm.
+- Mid-field: 19.5 vs 19.3 mm, unchanged.
+- Valve before the wall: as calm as the box (1 s window 15 vs 35 mm/s after).
+- Signature = a disturbing MOMENT: the external horizontal force stays ~0.1 N (mocap m a - T R e3), the true tilt
+  doubles and the law's moment estimate is 4x above the handle; the PX4 attitude error is unchanged.
+- NOT flying lower: rotor plane 0.66-0.72 m above the table top for both, 3.5-3.8 rotor radii.
+- The wall cannot be separated from the valve site's 0.45 m move.
+- MID-FIELD A/B (`archive/wb_sidewall_ab_20261103/`), all four 11-02 trajectory pairs (WB/DEC x circle/figure-8)
+  vs the same plans on 10-28:
+  - Every 11-02 lap had a larger roll error (8 of 8 vs 12 laps; EE +4..+46 %).
+  - The extra shaking sits at the vehicles' ~0.55 Hz slow modes; the IMU force is unchanged.
+  - The STANDING MOTOR TRIM stepped body-fixed (roll L-R ~0 -> +0.02..+0.06, mostly the rear pair) between 11-01 and
+    11-02, i.e. after the 11-01 valve crash, NOT when the wall went up (the 10-31/11-01 flights had the wall and the old trim).
+  - Go To Start, same vehicle, before vs after the wall: no change in shaking.
+  - So the 11-02 degradation is the vehicle (post-crash), not the wall; the table-site wander rise predates the crash.
+  - Inspect the rear arms/motors/props.
+  - 11-03's drone mocap was 2-3x noisier than every other day (0.6-0.8 mm jitter), the wall not the cause (11-02 clean). All
+four aborts climbed at once, tilt <= 5.8 deg, DIRECT kept, the valve unmoved. 165700's valve body showed ~12 deg
+orientation glitches every 1-3 s (gate-dropped) -- check its markers. Isaac's drift runs had shown the same gates
+blocking before contact; that was recorded but not raised before the flight.
+**192853 (11-03 evening, the wall moved 2 m back; `archive/wb_valve_turning_flight_20261103/README.md` last section):**
+- The hold above the handle was calm: 20-25 mm/s, 9.3 mm wander, Ready in 1.1 s.
+- Ready's slide-in then overshot ~18 mm past the grasp point. The bracket met the fin's back edge (planned slack 13 mm)
+  and turned the free valve 35.7 deg in 1.2 s before the Turn.
+- **The yaw demand came from the arm, not the reference** (`tools/yaw_192853.py`, `yaw2_192853.py`; platform heading,
+  EE heading and q_d all constant until the abort at 34.3 s):
+  - The slide-in's leftward drift (~25 mm/s, toward the shaft) carried the CoM-anchored open claw 18 mm across the fin.
+    From 32.9 s the claw sat at -12..-14 mm across for the whole 34 deg, with q1 frozen (-0.3/-0.4 deg): the fin's face
+    against the U's side.
+  - The claw target follows the CoM, which kept moving left (the drift, then pivoting about the pinned claw, 5.8 mm per
+    deg of yaw), so the claw's sideways error grew -7 -> -70 mm.
+  - The law answered with joint 1: 0.1 -> 0.64 N.m. On a blocked claw that torque only twists the airframe clockwise,
+    the law cancels it through the rotors, and the yaw error feeds the loop. Yaw command 0.30 -> 0.70 -> 1.26 N.m.
+  - The yaw ceiling at 36 N is 0.64 N.m (CCW pair at idle); the hover already used 0.17 mean / 0.33 p95. The fast part of
+    that noise is the arm's joint-1 torque (corr 0.91).
+- **The allocator ADDED thrust, it did not cut it (corrected 2026-11-03; the first write-up was wrong).** From 33.7 s
+  the CCW pair was at idle and the airmode shift raised all four motors to keep the yaw: applied 42 N vs the law's
+  28-34 N. From 33.9 s all four motors were on a limit, so 0.5 -> 1.6 N.m of roll/pitch was NOT delivered: tilt
+  5 -> 11 -> 21 deg uncontrolled, the vehicle rising 5 cm. 37.7 -> 28.4 N was the LAW's command (its observer read the
+  extra lift as +5 N up). Then sway guard -> 15 deg watchdog -> 25 deg -> SAFETY, which recovered.
+  `wrench_allocator.cpp` gives yaw priority over roll/pitch (PX4's own mixer drops yaw first).
+- Geometry: the bracket touched where the model says (model gap +1..-5 mm); depth 73 mm vs 80; across +7 mm at 32.0 s,
+  -11 at contact (the drift).
+- The valve's rest poses before/after put the shaft 7.7 mm from the planner's axis along the turn. This contradicts the
+  contact timing unless the base shifted; bench re-check with `valve_body_check.py`.
