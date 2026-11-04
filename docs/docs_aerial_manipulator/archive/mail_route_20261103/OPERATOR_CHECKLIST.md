@@ -13,9 +13,11 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
    "the planner has no pick_place/route/plan" — if it does, the Orin's planner is stale.
 2. No gain changes: the hardware mail yaml keeps `wb_l1_omega_c_t: 2.927`, and the
    stack prints "all N tuned values present … (09-27 H1b + 10-16 j4 fix)".
-3. Insert by hand: before Plan,
-   `ros2 param set /uav_0/whole_body_trajectory_planner pick_place_insert_auto false`
-   (sim: inserts pressed after the hold settled 6/6, the automatic insert 3/4).
+3. The insert is AUTOMATIC and cannot be triggered by hand: leave `pick_place_insert_auto`
+   true. In a route the planner refuses a manual Insert and the tab's Insert button stays
+   disabled. Check the mail yaml carries `pick_place_place_approach_back: 0.25` (the Insert
+   Margin), `pick_place_insert_auto_tol: 0.030`, `pick_place_insert_auto_settle_s: 3.0` and
+   `pick_place_insert_auto_settle_tol: 0.015`.
 4. Record the 10-31 mail topics (`archive/mail_3cm_tune_20261031/tools/hw_topics.txt`)
    + `/uav_0/whole_body_planner/pick_place/{status,info}`,
    `/uav_0/whole_body_planner/pick_place/route/drop_now`, the raw `/vrpn_mocap/*`.
@@ -57,11 +59,15 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
 19. Exit To Pick before Go To Mailbox Start (skipping it is now tracked, but the exit is
     the clean lift).
 20. Go To Mailbox Start → Ready To Insert.
-21. Wait until the drone holds STILL in front of the mouth (no creep, a couple of cm),
-    then press Insert. The drone drifted 20–25 cm during this hold in sim and the claw
-    rides with it (2 of the 3 insert aborts). Creeping toward the box: do not insert —
-    wait, or ABORT (it backs out of the mouth first).
-22. After the release: confirm the letter fell in, Exit To Insert, then the next letter.
+21. The vehicle holds 0.25 m back from the mouth and the planner slides the letter in BY
+    ITSELF once the drone has settled (its body within 15 mm of its own mean for 3 s) and
+    the claw is within 30 mm of the point in front of the mouth and still for 1 s; the
+    status says "waiting for the drone to settle" until then. The gripper opens by itself
+    at the target and Exit To Insert follows by itself. Watch the drone: creeping toward
+    the box, or the status stuck on "settle" -- ABORT (it backs out of the mouth first).
+    (Why: at the old 0.15 m margin the letter waited ~5 cm from the box face; a letter
+    touching the box while waiting dragged the drone into it -- the insert aborts in sim.)
+22. After the release: confirm the letter fell in before the next letter.
 23. Mid-letter: never the current letter's button or Reset with a letter in the claw
     (refused now). Margin edits are fine — then Plan again in the Mail Route tab (works
     mid-route, also at the pick).

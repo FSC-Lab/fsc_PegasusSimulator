@@ -632,10 +632,8 @@ def main():
     ap.add_argument("--grip-action", default="/uav_0/fsc_open_manipulator/gripper_controller/gripper_cmd")
     ap.add_argument("--grip-open-m", type=float, default=0.019, help="the arm GS's OPEN position [m]")
     ap.add_argument("--grip-closed-m", type=float, default=-0.010, help="the arm GS's gripper_closed [m]")
-    ap.add_argument("--insert-press-after", type=float, default=20.0,
-                    help="[s] press Insert if the autonomous slide has not started this long after Ready To "
-                         "Insert, as the operator does (0 = never, wait for the planner; route1 waited 60 s "
-                         "on the 0.03 m/s claw-speed gate)")
+    ap.add_argument("--insert-press-after", type=float, default=0.0,
+                    help="press Insert after this many s if the slide has not started (0 = never: the route inserts by itself and the planner refuses a manual Insert, 2026-11-03)")
     ap.add_argument("--max-disturb", type=float, default=0.008)
     ap.add_argument("--direct-settle", type=float, default=15.0)
     ap.add_argument("--leg-pause", type=float, default=2.0)
