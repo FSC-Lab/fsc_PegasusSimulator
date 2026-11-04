@@ -11,8 +11,13 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
 1. Orin: rebuild `fsc_autopilot_ros2`, then `fsc_trajectory_planner` (it links the law).
    Laptop: rebuild `utils_custom_ground_station`. The Mail Route tab must NOT say
    "the planner has no pick_place/route/plan" — if it does, the Orin's planner is stale.
-2. No gain changes: the hardware mail yaml keeps `wb_l1_omega_c_t: 2.927`, and the
-   stack prints "all N tuned values present … (09-27 H1b + 10-16 j4 fix)".
+2. Start the flight stack with the ROUTE's own experiment yaml (not the single-envelope
+   one, not the Isaac one):
+   `AM_HW_PROFILE=mail_route ~/dev_ws/src/fsc_autopilot_ros2/scripts/indoor_exp/start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator_fused.sh uav_0`
+   It loads `params_…_t650_mail_route.yaml` (vehicle `AM-T650-WB-L1-4D-HW-MAIL-ROUTE`;
+   Isaac flies `params_…_t650_sim_mail_route.yaml`). No gain changes: it keeps
+   `wb_l1_omega_c_t: 2.927`, and the stack prints "PROFILE: mail_route", the MAIL ROUTE
+   notes and "all N tuned values present … (09-27 H1b + 10-16 j4 fix)".
 3. The insert is AUTOMATIC and cannot be triggered by hand: leave `pick_place_insert_auto`
    true. In a route the planner refuses a manual Insert and the tab's Insert button stays
    disabled. Check the mail yaml carries `pick_place_place_approach_back: 0.25` (the Insert
@@ -26,7 +31,11 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
 5. Hats in a line in front of the boxes, the nearest ~1 m from the box face, 0.6 m apart.
 6. Letters turned 90° on the hats, seated exactly as the localization frame sat. The
    planner cannot see a misplaced letter (route12: the claw pushed one 62 mm and closed
-   on air).
+   on air). THE FRAME IS TURNED 90° WITH THE LETTER: the letter's yaw is the frame's yaw
+   at its Get, so on each hat the frame's arrow (+x) points along the side approach
+   (the way the drone faces when it picks; it comes in from 0.5 m behind the arrow), the
+   letter in its slot. A frame seated unturned (arrow toward the boxes) reads the box
+   yaw and the claw meets the letter 90° off.
 7. Mailboxes: the two flown boxes (same build, same height), centres 0.5 m apart. While
    posting into one box the props pass only 9–13 cm over the OTHER box's top and the
    planner does not check it: nothing on the box tops, no taller boxes, not closer.
@@ -37,7 +46,9 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
 
 ## 2. Gets (on the ground)
 9. Frame on hat k → Get Letter k → wait for the row; one at a time. A Get with the frame
-   still on another target is refused (the frame-left-behind check).
+   still on another target is refused (the frame-left-behind check). Each Letter row's
+   yaw must read ~90° off the Mailbox rows' yaw; ~equal = the frame was not turned (re-seat
+   it, Get again).
 10. Frame seated on the RED top → Get RED box; on the BLUE top → Get BLUE box.
 11. Take the frame OFF the box top after the last Get (it cuts the prop clearance over
     that box to ~5 cm).
@@ -52,7 +63,10 @@ AM-T650 (Orin + experiment laptop). Every item comes from a problem found on
 
 ## 4. Each letter
 16. Press Letter k (any order; posted letters are disabled).
-17. Go To Pick Start → Ready To Pick → Pick.
+17. Go To Pick Start → Ready To Pick → Pick. Go To Pick Start keeps the arm home (claw
+    NOT rolled); the wrist rolls to the pick pose during READY TO PICK (10-31 flights:
+    q4 0 → −84..−87° in the approach). At the hold above the letter the claw must be
+    rolled and lined up with the letter; if it is not, do NOT press Pick — ABORT.
 18. CHECK THE GRASP before lifting: a close that stalls part-way = held; a FULL close
     (≈ −48° in sim) = empty. The tab does not catch a missed hook grasp. Empty: open,
     Pick again — or ABORT.

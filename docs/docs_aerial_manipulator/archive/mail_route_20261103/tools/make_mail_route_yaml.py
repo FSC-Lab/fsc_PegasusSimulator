@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Write the MAIL ROUTE's flight yaml (2026-11-03) as a copy of a mail-delivery yaml:
 
-    make_mail_route_yaml.py SRC DST [--start X,Y,Z,YAW] [--land-z Z] [--vehicle-suffix S]
+    make_mail_route_yaml.py SRC DST [--start X,Y,Z,YAW | --keep-start] [--land-z Z] [--vehicle-suffix S]
 
 SRC (a mail-delivery yaml, e.g. the sim one) is copied line for line; Land is
-Start's x, y, yaw at --land-z. In its
+Start's x, y, yaw at --land-z. --keep-start keeps SRC's Start / Land Start / Land
+(the HARDWARE route, 2026-11-03: the drone takes off from its own mark and Adjust
+moves all three there, so the sim's off-the-line Start means nothing in the lab):
+
+    make_mail_route_yaml.py <(git show HEAD:config/..._t650_mail_delivery.yaml) \
+        config/..._t650_mail_route.yaml --keep-start
+
+In its
 /**/whole_body_trajectory_planner section the route is switched on and its keys
 added after pick_place_place_start_offset, and Start / Land Start / Land are moved
 to the take-off spot OFF the line of hats (every letter's go_to_start flies to its
@@ -20,6 +27,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("src")
 ap.add_argument("dst")
 ap.add_argument("--start", default="-0.5,-1.0,1.0,0.0", help="Start = Land Start [x, y, z, yaw_deg]")
+ap.add_argument("--keep-start", action="store_true", help="keep SRC's Start / Land Start / Land")
 ap.add_argument("--land-z", type=float, default=0.35)
 ap.add_argument("--vehicle-suffix", default="-ROUTE")
 a = ap.parse_args()
@@ -27,7 +35,7 @@ a = ap.parse_args()
 start = [float(v) for v in a.start.split(",")]
 assert len(start) == 4, "--start needs x,y,z,yaw_deg"
 fmt = lambda v: "[" + ", ".join(repr(float(x)) for x in v) + "]"   # floats: an int breaks a double array
-over = {
+over = {} if a.keep_start else {
     "pick_place_start": fmt(start),
     "pick_place_land_start": fmt(start),
     "pick_place_land": fmt(start[:2] + [a.land_z, start[3]]),
@@ -76,10 +84,15 @@ head = [
     "#   mail_route_20261103/tools/make_mail_route_yaml.py",
     f"# from {os.path.basename(a.src)} (whose own header follows unchanged). Differences:",
     f"#   * vehicle_name + '{a.vehicle_suffix}'",
-    "#   * planner: " + ", ".join(f"{k} {v}" for k, v in over.items()) + ", + " +
-    ", + ".join(f"{k} {v}" for k, v in add),
+    "#   * planner: " + "".join(f"{k} {v}, " for k, v in over.items()) +
+    ("Start / Land Start / Land kept (Adjust moves them to the take-off mark), " if a.keep_start else "") +
+    "+ " + ", + ".join(f"{k} {v}" for k, v in add),
     "#   * controller: none (the source's gains verbatim)",
+    # which world this file is for, in so many words (2026-11-03, user: "not confuse sim with exp")
+    ("# SIMULATION (Isaac) FILE. The EXPERIMENT flies ..._t650_mail_route.yaml" if "_sim_" in os.path.basename(a.dst) else
+     "# EXPERIMENT (HARDWARE) FILE: AM_HW_PROFILE=mail_route on the fused 4-D stack. Isaac flies ..._t650_sim_mail_route.yaml"),
     "",
 ]
 open(a.dst, "w").write("\n".join(head + out))
-print(f"wrote {a.dst}: route on, {len(add)} route keys, Start / Land at {fmt(start)}")
+print(f"wrote {a.dst}: route on, {len(add)} route keys, " +
+      ("Start / Land kept from the source" if a.keep_start else f"Start / Land at {fmt(start)}"))
