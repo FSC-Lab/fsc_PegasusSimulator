@@ -12,6 +12,10 @@ V21 (2026-11-04, archive/valve_push_plate_20261104/tools/make_v21_stl.py): v20 +
 closed shell on the fin's pushing (-y) edge, square to the push, with a clip either side of the fin.
 The CLOSED claw pushes its face with its nose, so the fin can never be inside the claw. It joins the
 rotor's visual and mass, gets a convex collider (the plate proper, not the clip) and fsc:push_plate_*.
+The user's own CAD of it (2026-11-04, Onshape: the same plate with two M3 holes through cheeks and
+fin, a 5.0 mm slot) TOUCHES the fin: the hole circles on the coincident cheek / fin faces share their
+vertices, so the shared-vertex split makes plate + rotor ONE shell. split_merged_plate() then
+separates them again along manifold edges (an edge where the two parts meet carries four triangles).
 
 V2 (2026-10-27, Valve_Assembly_v2.stl): the same three shells plus TWO STATIC HALF-RINGS
 around the hub (inner radius 27.2 mm against the 25.0 mm hub, 20 mm tall from the plate's
@@ -138,6 +142,53 @@ def shells(T):
     return roots[inv[:, 0]]
 
 
+def edge_components(T):
+    """Connected components of a triangle set joined only through MANIFOLD edges (shared by exactly two
+    triangles). Two closed parts that touch -- coincident faces whose tessellations share vertices and
+    edges -- meet along edges carrying four triangles, which this does not cross. One label per triangle."""
+    V = np.round(T.reshape(-1, 3), 6)
+    _, inv = np.unique(V, axis=0, return_inverse=True)
+    F = inv.reshape(-1, 3)
+    E = np.sort(np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]]), axis=1)
+    tri = np.tile(np.arange(len(F)), 3)
+    ekey, einv, ecount = np.unique(E, axis=0, return_inverse=True, return_counts=True)
+    parent = np.arange(len(F))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    order = np.argsort(einv, kind="stable")
+    e_sorted, t_sorted = einv[order], tri[order]
+    starts = np.r_[0, np.flatnonzero(np.diff(e_sorted)) + 1]
+    for st in starts:
+        if ecount[e_sorted[st]] == 2:
+            a, b = find(t_sorted[st]), find(t_sorted[st + 1])
+            parent[a] = b
+    return np.array([find(i) for i in range(len(F))])
+
+
+def split_merged_plate(T, lab):
+    """If the biggest shell (the rotor) has vertices outside the rotor's declared blocks, it may be the
+    rotor merged with a push plate that touches the fin (the user's CAD, 2026-11-04). Split it along
+    manifold edges: pieces inside the blocks stay the rotor, ONE piece outside them becomes its own shell."""
+    k = collections.Counter(lab.tolist()).most_common(1)[0][0]
+    sel = np.flatnonzero(lab == k)
+    blocks = list(ROTOR_MM.values()) + [ROTOR_MOUNT_MM]
+    if inside(T[sel].reshape(-1, 3), blocks).all():
+        return lab
+    sub = edge_components(T[sel])
+    out = [r for r in np.unique(sub) if not inside(T[sel[sub == r]].reshape(-1, 3), blocks).all()]
+    if len(out) != 1:
+        return lab                                        # not a plate on the fin: let the checks below report it
+    lab = lab.copy()
+    lab[sel[sub == out[0]]] = lab.max() + 1
+    print(f"  the push plate touches the fin (shared vertices): split it off the rotor, "
+          f"{int((sub == out[0]).sum())} triangles")
+    return lab
+
+
 def solid_mass_props(T):
     """Volume, centroid and inertia (about the centroid, unit density) of closed
     triangle meshes, by signed tetrahedra from the origin (Tonon 2004)."""
@@ -204,7 +255,7 @@ def main():
     V = T_cad.reshape(-1, 3)
     if np.ptp(V, 0).max() > 1000.0 or np.ptp(V, 0).max() < 100.0:
         raise SystemExit(f"unexpected extent {np.ptp(V, 0)} mm -- not the metre-unit 2026-10-15 valve?")
-    lab = shells(T_cad)
+    lab = split_merged_plate(T_cad, shells(T_cad))
     counts = collections.Counter(lab.tolist())
     if len(counts) < 3:
         raise SystemExit(f"expected 3 closed shells (plate, bearing, rotor), 5 (v2: + two half-rings) or "

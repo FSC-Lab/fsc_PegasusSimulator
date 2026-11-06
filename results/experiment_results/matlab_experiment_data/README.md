@@ -15,6 +15,9 @@ folder's `*_metrics.mat` / `*_rmse.mat`.
 | `pick_and_drop/` | pick-and-drop at a 5 cm Drop Margin, with the session's 12 / 8 / 6 / 5 cm comparison | M5, 2026-10-28 | `results/utils/experiment_pick_and_drop.py` | **no: the manuscript reports D-2; replace it with M5 if the paper reports the newest flight (section 2)** |
 | `pick_and_place/` | the earlier pick-and-drop flight, Drop Margin 20 cm | D-2, 2026-10-16 | `results/utils/experiment_pick_and_place.py` | yes, matches this data |
 | `box_pushing/` | box pushing (feasibility, not the accuracy comparison) | BP-1 (reported), BP-2, 2026-10-27 | `results/utils/experiment_box_pushing.py` | yes, matches this data |
+| `free_flight_model_uncertainty/` | circle 0.13 m/s with a 50 g / 100 g mass on the end effector, not in the model, Proposed vs Geo-L1 | 16 one-lap tests (four per method and mass), 2026-11-05 | `results/utils/experiment_robust_tracking.py` | no (new, section 5) |
+| `free_flight_wind_disturbance/` | circle 0.13 m/s in 5 m/s wind (fan 4 m from the circle's centre), Proposed vs Geo-L1 | 8 one-lap tests (four per method), 2026-11-05 | `results/utils/experiment_robust_tracking.py` | no (new, section 5) |
+| `mail_box/` | mail delivery: envelope picked from the hat, inserted through the mailbox mouth | S-1 to S-5, 2026-11-05 | `results/utils/experiment_mail_box.py` | no (new, section 5) |
 
 Not flown on hardware, so nothing to report: Geo-L1 at 0.20 m/s, MAC in any task, and a completed valve
 turn (section 4).
@@ -256,6 +259,59 @@ manuscript's experimental box-pushing text already matches this data.
   `free_flight_tracking_rmse.mat` (`rmse_all`, with the reason each is not averaged) but are not in the table.
   The same holds for the earlier of the two circle 0.13 m/s Proposed flights (WB-13, WB-14).
 
+## 5. The 2026-11-05 flights: robust tracking and mail delivery (added 2026-11-05)
+
+The Google Drive download came in two zip parts; both are merged into
+`docs/experimental_data_ros2_bag/1105 - .../` and every bag of the three task folders is complete. The earlier
+mail attempts of that morning (13:09 to 14:32, not under `Mail-Box [Success]`) are not used.
+
+### Robust tracking (`free_flight_model_uncertainty/`, `free_flight_wind_disturbance/`)
+
+The nominal circle 0.13 m/s task and configuration (section 1), with a disturbance. Two flights per method
+and setting.
+- **A test is one lap.** Unlike section 1, each flight is ONE planner run of two laps back to back. It is split
+  where the planner says the first lap ends, so lap 1 holds the 2 s speed-up and lap 2 the 2 s slow-down.
+- **An entry** is the mean over the setting's four laps.
+
+| method | nominal (10-28, section 1) | EE +50 g | EE +100 g | wind 5 m/s |
+|---|---|---|---|---|
+| Proposed, EE position RMSE [mm] | 35.3 | 42.9 | 41.4 | 38.7 |
+| Geo-L1, EE position RMSE [mm] | 90.1 | 74.9 | 68.1 | 79.3 |
+| Proposed, EE heading RMSE [deg] | 0.49 | 0.34 | 0.32 | 0.32 |
+| Geo-L1, EE heading RMSE [deg] | 3.70 | 4.12 | 4.15 | 4.08 |
+
+How to read it:
+- **Under every disturbance the Proposed controller's EE position error is 1.6 to 2.0 times lower than Geo-L1's**
+  (38.7 to 42.9 mm against 68.1 to 79.3 mm), and its EE heading error about 12 times lower.
+- **The nominal column is another day.** Geo-L1 scored LOWER with the disturbances (68.1 to 79.3 mm) than in its
+  10-28 nominal flight (90.1 mm). A disturbance does not improve tracking, so this is day-to-day variation, not
+  an effect. Compare the methods within a disturbance column, not a column against the 10-28 nominal one.
+- **The Proposed laps lie within the nominal lap spread** (26.9 to 45.4 mm on 10-28; 32.1 to 46.5 mm on 11-05).
+- **The second lap is the worse one in 8 of 12 lap pairs** (also in the nominal WB-15 31.1 / WB-16 39.6 mm).
+  Average both laps, as the entries do.
+
+### Mail delivery (`mail_box/`), S-1 to S-5
+
+All five were delivered: the operator's verdict, from the bag folder names. The envelope has no mocap markers,
+so what is measured is the claw at the release, against the planner's release point on the insertion line (a
+0.25 m slide pitched 25 deg down).
+
+| run | EE RMSE, whole mission [mm] | ‖ε<sub>UAV</sub>‖ max / RMS [mm] | release | claw at release, along / off the line [mm] |
+|---|---|---|---|---|
+| S-1 | 31.4 | 90.4 / 30.9 | planner (automatic) | +13 / 7 |
+| S-2 | 27.0 | 81.0 / 26.0 | by hand | −22 / 14 |
+| S-3 | 35.5 | 94.5 / 35.3 | by hand | +48 / 33 |
+| S-4 | 32.4 | 81.5 / 31.9 | by hand | +48 / 19 |
+| S-5 | 32.8 | 100.2 / 32.2 | by hand | +24 / 30 |
+| mean | 31.8 | 89.5 / 31.3 | | |
+
+- **Along > 0 = deeper than the release point.** The planner releases by itself only inside −15 / +20 mm along
+  and 30 mm off, with the claw still. Only S-1 met that; in S-2 to S-5 the operator opened the gripper.
+- **The claw positions above are the planner's own measurement too** (it logged "48 mm past the release point"
+  for S-3 and S-4 at the moment of release), so a release by hand was the operator's response to the claw
+  holding outside the window, not a missed signal.
+- In every flight the pilot took over (STAB) in the land leg; each window ends there.
+
 ## Files
 
 ```
@@ -264,6 +320,8 @@ free_flight_tracking/free_flight_tracking_rmse.mat   rmse_mean (the table), rmse
 free_flight_tracking/free_flight_tracking_exp.tex    the table in LaTeX, 16 error columns
 free_flight_tracking/<shape>/v<speed>/*_run<k>.mat   one run each, struct `run`
 pick_and_drop/, pick_and_place/, box_pushing/        one run per flight + *_metrics.mat
+free_flight_model_uncertainty/, free_flight_wind_disturbance/   one lap per file + <task>_rmse.mat (2026-11-05)
+mail_box/                                            one flight per file + mail_box_metrics.mat (2026-11-05)
 */configs/                                           the controller configs as flown
 */README.md                                          naming, struct layout, conditions, MATLAB snippets
 ```

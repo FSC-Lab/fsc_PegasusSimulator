@@ -88,6 +88,26 @@ Regenerate (re-scores from the bags, updates this file, the MATLAB data and the 
 | 70 | 10-29 | `flight_wb_l1_4d_valve_turning_20261029_145526` | whole-body L1 4-D | valve turning (not analysed here) | -- |
 | 71 | 10-29 | `flight_wb_l1_4d_figure8_010_20261029_150625` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | figure-8 0.10 m/s, two runs | WB-19, WB-20 |
 | 72 | 10-29 | `flight_decoupled_l1_figure8_010_20261029_152543` | Geo-L1 (2026-10-01 tune) | figure-8 0.10 m/s, two runs | DEC-13, DEC-14 |
+| 73 | 11-05 | `flight_wb_l1_4d_mail_box_20261105_160336_success_1` | whole-body L1 4-D (mail delivery) | mail delivery S-1: delivered, released by the planner | mail-box S-1 |
+| 74 | 11-05 | `flight_wb_l1_4d_mail_box_20261105_161320_success_2` | whole-body L1 4-D (mail delivery) | mail delivery S-2: delivered, released by hand | mail-box S-2 |
+| 75 | 11-05 | `flight_wb_l1_4d_mail_box_20261105_162728_success_3` | whole-body L1 4-D (mail delivery) | mail delivery S-3: delivered, released by hand | mail-box S-3 |
+| 76 | 11-05 | `flight_wb_l1_4d_mail_box_20261105_163355_success_4` | whole-body L1 4-D (mail delivery) | mail delivery S-4: delivered, released by hand | mail-box S-4 |
+| 77 | 11-05 | `flight_wb_l1_4d_mail_box_20261105_164904_success_5` | whole-body L1 4-D (mail delivery) | mail delivery S-5: delivered, released by hand | mail-box S-5 |
+| 78 | 11-05 | `flight_decoupled_l1_circle_013_100g_20261105_172752` | Geo-L1 (2026-10-01 tune) | circle 0.13 m/s, two laps, 100 g on the end effector | model uncertainty DEC-100g-1, -2 |
+| 79 | 11-05 | `flight_decoupled_l1_circle_013_100g_20261105_173408` | Geo-L1 (2026-10-01 tune) | circle 0.13 m/s, two laps, 100 g on the end effector | model uncertainty DEC-100g-3, -4 |
+| 80 | 11-05 | `flight_wb_l1_4d_circle_013_100g_20261105_174407` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | circle 0.13 m/s, two laps, 100 g on the end effector | model uncertainty WB-100g-1, -2 |
+| 81 | 11-05 | `flight_wb_l1_4d_circle_013_100g_20261105_174953` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | circle 0.13 m/s, two laps, 100 g on the end effector | model uncertainty WB-100g-3, -4 |
+| 82 | 11-05 | `flight_decoupled_l1_circle_013_50g_20261105_175803` | Geo-L1 (2026-10-01 tune) | circle 0.13 m/s, two laps, 50 g on the end effector | model uncertainty DEC-50g-1, -2 |
+| 83 | 11-05 | `flight_decoupled_l1_circle_013_50g_20261105_180344` | Geo-L1 (2026-10-01 tune) | circle 0.13 m/s, two laps, 50 g on the end effector | model uncertainty DEC-50g-3, -4 |
+| 84 | 11-05 | `flight_wb_l1_4d_circle_013_50g_20261105_181041` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | circle 0.13 m/s, two laps, 50 g on the end effector | model uncertainty WB-50g-1, -2 |
+| 85 | 11-05 | `flight_wb_l1_4d_circle_013_50g_20261105_181833` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | circle 0.13 m/s, two laps, 50 g on the end effector | model uncertainty WB-50g-3, -4 |
+| 86 | 11-05 | `flight_decoupled_l1_circle_013_wind_20261105_185232` | Geo-L1 (2026-10-01 tune) | circle 0.13 m/s, two laps, 5 m/s wind (fan 4 m from the centre) | wind DEC-wind-1, -2 |
+| 87 | 11-05 | `flight_decoupled_l1_circle_013_wind_20261105_190235` | Geo-L1 (2026-10-01 tune) | circle 0.13 m/s, two laps, 5 m/s wind (fan 4 m from the centre) | wind DEC-wind-3, -4 |
+| 88 | 11-05 | `flight_wb_l1_4d_circle_013_wind_20261105_190722` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | circle 0.13 m/s, two laps, 5 m/s wind (fan 4 m from the centre) | wind WB-wind-1, -2 |
+| 89 | 11-05 | `flight_wb_l1_4d_circle_013_wind_20261105_191334` | whole-body L1 4-D (+ 10-16 wrist-roll fix) | circle 0.13 m/s, two laps, 5 m/s wind (fan 4 m from the centre) | wind WB-wind-3, -4 |
+| 90 | 11-05 | `flight_wb_l1_4d_box_pushing_300g_20261105_211154` | whole-body L1 4-D (box-pushing-20261027 branch) | box pushing trial (not analysed here) | -- |
+| 91 | 11-05 | `flight_wb_l1_4d_box_pushing_300g_20261105_212207` | whole-body L1 4-D (box-pushing-20261027 branch) | box pushing trial (not analysed here) | -- |
+| 92 | 11-05 | `flight_wb_l1_4d_box_pushing_300g_20261105_214032` | whole-body L1 4-D (box-pushing-20261027 branch) | box pushing trial (not analysed here) | -- |
 
 Bag folders: `<date> - T650-AM .../<date> - T650-AM .../<bag>/` under `docs/experimental_data_ros2_bag/`; the
 10-21 bags sit one level deeper, in the sub-folder written before the bag name. The 10-24 and 10-27 box-pushing

@@ -8023,3 +8023,57 @@ https://claude.ai/artifact/BppzF9zYUZoNwrdPymSQoi).** Pushed on `valve-isolation
   shipped defaults (chain 9): the turn completed (91.8 deg), the bottom edge tripped and climbed at once. Left out of
   every commit: the other session's Onshape v21 (`Valve_Assembly_v21.stl` + its converter / make_v21_stl changes) and
   its handle pictures.
+
+**11-05 HARDWARE BOX PUSHES ON THE `box-pushing-20261027` BRANCH -- NOT NORMAL, AND NOT THE CODE (2026-11-06, user
+request: analyse; record `docs/docs_aerial_manipulator/archive/wb_box_pushing_flight_20261105/README.md`).** Two bags
+analysed (`_211154` has no metadata.yaml; the tools read the db3 directly). `_214032`'s db3 is missing from the download.
+- **Branch check (also asked 11-05):** `box-pushing-20261027` is the 10-27 flown code in every repo. The 10-27 bags match it
+  on debug widths, log text and the SAFETY map 0.037947 / 0.252449 (fits to 2e-8). Today's bags match it the same way.
+  `dev_robotic_arm` would fly a different box push: two parameter sets, emergency abort, a 0.25 s fast hand-back on
+  q3-guard aborts, the arm RELEASE, and the j4 trim change.
+- **Neither flight pushed.** In 211154, Ready was refused 72 s (the claw would not settle). In the descent the claw was
+  53-58 mm across the fin. An open finger then swept the fin and the box went off the table's far edge (the 79 deg tilt
+  trip = the box falling). In 212207 the claw held 12-14 mm across with the jaws open, and a FALSE box-tilt trip fired
+  (2.5 deg; the box moved <= 2 mm).
+- **Cause: the hover at the box site, about 4.5x worse than 10-27.**
+  - Holds above the handle: CoM wander 39 vs 8.7 mm, base speed 39 vs 16 mm/s, the law's moment estimate 55 vs 23 mN.m.
+  - This matches the 11-03 study's new-spot + wall group, and the table today is at the new spot (x 0.42-0.58).
+  - The motor trim is unchanged from 10-27.
+  - The drone's mocap jitter is 1.3-2.0 mm near the box against 0.6-0.7 mm far from it (10-27: 0.5-0.75 at the box).
+  - The drone body's offset to PX4 varies between flights; that is not the cause.
+- **The box body:**
+  - tilt noise with the arm above it: 9.2 % of samples above the 2 deg guard (10-27: 0-2.3 %);
+  - 178 deg flips with the vehicle 2 m away;
+  - it reads 13-16 mm higher at rest than on 10-27.
+- **Open:** what is near the table now (wall, fan from the wind tests); a hover-only test above the handle; the box
+  markers / pivot.
+
+**11-05 ROBUST TRACKING AND MAIL DELIVERY EXPORTED FOR MATLAB (2026-11-05, user request).** Bags
+`docs/experimental_data_ros2_bag/1105 - T650-AM Mail-Box, Robust Tracking, Box-Pushing-*/`. Google Drive split the
+download into TWO zip parts; part 2 (zip + unpacked folder) had gone to the Trash with the morning's non-success mail
+attempts, and was COPIED back (its three task subfolders only; Trash and ~/Downloads untouched; zip test clean, sizes
+checked). All 20 bags now complete: 5 mail, 12 robust (two per method and setting), 3 box pushing. Both exporters
+FIND bags by name. Task folders (bags in `flight_test_data/<task>/`, MATLAB in `matlab_experiment_data/<task>/`, each
+with a generated README; zip rebuilt):
+- `free_flight_model_uncertainty/` (`ee_mass_50g/`, `ee_mass_100g/`) and `free_flight_wind_disturbance/`, by
+  `results/utils/experiment_robust_tracking.py [--copy-bags]`. **Each 11-05 bag flies ONE planner run of two laps
+  back to back** (`circle x2`, T 52.33 s), unlike the nominal campaign's two one-lap runs: the laps are split at
+  `whole_body_planner/ee_trajectory/info[15]` (26.17 s; lap 1 holds the 2 s speed-up, lap 2 the slow-down), each
+  scored with the nominal definitions (each sweeps 358.4 deg of reference after the 0.1 s trims) and saved as
+  `run<k>` = lap k in flight order; entry = mean over all laps (4 when both bags exist). Reuses
+  `experiment_tracking.export_mat` (new optional `path` / `meta_extra`, defaults unchanged). Flown config =
+  the final campaign's yamls byte-identical (git diff a316625 -> dev_robotic_arm empty), node from dev_robotic_arm.
+  Mean of 4 laps, EE position: Proposed +50 g 42.9 / +100 g 41.4 / wind 38.7 mm; Geo-L1 74.9 / 68.1 / 79.3 mm
+  (EE heading 0.32-0.34 vs 4.08-4.15 deg). Geo-L1 scored BELOW its 10-28 nominal (90.1): day-to-day variation,
+  compare methods within a column only. Lap 2 worse in 8 of 12 pairs. Adding a bag shifts the lap tags, so the
+  exporter PRUNES lap files and bag copies of an earlier selection; a metadata.yaml missing from a part is rebuilt
+  in the copy by `ros2 bag reindex` (`REINDEXED.txt`) until the original arrives.
+- `mail_box/` by `results/utils/experiment_mail_box.py`: `whole_body_l1_mail_run<N>.mat` (N = `success_N`), the
+  pick-and-drop struct layout. Flown: dev_robotic_arm, `mail_delivery` yaml d957c26 (vehicle
+  `AM-T650-WB-L1-4D-HW-MAIL`, 150-wide debug). **obj_0 in these bags is the localization frame lying on the floor
+  (0.14-0.19, 1.85, 0.05) the whole flight; the envelope has no markers**, so the outcome is the claw at the OPEN
+  vs the planner's release point along / off the reference insertion line (25 deg, 0.25 m), matching the planner's
+  own number to < 2 mm: S-1 +13 / 7 mm (released automatically), S-2 -22 / 14, S-3 +48 / 33, S-4 +48 / 19, S-5
+  +24 / 30 (all by hand: outside the -15 / +20 mm, 30 mm window). EE RMSE 27-36 mm. Pilot took STAB in every land leg.
+- `flight_test_index.md` rows 73-92 (+ `experiment_tracking.INDEX`); top-level MATLAB README section 5.
+- Trap hit again: the `[Success]` folder names make `glob(os.path.join(d, "*.db3"))` match nothing -- `glob.escape`.

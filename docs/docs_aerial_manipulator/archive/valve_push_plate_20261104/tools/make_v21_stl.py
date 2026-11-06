@@ -15,6 +15,10 @@ added to the v20 assembly, unchanged otherwise (every v20 triangle is copied byt
                 the plate slides onto the fin's back edge and one M3 bolt through cheeks and fin
                 holds it (not modelled)
 
+SUPERSEDED 2026-11-04: Valve_Assembly_v21.stl is now the user's own Onshape design of this part (the
+same plate, two M3 holes through cheeks and fin, a 5.0 mm slot). This script refuses to overwrite a
+file it did not write; pass --out elsewhere (or --force) to rebuild the original model.
+
 Frames: the STL's own CAD frame (metres; the bearing axis at (-1.1, 3.0) mm, the plate bottom at
 z = -4.5 mm), the same as v20's -- stl_to_usda_valve.py moves it to the asset frame. Dimensions on the
 command line are in the ASSET frame (from the axis on the plate bottom), as the design page and the
@@ -104,7 +108,11 @@ def main():
     ap.add_argument("--top", type=float, default=0.204, help="its top above the plate bottom [m] (the fin top 0.204)")
     ap.add_argument("--thick", type=float, default=0.005, help="along the push [m]")
     ap.add_argument("--centre", type=float, default=0.160, help="its centre's radius [m] (the fin's)")
+    ap.add_argument("--force", action="store_true", help="overwrite --out even if this script did not write it")
     a = ap.parse_args()
+    if os.path.exists(a.out) and not a.force and not open(a.out, "rb").read(80).startswith(b"Valve_Assembly_v21: v20 + push plate"):
+        raise SystemExit(f"{a.out} was not written by this script (the user's CAD since 2026-11-04): "
+                         "pass --out elsewhere, or --force")
 
     xc, hw = a.centre, 0.5 * a.width
     y0, y1 = FIN_BACK_Y - a.thick, FIN_BACK_Y              # the plate: its pushing face at y0
