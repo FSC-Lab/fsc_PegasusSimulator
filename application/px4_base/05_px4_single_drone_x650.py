@@ -56,6 +56,14 @@ TOTAL_MASS = float(_mass_raw) if _mass_raw else 3.25
 if not 0.5 < TOTAL_MASS < 10.0:
     raise ValueError(f"PEGASUS_X650_TOTAL_MASS must be a total mass in kg, got {TOTAL_MASS}")
 
+# Optional plant INERTIA mismatch (2026-11-10): scales the body's CAD diagonal inertia; every controller keeps
+# its own model. Environment variable PEGASUS_PLANT_INERTIA_SCALE (default 1.0). Hardware 2026-11-10:
+# the geometric law's growing 0.65-0.78 Hz oscillation matches a real roll/pitch inertia ~1.45-1.6x the CAD value.
+_iscale_raw = os.environ.get("PEGASUS_PLANT_INERTIA_SCALE", "").strip()
+INERTIA_SCALE = float(_iscale_raw) if _iscale_raw else 1.0
+if not 0.2 < INERTIA_SCALE < 5.0:
+    raise ValueError(f"PEGASUS_PLANT_INERTIA_SCALE must be a positive scale, got {INERTIA_SCALE}")
+
 # Optional AERODYNAMIC DRAG injection (added 2026-09-30 for the CCM disturbance-estimation tests).
 #   PEGASUS_LINEAR_DRAG="cx,cy,cz"   linear body drag [N/(m/s)], body FLU, F = -diag(c) v_body
 #                                    (unset: the Pegasus default 0.50,0.30,0.0)
@@ -152,11 +160,14 @@ class FscDroneSim:
             spawn_euler=(0.0, 0.0, 0.0),
             enable_lockstep=PX4_LOCKSTEP,
             body_mass=body_mass,
+            body_inertia=None if INERTIA_SCALE == 1.0 else tuple(INERTIA_SCALE * j for j in X650_BODY_INERTIA),
             linear_drag=LINEAR_DRAG,
             angular_drag=ANGULAR_DRAG,
             realtime_io=True,
             rotor_lambda=ROTOR_LAMBDA,
         )
+        print(f"[X650] body inertia {tuple(round(INERTIA_SCALE * j, 6) for j in X650_BODY_INERTIA)} kg m^2 "
+              f"(CAD x{INERTIA_SCALE:.3f}, PEGASUS_PLANT_INERTIA_SCALE)", flush=True)
         print(
             f"[X650] DRAG: linear "
             f"{LINEAR_DRAG if LINEAR_DRAG is not None else [0.5, 0.3, 0.0]} N/(m/s) body FLU "
