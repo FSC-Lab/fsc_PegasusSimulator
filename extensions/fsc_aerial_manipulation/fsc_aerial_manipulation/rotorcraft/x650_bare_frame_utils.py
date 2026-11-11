@@ -184,19 +184,25 @@ class _ThrottledROS2Backend(ROS2Backend):
 
 class X650Multirotor(Multirotor):
     """Multirotor plus an optional rotational (aerodynamic) damping torque on /body:
-    tau_drag = -diag(angular_drag) * omega_body  [N m], omega in body FLU [rad/s].
-    With angular_drag all zero it is the stock Multirotor."""
+    tau_drag = -diag(angular_drag) * omega_body  [N m], omega in body FLU [rad/s],
+    and an optional CONSTANT body torque body_torque [N m] (body FLU), e.g. the standing
+    torque of a CoM offset (hardware X650: ~0.1 N m roll / pitch).
+    With both all zero it is the stock Multirotor."""
 
-    def __init__(self, *args, angular_drag=(0.0, 0.0, 0.0), **kwargs):
+    def __init__(self, *args, angular_drag=(0.0, 0.0, 0.0), body_torque=(0.0, 0.0, 0.0), **kwargs):
         self._angular_drag = np.asarray(angular_drag, dtype=float)
+        self._body_torque = np.asarray(body_torque, dtype=float)
         self.last_angular_drag_torque = np.zeros(3)
         super().__init__(*args, **kwargs)
 
     def update(self, dt: float):
         super().update(dt)
+        tau = self._body_torque.copy()
         if np.any(self._angular_drag):
-            tau = -self._angular_drag * np.asarray(self._state.angular_velocity, dtype=float)
-            self.last_angular_drag_torque = tau
+            drag = -self._angular_drag * np.asarray(self._state.angular_velocity, dtype=float)
+            self.last_angular_drag_torque = drag
+            tau += drag
+        if np.any(tau):
             self.apply_torque(tau.tolist(), "/body")
 
 
@@ -214,6 +220,7 @@ def spawn_x650_with_mavlink(
     body_inertia=None,
     linear_drag=None,
     angular_drag=None,
+    body_torque=None,
     realtime_io: bool = False,
     rotor_lambda=None,
 ):
@@ -240,6 +247,8 @@ def spawn_x650_with_mavlink(
         linear_drag: body-FLU linear drag [N/(m/s)]; None keeps the Pegasus default
             LinearDrag([0.50, 0.30, 0.0]).
         angular_drag: body-FLU rotational damping [N m/(rad/s)]; None/zero adds none.
+        body_torque: constant body-FLU torque [N m] on /body (e.g. a CoM-offset standing
+            torque); None/zero adds none.
         rotor_lambda: override the motor's spin-up lag lambda [1/s] (None: the
             calibration's), e.g. for rotor-lag robustness tests.
         realtime_io: throttle the ground-truth ROS 2 spin and run mag/GPS at
@@ -340,8 +349,11 @@ def spawn_x650_with_mavlink(
         init_orientation=quat_xyzw,
         config=config,
     )
-    vehicle = (X650Multirotor(angular_drag=angular_drag, **vehicle_kwargs) if any(angular_drag)
-               else Multirotor(**vehicle_kwargs))
+    body_torque = tuple(body_torque) if body_torque is not None else (0.0, 0.0, 0.0)
+    if any(body_torque):
+        print(f"[X650] CONSTANT BODY TORQUE {body_torque} N m (body FLU)", flush=True)
+    vehicle = (X650Multirotor(angular_drag=angular_drag, body_torque=body_torque, **vehicle_kwargs)
+               if any(angular_drag) or any(body_torque) else Multirotor(**vehicle_kwargs))
     apply_x650_mass_properties(vehicle, body_mass=body_mass, body_inertia=body_inertia)
 
     # Return the resolved stage prefix (get_stage_next_free_path may append a

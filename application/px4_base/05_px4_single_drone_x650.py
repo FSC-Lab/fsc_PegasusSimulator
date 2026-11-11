@@ -81,6 +81,12 @@ def _vec3_env(name):
 
 LINEAR_DRAG = _vec3_env("PEGASUS_LINEAR_DRAG")
 ANGULAR_DRAG = _vec3_env("PEGASUS_ANGULAR_DRAG")
+# PEGASUS_BODY_TORQUE="tx,ty,tz": CONSTANT torque on /body [N m], body FLU, signed (unset: none), e.g. the
+# standing torque of a CoM offset (hardware X650 2026-10-14..11-10: ~0.1 N m roll / pitch, ~0.04 yaw).
+_bt_raw = os.environ.get("PEGASUS_BODY_TORQUE", "").strip()
+BODY_TORQUE = [float(v) for v in _bt_raw.replace(" ", "").split(",")] if _bt_raw else None
+if BODY_TORQUE is not None and len(BODY_TORQUE) != 3:
+    raise ValueError(f"PEGASUS_BODY_TORQUE must be three numbers 'x,y,z', got '{_bt_raw}'")
 # PEGASUS_REPORT_MASS_PROPS=1 [PEGASUS_MASS_REPORT_FILE=<json>]: print / write what PhysX simulates
 # (every link's mass, CoM, inertia and pose; the composite about the composite CoM in the /body frame).
 # The printed "design" ratio is t650_mass_report's T650 reference -- compare the JSON with the X650's.
@@ -163,6 +169,7 @@ class FscDroneSim:
             body_inertia=None if INERTIA_SCALE == 1.0 else tuple(INERTIA_SCALE * j for j in X650_BODY_INERTIA),
             linear_drag=LINEAR_DRAG,
             angular_drag=ANGULAR_DRAG,
+            body_torque=BODY_TORQUE,
             realtime_io=True,
             rotor_lambda=ROTOR_LAMBDA,
         )
