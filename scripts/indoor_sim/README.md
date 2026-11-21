@@ -58,6 +58,11 @@ MicroXRCEAgent) and, where one exists, the real-hardware flight stack in
   - Sim stack: `start_whole_body_l1_4d_direct_actuation_t650_aerial_manipulator_stack_fused.sh` (EKF2-fused)
   - Hardware stack: `start_whole_body_l1_4d_direct_actuation_stack_t650_aerial_manipulator_fused.sh` (EKF2-fused)
 
+- `start_x650_slung_load_sitl.sh` (X650 + AK40-10 winch + slung payload, PX4 primary, 2026-11-21)
+  - Sim stack: fsc_autopilot_ros2 `scripts/isaacsim/start_x650_slung_load_sim_stack.sh` (branch
+    dev_slung_load_hw); both together: `scripts/isaacsim/slung/run_slung_sim.sh longhao_machine_ddshz`
+  - Hardware stack: the slung-load runbook (`docs/slung_load_x650_hardware_runbook.md`)
+
 ## Archived launchers (`archive/`)
 
 Inactive, but still runnable from their new location:
